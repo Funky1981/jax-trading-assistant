@@ -1,0 +1,9 @@
+{
+  "httpPort": 8081,
+  "defaultSymbols": ["AAPL", "MSFT"],
+  "accountSize": 10000,
+  "riskPercent": 3,
+  "useDexter": false,
+  "postgresDsn": ""
+}
+

@@ -1,0 +1,19 @@
+.serena/
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Go
+/bin/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/

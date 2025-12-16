@@ -1,0 +1,11 @@
+{
+  "id": "earnings_gap_v1",
+  "name": "Earnings Gap V1",
+  "eventTypes": ["earnings_surprise", "gap_open"],
+  "minRR": 2.0,
+  "maxRiskPercent": 3.0,
+  "entryRule": "Enter on continuation after earnings gap, above day-1 high.",
+  "stopRule": "Below day-1 low (or 1.5 ATR).",
+  "targetRule": "2R,3R"
+}
+

@@ -1,0 +1,11 @@
+{
+  "id": "volatility_spike_v1",
+  "name": "Volatility Spike V1",
+  "eventTypes": ["volume_spike"],
+  "minRR": 1.5,
+  "maxRiskPercent": 2.0,
+  "entryRule": "Enter on mean-reversion trigger after volatility spike.",
+  "stopRule": "1.5 ATR from entry.",
+  "targetRule": "1.5R,2R"
+}
+

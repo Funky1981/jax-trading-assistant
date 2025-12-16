@@ -1,0 +1,32 @@
+{
+  "providers": [
+    {
+      "id": "market-data",
+      "transport": "http",
+      "endpoint": "http://market-service:8080/tools"
+    },
+    {
+      "id": "risk",
+      "transport": "local"
+    },
+    {
+      "id": "backtest",
+      "transport": "local"
+    },
+    {
+      "id": "broker",
+      "transport": "http",
+      "endpoint": "http://broker-sim:8080/tools"
+    },
+    {
+      "id": "storage",
+      "transport": "local"
+    },
+    {
+      "id": "dexter",
+      "transport": "http",
+      "endpoint": "http://dexter:3000/tools"
+    }
+  ]
+}
+
