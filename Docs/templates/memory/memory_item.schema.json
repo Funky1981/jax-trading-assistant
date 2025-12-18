@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MemoryItem",
+  "type": "object",
+  "required": ["ts", "type", "summary", "data", "source"],
+  "properties": {
+    "id": { "type": "string" },
+    "ts": { "type": "string", "format": "date-time" },
+    "type": { "type": "string" },
+    "symbol": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "data": { "type": "object" },
+    "source": {
+      "type": "object",
+      "required": ["system"],
+      "properties": {
+        "system": { "type": "string" },
+        "ref": { "type": "string" }
+      }
+    }
+  }
+}

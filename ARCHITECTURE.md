@@ -1,17 +1,28 @@
 # Architecture (Clean Architecture)
 
-This repo follows a Clean Architecture / Hexagonal style:
+This repo follows a Clean Architecture / Hexagonal style.
 
-- `internal/domain`: Pure business types (no IO, no HTTP, no DB, no UTCP).
-- `internal/app`: Use-cases / orchestration. Depends on `domain` and *interfaces*.
-- `internal/infra`: Adapters (UTCP client, HTTP server, storage, external services).
-- `cmd/*`: Entrypoints (wire config + dependencies, start servers/processes).
+In the multi-service layout:
+
+- Each service lives under `services/<name>/` and keeps its own `internal/` packages.
+- Shared packages live under `libs/` and should be stable and well-tested.
 
 ## Directory structure
 
 ```text
 jax-trading assistant/
-  Docs/                         # Specs / build plan (01..06)
+  Docs/                         # Plan docs (see `Docs/docs/`)
+  services/
+    jax-api/                    # HTTP API service (current focus)
+    jax-orchestrator/           # Agent0 pipeline service (skeleton)
+    jax-memory/                 # Hindsight facade service (skeleton)
+    jax-ingest/                 # Dexter ingestion service (skeleton)
+    hindsight/                  # Vendored Hindsight upstream (pinned; see UPSTREAM.md)
+  libs/
+    utcp/                       # UTCP client + tool implementations (local/http) + Postgres storage adapter
+    contracts/                  # Shared DTOs/interfaces (memory schemas etc; WIP)
+    observability/              # Shared logging/tracing helpers (WIP)
+    testing/                    # Shared fakes/fixtures (WIP)
   cmd/
     jax-utcp-smoke/             # Smoke entrypoint to exercise UTCP tools end-to-end
   config/
@@ -20,9 +31,6 @@ jax-trading assistant/
     postgres/
       schema.sql                # Postgres schema for storage provider
       docker-compose.yml        # Local Postgres for development
-  internal/
-    infra/
-      utcp/                     # UTCP client + provider adapters + tool registrations
   scripts/
     test.ps1                    # Local quality gate (gofmt, golangci-lint, go test)
   dexter/                       # Vendored Dexter repo (research agent)
@@ -30,18 +38,12 @@ jax-trading assistant/
   .github/workflows/            # CI (gofmt, golangci-lint, go test)
 ```
 
-Notes:
+## Dependency rules (per service)
 
-- `internal/domain` and `internal/app` are not created yet; they’ll appear when `Docs/04_jax_core.md` begins.
-- Vendored repos (`dexter/`, `Agent0/`) are treated as external projects; Jax code should not depend on their internals directly.
-
-## Dependency rules
-
-- `domain` must not import from any other internal layer.
-- `app` may import `domain`, but must not import `infra` packages.
-- `infra` may import `domain` + `app` (for wiring), but keep adapters isolated.
-- Prefer defining interfaces in the consuming layer (usually `app`) and implement
-  them in `infra`.
+- `internal/domain` must not import from any other layer.
+- `internal/app` may import `internal/domain`, but must not import `internal/infra`.
+- `internal/infra` may import `internal/domain` + `internal/app`, but keep adapters isolated.
+- Prefer defining interfaces in the consuming layer (usually `internal/app`) and implement them in `internal/infra`.
 
 ## Testing rules
 

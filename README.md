@@ -1,18 +1,17 @@
 # jax-trading assistant
 
-Specs live in `Docs/`.
+Specs live in `Docs/` (see `Docs/docs/`).
 
-Initial backend scaffolding (spec `Docs/02_utcp_providers.md`):
+Repo scaffold and service skeletons (spec `Docs/docs/02_Repository_Scaffold_and_Service_Skeletons.md`):
 
 - `config/providers.json`
-- `internal/infra/utcp/*`
-  - Includes `UTCPClient` (HTTP/local transports) and strict config loading
-  - Includes local `risk` tools (`risk.position_size`, `risk.r_multiple`)
-  - Includes local `backtest` stub tools (`backtest.run_strategy`, `backtest.get_run`)
+- `libs/utcp/*` (UTCP client + local tools + Postgres storage adapter)
+- Vendored upstream services:
+  - `services/hindsight/` (Hindsight memory backend; pinned commit in `services/hindsight/UPSTREAM.md`)
 
-Jax Core (spec `Docs/04_jax_core.md`):
+Jax API service lives under `services/jax-api/`:
 
-- Entrypoint: `go run ./cmd/jax-core`
+- Entrypoint: `go run ./services/jax-api/cmd/jax-api`
 - HTTP endpoints: `GET /health`, `POST /risk/calc`, `GET /strategies`, `POST /symbols/{symbol}/process`, `GET /trades`, `GET /trades/{id}`
 
 Vendored repos:
@@ -30,7 +29,12 @@ See `ARCHITECTURE.md`.
 
 - `scripts/test.ps1`
 - Or: `go test ./...`
+- Or: `make test`
 - Lint (recommended): `golangci-lint run ./...`
+
+### Optional (Make)
+
+- `make test`, `make lint`, `make up`, `make down`
 
 ### Manual / component tests
 
