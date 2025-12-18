@@ -11,7 +11,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"jax-trading-assistant/internal/infra/utcp"
+	"jax-trading-assistant/libs/utcp"
 )
 
 func main() {
