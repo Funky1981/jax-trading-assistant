@@ -2,12 +2,31 @@ import { Agent, AgentCallbacks, Task } from '../agent.js';
 import { PlannedTask, SubTaskResult } from '../schemas.js';
 
 // Mock all external dependencies
-jest.mock('../../model/llm.js');
-jest.mock('../../tools/index.js');
-jest.mock('../../utils/context.js');
-jest.mock('../task-planner.js');
-jest.mock('../task-executor.js');
-jest.mock('../answer-generator.js');
+jest.mock('../../model/llm.js', () => ({
+  DEFAULT_MODEL: 'gpt-4.1',
+  callLlm: jest.fn(),
+  callLlmStream: jest.fn(),
+  getChatModel: jest.fn(),
+}));
+jest.mock('../../tools/index.js', () => ({
+  TOOLS: [],
+}));
+jest.mock('../../utils/context.js', () => ({
+  ToolContextManager: class {
+    hashQuery() {
+      return 'mock-query-id';
+    }
+  },
+}));
+jest.mock('../task-planner.js', () => ({
+  TaskPlanner: jest.fn(),
+}));
+jest.mock('../task-executor.js', () => ({
+  TaskExecutor: jest.fn(),
+}));
+jest.mock('../answer-generator.js', () => ({
+  AnswerGenerator: jest.fn(),
+}));
 
 import { TaskPlanner } from '../task-planner.js';
 import { TaskExecutor } from '../task-executor.js';

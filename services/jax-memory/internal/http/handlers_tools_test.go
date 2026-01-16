@@ -44,6 +44,8 @@ func TestTools_MemoryRetain(t *testing.T) {
 				"ts":      time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 				"type":    "decision",
 				"summary": "test",
+				"data":    map[string]any{"confidence": 0.5},
+				"source":  map[string]any{"system": "test"},
 			},
 		},
 	}

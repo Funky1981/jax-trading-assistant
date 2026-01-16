@@ -2,7 +2,9 @@ package httpapi
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"strings"
 
 	"jax-trading-assistant/libs/contracts"
 )
@@ -36,50 +38,66 @@ func (s *Server) RegisterTools() {
 		var out any
 		switch req.Tool {
 		case "memory.retain":
-			var in struct {
-				Bank string               `json:"bank"`
-				Item contracts.MemoryItem `json:"item"`
-			}
+			var in contracts.MemoryRetainRequest
 			if err := json.Unmarshal(req.Input, &in); err != nil {
 				http.Error(w, "invalid input", http.StatusBadRequest)
 				return
 			}
+			if strings.TrimSpace(in.Bank) == "" {
+				http.Error(w, "bank is required", http.StatusBadRequest)
+				return
+			}
+			in.Item.Tags = contracts.NormalizeMemoryTags(in.Item.Tags)
+			if err := contracts.ValidateMemoryItem(in.Item); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			log.Printf("memory.retain bank=%s type=%s", in.Bank, in.Item.Type)
 			id, err := s.store.Retain(r.Context(), in.Bank, in.Item)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			out = map[string]any{"id": id}
+			out = contracts.MemoryRetainResponse{ID: id}
 		case "memory.recall":
-			var in struct {
-				Bank  string                `json:"bank"`
-				Query contracts.MemoryQuery `json:"query"`
-			}
+			var in contracts.MemoryRecallRequest
 			if err := json.Unmarshal(req.Input, &in); err != nil {
 				http.Error(w, "invalid input", http.StatusBadRequest)
 				return
 			}
+			if strings.TrimSpace(in.Bank) == "" {
+				http.Error(w, "bank is required", http.StatusBadRequest)
+				return
+			}
+			in.Query.Tags = contracts.NormalizeMemoryTags(in.Query.Tags)
+			log.Printf("memory.recall bank=%s q=%s", in.Bank, in.Query.Q)
 			items, err := s.store.Recall(r.Context(), in.Bank, in.Query)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			out = map[string]any{"items": items}
+			out = contracts.MemoryRecallResponse{Items: items}
 		case "memory.reflect":
-			var in struct {
-				Bank   string                     `json:"bank"`
-				Params contracts.ReflectionParams `json:"params"`
-			}
+			var in contracts.MemoryReflectRequest
 			if err := json.Unmarshal(req.Input, &in); err != nil {
 				http.Error(w, "invalid input", http.StatusBadRequest)
 				return
 			}
+			if strings.TrimSpace(in.Bank) == "" {
+				http.Error(w, "bank is required", http.StatusBadRequest)
+				return
+			}
+			if strings.TrimSpace(in.Params.Query) == "" {
+				http.Error(w, "params.query is required", http.StatusBadRequest)
+				return
+			}
+			log.Printf("memory.reflect bank=%s window_days=%d", in.Bank, in.Params.WindowDays)
 			items, err := s.store.Reflect(r.Context(), in.Bank, in.Params)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			out = map[string]any{"items": items}
+			out = contracts.MemoryReflectResponse{Items: items}
 		default:
 			http.Error(w, "unknown tool", http.StatusBadRequest)
 			return

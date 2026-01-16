@@ -26,6 +26,11 @@
       "id": "dexter",
       "transport": "http",
       "endpoint": "http://dexter:3000/tools"
+    },
+    {
+      "id": "memory",
+      "transport": "http",
+      "endpoint": "http://jax-memory:8090/tools"
     }
   ]
 }

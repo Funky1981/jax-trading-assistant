@@ -8,7 +8,11 @@
     "ts": { "type": "string", "format": "date-time" },
     "type": { "type": "string" },
     "symbol": { "type": "string" },
-    "tags": { "type": "array", "items": { "type": "string" } },
+    "tags": {
+      "type": "array",
+      "maxItems": 10,
+      "items": { "type": "string", "pattern": "^[a-z0-9_-]+$" }
+    },
     "summary": { "type": "string", "minLength": 1, "maxLength": 500 },
     "data": { "type": "object" },
     "source": {

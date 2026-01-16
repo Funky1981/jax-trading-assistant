@@ -41,9 +41,12 @@ func TestIntegration_JaxMemory_RetainRecall(t *testing.T) {
 		Input: mustJSON(map[string]any{
 			"bank": bank,
 			"item": map[string]any{
+				"ts":      time.Now().UTC(),
 				"type":    "decision",
 				"summary": summary,
 				"tags":    []string{"integration"},
+				"data":    map[string]any{"source": "integration"},
+				"source":  map[string]any{"system": "integration"},
 			},
 		}),
 	})
