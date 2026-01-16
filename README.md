@@ -14,6 +14,12 @@ Jax API service lives under `services/jax-api/`:
 - Entrypoint: `go run ./services/jax-api/cmd/jax-api`
 - HTTP endpoints: `GET /health`, `POST /risk/calc`, `GET /strategies`, `POST /symbols/{symbol}/process`, `GET /trades`, `GET /trades/{id}`
 
+Jax Memory service lives under `services/jax-memory/`:
+
+- Entrypoint: `go run ./services/jax-memory/cmd/jax-memory`
+- UTCP endpoint: `POST /tools` supporting `memory.retain`, `memory.recall`, `memory.reflect`
+- Uses `HINDSIGHT_URL` if set; otherwise falls back to an in-memory store
+
 Vendored repos:
 
 - `dexter/`

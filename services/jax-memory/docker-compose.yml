@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  hindsight:
+    build:
+      context: ../hindsight
+      dockerfile: docker/standalone/Dockerfile
+      args:
+        INCLUDE_API: "true"
+        INCLUDE_CP: "false"
+    environment:
+      HINDSIGHT_API_LLM_PROVIDER: ${HINDSIGHT_API_LLM_PROVIDER:-openai}
+      HINDSIGHT_API_LLM_API_KEY: ${HINDSIGHT_API_LLM_API_KEY}
+      HINDSIGHT_API_LLM_MODEL: ${HINDSIGHT_API_LLM_MODEL:-o3-mini}
+      HINDSIGHT_API_LLM_BASE_URL: ${HINDSIGHT_API_LLM_BASE_URL:-https://api.openai.com/v1}
+      HINDSIGHT_API_HOST: 0.0.0.0
+      HINDSIGHT_API_PORT: 8888
+      HINDSIGHT_API_LOG_LEVEL: info
+    ports:
+      - "8888:8888"
+
+  jax-memory:
+    build:
+      context: ../..
+      dockerfile: services/jax-memory/Dockerfile
+    environment:
+      HINDSIGHT_URL: http://hindsight:8888
+      PORT: 8090
+    ports:
+      - "8090:8090"
+    depends_on:
+      - hindsight

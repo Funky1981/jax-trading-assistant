@@ -125,6 +125,7 @@ WORKDIR /app
 # Install pg0 dependencies (procps provides 'kill' command needed by pg0)
 # Note: libicu version varies by Debian version - try common versions in order
 RUN apt-get update && apt-get install -y \
+    bash \
     curl \
     procps \
     libxml2 \
@@ -143,7 +144,7 @@ COPY --from=api-builder /app/api /app/api
 
 # Copy startup script
 COPY docker/standalone/start-all.sh /app/start-all.sh
-RUN chmod +x /app/start-all.sh
+RUN sed -i 's/\r$//' /app/start-all.sh && chmod +x /app/start-all.sh
 
 # Create data directory for pg0 and set ownership
 RUN mkdir -p /app/data && chown -R hindsight:hindsight /app
@@ -199,7 +200,7 @@ WORKDIR /app
 
 # Copy startup script
 COPY docker/standalone/start-all.sh /app/start-all.sh
-RUN chmod +x /app/start-all.sh
+RUN sed -i 's/\r$//' /app/start-all.sh && chmod +x /app/start-all.sh
 
 # Install curl for health checks
 RUN apk add --no-cache curl bash
@@ -223,6 +224,7 @@ WORKDIR /app
 # Install Node.js, curl, uv, and pg0 dependencies (procps provides 'kill' command needed by pg0)
 # Note: libicu version varies by Debian version - try common versions in order
 RUN apt-get update && apt-get install -y \
+    bash \
     curl \
     procps \
     libxml2 \
@@ -254,7 +256,7 @@ WORKDIR /app
 
 # Copy startup script
 COPY docker/standalone/start-all.sh /app/start-all.sh
-RUN chmod +x /app/start-all.sh
+RUN sed -i 's/\r$//' /app/start-all.sh && chmod +x /app/start-all.sh
 
 # Create data directory for pg0 and set ownership
 RUN mkdir -p /app/data && chown -R hindsight:hindsight /app
