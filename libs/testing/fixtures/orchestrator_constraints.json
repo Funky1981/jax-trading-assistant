@@ -1,0 +1,10 @@
+{
+  "risk": 0.02,
+  "broker_credentials": {
+    "api_key": "supersecret"
+  },
+  "order_payload": {
+    "symbol": "AAPL",
+    "qty": 10
+  }
+}

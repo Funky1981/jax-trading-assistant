@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"jax-trading-assistant/libs/contracts"
+	"jax-trading-assistant/libs/observability"
 )
 
 type UTCPClient struct {
@@ -63,28 +66,68 @@ func NewUTCPClientFromFile(path string, opts ...ClientOption) (*UTCPClient, erro
 }
 
 func (c *UTCPClient) CallTool(ctx context.Context, providerID, toolName string, input any, output any) error {
+	start := time.Now()
+	observability.LogToolStart(ctx, providerID, toolName, input)
+	var callErr error
+	defer func() {
+		duration := time.Since(start)
+		observability.LogToolEnd(ctx, providerID, toolName, duration, callErr)
+		observability.RecordToolCall(ctx, providerID, toolName, duration, callErr)
+		if toolName == ToolMemoryRecall {
+			observability.RecordRecall(ctx, providerID, toolName, callErr)
+		}
+		if toolName == ToolMemoryRetain {
+			bank := extractBank(input)
+			observability.LogRetention(ctx, bank, callErr)
+			observability.RecordRetain(ctx, bank, callErr)
+		}
+	}()
+
 	provider, ok := c.providers[providerID]
 	if !ok {
-		return fmt.Errorf("utcp: provider not configured: %s", providerID)
+		callErr = fmt.Errorf("utcp: provider not configured: %s", providerID)
+		return callErr
 	}
 
 	switch strings.ToLower(provider.Transport) {
 	case "local":
 		if c.local == nil {
-			return fmt.Errorf("utcp: local transport requested but no LocalRegistry configured for provider %s", providerID)
+			callErr = fmt.Errorf("utcp: local transport requested but no LocalRegistry configured for provider %s", providerID)
+			return callErr
 		}
 		if err := c.local.Call(ctx, providerID, toolName, input, output); err != nil {
-			return fmt.Errorf("utcp: local call %s/%s: %w", providerID, toolName, err)
+			callErr = fmt.Errorf("utcp: local call %s/%s: %w", providerID, toolName, err)
+			return callErr
 		}
 		return nil
 	case "http":
 		if err := c.callHTTP(ctx, provider.Endpoint, providerID, toolName, input, output); err != nil {
-			return err
+			callErr = err
+			return callErr
 		}
 		return nil
 	default:
-		return fmt.Errorf("utcp: unsupported transport %q for provider %s", provider.Transport, providerID)
+		callErr = fmt.Errorf("utcp: unsupported transport %q for provider %s", provider.Transport, providerID)
+		return callErr
 	}
+}
+
+func extractBank(input any) string {
+	switch typed := input.(type) {
+	case contracts.MemoryRetainRequest:
+		return typed.Bank
+	case *contracts.MemoryRetainRequest:
+		if typed != nil {
+			return typed.Bank
+		}
+	case map[string]any:
+		if value, ok := typed["bank"]; ok {
+			if bank, ok := value.(string); ok {
+				return bank
+			}
+		}
+	}
+	return ""
 }
 
 func (c *UTCPClient) callHTTP(ctx context.Context, endpoint string, providerID string, toolName string, input any, output any) error {

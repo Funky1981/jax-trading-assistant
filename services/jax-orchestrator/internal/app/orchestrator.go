@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"jax-trading-assistant/libs/contracts"
+	"jax-trading-assistant/libs/observability"
 )
 
 type MemoryClient interface {
@@ -123,6 +124,9 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 			"tools":           toolRuns,
 		},
 		Source: &contracts.MemorySource{System: "jax-orchestrator"},
+	}
+	if redacted, ok := observability.RedactValue(retained.Data).(map[string]any); ok {
+		retained.Data = redacted
 	}
 	if retained.Summary == "" {
 		retained.Summary = "Decision recorded."

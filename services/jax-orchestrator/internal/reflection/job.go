@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"jax-trading-assistant/libs/contracts"
+	"jax-trading-assistant/libs/observability"
 )
 
 type MemoryClient interface {
@@ -46,6 +47,11 @@ func NewJob(memory MemoryClient, opts ...JobOption) *Job {
 }
 
 func (j *Job) Run(ctx context.Context, cfg RunConfig) (RunResult, error) {
+	start := time.Now()
+	beliefCount := 0
+	defer func() {
+		observability.RecordReflectionDuration(ctx, time.Since(start), beliefCount)
+	}()
 	if j.memory == nil {
 		return RunResult{}, fmt.Errorf("reflection job: memory client required")
 	}
@@ -89,6 +95,7 @@ func (j *Job) Run(ctx context.Context, cfg RunConfig) (RunResult, error) {
 
 	window := Window{From: from, To: to}
 	beliefs := GenerateBeliefs(to, window, decisions, outcomes)
+	beliefCount = len(beliefs)
 
 	retained := 0
 	if !cfg.DryRun {
@@ -103,10 +110,11 @@ func (j *Job) Run(ctx context.Context, cfg RunConfig) (RunResult, error) {
 		}
 	}
 
-	return RunResult{
+	result := RunResult{
 		Beliefs:     len(beliefs),
 		Retained:    retained,
 		Window:      window,
 		BeliefItems: beliefs,
-	}, nil
+	}
+	return result, nil
 }

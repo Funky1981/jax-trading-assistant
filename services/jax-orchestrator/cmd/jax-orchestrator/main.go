@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"jax-trading-assistant/libs/contracts"
+	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/utcp"
 	"jax-trading-assistant/services/jax-orchestrator/internal/app"
 )
@@ -34,6 +35,16 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	runID := observability.NewRunID()
+	taskID := "orchestrate"
+	if strings.TrimSpace(symbol) != "" {
+		taskID = "orchestrate-" + strings.ToLower(symbol)
+	}
+	ctx = observability.WithRunInfo(ctx, observability.RunInfo{
+		RunID:  runID,
+		TaskID: taskID,
+		Symbol: strings.ToUpper(symbol),
+	})
 
 	client, err := utcp.NewUTCPClientFromFile(providersPath)
 	if err != nil {

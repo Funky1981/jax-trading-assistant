@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"jax-trading-assistant/libs/contracts"
+	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/utcp"
 	"jax-trading-assistant/services/jax-ingest/internal/ingest"
 )
@@ -42,6 +43,10 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	ctx = observability.WithRunInfo(ctx, observability.RunInfo{
+		RunID:  observability.NewRunID(),
+		TaskID: "ingest",
+	})
 
 	client, err := utcp.NewUTCPClientFromFile(providersPath)
 	if err != nil {

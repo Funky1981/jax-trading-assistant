@@ -2,10 +2,14 @@ package app
 
 import (
 	"context"
+	"encoding/json"
+	"reflect"
 	"testing"
 	"time"
 
 	"jax-trading-assistant/libs/contracts"
+	"jax-trading-assistant/libs/observability"
+	testfixtures "jax-trading-assistant/libs/testing"
 )
 
 type fakeMemory struct {
@@ -68,13 +72,16 @@ func TestOrchestrator_Run_RecallPlanExecuteRetain(t *testing.T) {
 
 	orch := NewOrchestrator(memory, agent, tools)
 
+	var constraints map[string]any
+	if err := json.Unmarshal(testfixtures.LoadFixture(t, "orchestrator_constraints.json"), &constraints); err != nil {
+		t.Fatalf("constraints fixture: %v", err)
+	}
+
 	result, err := orch.Run(context.Background(), OrchestrationRequest{
-		Bank:     "trade_decisions",
-		Symbol:   "AAPL",
-		Strategy: "earnings_gap_v1",
-		Constraints: map[string]any{
-			"risk": 0.02,
-		},
+		Bank:        "trade_decisions",
+		Symbol:      "AAPL",
+		Strategy:    "earnings_gap_v1",
+		Constraints: constraints,
 		UserContext: "user constraints",
 		Tags:        []string{"earnings", "risk-high"},
 	})
@@ -98,5 +105,20 @@ func TestOrchestrator_Run_RecallPlanExecuteRetain(t *testing.T) {
 	}
 	if memory.lastRetainItem.Type != "decision" || memory.lastRetainItem.Symbol != "AAPL" {
 		t.Fatalf("unexpected retained item: %#v", memory.lastRetainItem)
+	}
+	if memory.lastRetainItem.TS.IsZero() {
+		t.Fatalf("expected retained item timestamp")
+	}
+	if memory.lastRetainItem.Summary == "" {
+		t.Fatalf("expected retained item summary")
+	}
+	if len(memory.lastRetainItem.Tags) == 0 {
+		t.Fatalf("expected retained item tags")
+	}
+	if memory.lastRetainItem.Data == nil {
+		t.Fatalf("expected retained item data")
+	}
+	if redacted := observability.RedactValue(memory.lastRetainItem.Data); !reflect.DeepEqual(memory.lastRetainItem.Data, redacted) {
+		t.Fatalf("expected retained data to be redacted")
 	}
 }
