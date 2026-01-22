@@ -21,10 +21,12 @@ func TestMemoryToolJSON_Golden(t *testing.T) {
 	req := MemoryRetainRequest{Bank: "trade_decisions", Item: item}
 	retOut := MemoryRetainResponse{ID: "mem_123"}
 	recOut := MemoryRecallResponse{Items: []MemoryItem{item}}
+	refOut := MemoryReflectResponse{Items: []MemoryItem{item}}
 
 	assertJSONEqual(t, req, `{"bank":"trade_decisions","item":{"ts":"2025-01-01T00:00:00Z","type":"decision","symbol":"AAPL","tags":["earnings"],"summary":"Entered on earnings gap.","data":{"confidence":0.72},"source":{"system":"dexter"}}}`)
 	assertJSONEqual(t, retOut, `{"id":"mem_123"}`)
 	assertJSONEqual(t, recOut, `{"items":[{"ts":"2025-01-01T00:00:00Z","type":"decision","symbol":"AAPL","tags":["earnings"],"summary":"Entered on earnings gap.","data":{"confidence":0.72},"source":{"system":"dexter"}}]}`)
+	assertJSONEqual(t, refOut, `{"items":[{"ts":"2025-01-01T00:00:00Z","type":"decision","symbol":"AAPL","tags":["earnings"],"summary":"Entered on earnings gap.","data":{"confidence":0.72},"source":{"system":"dexter"}}]}`)
 }
 
 func assertJSONEqual(t *testing.T, got any, expected string) {

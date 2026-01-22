@@ -4,7 +4,7 @@
 
 Steps:
 1) `go test ./...`
-2) `go test -tags=integration ./...` (optional; can run nightly)
+2) `go test -tags=integration ./...` (optional; run via workflow dispatch)
 3) lint
 4) build docker images (optional)
 

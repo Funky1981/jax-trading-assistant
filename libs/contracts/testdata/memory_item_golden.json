@@ -1,0 +1,15 @@
+{
+  "ts": "2025-01-01T00:00:00Z",
+  "type": "decision",
+  "symbol": "AAPL",
+  "tags": [
+    "earnings"
+  ],
+  "summary": "Entered on earnings gap.",
+  "data": {
+    "confidence": 0.72
+  },
+  "source": {
+    "system": "dexter"
+  }
+}

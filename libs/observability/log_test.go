@@ -57,3 +57,35 @@ func TestLogEvent_WritesJSON(t *testing.T) {
 		t.Fatalf("expected api_key to be redacted, got %#v", input["api_key"])
 	}
 }
+
+func TestLogToolStart_RedactsInput(t *testing.T) {
+	var buf bytes.Buffer
+	previous := logger.Writer()
+	logger.SetOutput(&buf)
+	t.Cleanup(func() {
+		logger.SetOutput(previous)
+	})
+
+	LogToolStart(context.Background(), "memory", "memory.retain", map[string]any{
+		"token": "secret",
+		"value": 1,
+	})
+
+	raw := strings.TrimSpace(buf.String())
+	if raw == "" {
+		t.Fatal("expected log output")
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	input, ok := payload["input"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected input field to be object, got %#v", payload["input"])
+	}
+	if input["token"] != redactedValue {
+		t.Fatalf("expected token to be redacted, got %#v", input["token"])
+	}
+}

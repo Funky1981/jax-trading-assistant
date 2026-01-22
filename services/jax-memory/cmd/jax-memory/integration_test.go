@@ -5,9 +5,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -23,8 +27,14 @@ type toolResponse struct {
 
 func TestIntegration_JaxMemory_RetainRecall(t *testing.T) {
 	baseURL := os.Getenv("JAX_MEMORY_URL")
+	if baseURL == "" && os.Getenv("JAX_MEMORY_COMPOSE") == "" {
+		t.Skip("set JAX_MEMORY_URL or JAX_MEMORY_COMPOSE=1 to run")
+	}
 	if baseURL == "" {
-		t.Skip("JAX_MEMORY_URL not set")
+		if err := startCompose(t); err != nil {
+			t.Fatalf("compose: %v", err)
+		}
+		baseURL = "http://localhost:8090"
 	}
 
 	healthResp, err := http.Get(baseURL + "/health")
@@ -115,6 +125,70 @@ func TestIntegration_JaxMemory_RetainRecall(t *testing.T) {
 	if !found {
 		t.Fatalf("expected to recall retained memory")
 	}
+}
+
+func startCompose(t *testing.T) error {
+	t.Helper()
+
+	if _, err := exec.LookPath("docker"); err != nil {
+		return err
+	}
+
+	root, err := repoRoot()
+	if err != nil {
+		return err
+	}
+	composeFile := filepath.Join(root, "services", "jax-memory", "docker-compose.yml")
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
+	defer cancel()
+
+	up := exec.CommandContext(ctx, "docker", "compose", "-f", composeFile, "up", "-d", "--build")
+	up.Dir = root
+	up.Env = os.Environ()
+	if err := up.Run(); err != nil {
+		return err
+	}
+	t.Cleanup(func() {
+		down := exec.Command("docker", "compose", "-f", composeFile, "down")
+		down.Dir = root
+		_ = down.Run()
+	})
+
+	return waitForHealth(ctx, "http://localhost:8090/health")
+}
+
+func waitForHealth(ctx context.Context, url string) error {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return err
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				return nil
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return errors.New("timed out waiting for health")
+		case <-ticker.C:
+		}
+	}
+}
+
+func repoRoot() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	root := filepath.Clean(filepath.Join(wd, "..", "..", "..", ".."))
+	return root, nil
 }
 
 func mustJSON(v any) json.RawMessage {

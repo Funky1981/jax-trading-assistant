@@ -1,0 +1,97 @@
+version: "3.9"
+
+services:
+  hindsight:
+    build:
+      context: ./services/hindsight
+      dockerfile: docker/standalone/Dockerfile
+      args:
+        INCLUDE_API: "true"
+        INCLUDE_CP: "false"
+    environment:
+      HINDSIGHT_API_HOST: 0.0.0.0
+      HINDSIGHT_API_PORT: 8888
+      HINDSIGHT_API_LOG_LEVEL: info
+    ports:
+      - "8888:8888"
+
+  jax-memory:
+    build:
+      context: .
+      dockerfile: services/jax-memory/Dockerfile
+    environment:
+      HINDSIGHT_URL: http://hindsight:8888
+      PORT: 8090
+    ports:
+      - "8090:8090"
+    depends_on:
+      - hindsight
+
+  jax-api:
+    image: golang:1.22
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    command:
+      - go
+      - run
+      - ./services/jax-api/cmd/jax-api
+      - -providers
+      - config/providers.json
+      - -config
+      - config/jax-core.json
+      - -strategies
+      - config/strategies
+    ports:
+      - "8081:8081"
+    depends_on:
+      - jax-memory
+
+  jax-orchestrator:
+    profiles:
+      - jobs
+    image: golang:1.22
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    command:
+      - go
+      - run
+      - ./services/jax-orchestrator/cmd/jax-orchestrator
+      - -symbol
+      - ${JAX_SYMBOL:-AAPL}
+    depends_on:
+      - jax-memory
+
+  jax-ingest:
+    profiles:
+      - jobs
+    image: golang:1.22
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - ./data:/data
+    command:
+      - go
+      - run
+      - ./services/jax-ingest/cmd/jax-ingest
+      - -input
+      - /data/dexter.json
+    depends_on:
+      - jax-memory
+
+  postgres:
+    profiles:
+      - db
+    image: postgres:16
+    environment:
+      POSTGRES_USER: jax
+      POSTGRES_PASSWORD: jax
+      POSTGRES_DB: jax
+    ports:
+      - "5432:5432"
+    volumes:
+      - jax-postgres:/var/lib/postgresql/data
+
+volumes:
+  jax-postgres:

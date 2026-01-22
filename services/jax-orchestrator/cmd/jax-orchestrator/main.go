@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -11,25 +11,16 @@ import (
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/utcp"
 	"jax-trading-assistant/services/jax-orchestrator/internal/app"
+	"jax-trading-assistant/services/jax-orchestrator/internal/config"
 )
 
 func main() {
-	var providersPath string
-	var bank string
-	var symbol string
-	var strategy string
-	var userContext string
-	var tagsCSV string
+	cfg, err := config.Parse(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	flag.StringVar(&providersPath, "providers", "config/providers.json", "Path to providers.json")
-	flag.StringVar(&bank, "bank", "trade_decisions", "Memory bank to use")
-	flag.StringVar(&symbol, "symbol", "", "Symbol to orchestrate")
-	flag.StringVar(&strategy, "strategy", "", "Strategy identifier for tagging")
-	flag.StringVar(&userContext, "context", "", "User context for planning")
-	flag.StringVar(&tagsCSV, "tags", "", "Comma-separated tags")
-	flag.Parse()
-
-	if strings.TrimSpace(symbol) == "" {
+	if strings.TrimSpace(cfg.Symbol) == "" {
 		log.Fatal("symbol is required (use -symbol)")
 	}
 
@@ -37,16 +28,16 @@ func main() {
 	defer cancel()
 	runID := observability.NewRunID()
 	taskID := "orchestrate"
-	if strings.TrimSpace(symbol) != "" {
-		taskID = "orchestrate-" + strings.ToLower(symbol)
+	if strings.TrimSpace(cfg.Symbol) != "" {
+		taskID = "orchestrate-" + strings.ToLower(cfg.Symbol)
 	}
 	ctx = observability.WithRunInfo(ctx, observability.RunInfo{
 		RunID:  runID,
 		TaskID: taskID,
-		Symbol: strings.ToUpper(symbol),
+		Symbol: strings.ToUpper(cfg.Symbol),
 	})
 
-	client, err := utcp.NewUTCPClientFromFile(providersPath)
+	client, err := utcp.NewUTCPClientFromFile(cfg.ProvidersPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,11 +49,11 @@ func main() {
 
 	orch := app.NewOrchestrator(memory, agent, tools)
 	result, err := orch.Run(ctx, app.OrchestrationRequest{
-		Bank:        bank,
-		Symbol:      symbol,
-		Strategy:    strategy,
-		UserContext: userContext,
-		Tags:        parseTags(tagsCSV),
+		Bank:        cfg.Bank,
+		Symbol:      cfg.Symbol,
+		Strategy:    cfg.Strategy,
+		UserContext: cfg.UserContext,
+		Tags:        parseTags(cfg.TagsCSV),
 	})
 	if err != nil {
 		log.Fatal(err)

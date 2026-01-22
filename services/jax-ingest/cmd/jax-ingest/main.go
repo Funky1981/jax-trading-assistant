@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -15,20 +14,17 @@ import (
 	"jax-trading-assistant/libs/contracts"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/utcp"
+	"jax-trading-assistant/services/jax-ingest/internal/config"
 	"jax-trading-assistant/services/jax-ingest/internal/ingest"
 )
 
 func main() {
-	var providersPath string
-	var inputPath string
-	var threshold float64
+	cfg, err := config.Parse(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	flag.StringVar(&providersPath, "providers", "config/providers.json", "Path to providers.json")
-	flag.StringVar(&inputPath, "input", "", "Path to Dexter JSON payload (defaults to stdin)")
-	flag.Float64Var(&threshold, "threshold", 0.7, "Significance threshold for retention")
-	flag.Parse()
-
-	payload, err := readPayload(inputPath)
+	payload, err := readPayload(cfg.InputPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,7 +44,7 @@ func main() {
 		TaskID: "ingest",
 	})
 
-	client, err := utcp.NewUTCPClientFromFile(providersPath)
+	client, err := utcp.NewUTCPClientFromFile(cfg.ProvidersPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,7 +53,7 @@ func main() {
 	store := memoryAdapter{svc: memorySvc}
 
 	result, err := ingest.RetainDexterObservations(ctx, store, payload.Observations, ingest.RetentionConfig{
-		SignificanceThreshold: threshold,
+		SignificanceThreshold: cfg.Threshold,
 	})
 	if err != nil {
 		log.Fatal(err)
