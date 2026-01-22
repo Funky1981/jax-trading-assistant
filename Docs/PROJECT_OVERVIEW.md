@@ -8,7 +8,7 @@ Jax Trading Assistant is a multi-service system for trading workflows that combi
 - **Memory** via Hindsight (vendored) with a Jax Memory facade service.
 - **Research/agent ingestion** via Dexter (vendored) and Agent0 references.
 
-Specs and build plan live in `Docs/docs/` with a step-by-step roadmap and checklists.
+Specs and build plan live in `Docs/backend/` with a step-by-step roadmap. Supporting templates/checklists live in `.serena/`.
 
 ---
 
@@ -58,7 +58,9 @@ This repo follows **Clean Architecture / Hexagonal** principles:
   - `Agent0/`: Agent0 repo (reference/inspiration)
 
 - **Docs/**
-  - `docs/`: numbered build plan steps (01–12)
+  - `backend/`: numbered build plan steps (01-12)
+  - `frontend/`: UI documentation
+- **.serena/**
   - `checklists/`: done criteria for each step
   - `templates/`: copy/paste snippets
 
@@ -69,7 +71,7 @@ This repo follows **Clean Architecture / Hexagonal** principles:
 1. **UTCP providers** are defined in `config/providers.json` and used by `libs/utcp`.
 2. **Jax API** serves trading-related endpoints and uses shared libs.
 3. **Jax Memory** exposes UTCP memory tools, backed by Hindsight or an in-memory store.
-4. **Dexter/Agent0** integration is planned for ingestion and agent workflows (see Docs steps 06–08).
+4. **Dexter/Agent0** integration is planned for ingestion and agent workflows (see Docs/backend steps 06-08).
 
 ---
 
@@ -96,15 +98,18 @@ Dexter tests:
 
 ## Key docs to read next
 
-- `Docs/docs/02_Repository_Scaffold_and_Service_Skeletons.md`
-- `Docs/docs/03_Add_Hindsight_and_Memory_Service.md`
-- `Docs/docs/05_go_UTCP_Memory_Tools.md`
-- `Docs/docs/06_Agent0_Wiring_With_Memory.md`
-- `Docs/docs/07_Dexter_Ingestion_to_Memory.md`
+- `Docs/backend/02_Repository_Scaffold_and_Service_Skeletons.md`
+- `Docs/backend/03_Add_Hindsight_and_Memory_Service.md`
+- `Docs/backend/05_go_UTCP_Memory_Tools.md`
+- `Docs/backend/06_Agent0_Wiring_With_Memory.md`
+- `Docs/backend/07_Dexter_Ingestion_to_Memory.md`
 
 ---
 
 ## Notes
 
-- The repo is actively scaffolding with WIP modules; consult `Docs/docs/` for the authoritative implementation plan.
+- The repo is actively scaffolding with WIP modules; consult `Docs/backend/` for the authoritative implementation plan.
 - Vendored upstreams are pinned; see each `UPSTREAM.md` for commit references.
+
+
+

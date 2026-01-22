@@ -11,7 +11,7 @@ In the multi-service layout:
 
 ```text
 jax-trading assistant/
-  Docs/                         # Plan docs (see `Docs/docs/`)
+  Docs/                         # Plan docs (see `Docs/backend/` and `Docs/frontend/`)
   services/
     jax-api/                    # HTTP API service (current focus)
     jax-orchestrator/           # Agent0 pipeline service (skeleton)

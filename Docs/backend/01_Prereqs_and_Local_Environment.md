@@ -12,7 +12,7 @@
 ## Repo conventions
 - One service per folder in `/services`
 - Shared libs in `/libs`
-- All docs in `/docs`
+- All docs in `/Docs`
 - Test naming: `*_test.go`
 - Use `go test ./...` as the baseline test command
 
@@ -27,3 +27,4 @@
   - one unit test
   - one table-driven test case
 - Avoid tests that require live internet calls.
+

@@ -14,8 +14,12 @@
   /contracts               # shared DTOs/events
   /observability           # logging/tracing helpers
   /testing                 # test fixtures
-/docs
-/templates
+/Docs
+  /backend
+  /frontend
+/.serena
+  /templates
+  /checklists
 ```
 
 ## Boundaries (important)
@@ -32,3 +36,4 @@ For each service, add:
 - a health endpoint test (if HTTP)
 - a basic “can instantiate config” test
 - a “can log something” test
+

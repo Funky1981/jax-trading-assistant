@@ -55,9 +55,10 @@ Example:
 ```
 
 ## 4.5 — Definition of Done
-- Schemas live in `templates/memory/`
+- Schemas live in `.serena/templates/memory/`
 - Validation helpers exist in `libs/contracts` (or `libs/testing`)
 - Unit tests cover at least:
   - valid item
   - missing required field
   - invalid timestamp
+

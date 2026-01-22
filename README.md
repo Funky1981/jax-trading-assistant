@@ -1,8 +1,8 @@
 # jax-trading assistant
 
-Specs live in `Docs/` (see `Docs/docs/`).
+Specs live in `Docs/` (`Docs/backend` for build steps, `Docs/frontend` for UI docs).
 
-Repo scaffold and service skeletons (spec `Docs/docs/02_Repository_Scaffold_and_Service_Skeletons.md`):
+Repo scaffold and service skeletons (spec `Docs/backend/02_Repository_Scaffold_and_Service_Skeletons.md`):
 
 - `config/providers.json`
 - `libs/utcp/*` (UTCP client + local tools + Postgres storage adapter)
