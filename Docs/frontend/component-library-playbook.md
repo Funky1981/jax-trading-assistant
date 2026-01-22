@@ -1,7 +1,12 @@
 # Component Library Playbook
 
 ## Purpose
-Define the design system and component library for a professional trading UI. Components must be stable, composable, and performance‑aware.
+Define the design system and component library for a professional trading UI. Components must be stable, composable, and performance-aware.
+
+## Chosen Library
+- **MUI (Material UI)** as the base component library.
+- **Rationale:** strong accessibility defaults, dense data display support, mature theming, and a deep component catalog that can be adapted for trading layouts.
+- **Approach:** use MUI primitives and build custom trading modules on top of a shared token system.
 
 ## Component Taxonomy
 1. **Foundations**
@@ -27,13 +32,13 @@ Define the design system and component library for a professional trading UI. Co
   - Visible focus states.
 
 ## Variant Strategy
-- Variants must be defined centrally (e.g., `Button` → `primary`, `secondary`, `danger`, `ghost`).
+- Variants must be defined centrally (e.g., `Button` -> `primary`, `secondary`, `danger`, `ghost`).
 - Theming overrides must not leak into component internals.
 
 ## Performance Requirements
 - **Tables:** use virtualization and windowing for order/position logs.
-- **Charts:** decimate data points for high‑frequency feeds.
-- **Order Book:** batch updates and prioritize top‑of‑book changes.
+- **Charts:** decimate data points for high-frequency feeds.
+- **Order Book:** batch updates and prioritize top-of-book changes.
 
 ## Documentation Standards
 Each component doc must include:
@@ -43,4 +48,3 @@ Each component doc must include:
 - Accessibility notes
 - Performance considerations
 - Example usage
-

@@ -1,17 +1,17 @@
 # Step 02: Design System & Tokens
 
 ## Objective
-Create a centralized styling system with tokens that ensure consistent and professional‑grade UI theming.
+Create a centralized styling system with tokens that ensure consistent and professional-grade UI theming.
 
 ## Actions
 1. **Define design tokens**
    - Colors: background, surface, accent, critical, warning, success.
    - Typography: font families, scale, weight, line height.
-   - Spacing: 4‑pt or 8‑pt grid.
+   - Spacing: 4-pt or 8-pt grid.
    - Elevation: defined shadow levels.
 
 2. **Implement themes**
-   - Default dark theme optimized for high‑density trading UI.
+   - Default dark theme optimized for high-density trading UI.
    - Optional light theme for alternate environments.
    - Validate contrast ratios and accessibility.
 
@@ -23,8 +23,8 @@ Create a centralized styling system with tokens that ensure consistent and profe
    - Use centralized theme provider and enforce consistent usage.
 
 ## Deliverables
-- `styles/tokens` definitions.
-- `styles/themes` for dark + light.
+- `frontend/src/styles/tokens.ts` and `frontend/src/styles/tokens.css`.
+- `frontend/src/styles/theme.ts` (MUI theme factory + defaults).
 - Documentation updates in `Docs/frontend/styling-and-theming.md`.
 
 ## Exit Criteria

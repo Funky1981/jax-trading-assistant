@@ -28,6 +28,26 @@ jobs:
       - name: go test
         run: go test ./...
 
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+      - name: install
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+      - name: lint
+        working-directory: frontend
+        run: npm run lint
+      - name: typecheck
+        working-directory: frontend
+        run: npm run typecheck
+      - name: test
+        working-directory: frontend
+        run: npm run test
+
   integration:
     if: github.event_name == 'workflow_dispatch' && inputs.run_integration == 'true'
     runs-on: ubuntu-latest
