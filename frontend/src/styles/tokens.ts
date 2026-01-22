@@ -51,6 +51,10 @@ export const tokens = {
     xl: 24,
     xxl: 32,
   },
+  layout: {
+    gridRowHeight: 120,
+    contentMaxWidth: 1280,
+  },
   radius: {
     sm: 4,
     md: 8,

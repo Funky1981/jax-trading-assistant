@@ -4,23 +4,25 @@
 Deliver a configurable, professional dashboard system for trading workflows.
 
 ## Actions
-1. **Widget registry**
+1. Widget registry
    - Register widgets with metadata (size, data needs, refresh policy).
 
-2. **Layout persistence**
-   - Store per‑user layout configs with schema versioning.
+2. Layout persistence
+   - Store per-user layout configs with schema versioning.
 
-3. **Performance considerations**
+3. Performance considerations
    - Virtualize large widgets.
-   - Batch updates for real‑time data.
+   - Batch updates for real-time data.
 
-4. **Preset layouts**
+4. Preset layouts
    - Trader, Risk, Ops presets for rapid onboarding.
 
 ## Deliverables
-- Dashboard layout engine.
-- Registry + persistence layer.
-- Documentation updates in `Docs/frontend/dashboards-and-widgets.md`.
+- `frontend/src/features/dashboard/registry.ts`
+- `frontend/src/features/dashboard/layouts.ts`
+- `frontend/src/features/dashboard/persistence.ts`
+- `frontend/src/features/dashboard/DashboardGrid.tsx`
+- Documentation updates in `Docs/frontend/dashboards-and-widgets.md`
 
 ## Exit Criteria
 - Users can save and restore layouts.

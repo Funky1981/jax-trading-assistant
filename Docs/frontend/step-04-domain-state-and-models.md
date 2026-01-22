@@ -1,7 +1,7 @@
 # Step 04: Domain State & Models
 
 ## Objective
-Create a domain‑focused layer that encapsulates trading business logic, ensuring separation of concerns and testability.
+Create a domain-focused layer that encapsulates trading business logic, ensuring separation of concerns and testability.
 
 ## Actions
 1. **Model trading entities**
@@ -9,21 +9,21 @@ Create a domain‑focused layer that encapsulates trading business logic, ensuri
    - Use explicit event types (`OrderPlaced`, `PriceUpdated`).
 
 2. **Business logic utilities**
-   - PnL calculations, margin impact, risk summaries.
-   - Keep these utilities framework‑agnostic.
+   - PnL calculations, exposure, risk summaries.
+   - Keep these utilities framework-agnostic.
 
 3. **State management approach**
-   - Use unidirectional data flow (Redux Toolkit, Zustand, or Context + reducers).
+   - Use unidirectional data flow via event reducers.
    - Avoid business logic inside React components.
 
 4. **Selectors and derived data**
-   - Memoized selectors for expensive calculations.
+   - Memoized selectors for expensive calculations (later phase).
 
 ## Deliverables
-- `domain/` models and utilities.
-- `domain/events` and `domain/selectors`.
+- `frontend/src/domain/models.ts`, `frontend/src/domain/events.ts`, `frontend/src/domain/state.ts`.
+- `frontend/src/domain/calculations.ts`, `frontend/src/domain/selectors.ts`.
+- Tests under `frontend/src/domain/__tests__/`.
 
 ## Exit Criteria
-- Domain logic is unit‑tested.
+- Domain logic is unit-tested.
 - UI components receive derived data via selectors.
-

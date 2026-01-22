@@ -48,3 +48,13 @@ Each component doc must include:
 - Accessibility notes
 - Performance considerations
 - Example usage
+
+## Initial Build-out
+Implemented in `frontend/src/components`:
+- **Primitives:** `PrimaryButton`, `TextInput`, `SelectInput`
+- **Data display:** `DataTable`
+- **Trading modules:** `PnLIndicator`, `PositionCard`, `RiskSummary`, `OrderTicket`
+
+## Component Library UI
+- Storybook lives under `frontend/.storybook`.
+- Run `npm run storybook` in `frontend/` to view all components at `http://localhost:6006`.
