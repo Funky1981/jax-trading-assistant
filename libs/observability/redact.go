@@ -78,6 +78,8 @@ func isSensitiveKey(key string) bool {
 	switch normalized {
 	case "order_payload", "order_request", "raw_order":
 		return true
+	case "account_id", "accountid", "account-id", "acct_id":
+		return true
 	}
 	if strings.Contains(normalized, "password") {
 		return true

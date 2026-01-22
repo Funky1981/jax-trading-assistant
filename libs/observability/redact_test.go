@@ -12,6 +12,7 @@ func TestRedactValue_RedactsSensitiveFields(t *testing.T) {
 		"order_payload": map[string]any{
 			"price": 123.45,
 		},
+		"account_id": "acct-123",
 		"nested": map[string]any{
 			"password": "secret",
 		},
@@ -21,6 +22,7 @@ func TestRedactValue_RedactsSensitiveFields(t *testing.T) {
 		"symbol":             "AAPL",
 		"broker_credentials": redactedValue,
 		"order_payload":      redactedValue,
+		"account_id":         redactedValue,
 		"nested": map[string]any{
 			"password": redactedValue,
 		},

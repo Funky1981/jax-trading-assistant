@@ -36,8 +36,10 @@ Each tool:
 `memory.reflect` request:
 
 ```json
-{ "bank":"trade_outcomes", "params": { "window_days": 7, "prompt_hint":"Summarise what worked." } }
+{ "bank":"trade_outcomes", "params": { "query":"Summarise what worked.", "window_days": 7, "prompt_hint":"Include outcomes with strong risk control." } }
 ```
+
+Note: `params.query` is required by Hindsight's reflect API.
 
 ## 5.3 — Logging and safety
 - redact:

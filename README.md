@@ -29,6 +29,13 @@ Vendored repos:
 
 See `ARCHITECTURE.md`.
 
+## Environment
+
+Use local `.env` files (or shell env vars) for secrets and keep them untracked. Common locations:
+
+- `dexter/.env` for Dexter API keys
+- `services/hindsight/.env` for Hindsight API keys
+
 ## Testing
 
 ### Automated (Go)

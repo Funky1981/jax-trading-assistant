@@ -45,6 +45,18 @@ func TestClient_Retain_SendsExpectedShape(t *testing.T) {
 		if len(body.Items) != 1 || body.Items[0].Content == "" {
 			t.Fatalf("unexpected body: %#v", body)
 		}
+		if body.Items[0].Metadata["symbol"] != "AAPL" {
+			t.Fatalf("expected symbol metadata, got %#v", body.Items[0].Metadata)
+		}
+		if body.Items[0].Metadata["item_type"] != "decision" {
+			t.Fatalf("expected item_type metadata, got %#v", body.Items[0].Metadata)
+		}
+		if body.Items[0].Metadata["source_system"] != "dexter" {
+			t.Fatalf("expected source_system metadata, got %#v", body.Items[0].Metadata)
+		}
+		if len(body.Items[0].Tags) != 1 || body.Items[0].Tags[0] != "earnings" {
+			t.Fatalf("expected tags, got %#v", body.Items[0].Tags)
+		}
 		_ = json.NewEncoder(w).Encode(retainResponse{Success: true, BankID: "trade_decisions", ItemsCount: 1, Async: false})
 	}))
 	t.Cleanup(srv.Close)
@@ -61,6 +73,8 @@ func TestClient_Retain_SendsExpectedShape(t *testing.T) {
 		Symbol:  "AAPL",
 		Tags:    []string{"earnings"},
 		Summary: "AAPL earnings gap long.",
+		Data:    map[string]any{"confidence": 0.7},
+		Source:  &contracts.MemorySource{System: "dexter"},
 	})
 	if err != nil {
 		t.Fatalf("retain: %v", err)
@@ -86,7 +100,20 @@ func TestClient_Recall_MapsResults(t *testing.T) {
 		entities := []string{"AAPL"}
 		_ = json.NewEncoder(w).Encode(recallResponse{
 			Results: []recallResult{
-				{ID: "m1", Text: "Test memory", Type: &typ, Entities: &entities},
+				{
+					ID:          "m1",
+					Text:        "Test memory",
+					Type:        &typ,
+					Entities:    entities,
+					MentionedAt: strPtr("2025-01-02T03:04:05Z"),
+					Tags:        []string{"earnings"},
+					Metadata: map[string]string{
+						"item_type":     "decision",
+						"symbol":        "AAPL",
+						"source_system": "dexter",
+						"data_json":     `{"confidence":0.62}`,
+					},
+				},
 			},
 		})
 	}))
@@ -103,6 +130,15 @@ func TestClient_Recall_MapsResults(t *testing.T) {
 	}
 	if len(out) != 1 || out[0].ID != "m1" || out[0].Summary != "Test memory" {
 		t.Fatalf("unexpected: %#v", out)
+	}
+	if out[0].Type != "decision" || out[0].Symbol != "AAPL" {
+		t.Fatalf("expected metadata to map type/symbol: %#v", out[0])
+	}
+	if out[0].Source == nil || out[0].Source.System != "dexter" {
+		t.Fatalf("expected source system dexter, got %#v", out[0].Source)
+	}
+	if out[0].Data["confidence"] != 0.62 {
+		t.Fatalf("expected confidence in data, got %#v", out[0].Data)
 	}
 }
 
@@ -147,6 +183,10 @@ func TestClient_Reflect_MapsResponse(t *testing.T) {
 	if len(items) != 1 || items[0].Summary == "" {
 		t.Fatalf("unexpected: %#v", items)
 	}
+}
+
+func strPtr(value string) *string {
+	return &value
 }
 
 func TestClient_Retain_HandlesHTTPError(t *testing.T) {

@@ -20,3 +20,5 @@ Thumbs.db
 
 # Local dev artifacts
 .sesskey
+.env
+**/.env
