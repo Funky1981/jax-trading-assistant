@@ -17,9 +17,8 @@ Compose full application pages from documented components and ensure navigation 
 
 ## Deliverables
 - `pages/` folder with core screens.
-- Updated documentation in `Docs/docs/frontend/pages-and-layouts.md`.
+- Updated documentation in `Docs/frontend/pages-and-layouts.md`.
 
 ## Exit Criteria
 - All pages render using shared components.
 - No page contains duplicated UI logic.
-

@@ -20,9 +20,8 @@ Deliver a configurable, professional dashboard system for trading workflows.
 ## Deliverables
 - Dashboard layout engine.
 - Registry + persistence layer.
-- Documentation updates in `Docs/docs/frontend/dashboards-and-widgets.md`.
+- Documentation updates in `Docs/frontend/dashboards-and-widgets.md`.
 
 ## Exit Criteria
 - Users can save and restore layouts.
 - Dashboard remains responsive under live updates.
-

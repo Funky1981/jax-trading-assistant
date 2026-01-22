@@ -20,9 +20,8 @@ Build a reusable component library to power all pages and widgets consistently.
 
 ## Deliverables
 - `components/` directory with primitives and data display elements.
-- Component docs updated in `Docs/docs/frontend/component-library-playbook.md`.
+- Component docs updated in `Docs/frontend/component-library-playbook.md`.
 
 ## Exit Criteria
 - All components pass accessibility checks.
 - Components are theme‑compatible and responsive.
-

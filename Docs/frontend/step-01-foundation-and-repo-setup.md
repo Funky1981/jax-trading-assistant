@@ -10,7 +10,7 @@ Establish a clean React frontend foundation with tooling, conventions, and a pre
 
 2. **Select the component library + design system approach**
    - Choose a component library (e.g., MUI, Chakra, or a custom design system) and confirm it supports theming, accessibility, and high‑density layouts.
-   - Record the choice in `Docs/docs/frontend/component-library-playbook.md` and align tokens in `Docs/docs/frontend/styling-and-theming.md`.
+   - Record the choice in `Docs/frontend/component-library-playbook.md` and align tokens in `Docs/frontend/styling-and-theming.md`.
 
 3. **Setup TypeScript & linting**
    - Configure TypeScript for strict mode.
@@ -32,4 +32,3 @@ Establish a clean React frontend foundation with tooling, conventions, and a pre
 ## Exit Criteria
 - Frontend compiles locally.
 - Linting + type checks run in CI.
-

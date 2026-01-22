@@ -25,9 +25,8 @@ Create a centralized styling system with tokens that ensure consistent and profe
 ## Deliverables
 - `styles/tokens` definitions.
 - `styles/themes` for dark + light.
-- Documentation updates in `Docs/docs/frontend/styling-and-theming.md`.
+- Documentation updates in `Docs/frontend/styling-and-theming.md`.
 
 ## Exit Criteria
 - All primitives use tokens.
 - Theme switch does not break component styling.
-
