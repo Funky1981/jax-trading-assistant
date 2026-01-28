@@ -1,0 +1,19 @@
+{
+  "portfolio_constraints": {
+    "max_position_size": 50000,
+    "max_positions": 10,
+    "max_sector_exposure": 0.30,
+    "max_correlated_exposure": 0.40,
+    "max_portfolio_risk": 0.15,
+    "max_drawdown": 0.20,
+    "min_account_size": 10000
+  },
+  "position_limits": {
+    "max_risk_per_trade": 0.02,
+    "min_risk_per_trade": 0.005,
+    "max_leverage": 2.0,
+    "min_stop_distance": 0.01,
+    "max_stop_distance": 0.10
+  },
+  "sizing_model": "fixed_fractional"
+}

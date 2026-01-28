@@ -10,11 +10,11 @@ import (
 
 // PortfolioRiskManager enforces portfolio-level risk constraints
 type PortfolioRiskManager struct {
-	constraints      domain.PortfolioConstraints
-	positionLimits   domain.PositionLimits
-	portfolioState   domain.PortfolioState
-	sizingModel      domain.RiskSizingModel
-	audit            *AuditLogger
+	constraints    domain.PortfolioConstraints
+	positionLimits domain.PositionLimits
+	portfolioState domain.PortfolioState
+	sizingModel    domain.RiskSizingModel
+	audit          *AuditLogger
 }
 
 // NewPortfolioRiskManager creates a new portfolio risk manager
@@ -62,7 +62,7 @@ func (p *PortfolioRiskManager) ValidatePosition(
 			Allowed: false,
 			Reason:  "account size below minimum threshold",
 			Violations: []string{
-				fmt.Sprintf("account size $%.2f < minimum $%.2f", 
+				fmt.Sprintf("account size $%.2f < minimum $%.2f",
 					p.portfolioState.AccountSize, p.constraints.MinAccountSize),
 			},
 		}
@@ -73,15 +73,15 @@ func (p *PortfolioRiskManager) ValidatePosition(
 			Allowed: false,
 			Reason:  "maximum drawdown exceeded",
 			Violations: []string{
-				fmt.Sprintf("current drawdown %.2f%% >= max %.2f%%", 
+				fmt.Sprintf("current drawdown %.2f%% >= max %.2f%%",
 					p.portfolioState.CurrentDrawdown*100, p.constraints.MaxDrawdown*100),
 			},
 		}
 	}
 
 	if p.portfolioState.OpenPositions >= p.constraints.MaxPositions {
-		violations = append(violations, 
-			fmt.Sprintf("max positions reached (%d/%d)", 
+		violations = append(violations,
+			fmt.Sprintf("max positions reached (%d/%d)",
 				p.portfolioState.OpenPositions, p.constraints.MaxPositions))
 	}
 
@@ -91,27 +91,27 @@ func (p *PortfolioRiskManager) ValidatePosition(
 
 	// Validate stop distance
 	if stopDistance < p.positionLimits.MinStopDistance {
-		violations = append(violations, 
-			fmt.Sprintf("stop too tight: %.2f%% < minimum %.2f%%", 
+		violations = append(violations,
+			fmt.Sprintf("stop too tight: %.2f%% < minimum %.2f%%",
 				stopDistance*100, p.positionLimits.MinStopDistance*100))
 	}
 
 	if stopDistance > p.positionLimits.MaxStopDistance {
-		violations = append(violations, 
-			fmt.Sprintf("stop too wide: %.2f%% > maximum %.2f%%", 
+		violations = append(violations,
+			fmt.Sprintf("stop too wide: %.2f%% > maximum %.2f%%",
 				stopDistance*100, p.positionLimits.MaxStopDistance*100))
 	}
 
 	// Validate risk percentage
 	if riskPercent < p.positionLimits.MinRiskPerTrade {
-		violations = append(violations, 
-			fmt.Sprintf("risk too small: %.2f%% < minimum %.2f%%", 
+		violations = append(violations,
+			fmt.Sprintf("risk too small: %.2f%% < minimum %.2f%%",
 				riskPercent*100, p.positionLimits.MinRiskPerTrade*100))
 	}
 
 	if riskPercent > p.positionLimits.MaxRiskPerTrade {
-		violations = append(violations, 
-			fmt.Sprintf("risk too large: %.2f%% > maximum %.2f%%", 
+		violations = append(violations,
+			fmt.Sprintf("risk too large: %.2f%% > maximum %.2f%%",
 				riskPercent*100, p.positionLimits.MaxRiskPerTrade*100))
 	}
 
@@ -127,8 +127,8 @@ func (p *PortfolioRiskManager) ValidatePosition(
 	// Check max position size
 	positionValue := float64(positionSize) * entry
 	if positionValue > p.constraints.MaxPositionSize {
-		violations = append(violations, 
-			fmt.Sprintf("position too large: $%.2f > maximum $%.2f", 
+		violations = append(violations,
+			fmt.Sprintf("position too large: $%.2f > maximum $%.2f",
 				positionValue, p.constraints.MaxPositionSize))
 	}
 
@@ -136,8 +136,8 @@ func (p *PortfolioRiskManager) ValidatePosition(
 	if p.portfolioState.AccountSize > 0 {
 		metrics.Leverage = positionValue / p.portfolioState.AccountSize
 		if metrics.Leverage > p.positionLimits.MaxLeverage {
-			violations = append(violations, 
-				fmt.Sprintf("leverage too high: %.2fx > maximum %.2fx", 
+			violations = append(violations,
+				fmt.Sprintf("leverage too high: %.2fx > maximum %.2fx",
 					metrics.Leverage, p.positionLimits.MaxLeverage))
 		}
 	}
@@ -147,8 +147,8 @@ func (p *PortfolioRiskManager) ValidatePosition(
 	metrics.PortfolioRisk = newPortfolioRisk / p.portfolioState.AccountSize
 
 	if metrics.PortfolioRisk > p.constraints.MaxPortfolioRisk {
-		violations = append(violations, 
-			fmt.Sprintf("portfolio risk too high: %.2f%% > maximum %.2f%%", 
+		violations = append(violations,
+			fmt.Sprintf("portfolio risk too high: %.2f%% > maximum %.2f%%",
 				metrics.PortfolioRisk*100, p.constraints.MaxPortfolioRisk*100))
 	}
 
@@ -159,8 +159,8 @@ func (p *PortfolioRiskManager) ValidatePosition(
 		metrics.SectorExposure = newSectorExposure
 
 		if newSectorExposure > p.constraints.MaxSectorExposure {
-			violations = append(violations, 
-				fmt.Sprintf("sector exposure too high for %s: %.2f%% > maximum %.2f%%", 
+			violations = append(violations,
+				fmt.Sprintf("sector exposure too high for %s: %.2f%% > maximum %.2f%%",
 					sector, newSectorExposure*100, p.constraints.MaxSectorExposure*100))
 		}
 	}
@@ -185,7 +185,7 @@ func (p *PortfolioRiskManager) ValidatePosition(
 		if !allowed {
 			outcome = domain.AuditOutcomeRejected
 		}
-		_ = p.audit.LogDecision(ctx, "portfolio_risk_check", outcome, 
+		_ = p.audit.LogDecision(ctx, "portfolio_risk_check", outcome,
 			map[string]interface{}{
 				"symbol":     symbol,
 				"sector":     sector,
