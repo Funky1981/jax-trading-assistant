@@ -22,7 +22,7 @@ func TestEventDetector_DetectGaps_AboveThreshold(t *testing.T) {
 			{TS: time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC), Open: 105},
 		},
 	}
-	detector := NewEventDetector(market)
+	detector := NewEventDetector(market, nil)
 
 	events, err := detector.DetectGaps(context.Background(), "AAPL", 3)
 	if err != nil {
@@ -43,7 +43,7 @@ func TestEventDetector_DetectGaps_BelowThreshold(t *testing.T) {
 			{TS: time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC), Open: 101},
 		},
 	}
-	detector := NewEventDetector(market)
+	detector := NewEventDetector(market, nil)
 
 	events, err := detector.DetectGaps(context.Background(), "AAPL", 3)
 	if err != nil {

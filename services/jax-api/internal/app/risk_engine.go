@@ -12,16 +12,23 @@ type RiskTool interface {
 }
 
 type RiskEngine struct {
-	risk RiskTool
+	risk  RiskTool
+	audit *AuditLogger
 }
 
-func NewRiskEngine(risk RiskTool) *RiskEngine {
-	return &RiskEngine{risk: risk}
+func NewRiskEngine(risk RiskTool, audit *AuditLogger) *RiskEngine {
+	return &RiskEngine{risk: risk, audit: audit}
 }
 
 func (r *RiskEngine) Calculate(ctx context.Context, accountSize float64, riskPercent float64, entry float64, stop float64, target *float64) (domain.RiskResult, error) {
+	if r.audit != nil {
+		_ = r.audit.LogDecision(ctx, "risk_calculate_start", domain.AuditOutcomeStarted, redactRiskInputPayload(accountSize, riskPercent, entry, stop, target), nil)
+	}
 	positionSize, riskPerUnit, totalRisk, err := r.risk.PositionSize(ctx, accountSize, riskPercent, entry, stop)
 	if err != nil {
+		if r.audit != nil {
+			_ = r.audit.LogDecision(ctx, "risk_calculate_error", domain.AuditOutcomeError, redactRiskInputPayload(accountSize, riskPercent, entry, stop, target), err)
+		}
 		return domain.RiskResult{}, err
 	}
 
@@ -29,15 +36,24 @@ func (r *RiskEngine) Calculate(ctx context.Context, accountSize float64, riskPer
 	if target != nil {
 		rm, err := r.risk.RMultiple(ctx, entry, stop, *target)
 		if err != nil {
+			if r.audit != nil {
+				_ = r.audit.LogDecision(ctx, "risk_calculate_rmultiple_error", domain.AuditOutcomeError, redactRiskInputPayload(accountSize, riskPercent, entry, stop, target), err)
+			}
 			return domain.RiskResult{}, err
 		}
 		rMultiple = rm
 	}
 
-	return domain.RiskResult{
+	result := domain.RiskResult{
 		PositionSize: positionSize,
 		RiskPerUnit:  riskPerUnit,
 		TotalRisk:    totalRisk,
 		RMultiple:    rMultiple,
-	}, nil
+	}
+
+	if r.audit != nil {
+		_ = r.audit.LogDecision(ctx, "risk_calculate_success", domain.AuditOutcomeSuccess, redactRiskResultPayload(result), nil)
+	}
+
+	return result, nil
 }
