@@ -4,7 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orchestrationService } from '../data/orchestration-service';
-import type { OrchestrationRequest } from '../data/types';
+import type { OrchestrationRequest, OrchestrationResult } from '../data/types';
 
 export function useOrchestrationRun() {
   const queryClient = useQueryClient();

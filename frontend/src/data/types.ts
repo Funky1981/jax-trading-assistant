@@ -48,7 +48,10 @@ export interface HealthStatus {
 
 export interface MemoryItem {
   id?: string;
+  key: string;
+  bank: string;
   ts: string;
+  timestamp: string;
   type: string;
   symbol: string;
   summary: string;
