@@ -80,7 +80,7 @@ func main() {
 
 	marketAdapter := adapters.NewUTCPMarketAdapter(marketSvc)
 	riskAdapter := adapters.NewUTCPRiskAdapter(riskSvc)
-	riskEngine := app.NewRiskEngine(riskAdapter)
+	var auditLogger *app.AuditLogger
 
 	var tradeStore app.TradeStore
 	var tradeSaver app.Storage
@@ -88,6 +88,7 @@ func main() {
 		storeAdapter := adapters.NewUTCPStorageAdapter(storageSvc)
 		tradeStore = storeAdapter
 		tradeSaver = storeAdapter
+		auditLogger = app.NewAuditLogger(storeAdapter)
 	}
 
 	var dexter app.Dexter
@@ -95,9 +96,10 @@ func main() {
 		dexter = adapters.NewUTCPDexterAdapter(dexterSvc)
 	}
 
-	detector := app.NewEventDetector(marketAdapter)
-	generator := app.NewTradeGenerator(marketAdapter, strategyMap)
-	orchestrator := app.NewOrchestrator(detector, generator, riskEngine, tradeSaver, dexter)
+	riskEngine := app.NewRiskEngine(riskAdapter, auditLogger)
+	detector := app.NewEventDetector(marketAdapter, auditLogger)
+	generator := app.NewTradeGenerator(marketAdapter, strategyMap, auditLogger)
+	orchestrator := app.NewOrchestrator(detector, generator, riskEngine, tradeSaver, dexter, auditLogger)
 
 	server := httpapi.NewServer()
 	server.RegisterHealth()

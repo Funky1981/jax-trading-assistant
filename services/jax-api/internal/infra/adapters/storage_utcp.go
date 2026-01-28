@@ -3,6 +3,7 @@ package adapters
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"jax-trading-assistant/libs/utcp"
 	"jax-trading-assistant/services/jax-api/internal/app"
@@ -50,6 +51,30 @@ func (a *UTCPStorageAdapter) SaveTrade(ctx context.Context, setup domain.TradeSe
 		}
 	}
 	return a.storage.SaveTrade(ctx, in)
+}
+
+func (a *UTCPStorageAdapter) SaveAuditEvent(ctx context.Context, event domain.AuditEvent) error {
+	action := strings.TrimSpace(event.Action)
+	eventType := "audit"
+	if action != "" {
+		eventType = "audit." + strings.ReplaceAll(action, " ", "_")
+	}
+	payload := map[string]any{
+		"correlationId": event.CorrelationID,
+		"action":        event.Action,
+		"outcome":       event.Outcome,
+		"payload":       event.Payload,
+	}
+	if event.Error != "" {
+		payload["error"] = event.Error
+	}
+	return a.storage.SaveEvent(ctx, utcp.StoredEvent{
+		ID:      event.ID,
+		Symbol:  "audit",
+		Type:    eventType,
+		Time:    event.Timestamp,
+		Payload: payload,
+	})
 }
 
 func (a *UTCPStorageAdapter) GetTrade(ctx context.Context, id string) (domain.TradeRecord, error) {
