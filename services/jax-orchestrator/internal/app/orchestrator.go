@@ -92,20 +92,32 @@ type OrchestrationResult struct {
 }
 
 func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (OrchestrationResult, error) {
+	startTime := time.Now()
+	var runErr error
+	defer func() {
+		duration := time.Since(startTime)
+		observability.RecordOrchestrationRun(ctx, duration, 7, runErr)
+	}()
+
 	if o.memory == nil {
-		return OrchestrationResult{}, fmt.Errorf("orchestrator: memory client required")
+		runErr = fmt.Errorf("orchestrator: memory client required")
+		return OrchestrationResult{}, runErr
 	}
 	if o.agent == nil {
-		return OrchestrationResult{}, fmt.Errorf("orchestrator: agent required")
+		runErr = fmt.Errorf("orchestrator: agent required")
+		return OrchestrationResult{}, runErr
 	}
 	if o.tools == nil {
-		return OrchestrationResult{}, fmt.Errorf("orchestrator: tool runner required")
+		runErr = fmt.Errorf("orchestrator: tool runner required")
+		return OrchestrationResult{}, runErr
 	}
 	if strings.TrimSpace(req.Bank) == "" {
-		return OrchestrationResult{}, fmt.Errorf("orchestrator: bank is required")
+		runErr = fmt.Errorf("orchestrator: bank is required")
+		return OrchestrationResult{}, runErr
 	}
 	if strings.TrimSpace(req.Symbol) == "" {
-		return OrchestrationResult{}, fmt.Errorf("orchestrator: symbol is required")
+		runErr = fmt.Errorf("orchestrator: symbol is required")
+		return OrchestrationResult{}, runErr
 	}
 
 	// 1. Recall relevant memories
@@ -113,6 +125,11 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 		Symbol: req.Symbol,
 		Limit:  5,
 	})
+	if err != nil {
+		runErr = err
+		return OrchestrationResult{}, err
+	}
+	observability.RecordRecall(ctx, "hindsight", "recall", err)
 	if err != nil {
 		return OrchestrationResult{}, err
 	}
@@ -127,6 +144,7 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 			signal, err := strategy.Analyze(ctx, analysisInput)
 			if err == nil && signal.Type != strategies.SignalHold {
 				signals = append(signals, signal)
+				observability.RecordStrategySignal(ctx, req.Strategy, string(signal.Type), signal.Confidence)
 			}
 		}
 	}
@@ -134,10 +152,12 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 	// 3. Dexter research (if enabled and queries provided)
 	var research *dexter.ResearchCompanyOutput
 	if o.dexter != nil && len(req.ResearchQueries) > 0 {
+		researchStart := time.Now()
 		res, err := o.dexter.ResearchCompany(ctx, dexter.ResearchCompanyInput{
 			Ticker:    req.Symbol,
 			Questions: req.ResearchQueries,
 		})
+		observability.RecordResearchQuery(ctx, "dexter", time.Since(researchStart), err)
 		if err == nil {
 			research = &res
 		}
@@ -191,11 +211,15 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 		Memories:    agentMemories,
 	}
 
+	planStart := time.Now()
 	agentPlan, err := o.agent.Plan(ctx, planReq)
 	if err != nil {
+		runErr = err
 		return OrchestrationResult{}, err
 	}
+	observability.RecordAgent0Plan(ctx, time.Since(planStart), len(agentPlan.Steps), agentPlan.Confidence, nil)
 
+	// 5. Build plan result
 	plan := PlanResult{
 		Summary:        agentPlan.Summary,
 		Steps:          agentPlan.Steps,
@@ -204,13 +228,14 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 		ReasoningNotes: agentPlan.ReasoningNotes,
 	}
 
-	// 5. Execute tools based on plan
+	// 6. Execute tools based on plan
 	toolRuns, err := o.tools.Execute(ctx, plan)
 	if err != nil {
+		runErr = err
 		return OrchestrationResult{}, err
 	}
 
-	// 6. Retain decision to memory
+	// 7. Retain decision to memory
 	retainedData := map[string]any{
 		"inputs": req.Constraints,
 		"plan": map[string]any{
@@ -246,11 +271,14 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 		retained.Summary = "Decision recorded."
 	}
 	if err := contracts.ValidateMemoryItem(retained); err != nil {
+		runErr = err
 		return OrchestrationResult{}, err
 	}
 	if _, err := o.memory.Retain(ctx, req.Bank, retained); err != nil {
+		runErr = err
 		return OrchestrationResult{}, err
 	}
+	observability.RecordRetain(ctx, req.Bank, nil)
 
 	return OrchestrationResult{Plan: plan, Tools: toolRuns}, nil
 }

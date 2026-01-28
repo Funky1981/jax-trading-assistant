@@ -2,9 +2,15 @@ module jax-trading-assistant
 
 go 1.22
 
+replace jax-trading-assistant/libs/contracts => ./libs/contracts
+
+replace jax-trading-assistant/libs/observability => ./libs/observability
+
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/jackc/pgx/v5 v5.7.1
+	jax-trading-assistant/libs/contracts v0.0.0
+	jax-trading-assistant/libs/observability v0.0.0-00010101000000-000000000000
 )
 
 require (
