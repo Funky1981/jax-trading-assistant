@@ -25,7 +25,7 @@ func TestTradeGenerator_GeneratesTargetsFromRule(t *testing.T) {
 		},
 	}
 
-	g := NewTradeGenerator(market, strategies)
+	g := NewTradeGenerator(market, strategies, nil)
 	e := domain.Event{
 		ID:     "ev1",
 		Symbol: "AAPL",

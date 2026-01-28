@@ -12,16 +12,20 @@ import (
 type TradeGenerator struct {
 	market     MarketData
 	strategies map[string]domain.StrategyConfig
+	audit      *AuditLogger
 }
 
-func NewTradeGenerator(market MarketData, strategies map[string]domain.StrategyConfig) *TradeGenerator {
+func NewTradeGenerator(market MarketData, strategies map[string]domain.StrategyConfig, audit *AuditLogger) *TradeGenerator {
 	if strategies == nil {
 		strategies = make(map[string]domain.StrategyConfig)
 	}
-	return &TradeGenerator{market: market, strategies: strategies}
+	return &TradeGenerator{market: market, strategies: strategies, audit: audit}
 }
 
 func (g *TradeGenerator) GenerateFromEvent(ctx context.Context, e domain.Event) ([]domain.TradeSetup, error) {
+	if g.audit != nil {
+		_ = g.audit.LogDecision(ctx, "trade_generate_start", domain.AuditOutcomeStarted, redactEventPayload(e), nil)
+	}
 	var matched []domain.StrategyConfig
 	for _, s := range g.strategies {
 		for _, t := range s.EventTypes {
@@ -32,14 +36,31 @@ func (g *TradeGenerator) GenerateFromEvent(ctx context.Context, e domain.Event) 
 		}
 	}
 	if len(matched) == 0 {
+		if g.audit != nil {
+			_ = g.audit.LogDecision(ctx, "trade_generate_no_strategies", domain.AuditOutcomeSkipped, map[string]any{
+				"eventType": e.Type,
+				"symbol":    e.Symbol,
+			}, nil)
+		}
 		return nil, nil
 	}
 
 	candles, err := g.market.GetDailyCandles(ctx, e.Symbol, 2)
 	if err != nil {
+		if g.audit != nil {
+			_ = g.audit.LogDecision(ctx, "trade_generate_candles_error", domain.AuditOutcomeError, map[string]any{
+				"symbol": e.Symbol,
+			}, err)
+		}
 		return nil, err
 	}
 	if len(candles) == 0 {
+		if g.audit != nil {
+			_ = g.audit.LogDecision(ctx, "trade_generate_no_candles", domain.AuditOutcomeSkipped, map[string]any{
+				"symbol":      e.Symbol,
+				"candleCount": 0,
+			}, nil)
+		}
 		return nil, nil
 	}
 	cur := candles[len(candles)-1]
@@ -50,6 +71,11 @@ func (g *TradeGenerator) GenerateFromEvent(ctx context.Context, e domain.Event) 
 		entry = cur.Close
 	}
 	if entry == 0 {
+		if g.audit != nil {
+			_ = g.audit.LogDecision(ctx, "trade_generate_missing_entry", domain.AuditOutcomeSkipped, map[string]any{
+				"symbol": e.Symbol,
+			}, nil)
+		}
 		return nil, nil
 	}
 
@@ -66,6 +92,11 @@ func (g *TradeGenerator) GenerateFromEvent(ctx context.Context, e domain.Event) 
 
 	riskPerUnit := abs(entry - stop)
 	if riskPerUnit == 0 {
+		if g.audit != nil {
+			_ = g.audit.LogDecision(ctx, "trade_generate_zero_risk", domain.AuditOutcomeSkipped, map[string]any{
+				"symbol": e.Symbol,
+			}, nil)
+		}
 		return nil, nil
 	}
 
@@ -73,6 +104,12 @@ func (g *TradeGenerator) GenerateFromEvent(ctx context.Context, e domain.Event) 
 	for _, s := range matched {
 		targetMultiples, err := parseTargetRuleRMultiples(s.TargetRule)
 		if err != nil {
+			if g.audit != nil {
+				_ = g.audit.LogDecision(ctx, "trade_generate_target_rule_error", domain.AuditOutcomeError, map[string]any{
+					"symbol":     e.Symbol,
+					"strategyId": s.ID,
+				}, err)
+			}
 			return nil, err
 		}
 		targets := make([]float64, 0, len(targetMultiples))
@@ -98,6 +135,24 @@ func (g *TradeGenerator) GenerateFromEvent(ctx context.Context, e domain.Event) 
 			StrategyID: s.ID,
 			Notes:      fmt.Sprintf("generated from event %s", e.Type),
 		})
+		if g.audit != nil {
+			payload := map[string]any{
+				"strategyId": s.ID,
+				"symbol":     e.Symbol,
+				"targets":    len(targets),
+				"direction":  direction,
+			}
+			_ = g.audit.LogDecision(ctx, "trade_generate_strategy", domain.AuditOutcomeSuccess, payload, nil)
+		}
+	}
+
+	if g.audit != nil {
+		_ = g.audit.LogDecision(ctx, "trade_generate_success", domain.AuditOutcomeSuccess, map[string]any{
+			"symbol":     e.Symbol,
+			"eventId":    e.ID,
+			"strategies": len(matched),
+			"setups":     len(setups),
+		}, nil)
 	}
 
 	return setups, nil
