@@ -4,6 +4,8 @@ import { PrimaryButton } from '../primitives/PrimaryButton';
 import { SelectInput } from '../primitives/SelectInput';
 import { TextInput } from '../primitives/TextInput';
 import { tokens } from '../../styles/tokens';
+import type { OrderDraft } from '../../domain/models';
+import type { Side } from '../../domain/types';
 
 const sideOptions = [
   { label: 'Buy', value: 'buy' },
@@ -12,13 +14,14 @@ const sideOptions = [
 
 interface OrderTicketProps {
   symbol: string;
-  onSubmit?: (payload: { side: string; quantity: number; price: number }) => void;
+  defaultPrice?: number;
+  onSubmit?: (payload: OrderDraft) => void;
 }
 
-export function OrderTicket({ symbol, onSubmit }: OrderTicketProps) {
-  const [side, setSide] = useState('buy');
+export function OrderTicket({ symbol, defaultPrice, onSubmit }: OrderTicketProps) {
+  const [side, setSide] = useState<Side>('buy');
   const [quantity, setQuantity] = useState(100);
-  const [price, setPrice] = useState(0);
+  const [price, setPrice] = useState(() => defaultPrice ?? 0);
 
   return (
     <Stack
@@ -37,7 +40,7 @@ export function OrderTicket({ symbol, onSubmit }: OrderTicketProps) {
       <SelectInput
         label="Side"
         value={side}
-        onChange={(event) => setSide(event.target.value)}
+        onChange={(event) => setSide(event.target.value as Side)}
         options={sideOptions}
       />
       <TextInput
@@ -53,7 +56,7 @@ export function OrderTicket({ symbol, onSubmit }: OrderTicketProps) {
         onChange={(event) => setPrice(Number(event.target.value))}
       />
       <PrimaryButton
-        onClick={() => onSubmit?.({ side, quantity, price })}
+        onClick={() => onSubmit?.({ symbol, side, quantity, price })}
         disabled={!quantity}
       >
         Place Order

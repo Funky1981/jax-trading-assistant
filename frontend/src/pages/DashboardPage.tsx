@@ -2,9 +2,15 @@ import { Stack, Typography } from '@mui/material';
 import { SelectInput } from '../components';
 import { DashboardGrid } from '../features/dashboard/DashboardGrid';
 import { presetOptions, useDashboardLayout } from '../features/dashboard/useDashboardLayout';
+import { useDomain } from '../domain/store';
+import { selectOrders, selectPositions, selectTicks } from '../domain/selectors';
 
 export function DashboardPage() {
   const { layout, applyPreset } = useDashboardLayout();
+  const { state, actions } = useDomain();
+  const positions = selectPositions(state);
+  const orders = selectOrders(state).sort((a, b) => b.createdAt - a.createdAt);
+  const ticks = selectTicks(state);
 
   return (
     <Stack spacing={3}>
@@ -28,7 +34,14 @@ export function DashboardPage() {
         sx={{ maxWidth: 240 }}
       />
 
-      <DashboardGrid layout={layout} />
+      <DashboardGrid
+        layout={layout}
+        positions={positions}
+        orders={orders}
+        ticks={ticks}
+        riskLimits={state.riskLimits}
+        onOrderSubmit={actions.placeOrder}
+      />
     </Stack>
   );
 }

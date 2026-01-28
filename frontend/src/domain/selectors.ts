@@ -13,6 +13,14 @@ export function selectPositions(state: DomainState) {
   return Object.values(state.positions);
 }
 
+export function selectTicks(state: DomainState) {
+  return Object.values(state.ticks).sort((a, b) => a.symbol.localeCompare(b.symbol));
+}
+
+export function selectTickBySymbol(state: DomainState, symbol: string) {
+  return state.ticks[symbol] ?? null;
+}
+
 export function selectTotalExposure(state: DomainState) {
   return calculateTotalExposure(selectPositions(state));
 }

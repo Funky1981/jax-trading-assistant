@@ -4,6 +4,7 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import App from './app/App';
 import './styles/tokens.css';
 import { theme } from './styles/theme';
+import { DomainProvider } from './domain/store';
 
 const root = document.getElementById('root');
 if (!root) {
@@ -14,7 +15,9 @@ createRoot(root).render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <App />
+      <DomainProvider>
+        <App />
+      </DomainProvider>
     </ThemeProvider>
   </React.StrictMode>
 );

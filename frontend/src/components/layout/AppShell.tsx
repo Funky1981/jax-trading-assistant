@@ -5,6 +5,7 @@ import {
   IconButton,
   List,
   ListItemButton,
+  ListItem,
   ListItemText,
   Toolbar,
   Typography,
@@ -19,7 +20,7 @@ import { theme } from '../../styles/theme';
 const drawerWidth = 240;
 
 const navItems = [
-  { label: 'Dashboard', path: '/' },
+  { label: 'Dashboard', path: '/', end: true },
   { label: 'Order Ticket', path: '/order-ticket' },
   { label: 'Blotter', path: '/blotter' },
   { label: 'Portfolio', path: '/portfolio' },
@@ -38,27 +39,28 @@ export function AppShell() {
         </Typography>
         <List>
           {navItems.map((item) => (
-            <NavLink key={item.path} to={item.path} style={{ textDecoration: 'none' }}>
-              {({ isActive }) => (
-                <ListItemButton
-                  selected={isActive}
-                  onClick={() => setMobileOpen(false)}
-                  sx={{
-                    borderRadius: tokens.radius.sm,
-                    marginBottom: tokens.spacing.xs,
-                    color: tokens.colors.textMuted,
-                    border: '1px solid transparent',
-                    '&.Mui-selected': {
-                      backgroundColor: tokens.colors.surface,
-                      color: tokens.colors.text,
-                      border: `1px solid ${tokens.colors.border}`,
-                    },
-                  }}
-                >
-                  <ListItemText primary={item.label} />
-                </ListItemButton>
-              )}
-            </NavLink>
+            <ListItem key={item.path} disablePadding>
+              <ListItemButton
+                component={NavLink}
+                to={item.path}
+                end={item.end}
+                onClick={() => setMobileOpen(false)}
+                sx={{
+                  borderRadius: tokens.radius.sm,
+                  marginBottom: tokens.spacing.xs,
+                  color: tokens.colors.textMuted,
+                  border: '1px solid transparent',
+                  textDecoration: 'none',
+                  '&.active': {
+                    backgroundColor: tokens.colors.surface,
+                    color: tokens.colors.text,
+                    border: `1px solid ${tokens.colors.border}`,
+                  },
+                }}
+              >
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            </ListItem>
           ))}
         </List>
       </Box>

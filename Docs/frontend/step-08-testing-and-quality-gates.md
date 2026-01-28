@@ -20,8 +20,12 @@ Ensure every UI element and workflow has automated validation to prevent regress
    - Measure render cadence and memory under streaming data.
 
 ## Deliverables
-- Test suites across unit, integration, and E2E layers.
-- CI gates enforcing test pass/fail.
+- Unit tests: domain + component coverage in `frontend/src/**/__tests__/`.
+- Integration tests: order ticket flow + blotter update harness in `frontend/src/tests/integration/`.
+- Accessibility checks with `vitest-axe` in `frontend/src/tests/accessibility/`.
+- Performance guardrails in `frontend/src/tests/performance/`.
+- E2E Playwright suite in `frontend/e2e/` with `frontend/playwright.config.ts`.
+- Scripts: `npm run test`, `npm run test:e2e` (run `npx playwright install --with-deps` once).
 
 ## Exit Criteria
 - CI blocks merges on failing tests.

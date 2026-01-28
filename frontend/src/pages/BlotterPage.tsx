@@ -1,13 +1,13 @@
 import { Stack, Typography } from '@mui/material';
 import { DataTable } from '../components';
-
-const blotterRows = [
-  { id: '1', symbol: 'AAPL', side: 'Buy', quantity: 150, price: 249.42, status: 'Filled' },
-  { id: '2', symbol: 'MSFT', side: 'Sell', quantity: 50, price: 413.1, status: 'Open' },
-  { id: '3', symbol: 'SPY', side: 'Buy', quantity: 200, price: 541.22, status: 'Cancelled' },
-];
+import { useDomain } from '../domain/store';
+import { selectOrders } from '../domain/selectors';
+import { formatPrice } from '../domain/market';
 
 export function BlotterPage() {
+  const { state } = useDomain();
+  const orders = selectOrders(state).sort((a, b) => b.createdAt - a.createdAt);
+
   return (
     <Stack spacing={2}>
       <Typography variant="h4">Blotter</Typography>
@@ -19,10 +19,15 @@ export function BlotterPage() {
           { key: 'symbol', label: 'Symbol' },
           { key: 'side', label: 'Side' },
           { key: 'quantity', label: 'Qty', align: 'right' },
-          { key: 'price', label: 'Price', align: 'right' },
+          {
+            key: 'price',
+            label: 'Price',
+            align: 'right',
+            render: (row) => formatPrice(row.price),
+          },
           { key: 'status', label: 'Status' },
         ]}
-        rows={blotterRows}
+        rows={orders}
         getRowId={(row) => row.id}
       />
     </Stack>

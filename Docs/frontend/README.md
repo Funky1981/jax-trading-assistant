@@ -40,3 +40,4 @@ This documentation defines a professional, high-performance React frontend for a
 - [Step 06: Pages & Routing](./step-06-pages-and-routing.md)
 - [Step 07: Dashboard Customization](./step-07-dashboard-customization.md)
 - [Step 08: Testing & Quality Gates](./step-08-testing-and-quality-gates.md)
+- [Step 09: Data Wiring & Domain Integration](./step-09-data-wiring-and-integration.md)

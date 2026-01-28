@@ -5,6 +5,8 @@ node_modules/
 dist/
 .vite/
 storybook-static/
+playwright-report/
+test-results/
 
 # Python
 __pycache__/

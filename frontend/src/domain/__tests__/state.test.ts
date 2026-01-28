@@ -50,6 +50,7 @@ describe('domain reducer', () => {
     });
 
     expect(withPrice.positions.AAPL.marketPrice).toBe(150);
+    expect(withPrice.ticks.AAPL.price).toBe(150);
     expect(breached).toBe(true);
   });
 });

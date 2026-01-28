@@ -20,6 +20,13 @@ export interface Order {
   createdAt: number;
 }
 
+export interface OrderDraft {
+  symbol: string;
+  side: Side;
+  quantity: number;
+  price: number;
+}
+
 export interface Position {
   symbol: string;
   quantity: number;

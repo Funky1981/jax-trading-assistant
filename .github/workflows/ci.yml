@@ -47,6 +47,12 @@ jobs:
       - name: test
         working-directory: frontend
         run: npm run test
+      - name: playwright install
+        working-directory: frontend
+        run: npx playwright install --with-deps
+      - name: e2e
+        working-directory: frontend
+        run: npm run test:e2e
 
   integration:
     if: github.event_name == 'workflow_dispatch' && inputs.run_integration == 'true'
