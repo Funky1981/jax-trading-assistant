@@ -1,15 +1,25 @@
 services:
   postgres:
     image: postgres:16
+    container_name: jax-postgres
     environment:
-      POSTGRES_DB: jax
-      POSTGRES_USER: jax
-      POSTGRES_PASSWORD: jax
+      POSTGRES_DB: jaxdb
+      POSTGRES_USER: jaxuser
+      POSTGRES_PASSWORD: jaxpass
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jax -d jax"]
-      interval: 2s
+      test: ["CMD-SHELL", "pg_isready -U jaxuser -d jaxdb"]
+      interval: 5s
       timeout: 3s
-      retries: 20
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
 

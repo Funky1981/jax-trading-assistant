@@ -1,11 +1,4 @@
--- DEPRECATED: This file is kept for reference only.
--- Use migrations in db/postgres/migrations/ instead.
--- To apply migrations, run: scripts/migrate.ps1 up
-
--- Initial schema for Postgres-backed storage provider.
--- This schema is now managed via versioned migrations:
---   - 000001_initial_schema.up.sql: events and trades tables
---   - 000002_audit_events.up.sql: audit_events table
+-- Initial schema for events and trades
 
 CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,
@@ -40,22 +33,3 @@ CREATE INDEX IF NOT EXISTS idx_trades_symbol_created_at ON trades(symbol, create
 CREATE INDEX IF NOT EXISTS idx_trades_strategy_created_at ON trades(strategy_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_trades_direction ON trades(direction);
 CREATE INDEX IF NOT EXISTS idx_trades_event_id ON trades(event_id);
-
-CREATE TABLE IF NOT EXISTS audit_events (
-  id TEXT PRIMARY KEY,
-  correlation_id TEXT NOT NULL,
-  category TEXT NOT NULL,
-  action TEXT NOT NULL,
-  outcome TEXT NOT NULL,
-  message TEXT NOT NULL,
-  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-  timestamp TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_audit_correlation_id ON audit_events(correlation_id);
-CREATE INDEX IF NOT EXISTS idx_audit_category ON audit_events(category);
-CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_events(action);
-CREATE INDEX IF NOT EXISTS idx_audit_outcome ON audit_events(outcome);
-CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_events(timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_category_timestamp ON audit_events(category, timestamp DESC);
-

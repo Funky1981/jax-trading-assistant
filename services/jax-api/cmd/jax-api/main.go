@@ -2,15 +2,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
-
+	"jax-trading-assistant/libs/database"
 	"jax-trading-assistant/libs/utcp"
 	"jax-trading-assistant/services/jax-api/internal/app"
 	"jax-trading-assistant/services/jax-api/internal/config"
@@ -51,20 +49,27 @@ func main() {
 	}
 
 	if coreCfg.PostgresDSN != "" {
-		db, err := sql.Open("pgx", coreCfg.PostgresDSN)
+		// Configure database connection with pooling and retry logic
+		dbConfig := database.DefaultConfig()
+		dbConfig.DSN = coreCfg.PostgresDSN
+
+		// Connect with migrations
+		db, err := database.ConnectWithMigrations(ctx, dbConfig, "file://db/postgres/migrations")
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("failed to connect to database: %v", err)
 		}
 		defer db.Close()
-		if err := db.PingContext(ctx); err != nil {
-			log.Fatal(err)
-		}
-		store, err := utcp.NewPostgresStorage(db)
+
+		log.Printf("database connected: max_open=%d, max_idle=%d, max_lifetime=%v",
+			dbConfig.MaxOpenConns, dbConfig.MaxIdleConns, dbConfig.ConnMaxLifetime)
+
+		// Create UTCP storage provider
+		store, err := utcp.NewPostgresStorage(db.DB)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("failed to create storage: %v", err)
 		}
 		if err := utcp.RegisterStorageTools(registry, store); err != nil {
-			log.Fatal(err)
+			log.Fatalf("failed to register storage tools: %v", err)
 		}
 	}
 
