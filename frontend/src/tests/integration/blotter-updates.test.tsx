@@ -3,8 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { useState } from 'react';
 import { DataTable, PrimaryButton } from '../../components';
+import type { DataTableColumn } from '../../components/data/DataTable';
 
-const columns = [
+interface BlotterRow {
+  id: string;
+  symbol: string;
+  side: string;
+  quantity: number;
+}
+
+const columns: DataTableColumn<BlotterRow>[] = [
   { key: 'symbol', label: 'Symbol' },
   { key: 'side', label: 'Side' },
   { key: 'quantity', label: 'Qty', align: 'right' },
