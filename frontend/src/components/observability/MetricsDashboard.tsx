@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { TrendingUp, CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
 import { useRecentMetrics, useRunMetrics } from '../../hooks/useObservability';
+import type { MetricEvent } from '../../data/types';
 
 export function MetricsDashboard() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export function MetricsDashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {recentMetrics.map((metric: any, idx: number) => (
+              {recentMetrics.map((metric: MetricEvent, idx: number) => (
                 <TableRow
                   key={idx}
                   hover

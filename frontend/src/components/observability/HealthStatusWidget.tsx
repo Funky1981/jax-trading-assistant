@@ -1,4 +1,4 @@
-import { Box, Card, CardContent, Typography, Chip, Stack, CircularProgress } from '@mui/material';
+import { Card, CardContent, Typography, Chip, Stack, CircularProgress } from '@mui/material';
 import { CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
 import { useAPIHealth, useMemoryHealth } from '../../hooks/useObservability';
 
@@ -10,7 +10,6 @@ export function HealthStatusWidget() {
     name: string,
     isLoading: boolean,
     isHealthy?: boolean,
-    timestamp?: string,
   ) => {
     if (isLoading) {
       return (
@@ -48,12 +47,11 @@ export function HealthStatusWidget() {
           Backend Health
         </Typography>
         <Stack spacing={2}>
-          {renderServiceStatus('JAX API', apiLoading, apiHealth?.healthy, apiHealth?.timestamp)}
+          {renderServiceStatus('JAX API', apiLoading, apiHealth?.healthy)}
           {renderServiceStatus(
             'Memory Service',
             memoryLoading,
             memoryHealth?.healthy,
-            memoryHealth?.timestamp,
           )}
         </Stack>
         {(apiHealth?.timestamp || memoryHealth?.timestamp) && (

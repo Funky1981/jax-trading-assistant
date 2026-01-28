@@ -5,10 +5,11 @@ import "time"
 type AuditOutcome string
 
 const (
-	AuditOutcomeStarted AuditOutcome = "started"
-	AuditOutcomeSuccess AuditOutcome = "success"
-	AuditOutcomeSkipped AuditOutcome = "skipped"
-	AuditOutcomeError   AuditOutcome = "error"
+	AuditOutcomeStarted  AuditOutcome = "started"
+	AuditOutcomeSuccess  AuditOutcome = "success"
+	AuditOutcomeSkipped  AuditOutcome = "skipped"
+	AuditOutcomeRejected AuditOutcome = "rejected"
+	AuditOutcomeError    AuditOutcome = "error"
 )
 
 type AuditEvent struct {

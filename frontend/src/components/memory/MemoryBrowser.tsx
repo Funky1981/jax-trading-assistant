@@ -12,7 +12,6 @@ import {
   ListItemText,
   CircularProgress,
   Alert,
-  Button,
   Select,
   MenuItem,
   FormControl,
@@ -20,6 +19,7 @@ import {
 } from '@mui/material';
 import { Search, Storage } from '@mui/icons-material';
 import { useMemorySearch, useMemoryBanks } from '../../hooks/useMemory';
+import type { MemoryItem } from '../../data/types';
 
 export function MemoryBrowser() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,7 +87,7 @@ export function MemoryBrowser() {
 
           {results && results.length > 0 && (
             <List>
-              {results.map((item: any, idx: number) => (
+              {results.map((item: MemoryItem, idx: number) => (
                 <ListItem
                   key={idx}
                   sx={{

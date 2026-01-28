@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	"github.com/alpacahq/alpaca-trade-api-go/v3/marketdata"
 )
 
@@ -24,8 +23,8 @@ func NewAlpacaProvider(config ProviderConfig) (*AlpacaProvider, error) {
 	}
 
 	client := marketdata.NewClient(marketdata.ClientOpts{
-		ApiKey:    config.APIKey,
-		ApiSecret: config.APISecret,
+		APIKey:    config.APIKey,
+		APISecret: config.APISecret,
 		BaseURL:   baseURL,
 	})
 

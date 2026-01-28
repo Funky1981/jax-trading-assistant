@@ -11,7 +11,7 @@ export function useOrchestrationRun() {
   
   return useMutation({
     mutationFn: (request: OrchestrationRequest) => orchestrationService.run(request),
-    onSuccess: (data: any) => {
+    onSuccess: (data: OrchestrationResult) => {
       // Invalidate runs list
       queryClient.invalidateQueries({ queryKey: ['orchestration', 'runs'] });
       
@@ -28,7 +28,7 @@ export function useOrchestrationRunStatus(runId: string | null) {
     queryKey: ['orchestration', 'run', runId],
     queryFn: () => runId ? orchestrationService.getRunStatus(runId) : Promise.resolve(null),
     enabled: !!runId,
-    refetchInterval: (query: any) => {
+    refetchInterval: (query) => {
       const data = query?.state?.data;
       // Stop polling if status is terminal
       if (data?.status === 'completed' || data?.status === 'failed') {
