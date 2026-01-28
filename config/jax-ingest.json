@@ -1,0 +1,32 @@
+{
+  "database_dsn": "postgres://jaxuser:jaxpass@localhost:5432/jaxdb?sslmode=disable",
+  "ingest_interval": 300,
+  "symbols": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "NVDA",
+    "TSLA",
+    "META",
+    "SPY",
+    "QQQ",
+    "IWM"
+  ],
+  "polygon": {
+    "enabled": true,
+    "api_key": "",
+    "tier": "free"
+  },
+  "alpaca": {
+    "enabled": false,
+    "api_key": "",
+    "api_secret": "",
+    "tier": "free"
+  },
+  "cache": {
+    "enabled": true,
+    "redis_url": "localhost:6379",
+    "ttl": 300
+  }
+}
