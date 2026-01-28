@@ -9,6 +9,7 @@ import (
 
 	"jax-trading-assistant/libs/agent0"
 	"jax-trading-assistant/libs/contracts"
+	"jax-trading-assistant/libs/dexter"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/strategies"
 	testfixtures "jax-trading-assistant/libs/testing"
@@ -175,8 +176,15 @@ func TestOrchestrator_WithStrategySignals(t *testing.T) {
 	}
 
 	// Check that retained memory includes signals
-	if data, ok := memory.lastRetainItem.Data["signals"].([]map[string]interface{}); !ok || len(data) == 0 {
-		t.Error("expected retained memory to include signals")
+	signalsData := memory.lastRetainItem.Data["signals"]
+	t.Logf("signals type: %T, value: %+v", signalsData, signalsData)
+	if data, ok := signalsData.([]map[string]interface{}); !ok || len(data) == 0 {
+		// Try []interface{} as well since RedactValue might convert it
+		if data2, ok2 := signalsData.([]interface{}); ok2 && len(data2) > 0 {
+			// OK, RedactValue converted it
+		} else {
+			t.Errorf("expected retained memory to include signals, got type=%T", signalsData)
+		}
 	}
 }
 
@@ -193,3 +201,77 @@ func findSubstring(s, substr string) bool {
 	return false
 }
 
+func TestOrchestrator_WithDexterResearch(t *testing.T) {
+	memory := &fakeMemory{}
+	agent := &fakeAgent{}
+	tools := &fakeTools{}
+	registry := strategies.NewRegistry()
+
+	// Mock Dexter client
+	dexterMock := &dexter.MockClient{
+		ResearchCompanyFunc: func(ctx context.Context, input dexter.ResearchCompanyInput) (dexter.ResearchCompanyOutput, error) {
+			if input.Ticker != "TSLA" {
+				t.Errorf("expected ticker TSLA, got %s", input.Ticker)
+			}
+			return dexter.ResearchCompanyOutput{
+				Ticker:    input.Ticker,
+				Summary:   "Tesla showing strong EV market growth",
+				KeyPoints: []string{"Revenue up 25% YoY", "Production capacity expanding"},
+				Metrics:   map[string]interface{}{"pe_ratio": 65.2, "growth_rate": 0.25},
+			}, nil
+		},
+	}
+
+	orch := NewOrchestrator(memory, agent, tools, registry).WithDexter(dexterMock)
+
+	result, err := orch.Run(context.Background(), OrchestrationRequest{
+		Bank:            "trade_decisions",
+		Symbol:          "TSLA",
+		Strategy:        "",
+		Constraints:     map[string]any{"price": 250.0},
+		UserContext:     "Analyzing TSLA earnings opportunity",
+		Tags:            []string{"earnings"},
+		ResearchQueries: []string{"What is revenue growth?", "What are production trends?"},
+	})
+
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	// Check that plan was generated
+	if result.Plan.Summary == "" {
+		t.Error("expected non-empty plan summary")
+	}
+
+	// Check that agent received context with research
+	if !contains(agent.lastPlanRequest.Context, "Dexter research") {
+		t.Error("expected agent context to include Dexter research")
+	}
+
+	if !contains(agent.lastPlanRequest.Context, "Tesla showing strong EV market growth") {
+		t.Error("expected agent context to include research summary")
+	}
+
+	// Check that retained memory includes research
+	if data, ok := memory.lastRetainItem.Data["research"].(map[string]interface{}); !ok || data == nil {
+		t.Errorf("expected retained memory to include research data, got: %+v", memory.lastRetainItem.Data)
+	} else {
+		if summary, ok := data["summary"].(string); !ok || summary == "" {
+			t.Errorf("expected research summary in retained memory, got: %+v", data)
+		}
+		// key_points can be []string or []interface{} depending on how it's stored
+		keyPointsRaw := data["key_points"]
+		if keyPointsRaw == nil {
+			t.Error("expected research key points in retained memory, got nil")
+		} else {
+			// Try []string first
+			if kp, ok := keyPointsRaw.([]string); ok && len(kp) > 0 {
+				// OK
+			} else if kp, ok := keyPointsRaw.([]interface{}); ok && len(kp) > 0 {
+				// Also OK
+			} else {
+				t.Errorf("expected research key points (non-empty array), got type=%T, value=%+v", keyPointsRaw, keyPointsRaw)
+			}
+		}
+	}
+}

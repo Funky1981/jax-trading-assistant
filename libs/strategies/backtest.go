@@ -8,10 +8,10 @@ import (
 
 // BacktestResult represents the results of a single backtest run
 type BacktestResult struct {
-	StrategyID    string
-	Symbol        string
-	StartDate     time.Time
-	EndDate       time.Time
+	StrategyID     string
+	Symbol         string
+	StartDate      time.Time
+	EndDate        time.Time
 	InitialCapital float64
 	FinalCapital   float64
 
@@ -27,11 +27,11 @@ type BacktestResult struct {
 	ProfitFactor   float64
 
 	// Trade statistics
-	AvgWin         float64
-	AvgLoss        float64
-	AvgR           float64
-	LargestWin     float64
-	LargestLoss    float64
+	AvgWin      float64
+	AvgLoss     float64
+	AvgR        float64
+	LargestWin  float64
+	LargestLoss float64
 
 	// Trades executed
 	Trades []BacktestTrade
@@ -39,20 +39,20 @@ type BacktestResult struct {
 
 // BacktestTrade represents a single trade in a backtest
 type BacktestTrade struct {
-	Symbol      string
-	EntryDate   time.Time
-	ExitDate    time.Time
-	EntryPrice  float64
-	ExitPrice   float64
-	StopLoss    float64
-	TakeProfit  []float64
-	Quantity    int
-	Direction   SignalType // Buy or Sell
-	PnL         float64
-	PnLPct      float64
-	RMultiple   float64
-	ExitReason  string
-	Confidence  float64
+	Symbol     string
+	EntryDate  time.Time
+	ExitDate   time.Time
+	EntryPrice float64
+	ExitPrice  float64
+	StopLoss   float64
+	TakeProfit []float64
+	Quantity   int
+	Direction  SignalType // Buy or Sell
+	PnL        float64
+	PnLPct     float64
+	RMultiple  float64
+	ExitReason string
+	Confidence float64
 }
 
 // Backtester runs historical backtests on strategies
@@ -188,14 +188,14 @@ func (b *Backtester) Run(ctx context.Context, config BacktestConfig) (*BacktestR
 
 			// Enter trade
 			trade := BacktestTrade{
-				Symbol:      symbol,
-				EntryDate:   candle.Timestamp,
-				EntryPrice:  signal.EntryPrice,
-				StopLoss:    signal.StopLoss,
-				TakeProfit:  signal.TakeProfit,
-				Quantity:    quantity,
-				Direction:   signal.Type,
-				Confidence:  signal.Confidence,
+				Symbol:     symbol,
+				EntryDate:  candle.Timestamp,
+				EntryPrice: signal.EntryPrice,
+				StopLoss:   signal.StopLoss,
+				TakeProfit: signal.TakeProfit,
+				Quantity:   quantity,
+				Direction:  signal.Type,
+				Confidence: signal.Confidence,
 			}
 
 			activePositions[symbol] = &trade

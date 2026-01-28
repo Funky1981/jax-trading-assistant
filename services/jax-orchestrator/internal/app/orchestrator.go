@@ -8,6 +8,7 @@ import (
 
 	"jax-trading-assistant/libs/agent0"
 	"jax-trading-assistant/libs/contracts"
+	"jax-trading-assistant/libs/dexter"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/strategies"
 )
@@ -22,6 +23,11 @@ type Agent0Client interface {
 	Execute(ctx context.Context, req agent0.ExecuteRequest) (agent0.ExecuteResponse, error)
 }
 
+type DexterClient interface {
+	ResearchCompany(ctx context.Context, input dexter.ResearchCompanyInput) (dexter.ResearchCompanyOutput, error)
+	CompareCompanies(ctx context.Context, input dexter.CompareCompaniesInput) (dexter.CompareCompaniesOutput, error)
+}
+
 type ToolRunner interface {
 	Execute(ctx context.Context, plan PlanResult) ([]ToolRun, error)
 }
@@ -29,6 +35,7 @@ type ToolRunner interface {
 type Orchestrator struct {
 	memory     MemoryClient
 	agent      Agent0Client
+	dexter     DexterClient
 	tools      ToolRunner
 	strategies *strategies.Registry
 }
@@ -42,13 +49,20 @@ func NewOrchestrator(memory MemoryClient, agent Agent0Client, tools ToolRunner, 
 	}
 }
 
+// WithDexter adds Dexter research capabilities
+func (o *Orchestrator) WithDexter(dexter DexterClient) *Orchestrator {
+	o.dexter = dexter
+	return o
+}
+
 type OrchestrationRequest struct {
-	Bank        string
-	Symbol      string
-	Strategy    string
-	Constraints map[string]any
-	UserContext string
-	Tags        []string
+	Bank            string
+	Symbol          string
+	Strategy        string
+	Constraints     map[string]any
+	UserContext     string
+	Tags            []string
+	ResearchQueries []string // Optional: Questions for Dexter research
 }
 
 type PlanInput struct {
@@ -117,7 +131,19 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 		}
 	}
 
-	// 3. Build context for Agent0
+	// 3. Dexter research (if enabled and queries provided)
+	var research *dexter.ResearchCompanyOutput
+	if o.dexter != nil && len(req.ResearchQueries) > 0 {
+		res, err := o.dexter.ResearchCompany(ctx, dexter.ResearchCompanyInput{
+			Ticker:    req.Symbol,
+			Questions: req.ResearchQueries,
+		})
+		if err == nil {
+			research = &res
+		}
+	}
+
+	// 4. Build context for Agent0
 	contextBuilder := strings.Builder{}
 	contextBuilder.WriteString(req.UserContext)
 	if len(memories) > 0 {
@@ -129,25 +155,36 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 	if len(signals) > 0 {
 		contextBuilder.WriteString("\n\nStrategy signals:\n")
 		for i, sig := range signals {
-			contextBuilder.WriteString(fmt.Sprintf("%d. %s: %s at %.2f (confidence: %.2f)\n", 
+			contextBuilder.WriteString(fmt.Sprintf("%d. %s: %s at %.2f (confidence: %.2f)\n",
 				i+1, sig.Symbol, sig.Type, sig.EntryPrice, sig.Confidence))
 		}
 	}
+	if research != nil {
+		contextBuilder.WriteString("\n\nDexter research:\n")
+		contextBuilder.WriteString(fmt.Sprintf("Summary: %s\n", research.Summary))
+		if len(research.KeyPoints) > 0 {
+			contextBuilder.WriteString("Key points:\n")
+			for i, point := range research.KeyPoints {
+				contextBuilder.WriteString(fmt.Sprintf("  %d. %s\n", i+1, point))
+			}
+		}
+		if len(research.Metrics) > 0 {
+			contextBuilder.WriteString(fmt.Sprintf("Metrics: %v\n", research.Metrics))
+		}
+	}
 
-	// 4. Agent0 planning with enhanced context
-	agentMemories := make([]agent0.Memory, len(memories))
-	for i, mem := range memories {
-		agentMemories[i] = agent0.Memory{
+	agentMemories := []agent0.Memory{}
+	for _, mem := range memories {
+		agentMemories = append(agentMemories, agent0.Memory{
 			Summary: mem.Summary,
 			Type:    mem.Type,
 			Symbol:  mem.Symbol,
 			Tags:    mem.Tags,
 			Data:    mem.Data,
-		}
+		})
 	}
 
 	planReq := agent0.PlanRequest{
-		Task:        fmt.Sprintf("Analyze trading opportunity for %s", req.Symbol),
 		Context:     contextBuilder.String(),
 		Symbol:      req.Symbol,
 		Constraints: req.Constraints,
@@ -174,24 +211,33 @@ func (o *Orchestrator) Run(ctx context.Context, req OrchestrationRequest) (Orche
 	}
 
 	// 6. Retain decision to memory
+	retainedData := map[string]any{
+		"inputs": req.Constraints,
+		"plan": map[string]any{
+			"steps":      plan.Steps,
+			"action":     plan.Action,
+			"confidence": plan.Confidence,
+		},
+		"reasoning_notes": plan.ReasoningNotes,
+		"tools":           toolRuns,
+		"signals":         summarizeSignals(signals),
+	}
+	if research != nil {
+		retainedData["research"] = map[string]any{
+			"summary":    research.Summary,
+			"key_points": research.KeyPoints,
+			"metrics":    research.Metrics,
+		}
+	}
+
 	retained := contracts.MemoryItem{
 		TS:      time.Now().UTC(),
 		Type:    "decision",
 		Symbol:  req.Symbol,
 		Summary: strings.TrimSpace(plan.Summary),
 		Tags:    contracts.NormalizeMemoryTags(append(req.Tags, req.Strategy)),
-		Data: map[string]any{
-			"inputs": req.Constraints,
-			"plan": map[string]any{
-				"steps":      plan.Steps,
-				"action":     plan.Action,
-				"confidence": plan.Confidence,
-			},
-			"reasoning_notes": plan.ReasoningNotes,
-			"tools":           toolRuns,
-			"signals":         summarizeSignals(signals),
-		},
-		Source: &contracts.MemorySource{System: "jax-orchestrator"},
+		Data:    retainedData,
+		Source:  &contracts.MemorySource{System: "jax-orchestrator"},
 	}
 	if redacted, ok := observability.RedactValue(retained.Data).(map[string]any); ok {
 		retained.Data = redacted
@@ -276,4 +322,3 @@ func summarizeSignals(signals []strategies.Signal) []map[string]interface{} {
 	}
 	return summaries
 }
-
