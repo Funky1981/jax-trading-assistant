@@ -7,12 +7,12 @@ import (
 
 // Config holds jax-market configuration
 type Config struct {
-	DatabaseDSN     string         `json:"database_dsn"`
-	IngestInterval  int            `json:"ingest_interval"` // seconds
-	Symbols         []string       `json:"symbols"`
-	Polygon         PolygonConfig  `json:"polygon"`
-	Alpaca          AlpacaConfig   `json:"alpaca"`
-	Cache           CacheConfig    `json:"cache"`
+	DatabaseDSN    string        `json:"database_dsn"`
+	IngestInterval int           `json:"ingest_interval"` // seconds
+	Symbols        []string      `json:"symbols"`
+	Polygon        PolygonConfig `json:"polygon"`
+	Alpaca         AlpacaConfig  `json:"alpaca"`
+	Cache          CacheConfig   `json:"cache"`
 }
 
 // PolygonConfig holds Polygon.io configuration

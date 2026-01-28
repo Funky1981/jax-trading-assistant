@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"time"
 )
 
 // Provider defines the interface for market data providers

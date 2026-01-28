@@ -29,11 +29,11 @@ type Candle struct {
 
 // Trade represents an individual trade execution
 type Trade struct {
-	Symbol    string
-	Price     float64
-	Size      int64
-	Timestamp time.Time
-	Exchange  string
+	Symbol     string
+	Price      float64
+	Size       int64
+	Timestamp  time.Time
+	Exchange   string
 	Conditions []string
 }
 

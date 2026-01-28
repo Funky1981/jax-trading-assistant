@@ -113,7 +113,7 @@ func (p *PolygonProvider) GetCandles(ctx context.Context, symbol string, timefra
 	}
 
 	iter := p.client.ListAggregates(ctx, params)
-	
+
 	candles := make([]Candle, 0, limit)
 	for iter.Next() {
 		agg := iter.Item()
