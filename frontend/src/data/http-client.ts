@@ -71,3 +71,14 @@ export function createHttpClient(options: HttpClientOptions = {}) {
     buildUrl: (path: string, params?: Record<string, string>) => buildUrl(baseUrl, path, params),
   };
 }
+
+// Backend service clients
+export const apiClient = createHttpClient({
+  baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8081',
+  timeoutMs: 30_000,
+});
+
+export const memoryClient = createHttpClient({
+  baseUrl: import.meta.env.VITE_MEMORY_API_URL || 'http://localhost:8090',
+  timeoutMs: 15_000,
+});

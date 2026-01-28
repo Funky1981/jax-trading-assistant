@@ -1,9 +1,11 @@
-import { Stack, Typography } from '@mui/material';
+import { Stack, Typography, Grid } from '@mui/material';
 import { SelectInput } from '../components';
 import { DashboardGrid } from '../features/dashboard/DashboardGrid';
 import { presetOptions, useDashboardLayout } from '../features/dashboard/useDashboardLayout';
 import { useDomain } from '../domain/store';
 import { selectOrders, selectPositions, selectTicks } from '../domain/selectors';
+import { HealthStatusWidget, MetricsDashboard } from '../components/observability';
+import { MemoryBrowser } from '../components/memory';
 
 export function DashboardPage() {
   const { layout, applyPreset } = useDashboardLayout();
@@ -25,6 +27,19 @@ export function DashboardPage() {
           Drag-and-drop layout support will arrive next. Choose a preset to start.
         </Typography>
       </Stack>
+
+      {/* Backend Health & Metrics */}
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={4}>
+          <HealthStatusWidget />
+        </Grid>
+        <Grid item xs={12} md={8}>
+          <MetricsDashboard />
+        </Grid>
+      </Grid>
+
+      {/* Memory Browser */}
+      <MemoryBrowser />
 
       <SelectInput
         label="Preset"
