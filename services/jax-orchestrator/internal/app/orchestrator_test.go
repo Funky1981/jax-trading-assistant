@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"jax-trading-assistant/libs/agent0"
 	"jax-trading-assistant/libs/contracts"
 	"jax-trading-assistant/libs/observability"
+	"jax-trading-assistant/libs/strategies"
 	testfixtures "jax-trading-assistant/libs/testing"
 )
 
@@ -42,18 +44,22 @@ func (m *fakeMemory) Retain(_ context.Context, bank string, item contracts.Memor
 }
 
 type fakeAgent struct {
-	lastInput PlanInput
+	lastPlanRequest agent0.PlanRequest
 }
 
-func (a *fakeAgent) Plan(_ context.Context, input PlanInput) (PlanResult, error) {
-	a.lastInput = input
-	return PlanResult{
+func (a *fakeAgent) Plan(_ context.Context, req agent0.PlanRequest) (agent0.PlanResponse, error) {
+	a.lastPlanRequest = req
+	return agent0.PlanResponse{
 		Summary:        "Plan summary",
 		Steps:          []string{"step1", "step2"},
 		Action:         "executed",
 		Confidence:     0.7,
 		ReasoningNotes: "short notes",
 	}, nil
+}
+
+func (a *fakeAgent) Execute(_ context.Context, _ agent0.ExecuteRequest) (agent0.ExecuteResponse, error) {
+	return agent0.ExecuteResponse{Success: true}, nil
 }
 
 type fakeTools struct {
@@ -69,8 +75,9 @@ func TestOrchestrator_Run_RecallPlanExecuteRetain(t *testing.T) {
 	memory := &fakeMemory{}
 	agent := &fakeAgent{}
 	tools := &fakeTools{}
+	registry := strategies.NewRegistry()
 
-	orch := NewOrchestrator(memory, agent, tools)
+	orch := NewOrchestrator(memory, agent, tools, registry)
 
 	var constraints map[string]any
 	if err := json.Unmarshal(testfixtures.LoadFixture(t, "orchestrator_constraints.json"), &constraints); err != nil {
@@ -94,10 +101,10 @@ func TestOrchestrator_Run_RecallPlanExecuteRetain(t *testing.T) {
 	if memory.lastRecallBank != "trade_decisions" {
 		t.Fatalf("expected recall bank trade_decisions, got %q", memory.lastRecallBank)
 	}
-	if agent.lastInput.Symbol != "AAPL" || agent.lastInput.Context != "user constraints" {
-		t.Fatalf("expected agent input context merged")
+	if agent.lastPlanRequest.Symbol != "AAPL" {
+		t.Fatalf("expected agent plan symbol AAPL, got %q", agent.lastPlanRequest.Symbol)
 	}
-	if len(agent.lastInput.Memories) == 0 {
+	if len(agent.lastPlanRequest.Memories) == 0 {
 		t.Fatalf("expected recalled memories passed to agent")
 	}
 	if len(result.Tools) != 1 || result.Tools[0].Name != "risk.position_size" {
@@ -122,3 +129,67 @@ func TestOrchestrator_Run_RecallPlanExecuteRetain(t *testing.T) {
 		t.Fatalf("expected retained data to be redacted")
 	}
 }
+
+func TestOrchestrator_WithStrategySignals(t *testing.T) {
+	memory := &fakeMemory{}
+	agent := &fakeAgent{}
+	tools := &fakeTools{}
+	registry := strategies.NewRegistry()
+
+	// Register RSI strategy
+	rsiStrategy := strategies.NewRSIMomentumStrategy()
+	registry.Register(rsiStrategy, rsiStrategy.GetMetadata())
+
+	orch := NewOrchestrator(memory, agent, tools, registry)
+
+	// Constraints with oversold RSI
+	constraints := map[string]any{
+		"price":        150.0,
+		"rsi":          25.0,
+		"atr":          2.5,
+		"market_trend": "bullish",
+		"volume":       int64(1000000),
+		"avg_volume":   int64(900000),
+	}
+
+	result, err := orch.Run(context.Background(), OrchestrationRequest{
+		Bank:        "trade_decisions",
+		Symbol:      "AAPL",
+		Strategy:    "rsi_momentum_v1",
+		Constraints: constraints,
+		UserContext: "Analyzing AAPL",
+		Tags:        []string{"momentum"},
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	// Check that plan was generated
+	if result.Plan.Summary == "" {
+		t.Error("expected non-empty plan summary")
+	}
+
+	// Check that agent received context with signals
+	if !contains(agent.lastPlanRequest.Context, "Strategy signals") {
+		t.Error("expected agent context to include strategy signals")
+	}
+
+	// Check that retained memory includes signals
+	if data, ok := memory.lastRetainItem.Data["signals"].([]map[string]interface{}); !ok || len(data) == 0 {
+		t.Error("expected retained memory to include signals")
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && findSubstring(s, substr))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
