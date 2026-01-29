@@ -3,7 +3,7 @@
   "defaultSymbols": ["AAPL", "MSFT"],
   "accountSize": 10000,
   "riskPercent": 3,
+  "maxConsecutiveLosses": 3,
   "useDexter": false,
   "postgresDsn": ""
 }
-

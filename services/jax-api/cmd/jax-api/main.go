@@ -104,7 +104,8 @@ func main() {
 	riskEngine := app.NewRiskEngine(riskAdapter, auditLogger)
 	detector := app.NewEventDetector(marketAdapter, auditLogger)
 	generator := app.NewTradeGenerator(marketAdapter, strategyMap, auditLogger)
-	orchestrator := app.NewOrchestrator(detector, generator, riskEngine, tradeSaver, dexter, auditLogger)
+	tradingGuard := app.NewTradingGuard(app.TradingGuardConfig{MaxConsecutiveLosses: coreCfg.MaxConsecutiveLosses}, auditLogger)
+	orchestrator := app.NewOrchestrator(detector, generator, riskEngine, tradeSaver, dexter, auditLogger, tradingGuard)
 
 	server := httpapi.NewServer()
 	server.RegisterHealth()
@@ -112,6 +113,7 @@ func main() {
 	server.RegisterStrategies(strategyRegistry)
 	server.RegisterProcess(orchestrator, coreCfg.AccountSize, coreCfg.RiskPercent, 3)
 	server.RegisterTrades(tradeStore)
+	server.RegisterTradingGuard(tradingGuard)
 
 	addr := fmt.Sprintf(":%d", coreCfg.HTTPPort)
 	log.Printf("jax-core listening on %s", addr)

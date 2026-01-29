@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"jax-trading-assistant/services/jax-api/internal/domain"
 )
@@ -22,9 +23,10 @@ type Orchestrator struct {
 	storage   Storage
 	dexter    Dexter
 	audit     *AuditLogger
+	guard     *TradingGuard
 }
 
-func NewOrchestrator(detector *EventDetector, generator *TradeGenerator, risk *RiskEngine, storage Storage, dexter Dexter, audit *AuditLogger) *Orchestrator {
+func NewOrchestrator(detector *EventDetector, generator *TradeGenerator, risk *RiskEngine, storage Storage, dexter Dexter, audit *AuditLogger, guard *TradingGuard) *Orchestrator {
 	return &Orchestrator{
 		detector:  detector,
 		generator: generator,
@@ -32,6 +34,7 @@ func NewOrchestrator(detector *EventDetector, generator *TradeGenerator, risk *R
 		storage:   storage,
 		dexter:    dexter,
 		audit:     audit,
+		guard:     guard,
 	}
 }
 
@@ -45,6 +48,18 @@ type ProcessResult struct {
 
 func (o *Orchestrator) ProcessSymbol(ctx context.Context, symbol string, accountSize float64, riskPercent float64, gapThresholdPct float64) (ProcessResult, error) {
 	ctx = EnsureCorrelationID(ctx)
+	if o.guard != nil {
+		allowed, reason := o.guard.CanTrade()
+		if !allowed {
+			if o.audit != nil {
+				_ = o.audit.LogDecision(ctx, "process_symbol_halted", domain.AuditOutcomeSkipped, map[string]any{
+					"symbol": symbol,
+					"reason": reason,
+				}, nil)
+			}
+			return ProcessResult{}, fmt.Errorf("trading halted: %s", reason)
+		}
+	}
 	if o.audit != nil {
 		_ = o.audit.LogDecision(ctx, "process_symbol_start", domain.AuditOutcomeStarted, map[string]any{
 			"symbol":       symbol,
@@ -55,6 +70,9 @@ func (o *Orchestrator) ProcessSymbol(ctx context.Context, symbol string, account
 	}
 	events, err := o.detector.DetectGaps(ctx, symbol, gapThresholdPct)
 	if err != nil {
+		if o.guard != nil {
+			o.guard.RecordFailure(ctx, "detect_gaps", err)
+		}
 		if o.audit != nil {
 			_ = o.audit.LogDecision(ctx, "process_symbol_error", domain.AuditOutcomeError, map[string]any{
 				"symbol": symbol,
@@ -74,6 +92,9 @@ func (o *Orchestrator) ProcessSymbol(ctx context.Context, symbol string, account
 	for _, e := range events {
 		setups, err := o.generator.GenerateFromEvent(ctx, e)
 		if err != nil {
+			if o.guard != nil {
+				o.guard.RecordFailure(ctx, "generate_setups", err)
+			}
 			if o.audit != nil {
 				_ = o.audit.LogDecision(ctx, "process_symbol_generate_error", domain.AuditOutcomeError, redactEventPayload(e), err)
 			}
@@ -91,6 +112,9 @@ func (o *Orchestrator) ProcessSymbol(ctx context.Context, symbol string, account
 
 			r, err := o.risk.Calculate(ctx, accountSize, riskPercent, s.Entry, s.Stop, target)
 			if err != nil {
+				if o.guard != nil {
+					o.guard.RecordFailure(ctx, "risk_calculate", err)
+				}
 				if o.audit != nil {
 					payload := redactTradeSetupPayload(s)
 					payload["symbol"] = s.Symbol
@@ -105,12 +129,16 @@ func (o *Orchestrator) ProcessSymbol(ctx context.Context, symbol string, account
 					"Highlight key risks and catalysts for this trade idea.",
 				})
 				if err != nil {
+					if o.guard != nil {
+						o.guard.RecordFailure(ctx, "dexter_research", err)
+					}
 					if o.audit != nil {
 						_ = o.audit.LogDecision(ctx, "process_symbol_research_error", domain.AuditOutcomeError, map[string]any{
 							"symbol":        s.Symbol,
 							"questionCount": 2,
 						}, err)
 					}
+					return ProcessResult{}, err
 				} else if bundle != nil {
 					s.Research = bundle
 					if o.audit != nil {
@@ -124,6 +152,9 @@ func (o *Orchestrator) ProcessSymbol(ctx context.Context, symbol string, account
 
 			if o.storage != nil {
 				if err := o.storage.SaveTrade(ctx, s, r, &e); err != nil {
+					if o.guard != nil {
+						o.guard.RecordFailure(ctx, "save_trade", err)
+					}
 					if o.audit != nil {
 						payload := redactTradeSetupPayload(s)
 						payload["eventId"] = e.ID
