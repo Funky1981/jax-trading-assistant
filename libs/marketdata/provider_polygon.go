@@ -3,6 +3,7 @@ package marketdata
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	polygon "github.com/polygon-io/client-go/rest"
@@ -41,36 +42,41 @@ func (p *PolygonProvider) GetQuote(ctx context.Context, symbol string) (*Quote, 
 		return nil, fmt.Errorf("%w: %v", ErrProviderError, err)
 	}
 
-	if resp.Results == nil {
+	// Check if we got valid data (Results is a value, not pointer - check price)
+	if resp.Results.Price == 0 {
 		return nil, ErrNoData
 	}
 
 	// Also get snapshot for bid/ask
-	snapshotParams := &models.GetSnapshotTickerParams{
-		Ticker: symbol,
+	snapshotParams := &models.GetTickerSnapshotParams{
+		Ticker:     symbol,
+		Locale:     models.US,
+		MarketType: models.Stocks,
 	}
-	snapshot, err := p.client.GetSnapshotTicker(ctx, snapshotParams)
+	snapshot, err := p.client.GetTickerSnapshot(ctx, snapshotParams)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrProviderError, err)
+		// Snapshot failed but we can still return price from last trade
+		return &Quote{
+			Symbol:    symbol,
+			Price:     resp.Results.Price,
+			Timestamp: time.Time(resp.Results.Timestamp),
+			Exchange:  strconv.FormatInt(int64(resp.Results.Exchange), 10),
+		}, nil
 	}
 
 	quote := &Quote{
 		Symbol:    symbol,
 		Price:     resp.Results.Price,
-		Timestamp: time.UnixMilli(resp.Results.SipTimestamp),
-		Exchange:  resp.Results.Exchange,
+		Timestamp: time.Time(resp.Results.Timestamp),
+		Exchange:  strconv.FormatInt(int64(resp.Results.Exchange), 10),
 	}
 
-	if snapshot.Ticker != nil && snapshot.Ticker.LastQuote != nil {
-		quote.Bid = snapshot.Ticker.LastQuote.BidPrice
-		quote.Ask = snapshot.Ticker.LastQuote.AskPrice
-		quote.BidSize = int64(snapshot.Ticker.LastQuote.BidSize)
-		quote.AskSize = int64(snapshot.Ticker.LastQuote.AskSize)
-	}
-
-	if snapshot.Ticker != nil && snapshot.Ticker.Day != nil {
-		quote.Volume = int64(snapshot.Ticker.Day.Volume)
-	}
+	// Access Snapshot field, not Ticker
+	quote.Bid = snapshot.Snapshot.LastQuote.BidPrice
+	quote.Ask = snapshot.Snapshot.LastQuote.AskPrice
+	quote.BidSize = int64(snapshot.Snapshot.LastQuote.BidSize)
+	quote.AskSize = int64(snapshot.Snapshot.LastQuote.AskSize)
+	quote.Volume = int64(snapshot.Snapshot.Day.Volume)
 
 	return quote, nil
 }
@@ -79,21 +85,21 @@ func (p *PolygonProvider) GetQuote(ctx context.Context, symbol string) (*Quote, 
 func (p *PolygonProvider) GetCandles(ctx context.Context, symbol string, timeframe Timeframe, limit int) ([]Candle, error) {
 	// Convert timeframe to Polygon format
 	multiplier := 1
-	timespan := "day"
+	var timespan models.Timespan
 
 	switch timeframe {
 	case Timeframe1Min:
-		multiplier, timespan = 1, "minute"
+		multiplier, timespan = 1, models.Minute
 	case Timeframe5Min:
-		multiplier, timespan = 5, "minute"
+		multiplier, timespan = 5, models.Minute
 	case Timeframe15Min:
-		multiplier, timespan = 15, "minute"
+		multiplier, timespan = 15, models.Minute
 	case Timeframe1Hour:
-		multiplier, timespan = 1, "hour"
+		multiplier, timespan = 1, models.Hour
 	case Timeframe1Day:
-		multiplier, timespan = 1, "day"
+		multiplier, timespan = 1, models.Day
 	case Timeframe1Week:
-		multiplier, timespan = 1, "week"
+		multiplier, timespan = 1, models.Week
 	default:
 		return nil, ErrInvalidTimeframe
 	}
@@ -102,24 +108,22 @@ func (p *PolygonProvider) GetCandles(ctx context.Context, symbol string, timefra
 	to := time.Now()
 	from := to.AddDate(0, 0, -limit)
 
-	params := &models.ListAggregatesParams{
+	params := models.ListAggsParams{
 		Ticker:     symbol,
 		Multiplier: multiplier,
 		Timespan:   timespan,
 		From:       models.Millis(from),
 		To:         models.Millis(to),
-		Limit:      int64(limit),
-		Sort:       "asc",
-	}
+	}.WithLimit(limit)
 
-	iter := p.client.ListAggregates(ctx, params)
+	iter := p.client.ListAggs(ctx, params)
 
 	candles := make([]Candle, 0, limit)
 	for iter.Next() {
 		agg := iter.Item()
 		candle := Candle{
 			Symbol:    symbol,
-			Timestamp: time.UnixMilli(int64(agg.Timestamp)),
+			Timestamp: time.Time(agg.Timestamp),
 			Open:      agg.Open,
 			High:      agg.High,
 			Low:       agg.Low,
@@ -165,4 +169,10 @@ func (p *PolygonProvider) HealthCheck(ctx context.Context) error {
 	// Try to fetch SPY quote as health check
 	_, err := p.GetQuote(ctx, "SPY")
 	return err
+}
+
+// Close cleans up provider resources
+func (p *PolygonProvider) Close() error {
+	// Polygon REST client doesn't need explicit cleanup
+	return nil
 }

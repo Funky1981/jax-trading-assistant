@@ -74,6 +74,17 @@ func main() {
 		})
 	}
 
+	if cfg.IB.Enabled {
+		mdConfig.Providers = append(mdConfig.Providers, marketdata.ProviderConfig{
+			Name:       marketdata.ProviderIB,
+			IBHost:     cfg.IB.Host,
+			IBPort:     cfg.IB.Port,
+			IBClientID: cfg.IB.ClientID,
+			Priority:   1, // Highest priority if enabled (real-time data)
+			Enabled:    true,
+		})
+	}
+
 	mdClient, err := marketdata.NewClient(mdConfig)
 	if err != nil {
 		log.Fatalf("failed to create market data client: %v", err)

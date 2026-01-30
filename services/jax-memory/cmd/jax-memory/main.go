@@ -20,6 +20,7 @@ func main() {
 	srv := httpapi.NewServer(store)
 	srv.RegisterHealth()
 	srv.RegisterTools()
+	srv.RegisterMemoryAPI()
 
 	port := getenvInt("PORT", 8090)
 	addr := ":" + strconv.Itoa(port)

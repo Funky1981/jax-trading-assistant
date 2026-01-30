@@ -1,8 +1,10 @@
-FROM golang:1.22 AS build
+FROM golang:1.24 AS build
 
 WORKDIR /src
 
+# Copy module files and local libs first for better caching
 COPY go.mod go.sum ./
+COPY libs/ ./libs/
 RUN go mod download
 
 COPY . .

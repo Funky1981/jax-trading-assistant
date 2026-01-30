@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"jax-trading-assistant/internal/strategyregistry"
 	"jax-trading-assistant/libs/database"
 	"jax-trading-assistant/libs/utcp"
 	"jax-trading-assistant/services/jax-api/internal/app"
@@ -73,6 +74,35 @@ func main() {
 		}
 	}
 
+	// Initialize Knowledge Base (Strategy Registry from Postgres)
+	// This connects to jax_knowledge database and loads approved documents.
+	knowledgeRegistry, err := strategyregistry.NewFromDSN(ctx, coreCfg.KnowledgeDSN)
+	if err != nil {
+		log.Printf("WARNING: knowledge registry not available: %v", err)
+		log.Printf("Run 'make knowledge-up && make knowledge-schema && make knowledge-ingest' to set up")
+	} else {
+		defer knowledgeRegistry.Close()
+
+		// Health check
+		if err := knowledgeRegistry.HealthCheck(ctx); err != nil {
+			log.Printf("WARNING: knowledge registry health check failed: %v", err)
+		} else {
+			// Load and log counts ("it's alive" proof)
+			counts, err := knowledgeRegistry.CountsByType(ctx)
+			if err != nil {
+				log.Printf("WARNING: failed to load knowledge counts: %v", err)
+			} else {
+				log.Printf("knowledge registry connected:")
+				log.Printf("  strategies:    %d", counts[strategyregistry.DocTypeStrategy])
+				log.Printf("  anti-patterns: %d", counts[strategyregistry.DocTypeAntiPattern])
+				log.Printf("  patterns:      %d", counts[strategyregistry.DocTypePattern])
+				log.Printf("  meta docs:     %d", counts[strategyregistry.DocTypeMeta])
+				log.Printf("  risk docs:     %d", counts[strategyregistry.DocTypeRisk])
+				log.Printf("  evaluation:    %d", counts[strategyregistry.DocTypeEvaluation])
+			}
+		}
+	}
+
 	client, err := utcp.NewUTCPClientFromFile(providersPath, utcp.WithLocalRegistry(registry))
 	if err != nil {
 		log.Fatal(err)
@@ -109,6 +139,7 @@ func main() {
 
 	server := httpapi.NewServer()
 	server.RegisterHealth()
+	server.RegisterMetrics()
 	server.RegisterRisk(riskEngine)
 	server.RegisterStrategies(strategyRegistry)
 	server.RegisterProcess(orchestrator, coreCfg.AccountSize, coreCfg.RiskPercent, 3)

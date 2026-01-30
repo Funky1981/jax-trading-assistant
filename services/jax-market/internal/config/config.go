@@ -12,6 +12,7 @@ type Config struct {
 	Symbols        []string      `json:"symbols"`
 	Polygon        PolygonConfig `json:"polygon"`
 	Alpaca         AlpacaConfig  `json:"alpaca"`
+	IB             IBConfig      `json:"ib"`
 	Cache          CacheConfig   `json:"cache"`
 }
 
@@ -28,6 +29,14 @@ type AlpacaConfig struct {
 	APIKey    string `json:"api_key"`
 	APISecret string `json:"api_secret"`
 	Tier      string `json:"tier"`
+}
+
+// IBConfig holds Interactive Brokers Gateway configuration
+type IBConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Host     string `json:"host"`      // Default: "127.0.0.1"
+	Port     int    `json:"port"`      // 7497 for paper, 7496 for live
+	ClientID int    `json:"client_id"` // Any integer to identify connection
 }
 
 // CacheConfig holds cache configuration

@@ -60,6 +60,8 @@ func NewClient(config *Config) (*Client, error) {
 			provider, err = NewPolygonProvider(pc)
 		case ProviderAlpaca:
 			provider, err = NewAlpacaProvider(pc)
+		case ProviderIB:
+			provider, err = NewIBProvider(pc)
 		default:
 			log.Printf("unknown provider: %s", pc.Name)
 			continue

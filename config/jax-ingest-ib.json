@@ -1,0 +1,27 @@
+{
+  "database_dsn": "postgresql://jax:jax@postgres:5432/jax",
+  "ingest_interval": 300,
+  "symbols": ["AAPL", "MSFT", "GOOGL", "AMZN", "SPY", "QQQ"],
+  "polygon": {
+    "enabled": false,
+    "api_key": "",
+    "tier": "free"
+  },
+  "alpaca": {
+    "enabled": false,
+    "api_key": "",
+    "api_secret": "",
+    "tier": "free"
+  },
+  "ib": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 7497,
+    "client_id": 1
+  },
+  "cache": {
+    "enabled": true,
+    "redis_url": "redis:6379",
+    "ttl": 300
+  }
+}

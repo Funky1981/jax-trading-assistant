@@ -68,3 +68,64 @@ Smoke test (risk/backtest/storage):
 
 - Set `JAX_POSTGRES_DSN=postgres://jax:jax@localhost:5432/jax?sslmode=disable`
 - Run: `go run ./cmd/jax-utcp-smoke`
+
+## Knowledge Base (Strategy Registry)
+
+The knowledge base stores strategy documentation (playbooks, anti-patterns, risk docs, etc.) in Postgres and makes them available at runtime for agent retrieval.
+
+### Quick Start
+
+```bash
+make knowledge-up      # Start Postgres container (jax_knowledge db)
+make knowledge-schema  # Apply schema (creates strategy_documents table)
+make knowledge-ingest  # Ingest markdown files from knowledge/md/
+```
+
+### Environment
+
+- `JAX_KNOWLEDGE_DSN` — Connection string for jax_knowledge database
+- Default: `postgres://postgres:postgres@localhost:5432/jax_knowledge?sslmode=disable`
+
+### Dry Run
+
+Test ingestion without writing to the database:
+
+```bash
+make knowledge-ingest-dry
+```
+
+### Sanity Query
+
+After ingestion, verify documents were loaded:
+
+```sql
+SELECT doc_type, status, count(*)
+FROM strategy_documents
+GROUP BY 1, 2
+ORDER BY 1, 2;
+```
+
+### Package Usage
+
+The `internal/strategyregistry` package provides runtime access to approved documents:
+
+```go
+import "jax-trading-assistant/internal/strategyregistry"
+
+registry, err := strategyregistry.NewFromDSN(ctx, dsn)
+if err != nil {
+    log.Fatal(err)
+}
+defer registry.Close()
+
+// Get all approved strategies
+strategies, _ := registry.GetApprovedStrategies(ctx)
+
+// Get anti-patterns for risk checks
+antiPatterns, _ := registry.GetAntiPatterns(ctx)
+
+// Get specific document by path
+doc, _ := registry.GetByRelPath(ctx, "strategies/earnings_gap_v1.md")
+```
+
+All query methods enforce a `WHERE status='approved'` gate by default.

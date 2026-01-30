@@ -15,7 +15,11 @@ type JaxCoreConfig struct {
 	MaxConsecutiveLosses int      `json:"maxConsecutiveLosses"`
 	UseDexter            bool     `json:"useDexter"`
 	PostgresDSN          string   `json:"postgresDsn"`
+	KnowledgeDSN         string   `json:"knowledgeDsn"` // Knowledge base DSN
 }
+
+// DefaultKnowledgeDSN is the default connection string for the knowledge database.
+const DefaultKnowledgeDSN = "postgres://postgres:postgres@localhost:5432/jax_knowledge?sslmode=disable"
 
 func LoadJaxCoreConfig(path string) (JaxCoreConfig, error) {
 	raw, err := os.ReadFile(path)
@@ -38,6 +42,20 @@ func LoadJaxCoreConfig(path string) (JaxCoreConfig, error) {
 	}
 	if cfg.MaxConsecutiveLosses == 0 {
 		cfg.MaxConsecutiveLosses = 3
+	}
+
+	// Allow overriding Postgres DSN with environment variable DATABASE_URL.
+	// This is useful when running in Docker Compose or locally with .env files.
+	if envDSN := os.Getenv("DATABASE_URL"); envDSN != "" {
+		cfg.PostgresDSN = envDSN
+	}
+
+	// Allow overriding Knowledge DSN with environment variable JAX_KNOWLEDGE_DSN.
+	// Falls back to default if not set in config or env.
+	if envKnowledgeDSN := os.Getenv("JAX_KNOWLEDGE_DSN"); envKnowledgeDSN != "" {
+		cfg.KnowledgeDSN = envKnowledgeDSN
+	} else if cfg.KnowledgeDSN == "" {
+		cfg.KnowledgeDSN = DefaultKnowledgeDSN
 	}
 
 	return cfg, nil

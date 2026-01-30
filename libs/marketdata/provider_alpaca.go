@@ -74,21 +74,21 @@ func (p *AlpacaProvider) GetQuote(ctx context.Context, symbol string) (*Quote, e
 // GetCandles fetches historical OHLCV data
 func (p *AlpacaProvider) GetCandles(ctx context.Context, symbol string, timeframe Timeframe, limit int) ([]Candle, error) {
 	// Convert timeframe to Alpaca format
-	var tf alpaca.TimeFrame
+	var tf marketdata.TimeFrame
 
 	switch timeframe {
 	case Timeframe1Min:
-		tf = alpaca.NewTimeFrame(1, alpaca.Min)
+		tf = marketdata.NewTimeFrame(1, marketdata.Min)
 	case Timeframe5Min:
-		tf = alpaca.NewTimeFrame(5, alpaca.Min)
+		tf = marketdata.NewTimeFrame(5, marketdata.Min)
 	case Timeframe15Min:
-		tf = alpaca.NewTimeFrame(15, alpaca.Min)
+		tf = marketdata.NewTimeFrame(15, marketdata.Min)
 	case Timeframe1Hour:
-		tf = alpaca.NewTimeFrame(1, alpaca.Hour)
+		tf = marketdata.NewTimeFrame(1, marketdata.Hour)
 	case Timeframe1Day:
-		tf = alpaca.NewTimeFrame(1, alpaca.Day)
+		tf = marketdata.NewTimeFrame(1, marketdata.Day)
 	case Timeframe1Week:
-		tf = alpaca.NewTimeFrame(1, alpaca.Week)
+		tf = marketdata.NewTimeFrame(1, marketdata.Week)
 	default:
 		return nil, ErrInvalidTimeframe
 	}
@@ -101,7 +101,6 @@ func (p *AlpacaProvider) GetCandles(ctx context.Context, symbol string, timefram
 		TimeFrame: tf,
 		Start:     start,
 		End:       end,
-		Limit:     limit,
 	})
 
 	if err != nil {
@@ -136,9 +135,9 @@ func (p *AlpacaProvider) GetTrades(ctx context.Context, symbol string, limit int
 	start := end.Add(-1 * time.Hour) // Last hour of trades
 
 	trades, err := p.client.GetTrades(symbol, marketdata.GetTradesRequest{
-		Start: start,
-		End:   end,
-		Limit: limit,
+		Start:      start,
+		End:        end,
+		TotalLimit: limit,
 	})
 
 	if err != nil {

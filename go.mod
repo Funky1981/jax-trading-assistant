@@ -16,6 +16,7 @@ replace jax-trading-assistant/libs/marketdata => ./libs/marketdata
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	jax-trading-assistant/libs/contracts v0.0.0
 	jax-trading-assistant/libs/database v0.0.0-00010101000000-000000000000
@@ -35,9 +36,8 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.18.0 // indirect
 	github.com/go-resty/resty/v2 v2.11.0 // indirect
+	github.com/gofinance/ib v0.0.0-20190131202149-a7abd0c5d772 // indirect
 	github.com/golang-migrate/migrate/v4 v4.19.1 // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
@@ -48,7 +48,6 @@ require (
 	github.com/polygon-io/client-go v1.16.4 // indirect
 	github.com/redis/go-redis/v9 v9.4.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
