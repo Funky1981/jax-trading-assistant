@@ -142,6 +142,19 @@ func TestPortfolioRiskManager_ValidatePosition(t *testing.T) {
 			wantAllowed:   false,
 			wantViolation: "risk too large",
 		},
+		{
+			name:          "invalid entry price",
+			accountSize:   10000,
+			openPositions: 0,
+			drawdown:      0,
+			symbol:        "AAPL",
+			sector:        "Technology",
+			entry:         0,
+			stop:          145.00,
+			riskPercent:   0.01,
+			wantAllowed:   false,
+			wantViolation: "entry price",
+		},
 	}
 
 	for _, tt := range tests {
