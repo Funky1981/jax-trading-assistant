@@ -23,6 +23,9 @@ func TestLoadJaxCoreConfig_Defaults(t *testing.T) {
 	if cfg.RiskPercent != 3 {
 		t.Fatalf("expected default risk percent 3, got %v", cfg.RiskPercent)
 	}
+	if cfg.MaxConsecutiveLosses != 3 {
+		t.Fatalf("expected default max consecutive losses 3, got %d", cfg.MaxConsecutiveLosses)
+	}
 }
 
 func TestLoadJaxCoreConfig_CustomValues(t *testing.T) {
@@ -33,14 +36,16 @@ func TestLoadJaxCoreConfig_CustomValues(t *testing.T) {
 		wantRisk    float64
 		wantDexter  bool
 		wantAccount float64
+		wantMaxLoss int
 	}{
 		{
 			name:        "custom values",
-			payload:     `{"httpPort":9090,"riskPercent":2.5,"useDexter":true,"accountSize":20000}`,
+			payload:     `{"httpPort":9090,"riskPercent":2.5,"useDexter":true,"accountSize":20000,"maxConsecutiveLosses":4}`,
 			wantPort:    9090,
 			wantRisk:    2.5,
 			wantDexter:  true,
 			wantAccount: 20000,
+			wantMaxLoss: 4,
 		},
 	}
 
@@ -67,6 +72,9 @@ func TestLoadJaxCoreConfig_CustomValues(t *testing.T) {
 			}
 			if cfg.AccountSize != tc.wantAccount {
 				t.Fatalf("expected account size %v, got %v", tc.wantAccount, cfg.AccountSize)
+			}
+			if cfg.MaxConsecutiveLosses != tc.wantMaxLoss {
+				t.Fatalf("expected max consecutive losses %d, got %d", tc.wantMaxLoss, cfg.MaxConsecutiveLosses)
 			}
 		})
 	}

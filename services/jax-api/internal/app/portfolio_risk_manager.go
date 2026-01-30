@@ -56,6 +56,18 @@ func (p *PortfolioRiskManager) ValidatePosition(
 	violations := []string{}
 	metrics := domain.RiskMetrics{}
 
+	if entry <= 0 {
+		return domain.RiskCheckResult{
+			Allowed: false,
+			Reason:  "invalid entry price",
+			Violations: []string{
+				"entry price must be > 0",
+			},
+		}
+	}
+
+	riskFraction := normalizeRiskPercent(riskPercent)
+
 	// Check portfolio-level constraints first
 	if p.portfolioState.AccountSize < p.constraints.MinAccountSize {
 		return domain.RiskCheckResult{
@@ -103,26 +115,26 @@ func (p *PortfolioRiskManager) ValidatePosition(
 	}
 
 	// Validate risk percentage
-	if riskPercent < p.positionLimits.MinRiskPerTrade {
+	if riskFraction < p.positionLimits.MinRiskPerTrade {
 		violations = append(violations,
 			fmt.Sprintf("risk too small: %.2f%% < minimum %.2f%%",
-				riskPercent*100, p.positionLimits.MinRiskPerTrade*100))
+				riskFraction*100, p.positionLimits.MinRiskPerTrade*100))
 	}
 
-	if riskPercent > p.positionLimits.MaxRiskPerTrade {
+	if riskFraction > p.positionLimits.MaxRiskPerTrade {
 		violations = append(violations,
 			fmt.Sprintf("risk too large: %.2f%% > maximum %.2f%%",
-				riskPercent*100, p.positionLimits.MaxRiskPerTrade*100))
+				riskFraction*100, p.positionLimits.MaxRiskPerTrade*100))
 	}
 
 	// Calculate position size using selected model
 	positionSize, dollarRisk, riskPerUnit := p.calculatePositionSize(
-		p.portfolioState.AccountSize, riskPercent, entry, stop)
+		p.portfolioState.AccountSize, riskFraction, entry, stop)
 
 	metrics.PositionSize = positionSize
 	metrics.DollarRisk = dollarRisk
 	metrics.RiskPerUnit = riskPerUnit
-	metrics.PositionRisk = riskPercent
+	metrics.PositionRisk = riskFraction
 
 	// Check max position size
 	positionValue := float64(positionSize) * entry
@@ -197,6 +209,13 @@ func (p *PortfolioRiskManager) ValidatePosition(
 	return result
 }
 
+func normalizeRiskPercent(riskPercent float64) float64 {
+	if riskPercent > 1 {
+		return riskPercent / 100
+	}
+	return riskPercent
+}
+
 // calculatePositionSize computes position size using the selected sizing model
 func (p *PortfolioRiskManager) calculatePositionSize(
 	accountSize float64,
@@ -204,6 +223,7 @@ func (p *PortfolioRiskManager) calculatePositionSize(
 	entry float64,
 	stop float64,
 ) (positionSize int, dollarRisk float64, riskPerUnit float64) {
+	riskPercent = normalizeRiskPercent(riskPercent)
 	switch p.sizingModel {
 	case domain.FixedFractional:
 		return p.fixedFractionalSize(accountSize, riskPercent, entry, stop)
