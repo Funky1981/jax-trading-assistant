@@ -124,13 +124,13 @@ func (rl *RateLimiter) Allow(clientIP string) (bool, string) {
 	// Check limits
 	if bucket.minuteCount >= rl.config.RequestsPerMinute {
 		retryAfter := bucket.minuteResetTime.Sub(now)
-		return false, fmt.Sprintf("Rate limit exceeded: %d requests per minute. Retry after %v", 
+		return false, fmt.Sprintf("Rate limit exceeded: %d requests per minute. Retry after %v",
 			rl.config.RequestsPerMinute, retryAfter.Round(time.Second))
 	}
 
 	if bucket.hourCount >= rl.config.RequestsPerHour {
 		retryAfter := bucket.hourResetTime.Sub(now)
-		return false, fmt.Sprintf("Rate limit exceeded: %d requests per hour. Retry after %v", 
+		return false, fmt.Sprintf("Rate limit exceeded: %d requests per hour. Retry after %v",
 			rl.config.RequestsPerHour, retryAfter.Round(time.Second))
 	}
 
@@ -167,7 +167,7 @@ func (rl *RateLimiter) cleanup() {
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		clientIP := getClientIP(r)
-		
+
 		allowed, message := rl.Allow(clientIP)
 		if !allowed {
 			log.Printf("Rate limit exceeded for IP: %s, Path: %s", clientIP, r.URL.Path)
@@ -185,7 +185,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 func (rl *RateLimiter) MiddlewareFunc(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		clientIP := getClientIP(r)
-		
+
 		allowed, message := rl.Allow(clientIP)
 		if !allowed {
 			log.Printf("Rate limit exceeded for IP: %s, Path: %s", clientIP, r.URL.Path)
@@ -205,7 +205,7 @@ func getClientIP(r *http.Request) string {
 	// Check X-Forwarded-For header (standard for proxies/load balancers)
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		// X-Forwarded-For can contain multiple IPs, take the first one
-		if idx := 0; idx < len(xff); idx++ {
+		for idx := 0; idx < len(xff); idx++ {
 			if xff[idx] == ',' {
 				return xff[:idx]
 			}
@@ -235,9 +235,9 @@ func (rl *RateLimiter) Stats() map[string]interface{} {
 	defer rl.mu.RUnlock()
 
 	return map[string]interface{}{
-		"enabled":              rl.config.Enabled,
-		"requests_per_minute":  rl.config.RequestsPerMinute,
-		"requests_per_hour":    rl.config.RequestsPerHour,
-		"active_clients":       len(rl.clients),
+		"enabled":             rl.config.Enabled,
+		"requests_per_minute": rl.config.RequestsPerMinute,
+		"requests_per_hour":   rl.config.RequestsPerHour,
+		"active_clients":      len(rl.clients),
 	}
 }

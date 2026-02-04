@@ -8,7 +8,7 @@ import {
   createColumnHelper,
   SortingState,
 } from '@tanstack/react-table';
-import { useWatchlist, useWatchlistSummary, WatchlistItem } from '@/hooks/useWatchlist';
+import { useWatchlistSummary, WatchlistItem } from '@/hooks/useWatchlist';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

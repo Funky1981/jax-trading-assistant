@@ -11,6 +11,22 @@ import (
 	internalIngest "jax-trading-assistant/services/jax-ingest/internal/ingest"
 )
 
+// convertObservations converts from libs/ingest.DexterObservation to internal/ingest.DexterObservation
+func convertObservations(libsObs []ingest.DexterObservation) []internalIngest.DexterObservation {
+	result := make([]internalIngest.DexterObservation, len(libsObs))
+	for i, obs := range libsObs {
+		result[i] = internalIngest.DexterObservation{
+			Type:           obs.Type,
+			Symbol:         obs.Symbol,
+			ImpactEstimate: obs.ImpactEstimate,
+			Confidence:     obs.Confidence,
+			TS:             obs.Timestamp,
+			Bookmarked:     obs.Bookmarked,
+		}
+	}
+	return result
+}
+
 func main() {
 	cfg, err := config.Parse(os.Args[1:])
 	if err != nil {
@@ -33,7 +49,10 @@ func main() {
 
 	store := ingest.NewMemoryAdapter(client)
 
-	result, err := internalIngest.RetainDexterObservations(ctx, store, payload.Observations, internalIngest.RetentionConfig{
+	// Convert observations to the internal type
+	convertedObs := convertObservations(payload.Observations)
+
+	result, err := internalIngest.RetainDexterObservations(ctx, store, convertedObs, internalIngest.RetentionConfig{
 		SignificanceThreshold: cfg.Threshold,
 	})
 	if err != nil {

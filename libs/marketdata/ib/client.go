@@ -93,71 +93,73 @@ func (c *Client) GetAccount(ctx context.Context) (*AccountResponse, error) {
 
 // get performs a GET request
 func (c *Client) get(ctx context.Context, path string, result interface{}) error {
-	return c.circuitBreaker.Execute(func() error {
+	_, err := c.circuitBreaker.Execute(func() (any, error) {
 		url := c.baseURL + path
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
-			return fmt.Errorf("failed to create request: %w", err)
+			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			return fmt.Errorf("request failed: %w", err)
+			return nil, fmt.Errorf("request failed: %w", err)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+			return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 		}
 
 		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
-			return fmt.Errorf("failed to decode response: %w", err)
+			return nil, fmt.Errorf("failed to decode response: %w", err)
 		}
 
-		return nil
+		return nil, nil
 	})
+	return err
 }
 
 // post performs a POST request
 func (c *Client) post(ctx context.Context, path string, body interface{}, result interface{}) error {
-	return c.circuitBreaker.Execute(func() error {
+	_, err := c.circuitBreaker.Execute(func() (any, error) {
 		url := c.baseURL + path
 
 		var reqBody io.Reader
 		if body != nil {
 			jsonData, err := json.Marshal(body)
 			if err != nil {
-				return fmt.Errorf("failed to marshal request body: %w", err)
+				return nil, fmt.Errorf("failed to marshal request body: %w", err)
 			}
 			reqBody = bytes.NewBuffer(jsonData)
 		}
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, reqBody)
 		if err != nil {
-			return fmt.Errorf("failed to create request: %w", err)
+			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			return fmt.Errorf("request failed: %w", err)
+			return nil, fmt.Errorf("request failed: %w", err)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+			return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 		}
 
 		if result != nil {
 			if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
-				return fmt.Errorf("failed to decode response: %w", err)
+				return nil, fmt.Errorf("failed to decode response: %w", err)
 			}
 		}
 
-		return nil
+		return nil, nil
 	})
+	return err
 }

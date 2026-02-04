@@ -78,6 +78,24 @@ func (m *MemoryAdapter) Retain(ctx context.Context, bank string, item contracts.
 	return out.ID, nil
 }
 
+// Recall retrieves memory items matching the query
+func (m *MemoryAdapter) Recall(ctx context.Context, bank string, query contracts.MemoryQuery) ([]contracts.MemoryItem, error) {
+	out, err := m.svc.Recall(ctx, contracts.MemoryRecallRequest{Bank: bank, Query: query})
+	if err != nil {
+		return nil, err
+	}
+	return out.Items, nil
+}
+
+// Reflect generates reflection items based on params
+func (m *MemoryAdapter) Reflect(ctx context.Context, bank string, params contracts.ReflectionParams) ([]contracts.MemoryItem, error) {
+	out, err := m.svc.Reflect(ctx, contracts.MemoryReflectRequest{Bank: bank, Params: params})
+	if err != nil {
+		return nil, err
+	}
+	return out.Items, nil
+}
+
 // ReadPayload reads and parses a Dexter payload from file or stdin
 func ReadPayload(path string) (DexterPayload, error) {
 	var payload DexterPayload

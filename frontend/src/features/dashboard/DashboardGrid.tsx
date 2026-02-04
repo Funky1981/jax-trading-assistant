@@ -1,6 +1,5 @@
-import { TrendingUp, BarChart3, DollarSign, Gauge, List as ListIcon } from 'lucide-react';
+import { TrendingUp, BarChart3, Gauge, List as ListIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import {
   DataTable,
   OrderTicket,
