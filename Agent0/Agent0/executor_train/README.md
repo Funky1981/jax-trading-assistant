@@ -1,4 +1,4 @@
-# Verl-Tool
+﻿# Verl-Tool
 
 <p align="center">
   <picture>
@@ -13,20 +13,19 @@ VerlTool: A unified and easy-to-extend tool-agent training framework based on ve
 
 <p align="center">
 | 
-<a href="https://arxiv.org/abs/2509.01055"><b>Paper</b></a> |
-<a href="https://github.com/TIGER-AI-Lab/verl-tool/blob/main/assets/docs/install.md"><b>Quick Start</b></a> |
-  <a href="https://github.com/TIGER-AI-Lab/verl-tool/tree/main/examples/train"><b>Training Recipes</b></a> |
-  <a href="https://deepwiki.com/TIGER-AI-Lab/verl-tool"><b>DeepWiki</b></a> |
-  <a href="https://github.com/TIGER-AI-Lab/verl-tool/tree/main/assets/imgs/wechat_group.jpg"><b>WeChat Group</b></a> |
-  <a href="https://discord.gg/CUARJFJ8"><b>Discord</b></a>
+<a href="<https://arxiv.org/abs/2509.01055">><b>Paper</b></a> |
+<a href="<https://github.com/TIGER-AI-Lab/verl-tool/blob/main/assets/docs/install.md">><b>Quick Start</b></a> |
+  <a href="<https://github.com/TIGER-AI-Lab/verl-tool/tree/main/examples/train">><b>Training Recipes</b></a> |
+  <a href="<https://deepwiki.com/TIGER-AI-Lab/verl-tool">><b>DeepWiki</b></a> |
+  <a href="<https://github.com/TIGER-AI-Lab/verl-tool/tree/main/assets/imgs/wechat_group.jpg">><b>WeChat Group</b></a> |
+  <a href="<https://discord.gg/CUARJFJ8">><b>Discord</b></a>
 |
 </p>
 
 ---
 
-
-
 ## News
+
 + [2025/09/02] VerlTool's tech report is out! See on [Hugging Face Daily Paper](https://huggingface.co/papers/2509.01055)!
 + [2025/06/30] We reproduce Search-R1 with even higher performance on the same benchmarks! See [PR](https://github.com/TIGER-AI-Lab/verl-tool/pull/71) and training [README](examples/train/search_r1/README.md) for more details.
 + [2025/06/28] We support NL2SQL tool RL training. See NL2SQL [README](examples/train/nl2sql/README.md) for more details.
@@ -62,36 +61,36 @@ VerlTool: A unified and easy-to-extend tool-agent training framework based on ve
 <table>
 <tr>
     <td align="center">
-        <a href="https://github.com/jdf-prog">
-            <img src="https://github.com/jdf-prog.png" width="75px;" alt="Dongfu Jiang"/>
+        <a href="<https://github.com/jdf-prog">>
+            <img src="<https://github.com/jdf-prog.png"> width="75px;" alt="Dongfu Jiang"/>
             <br />
             <sub><b>Dongfu Jiang</b></sub>
         </a>
     </td>
     <td align="center">
-        <a href="https://github.com/Zhuofeng-Li">
-            <img src="https://github.com/Zhuofeng-Li.png" width="75px;" alt="Zhuofeng Li"/>
+        <a href="<https://github.com/Zhuofeng-Li">>
+            <img src="<https://github.com/Zhuofeng-Li.png"> width="75px;" alt="Zhuofeng Li"/>
             <br />
             <sub><b>Zhuofeng Li</b></sub>
         </a>
     </td>
     <td align="center">
-        <a href="https://github.com/EigenTom">
-            <img src="https://github.com/EigenTom.png" width="75px;" alt="Yi Lu"/>
+        <a href="<https://github.com/EigenTom">>
+            <img src="<https://github.com/EigenTom.png"> width="75px;" alt="Yi Lu"/>
             <br />
             <sub><b>Yi Lu</b></sub>
         </a>
     </td>
     <td align="center">
-        <a href="https://github.com/cogito233">
-            <img src="https://github.com/cogito233.png" width="75px;" alt="Zhiheng Lvu"/>
+        <a href="<https://github.com/cogito233">>
+            <img src="<https://github.com/cogito233.png"> width="75px;" alt="Zhiheng Lvu"/>
             <br />
             <sub><b>Zhiheng Lvu</b></sub>
         </a>
     </td>
     <td align="center">
-        <a href="https://github.com/erenup">
-            <img src="https://github.com/erenup.png" width="75px;" alt="Ping Nie"/>
+        <a href="<https://github.com/erenup">>
+            <img src="<https://github.com/erenup.png"> width="75px;" alt="Ping Nie"/>
             <br />
             <sub><b>Ping Nie</b></sub>
         </a>
@@ -104,22 +103,22 @@ VerlTool: A unified and easy-to-extend tool-agent training framework based on ve
 <table>
 <tr>
     <td align="center">
-        <a href="https://github.com/wenhuchen">
-            <img src="https://github.com/wenhuchen.png" width="75px;" alt="Wenhu Chen"/>
+        <a href="<https://github.com/wenhuchen">>
+            <img src="<https://github.com/wenhuchen.png"> width="75px;" alt="Wenhu Chen"/>
             <br />
             <sub><b>Wenhu Chen</b></sub>
         </a>
     </td>
     <td align="center">
-        <a href="https://github.com/P2333">
-            <img src="https://github.com/P2333.png" width="75px;" alt="Tianyu Pang"/>
+        <a href="<https://github.com/P2333">>
+            <img src="<https://github.com/P2333.png"> width="75px;" alt="Tianyu Pang"/>
             <br />
             <sub><b>Tianyu Pang</b></sub>
         </a>
     </td>
     <td align="center">
-        <a href="https://github.com/duchao0726">
-            <img src="https://github.com/duchao0726.png" width="75px;" alt="Chao Du"/>
+        <a href="<https://github.com/duchao0726">>
+            <img src="<https://github.com/duchao0726.png"> width="75px;" alt="Chao Du"/>
             <br />
             <sub><b>Chao Du</b></sub>
         </a>
@@ -140,17 +139,18 @@ We thank [Netmind.AI](https://www.netmind.ai/), [SeaAI Lab](https://sail.sea.com
 
 [![Star History Chart](https://api.star-history.com/svg?repos=TIGER-AI-Lab/verl-tool&type=Date)](https://www.star-history.com/#TIGER-AI-Lab/verl-tool&Date)
 
-
 ## Badge
 
 [![MseeP.ai Security Assessment Badge](https://mseep.net/pr/tiger-ai-lab-verl-tool-badge.png)](https://mseep.ai/app/tiger-ai-lab-verl-tool)
 
 ## Citation
-```bibtex
+
+```n
 @article{jiang2025verltool,
   title={VerlTool: Towards Holistic Agentic Reinforcement Learning with Tool Use},
   author={Jiang, Dongfu and Lu, Yi and Li, Zhuofeng and Lyu, Zhiheng and Nie, Ping and Wang, Haozhe and Su, Alex and Chen, Hui and Zou, Kai and Du, Chao and others},
   journal={arXiv preprint arXiv:2509.01055},
   year={2025}
 }
+
 ```

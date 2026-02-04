@@ -1,4 +1,4 @@
-# Testing and Continuous Integration/Continuous Deployment (CI/CD)
+﻿# Testing and Continuous Integration/Continuous Deployment (CI/CD)
 
 A comprehensive testing strategy and automated pipeline ensure that changes do not break existing functionality and that deployments are repeatable and safe.
 

@@ -1,4 +1,4 @@
-# Consolidate Outstanding Changes Documentation
+﻿# Consolidate Outstanding Changes Documentation
 
 There are two nearly identical pull requests (#4 and #5) that add an `OUTSTANDING_CHANGES.md` to document a change in file permissions for a CLI script. Keeping multiple branches with the same change creates confusion and review overhead.
 

@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 2
 ---
 
@@ -27,12 +27,13 @@ Make sure you've completed the [Quick Start](./quickstart) to install the client
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<http://localhost:8888">)
 
 client.retain(
     bank_id="my-bank",
     content="Alice works at Google as a software engineer"
 )
+
 ```
 
 </TabItem>
@@ -41,9 +42,10 @@ client.retain(
 ```typescript
 import { HindsightClient } from '@vectorize-io/hindsight-client';
 
-const client = new HindsightClient({ baseUrl: 'http://localhost:8888' });
+const client = new HindsightClient({ baseUrl: '<http://localhost:8888'> });
 
 await client.retain('my-bank', 'Alice works at Google as a software engineer');
+
 ```
 
 </TabItem>
@@ -51,6 +53,7 @@ await client.retain('my-bank', 'Alice works at Google as a software engineer');
 
 ```bash
 hindsight memory put my-bank "Alice works at Google as a software engineer"
+
 ```
 
 </TabItem>
@@ -79,6 +82,7 @@ client.retain(
     context="career update",
     timestamp="2024-03-15T10:00:00Z"
 )
+
 ```
 
 </TabItem>
@@ -89,6 +93,7 @@ await client.retain('my-bank', 'Alice got promoted to senior engineer', {
     context: 'career update',
     timestamp: '2024-03-15T10:00:00Z'
 });
+
 ```
 
 </TabItem>
@@ -98,6 +103,7 @@ await client.retain('my-bank', 'Alice got promoted to senior engineer', {
 hindsight memory put my-bank "Alice got promoted" \
     --context "career update" \
     --event-date "2024-03-15"
+
 ```
 
 </TabItem>
@@ -122,6 +128,7 @@ client.retain_batch(
     ],
     document_id="conversation_001"
 )
+
 ```
 
 </TabItem>
@@ -133,6 +140,7 @@ await client.retainBatch('my-bank', [
     { content: 'Bob is a data scientist at Meta', context: 'career' },
     { content: 'Alice and Bob are friends', context: 'relationship' }
 ], { documentId: 'conversation_001' });
+
 ```
 
 </TabItem>
@@ -146,19 +154,23 @@ The `document_id` groups related memories for later management.
 <TabItem value="cli" label="CLI">
 
 ```bash
+
 # Single file
+
 hindsight memory put-files my-bank document.txt
 
 # Multiple files
+
 hindsight memory put-files my-bank doc1.txt doc2.md notes.txt
 
 # With document ID
+
 hindsight memory put-files my-bank report.pdf --document-id "q4-report"
+
 ```
 
 </TabItem>
 </Tabs>
-
 
 ## Async Ingestion
 
@@ -168,7 +180,9 @@ For large batches, use async ingestion to avoid blocking:
 <TabItem value="python" label="Python">
 
 ```python
+
 # Start async ingestion (returns immediately)
+
 result = client.retain_batch(
     bank_id="my-bank",
     items=[...large batch...],
@@ -177,7 +191,9 @@ result = client.retain_batch(
 )
 
 # Check if it was processed asynchronously
+
 print(result.var_async)  # True
+
 ```
 
 </TabItem>
@@ -191,6 +207,7 @@ const result = await client.retainBatch('my-bank', largeItems, {
 });
 
 console.log(result.async);  // true
+
 ```
 
 </TabItem>

@@ -1,9 +1,11 @@
-# Step 05: Component Library Build-out
+﻿# Step 05: Component Library Build-out
 
 ## Objective
+
 Build a reusable component library to power all pages and widgets consistently.
 
 ## Actions
+
 1. **Build primitives first**
    - Buttons, inputs, selectors, tabs, tooltips.
    - Ensure keyboard navigation and ARIA roles.

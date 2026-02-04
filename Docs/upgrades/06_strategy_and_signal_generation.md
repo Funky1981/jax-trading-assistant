@@ -1,4 +1,4 @@
-# Strategy and Signal Generation
+﻿# Strategy and Signal Generation
 
 The current trade generation logic is simplistic: it looks for gap events and applies a static target rule. To operate in production, you need a flexible strategy engine that supports multiple strategies, configurable parameters, and signal quality checks.
 

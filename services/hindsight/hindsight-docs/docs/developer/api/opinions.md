@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 5
 ---
 
@@ -37,22 +37,27 @@ graph LR
     D --> J[Judgment]
     J --> O[Opinion + Confidence]
     O --> S[(Store)]
+
 ```
 
 <Tabs>
 <TabItem value="python" label="Python">
 
 ```python
+
 # Ask a question that might form an opinion
+
 answer = client.reflect(
     bank_id="my-bank",
     query="What do you think about functional programming?"
 )
 
 # Check if new opinions were formed
+
 for opinion in answer.get("new_opinions", []):
     print(f"New opinion: {opinion['text']}")
     print(f"Confidence: {opinion['confidence']}")
+
 ```
 
 </TabItem>
@@ -64,7 +69,9 @@ for opinion in answer.get("new_opinions", []):
 <TabItem value="python" label="Python">
 
 ```python
+
 # Search only opinions
+
 opinions = client.recall(
     bank_id="my-bank",
     query="programming languages",
@@ -73,6 +80,7 @@ opinions = client.recall(
 
 for op in opinions:
     print(f"{op['text']} (confidence: {op['confidence_score']:.2f})")
+
 ```
 
 </TabItem>
@@ -80,6 +88,7 @@ for op in opinions:
 
 ```bash
 hindsight recall my-bank "programming" --types opinion
+
 ```
 
 </TabItem>
@@ -97,7 +106,7 @@ Opinions change as new evidence arrives:
 
 **Example evolution:**
 
-```
+```text
 t=0: "Python is best for data science" (0.70)
      ↓ New evidence: Python dominates ML libraries
 t=1: "Python is best for data science" (0.85)
@@ -105,6 +114,7 @@ t=1: "Python is best for data science" (0.85)
 t=2: "Python is best for data science, though Julia is faster" (0.75)
      ↓ New evidence: Most teams still use Python
 t=3: "Python is best for data science" (0.82)
+
 ```
 
 ## Disposition Influence
@@ -115,7 +125,9 @@ Different dispositions form different opinions from the same facts:
 <TabItem value="python" label="Python">
 
 ```python
+
 # Create two memory banks with different dispositions
+
 client.create_bank(
     bank_id="open-minded",
     disposition={"skepticism": 2, "literalism": 2, "empathy": 4}
@@ -127,6 +139,7 @@ client.create_bank(
 )
 
 # Store the same facts to both
+
 facts = [
     "Rust has better memory safety than C++",
     "C++ has a larger ecosystem and more libraries",
@@ -137,13 +150,17 @@ for fact in facts:
     client.retain(bank_id="conservative", content=fact)
 
 # Ask both the same question
+
 q = "Should we rewrite our C++ codebase in Rust?"
 
 answer1 = client.reflect(bank_id="open-minded", query=q)
+
 # Likely: "Yes, Rust's safety benefits outweigh migration costs"
 
 answer2 = client.reflect(bank_id="conservative", query=q)
+
 # Likely: "No, C++'s ecosystem and our team's expertise make it the safer choice"
+
 ```
 
 </TabItem>
@@ -163,6 +180,7 @@ for f in answer.based_on.get("world", []):
 print("\nOpinions used:")
 for o in answer.based_on.get("opinion", []):
     print(f"  {o['text']} (confidence: {o['confidence_score']})")
+
 ```
 
 ## Confidence Thresholds
@@ -173,9 +191,13 @@ Opinions below a confidence threshold may be:
 - Revised more easily
 
 ```python
+
 # Low confidence opinions are held loosely
+
 # "I think Python might be good for this" (0.45)
 
 # High confidence opinions are stated firmly
+
 # "Python is definitely the right choice" (0.92)
+
 ```

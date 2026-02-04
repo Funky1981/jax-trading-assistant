@@ -15,8 +15,9 @@ type TradesHandler struct {
 
 func (s *Server) RegisterTrades(store app.TradeStore) {
 	h := &TradesHandler{store: store}
-	s.mux.HandleFunc("/trades", h.handleList)
-	s.mux.HandleFunc("/trades/", h.handleGet)
+	// Protected endpoints - require authentication
+	s.mux.HandleFunc("/trades", s.protect(h.handleList))
+	s.mux.HandleFunc("/trades/", s.protect(h.handleGet))
 }
 
 func (h *TradesHandler) handleList(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +50,9 @@ func (h *TradesHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"trades": trades})
+	if err := json.NewEncoder(w).Encode(map[string]any{"trades": trades}); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *TradesHandler) handleGet(w http.ResponseWriter, r *http.Request) {
@@ -76,5 +79,7 @@ func (h *TradesHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(trade)
+	if err := json.NewEncoder(w).Encode(trade); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }

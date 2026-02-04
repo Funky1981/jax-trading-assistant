@@ -1,4 +1,4 @@
-# Interactive Brokers Gateway Integration
+﻿# Interactive Brokers Gateway Integration
 
 This guide explains how to connect your jax-trading-assistant to Interactive Brokers Gateway for paper trading or live trading.
 
@@ -35,6 +35,7 @@ This guide explains how to connect your jax-trading-assistant to Interactive Bro
 - **Client ID**: Any integer (e.g., `1`)
 
 ### Custom Configuration
+
 You can change these in IB Gateway settings:
 1. Launch IB Gateway
 2. Go to **Configure > Settings > API > Settings**
@@ -46,12 +47,17 @@ You can change these in IB Gateway settings:
 ### 1. Start IB Gateway
 
 **Windows:**
-```powershell
+
+```
+
 # Navigate to IB Gateway install directory (usually):
+
 cd "C:\Jts\ibgateway\<version>"
 
 # Run the gateway
+
 .\ibgateway.exe
+
 ```
 
 **Login with your credentials:**
@@ -100,6 +106,7 @@ Add IB provider to your `config/jax-ingest.json`:
     "ttl": 300
   }
 }
+
 ```
 
 Or configure via code in `services/jax-market/cmd/jax-market/main.go`:
@@ -116,19 +123,25 @@ if cfg.IB.Enabled {
         Enabled:    true,
     })
 }
+
 ```
 
 ### 4. Run Your Trading Assistant
 
 ```powershell
+
 # Start just the database
+
 docker compose up -d postgres
 
 # Run the market data service
+
 go run services/jax-market/cmd/jax-market/main.go -config config/jax-ingest.json
 
 # Or start the full stack
+
 .\start.ps1
+
 ```
 
 ## Verifying Connection
@@ -180,6 +193,7 @@ func main() {
 
     fmt.Printf("AAPL: $%.2f at %s\n", quote.Price, quote.Timestamp)
 }
+
 ```
 
 ## Troubleshooting

@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 8
 ---
 
@@ -44,9 +44,10 @@ Associate retained content with a document:
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<<http://localhost:8888">>)
 
 # Retain with document ID
+
 client.retain(
     bank_id="my-bank",
     content="Alice presented the Q4 roadmap...",
@@ -54,6 +55,7 @@ client.retain(
 )
 
 # Batch retain for a document
+
 client.retain_batch(
     bank_id="my-bank",
     items=[
@@ -65,12 +67,14 @@ client.retain_batch(
 )
 
 # From file
+
 with open("notes.txt") as f:
     client.retain(
         bank_id="my-bank",
         content=f.read(),
         document_id="notes-2024-03-15"
     )
+
 ```
 
 </TabItem>
@@ -79,7 +83,7 @@ with open("notes.txt") as f:
 ```typescript
 import { HindsightClient } from '@vectorize-io/hindsight-client';
 
-const client = new HindsightClient({ baseUrl: 'http://localhost:8888' });
+const client = new HindsightClient({ baseUrl: '<<http://localhost:8888'>> });
 
 // Retain with document ID
 await client.retain('my-bank', 'Alice presented the Q4 roadmap...', {
@@ -92,17 +96,22 @@ await client.retainBatch('my-bank', [
     { content: 'Item 2: New hiring targets announced' },
     { content: 'Item 3: Budget approved for ML team' }
 ], { documentId: 'meeting-2024-03-15' });
+
 ```
 
 </TabItem>
 <TabItem value="cli" label="CLI">
 
 ```bash
+
 # Retain file with document ID
+
 hindsight retain my-bank --file notes.txt --document-id notes-2024-03-15
 
 # Batch retain directory
+
 hindsight retain my-bank --files docs/*.md --document-id project-docs
+
 ```
 
 </TabItem>
@@ -116,7 +125,9 @@ Re-retaining with the same document_id **replaces** the old content:
 <TabItem value="python" label="Python">
 
 ```python
+
 # Original
+
 client.retain(
     bank_id="my-bank",
     content="Project deadline: March 31",
@@ -124,11 +135,13 @@ client.retain(
 )
 
 # Update (deletes old facts, creates new ones)
+
 client.retain(
     bank_id="my-bank",
     content="Project deadline: April 15 (extended)",
     document_id="project-plan"
 )
+
 ```
 
 </TabItem>
@@ -144,17 +157,22 @@ await client.retain('my-bank', 'Project deadline: March 31', {
 await client.retain('my-bank', 'Project deadline: April 15 (extended)', {
     document_id: 'project-plan'
 });
+
 ```
 
 </TabItem>
 <TabItem value="cli" label="CLI">
 
 ```bash
+
 # Original
+
 hindsight retain my-bank "Project deadline: March 31" --document-id project-plan
 
 # Update
+
 hindsight retain my-bank "Project deadline: April 15 (extended)" --document-id project-plan
+
 ```
 
 </TabItem>
@@ -171,11 +189,12 @@ Retrieve a document's original text and metadata. This is useful for expanding d
 from hindsight_client_api import ApiClient, Configuration
 from hindsight_client_api.api import DefaultApi
 
-config = Configuration(host="http://localhost:8888")
+config = Configuration(host="<<http://localhost:8888">>)
 api_client = ApiClient(config)
 api = DefaultApi(api_client)
 
 # Get document to expand context from recall results
+
 doc = api.get_document(
     bank_id="my-bank",
     document_id="meeting-2024-03-15"
@@ -185,6 +204,7 @@ print(f"Document: {doc.id}")
 print(f"Original text: {doc.original_text}")
 print(f"Memory count: {doc.memory_unit_count}")
 print(f"Created: {doc.created_at}")
+
 ```
 
 </TabItem>
@@ -193,7 +213,7 @@ print(f"Created: {doc.created_at}")
 ```typescript
 import { sdk, createClient, createConfig } from '@vectorize-io/hindsight-client';
 
-const apiClient = createClient(createConfig({ baseUrl: 'http://localhost:8888' }));
+const apiClient = createClient(createConfig({ baseUrl: '<<http://localhost:8888'>> }));
 
 // Get document to expand context from recall results
 const { data: doc } = await sdk.getDocument({
@@ -205,6 +225,7 @@ console.log(`Document: ${doc.id}`);
 console.log(`Original text: ${doc.original_text}`);
 console.log(`Memory count: ${doc.memory_unit_count}`);
 console.log(`Created: ${doc.created_at}`);
+
 ```
 
 </TabItem>
@@ -212,6 +233,7 @@ console.log(`Created: ${doc.created_at}`);
 
 ```bash
 hindsight documents get my-bank meeting-2024-03-15
+
 ```
 
 </TabItem>
@@ -229,6 +251,7 @@ hindsight documents get my-bank meeting-2024-03-15
   "created_at": "2024-03-15T14:00:00Z",
   "updated_at": "2024-03-15T14:00:00Z"
 }
+
 ```
 
 ## Next Steps

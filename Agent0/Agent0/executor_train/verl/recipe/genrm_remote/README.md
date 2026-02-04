@@ -1,4 +1,4 @@
-# Generative Reward Model
+﻿# Generative Reward Model
 
 ## Scripts
 
@@ -8,12 +8,14 @@ Deploy the pretrained GenRM model using vLLM. Skip this step if you want to use 
 
 ```bash 
 vllm serve verl-team/GenRM-CI-Test-1.5B --served-model-name genrm-demo
+
 ```
 
 ### Step 2: Perform RL using GenRM
 
 ```bash
 bash recipe/api-genrm/run_genrm_remote.sh
+
 ```
 
 The implementation works by passing a customized reward function (see `reward_function.py`)
@@ -26,6 +28,7 @@ You can use sglang server with data parallel for faster inference:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 python -m sglang_router.launch_server --model-path verl-team/GenRM-CI-Test-1.5B --dp-size 4
+
 ```
 
 Note that you should modify the `BASE_URL` in `reward_function.py` to match your SGLang Server address.

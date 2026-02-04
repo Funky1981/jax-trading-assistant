@@ -1,1 +1,1 @@
-# Hindsight Python Client
+﻿# Hindsight Python Client

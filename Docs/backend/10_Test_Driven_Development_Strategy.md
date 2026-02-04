@@ -1,4 +1,4 @@
-# 10 — TDD Strategy (How we keep this system sane)
+﻿# 10 — TDD Strategy (How we keep this system sane)
 
 **Goal:** enforce a test taxonomy that Codex can follow consistently.
 
@@ -16,6 +16,7 @@
   - run orchestrator against fixtures
 
 ## 10.2 — “Write the test first” rule
+
 For each new capability:
 1) Add failing unit test
 2) Implement minimal code to pass
@@ -23,6 +24,7 @@ For each new capability:
 4) Add edge cases
 
 ## 10.3 — Logging to memory is testable
+
 For every decision pipeline test, assert:
 - a MemoryItem was produced
 - item validates schema
@@ -30,6 +32,7 @@ For every decision pipeline test, assert:
 - item does NOT contain secrets
 
 ## 10.4 — Fixtures
+
 Put fixtures in:
 - `libs/testing/fixtures/...`
 Use:

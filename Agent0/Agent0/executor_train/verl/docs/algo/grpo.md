@@ -1,4 +1,4 @@
-# Group Relative Policy Optimization (GRPO)
+﻿# Group Relative Policy Optimization (GRPO)
 
 Last updated: 05/31/2025.
 
@@ -46,7 +46,7 @@ Instead of adding KL penalty in the reward, GRPO regularizes by directly adding 
 
 - `actor_rollout_ref.actor.kl_loss_coef`: The coefficient of kl loss. Default is 0.001.
 
-- `actor_rollout_ref.actor.kl_loss_type`: Support kl(k1), abs, mse(k2), low_var_kl(k3) and full. How to calculate the kl divergence between actor and reference policy. See this blog post for detailed analysis: http://joschu.net/blog/kl-approx.html
+- `actor_rollout_ref.actor.kl_loss_type`: Support kl(k1), abs, mse(k2), low_var_kl(k3) and full. How to calculate the kl divergence between actor and reference policy. See this blog post for detailed analysis: <http://joschu.net/blog/kl-approx.html>
 
 ## Advanced Extensions
 
@@ -66,6 +66,7 @@ Qwen2.5 GRPO training log and commands: [link](https://github.com/eric-haibin-li
 
 ```bash
 bash examples/grpo_trainer/run_qwen3-8b.sh
+
 ```
 
-For more reference performance, please see https://verl.readthedocs.io/en/latest/algo/baseline.html
+For more reference performance, please see <https://verl.readthedocs.io/en/latest/algo/baseline.html>

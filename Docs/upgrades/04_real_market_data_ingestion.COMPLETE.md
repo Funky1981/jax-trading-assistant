@@ -1,4 +1,4 @@
-# Real Market Data Ingestion - Implementation Summary
+﻿# Real Market Data Ingestion - Implementation Summary
 
 ## Completed Tasks
 
@@ -66,6 +66,7 @@
 ## Files Created (16)
 
 ### libs/marketdata (9 files)
+
 1. `README.md` - Documentation and usage examples
 2. `config.go` - Configuration structures and validation
 3. `types.go` - Data models (Quote, Candle, Trade, Earnings)
@@ -77,16 +78,19 @@
 9. `go.mod` - Dependencies
 
 ### services/jax-market (3 files)
+
 1. `cmd/jax-market/main.go` - Service entry point
 2. `internal/config/config.go` - Configuration loading
 3. `internal/ingester/ingester.go` - Ingestion logic
 
 ### Configuration & Migrations (3 files)
+
 1. `config/jax-ingest.json` - Service configuration
 2. `db/postgres/migrations/000003_market_data_tables.up.sql`
 3. `db/postgres/migrations/000003_market_data_tables.down.sql`
 
 ### Documentation (1 file)
+
 1. `Docs/upgrades/04_real_market_data_ingestion.COMPLETE.md`
 
 ## Architecture Benefits
@@ -120,20 +124,26 @@ fmt.Printf("AAPL: $%.2f\n", quote.Price)
 
 // Fetch 30 days of daily candles
 candles, _ := client.GetCandles(ctx, "SPY", marketdata.Timeframe1Day, 30)
+
 ```
 
 ## Running jax-market
 
 ```powershell
+
 # Set environment variables
+
 $env:POLYGON_API_KEY = "your-key"
 $env:DATABASE_URL = "postgres://jaxuser:jaxpass@localhost:5432/jaxdb"
 
 # Run migrations
+
 .\scripts\migrate.ps1 up
 
 # Start service
+
 go run services/jax-market/cmd/jax-market/main.go -config config/jax-ingest.json
+
 ```
 
 ## Next Steps

@@ -1,4 +1,4 @@
-# Orchestrator and Agent Pipeline
+﻿# Orchestrator and Agent Pipeline
 
 The orchestrator coordinates the core flow: detect events → generate trades → calculate risk → enrich with research → persist results. It is the heart of the trading assistant, and its current implementation is skeletal.
 

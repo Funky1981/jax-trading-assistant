@@ -1,4 +1,4 @@
-# Hindsight Integration Tests
+﻿# Hindsight Integration Tests
 
 This directory contains integration tests for the Hindsight all-in-one package.
 
@@ -46,6 +46,7 @@ export HINDSIGHT_LLM_PROVIDER=$HINDSIGHT_API_LLM_PROVIDER
 export HINDSIGHT_LLM_API_KEY=$HINDSIGHT_API_LLM_API_KEY
 export HINDSIGHT_LLM_MODEL=$HINDSIGHT_API_LLM_MODEL
 pytest tests/ -v
+
 ```
 
 **Note on Parallel Execution**: These tests use embedded PostgreSQL (`pg0`), which is a singleton that cannot be shared across pytest-xdist worker processes. Therefore, these tests must run sequentially. Do not use `pytest -n` (parallel workers) with these tests.
@@ -60,12 +61,14 @@ pytest tests/ -v
 
 ```bash
 pytest tests/test_server_integration.py::test_server_context_manager_basic_workflow -v
+
 ```
 
 ### Run with Verbose Output
 
 ```bash
 pytest tests/ -v -s
+
 ```
 
 The `-s` flag shows print statements, which is useful to see the test progress.
@@ -76,6 +79,7 @@ These tests involve LLM calls which can take time:
 
 ```bash
 pytest tests/ --timeout=300
+
 ```
 
 ## Test Configuration

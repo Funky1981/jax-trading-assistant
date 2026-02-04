@@ -7,15 +7,18 @@ import (
 	"sync"
 	"time"
 
+	"jax-trading-assistant/libs/resilience"
+
 	"github.com/gofinance/ib"
 )
 
 // IBProvider implements the Provider interface for Interactive Brokers
 type IBProvider struct {
-	config    IBConfig
-	engine    *ib.Engine
-	mu        sync.RWMutex
-	connected bool
+	config         IBConfig
+	engine         *ib.Engine
+	mu             sync.RWMutex
+	connected      bool
+	circuitBreaker *resilience.CircuitBreaker
 }
 
 // IBConfig holds IB Gateway configuration
@@ -84,6 +87,11 @@ func (p *IBProvider) connect() error {
 
 	p.engine = engine
 	p.connected = true
+
+	// Create circuit breaker for this provider
+	cbConfig := resilience.DefaultConfig("ib-gateway")
+	p.circuitBreaker = resilience.NewCircuitBreaker(cbConfig)
+
 	return nil
 }
 

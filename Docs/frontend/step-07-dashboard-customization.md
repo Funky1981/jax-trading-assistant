@@ -1,9 +1,11 @@
-# Step 07: Dashboard Customization
+﻿# Step 07: Dashboard Customization
 
 ## Objective
+
 Deliver a configurable, professional dashboard system for trading workflows.
 
 ## Actions
+
 1. Widget registry
    - Register widgets with metadata (size, data needs, refresh policy).
 

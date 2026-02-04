@@ -6,23 +6,31 @@ import (
 	"strconv"
 	"time"
 
+	"jax-trading-assistant/libs/resilience"
+
 	polygon "github.com/polygon-io/client-go/rest"
 	"github.com/polygon-io/client-go/rest/models"
 )
 
 // PolygonProvider implements the Provider interface for Polygon.io
 type PolygonProvider struct {
-	client *polygon.Client
-	config ProviderConfig
+	client         *polygon.Client
+	config         ProviderConfig
+	circuitBreaker *resilience.CircuitBreaker
 }
 
 // NewPolygonProvider creates a new Polygon.io provider
 func NewPolygonProvider(config ProviderConfig) (*PolygonProvider, error) {
 	client := polygon.New(config.APIKey)
 
+	// Create circuit breaker for this provider
+	cbConfig := resilience.DefaultConfig("polygon-api")
+	cb := resilience.NewCircuitBreaker(cbConfig)
+
 	return &PolygonProvider{
-		client: client,
-		config: config,
+		client:         client,
+		config:         config,
+		circuitBreaker: cb,
 	}, nil
 }
 
@@ -33,52 +41,59 @@ func (p *PolygonProvider) Name() string {
 
 // GetQuote fetches a real-time or delayed quote
 func (p *PolygonProvider) GetQuote(ctx context.Context, symbol string) (*Quote, error) {
-	params := &models.GetLastTradeParams{
-		Ticker: symbol,
-	}
+	result, err := p.circuitBreaker.ExecuteWithContext(ctx, func() (any, error) {
+		params := &models.GetLastTradeParams{
+			Ticker: symbol,
+		}
 
-	resp, err := p.client.GetLastTrade(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrProviderError, err)
-	}
+		resp, err := p.client.GetLastTrade(ctx, params)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrProviderError, err)
+		}
 
-	// Check if we got valid data (Results is a value, not pointer - check price)
-	if resp.Results.Price == 0 {
-		return nil, ErrNoData
-	}
+		// Check if we got valid data (Results is a value, not pointer - check price)
+		if resp.Results.Price == 0 {
+			return nil, ErrNoData
+		}
 
-	// Also get snapshot for bid/ask
-	snapshotParams := &models.GetTickerSnapshotParams{
-		Ticker:     symbol,
-		Locale:     models.US,
-		MarketType: models.Stocks,
-	}
-	snapshot, err := p.client.GetTickerSnapshot(ctx, snapshotParams)
-	if err != nil {
-		// Snapshot failed but we can still return price from last trade
-		return &Quote{
+		// Also get snapshot for bid/ask
+		snapshotParams := &models.GetTickerSnapshotParams{
+			Ticker:     symbol,
+			Locale:     models.US,
+			MarketType: models.Stocks,
+		}
+		snapshot, err := p.client.GetTickerSnapshot(ctx, snapshotParams)
+		if err != nil {
+			// Snapshot failed but we can still return price from last trade
+			return &Quote{
+				Symbol:    symbol,
+				Price:     resp.Results.Price,
+				Timestamp: time.Time(resp.Results.Timestamp),
+				Exchange:  strconv.FormatInt(int64(resp.Results.Exchange), 10),
+			}, nil
+		}
+
+		quote := &Quote{
 			Symbol:    symbol,
 			Price:     resp.Results.Price,
 			Timestamp: time.Time(resp.Results.Timestamp),
 			Exchange:  strconv.FormatInt(int64(resp.Results.Exchange), 10),
-		}, nil
+		}
+
+		// Access Snapshot field, not Ticker
+		quote.Bid = snapshot.Snapshot.LastQuote.BidPrice
+		quote.Ask = snapshot.Snapshot.LastQuote.AskPrice
+		quote.BidSize = int64(snapshot.Snapshot.LastQuote.BidSize)
+		quote.AskSize = int64(snapshot.Snapshot.LastQuote.AskSize)
+		quote.Volume = int64(snapshot.Snapshot.Day.Volume)
+
+		return quote, nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
-
-	quote := &Quote{
-		Symbol:    symbol,
-		Price:     resp.Results.Price,
-		Timestamp: time.Time(resp.Results.Timestamp),
-		Exchange:  strconv.FormatInt(int64(resp.Results.Exchange), 10),
-	}
-
-	// Access Snapshot field, not Ticker
-	quote.Bid = snapshot.Snapshot.LastQuote.BidPrice
-	quote.Ask = snapshot.Snapshot.LastQuote.AskPrice
-	quote.BidSize = int64(snapshot.Snapshot.LastQuote.BidSize)
-	quote.AskSize = int64(snapshot.Snapshot.LastQuote.AskSize)
-	quote.Volume = int64(snapshot.Snapshot.Day.Volume)
-
-	return quote, nil
+	return result.(*Quote), nil
 }
 
 // GetCandles fetches historical OHLCV data

@@ -1,4 +1,4 @@
-# Interactive Brokers Gateway - Integration Summary
+﻿# Interactive Brokers Gateway - Integration Summary
 
 ## What I've Created
 
@@ -28,10 +28,11 @@ I've set up the foundation for Interactive Brokers Gateway integration in your j
 
 ### Connection Details
 
-```
+```text
 Paper Trading:  127.0.0.1:7497
 Live Trading:   127.0.0.1:7496
 Client ID:      Any integer (e.g., 1)
+
 ```
 
 ### Configuration Example
@@ -45,6 +46,7 @@ Client ID:      Any integer (e.g., 1)
     "client_id": 1
   }
 }
+
 ```
 
 ## Current Implementation Status
@@ -91,15 +93,17 @@ IB's official API has **better Python support** than Go. Consider:
 4. This is actually a common pattern for IB integrations
 
 Example architecture:
-```
+
+```n
 [Go Services] → HTTP/gRPC → [Python IB Service] → Socket → [IB Gateway]
+
 ```
 
 ## How to Get Started
 
 ### For Testing (Paper Trading):
 
-1. **Download IB Gateway** from https://www.interactivebrokers.com/en/trading/ib-api.php
+1. **Download IB Gateway** from <https://www.interactivebrokers.com/en/trading/ib-api.php>
 
 2. **Create Paper Trading Account** (free, no credit card needed)
 
@@ -124,10 +128,10 @@ Example architecture:
 
 ## Resources
 
-- **IB API Docs**: https://interactivebrokers.github.io/tws-api/
-- **Go Library**: https://github.com/gofinance/ib
-- **Python Library** (recommended): https://github.com/erdewit/ib_insync
-- **Paper Trading**: https://www.interactivebrokers.com/en/index.php?f=1286
+- **IB API Docs**: <https://interactivebrokers.github.io/tws-api/>
+- **Go Library**: <https://github.com/gofinance/ib>
+- **Python Library** (recommended): <https://github.com/erdewit/ib_insync>
+- **Paper Trading**: <https://www.interactivebrokers.com/en/index.php?f=1286>
 
 ## Questions?
 

@@ -1,4 +1,4 @@
-# 08 — Reflection Jobs (Outcomes -> Beliefs)
+﻿# 08 — Reflection Jobs (Outcomes -> Beliefs)
 
 **Goal:** Add scheduled reflection to produce insights that improve future decisions.
 
@@ -11,6 +11,7 @@
 - Store results in `strategy_beliefs`
 
 ## 8.2 — Scheduling
+
 Options:
 - cron inside a service (simple)
 - external scheduler (more production-like)

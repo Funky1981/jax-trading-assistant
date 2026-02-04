@@ -1,4 +1,4 @@
-# Hindsight TypeScript Client
+﻿# Hindsight TypeScript Client
 
 TypeScript client library for the Hindsight API.
 
@@ -6,8 +6,11 @@ TypeScript client library for the Hindsight API.
 
 ```bash
 npm install @vectorize-io/hindsight-client
+
 # or
+
 yarn add @vectorize-io/hindsight-client
+
 ```
 
 ## Usage
@@ -15,7 +18,7 @@ yarn add @vectorize-io/hindsight-client
 ```typescript
 import { HindsightClient } from '@vectorize-io/hindsight-client';
 
-const client = new HindsightClient({ baseUrl: 'http://localhost:8888' });
+const client = new HindsightClient({ baseUrl: '<http://localhost:8888'> });
 
 // Retain information
 await client.retain('my-bank', 'Alice works at Google in Mountain View.');
@@ -25,6 +28,7 @@ const results = await client.recall('my-bank', 'Where does Alice work?');
 
 // Reflect and get an opinion
 const response = await client.reflect('my-bank', 'What do you think about Alice\'s career?');
+
 ```
 
 ## API Reference
@@ -39,6 +43,7 @@ await client.retain('my-bank', 'User prefers dark mode', {
   context: 'Settings conversation',
   metadata: { source: 'chat' }
 });
+
 ```
 
 ### `retainBatch(bankId, items, options?)`
@@ -50,6 +55,7 @@ await client.retainBatch('my-bank', [
   { content: 'Alice loves hiking' },
   { content: 'Alice visited Paris last summer' }
 ], { async: true });
+
 ```
 
 ### `recall(bankId, query, options?)`
@@ -60,6 +66,7 @@ Recall memories matching a query.
 const results = await client.recall('my-bank', 'What are Alice\'s hobbies?', {
   budget: 'mid'
 });
+
 ```
 
 ### `reflect(bankId, query, options?)`
@@ -71,6 +78,7 @@ const response = await client.reflect('my-bank', 'What should I do this weekend?
   budget: 'low'
 });
 console.log(response.text);
+
 ```
 
 ### `createBank(bankId, options)`
@@ -82,6 +90,7 @@ await client.createBank('my-bank', {
   name: 'My Assistant',
   background: 'A helpful assistant that remembers everything.'
 });
+
 ```
 
 ## Documentation

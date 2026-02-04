@@ -1,4 +1,4 @@
-# Training DeepSeek 671b
+﻿# Training DeepSeek 671b
 
 Last updated: 06/13/2025.
 
@@ -48,4 +48,5 @@ The community continue to optimize large MoE models further, ongoing efforts inc
 We invite the community to try and improve verl together. Get connected with us on [slack](https://join.slack.com/t/verlgroup/shared_invite/zt-2w5p9o4c3-yy0x2Q56s_VlGLsJ93A6vA)/[wechat](https://raw.githubusercontent.com/eric-haibin-lin/verl-community/refs/heads/main/WeChat.JPG)/[Github issues](https://github.com/volcengine/verl/issues/708)!
 
 ## Acknowledgement
+
 @vermouth1992 @ISEEKYAN @ETOgaosion @yzlnew @ShareLer @BearBiscuit05 @ccclyu @ann-qin-lu @SwordFaith @zzong2006 @zhaochenyang20 @ocss884 @eric-haibin-lin

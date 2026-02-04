@@ -1,4 +1,4 @@
-# Hindsight Helm Chart
+﻿# Hindsight Helm Chart
 
 Helm chart for deploying Hindsight - a temporal-semantic-entity memory system for AI agents.
 
@@ -11,13 +11,17 @@ Helm chart for deploying Hindsight - a temporal-semantic-entity memory system fo
 ## Quick Start
 
 ```bash
+
 # Update dependencies first
+
 helm dependency update ./helm/hindsight
 
 # Install (PostgreSQL included by default)
+
 export OPENAI_API_KEY="sk-your-openai-key"
 helm upgrade hindsight --install ./helm/hindsight -n hindsight --create-namespace \
   --set api.secrets.HINDSIGHT_API_LLM_API_KEY="$OPENAI_API_KEY"
+
 ```
 
 To use an external database instead:
@@ -28,6 +32,7 @@ helm install hindsight ./helm/hindsight -n hindsight --create-namespace \
   --set postgresql.enabled=false \
   --set postgresql.external.host=my-postgres.example.com \
   --set postgresql.external.password=mypassword
+
 ```
 
 ## Installation
@@ -35,8 +40,9 @@ helm install hindsight ./helm/hindsight -n hindsight --create-namespace \
 ### Add the repository (if published)
 
 ```bash
-helm repo add hindsight https://your-helm-repo.com
+helm repo add hindsight <https://your-helm-repo.com>
 helm repo update
+
 ```
 
 ### Install with custom values file
@@ -52,12 +58,14 @@ postgresql:
   external:
     host: "my-postgres.example.com"
     password: "mypassword"
+
 ```
 
 Then install:
 
 ```bash
 helm install hindsight ./helm/hindsight -n hindsight --create-namespace -f values-override.yaml
+
 ```
 
 ## Configuration
@@ -94,12 +102,13 @@ api:
     HINDSIGHT_API_LLM_MODEL: "gpt-4"
   secrets:
     HINDSIGHT_API_LLM_API_KEY: "your-api-key"
-    HINDSIGHT_API_LLM_BASE_URL: "https://api.openai.com/v1"
+    HINDSIGHT_API_LLM_BASE_URL: "<https://api.openai.com/v1">
 
 controlPlane:
   env:
     NODE_ENV: "production"
   secrets: {}
+
 ```
 
 ### External Database
@@ -115,6 +124,7 @@ postgresql:
     database: "hindsight"
     username: "hindsight"
     password: "your-password"
+
 ```
 
 ### Ingress
@@ -140,18 +150,21 @@ ingress:
     - secretName: hindsight-tls
       hosts:
         - hindsight.example.com
+
 ```
 
 ## Upgrading
 
 ```bash
 helm upgrade hindsight ./helm/hindsight -n hindsight
+
 ```
 
 ## Uninstalling
 
 ```bash
 helm uninstall hindsight -n hindsight
+
 ```
 
 ## Components
@@ -167,16 +180,19 @@ The chart deploys:
 
 ```bash
 helm lint ./helm/hindsight
+
 ```
 
 ### Template locally
 
 ```bash
 helm template hindsight ./helm/hindsight --debug
+
 ```
 
 ### Dry run installation
 
 ```bash
 helm install hindsight ./helm/hindsight --dry-run --debug
+
 ```

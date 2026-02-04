@@ -9,11 +9,13 @@ import (
 func (s *Server) RegisterHealth() {
 	s.mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"ok":        true,
 			"healthy":   true,
 			"status":    "healthy",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
-		})
+		}); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		}
 	})
 }

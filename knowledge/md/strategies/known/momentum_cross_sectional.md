@@ -1,14 +1,17 @@
----
+﻿---
 title: "Momentum (Cross-Sectional / Relative Strength)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "momentum", "equities", "cross-sectional"]
 ---
+
 ## What it is
+
 Ranks assets by past performance and goes **long winners / short losers** (market-neutral or beta-managed).
 
 ## Why it can work (edge hypothesis)
+
 Relative performance persistence has been widely documented in equities and other assets, though it is sensitive to costs and crashes.
 
 ## Best conditions
@@ -22,6 +25,7 @@ Relative performance persistence has been widely documented in equities and othe
 - Crowding and forced deleveraging
 
 ## Signal definition (implementation-friendly)
+
 Example:
 - Monthly rank assets by 12-1 month returns (12 months excluding most recent 1 month)
 - Long top decile, short bottom decile

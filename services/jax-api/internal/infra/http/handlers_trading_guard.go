@@ -17,8 +17,9 @@ type tradingOutcomeRequest struct {
 
 func (s *Server) RegisterTradingGuard(guard *app.TradingGuard) {
 	h := &TradingGuardHandler{guard: guard}
-	s.mux.HandleFunc("/trading/guard", h.handleStatus)
-	s.mux.HandleFunc("/trading/guard/outcome", h.handleOutcome)
+	// Protected endpoints - require authentication
+	s.mux.HandleFunc("/trading/guard", s.protect(h.handleStatus))
+	s.mux.HandleFunc("/trading/guard/outcome", s.protect(h.handleOutcome))
 }
 
 func (h *TradingGuardHandler) handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +32,9 @@ func (h *TradingGuardHandler) handleStatus(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(h.guard.Status())
+	if err := json.NewEncoder(w).Encode(h.guard.Status()); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *TradingGuardHandler) handleOutcome(w http.ResponseWriter, r *http.Request) {
@@ -50,5 +53,7 @@ func (h *TradingGuardHandler) handleOutcome(w http.ResponseWriter, r *http.Reque
 	}
 	h.guard.RecordOutcome(r.Context(), req.PnL)
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(h.guard.Status())
+	if err := json.NewEncoder(w).Encode(h.guard.Status()); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }

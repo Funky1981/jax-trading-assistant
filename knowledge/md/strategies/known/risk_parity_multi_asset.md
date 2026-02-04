@@ -1,14 +1,17 @@
----
+﻿---
 title: "Risk Parity (Diversified Multi-Asset Allocation)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "allocation", "risk-parity", "multi-asset"]
 ---
+
 ## What it is
+
 Allocates across asset classes so that each contributes roughly equally to total portfolio risk, often using leverage to reach a target risk level.
 
 ## Why it can work (edge hypothesis)
+
 Diversification across uncorrelated assets can reduce portfolio drawdowns; risk parity emphasizes risk balance rather than capital balance.
 
 ## Best conditions
@@ -22,6 +25,7 @@ Diversification across uncorrelated assets can reduce portfolio drawdowns; risk 
 - When bond-heavy allocations suffer from rising yields (depends on implementation)
 
 ## Signal definition (implementation-friendly)
+
 Example:
 - Choose asset buckets (equities, nominal bonds, inflation hedges, etc.)
 - Estimate vol and correlations

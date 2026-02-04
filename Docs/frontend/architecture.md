@@ -1,4 +1,4 @@
-# Frontend Architecture
+﻿# Frontend Architecture
 
 ## Principles
 - **Responsiveness first:** all user interactions must be reflected immediately with optimistic UI updates and non‑blocking async flows.
@@ -40,11 +40,19 @@
 frontend/
   src/
     app/               # App shell, routing, providers
+
     data/              # API clients, query caches, stream adapters
+
     domain/            # Trading models, business logic
+
     components/        # Reusable UI components
+
     pages/             # Screen assemblies
+
     features/          # Cross‑cutting feature modules
+
     styles/            # Design tokens, themes, global styles
+
     tests/             # Shared test utilities
+
 ```

@@ -1,4 +1,4 @@
-# hindsight-litellm
+﻿# hindsight-litellm
 
 Universal LLM memory integration via LiteLLM. Add persistent memory to any LLM application with just a few lines of code.
 
@@ -17,6 +17,7 @@ Universal LLM memory integration via LiteLLM. Add persistent memory to any LLM a
 
 ```bash
 pip install hindsight-litellm
+
 ```
 
 ## Quick Start
@@ -25,24 +26,27 @@ pip install hindsight-litellm
 import hindsight_litellm
 
 # Configure and enable memory integration
+
 hindsight_litellm.configure(
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="<<<<<<<http://localhost:8888">>>,>>>>
     bank_id="my-agent",
 )
 hindsight_litellm.enable()
 
 # Use the convenience wrapper - memory is automatically injected and stored
+
 response = hindsight_litellm.completion(
     model="gpt-4o-mini",
     messages=[{"role": "user", "content": "What did we discuss about AI?"}]
 )
+
 ```
 
 ## How It Works
 
 Here's what happens under the hood when you call `completion()`:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  1. YOUR CODE                                                               │
 │  ───────────────────────────────────────────────────────────────────────── │
@@ -57,14 +61,19 @@ Here's what happens under the hood when you call `completion()`:
 │  2. MEMORY RETRIEVAL (before LLM call)                                      │
 │  ───────────────────────────────────────────────────────────────────────── │
 │  # hindsight_litellm queries Hindsight for relevant memories                │
+
 │                                                                             │
 │  # If use_reflect=False (default) - raw memories:                           │
+
 │  memories = hindsight.recall(query="Help me with my Python project")        │
 │  # Returns: ["User prefers pytest", "User is building a FastAPI app", ...]  │
+
 │                                                                             │
 │  # If use_reflect=True - synthesized context:                               │
+
 │  context = hindsight.reflect(query="Help me with my Python project")        │
 │  # Returns: "The user is an experienced Python developer working on..."     │
+
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
@@ -72,10 +81,12 @@ Here's what happens under the hood when you call `completion()`:
 │  3. PROMPT INJECTION                                                        │
 │  ───────────────────────────────────────────────────────────────────────── │
 │  # Memories are injected into the system message:                           │
+
 │                                                                             │
 │  messages = [                                                               │
 │      {"role": "system", "content": """                                      │
 │          # Relevant Memories                                                │
+
 │          1. [WORLD] User prefers pytest for testing                         │
 │          2. [WORLD] User is building a FastAPI app                          │
 │          3. [OPINION] User likes type hints                                 │
@@ -89,11 +100,15 @@ Here's what happens under the hood when you call `completion()`:
 │  4. LLM CALL                                                                │
 │  ───────────────────────────────────────────────────────────────────────── │
 │  # The enriched prompt is sent to the LLM                                   │
+
 │  response = litellm.completion(model="gpt-4o-mini", messages=messages)      │
 │                                                                             │
 │  # LLM now has context and can give personalized responses like:            │
+
 │  # "Since you're working on your FastAPI app, here's how to add tests       │
+
 │  #  with pytest..."                                                         │
+
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
@@ -101,11 +116,13 @@ Here's what happens under the hood when you call `completion()`:
 │  5. CONVERSATION STORAGE (after LLM call)                                   │
 │  ───────────────────────────────────────────────────────────────────────── │
 │  # The conversation is stored to Hindsight for future recall                │
+
 │  hindsight.retain(                                                          │
 │      content="User: Help me with my Python project\n"                       │
 │              "Assistant: Since you're working on FastAPI..."                │
 │  )                                                                          │
 │  # Hindsight extracts facts: "User asked about Python project help"         │
+
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
@@ -113,8 +130,10 @@ Here's what happens under the hood when you call `completion()`:
 │  6. RESPONSE RETURNED                                                       │
 │  ───────────────────────────────────────────────────────────────────────── │
 │  # You receive the response as normal                                       │
+
 │  print(response.choices[0].message.content)                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 The memory injection and storage happen automatically - you just use `completion()` as normal.
@@ -124,30 +143,47 @@ The memory injection and storage happen automatically - you just use `completion
 ```python
 hindsight_litellm.configure(
     # Required
-    hindsight_api_url="http://localhost:8888",  # Hindsight API server URL
+
+    hindsight_api_url="<<<<<<<http://localhost:8888">>>,>>>>  # Hindsight API server URL
+
     bank_id="my-agent",                          # Memory bank ID
 
     api_key="your-api-key",        # Optional API key for authentication
 
     # Optional - Memory behavior
+
     store_conversations=True,      # Store conversations after LLM calls
+
     inject_memories=True,          # Inject relevant memories into prompts
+
     use_reflect=False,             # Use reflect API (synthesized) vs recall (raw memories)
+
     reflect_include_facts=False,   # Include source facts with reflect responses
+
     max_memories=None,             # Maximum memories to inject (None = unlimited)
+
     max_memory_tokens=4096,        # Maximum tokens for memory context
+
     recall_budget="mid",           # Recall budget: "low", "mid", "high"
+
     fact_types=["world", "agent"], # Filter fact types to inject
 
     # Optional - Bank Configuration
+
     bank_name="My Agent",          # Human-readable display name for the memory bank
+
     background="This agent...",    # Instructions guiding what Hindsight should remember (see below)
 
     # Optional - Advanced
+
     injection_mode="system_message",  # or "prepend_user"
+
     excluded_models=["gpt-3.5*"],     # Exclude certain models
+
     verbose=True,                     # Enable verbose logging and debug info
+
 )
+
 ```
 
 ### Bank Configuration: background and bank_name
@@ -159,9 +195,11 @@ The `background` and `bank_name` parameters configure the memory bank itself. Wh
 - **background**: Instructions that guide Hindsight on what information is important to extract and remember from conversations. This influences memory extraction during the `retain` operation and can affect how the bank's "disposition" (skepticism, literalism, empathy) is calibrated.
 
 ```python
+
 # Example: Customer support routing agent
+
 hindsight_litellm.configure(
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="<<<<<<<http://localhost:8888">>>,>>>>
     bank_id="support-router",
     bank_name="Customer Support Router",
     background="""This agent routes customer support requests to the appropriate team.
@@ -169,6 +207,7 @@ hindsight_litellm.configure(
     Track customer preferences for communication channels and past issue resolutions.
     Note any escalation patterns or VIP customers who need special handling.""",
 )
+
 ```
 
 ### Memory Modes: Reflect vs Recall
@@ -177,19 +216,26 @@ hindsight_litellm.configure(
 - **Reflect mode** (`use_reflect=True`): Synthesizes memories into a coherent context paragraph. Best for natural, conversational memory context.
 
 ```python
+
 # Recall mode - raw memories
+
 hindsight_litellm.configure(
     bank_id="my-agent",
     use_reflect=False,  # Default
+
 )
+
 # Injects: "1. [WORLD] User prefers Python\n2. [OPINION] User dislikes Java..."
 
 # Reflect mode - synthesized context
+
 hindsight_litellm.configure(
     bank_id="my-agent",
     use_reflect=True,
 )
+
 # Injects: "Based on previous conversations, the user is a Python developer who..."
+
 ```
 
 ## Multi-Provider Support
@@ -200,28 +246,35 @@ Works with any LiteLLM-supported provider:
 import hindsight_litellm
 
 hindsight_litellm.configure(
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="<<<<<<<http://localhost:8888">>>,>>>>
     bank_id="my-agent",
 )
 hindsight_litellm.enable()
 
 # OpenAI
+
 hindsight_litellm.completion(model="gpt-4o", messages=[...])
 
 # Anthropic
+
 hindsight_litellm.completion(model="claude-3-5-sonnet-20241022", messages=[...])
 
 # Groq
+
 hindsight_litellm.completion(model="groq/llama-3.1-70b-versatile", messages=[...])
 
 # Azure OpenAI
+
 hindsight_litellm.completion(model="azure/gpt-4", messages=[...])
 
 # AWS Bedrock
+
 hindsight_litellm.completion(model="bedrock/anthropic.claude-3", messages=[...])
 
 # Google Vertex AI
+
 hindsight_litellm.completion(model="vertex_ai/gemini-pro", messages=[...])
+
 ```
 
 ## Direct Memory APIs
@@ -231,16 +284,20 @@ hindsight_litellm.completion(model="vertex_ai/gemini-pro", messages=[...])
 ```python
 from hindsight_litellm import configure, recall
 
-configure(bank_id="my-agent", hindsight_api_url="http://localhost:8888")
+configure(bank_id="my-agent", hindsight_api_url="<<<http://localhost:8888">>>)
 
 # Query memories
+
 memories = recall("what projects am I working on?", budget="mid")
 for m in memories:
     print(f"- [{m.fact_type}] {m.text}")
 
 # Output:
+
 # - [world] User is building a FastAPI project
+
 # - [opinion] User prefers Python over JavaScript
+
 ```
 
 ### Reflect - Get synthesized context
@@ -248,14 +305,17 @@ for m in memories:
 ```python
 from hindsight_litellm import configure, reflect
 
-configure(bank_id="my-agent", hindsight_api_url="http://localhost:8888")
+configure(bank_id="my-agent", hindsight_api_url="<<<http://localhost:8888">>>)
 
 # Get synthesized memory context
+
 result = reflect("what do you know about the user's preferences?")
 print(result.text)
 
 # Output:
+
 # "Based on our conversations, the user prefers Python for backend development..."
+
 ```
 
 ### Retain - Store memories
@@ -263,14 +323,16 @@ print(result.text)
 ```python
 from hindsight_litellm import configure, retain
 
-configure(bank_id="my-agent", hindsight_api_url="http://localhost:8888")
+configure(bank_id="my-agent", hindsight_api_url="<<<http://localhost:8888">>>)
 
 # Store a memory
+
 result = retain(
     content="User mentioned they're working on a machine learning project",
     context="Discussion about current projects",
 )
 print(f"Retained successfully: {result.success}, items: {result.items_count}")
+
 ```
 
 ### Async APIs
@@ -279,9 +341,11 @@ print(f"Retained successfully: {result.success}, items: {result.items_count}")
 from hindsight_litellm import arecall, areflect, aretain
 
 # Async versions of all memory APIs
+
 memories = await arecall("what do you know about me?")
 context = await areflect("summarize user preferences")
 result = await aretain(content="New information to remember")
+
 ```
 
 ## Native Client Wrappers
@@ -298,13 +362,14 @@ client = OpenAI()
 wrapped = wrap_openai(
     client,
     bank_id="my-agent",
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="<<<<<<<http://localhost:8888">>>,>>>>
 )
 
 response = wrapped.chat.completions.create(
     model="gpt-4",
     messages=[{"role": "user", "content": "What do you know about me?"}]
 )
+
 ```
 
 ### Anthropic Wrapper
@@ -317,7 +382,7 @@ client = Anthropic()
 wrapped = wrap_anthropic(
     client,
     bank_id="my-agent",
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="<<<<<<<http://localhost:8888">>>,>>>>
 )
 
 response = wrapped.messages.create(
@@ -325,6 +390,7 @@ response = wrapped.messages.create(
     max_tokens=1024,
     messages=[{"role": "user", "content": "Hello!"}]
 )
+
 ```
 
 ## Debug Mode
@@ -336,7 +402,7 @@ from hindsight_litellm import configure, enable, completion, get_last_injection_
 
 configure(
     bank_id="my-agent",
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="<<<<<<<http://localhost:8888">>>,>>>>
     verbose=True,
     use_reflect=True,
 )
@@ -348,14 +414,18 @@ response = completion(
 )
 
 # Inspect what was injected
+
 debug = get_last_injection_debug()
 if debug:
     print(f"Mode: {debug.mode}")           # "reflect" or "recall"
+
     print(f"Injected: {debug.injected}")   # True/False
+
     print(f"Results: {debug.results_count}")
     print(f"Memory context:\n{debug.memory_context}")
     if debug.error:
         print(f"Error: {debug.error}")
+
 ```
 
 ## Context Manager
@@ -366,7 +436,9 @@ import litellm
 
 with hindsight_memory(bank_id="user-123"):
     response = litellm.completion(model="gpt-4", messages=[...])
+
 # Memory integration automatically disabled after context
+
 ```
 
 ## Disabling and Cleanup
@@ -375,10 +447,13 @@ with hindsight_memory(bank_id="user-123"):
 from hindsight_litellm import disable, cleanup
 
 # Temporarily disable memory integration
+
 disable()
 
 # Clean up all resources (call when shutting down)
+
 cleanup()
+
 ```
 
 ## API Reference

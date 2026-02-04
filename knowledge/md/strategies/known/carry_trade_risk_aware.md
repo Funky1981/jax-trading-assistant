@@ -1,14 +1,17 @@
----
+﻿---
 title: "Carry (Risk-Aware)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "carry", "fx", "rates", "risk"]
 ---
+
 ## What it is
+
 Earns yield differentials (e.g., long high-rate, short low-rate currencies) or analogous carry in other markets.
 
 ## Why it can work (edge hypothesis)
+
 Carry can compensate for providing liquidity/funding in normal times, but embeds crash risk.
 
 ## Best conditions
@@ -22,6 +25,7 @@ Carry can compensate for providing liquidity/funding in normal times, but embeds
 - Sudden regime shifts (crash risk)
 
 ## Signal definition (implementation-friendly)
+
 Example (FX):
 - Rank currencies by interest rate differential
 - Long high differential basket, short low differential basket

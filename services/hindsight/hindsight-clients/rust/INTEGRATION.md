@@ -1,4 +1,4 @@
-# CLI Integration Guide
+﻿# CLI Integration Guide
 
 This guide shows how to integrate the auto-generated Rust client into the CLI.
 
@@ -30,6 +30,7 @@ impl ApiClient {
     }
     // ... other methods
 }
+
 ```
 
 ### Option 2: Full Async (Recommended for New CLI)
@@ -54,6 +55,7 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+
 ```
 
 ## Type Mapping
@@ -75,21 +77,25 @@ The generated types are in `hindsight_client::types::*`. Here's the mapping:
 ## Example: List Agents Command
 
 ### Before (Manual API Code):
-```rust
+
+```n
 pub fn list_agents(&self, verbose: bool) -> Result<Vec<Agent>> {
     let url = format!("{}/api/v1/agents", self.base_url);
     let response = self.client.get(&url).send()?;
     // ... manual parsing
 }
+
 ```
 
 ### After (Generated Client):
-```rust
+
+```n
 pub fn list_agents(&self) -> Result<Vec<AgentListItem>> {
     self.runtime.block_on(async {
         self.client.list_agents().await
     })
 }
+
 ```
 
 ## Benefits
@@ -114,6 +120,7 @@ Test the client library directly:
 ```bash
 cd hindsight-clients/rust
 cargo test
+
 ```
 
 Build CLI with new client:
@@ -121,4 +128,5 @@ Build CLI with new client:
 ```bash
 cd ../../hindsight-cli
 cargo build
+
 ```

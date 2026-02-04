@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 ![Hindsight Banner](./hindsight-docs/static/img/banner.svg)
 
@@ -9,7 +9,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/hindsight-api?label=PyPI)
 ![NPM Downloads](https://img.shields.io/npm/dm/%40vectorize-io%2Fhindsight-client?logoColor=orange&label=NPM&color=blue&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2F%40vectorize-io%2Fhindsight-client)
-
 
 </div>
 
@@ -79,17 +78,21 @@ docker run --rm -it --pull always -p 8888:8888 -p 9999:9999 \
   -e HINDSIGHT_API_LLM_MODEL=o3-mini \
   -v $HOME/.hindsight-docker:/home/hindsight/.pg0 \
   ghcr.io/vectorize-io/hindsight:latest
+
 ```
 
-API: http://localhost:8888  
-UI: http://localhost:9999
+API: <http://localhost:8888>  
+UI: <http://localhost:9999>
 
 Install client:
 
 ```bash
 pip install hindsight-client -U
+
 # or
+
 npm install @vectorize-io/hindsight-client
+
 ```
 
 Python example:
@@ -97,22 +100,27 @@ Python example:
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<http://localhost:8888>")
 
 # Retain: Store information
+
 client.retain(bank_id="my-bank", content="Alice works at Google as a software engineer")
 
 # Recall: Search memories
+
 client.recall(bank_id="my-bank", query="What does Alice do?")
 
 # Reflect: Generate disposition-aware response
+
 client.reflect(bank_id="my-bank", query="Tell me about Alice")
+
 ```
 
 ### Python (embedded, no Docker)
 
 ```bash
 pip install hindsight-all -U
+
 ```
 
 ```python
@@ -127,21 +135,24 @@ with HindsightServer(
     client = HindsightClient(base_url=server.url)
     client.retain(bank_id="my-bank", content="Alice works at Google")
     results = client.recall(bank_id="my-bank", query="Where does Alice work?")
+
 ```
 
 ### Node.js / TypeScript
 
 ```bash
 npm install @vectorize-io/hindsight-client
+
 ```
 
 ```javascript
 const { HindsightClient } = require('@vectorize-io/hindsight-client');
 
-const client = new HindsightClient({ baseUrl: 'http://localhost:8888' });
+const client = new HindsightClient({ baseUrl: '<http://localhost:8888>' });
 
 await client.retain('my-bank', 'Alice loves hiking in Yosemite');
 await client.recall('my-bank', 'What does Alice like?');
+
 ```
 
 ---
@@ -155,21 +166,24 @@ The `retain` operation is used to push new memories into Hindsight. It tells Hin
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<http://localhost:8888>")
 
 # Simple
+
 client.retain(
     bank_id="my-bank",
     content="Alice works at Google as a software engineer"
 )
 
 # With context and timestamp
+
 client.retain(
     bank_id="my-bank",
     content="Alice got promoted to senior engineer",
     context="career update",
     timestamp="2025-06-15T10:00:00Z"
 )
+
 ```
 
 Behind the scenes, the retain operation uses an LLM to extract key facts, temporal data, entities, and relationships. It passes these through a normalization process to transform extracted data into canonical entities, time series, and search indexes along with metadata. These representations create the pathways for accurate memory retrieval in the recall and reflect operations. 
@@ -183,13 +197,16 @@ The recall operation is used to retrieve memories. These memories can come from 
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<http://localhost:8888>")
 
 # Simple
+
 client.recall(bank_id="my-bank", query="What does Alice do?")
 
 # Temporal
+
 client.recall(bank_id="my-bank", query="What happened in June?")
+
 ```
 
 Recall performs 4 retrieval strategies in parallel:
@@ -219,9 +236,10 @@ The `reflect` operation can also be used to handle on-demand question answering 
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<http://localhost:8888>")
 
 client.reflect(bank_id="my-bank", query="What should I know about Alice?")
+
 ```
 
 ![Retain Operation](hindsight-docs/static/img/reflect-operation.webp)
@@ -244,6 +262,7 @@ client.reflect(bank_id="my-bank", query="What should I know about Alice?")
 - [GitHub Issues](https://github.com/vectorize-io/hindsight/issues)
 
 ---
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=vectorize-io/hindsight&type=date&legend=top-left)](https://www.star-history.com/#vectorize-io/hindsight&type=date&legend=top-left)

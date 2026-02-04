@@ -1,11 +1,13 @@
-# Step 09: Data Wiring & Domain Integration
+﻿# Step 09: Data Wiring & Domain Integration
 
 ## Status: ✅ COMPLETED
 
 ## Objective
+
 Replace mock UI data with domain-backed state and streaming updates so pages reflect live trading workflows.
 
 ## Actions
+
 1. **Domain provider** ✅
    - Introduce a `DomainProvider` wrapping the app with a reducer-driven store.
    - Expose typed actions (order placement, price updates, position updates).

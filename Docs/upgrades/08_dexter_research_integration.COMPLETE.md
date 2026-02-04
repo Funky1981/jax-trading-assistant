@@ -1,4 +1,4 @@
-# Task 8: Dexter Research Integration - COMPLETE
+﻿# Task 8: Dexter Research Integration - COMPLETE
 
 **Implementation Date**: January 28, 2026  
 **Status**: ✅ Complete  
@@ -13,6 +13,7 @@ Integrated Dexter's financial research agent into the orchestrator workflow, ena
 ## 1. Dexter Client Library
 
 ### client.go (227 lines)
+
 HTTP client for Dexter tools server (TypeScript/Bun service).
 
 **Core Methods**:
@@ -25,7 +26,8 @@ HTTP client for Dexter tools server (TypeScript/Bun service).
 - `Health(ctx)`: Service availability check
 
 **Request/Response Types**:
-```go
+
+```n
 ResearchCompanyInput {
     Ticker    string   // "AAPL", "TSLA", etc.
     Questions []string // Research questions
@@ -48,6 +50,7 @@ CompareCompaniesOutput {
     ComparisonAxis string
     Items          []ComparisonItem // Per-company analysis
 }
+
 ```
 
 **API Integration**:
@@ -83,23 +86,28 @@ CompareCompaniesOutput {
 ### Code Changes
 
 **WithDexter() method**:
-```go
+
+```n
 func (o *Orchestrator) WithDexter(dexter DexterClient) *Orchestrator {
     o.dexter = dexter
     return o
 }
+
 ```
 
 **OrchestrationRequest enhancement**:
-```go
+
+```n
 type OrchestrationRequest struct {
     // ... existing fields
     ResearchQueries []string // NEW: Questions for Dexter
 }
+
 ```
 
 **Research invocation** (between strategy analysis and context building):
-```go
+
+```n
 var research *dexter.ResearchCompanyOutput
 if o.dexter != nil && len(req.ResearchQueries) > 0 {
     res, err := o.dexter.ResearchCompany(ctx, dexter.ResearchCompanyInput{
@@ -110,10 +118,12 @@ if o.dexter != nil && len(req.ResearchQueries) > 0 {
         research = &res
     }
 }
+
 ```
 
 **Context enrichment**:
-```go
+
+```n
 if research != nil {
     contextBuilder.WriteString("\n\nDexter research:\n")
     contextBuilder.WriteString(fmt.Sprintf("Summary: %s\n", research.Summary))
@@ -127,10 +137,12 @@ if research != nil {
         contextBuilder.WriteString(fmt.Sprintf("Metrics: %v\n", research.Metrics))
     }
 }
+
 ```
 
 **Memory retention**:
-```go
+
+```n
 retainedData := map[string]any{
     // ... existing fields
 }
@@ -141,6 +153,7 @@ if research != nil {
         "metrics":     research.Metrics,
     }
 }
+
 ```
 
 ---
@@ -160,9 +173,11 @@ if research != nil {
   - Confirms research in retained memory
 
 **Test Coverage**:
-```
+
+```n
 libs/dexter:         2/2 tests passing
 jax-orchestrator:    3/3 tests passing (existing + new)
+
 ```
 
 ---
@@ -171,7 +186,7 @@ jax-orchestrator:    3/3 tests passing (existing + new)
 
 ### Data Flow
 
-```
+```text
 User Request (Symbol + ResearchQueries)
     ↓
 [1. Recall Memories]
@@ -187,12 +202,14 @@ User Request (Symbol + ResearchQueries)
 [6. Tool Execution] → Results
     ↓
 [7. Retain Decision] → Memory (with research)
+
 ```
 
 ### Context Enrichment Example
 
 **Before Dexter**:
-```
+
+```n
 User context: Analyzing TSLA earnings opportunity
 
 Recalled memories:
@@ -200,10 +217,12 @@ Recalled memories:
 
 Strategy signals:
 1. TSLA: buy at 250.00 (confidence: 0.75)
+
 ```
 
 **After Dexter**:
-```
+
+```n
 User context: Analyzing TSLA earnings opportunity
 
 Recalled memories:
@@ -218,6 +237,7 @@ Key points:
   1. Revenue up 25% YoY
   2. Production capacity expanding
 Metrics: map[growth_rate:0.25 pe_ratio:65.2]
+
 ```
 
 Agent0 now has **richer context** for planning!
@@ -229,10 +249,13 @@ Agent0 now has **richer context** for planning!
 ### Running Dexter
 
 **Start tools server**:
-```bash
+
+```n
 cd dexter
 bun run tools:server
+
 # Listening on :3000 (mock=true)
+
 ```
 
 **Mock mode**:
@@ -261,7 +284,8 @@ bun run tools:server
 ## 6. Use Cases
 
 ### Pre-Trade Research
-```go
+
+```n
 result, _ := orchestrator.Run(ctx, OrchestrationRequest{
     Symbol:  "AAPL",
     ResearchQueries: []string{
@@ -271,10 +295,12 @@ result, _ := orchestrator.Run(ctx, OrchestrationRequest{
     },
 })
 // Agent0 plans with research context
+
 ```
 
 ### Earnings Analysis
-```go
+
+```n
 result, _ := orchestrator.Run(ctx, OrchestrationRequest{
     Symbol:  "NVDA",
     ResearchQueries: []string{
@@ -283,15 +309,18 @@ result, _ := orchestrator.Run(ctx, OrchestrationRequest{
     },
     Tags: []string{"earnings"},
 })
+
 ```
 
 ### Competitive Intelligence
-```go
+
+```n
 // Via Dexter client directly
 comparison, _ := dexterClient.CompareCompanies(ctx, CompareCompaniesInput{
     Tickers: []string{"AAPL", "MSFT", "GOOGL"},
     Focus:   "Cloud revenue growth",
 })
+
 ```
 
 ---
@@ -310,6 +339,7 @@ comparison, _ := dexterClient.CompareCompanies(ctx, CompareCompaniesInput{
 ## 8. Files Created/Modified
 
 ### New Files
+
 1. **libs/dexter/client.go** (227 lines)
    - HTTP client for Dexter tools server
    - ResearchCompany, CompareCompanies methods
@@ -327,6 +357,7 @@ comparison, _ := dexterClient.CompareCompanies(ctx, CompareCompaniesInput{
    - Module definition
 
 ### Modified Files
+
 5. **services/jax-orchestrator/internal/app/orchestrator.go** (+40 lines)
    - DexterClient interface
    - WithDexter() method
@@ -349,25 +380,35 @@ comparison, _ := dexterClient.CompareCompanies(ctx, CompareCompaniesInput{
 ## 9. Configuration
 
 ### Environment Variables (Dexter)
-```bash
+
+```
+
 # Dexter tools server
+
 DEXTER_TOOLS_MOCK=1              # Mock mode (default: false)
+
 PORT=3000                         # Server port (default: 3000)
 
 # Production APIs
+
 OPENAI_API_KEY=sk-...            # OpenAI for AI analysis
+
 FINANCIAL_DATASETS_API_KEY=...   # Financial data API
+
 TAVILY_API_KEY=...               # Optional: Web search
+
 ```
 
 ### Orchestrator Configuration
-```go
+
+```n
 // Initialize Dexter client
-dexterClient, _ := dexter.New("http://localhost:3000")
+dexterClient, _ := dexter.New("<http://localhost:3000">)
 
 // Add to orchestrator
 orch := NewOrchestrator(memory, agent0, tools, strategies).
     WithDexter(dexterClient)
+
 ```
 
 ---

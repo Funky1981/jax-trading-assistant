@@ -1,9 +1,11 @@
-# Step 03: Data Layer & Streams
+﻿# Step 03: Data Layer & Streams
 
 ## Objective
+
 Implement a reliable and performant data access layer that supports real-time trading data with prioritized updates.
 
 ## Actions
+
 1. **Define API clients**
    - REST/GraphQL clients with typed responses.
    - Central error handling and retry policy.

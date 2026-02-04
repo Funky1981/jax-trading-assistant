@@ -22,7 +22,8 @@ func (s *Server) RegisterProcess(orchestrator *app.Orchestrator, defaultAccountS
 		defaultRiskPct:   defaultRiskPercent,
 		defaultGapThresh: defaultGapThresholdPct,
 	}
-	s.mux.HandleFunc("/symbols/", h.handle)
+	// Protected endpoint - requires authentication
+	s.mux.HandleFunc("/symbols/", s.protect(h.handle))
 }
 
 type processRequest struct {
@@ -71,5 +72,7 @@ func (h *ProcessHandler) handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(out)
+	if err := json.NewEncoder(w).Encode(out); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }

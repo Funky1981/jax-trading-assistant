@@ -1,9 +1,11 @@
-# Step 04: Domain State & Models
+﻿# Step 04: Domain State & Models
 
 ## Objective
+
 Create a domain-focused layer that encapsulates trading business logic, ensuring separation of concerns and testability.
 
 ## Actions
+
 1. **Model trading entities**
    - Orders, positions, instruments, risk limits, alerts.
    - Use explicit event types (`OrderPlaced`, `PriceUpdated`).

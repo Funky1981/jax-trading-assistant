@@ -1,4 +1,4 @@
-# Jax Trading Assistant — Project Overview
+﻿# Jax Trading Assistant — Project Overview
 
 ## Purpose
 
@@ -110,6 +110,4 @@ Dexter tests:
 
 - The repo is actively scaffolding with WIP modules; consult `Docs/backend/` for the authoritative implementation plan.
 - Vendored upstreams are pinned; see each `UPSTREAM.md` for commit references.
-
-
 

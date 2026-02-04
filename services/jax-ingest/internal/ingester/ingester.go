@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	sharedIngest "jax-trading-assistant/libs/ingest"
 	"jax-trading-assistant/libs/marketdata"
 	"jax-trading-assistant/services/jax-ingest/internal/config"
 )
@@ -98,34 +99,18 @@ func (i *Ingester) ingestSymbol(ctx context.Context, symbol string) error {
 
 // storeQuote stores a quote in the database
 func (i *Ingester) storeQuote(ctx context.Context, quote *marketdata.Quote) error {
-	query := `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-		ON CONFLICT (symbol) DO UPDATE SET
-			price = EXCLUDED.price,
-			bid = EXCLUDED.bid,
-			ask = EXCLUDED.ask,
-			bid_size = EXCLUDED.bid_size,
-			ask_size = EXCLUDED.ask_size,
-			volume = EXCLUDED.volume,
-			timestamp = EXCLUDED.timestamp,
-			exchange = EXCLUDED.exchange,
-			updated_at = NOW()
-	`
-
-	_, err := i.db.ExecContext(ctx, query,
-		quote.Symbol,
-		quote.Price,
-		quote.Bid,
-		quote.Ask,
-		quote.BidSize,
-		quote.AskSize,
-		quote.Volume,
-		quote.Timestamp,
-		quote.Exchange,
-	)
-
-	return err
+	quoteData := sharedIngest.QuoteData{
+		Symbol:    quote.Symbol,
+		Price:     quote.Price,
+		Bid:       quote.Bid,
+		Ask:       quote.Ask,
+		BidSize:   quote.BidSize,
+		AskSize:   quote.AskSize,
+		Volume:    quote.Volume,
+		Timestamp: quote.Timestamp,
+		Exchange:  quote.Exchange,
+	}
+	return sharedIngest.StoreQuote(ctx, i.db, quoteData)
 }
 
 // storeCandles stores candles in the database
@@ -134,39 +119,20 @@ func (i *Ingester) storeCandles(ctx context.Context, candles []marketdata.Candle
 		return nil
 	}
 
-	query := `
-		INSERT INTO candles (symbol, timestamp, open, high, low, close, volume, vwap)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (symbol, timestamp) DO UPDATE SET
-			open = EXCLUDED.open,
-			high = EXCLUDED.high,
-			low = EXCLUDED.low,
-			close = EXCLUDED.close,
-			volume = EXCLUDED.volume,
-			vwap = EXCLUDED.vwap
-	`
-
-	stmt, err := i.db.PrepareContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	for _, candle := range candles {
-		_, err := stmt.ExecContext(ctx,
-			candle.Symbol,
-			candle.Timestamp,
-			candle.Open,
-			candle.High,
-			candle.Low,
-			candle.Close,
-			candle.Volume,
-			candle.VWAP,
-		)
-		if err != nil {
-			return err
+	// Convert to shared ingest format
+	candleData := make([]sharedIngest.CandleData, len(candles))
+	for idx, candle := range candles {
+		candleData[idx] = sharedIngest.CandleData{
+			Symbol:    candle.Symbol,
+			Timestamp: candle.Timestamp,
+			Open:      candle.Open,
+			High:      candle.High,
+			Low:       candle.Low,
+			Close:     candle.Close,
+			Volume:    candle.Volume,
+			VWAP:      candle.VWAP,
 		}
 	}
 
-	return nil
+	return sharedIngest.StoreCandles(ctx, i.db, candleData)
 }

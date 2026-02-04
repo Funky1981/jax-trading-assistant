@@ -1,6 +1,7 @@
-# Frontend Documentation (React Trading UI)
+﻿# Frontend Documentation (React Trading UI)
 
 ## Purpose
+
 This documentation defines a professional, high-performance React frontend for a complex trading application. It is documentation only and provides architecture, component, styling, and testing standards for a production-grade UI.
 
 ## Goals

@@ -1,10 +1,13 @@
-import { Box, Paper, Stack, Typography } from '@mui/material';
+import { TrendingUp, BarChart3, DollarSign, Gauge, List as ListIcon } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import {
   DataTable,
   OrderTicket,
   PositionCard,
   RiskSummary,
   PnLIndicator,
+  EmptyState,
 } from '../../components';
 import { calculateTotalExposure, calculateTotalUnrealizedPnl } from '../../domain/calculations';
 import type { Order, OrderDraft, Position, RiskLimits } from '../../domain/models';
@@ -42,6 +45,16 @@ function renderWidget(
       );
     }
     case 'watchlist':
+      if (ticks.length === 0) {
+        return (
+          <EmptyState
+            icon={<TrendingUp className="h-10 w-10" />}
+            title="No market data"
+            description="Watchlist will populate when market data arrives."
+            compact
+          />
+        );
+      }
       return (
         <DataTable
           columns={[
@@ -66,24 +79,30 @@ function renderWidget(
     case 'positions':
       if (positions.length === 0) {
         return (
-          <Typography variant="body2" color="text.secondary">
-            No positions yet.
-          </Typography>
+          <EmptyState
+            icon={<BarChart3 className="h-10 w-10" />}
+            title="No positions"
+            description="Positions will appear here after your first fills."
+            compact
+          />
         );
       }
       return (
-        <Stack spacing={2}>
+        <div className="space-y-2">
           {positions.map((position) => (
             <PositionCard key={position.symbol} position={position} />
           ))}
-        </Stack>
+        </div>
       );
     case 'risk-summary':
       if (positions.length === 0) {
         return (
-          <Typography variant="body2" color="text.secondary">
-            Risk metrics will appear after your first fills.
-          </Typography>
+          <EmptyState
+            icon={<Gauge className="h-10 w-10" />}
+            title="No risk data"
+            description="Risk metrics will appear after your first fills."
+            compact
+          />
         );
       }
       return (
@@ -94,6 +113,16 @@ function renderWidget(
         />
       );
     case 'blotter':
+      if (orders.length === 0) {
+        return (
+          <EmptyState
+            icon={<ListIcon className="h-10 w-10" />}
+            title="No orders"
+            description="Your order history will appear here."
+            compact
+          />
+        );
+      }
       return (
         <DataTable
           columns={[
@@ -114,21 +143,28 @@ function renderWidget(
       );
     case 'system-status':
       return (
-        <Stack spacing={1}>
-          <Typography variant="body2">Market feed: healthy</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Latency: 12ms
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Last refresh: {new Date().toLocaleTimeString()}
-          </Typography>
-        </Stack>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Gauge className="h-5 w-5 text-emerald-500" />
+            <p className="text-sm font-medium">Market feed: healthy</p>
+          </div>
+          <div className="pl-6">
+            <p className="text-sm text-muted-foreground">
+              Latency: 12ms
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Last refresh: {new Date().toLocaleTimeString()}
+            </p>
+          </div>
+        </div>
       );
     default:
       return (
-        <Typography variant="body2" color="text.secondary">
-          Data stream pending.
-        </Typography>
+        <EmptyState
+          title="Data pending"
+          description="Waiting for data stream to connect..."
+          compact
+        />
       );
   }
 }
@@ -151,41 +187,40 @@ export function DashboardGrid({
   onOrderSubmit,
 }: DashboardGridProps) {
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
-        gridAutoRows: `${tokens.layout.gridRowHeight}px`,
-        gap: tokens.spacing.md,
-      }}
+    <div
+      className="grid grid-cols-12 gap-6"
+      style={{ gridAutoRows: `${tokens.layout.gridRowHeight}px` }}
     >
       {layout.widgets.map((widget) => {
         const definition = getWidgetById(widget.id);
         return (
-          <Paper
+          <Card
             key={widget.id}
-            variant="outlined"
-            sx={{
+            className="transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+            style={{
               gridColumn: `${widget.x + 1} / span ${widget.w}`,
               gridRow: `${widget.y + 1} / span ${widget.h}`,
-              padding: tokens.spacing.md,
-              backgroundColor: tokens.colors.surface,
-              borderColor: tokens.colors.border,
             }}
           >
-            <Typography variant="subtitle2" sx={{ marginBottom: tokens.spacing.sm }}>
-              {definition?.title ?? widget.id}
-            </Typography>
-            {renderWidget(widget, {
-              positions,
-              orders,
-              ticks,
-              riskLimits,
-              onOrderSubmit,
-            })}
-          </Paper>
+            <CardContent className="p-5 h-full flex flex-col">
+              <div className="mb-3 pb-2 border-b">
+                <h3 className="text-base font-semibold">
+                  {definition?.title ?? widget.id}
+                </h3>
+              </div>
+              <div className="flex-1 overflow-auto">
+                {renderWidget(widget, {
+                  positions,
+                  orders,
+                  ticks,
+                  riskLimits,
+                  onOrderSubmit,
+                })}
+              </div>
+            </CardContent>
+          </Card>
         );
       })}
-    </Box>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-# Dockerfiles of verl
+﻿# Dockerfiles of verl
 
 We provide pre-built Docker images for quick setup. And from this version, we utilize a new image release hierarchy for productivity and stability.
 
@@ -59,21 +59,27 @@ After pulling the desired Docker image and installing desired inference and trai
 docker create --runtime=nvidia --gpus all --net=host --shm-size="10g" --cap-add=SYS_ADMIN -v .:/workspace/verl --name verl <image:tag> sleep infinity
 docker start verl
 docker exec -it verl bash
+
 ```
 
-2.	If you use the images provided, you only need to install verl itself without dependencies:
+2.    If you use the images provided, you only need to install verl itself without dependencies:
 
 ```sh
+
 # install the nightly version (recommended)
-git clone https://github.com/volcengine/verl && cd verl
+
+git clone <<https://github.com/volcengine/verl>> && cd verl
 pip3 install --no-deps -e .
+
 ```
 
 [Optional] If you hope to switch between different frameworks, you can install verl with the following command:
 
 ```sh
+
 # install the nightly version (recommended)
-git clone https://github.com/volcengine/verl && cd verl
+
+git clone <<https://github.com/volcengine/verl>> && cd verl
 pip3 install -e .[vllm]
 pip3 install -e .[sglang]
 ```

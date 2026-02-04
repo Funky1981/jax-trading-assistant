@@ -1,9 +1,11 @@
-# Step 08: Testing & Quality Gates
+﻿# Step 08: Testing & Quality Gates
 
 ## Objective
+
 Ensure every UI element and workflow has automated validation to prevent regressions and performance degradation.
 
 ## Actions
+
 1. **Unit tests**
    - Components and domain logic with React Testing Library and Jest/Vitest.
 

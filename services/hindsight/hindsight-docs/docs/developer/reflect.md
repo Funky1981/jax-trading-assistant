@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 4
 ---
 
@@ -13,6 +13,7 @@ graph LR
     C --> D[Reason]
     D --> E[Form Opinions]
     E --> F[Response]
+
 ```
 
 ---
@@ -73,10 +74,14 @@ client.create_bank(
                "systems experience. I prefer simplicity over cutting-edge technology.",
     disposition={
         "skepticism": 4,   # Questions new technologies
+
         "literalism": 4,   # Focuses on concrete specs
+
         "empathy": 2       # Prioritizes technical facts
+
     }
 )
+
 ```
 
 The background provides context that shapes how disposition traits are applied:
@@ -150,7 +155,8 @@ When you call `reflect()`:
 - **Based on** — Which memories were used (with relevance scores)
 
 **Example:**
-```json
+
+```n
 {
   "text": "Based on Alice's ML expertise and her work at Google, she'd be an excellent fit for the research team lead position...",
   "based_on": {
@@ -160,6 +166,7 @@ When you call `reflect()`:
     ]
   }
 }
+
 ```
 
 **Note:** New opinions are formed asynchronously in the background. They'll influence future `reflect()` calls but aren't returned directly.

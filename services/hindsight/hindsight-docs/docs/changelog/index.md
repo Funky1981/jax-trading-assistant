@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 1
 ---
 
@@ -17,7 +17,6 @@ For full release details, see [GitHub Releases](https://github.com/vectorize-io/
 ## [0.1.10](https://github.com/vectorize-io/hindsight/releases/tag/v0.1.10)
 
 *This release contains internal maintenance and infrastructure changes only.*
-
 
 ## [0.1.9](https://github.com/vectorize-io/hindsight/releases/tag/v0.1.9)
 
@@ -76,7 +75,6 @@ For full release details, see [GitHub Releases](https://github.com/vectorize-io/
 **Improvements**
 
 - Improved CLI and UI branding/polish, including new banner/logo assets and updated interface styling. ([`fa554b8`](https://github.com/vectorize-io/hindsight/commit/fa554b8))
-
 
 ## [0.1.2](https://github.com/vectorize-io/hindsight/releases/tag/v0.1.2)
 

@@ -1,4 +1,4 @@
-# Merge and Stabilise the Audit Logger
+﻿# Merge and Stabilise the Audit Logger
 
 The first step towards a production‑ready Jax trading system is to merge and stabilise the **audit logging** feature. The open pull request (`codex/add-auditevent-model-and-logger`) introduces a structured audit logging capability that tracks decisions and outcomes throughout the event detection, trade generation, risk calculation and orchestration workflows.
 

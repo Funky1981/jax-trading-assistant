@@ -1,4 +1,4 @@
-# Risk Engine Hardening - Implementation Summary
+﻿# Risk Engine Hardening - Implementation Summary
 
 ## Completed Tasks
 
@@ -118,6 +118,7 @@
 ## Architecture Highlights
 
 ### Multi-Layer Validation
+
 1. **Portfolio Level**: Account size, drawdown, position count
 2. **Position Level**: Stop distance, risk %, leverage
 3. **Aggregation Level**: Portfolio risk, sector exposure
@@ -178,6 +179,7 @@ if !result.Allowed {
     fmt.Printf("Trade approved: %d shares, $%.2f risk\n", 
         result.RiskMetrics.PositionSize, result.RiskMetrics.DollarRisk)
 }
+
 ```
 
 ## Testing Results

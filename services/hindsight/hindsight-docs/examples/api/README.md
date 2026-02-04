@@ -1,4 +1,4 @@
-# API Documentation Examples
+﻿# API Documentation Examples
 
 This directory contains runnable example scripts that serve as the source of truth for code samples in the documentation.
 
@@ -6,6 +6,7 @@ This directory contains runnable example scripts that serve as the source of tru
 
 1. **Scripts are runnable** - Each file can be executed as a smoke test
 2. **Markers define sections** - Code between `# [docs:section-name]` and `# [/docs:section-name]` markers is extracted
+
 3. **Docs import at build time** - MDX files use `raw-loader` to import scripts, then `CodeSnippet` extracts marked sections
 
 ## File Structure
@@ -25,14 +26,19 @@ This directory contains runnable example scripts that serve as the source of tru
 ## Running Examples
 
 ```bash
+
 # Run all Python examples
+
 for f in *.py; do python "$f"; done
 
 # Run all Node.js examples
+
 for f in *.mjs; do node "$f"; done
 
 # Run all CLI examples
+
 for f in *.sh; do bash "$f"; done
+
 ```
 
 Requires a running Hindsight server at `http://localhost:8888` (or set `HINDSIGHT_API_URL`).
@@ -64,8 +70,10 @@ Some docs show error responses (e.g., "what happens when bank doesn't exist"). T
 2. Add markers around the new code section:
    ```python
    # [docs:my-new-section]
+
    client.some_method(...)
    # [/docs:my-new-section]
+
    ```
 3. Reference in the MDX file:
    ```mdx

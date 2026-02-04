@@ -14,14 +14,20 @@ replace jax-trading-assistant/libs/testing => ./libs/testing
 
 replace jax-trading-assistant/libs/marketdata => ./libs/marketdata
 
+replace jax-trading-assistant/libs/resilience => ./libs/resilience
+
+replace jax-trading-assistant/libs/ingest => ./libs/ingest
+
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	jax-trading-assistant/libs/contracts v0.0.0
 	jax-trading-assistant/libs/database v0.0.0-00010101000000-000000000000
+	jax-trading-assistant/libs/ingest v0.0.0-00010101000000-000000000000
 	jax-trading-assistant/libs/marketdata v0.0.0-00010101000000-000000000000
-	jax-trading-assistant/libs/observability v0.0.0-00010101000000-000000000000
+	jax-trading-assistant/libs/observability v0.0.0
 	jax-trading-assistant/libs/testing v0.0.0-00010101000000-000000000000
 )
 
@@ -48,9 +54,11 @@ require (
 	github.com/polygon-io/client-go v1.16.4 // indirect
 	github.com/redis/go-redis/v9 v9.4.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/sony/gobreaker/v2 v2.0.0 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
+	jax-trading-assistant/libs/resilience v0.0.0-00010101000000-000000000000 // indirect
 )

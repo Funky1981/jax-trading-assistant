@@ -1,4 +1,4 @@
-# Trading Execution
+﻿# Trading Execution
 
 The ultimate goal of the Jax trading assistant is to place orders in live markets. To minimise financial risk, execution must be approached cautiously. Start with paper trading, add human approval gates and build adapters to reputable brokers.
 

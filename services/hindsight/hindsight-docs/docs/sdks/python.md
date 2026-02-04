@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 1
 ---
 
@@ -18,6 +18,7 @@ The `hindsight-all` package includes embedded PostgreSQL, HTTP API server, and c
 
 ```bash
 pip install hindsight-all
+
 ```
 
 </TabItem>
@@ -27,6 +28,7 @@ If you already have a Hindsight server running:
 
 ```bash
 pip install hindsight-client
+
 ```
 
 </TabItem>
@@ -49,16 +51,20 @@ with HindsightServer(
     client = HindsightClient(base_url=server.url)
 
     # Retain a memory
+
     client.retain(bank_id="my-bank", content="Alice works at Google")
 
     # Recall memories
+
     results = client.recall(bank_id="my-bank", query="What does Alice do?")
     for r in results:
         print(r.text)
 
     # Reflect - generate response with disposition
+
     answer = client.reflect(bank_id="my-bank", query="Tell me about Alice")
     print(answer.text)
+
 ```
 
 </TabItem>
@@ -67,19 +73,23 @@ with HindsightServer(
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<<<http://localhost:8888">>>)
 
 # Retain a memory
+
 client.retain(bank_id="my-bank", content="Alice works at Google")
 
 # Recall memories
+
 results = client.recall(bank_id="my-bank", query="What does Alice do?")
 for r in results:
     print(r.text)
 
 # Reflect - generate response with disposition
+
 answer = client.reflect(bank_id="my-bank", query="Tell me about Alice")
 print(answer.text)
+
 ```
 
 </TabItem>
@@ -91,9 +101,12 @@ print(answer.text)
 from hindsight_client import Hindsight
 
 client = Hindsight(
-    base_url="http://localhost:8888",  # Hindsight API URL
+    base_url="<<<http://localhost:8888">>>,  # Hindsight API URL
+
     timeout=30.0,                       # Request timeout in seconds
+
 )
+
 ```
 
 ## Core Operations
@@ -101,13 +114,16 @@ client = Hindsight(
 ### Retain (Store Memory)
 
 ```python
+
 # Simple
+
 client.retain(
     bank_id="my-bank",
     content="Alice works at Google as a software engineer",
 )
 
 # With options
+
 from datetime import datetime
 
 client.retain(
@@ -118,6 +134,7 @@ client.retain(
     document_id="conversation_001",
     metadata={"source": "slack"},
 )
+
 ```
 
 ### Retain Batch
@@ -131,13 +148,17 @@ client.retain_batch(
     ],
     document_id="conversation_001",
     retain_async=False,  # Set True for background processing
+
 )
+
 ```
 
 ### Recall (Search)
 
 ```python
+
 # Simple - returns list of RecallResult
+
 results = client.recall(
     bank_id="my-bank",
     query="What does Alice do?",
@@ -147,19 +168,25 @@ for r in results.results:
     print(f"{r.text} (type: {r.type})")
 
 # With options
+
 results = client.recall(
     bank_id="my-bank",
     query="What does Alice do?",
     types=["world", "opinion"],  # Filter by fact type
+
     max_tokens=4096,
     budget="high",  # low, mid, or high
+
 )
+
 ```
 
 ### Recall with Full Response
 
 ```python
+
 # Returns RecallResponse with entities and chunks
+
 response = client.recall(
     bank_id="my-bank",
     query="What does Alice do?",
@@ -175,9 +202,11 @@ for r in response.results:
     print(f"  - {r.text}")
 
 # Access entities
+
 if response.entities:
     for entity in response.entities:
         print(f"Entity: {entity.name}")
+
 ```
 
 ### Reflect (Generate Response)
@@ -187,10 +216,12 @@ answer = client.reflect(
     bank_id="my-bank",
     query="What should I know about Alice?",
     budget="low",  # low, mid, or high
+
     context="preparing for a meeting",
 )
 
 print(answer.text)  # Generated response
+
 ```
 
 ## Bank Management
@@ -204,10 +235,14 @@ client.create_bank(
     background="I am a helpful AI assistant",
     disposition={
         "skepticism": 3,    # 1-5: trusting to skeptical
+
         "literalism": 3,    # 1-5: flexible to literal
+
         "empathy": 3,       # 1-5: detached to empathetic
+
     },
 )
+
 ```
 
 ### List Memories
@@ -216,10 +251,13 @@ client.create_bank(
 client.list_memories(
     bank_id="my-bank",
     type="world",  # Optional: filter by type
+
     search_query="Alice",  # Optional: text search
+
     limit=100,
     offset=0,
 )
+
 ```
 
 ## Async Support
@@ -231,23 +269,27 @@ import asyncio
 from hindsight_client import Hindsight
 
 async def main():
-    client = Hindsight(base_url="http://localhost:8888")
+    client = Hindsight(base_url="<<<http://localhost:8888">>>)
 
     # Async retain
+
     await client.aretain(bank_id="my-bank", content="Hello world")
 
     # Async recall
+
     results = await client.arecall(bank_id="my-bank", query="Hello")
     for r in results:
         print(r.text)
 
     # Async reflect
+
     answer = await client.areflect(bank_id="my-bank", query="What did I say?")
     print(answer.text)
 
     client.close()
 
 asyncio.run(main())
+
 ```
 
 ## Context Manager
@@ -255,8 +297,10 @@ asyncio.run(main())
 ```python
 from hindsight_client import Hindsight
 
-with Hindsight(base_url="http://localhost:8888") as client:
+with Hindsight(base_url="<<<http://localhost:8888">>>) as client:
     client.retain(bank_id="my-bank", content="Hello")
     results = client.recall(bank_id="my-bank", query="Hello")
+
 # Client automatically closed
+
 ```

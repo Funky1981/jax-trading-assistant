@@ -1,14 +1,17 @@
----
+﻿---
 title: "Tail Risk Hedging (Convexity Overlay)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "risk", "tail-hedge", "options"]
 ---
+
 ## What it is
+
 Adds convex payoff structures intended to offset large crash losses (e.g., defined-risk options structures).
 
 ## Why it can work (edge hypothesis)
+
 Some strategy mixes have negative skew; convex hedges can reduce blow-up risk at the cost of carry/drag.
 
 ## Best conditions
@@ -20,6 +23,7 @@ Some strategy mixes have negative skew; convex hedges can reduce blow-up risk at
 - Poorly designed hedges that bleed excessively
 
 ## Signal definition (implementation-friendly)
+
 Example:
 - Allocate a small budget to convex hedges (defined-risk)
 - Increase hedge allocation when stress probability rises

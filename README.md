@@ -1,4 +1,4 @@
-# jax-trading assistant
+﻿# jax-trading assistant
 
 Specs live in `Docs/` (`Docs/backend` for build steps, `Docs/frontend` for UI docs).
 
@@ -77,8 +77,11 @@ The knowledge base stores strategy documentation (playbooks, anti-patterns, risk
 
 ```bash
 make knowledge-up      # Start Postgres container (jax_knowledge db)
+
 make knowledge-schema  # Apply schema (creates strategy_documents table)
+
 make knowledge-ingest  # Ingest markdown files from knowledge/md/
+
 ```
 
 ### Environment
@@ -92,6 +95,7 @@ Test ingestion without writing to the database:
 
 ```bash
 make knowledge-ingest-dry
+
 ```
 
 ### Sanity Query
@@ -103,6 +107,7 @@ SELECT doc_type, status, count(*)
 FROM strategy_documents
 GROUP BY 1, 2
 ORDER BY 1, 2;
+
 ```
 
 ### Package Usage
@@ -126,6 +131,7 @@ antiPatterns, _ := registry.GetAntiPatterns(ctx)
 
 // Get specific document by path
 doc, _ := registry.GetByRelPath(ctx, "strategies/earnings_gap_v1.md")
+
 ```
 
 All query methods enforce a `WHERE status='approved'` gate by default.

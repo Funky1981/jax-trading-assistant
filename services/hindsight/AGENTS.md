@@ -1,4 +1,4 @@
-# AGENTS.md
+﻿# AGENTS.md
 
 This document captures architectural decisions and coding conventions for the Hindsight project.
 
@@ -10,15 +10,23 @@ This document captures architectural decisions and coding conventions for the Hi
 
 ## Project Structure
 
-```
+```text
 hindsight/              # Python package for embedded usage
+
 hindsight-api/          # FastAPI server (core memory engine)
+
 hindsight-cli/          # Rust CLI client
+
 hindsight-control-plane/ # Next.js admin UI
+
 hindsight-docs/         # Docusaurus documentation site
+
 hindsight-dev/          # Development tools and benchmarks
+
 hindsight-integrations/ # Framework integrations (LangChain, etc.)
+
 hindsight-clients/      # Generated API clients (Python, TypeScript, Rust)
+
 ```
 
 ## Core Concepts
@@ -65,22 +73,30 @@ See [hindsight-docs/docs/cookbook/](./hindsight-docs/docs/cookbook/) for detaile
 ### Running the API Server
 
 ```bash
+
 # From project root
+
 ./scripts/dev/start-api.sh
 
 # With options
+
 ./scripts/dev/start-api.sh --reload --port 8888 --log-level debug
+
 ```
 
 ### Running Tests
 
 ```bash
+
 # API tests
+
 cd hindsight-api
 uv run pytest tests/
 
 # Specific test
+
 uv run pytest tests/test_http_api_integration.py -v
+
 ```
 
 ### Generating OpenAPI Spec
@@ -89,6 +105,7 @@ After changing API endpoints, regenerate the OpenAPI spec and docs:
 
 ```bash
 ./scripts/generate-openapi.sh
+
 ```
 
 This will:
@@ -102,6 +119,7 @@ After updating the OpenAPI spec, regenerate all clients:
 
 ```bash
 ./scripts/generate-clients.sh
+
 ```
 
 This generates:
@@ -115,12 +133,14 @@ Note: The maintained wrapper `hindsight_client.py` and `README.md` are preserved
 
 ```bash
 ./scripts/dev/start-docs.sh
+
 ```
 
 ### Running the Control Plane
 
 ```bash
 ./scripts/dev/start-control-plane.sh
+
 ```
 
 ## Code Style
@@ -147,5 +167,6 @@ Note: The maintained wrapper `hindsight_client.py` and `README.md` are preserved
 - Key tables: `banks`, `memory_units`, `documents`, `entities`, `entity_links`
 
 # Branding
+
 ## Colors
 - Primary: gradient from #0074d9 to #009296  

@@ -1,8 +1,9 @@
-# Strategy Index
+﻿# Strategy Index
 
 Generated: 2026-01-30
 
 ## Employ (baseline / approved templates)
+
 1. `strategies/known/trend_following_time_series_momentum.md`
 2. `strategies/known/momentum_cross_sectional.md`
 3. `strategies/known/breakout_volatility_squeeze.md`
@@ -16,6 +17,7 @@ Generated: 2026-01-30
 11. `strategies/known/market_making_inventory_aware.md` (advanced; venue dependent)
 
 ## Avoid (anti-patterns / guardrails)
+
 1. `anti-patterns/martingale_and_loss_doubling.md`
 2. `anti-patterns/curve_fitting_parameter_sweeps.md`
 3. `anti-patterns/ignoring_transaction_costs.md`

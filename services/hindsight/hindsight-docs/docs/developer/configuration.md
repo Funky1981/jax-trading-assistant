@@ -1,4 +1,4 @@
-# Configuration
+﻿# Configuration
 
 Complete reference for configuring Hindsight services through environment variables.
 
@@ -35,31 +35,38 @@ If not provided, the server uses embedded `pg0` — convenient for development b
 **Provider Examples**
 
 ```bash
+
 # Groq (recommended for fast inference)
+
 export HINDSIGHT_API_LLM_PROVIDER=groq
 export HINDSIGHT_API_LLM_API_KEY=gsk_xxxxxxxxxxxx
 export HINDSIGHT_API_LLM_MODEL=openai/gpt-oss-20b
 
 # OpenAI
+
 export HINDSIGHT_API_LLM_PROVIDER=openai
 export HINDSIGHT_API_LLM_API_KEY=sk-xxxxxxxxxxxx
 export HINDSIGHT_API_LLM_MODEL=gpt-4o
 
 # Gemini
+
 export HINDSIGHT_API_LLM_PROVIDER=gemini
 export HINDSIGHT_API_LLM_API_KEY=xxxxxxxxxxxx
 export HINDSIGHT_API_LLM_MODEL=gemini-2.0-flash
 
 # Ollama (local, no API key)
+
 export HINDSIGHT_API_LLM_PROVIDER=ollama
-export HINDSIGHT_API_LLM_BASE_URL=http://localhost:11434/v1
+export HINDSIGHT_API_LLM_BASE_URL=<http://localhost:11434/v1>
 export HINDSIGHT_API_LLM_MODEL=gpt-oss-20b
 
 # OpenAI-compatible endpoint
+
 export HINDSIGHT_API_LLM_PROVIDER=openai
-export HINDSIGHT_API_LLM_BASE_URL=https://your-endpoint.com/v1
+export HINDSIGHT_API_LLM_BASE_URL=<https://your-endpoint.com/v1>
 export HINDSIGHT_API_LLM_API_KEY=your-api-key
 export HINDSIGHT_API_LLM_MODEL=your-model-name
+
 ```
 
 ### Embeddings
@@ -71,13 +78,17 @@ export HINDSIGHT_API_LLM_MODEL=your-model-name
 | `HINDSIGHT_API_EMBEDDINGS_TEI_URL` | TEI server URL | - |
 
 ```bash
+
 # Local (default) - uses SentenceTransformers
+
 export HINDSIGHT_API_EMBEDDINGS_PROVIDER=local
 export HINDSIGHT_API_EMBEDDINGS_LOCAL_MODEL=BAAI/bge-small-en-v1.5
 
 # TEI - HuggingFace Text Embeddings Inference (recommended for production)
+
 export HINDSIGHT_API_EMBEDDINGS_PROVIDER=tei
-export HINDSIGHT_API_EMBEDDINGS_TEI_URL=http://localhost:8080
+export HINDSIGHT_API_EMBEDDINGS_TEI_URL=<http://localhost:8080>
+
 ```
 
 :::warning
@@ -93,13 +104,17 @@ All embedding models must produce 384-dimensional vectors to match the database 
 | `HINDSIGHT_API_RERANKER_TEI_URL` | TEI server URL | - |
 
 ```bash
+
 # Local (default) - uses SentenceTransformers CrossEncoder
+
 export HINDSIGHT_API_RERANKER_PROVIDER=local
 export HINDSIGHT_API_RERANKER_LOCAL_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
 
 # TEI - for high-performance inference
+
 export HINDSIGHT_API_RERANKER_PROVIDER=tei
-export HINDSIGHT_API_RERANKER_TEI_URL=http://localhost:8081
+export HINDSIGHT_API_RERANKER_TEI_URL=<http://localhost:8081>
+
 ```
 
 ### Server
@@ -120,6 +135,7 @@ from hindsight_api import MemoryEngine
 
 memory = MemoryEngine.from_env()
 await memory.initialize()
+
 ```
 
 ---
@@ -130,11 +146,14 @@ The Control Plane is the web UI for managing memory banks.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `HINDSIGHT_CP_DATAPLANE_API_URL` | URL of the API service | `http://localhost:8888` |
+| `HINDSIGHT_CP_DATAPLANE_API_URL` | URL of the API service | `<<http://localhost:8888>`> |
 
 ```bash
+
 # Point Control Plane to a remote API service
-export HINDSIGHT_CP_DATAPLANE_API_URL=http://api.example.com:8888
+
+export HINDSIGHT_CP_DATAPLANE_API_URL=<http://api.example.com:8888>
+
 ```
 
 ---
@@ -142,13 +161,17 @@ export HINDSIGHT_CP_DATAPLANE_API_URL=http://api.example.com:8888
 ## Example .env File
 
 ```bash
+
 # API Service
+
 HINDSIGHT_API_DATABASE_URL=postgresql://hindsight:hindsight_dev@localhost:5432/hindsight
 HINDSIGHT_API_LLM_PROVIDER=groq
 HINDSIGHT_API_LLM_API_KEY=gsk_xxxxxxxxxxxx
 
 # Control Plane
-HINDSIGHT_CP_DATAPLANE_API_URL=http://localhost:8888
+
+HINDSIGHT_CP_DATAPLANE_API_URL=<http://localhost:8888>
+
 ```
 
 ---

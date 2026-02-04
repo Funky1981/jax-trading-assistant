@@ -1,8 +1,9 @@
-# 03 — Add Hindsight + Memory Service (TDD First)
+﻿# 03 — Add Hindsight + Memory Service (TDD First)
 
 **Goal:** Introduce Hindsight as a container + create `jax-memory` as a facade.
 
 ## 3.1 — Add Hindsight to docker-compose (write tests first)
+
 We want:
 - A running memory backend
 - `jax-memory` service that can:
@@ -12,6 +13,7 @@ We want:
   - `Reflect()` (optional to start, but interface should exist)
 
 ### TDD approach
+
 1) Create an interface in `libs/contracts`:
 
 ```go
@@ -21,6 +23,7 @@ type MemoryStore interface {
   Recall(ctx context.Context, bank string, query MemoryQuery) ([]MemoryItem, error)
   Reflect(ctx context.Context, bank string, params ReflectionParams) ([]MemoryItem, error)
 }
+
 ```
 
 2) Write unit tests for:
@@ -31,6 +34,7 @@ type MemoryStore interface {
 That becomes an **integration test** later.
 
 ## 3.2 — Integration test (optional but recommended)
+
 Add one integration test suite:
 - spins docker compose
 - calls `jax-memory` -> `Ping`

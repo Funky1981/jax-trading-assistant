@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 2
 ---
 
@@ -21,13 +21,16 @@ Store conversations, documents, and facts into a memory bank.
 <TabItem value="python" label="Python">
 
 ```python
+
 # Store a single fact
+
 client.retain(
     bank_id="my-bank",
     content="Alice joined Google in March 2024 as a Senior ML Engineer"
 )
 
 # Store a conversation
+
 conversation = """
 User: What did you work on today?
 Assistant: I reviewed the new ML pipeline architecture.
@@ -42,6 +45,7 @@ client.retain(
 )
 
 # Batch retain multiple items
+
 client.retain_batch(
     bank_id="my-bank",
     contents=[
@@ -50,6 +54,7 @@ client.retain_batch(
         {"content": "The team uses GitHub for code reviews"}
     ]
 )
+
 ```
 
 </TabItem>
@@ -83,20 +88,26 @@ await client.retainBatch({
         { content: 'The team uses GitHub for code reviews' }
     ]
 });
+
 ```
 
 </TabItem>
 <TabItem value="cli" label="CLI">
 
 ```bash
+
 # Store a single fact
+
 hindsight retain my-bank "Alice joined Google in March 2024 as a Senior ML Engineer"
 
 # Store from a file
+
 hindsight retain my-bank --file conversation.txt --context "Daily standup"
 
 # Store multiple files
+
 hindsight retain my-bank --files docs/*.md
+
 ```
 
 </TabItem>
@@ -116,7 +127,9 @@ Search for relevant memories using multi-strategy retrieval.
 <TabItem value="python" label="Python">
 
 ```python
+
 # Basic search
+
 results = client.recall(
     bank_id="my-bank",
     query="What does Alice do at Google?"
@@ -126,15 +139,20 @@ for result in results:
     print(f"[{result['weight']:.2f}] {result['text']}")
 
 # Search with options
+
 results = client.recall(
     bank_id="my-bank",
     query="What happened last spring?",
     budget="high",  # More thorough graph traversal
+
     max_tokens=8192,  # Return more context
+
     fact_type="world"  # Only world facts
+
 )
 
 # Include entity information
+
 results = client.recall(
     bank_id="my-bank",
     query="Tell me about Alice",
@@ -143,9 +161,11 @@ results = client.recall(
 )
 
 # Check entity details
+
 for entity in results["entities"]:
     print(f"Entity: {entity['name']}")
     print(f"Observations: {entity['observations']}")
+
 ```
 
 </TabItem>
@@ -178,23 +198,29 @@ const withEntities = await client.recall({
     includeEntities: true,
     maxEntityTokens: 500
 });
+
 ```
 
 </TabItem>
 <TabItem value="cli" label="CLI">
 
 ```bash
+
 # Basic search
+
 hindsight recall my-bank "What does Alice do at Google?"
 
 # Search with options
+
 hindsight recall my-bank "What happened last spring?" \
     --budget high \
     --max-tokens 8192 \
     --fact-type world
 
 # Verbose output (shows weights and sources)
+
 hindsight recall my-bank "Tell me about Alice" -v
+
 ```
 
 </TabItem>
@@ -214,7 +240,9 @@ Generate disposition-aware responses that form opinions based on evidence.
 <TabItem value="python" label="Python">
 
 ```python
+
 # Basic reflect
+
 response = client.reflect(
     bank_id="my-bank",
     query="Should we adopt TypeScript for our backend?"
@@ -225,21 +253,26 @@ print("\nBased on:", len(response["based_on"]["world"]), "facts")
 print("New opinions:", len(response["new_opinions"]))
 
 # Reflect with options
+
 response = client.reflect(
     bank_id="my-bank",
     query="What are Alice's strengths for the team lead role?",
     budget="high",  # More thorough reasoning
+
     include_entities=True
 )
 
 # Access formed opinions
+
 for opinion in response["new_opinions"]:
     print(f"Opinion: {opinion['text']}")
     print(f"Confidence: {opinion['confidence']}")
 
 # See which facts influenced the response
+
 for fact in response["based_on"]["world"]:
     print(f"[{fact['weight']:.2f}] {fact['text']}")
+
 ```
 
 </TabItem>
@@ -269,20 +302,26 @@ detailed.newOpinions.forEach(op => {
     console.log(`Opinion: ${op.text}`);
     console.log(`Confidence: ${op.confidence}`);
 });
+
 ```
 
 </TabItem>
 <TabItem value="cli" label="CLI">
 
 ```bash
+
 # Basic reflect
+
 hindsight reflect my-bank "Should we adopt TypeScript for our backend?"
 
 # Verbose output (shows sources and opinions)
+
 hindsight reflect my-bank "What are Alice's strengths for the team lead role?" -v
 
 # With higher reasoning budget
+
 hindsight reflect my-bank "Analyze our tech stack" --budget high
+
 ```
 
 </TabItem>

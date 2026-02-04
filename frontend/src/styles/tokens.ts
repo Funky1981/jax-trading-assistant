@@ -8,7 +8,8 @@ export const tokens = {
     accent: '#3aa0ff',
     positive: '#1db954',
     negative: '#ff5c5c',
-    warning: '#f5a623',
+    warning: '#f59e0b',
+    info: '#3aa0ff',
   },
   colorsLight: {
     bg: '#f4f6f8',
@@ -20,6 +21,7 @@ export const tokens = {
     positive: '#15803d',
     negative: '#dc2626',
     warning: '#d97706',
+    info: '#0284c7',
   },
   typography: {
     fontFamily: '"IBM Plex Sans", "Segoe UI", sans-serif',

@@ -1,5 +1,12 @@
-import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 import type { ReactNode } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 export interface DataTableColumn<T> {
   key: string;
@@ -15,22 +22,28 @@ interface DataTableProps<T> {
 }
 
 export function DataTable<T>({ columns, rows, getRowId }: DataTableProps<T>) {
+  const getAlignClass = (align?: 'left' | 'right' | 'center') => {
+    if (align === 'right') return 'text-right';
+    if (align === 'center') return 'text-center';
+    return 'text-left';
+  };
+
   return (
-    <Table size="small" aria-label="data table">
-      <TableHead>
+    <Table aria-label="data table">
+      <TableHeader>
         <TableRow>
           {columns.map((column) => (
-            <TableCell key={column.key} align={column.align ?? 'left'}>
+            <TableHead key={column.key} className={getAlignClass(column.align)}>
               {column.label}
-            </TableCell>
+            </TableHead>
           ))}
         </TableRow>
-      </TableHead>
+      </TableHeader>
       <TableBody>
         {rows.map((row) => (
           <TableRow key={getRowId(row)}>
             {columns.map((column) => (
-              <TableCell key={column.key} align={column.align ?? 'left'}>
+              <TableCell key={column.key} className={getAlignClass(column.align)}>
                 {column.render ? column.render(row) : (row as Record<string, ReactNode>)[column.key]}
               </TableCell>
             ))}

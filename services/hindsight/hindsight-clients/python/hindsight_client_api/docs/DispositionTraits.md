@@ -1,4 +1,4 @@
-# DispositionTraits
+﻿# DispositionTraits
 
 Disposition traits that influence how memories are formed and interpreted.
 
@@ -16,17 +16,25 @@ Name | Type | Description | Notes
 from hindsight_client_api.models.disposition_traits import DispositionTraits
 
 # TODO update the JSON string below
+
 json = "{}"
+
 # create an instance of DispositionTraits from a JSON string
+
 disposition_traits_instance = DispositionTraits.from_json(json)
+
 # print the JSON string representation of the object
+
 print(DispositionTraits.to_json())
 
 # convert the object into a dict
-disposition_traits_dict = disposition_traits_instance.to_dict()
-# create an instance of DispositionTraits from a dict
-disposition_traits_from_dict = DispositionTraits.from_dict(disposition_traits_dict)
-```
-[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 
+disposition_traits_dict = disposition_traits_instance.to_dict()
+
+# create an instance of DispositionTraits from a dict
+
+disposition_traits_from_dict = DispositionTraits.from_dict(disposition_traits_dict)
+
+```n
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

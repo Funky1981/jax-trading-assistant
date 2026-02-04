@@ -1,8 +1,9 @@
-# 07 — Dexter Ingestion -> Memory Retain (Events + Signals)
+﻿# 07 — Dexter Ingestion -> Memory Retain (Events + Signals)
 
 **Goal:** Convert Dexter outputs into canonical events/signals and retain them.
 
 ## 7.1 — Event normalization
+
 Dexter may output:
 - earnings detected
 - unusual volume

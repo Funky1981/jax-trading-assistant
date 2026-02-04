@@ -1,4 +1,4 @@
-# Models
+﻿# Models
 
 Hindsight uses several machine learning models for different tasks.
 
@@ -52,25 +52,31 @@ Other LLM models not listed above may work with Hindsight, but they must support
 ### Configuration
 
 ```bash
+
 # Groq (recommended)
+
 export HINDSIGHT_API_LLM_PROVIDER=groq
 export HINDSIGHT_API_LLM_API_KEY=gsk_xxxxxxxxxxxx
 export HINDSIGHT_API_LLM_MODEL=openai/gpt-oss-20b
 
 # OpenAI
+
 export HINDSIGHT_API_LLM_PROVIDER=openai
 export HINDSIGHT_API_LLM_API_KEY=sk-xxxxxxxxxxxx
 export HINDSIGHT_API_LLM_MODEL=gpt-4o
 
 # Gemini
+
 export HINDSIGHT_API_LLM_PROVIDER=gemini
 export HINDSIGHT_API_LLM_API_KEY=xxxxxxxxxxxx
 export HINDSIGHT_API_LLM_MODEL=gemini-2.0-flash
 
 # Ollama (local)
+
 export HINDSIGHT_API_LLM_PROVIDER=ollama
-export HINDSIGHT_API_LLM_BASE_URL=http://localhost:11434/v1
+export HINDSIGHT_API_LLM_BASE_URL=<http://localhost:11434/v1>
 export HINDSIGHT_API_LLM_MODEL=gpt-oss-20b
+
 ```
 
 **Note:** The LLM is the primary bottleneck for retain operations. See [Performance](./performance) for optimization strategies.
@@ -97,13 +103,17 @@ All embedding models must produce **384-dimensional vectors** to match the datab
 **Configuration:**
 
 ```bash
+
 # Local provider (default)
+
 export HINDSIGHT_API_EMBEDDINGS_PROVIDER=local
 export HINDSIGHT_API_EMBEDDINGS_LOCAL_MODEL=BAAI/bge-small-en-v1.5
 
 # TEI provider (remote)
+
 export HINDSIGHT_API_EMBEDDINGS_PROVIDER=tei
-export HINDSIGHT_API_EMBEDDINGS_TEI_URL=http://localhost:8080
+export HINDSIGHT_API_EMBEDDINGS_TEI_URL=<http://localhost:8080>
+
 ```
 
 ---
@@ -125,11 +135,15 @@ Reranks initial search results to improve precision.
 **Configuration:**
 
 ```bash
+
 # Local provider (default)
+
 export HINDSIGHT_API_RERANKER_PROVIDER=local
 export HINDSIGHT_API_RERANKER_LOCAL_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
 
 # TEI provider (remote)
+
 export HINDSIGHT_API_RERANKER_PROVIDER=tei
-export HINDSIGHT_API_RERANKER_TEI_URL=http://localhost:8081
+export HINDSIGHT_API_RERANKER_TEI_URL=<http://localhost:8081>
+
 ```

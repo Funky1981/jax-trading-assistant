@@ -1,4 +1,4 @@
-# Services
+﻿# Services
 
 Hindsight consists of two services that can run together or separately depending on your deployment needs.
 
@@ -10,8 +10,9 @@ The core memory engine. Handles all memory operations:
 - **Recall**: Semantic search across memories
 - **Reflect**: Disposition-aware answer generation
 
-```
+```text
 hindsight-api        # Default port: 8888
+
 ```
 
 The API service is stateless and can be horizontally scaled behind a load balancer. All state is stored in PostgreSQL.

@@ -1,4 +1,4 @@
-# Task 6: Strategy Engine Expansion - COMPLETE
+﻿# Task 6: Strategy Engine Expansion - COMPLETE
 
 **Implementation Date**: January 28, 2026  
 **Status**: ✅ Complete  
@@ -135,6 +135,7 @@ Implemented a comprehensive strategy engine with dynamic loading, three producti
 ### Core Components (`backtest.go`)
 
 #### BacktestResult
+
 Complete performance analysis:
 - **Capital**: Initial, final, total return, return %
 - **Trade Stats**: Total trades, wins, losses, win rate
@@ -147,6 +148,7 @@ Complete performance analysis:
 - **Trade Log**: Full history of all trades
 
 #### BacktestTrade
+
 Individual trade tracking:
 - Entry/exit dates and prices
 - Stop loss and take profit levels
@@ -157,6 +159,7 @@ Individual trade tracking:
 - Confidence score
 
 #### Backtester
+
 Configurable backtest engine:
 - **Configuration**:
   - Initial capital (default: $100K)
@@ -170,6 +173,7 @@ Configurable backtest engine:
   - Real exit simulation (stop/target hit detection)
 
 #### HistoricalDataSource Interface
+
 Abstraction for market data:
 - `GetCandles(ctx, symbol, start, end)`: OHLCV data
 - `GetIndicators(ctx, symbol, timestamp)`: Technical indicators
@@ -191,11 +195,13 @@ Abstraction for market data:
 **Average R-Multiple**: Sum(R-multiples) / total trades  
 - R-multiple = (Exit - Entry) / (Entry - Stop)
 
-**Position Sizing**: 
-```
+**Position Sizing**:
+
+```n
 Risk amount = Capital × Risk%
 Stop distance = |Entry - Stop|
 Quantity = Risk amount / Stop distance
+
 ```
 
 ---
@@ -224,8 +230,10 @@ Quantity = Risk amount / Stop distance
 - ✅ Performance metrics calculation
 
 **Test Results**:
-```
+
+```n
 15 tests PASSED in 0.471s
+
 ```
 
 ### Mock Data Source
@@ -289,7 +297,8 @@ Quantity = Risk amount / Stop distance
 ## 7. Configuration
 
 ### Strategy Selection
-```json
+
+```n
 {
   "enabled_strategies": [
     "rsi_momentum_v1",
@@ -302,10 +311,12 @@ Quantity = Risk amount / Stop distance
     "ma_crossover_v1": 0.3
   }
 }
+
 ```
 
 ### Backtest Configuration
-```json
+
+```n
 {
   "initial_capital": 100000,
   "risk_per_trade": 0.01,
@@ -314,6 +325,7 @@ Quantity = Risk amount / Stop distance
   "start_date": "2024-01-01",
   "end_date": "2024-12-31"
 }
+
 ```
 
 ---
@@ -363,7 +375,8 @@ Quantity = Risk amount / Stop distance
 ## 9. Usage Examples
 
 ### Registering Strategies
-```go
+
+```n
 registry := strategies.NewRegistry()
 
 rsi := strategies.NewRSIMomentumStrategy()
@@ -374,10 +387,12 @@ registry.Register(macd, macd.GetMetadata())
 
 ma := strategies.NewMACrossoverStrategy()
 registry.Register(ma, ma.GetMetadata())
+
 ```
 
 ### Analyzing Market Data
-```go
+
+```n
 strategy, _ := registry.Get("rsi_momentum_v1")
 
 input := strategies.AnalysisInput{
@@ -395,10 +410,12 @@ if signal.Type == strategies.SignalBuy {
     fmt.Printf("BUY %s at %.2f, SL: %.2f, TP: %.2f\n", 
         signal.Symbol, signal.EntryPrice, signal.StopLoss, signal.TakeProfit[0])
 }
+
 ```
 
 ### Running Backtests
-```go
+
+```n
 backtester := strategies.NewBacktester(registry).
     WithCapital(100000.0).
     WithRiskPerTrade(0.015).
@@ -417,6 +434,7 @@ fmt.Printf("Win Rate: %.2f%%\n", result.WinRate * 100)
 fmt.Printf("Total Return: $%.2f (%.2f%%)\n", result.TotalReturn, result.TotalReturnPct * 100)
 fmt.Printf("Max Drawdown: %.2f%%\n", result.MaxDrawdown * 100)
 fmt.Printf("Sharpe Ratio: %.2f\n", result.SharpeRatio)
+
 ```
 
 ---

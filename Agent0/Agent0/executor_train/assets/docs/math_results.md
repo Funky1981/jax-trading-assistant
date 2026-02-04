@@ -1,4 +1,4 @@
-
+﻿
 ### Math Benchmark Results
 
 **1.5B Model Performance across challenging mathematical benchmarks:**
@@ -10,7 +10,6 @@
 | Qwen-2.5-Math-1.5B-Instruct-TIR             | ✅        | 83.70  | 76.20     | 24.30         | 41.30            | 26.70            | 55.00  | 51.20 |
 | ToRL-1.5B                                   | ✅        | 85.60  | 77.80     | 29.80         | 44.00            | 26.70            | 67.50  | 55.23 |
 | **Qwen-2.5-Math-1.5B + Verl-Tool**          | ✅        | **85.10** | **77.40** | **28.30**     | **44.00**        | **33.30**        | **65.00** | **55.52** |
-
 
 **7B Model Performance across challenging mathematical benchmarks:**
 |Model Name                                 |Tool|GSM8K|MATH 500|Minerva  Math|Olympiad  Bench|AIME24 |AMC23|Avg  |

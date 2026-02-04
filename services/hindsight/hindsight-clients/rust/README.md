@@ -1,4 +1,4 @@
-# Hindsight Rust Client
+﻿# Hindsight Rust Client
 
 Auto-generated Rust client library for the Hindsight semantic memory system API.
 
@@ -17,6 +17,7 @@ Add to your `Cargo.toml`:
 [dependencies]
 hindsight-client = "0.1.0"
 tokio = { version = "1", features = ["full"] }
+
 ```
 
 ## Quick Start
@@ -27,7 +28,7 @@ use hindsight_client::Client;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a client
-    let client = Client::new("http://localhost:8888");
+    let client = Client::new("<http://localhost:8888">);
 
     // List all agents
     let agents = client.list_agents().await?;
@@ -66,6 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
 ```
 
 ## How It Works
@@ -126,6 +128,7 @@ match client.get_agent_profile("my-agent").await {
     }
     Err(e) => println!("Other error: {}", e),
 }
+
 ```
 
 ## Development
@@ -134,6 +137,7 @@ match client.get_agent_profile("my-agent").await {
 
 ```bash
 cargo build
+
 ```
 
 The OpenAPI spec is automatically converted and the client is generated during build.
@@ -142,6 +146,7 @@ The OpenAPI spec is automatically converted and the client is generated during b
 
 ```bash
 cargo test
+
 ```
 
 ### Releasing
@@ -150,20 +155,25 @@ This client can be published to crates.io independently of the CLI:
 
 ```bash
 cargo publish
+
 ```
 
 ## Architecture
 
-```
+```text
 hindsight-clients/rust/
 ├── Cargo.toml          # Package definition
+
 ├── build.rs            # Build script (generates client)
+
 ├── src/
 │   └── lib.rs          # Library entry point
+
 └── target/
     └── debug/build/
         └── hindsight-client-.../out/
             └── hindsight_client_generated.rs  # Generated code
+
 ```
 
 ## License

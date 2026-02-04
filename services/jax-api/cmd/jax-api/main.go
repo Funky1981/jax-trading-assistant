@@ -139,6 +139,7 @@ func main() {
 
 	server := httpapi.NewServer()
 	server.RegisterHealth()
+	server.RegisterAuth()
 	server.RegisterMetrics()
 	server.RegisterRisk(riskEngine)
 	server.RegisterStrategies(strategyRegistry)
@@ -148,5 +149,7 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", coreCfg.HTTPPort)
 	log.Printf("jax-core listening on %s", addr)
+	log.Printf("Public endpoints: /health, /auth/login, /auth/refresh")
+	log.Printf("Protected endpoints: /risk/*, /strategies, /trades, /symbols/*, /trading/*, /api/v1/metrics*")
 	log.Fatal(http.ListenAndServe(addr, server.Handler()))
 }

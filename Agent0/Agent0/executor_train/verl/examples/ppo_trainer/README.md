@@ -1,4 +1,4 @@
-# Proximal Policy Optimization (PPO)
+﻿# Proximal Policy Optimization (PPO)
 
 Proximal Policy Optimization (PPO) is a family of policy gradient methods for reinforcement learning, proposed by OpenAI in 2017. PPO strikes a balance between simplicity, stability, and performance, making it one of the most widely used algorithms in modern RL applications, including large-scale language model fine-tuning.
 
@@ -57,13 +57,13 @@ Options to use KL loss for KL divergence control:
 
 - `actor_rollout_ref.actor.kl_loss_coef`: The coefficient of kl loss. Default is 0.001.
 
-- `actor_rollout_ref.actor.kl_loss_type`: Support kl(k1), abs, mse(k2), low_var_kl(k3) and full. How to calculate the kl divergence between actor and reference policy. See this blog post for detailed analysis: http://joschu.net/blog/kl-approx.html
+- `actor_rollout_ref.actor.kl_loss_type`: Support kl(k1), abs, mse(k2), low_var_kl(k3) and full. How to calculate the kl divergence between actor and reference policy. See this blog post for detailed analysis: <<http://joschu.net/blog/kl-approx.html>>
 
 Options to use KL penalty in the reward:
 
 - `algorithm.use_kl_in_reward`: Whether to enable in-reward kl penalty. Default is False.
 
-- `algorithm.kl_penalty`: Support kl(k1), abs, mse(k2), low_var_kl(k3) and full. This defines the way to calculate the kl divergence between actor and reference policy. For specific options, refer to `kl_penalty` in core_algos.py. See this blog post for detailed analysis: http://joschu.net/blog/kl-approx.html
+- `algorithm.kl_penalty`: Support kl(k1), abs, mse(k2), low_var_kl(k3) and full. This defines the way to calculate the kl divergence between actor and reference policy. For specific options, refer to `kl_penalty` in core_algos.py. See this blog post for detailed analysis: <<http://joschu.net/blog/kl-approx.html>>
 
 - `algorithm.kl_ctrl.kl_coef`: The (initial) coefficient of in-reward kl_penalty. Default is 0.001.
 - `algorithm.kl_ctrl.type`: 'fixed' for FixedKLController and 'adaptive' for AdaptiveKLController.
@@ -93,6 +93,7 @@ bash run_gemma.sh
   actor_rollout_ref.actor.ppo_mini_batch_size=64 \
   actor_rollout_ref.actor.ppo_micro_batch_size=2 \
   critic.ppo_micro_batch_size=2
+
 ```
 
 Reference performance with verl v0.2:

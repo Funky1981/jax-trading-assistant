@@ -1,15 +1,13 @@
----
+﻿---
 sidebar_position: 5
 ---
 
 # Routing Tool Learning
 
-
 :::tip Run this notebook
 This recipe is available as an interactive Jupyter notebook.
 [**Open in GitHub →**](https://github.com/vectorize-io/hindsight-cookbook/blob/main/notebooks/05-tool-learning-demo.ipynb)
 :::
-
 
 This notebook demonstrates how Hindsight helps an LLM learn which tool to use when tool names are ambiguous. Without memory, the LLM might randomly select between similarly-named tools. With Hindsight, it learns from past interactions and consistently makes the correct choice.
 
@@ -38,17 +36,17 @@ docker run --rm -it --pull always -p 8888:8888 -p 9999:9999 \
   -e HINDSIGHT_API_LLM_MODEL=o3-mini \
   -v $HOME/.hindsight-docker:/home/hindsight/.pg0 \
   ghcr.io/vectorize-io/hindsight:latest
+
 ```
 
 ## Installation
 
-
 ```python
 !pip install hindsight-litellm hindsight-client litellm nest_asyncio python-dotenv -U -q
+
 ```
 
 ## Setup
-
 
 ```python
 import os
@@ -72,16 +70,16 @@ import litellm
 import hindsight_litellm
 from hindsight_client import Hindsight
 
-HINDSIGHT_API_URL = os.getenv("HINDSIGHT_API_URL", "http://localhost:8888")
+HINDSIGHT_API_URL = os.getenv("HINDSIGHT_API_URL", "<http://localhost:8888">)
 
 if not os.getenv("OPENAI_API_KEY"):
     print("Warning: OPENAI_API_KEY not set")
+
 ```
 
 ## Define Tools
 
 These tool definitions are **intentionally ambiguous** - the descriptions don't reveal which channel handles what type of request.
-
 
 ```python
 TOOLS = [
@@ -130,12 +128,12 @@ TOOLS = [
         }
     }
 ]
+
 ```
 
 ## Test Scenarios
 
 A mix of financial and technical requests to test routing accuracy.
-
 
 ```python
 TEST_SCENARIOS = [
@@ -165,10 +163,10 @@ TEST_SCENARIOS = [
         "correct_tool": "route_to_channel_alpha"
     },
 ]
+
 ```
 
 ## Helper Functions
-
 
 ```python
 SYSTEM_PROMPT = """You are a customer service routing agent. Your job is to route customer requests to the appropriate processing channel.
@@ -180,7 +178,6 @@ You have access to two routing channels:
 Analyze the customer's request and route it to the most appropriate channel. You must call one of the routing functions to process the request.
 
 Important: Base your routing decision on what you know about each channel's purpose. If you have learned from previous interactions which channel handles specific types of requests, use that knowledge."""
-
 
 def make_routing_request(user_request: str, use_hindsight: bool, bank_id: Optional[str] = None):
     """Make a routing request and return the tool called."""
@@ -211,7 +208,6 @@ def make_routing_request(user_request: str, use_hindsight: bool, bank_id: Option
         return tool_call.function.name
     return None
 
-
 def store_feedback(bank_id: str, request: str, correct_tool: str, request_type: str):
     """Store feedback about which tool was correct for a request type."""
     client = Hindsight(base_url=HINDSIGHT_API_URL, timeout=60.0)
@@ -230,12 +226,12 @@ This is important institutional knowledge for routing decisions."""
         context=f"routing:feedback:{request_type}",
         metadata={"request_type": request_type, "correct_tool": correct_tool}
     )
+
 ```
 
 ## Phase 1: Without Hindsight (No Memory)
 
 The LLM has no prior knowledge about which channel handles what. With ambiguous tool descriptions, it may route incorrectly.
-
 
 ```python
 print("=" * 60)
@@ -258,18 +254,19 @@ for i, scenario in enumerate(TEST_SCENARIOS[:3], 1):
 
 phase1_accuracy = sum(phase1_results) / len(phase1_results) * 100
 print(f"\n>>> Phase 1 Accuracy: {phase1_accuracy:.0f}% ({sum(phase1_results)}/{len(phase1_results)})")
+
 ```
 
 ## Phase 2: Teaching Phase
 
 Now we provide feedback about correct routing to build memory. This simulates a human supervisor correcting the AI's routing decisions.
 
-
 ```python
 bank_id = f"tool-learning-{uuid.uuid4().hex[:8]}"
 print(f"Using bank_id: {bank_id}")
 
 # Configure and enable Hindsight
+
 hindsight_litellm.configure(
     hindsight_api_url=HINDSIGHT_API_URL,
     bank_id=bank_id,
@@ -297,12 +294,12 @@ for request, correct_tool, req_type in feedback_examples:
 print("\nWaiting 15 seconds for Hindsight to process memories...")
 time.sleep(15)
 print("Done!")
+
 ```
 
 ## Phase 3: With Hindsight (Memory-Augmented)
 
 The LLM now has access to learned routing knowledge via Hindsight. It should route requests correctly based on past feedback.
-
 
 ```python
 print("=" * 60)
@@ -329,10 +326,10 @@ for i, scenario in enumerate(TEST_SCENARIOS, 1):
 
 phase3_accuracy = sum(phase3_results) / len(phase3_results) * 100
 print(f"\n>>> Phase 3 Accuracy: {phase3_accuracy:.0f}% ({sum(phase3_results)}/{len(phase3_results)})")
+
 ```
 
 ## Summary
-
 
 ```python
 print("=" * 60)
@@ -350,23 +347,25 @@ else:
     print(f"\nNote: Phase 1 got lucky! Run again to see typical behavior.")
 
 print(f"\nMemories stored in bank: {bank_id}")
-print(f"View in UI: http://localhost:9999/banks/{bank_id}")
+print(f"View in UI: <http://localhost:9999/banks/{bank_id}">)
 
 print("\n" + "=" * 60)
 print("KEY INSIGHT")
 print("=" * 60)
 print("Hindsight allows the LLM to learn from experience which tool")
 print("to use, even when tool names/descriptions are ambiguous.")
+
 ```
 
 ## Cleanup
-
 
 ```python
 hindsight_litellm.cleanup()
 
 # Optional: delete the bank
+
 import requests
 response = requests.delete(f"{HINDSIGHT_API_URL}/v1/default/banks/{bank_id}")
 print(f"Deleted bank: {response.json()}")
+
 ```

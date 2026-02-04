@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 3
 ---
 
@@ -20,6 +20,7 @@ graph LR
 
     RRF --> CE[Cross-Encoder]
     CE --> R[Results]
+
 ```
 
 ---
@@ -146,22 +147,24 @@ Memories are distilled facts—concise but sometimes missing nuance. When your a
 
 **Chunks** return the raw text that generated each memory—useful when the distilled fact loses important nuance:
 
-```
+```text
 Memory: "Alice prefers Python over JavaScript"
 Chunk:  "Alice mentioned she prefers Python over JavaScript, mainly because
          of its data science ecosystem, though she admits JS is better for
          frontend work and she's been learning TypeScript lately."
+
 ```
 
 **Entity Observations** pull in related facts about entities mentioned in your results. If a memory mentions "Alice", you automatically get her role, skills, and other relevant context—without needing a separate query:
 
-```
+```text
 Query: "What programming languages does Alice like?"
 Memory: "Alice prefers Python over JavaScript"
 Entity Observations (Alice):
   - "Alice is a senior data scientist at Google"
   - "Alice specializes in machine learning"
   - "Alice has been learning TypeScript"
+
 ```
 
 **When to include them:**

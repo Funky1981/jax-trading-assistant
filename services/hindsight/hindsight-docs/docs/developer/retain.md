@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 2
 ---
 
@@ -14,6 +14,7 @@ graph LR
     B --> C[Identify Entities]
     C --> D[Build Connections]
     D --> E[Memory Bank]
+
 ```
 
 ---
@@ -61,7 +62,6 @@ Hindsight distinguishes between **world** facts (about others) and **experience*
 |-----------------|-----------------------------------|---------|
 | **world**       | Facts about people, places, things | "Alice works at Google" |
 | **experience** | Conversations and events         | "I recommended Python to Alice" |
-
 
 **Note:** Opinions aren't created during `retain()` — only during `reflect()` when the bank forms beliefs.
 This separation is important for `reflect()` — the bank can reason about what it knows versus what happened in conversations.

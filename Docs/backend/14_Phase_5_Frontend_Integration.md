@@ -1,4 +1,4 @@
-# Phase 5: Frontend Integration with Backend Services
+﻿# Phase 5: Frontend Integration with Backend Services
 
 **Status**: ✅ Complete  
 **Commit**: 31bce70
@@ -26,17 +26,20 @@ Phase 5 integrates the React frontend with all backend services built in Phases 
 ### 1. Data Services (frontend/src/data/)
 
 #### observability-service.ts (29 lines)
-```typescript
+
+```n
 export const observabilityService = {
   getAPIHealth(): Promise<HealthStatus>
   getMemoryHealth(): Promise<HealthStatus>
   getRecentMetrics(limit?: number): Promise<MetricEvent[]>
   getRunMetrics(runId: string): Promise<MetricEvent[]>
 }
+
 ```
 
 #### memory-service.ts (56 lines)
-```typescript
+
+```n
 export const memoryService = {
   recall(bank: string, query: MemoryQuery): Promise<MemoryRecallResponse>
   retain(bank: string, item: Omit<MemoryItem, 'id'>): Promise<{ id: string }>
@@ -44,25 +47,30 @@ export const memoryService = {
   listBanks(): Promise<string[]>
   search(queryText: string, bank?: string, limit?: number): Promise<MemoryItem[]>
 }
+
 ```
 
 #### strategy-service.ts (40 lines)
-```typescript
+
+```n
 export const strategyService = {
   listStrategies(): Promise<string[]>
   getSignals(strategyId: string): Promise<StrategySignal[]>
   getPerformance(strategyId: string): Promise<StrategyPerformance>
   analyze(symbol: string, strategyId?: string): Promise<StrategySignal>
 }
+
 ```
 
 #### orchestration-service.ts (28 lines)
-```typescript
+
+```n
 export const orchestrationService = {
   run(request: OrchestrationRequest): Promise<OrchestrationResult>
   getRunStatus(runId: string): Promise<OrchestrationResult & { status: string }>
   listRuns(limit?: number): Promise<OrchestrationResult[]>
 }
+
 ```
 
 ### 2. React Hooks (frontend/src/hooks/)
@@ -148,7 +156,8 @@ export const orchestrationService = {
 ## Integration Points
 
 ### DashboardPage.tsx
-```tsx
+
+```n
 import { HealthStatusWidget, MetricsDashboard } from '../components/observability';
 import { MemoryBrowser } from '../components/memory';
 
@@ -156,24 +165,28 @@ import { MemoryBrowser } from '../components/memory';
 // Row 1: Health (4 cols) + Metrics (8 cols)
 // Row 2: Memory Browser (full width)
 // Row 3: Existing DashboardGrid
+
 ```
 
 ### HTTP Client Enhancement
-```typescript
+
+```n
 // http-client.ts additions
 export const apiClient = createHttpClient({
-  baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8081',
+  baseUrl: import.meta.env.VITE_API_URL || '<<http://localhost:8081>',>
   timeoutMs: 30_000,
 });
 
 export const memoryClient = createHttpClient({
-  baseUrl: import.meta.env.VITE_MEMORY_API_URL || 'http://localhost:8090',
+  baseUrl: import.meta.env.VITE_MEMORY_API_URL || '<<http://localhost:8090>',>
   timeoutMs: 15_000,
 });
+
 ```
 
 ### Type Definitions Added
-```typescript
+
+```n
 // types.ts additions (~100 lines)
 export interface MetricEvent { /* 18 fields */ }
 export interface HealthStatus { /* 5 fields */ }
@@ -184,14 +197,17 @@ export interface StrategySignal { /* 8 fields */ }
 export interface StrategyPerformance { /* 6 fields */ }
 export interface OrchestrationRequest { /* 7 fields */ }
 export interface OrchestrationResult { /* nested plan + tools */ }
+
 ```
 
 ## Environment Variables
 
 Required `.env` file:
-```bash
-VITE_API_URL=http://localhost:8081
-VITE_MEMORY_API_URL=http://localhost:8090
+
+```n
+VITE_API_URL=<http://localhost:8081>
+VITE_MEMORY_API_URL=<http://localhost:8090>
+
 ```
 
 ## Dependencies Added
@@ -200,6 +216,7 @@ VITE_MEMORY_API_URL=http://localhost:8090
 {
   "@tanstack/react-query": "^5.0.0"
 }
+
 ```
 
 ## Testing Results
@@ -217,7 +234,8 @@ Build output: `526.19 kB` (gzipped: 161.62 kB)
 ## Usage Examples
 
 ### Health Monitoring
-```tsx
+
+```n
 function MyComponent() {
   const { data: health } = useAPIHealth();
   
@@ -226,10 +244,12 @@ function MyComponent() {
   }
   // ... rest of component
 }
+
 ```
 
 ### Memory Operations
-```tsx
+
+```n
 function MemoryExample() {
   const { data: memories } = useMemorySearch('AAPL', 'signals', 10);
   const retainMutation = useMemoryRetain('signals');
@@ -247,10 +267,12 @@ function MemoryExample() {
   
   return <MemoryList items={memories} onSave={handleSave} />;
 }
+
 ```
 
 ### Orchestration Polling
-```tsx
+
+```n
 function OrchestrationRunner() {
   const runMutation = useOrchestrationRun();
   const { data: status } = useOrchestrationRunStatus(runMutation.data?.runId);
@@ -273,6 +295,7 @@ function OrchestrationRunner() {
     </>
   );
 }
+
 ```
 
 ## Performance Characteristics

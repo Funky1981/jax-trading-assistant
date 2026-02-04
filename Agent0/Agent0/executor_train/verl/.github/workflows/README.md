@@ -1,4 +1,4 @@
-### Adding a New Workflow
+﻿### Adding a New Workflow
 
 When adding a new workflow for continuous integration (CI), you have two runner options: a fixed runner or a machine from the vemlp.
 
@@ -32,7 +32,8 @@ permissions:
 
 env:
   IMAGE: "your vemlp image" # e.g. "verl-ci-cn-beijing.cr.volces.com/verlai/verl:app-verl0.4-vllm0.8.5-mcore0.12.1"
-  DYNAMIC_RUNNER_URL: "https://sd10g3clalm04ug7alq90.apigateway-cn-beijing.volceapi.com/runner" # public veFaas api
+
+  DYNAMIC_RUNNER_URL: "<https://sd10g3clalm04ug7alq90.apigateway-cn-beijing.volceapi.com/runner"> # public veFaas api
 
 jobs:
   setup:

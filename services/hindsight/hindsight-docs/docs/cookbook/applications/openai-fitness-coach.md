@@ -1,15 +1,13 @@
----
+﻿---
 sidebar_position: 1
 ---
 
 # OpenAI Agent + Hindsight Memory Integration
 
-
 :::info Complete Application
 This is a complete, runnable application demonstrating Hindsight integration.
 [**View source on GitHub →**](https://github.com/vectorize-io/hindsight-cookbook/tree/main/openai-fitness-coach)
 :::
-
 
 A fitness coach example demonstrating how to use **OpenAI Agents** with **Hindsight as a memory backend**.
 
@@ -29,7 +27,7 @@ This example showcases:
 
 ## Architecture
 
-```
+```text
 User: "I ran 5K today, don't like tempo runs"
     |
 OpenAI Assistant
@@ -51,6 +49,7 @@ Function Call: store_memory(advice as opinion)
 Hindsight API (stores coach's observation)
     |
 Personalized Answer
+
 ```
 
 ## Key Difference from Standard Demo
@@ -75,7 +74,9 @@ Personalized Answer
 2. **Hindsight API running**
    ```bash
    # Follow Hindsight setup instructions to start the API
-   # Default: http://localhost:8888
+
+   # Default: <http://localhost:8888>
+
    ```
 
 3. **Install dependencies**
@@ -89,6 +90,7 @@ Personalized Answer
 cd openai-fitness-coach
 export OPENAI_API_KEY=your_key_here
 python demo_conversational.py
+
 ```
 
 The demo showcases:
@@ -106,13 +108,17 @@ The demo uses a separate agent (`fitness-coach-demo`) to avoid mixing with real 
 ### Chat with Your Coach
 
 **Interactive mode:**
-```bash
+
+```n
 python openai_coach.py
+
 ```
 
 **Single question:**
-```bash
+
+```n
 python openai_coach.py "What did I do for training this week?"
+
 ```
 
 ## How It Works
@@ -127,6 +133,7 @@ search_workouts(after_date, before_date, workout_type)
 get_nutrition_summary(after_date, before_date)
 get_user_goals()
 get_coach_opinions(about)
+
 ```
 
 Each function makes API calls to Hindsight to fetch relevant memories.
@@ -147,15 +154,18 @@ When you ask a question:
 ### 3. Function Calling Flow
 
 ```python
+
 # User asks: "What did I run this week?"
 
 # OpenAI Assistant decides to call:
+
 search_workouts(
     after_date="2024-11-18",
     workout_type="running"
 )
 
 # Function retrieves from Hindsight:
+
 {
   "results": [
     {"text": "User completed 45-minute cardio workout: running..."},
@@ -164,8 +174,10 @@ search_workouts(
 }
 
 # OpenAI Assistant generates response:
+
 "This week you've done two runs: a 45-minute run on Monday
 and a longer 60-minute run on Wednesday. Great consistency!"
+
 ```
 
 ## Example Questions
@@ -178,6 +190,7 @@ python openai_coach.py "Based on my workouts, should I rest today?"
 python openai_coach.py "How is my nutrition supporting my goals?"
 python openai_coach.py "What's my progress toward my goal?"
 python openai_coach.py "Compare my training this month to last month"
+
 ```
 
 The agent will automatically:
@@ -204,20 +217,25 @@ Edit `memory_tools.py` to add new capabilities:
 def get_weekly_summary(week_offset: int = 0):
     """Get a summary of a specific week."""
     # Implementation
+
     pass
 
 # Add to MEMORY_TOOLS list
+
 MEMORY_TOOLS.append({
     "type": "function",
     "function": {
         "name": "get_weekly_summary",
         "description": "Get training summary for a specific week",
         # ... parameters
+
     }
 })
 
 # Add to FUNCTION_MAP
+
 FUNCTION_MAP["get_weekly_summary"] = get_weekly_summary
+
 ```
 
 ### Modify Assistant Instructions
@@ -231,6 +249,7 @@ assistant = client.beta.assistants.create(
     model="gpt-4o-mini",
     tools=MEMORY_TOOLS
 )
+
 ```
 
 ## Use Cases
@@ -289,8 +308,10 @@ After running this demo, you'll understand:
 ## Common Issues
 
 **"OPENAI_API_KEY not set"**
-```bash
+
+```n
 export OPENAI_API_KEY=your_api_key_here
+
 ```
 
 **"Agent not found"**

@@ -1,4 +1,4 @@
-# Testing Strategy
+﻿# Testing Strategy
 
 ## Goals
 - Prevent regressions in trading flows.
@@ -6,6 +6,7 @@
 - Ensure accessibility compliance.
 
 ## Test Layers
+
 1. **Unit Tests**
    - Component props, rendering, and variants.
    - Domain logic (PnL, risk calculations).

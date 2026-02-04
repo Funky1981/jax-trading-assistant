@@ -1,14 +1,17 @@
----
+﻿---
 title: "Curve-Fitting / Parameter Sweep Overfitting"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["anti-pattern", "overfitting", "backtesting"]
 ---
+
 ## Why it’s tempting
+
 You can always find parameters that look amazing in sample.
 
 ## Why it’s dangerous / usually wrong
+
 The ‘best’ backtest often captures random patterns that disappear live, especially when you tried many variants.
 
 ## How to detect it in Jax (guardrails)

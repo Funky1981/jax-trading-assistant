@@ -1,14 +1,17 @@
----
+﻿---
 title: "Unhedged Short Volatility (Picking Up Nickels in Front of a Steamroller)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["anti-pattern", "tail-risk", "options"]
 ---
+
 ## Why it’s tempting
+
 High win rate and steady gains in calm markets.
 
 ## Why it’s dangerous / usually wrong
+
 Rare tail events can erase years of gains. Negative skew is the core problem.
 
 ## How to detect it in Jax (guardrails)

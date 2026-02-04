@@ -1,4 +1,4 @@
-# Agent0: Unleashing Self-Evolving Agents from Zero Data via Tool-Integrated Reasoning
+﻿# Agent0: Unleashing Self-Evolving Agents from Zero Data via Tool-Integrated Reasoning
 
 [![arXiv](https://img.shields.io/badge/arXiv-2511.16043-b31b1b.svg)](https://arxiv.org/abs/2511.16043)
 
@@ -26,22 +26,26 @@ Empirically, Agent 0 substantially boosts reasoning capabilities on the Qwen3-8B
 ### 1. Configure Environment and Prepare Dirs
 
 ```bash
-git clone https://github.com/aiming-lab/Agent0.git
+git clone <https://github.com/aiming-lab/Agent0.git>
 
 cd Agent0/Agent0
 
 # Install the required packages
+
 pip install -r requirements.txt
 
 # For curriculum training
+
 cd curriculum_train/
 pip install -e verl
 
 # For executor training
+
 cd executor_train/
 pip install -e verl
 
 pip install "flash-attn==2.8.3" --no-build-isolation
+
 ```
 
 ### 2. Sandbox Service
@@ -51,11 +55,12 @@ You need to deploy a code sandbox service for subsequent code compilation. You c
 Here is a sample script for the sandbox setup. We deployed four sandbox services. Each service is assigned an IP address and a corresponding port.
 
 ```bash
-git clone https://github.com/bytedance/SandboxFusion.git
+git clone <https://github.com/bytedance/SandboxFusion.git>
 
 cd SandboxFusion
 poetry install
 make run-online
+
 ```
 
 ### 3. Train the Curriculum Agent
@@ -69,6 +74,7 @@ SANDBOX_API_URLS = [
     'IP3:PORT3/run_code',
     'IP4:PORT4/run_code'
 ]
+
 ```
 
 Then use the script to train the curriculum agent. This step will be relatively slow due to limitations such as rollout and concurrency restrictions of the sandbox service. So if you would like to change the `max_turns`, please refer to `generate_with_tool_use()` in `curriculum_train/vllm_service_init/start_vllm_server_tool.py`.
@@ -87,7 +93,9 @@ mkdir -p \
   "$STORAGE_PATH/temp_results"
 
 # Initialize first iteration with base model
+
 bash scripts/curriculum_train.sh Qwen/Qwen3-4B-Base Qwen/Qwen3-4B-Base qwen3_4b_curriculum_v1
+
 ```
 
 ### 4. Data Curation
@@ -109,6 +117,7 @@ bash question_evaluate/evaluate.sh $executor_agent_path $experiment_name
 echo 'start upload'
 LOCAL_DATA_PATH=$(python question_evaluate/upload.py --max_score 0.8 --min_score 0.3 --experiment_name ${experiment_name})
 echo "training data saved to: ${LOCAL_DATA_PATH}"
+
 ```
 
 ### 5. Train the Executor Agent
@@ -119,7 +128,9 @@ Lastly, we implement the ADPO algorithm in `executor_train/verl_tool/trainer/ppo
 cd ../executor_train
 
 # if out of cuda memory during training, try lower the use_dynamic_bs=False
+
 bash examples/train/math_tir/train_qwen3_4b_adpo.sh
+
 ```
 
 The checkpoints will be saved in `checkpoints/torl`. So you can manually select the checkpoint and train the next iterations.
@@ -139,4 +150,5 @@ If you find this work helpful, please consider citing our paper:
   journal={arXiv preprint arXiv:2511.16043},
   year={2025}
 }
+
 ```

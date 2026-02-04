@@ -1,4 +1,4 @@
-# Database Package
+﻿# Database Package
 
 Shared database connection management and migration utilities for Jax Trading Assistant services.
 
@@ -25,6 +25,7 @@ if err != nil {
     log.Fatal(err)
 }
 defer db.Close()
+
 ```
 
 ### With Migrations
@@ -34,6 +35,7 @@ db, err := database.ConnectWithMigrations(ctx, config, "file://db/postgres/migra
 if err != nil {
     log.Fatal(err)
 }
+
 ```
 
 ### Configuration
@@ -49,6 +51,7 @@ config := &database.Config{
     RetryAttempts:       3,
     RetryDelay:          1 * time.Second,
 }
+
 ```
 
 ## Running Migrations
@@ -56,17 +59,23 @@ config := &database.Config{
 ### Command Line
 
 ```powershell
+
 # Install migrate CLI
+
 go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 # Run migrations up
+
 migrate -path db/postgres/migrations -database "postgres://localhost:5432/jaxdb?sslmode=disable" up
 
 # Rollback one migration
+
 migrate -path db/postgres/migrations -database "postgres://localhost:5432/jaxdb?sslmode=disable" down 1
 
 # Check version
+
 migrate -path db/postgres/migrations -database "postgres://localhost:5432/jaxdb?sslmode=disable" version
+
 ```
 
 ### Programmatically
@@ -76,19 +85,25 @@ err := database.RunMigrations(ctx, db, "file://db/postgres/migrations")
 if err != nil {
     log.Fatal(err)
 }
+
 ```
 
 ## Local Development
 
 ```powershell
+
 # Start Postgres via Docker Compose
+
 cd db/postgres
 docker-compose up -d
 
 # Run migrations
+
 cd ../..
 migrate -path db/postgres/migrations -database "postgres://jaxuser:jaxpass@localhost:5432/jaxdb?sslmode=disable" up
 
 # Verify schema
+
 docker exec -it postgres psql -U jaxuser -d jaxdb -c "\dt"
+
 ```

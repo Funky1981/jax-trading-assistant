@@ -1,6 +1,7 @@
-# 00 — Context & Goals
+﻿# 00 — Context & Goals
 
 ## What we are building
+
 **Jax** is an AI trading assistant built from four core pieces:
 
 - **Dexter**: market/event ingestion and signal generation (the “senses”)
@@ -9,6 +10,7 @@
 - **Hindsight (Vectorize)**: long-term memory + reflection (the “hippocampus”)
 
 ## What changes in this revision
+
 We are **adding Hindsight** into the architecture as a first-class subsystem, and enforcing **TDD** so:
 
 1) Every service boundary has executable tests.
@@ -17,6 +19,7 @@ We are **adding Hindsight** into the architecture as a first-class subsystem, an
 4) Scheduled **reflection** produces durable insights (“beliefs”) for future decisions.
 
 ## High-level requirements
+
 - Run locally via Docker Compose
 - Deterministic tests (no flaky web calls)
 - Clear interfaces between:
@@ -26,6 +29,7 @@ We are **adding Hindsight** into the architecture as a first-class subsystem, an
   - memory (Hindsight)
 
 ## Non-goals (for now)
+
 - Not building a fully automated trading bot that places orders without human review
 - Not attempting to “predict markets” using LLM magic
 - Not storing secrets or broker credentials in memory

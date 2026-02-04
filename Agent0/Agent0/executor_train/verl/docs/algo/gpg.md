@@ -1,4 +1,4 @@
-# GPG: Group Policy Gradient
+﻿# GPG: Group Policy Gradient
 
 Last updated: 07/03/2025.
 
@@ -10,6 +10,7 @@ Group Policy Gradient (GPG) is a minimalist reinforcement learning (RL) method t
 - By eliminating the critic and reference models, avoiding KL divergence constraints, significantly simplifies the training process compared to Group Relative Policy Optimization (GRPO)
 
 ## Configuration
+
 To configure GPG within the framework, use the following YAML settings.
 
 ```yaml
@@ -19,9 +20,11 @@ actor_rollout_ref:
   actor:
     policy_loss:
       loss_mode: "gpg"
+
 ```
 
 ## Advanced Extensions
+
 GPG is a simple and strong baseline for model reasoning. Although it avoids using KL loss in its original form, you can still use KL loss to further improve the performance.
 
 ```yaml
@@ -30,6 +33,7 @@ algorithm:
 actor_rollout_ref:
   actor:
     use_kl_loss: True # enable kl regularization
+
     kl_loss_coef: 0.01
     policy_loss:
       loss_mode: "gpg"

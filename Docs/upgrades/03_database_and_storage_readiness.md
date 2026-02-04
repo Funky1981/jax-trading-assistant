@@ -1,4 +1,4 @@
-# Database and Storage Readiness
+﻿# Database and Storage Readiness
 
 The Jax trading assistant persists trades and events via a UTCP storage adapter backed by Postgres. For production use, this layer must be hardened, schema migrations must be automated, and storage errors must not propagate silently.
 

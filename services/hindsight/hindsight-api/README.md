@@ -1,4 +1,4 @@
-# Hindsight API
+﻿# Hindsight API
 
 **Memory System for AI Agents** — Temporal + Semantic + Entity Memory Architecture using PostgreSQL with pgvector.
 
@@ -8,6 +8,7 @@ Hindsight gives AI agents persistent memory that works like human memory: it sto
 
 ```bash
 pip install hindsight-api
+
 ```
 
 ## Quick Start
@@ -15,15 +16,19 @@ pip install hindsight-api
 ### Run the Server
 
 ```bash
+
 # Set your LLM provider
+
 export HINDSIGHT_API_LLM_PROVIDER=openai
 export HINDSIGHT_API_LLM_API_KEY=sk-xxxxxxxxxxxx
 
 # Start the server (uses embedded PostgreSQL by default)
+
 hindsight-api
+
 ```
 
-The server starts at http://localhost:8888 with:
+The server starts at <http://localhost:8888> with:
 - REST API for memory operations
 - MCP server at `/mcp` for tool-use integration
 
@@ -33,32 +38,38 @@ The server starts at http://localhost:8888 with:
 from hindsight_api import MemoryEngine
 
 # Create and initialize the memory engine
+
 memory = MemoryEngine()
 await memory.initialize()
 
 # Create a memory bank for your agent
+
 bank = await memory.create_memory_bank(
     name="my-assistant",
     background="A helpful coding assistant"
 )
 
 # Store a memory
+
 await memory.retain(
     memory_bank_id=bank.id,
     content="The user prefers Python for data science projects"
 )
 
 # Recall memories
+
 results = await memory.recall(
     memory_bank_id=bank.id,
     query="What programming language does the user prefer?"
 )
 
 # Reflect with reasoning
+
 response = await memory.reflect(
     memory_bank_id=bank.id,
     query="Should I recommend Python or R for this ML project?"
 )
+
 ```
 
 ## CLI Options
@@ -67,10 +78,15 @@ response = await memory.reflect(
 hindsight-api --help
 
 # Common options
+
 hindsight-api --port 9000          # Custom port (default: 8888)
+
 hindsight-api --host 127.0.0.1     # Bind to localhost only
+
 hindsight-api --workers 4          # Multiple worker processes
+
 hindsight-api --log-level debug    # Verbose logging
+
 ```
 
 ## Configuration
@@ -94,6 +110,7 @@ export HINDSIGHT_API_LLM_PROVIDER=groq
 export HINDSIGHT_API_LLM_API_KEY=gsk_xxxxxxxxxxxx
 
 hindsight-api
+
 ```
 
 ## Docker
@@ -103,6 +120,7 @@ docker run --rm -it -p 8888:8888 \
   -e HINDSIGHT_API_LLM_API_KEY=$OPENAI_API_KEY \
   -v $HOME/.hindsight-docker:/home/hindsight/.pg0 \
   ghcr.io/vectorize-io/hindsight:latest
+
 ```
 
 ## MCP Server
@@ -111,6 +129,7 @@ For local MCP integration without running the full API server:
 
 ```bash
 hindsight-local-mcp
+
 ```
 
 This runs a stdio-based MCP server that can be used directly with MCP-compatible clients.

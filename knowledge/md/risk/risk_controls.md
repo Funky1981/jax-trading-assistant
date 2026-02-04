@@ -1,4 +1,4 @@
----
+﻿---
 title: "Risk Controls & Kill Switches"
 version: "1.0"
 status: "approved"
@@ -21,6 +21,7 @@ tags: ["risk", "controls"]
 - Execution stop: disable if fills drop below X%
 
 ## Tail risk awareness
+
 Some strategies (carry, short volatility, mean reversion in crashes) have **negative skew**:
 - They win often and lose rarely — but catastrophically.
 Use explicit tail hedges or strict risk caps if you deploy these.

@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 5
 ---
 
@@ -10,19 +10,23 @@ Hindsight includes a built-in [Model Context Protocol (MCP)](https://modelcontex
 
 The MCP server is **enabled by default** and mounted at `/mcp` on the API server. Each memory bank has its own MCP endpoint:
 
-```
-http://localhost:8888/mcp/{bank_id}/
+```text
+<http://localhost:8888/mcp/{bank_id}/>
+
 ```
 
 For example, to connect to the memory bank `alice`:
-```
+
+```n
 http://localhost:8888/mcp/alice/
+
 ```
 
 To disable the MCP server, set the environment variable:
 
 ```bash
 export HINDSIGHT_API_MCP_ENABLED=false
+
 ```
 
 ## Per-Bank Endpoints
@@ -48,7 +52,8 @@ Store information to long-term memory.
 | `context` | string | No | Category for the memory (default: `general`) |
 
 **Example:**
-```json
+
+```n
 {
   "name": "retain",
   "arguments": {
@@ -56,6 +61,7 @@ Store information to long-term memory.
     "context": "programming_preferences"
   }
 }
+
 ```
 
 **When to use:**
@@ -76,17 +82,20 @@ Search memories to provide personalized responses.
 | `max_results` | integer | No | Maximum results to return (default: 10) |
 
 **Example:**
-```json
+
+```n
 {
   "name": "recall",
   "arguments": {
     "query": "What are the user's programming language preferences?"
   }
 }
+
 ```
 
 **Response:**
-```json
+
+```n
 {
   "results": [
     {
@@ -98,6 +107,7 @@ Search memories to provide personalized responses.
     }
   ]
 }
+
 ```
 
 **When to use:**
@@ -120,10 +130,11 @@ To connect Claude Desktop to a specific memory bank:
 {
   "mcpServers": {
     "hindsight-alice": {
-      "url": "http://localhost:8888/mcp/alice/"
+      "url": "<http://localhost:8888/mcp/alice/">
     }
   }
 }
+
 ```
 
 Each user can have their own MCP server configuration pointing to their personal memory bank.

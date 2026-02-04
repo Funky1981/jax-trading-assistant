@@ -1,4 +1,4 @@
-# Installation
+﻿# Installation
 
 Hindsight can be deployed in several ways depending on your infrastructure and requirements.
 
@@ -47,10 +47,11 @@ docker run --rm -it --pull always -p 8888:8888 -p 9999:9999 \
   -e HINDSIGHT_API_LLM_API_KEY=$OPENAI_API_KEY \
   -v $HOME/.hindsight-docker:/home/hindsight/.pg0 \
   ghcr.io/vectorize-io/hindsight:latest
+
 ```
 
-- **API Server**: http://localhost:8888
-- **Control Plane** (Web UI): http://localhost:9999
+- **API Server**: <<<<http://localhost:8888>>>>
+- **Control Plane** (Web UI): <http://localhost:9999>
 
 ---
 
@@ -59,13 +60,16 @@ docker run --rm -it --pull always -p 8888:8888 -p 9999:9999 \
 **Best for**: Production deployments, auto-scaling, cloud environments
 
 ```bash
+
 # Install with built-in PostgreSQL
+
 helm install hindsight oci://ghcr.io/vectorize-io/charts/hindsight \
   --set api.llm.provider=groq \
   --set api.llm.apiKey=gsk_xxxxxxxxxxxx \
   --set postgresql.enabled=true
 
 # Or use external PostgreSQL
+
 helm install hindsight oci://ghcr.io/vectorize-io/charts/hindsight \
   --set api.llm.provider=groq \
   --set api.llm.apiKey=gsk_xxxxxxxxxxxx \
@@ -73,10 +77,13 @@ helm install hindsight oci://ghcr.io/vectorize-io/charts/hindsight \
   --set api.database.url=postgresql://user:pass@postgres.example.com:5432/hindsight
 
 # Install a specific version
+
 helm install hindsight oci://ghcr.io/vectorize-io/charts/hindsight --version 0.1.3
 
 # Upgrade to latest
+
 helm upgrade hindsight oci://ghcr.io/vectorize-io/charts/hindsight
+
 ```
 
 **Requirements**:
@@ -95,6 +102,7 @@ See the [Helm chart documentation](https://github.com/vectorize-io/hindsight/tre
 
 ```bash
 pip install hindsight-all
+
 ```
 
 ### Run with Embedded Database
@@ -106,9 +114,10 @@ export HINDSIGHT_API_LLM_PROVIDER=groq
 export HINDSIGHT_API_LLM_API_KEY=gsk_xxxxxxxxxxxx
 
 hindsight-api
+
 ```
 
-This creates a database in `~/.hindsight/data/` and starts the API on http://localhost:8888.
+This creates a database in `~/.hindsight/data/` and starts the API on <<<<http://localhost:8888>>>>.
 
 ### Run with External PostgreSQL
 
@@ -120,6 +129,7 @@ export HINDSIGHT_API_LLM_PROVIDER=groq
 export HINDSIGHT_API_LLM_API_KEY=gsk_xxxxxxxxxxxx
 
 hindsight-api
+
 ```
 
 **Note**: The database must exist and have pgvector enabled (`CREATE EXTENSION vector;`).
@@ -128,9 +138,13 @@ hindsight-api
 
 ```bash
 hindsight-api --port 9000          # Custom port (default: 8888)
+
 hindsight-api --host 127.0.0.1     # Bind to localhost only
+
 hindsight-api --workers 4          # Multiple worker processes
+
 hindsight-api --log-level debug    # Verbose logging
+
 ```
 
 ### Control Plane
@@ -138,7 +152,8 @@ hindsight-api --log-level debug    # Verbose logging
 The Control Plane (Web UI) can be run standalone using npx:
 
 ```bash
-npx @vectorize-io/hindsight-control-plane --api-url http://localhost:8888
+npx @vectorize-io/hindsight-control-plane --api-url <<<<http://localhost:8888>>>>
+
 ```
 
 This connects to your running API server and provides a visual interface for managing memory banks, exploring entities, and testing queries.
@@ -149,20 +164,25 @@ This connects to your running API server and provides a visual interface for man
 |--------|---------------------|---------|-------------|
 | `-p, --port` | `PORT` | 9999 | Port to listen on |
 | `-H, --hostname` | `HOSTNAME` | 0.0.0.0 | Hostname to bind to |
-| `-a, --api-url` | `HINDSIGHT_CP_DATAPLANE_API_URL` | http://localhost:8888 | Hindsight API URL |
+| `-a, --api-url` | `HINDSIGHT_CP_DATAPLANE_API_URL` | <<<<http://localhost:8888>>>> | Hindsight API URL |
 
 #### Examples
 
 ```bash
+
 # Run on custom port
-npx @vectorize-io/hindsight-control-plane --port 9999 --api-url http://localhost:8888
+
+npx @vectorize-io/hindsight-control-plane --port 9999 --api-url <<<<http://localhost:8888>>>>
 
 # Using environment variables
-export HINDSIGHT_CP_DATAPLANE_API_URL=http://api.example.com
+
+export HINDSIGHT_CP_DATAPLANE_API_URL=<http://api.example.com>
 npx @vectorize-io/hindsight-control-plane
 
 # Production deployment
-PORT=80 HINDSIGHT_CP_DATAPLANE_API_URL=https://api.hindsight.io npx @vectorize-io/hindsight-control-plane
+
+PORT=80 HINDSIGHT_CP_DATAPLANE_API_URL=<https://api.hindsight.io> npx @vectorize-io/hindsight-control-plane
+
 ```
 
 ---

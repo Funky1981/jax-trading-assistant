@@ -1,4 +1,4 @@
-# Observability and Monitoring
+﻿# Observability and Monitoring
 
 Observability is the practice of making a system’s internal state visible through logs, metrics and traces. For the Jax trading assistant, observability is essential to detect and diagnose failures, understand performance bottlenecks and ensure compliance.
 

@@ -1,4 +1,4 @@
-# 11 — Docker Compose (Local Dev)
+﻿# 11 — Docker Compose (Local Dev)
 
 **Goal:** one command starts the core backend stack.
 
@@ -22,6 +22,7 @@ Notes:
 - `HINDSIGHT_API_LLM_API_KEY`
 - `HINDSIGHT_URL`
 - `JAX_SYMBOL`
+
 ## Commands
 - `docker compose up -d`
 - `docker compose --profile db up -d`

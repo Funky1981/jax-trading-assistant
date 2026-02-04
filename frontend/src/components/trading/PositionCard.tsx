@@ -1,8 +1,8 @@
-import { Card, CardContent, Stack, Typography } from '@mui/material';
 import { formatPrice } from '../../domain/market';
 import type { Position } from '../../domain/models';
 import { calculateUnrealizedPnl } from '../../domain/calculations';
 import { PnLIndicator } from './PnLIndicator';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface PositionCardProps {
   position: Position;
@@ -12,18 +12,18 @@ export function PositionCard({ position }: PositionCardProps) {
   const pnl = calculateUnrealizedPnl(position);
 
   return (
-    <Card variant="outlined">
+    <Card>
       <CardContent>
-        <Stack spacing={1}>
-          <Typography variant="subtitle2">{position.symbol}</Typography>
-          <Typography variant="body2" color="text.secondary">
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">{position.symbol}</h3>
+          <p className="text-sm text-muted-foreground">
             Qty {position.quantity} @ {formatPrice(position.avgPrice)}
-          </Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="body2">Mkt {formatPrice(position.marketPrice)}</Typography>
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Mkt {formatPrice(position.marketPrice)}</span>
             <PnLIndicator value={pnl} />
-          </Stack>
-        </Stack>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

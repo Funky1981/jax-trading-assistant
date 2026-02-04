@@ -1,15 +1,23 @@
-## Tool Server Usage
+﻿## Tool Server Usage
+
 We provide a tool server starting command to start any tool server that is supported by verl-tool (see full list in [verl_tool/servers/tools](verl_tool/servers/tools)). To start the tool server, you can use the following command:
-```bash
+
+```
+
 # Start the tool server
+
 host=localhost
 port=5500
 tool_type=python_code # separate by comma if you want to start multiple tool servers. 
+
 workers_per_tool=4 # number of workers for the tool server, meaning how many threads will be used to handle a single tool request with multiple trajectories
+
 python -m verl_tool.servers.serve --host $host --port $port --tool_type $tool_type --workers_per_tool $workers_per_tool & # run in background
-```
+
+```n
 After running, you should see the following output. Those marked with 🟢 are active tools, while those marked with ⚪ are inactive tools. `finish` as a tool will always be added to manage the end of each trajectory (e.g. delete env)
-```
+
+```n
 2025-06-06 02:19:04,764 - __main__ - INFO - Initializing tools: ('python_code',)
 2025-06-06 02:19:04,772 - __main__ - INFO - Initialized tool: python_code
 2025-06-06 02:19:04,772 - __main__ - INFO - Available Tools:
@@ -27,15 +35,21 @@ After running, you should see the following output. Those marked with 🟢 are a
 INFO:     Started server process [493613]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://localhost:5500 (Press CTRL+C to quit)
-```
+INFO:     Uvicorn running on <http://localhost:5500> (Press CTRL+C to quit)
+
+```n
 To test the tool server, we provide a list of corresponding test scripts in the `verl_tool/servers/tests` directory. For example, to test the `python_code` tool server, you can run the following command:
-```bash
+
+```
+
 # Test the python_code tool server
-python -m verl_tool.servers.tests.test_python_code_tool python --url=http://localhost:$port/get_observation
+
+python -m verl_tool.servers.tests.test_python_code_tool python --url=<http://localhost:$port/get_observation>
+
 ```
 
 ## Available Tools
+
 |Tool          |Type            |
 |--------------|----------------|
 |[Python Interpreter](https://github.com/TIGER-AI-Lab/verl-tool/blob/main/verl_tool/servers/tools/python_code.py) (recommend)|Code Interpreter|
@@ -77,11 +91,15 @@ Web search functionality using Google Custom Search API with full content retrie
 ### Usage
 
 ```bash
+
 # Start server
+
 python -m verl_tool.servers.serve --host localhost --port 5500 --tool_type google_search --workers_per_tool 4 &
 
 # Test tool
-python -m verl_tool.servers.tests.test_google_search_tool google_search --url=http://localhost:5500/get_observation
+
+python -m verl_tool.servers.tests.test_google_search_tool google_search --url=<http://localhost:5500>/get_observation
+
 ```
 
 ### Query Formats
@@ -121,29 +139,35 @@ Web search using SerpAPI with support for multiple search engines and structured
 ### Usage
 
 ```bash
+
 # Start server  
+
 python -m verl_tool.servers.serve --host localhost --port 5500 --tool_type serp_search --workers_per_tool 4 &
 
 # Test tool
-python -m verl_tool.servers.tests.test_serp_search_tool serp_search --url=http://localhost:5500/get_observation
+
+python -m verl_tool.servers.tests.test_serp_search_tool serp_search --url=<http://localhost:5500>/get_observation
+
 ```
 
 ### Configuration Options
 - `serp_engine`: "google" (default), "bing", "yahoo", "duckduckgo", etc.
 - `topk`: Number of results per type (default: 3)
-- `search_url`: SerpAPI endpoint (default: "https://serpapi.com/search")
+- `search_url`: SerpAPI endpoint (default: "<https://serpapi.com/search">)
 
 ### Output Example
-```
+
+```n
 📋 Answer Box 1:
-URL: https://example.com
+URL: <https://example.com>
 Content: "Direct Answer Title"
 Direct answer content...
 
 🔍 Web Result 2:  
-URL: https://website.com
+URL: <https://website.com>
 Content: "Page Title"
 Relevant webpage content...
+
 ```
 
 ### Advantages over Google Search

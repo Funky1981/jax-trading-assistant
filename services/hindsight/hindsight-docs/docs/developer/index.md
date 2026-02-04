@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 1
 slug: /
 ---
@@ -43,6 +43,7 @@ graph TB
     API --> Documents
     API --> Memories
     API --> Entities
+
 ```
 
 **Your AI agent** stores information via `retain()`, searches with `recall()`, and reasons with `reflect()` — all interactions with its dedicated **memory bank**
@@ -77,6 +78,7 @@ graph LR
 
     RRF --> CE[Cross-Encoder]
     CE --> R[Results]
+
 ```
 
 | Strategy | Best for |

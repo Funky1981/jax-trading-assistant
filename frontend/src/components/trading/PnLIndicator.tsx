@@ -1,4 +1,4 @@
-import { Chip } from '@mui/material';
+import { Badge } from '@/components/ui/badge';
 import { tokens } from '../../styles/tokens';
 
 interface PnLIndicatorProps {
@@ -11,15 +11,13 @@ export function PnLIndicator({ value, suffix = '' }: PnLIndicatorProps) {
   const label = `${isPositive ? '+' : ''}${value.toFixed(2)}${suffix}`;
 
   return (
-    <Chip
-      label={label}
-      size="small"
-      sx={{
-        backgroundColor: 'transparent',
-        border: `1px solid ${tokens.colors.border}`,
-        color: isPositive ? tokens.colors.positive : tokens.colors.negative,
-        fontWeight: tokens.typography.weight.semibold,
-      }}
-    />
+    <Badge
+      variant="outline"
+      className={`font-semibold ${
+        isPositive ? 'text-green-500 border-green-500' : 'text-red-500 border-red-500'
+      }`}
+    >
+      {label}
+    </Badge>
   );
 }

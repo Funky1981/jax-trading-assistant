@@ -1,4 +1,4 @@
-# Algorithm Baselines
+﻿# Algorithm Baselines
 
 Last updated: 06/18/2025.
 
@@ -10,10 +10,10 @@ Assuming GSM8k/math dataset is preprocessed via:
 
 ```bash
 python3 examples/data_preprocess/*.py
+
 ```
 
 Refer to the table below to reproduce RL training from different pre-trained checkpoints. Below is the performance on the GSM8k dataset if not specified otherwise. More comprehensive benchmark results are available in the recipe folder.
-
 
 | Hardware    | Model                            | Method            | Test score   | Details |
 |-------------|----------------------------------|-------------------|--------------|---------|
@@ -47,8 +47,8 @@ Refer to the table below to reproduce RL training from different pre-trained che
 
 ### DAPO math-17k
 
-- Training DAPO math-17k dataset: https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k
-- Testing: AIME'24: https://huggingface.co/datasets/BytedTsinghua-SIA/AIME-2024
+- Training DAPO math-17k dataset: <https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k>
+- Testing: AIME'24: <https://huggingface.co/datasets/BytedTsinghua-SIA/AIME-2024>
 
 Note:
 - For Qwen/Qwen2.5-Math-7B, we directly modify the max_position_embeddings to 32768 without observing performance degradation in order to train longer response length.
@@ -57,8 +57,6 @@ Note:
 |-------------|----------------------------------|-------------------|--------------|---------|
 | NVIDIA GPU  | Qwen/Qwen2.5-Math-7B (32k)       | DAPO              | 36.3         | [command](https://github.com/volcengine/verl/blob/main/recipe/dapo/test_dapo_7b_math.sh), [logs](https://wandb.ai/verl-org/DAPO%20Reproduction%20on%20verl/runs/ow47vvon?nw=nwusertongyuxuan361)|
 
-
-
 ## Coding related datasets
 
 Below is the result on leetcode if not specified otherwise.
@@ -66,7 +64,6 @@ Below is the result on leetcode if not specified otherwise.
 | Hardware    | Model                            | Method            | Test score   | Details |
 |-------------|----------------------------------|-------------------|--------------|---------|
 | NVIDIA GPU  | PRIME-RL/Eurus-2-7B-SFT          | RPIME             | 36.1         | [script](https://github.com/volcengine/verl/blob/main/recipe/prime/run_prime_qwen_code.sh), [swanlab](https://swanlab.cn/@wangzefan/prime_example/runs/7f541qhspgmy8nmhdlx35/chart) |
-
 
 ### Notes
 

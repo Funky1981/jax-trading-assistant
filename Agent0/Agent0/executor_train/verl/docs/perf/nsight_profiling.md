@@ -1,4 +1,4 @@
-# NVIDIA Nsight Systems profiling in verl
+﻿# NVIDIA Nsight Systems profiling in verl
 
 Last updated: 06/20/2025.
 
@@ -19,7 +19,6 @@ verl has one single controller process and multiple worker processes. Both contr
 In `trainer`, three new config entries control the profiler behaviors:
 
 * **`trainer.profile_steps`**. List of step numbers at which profiling should be performed. For example: [1, 2, 5] will profile steps 1, 2, and 5. And ``null`` means no profiling.
-
 
 * **`controller_nsight_options`**. This config group is for the single controller. All fields in this config group will be just sent to Nsight Systems when Ray starts the controller process. `ppo_trainer.yaml` provides a workable example. Users can reference [Nsight Systems manual](https://docs.nvidia.com/nsight-systems/UserGuide/index.html) and [Ray user guide](https://docs.ray.io/en/latest/ray-observability/user-guides/profiling.html) for more details.
 
@@ -48,13 +47,16 @@ Some users may think it is not convenient, but it is understandable that Ray may
 To enable profiling for specific components and steps, modify your ppo_trainer.yaml like this:
 
 ### Disable profiler
-```yaml
+
+```n
     trainer:
         profile_steps: null # disable profile
+
 ```
 
 ### Enable profiler and one database for one training step
-```yaml
+
+```n
     trainer:
         profile_steps: [1, 2, 5]
     actor_rollout_ref:
@@ -72,10 +74,12 @@ To enable profiling for specific components and steps, modify your ppo_trainer.y
             discrete: False
             all_ranks: False
             ranks: [0, 1]
+
 ```
 
 ### Enable profiler and multiple databases for one training step
-```yaml
+
+```n
     trainer:
         profile_steps: [1, 2, 5]
     actor_rollout_ref:
@@ -93,6 +97,7 @@ To enable profiling for specific components and steps, modify your ppo_trainer.y
             discrete: True
             all_ranks: False
             ranks: [0, 1]
+
 ```
 
 ## Profiling Output

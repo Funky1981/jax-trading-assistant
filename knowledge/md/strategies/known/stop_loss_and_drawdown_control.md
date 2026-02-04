@@ -1,14 +1,17 @@
----
+﻿---
 title: "Stop-Loss & Drawdown Control (Overlay)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "risk", "overlay", "stops"]
 ---
+
 ## What it is
+
 Rules that reduce exposure after losses or when price moves against the position, aiming to cap drawdowns.
 
 ## Why it can work (edge hypothesis)
+
 Stops can improve drawdown characteristics in some implementations, but can also reduce expected returns and increase turnover/costs.
 
 ## Best conditions
@@ -21,6 +24,7 @@ Stops can improve drawdown characteristics in some implementations, but can also
 - When stops are substituted for a real edge
 
 ## Signal definition (implementation-friendly)
+
 Example:
 - Per-trade hard stop (max loss)
 - Time stop (exit if not working)

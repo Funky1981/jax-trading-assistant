@@ -1,13 +1,12 @@
-import { Stack, Switch, Typography } from '@mui/material';
 import { SelectInput, TextInput } from '../components';
 
 export function SettingsPage() {
   return (
-    <Stack spacing={2} maxWidth={480}>
-      <Typography variant="h4">Settings</Typography>
-      <Typography variant="body2" color="text.secondary">
+    <div className="space-y-4 max-w-lg">
+      <h1 className="text-3xl font-semibold">Settings</h1>
+      <p className="text-sm text-muted-foreground">
         Customize your layout and preferences.
-      </Typography>
+      </p>
       <SelectInput
         label="Theme"
         value="dark"
@@ -17,10 +16,10 @@ export function SettingsPage() {
         ]}
       />
       <TextInput label="Default Order Size" type="number" value={100} />
-      <Stack direction="row" alignItems="center" spacing={1}>
-        <Switch defaultChecked />
-        <Typography variant="body2">Enable compact layout</Typography>
-      </Stack>
-    </Stack>
+      <div className="flex items-center gap-2">
+        <input type="checkbox" defaultChecked className="h-4 w-4" id="compact" />
+        <label htmlFor="compact" className="text-sm">Enable compact layout</label>
+      </div>
+    </div>
   );
 }

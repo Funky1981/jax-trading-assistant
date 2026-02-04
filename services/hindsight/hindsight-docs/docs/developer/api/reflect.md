@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 3
 ---
 
@@ -33,9 +33,10 @@ Make sure you've completed the [Quick Start](./quickstart) to install the client
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<http://localhost:8888">)
 
 client.reflect(bank_id="my-bank", query="What should I know about Alice?")
+
 ```
 
 </TabItem>
@@ -44,9 +45,10 @@ client.reflect(bank_id="my-bank", query="What should I know about Alice?")
 ```typescript
 import { HindsightClient } from '@vectorize-io/hindsight-client';
 
-const client = new HindsightClient({ baseUrl: 'http://localhost:8888' });
+const client = new HindsightClient({ baseUrl: '<http://localhost:8888'> });
 
 await client.reflect('my-bank', 'What should I know about Alice?');
+
 ```
 
 </TabItem>
@@ -54,6 +56,7 @@ await client.reflect('my-bank', 'What should I know about Alice?');
 
 ```bash
 hindsight memory think my-bank "What should I know about Alice?"
+
 ```
 
 </TabItem>
@@ -77,6 +80,7 @@ response = client.reflect(
     budget="mid",
     context="We're considering a hybrid work policy"
 )
+
 ```
 
 </TabItem>
@@ -87,6 +91,7 @@ const response = await client.reflect('my-bank', 'What do you think about remote
     budget: 'mid',
     context: "We're considering a hybrid work policy"
 });
+
 ```
 
 </TabItem>
@@ -105,12 +110,15 @@ The `context` parameter steers how the reflection is performed without impacting
 <TabItem value="python" label="Python">
 
 ```python
+
 # Context is passed to the LLM to help it understand the situation
+
 response = client.reflect(
     bank_id="my-bank",
     query="What do you think about the proposal?",
     context="We're in a budget review meeting discussing Q4 spending"
 )
+
 ```
 
 </TabItem>
@@ -121,6 +129,7 @@ response = client.reflect(
 const response = await client.reflect('my-bank', 'What do you think about the proposal?', {
     context: "We're in a budget review meeting discussing Q4 spending"
 });
+
 ```
 
 </TabItem>
@@ -151,23 +160,31 @@ The bank's disposition affects reflect responses:
 <TabItem value="python" label="Python">
 
 ```python
+
 # Create a bank with specific disposition
+
 client.create_bank(
     bank_id="cautious-advisor",
     background="I am a risk-aware financial advisor",
     disposition={
         "skepticism": 5,   # Very skeptical of claims
+
         "literalism": 4,   # Focuses on exact requirements
+
         "empathy": 2       # Prioritizes facts over feelings
+
     }
 )
 
 # Reflect responses will reflect this disposition
+
 response = client.reflect(
     bank_id="cautious-advisor",
     query="Should I invest in crypto?"
 )
+
 # Response will likely emphasize risks and caution
+
 ```
 
 </TabItem>
@@ -186,6 +203,7 @@ await client.createBank('cautious-advisor', {
 
 // Reflect responses will reflect this disposition
 const response = await client.reflect('cautious-advisor', 'Should I invest in crypto?');
+
 ```
 
 </TabItem>
@@ -205,6 +223,7 @@ print("Response:", response.text)
 print("\nBased on:")
 for fact in response.based_on or []:
     print(f"  - [{fact.type}] {fact.text}")
+
 ```
 
 </TabItem>
@@ -218,6 +237,7 @@ console.log('\nBased on:');
 for (const fact of response.based_on || []) {
     console.log(`  - [${fact.type}] ${fact.text}`);
 }
+
 ```
 
 </TabItem>

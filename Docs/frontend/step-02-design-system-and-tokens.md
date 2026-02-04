@@ -1,9 +1,11 @@
-# Step 02: Design System & Tokens
+﻿# Step 02: Design System & Tokens
 
 ## Objective
+
 Create a centralized styling system with tokens that ensure consistent and professional-grade UI theming.
 
 ## Actions
+
 1. **Define design tokens**
    - Colors: background, surface, accent, critical, warning, success.
    - Typography: font families, scale, weight, line height.

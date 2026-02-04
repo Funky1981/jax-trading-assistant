@@ -1,4 +1,4 @@
-# Final Go/No‑Go Gates
+﻿# Final Go/No‑Go Gates
 
 Before flipping the switch on a live trading system, you need to define and adhere to a set of go/no‑go criteria. These gates ensure that all components meet functional, performance, and compliance requirements and that you can halt trading quickly if something goes wrong.
 

@@ -1,4 +1,4 @@
-# Real Market Data Ingestion
+﻿# Real Market Data Ingestion
 
 Currently, the Jax trading assistant uses stubbed or limited market data through a `MarketData` interface. To trade on live markets, you must ingest real‑time or near‑real‑time prices and historical candles from a reliable provider.
 

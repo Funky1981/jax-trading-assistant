@@ -1,122 +1,140 @@
-import {
-  AppBar,
-  Box,
-  Drawer,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItem,
-  ListItemText,
-  Toolbar,
-  Typography,
-  useMediaQuery,
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { tokens } from '../../styles/tokens';
-import { theme } from '../../styles/theme';
-
-const drawerWidth = 240;
+import { 
+  Menu, 
+  X, 
+  LayoutDashboard, 
+  FileText, 
+  Briefcase, 
+  Settings,
+  Receipt,
+  Activity
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import JaxLogo from '@/images/jax_ai_trader.svg';
 
 const navItems = [
-  { label: 'Dashboard', path: '/', end: true },
-  { label: 'Order Ticket', path: '/order-ticket' },
-  { label: 'Blotter', path: '/blotter' },
-  { label: 'Portfolio', path: '/portfolio' },
-  { label: 'Settings', path: '/settings' },
+  { label: 'Dashboard', path: '/', icon: LayoutDashboard, end: true },
+  { label: 'Order Ticket', path: '/order-ticket', icon: Receipt },
+  { label: 'Blotter', path: '/blotter', icon: FileText },
+  { label: 'Portfolio', path: '/portfolio', icon: Briefcase },
+  { label: 'Settings', path: '/settings', icon: Settings },
 ];
 
 export function AppShell() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
-  const drawerContent = useMemo(
-    () => (
-      <Box sx={{ padding: tokens.spacing.md }}>
-        <Typography variant="overline" color="text.secondary">
-          NAVIGATION
-        </Typography>
-        <List>
-          {navItems.map((item) => (
-            <ListItem key={item.path} disablePadding>
-              <ListItemButton
-                component={NavLink}
-                to={item.path}
-                end={item.end}
-                onClick={() => setMobileOpen(false)}
-                sx={{
-                  borderRadius: tokens.radius.sm,
-                  marginBottom: tokens.spacing.xs,
-                  color: tokens.colors.textMuted,
-                  border: '1px solid transparent',
-                  textDecoration: 'none',
-                  '&.active': {
-                    backgroundColor: tokens.colors.surface,
-                    color: tokens.colors.text,
-                    border: `1px solid ${tokens.colors.border}`,
-                  },
-                }}
-              >
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      </Box>
-    ),
-    []
-  );
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: tokens.colors.bg }}>
-      <AppBar
-        position="fixed"
-        color="transparent"
-        elevation={0}
-        sx={{ borderBottom: `1px solid ${tokens.colors.border}` }}
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 w-64 transform border-r border-border bg-card transition-transform duration-200 md:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
       >
-        <Toolbar>
-          {isMobile && (
-            <IconButton color="inherit" edge="start" onClick={() => setMobileOpen(true)}>
-              <MenuIcon />
-            </IconButton>
-          )}
-          <Typography variant="h6" sx={{ fontWeight: tokens.typography.weight.semibold }}>
-            Jax Trading UI
-          </Typography>
-          <Box sx={{ marginLeft: 'auto' }}>
-            <Typography variant="body2" color="text.secondary">
-              Live session - Connected
-            </Typography>
-          </Box>
-        </Toolbar>
-      </AppBar>
+        <div className="flex h-full flex-col">
+          {/* Sidebar Header */}
+          <div className="flex h-16 items-center gap-3 border-b border-border px-4">
+            <img
+              src={JaxLogo}
+              alt="Jax Logo"
+              className="h-8 w-auto"
+            />
+            <span className="text-lg font-semibold">Jax Trader</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
 
-      <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}>
-        <Drawer
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? mobileOpen : true}
-          onClose={() => setMobileOpen(false)}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            '& .MuiDrawer-paper': {
-              width: drawerWidth,
-              boxSizing: 'border-box',
-              backgroundColor: tokens.colors.surface,
-              borderRight: `1px solid ${tokens.colors.border}`,
-            },
-          }}
-        >
-          <Toolbar />
-          {drawerContent}
-        </Drawer>
-      </Box>
+          {/* Navigation */}
+          <nav className="flex-1 space-y-1 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Navigation
+            </p>
+            {navItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.end}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )
+                }
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
 
-      <Box component="main" sx={{ flexGrow: 1, padding: tokens.spacing.xl }}>
-        <Toolbar />
-        <Outlet />
-      </Box>
-    </Box>
+          {/* Sidebar Footer */}
+          <div className="border-t border-border p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Activity className="h-3 w-3 text-success" />
+              <span>System Online</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="md:pl-64">
+        {/* Header */}
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+
+          <NavLink to="/" className="flex items-center gap-3 md:hidden">
+            <img
+              src={JaxLogo}
+              alt="Jax Logo"
+              className="h-8 w-auto"
+            />
+            <span className="text-lg font-semibold">Jax Trader</span>
+          </NavLink>
+
+          <div className="ml-auto flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-success" />
+              <span className="text-sm text-muted-foreground">
+                Live Session
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="p-4 md:p-6 lg:p-8">
+          <Outlet />
+        </main>
+      </div>
+    </div>
   );
 }

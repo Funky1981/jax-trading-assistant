@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 0
 ---
 
@@ -20,9 +20,10 @@ export OPENAI_API_KEY=sk-xxx
 export HINDSIGHT_API_LLM_API_KEY=$OPENAI_API_KEY
 
 hindsight-api
+
 ```
 
-API available at [http://localhost:8888](http://localhost:8888/docs)
+API available at [<http://localhost:8888>](<http://localhost:8888>/docs)
 
 </TabItem>
 <TabItem value="docker" label="Docker (Full Experience)">
@@ -35,10 +36,11 @@ docker run --rm -it --pull always -p 8888:8888 -p 9999:9999 \
   -e HINDSIGHT_API_LLM_API_KEY=$OPENAI_API_KEY \
   -v $HOME/.hindsight-docker:/home/hindsight/.pg0 \
   ghcr.io/vectorize-io/hindsight:latest
+
 ```
 
-- **API**: http://localhost:8888
-- **Control Plane** (Web UI): http://localhost:9999
+- **API**: <http://localhost:8888>
+- **Control Plane** (Web UI): <http://localhost:9999>
 
 </TabItem>
 </Tabs>
@@ -57,21 +59,26 @@ See [LLM Providers](/developer/models#llm) for more details.
 
 ```bash
 pip install hindsight-client
+
 ```
 
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<http://localhost:8888>")
 
 # Retain: Store information
+
 client.retain(bank_id="my-bank", content="Alice works at Google as a software engineer")
 
 # Recall: Search memories
+
 client.recall(bank_id="my-bank", query="What does Alice do?")
 
 # Reflect: Generate disposition-aware response
+
 client.reflect(bank_id="my-bank", query="Tell me about Alice")
+
 ```
 
 </TabItem>
@@ -79,12 +86,13 @@ client.reflect(bank_id="my-bank", query="Tell me about Alice")
 
 ```bash
 npm install @vectorize-io/hindsight-client
+
 ```
 
 ```javascript
 const { HindsightClient } = require('@vectorize-io/hindsight-client');
 
-const client = new HindsightClient({ baseUrl: 'http://localhost:8888' });
+const client = new HindsightClient({ baseUrl: '<http://localhost:8888>' });
 
 // Retain: Store information
 await client.retain('my-bank', 'Alice works at Google as a software engineer');
@@ -94,24 +102,31 @@ await client.recall('my-bank', 'What does Alice do?');
 
 // Reflect: Generate response
 await client.reflect('my-bank', 'Tell me about Alice');
+
 ```
 
 </TabItem>
 <TabItem value="cli" label="CLI">
 
 ```bash
-curl -fsSL https://hindsight.vectorize.io/get-cli | bash
+curl -fsSL <https://hindsight.vectorize.io/get-cli> | bash
+
 ```
 
 ```bash
+
 # Retain: Store information
+
 hindsight memory retain my-bank "Alice works at Google as a software engineer"
 
 # Recall: Search memories
+
 hindsight memory recall my-bank "What does Alice do?"
 
 # Reflect: Generate response
+
 hindsight memory reflect my-bank "Tell me about Alice"
+
 ```
 
 </TabItem>

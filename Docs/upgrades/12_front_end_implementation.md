@@ -1,4 +1,4 @@
-# Front‑End Implementation
+﻿# Front‑End Implementation
 
 The Jax trading assistant includes a comprehensive front‑end build plan, but the UI hasn’t been implemented yet. Building a rich, performant front‑end is key for user adoption and workflow efficiency.
 

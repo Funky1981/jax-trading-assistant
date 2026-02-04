@@ -1,6 +1,7 @@
-# Component Library Playbook
+﻿# Component Library Playbook
 
 ## Purpose
+
 Define the design system and component library for a professional trading UI. Components must be stable, composable, and performance-aware.
 
 ## Chosen Library
@@ -9,6 +10,7 @@ Define the design system and component library for a professional trading UI. Co
 - **Approach:** use MUI primitives and build custom trading modules on top of a shared token system.
 
 ## Component Taxonomy
+
 1. **Foundations**
    - Typography, colors, spacing, elevation, motion, icons.
 2. **Primitives**
@@ -41,6 +43,7 @@ Define the design system and component library for a professional trading UI. Co
 - **Order Book:** batch updates and prioritize top-of-book changes.
 
 ## Documentation Standards
+
 Each component doc must include:
 - Purpose
 - Props and types
@@ -50,6 +53,7 @@ Each component doc must include:
 - Example usage
 
 ## Initial Build-out
+
 Implemented in `frontend/src/components`:
 - **Primitives:** `PrimaryButton`, `TextInput`, `SelectInput`
 - **Data display:** `DataTable`

@@ -1,4 +1,4 @@
-### What does this PR do?
+﻿### What does this PR do?
 
 > Add **concise** overview of what this PR aims to achieve or accomplish. Reference related GitHub issues and PRs that help with the review.
 
@@ -21,7 +21,9 @@
 > Demonstrate how the API changes if any, and provide usage example(s) if possible.
 
 ```python
+
 # Add code snippet or script demonstrating how to use this
+
 ```
 
 ### Design & Code Changes

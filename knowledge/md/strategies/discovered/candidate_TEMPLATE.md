@@ -1,4 +1,4 @@
----
+﻿---
 title: "Candidate Strategy Template"
 version: "1.0"
 status: "approved"
@@ -8,9 +8,9 @@ tags: ["strategy", "candidate"]
 
 ## Summary
 - **Hypothesis:** (why it should work)
-- **Market / Universe:** 
-- **Timeframe:** 
-- **Expected holding period:** 
+- **Market / Universe:**
+- **Timeframe:**
+- **Expected holding period:**
 - **Edge type:** (trend / mean reversion / stat-arb / carry / vol / execution)
 
 ## Signal definition (exact)

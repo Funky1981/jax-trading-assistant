@@ -1,4 +1,4 @@
----
+﻿---
 title: "Evaluation Protocol (Backtests That Don’t Lie)"
 version: "1.0"
 status: "approved"
@@ -29,4 +29,5 @@ tags: ["evaluation", "backtesting"]
 - Monitoring metrics and kill criteria
 
 ## Notes & references
+
 Backtest overfitting and selection bias can inflate apparent Sharpe ratios; the Deflated Sharpe Ratio is one published approach to correcting for this.

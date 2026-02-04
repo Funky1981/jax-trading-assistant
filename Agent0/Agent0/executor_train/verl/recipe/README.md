@@ -1,4 +1,5 @@
-# Recipe
+﻿# Recipe
+
 The examples under `recipes/` are representative extensions to verl for specific end-to-end RL training recipes.
 The help the community reproduce experiments, verl team provides a snapshot of the codebase when each recipe is initially PR'ed to verl main. You can find them via [github branches](https://github.com/volcengine/verl/branches/all?query=recipe)
 

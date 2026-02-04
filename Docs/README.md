@@ -1,8 +1,8 @@
-# Jax Trading Assistant - Plan (Agent0 + go-UTCP + Dexter + Hindsight) with TDD
+﻿# Jax Trading Assistant - Plan (Agent0 + go-UTCP + Dexter + Hindsight) with TDD
 
 This folder contains the build plan docs for Codex.
 
-**Important:** You said Codex is currently implementing **02**.  
+**Important:** You said Codex is currently implementing **02**.
 So the biggest change is: **from 03 onwards**, we introduce **Hindsight** as the memory layer, and we require **test-driven development** for every new module and every tool endpoint. We also make sure *every tested/verified outcome can be logged into memory* (where appropriate).
 
 ## Quick map

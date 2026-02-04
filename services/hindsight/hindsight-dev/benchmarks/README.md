@@ -1,4 +1,4 @@
-# Hindsight Benchmarks
+﻿# Hindsight Benchmarks
 
 This directory contains benchmark suites for evaluating Hindsight's memory capabilities.
 
@@ -8,6 +8,7 @@ This directory contains benchmark suites for evaluating Hindsight's memory capab
    ```bash
    cp .env.example .env
    # Edit .env with your API keys
+
    ```
 
 2. Make sure you have `uv` installed.
@@ -19,14 +20,20 @@ This directory contains benchmark suites for evaluating Hindsight's memory capab
 Tests conversational memory with multi-turn dialogues.
 
 ```bash
+
 # Run from project root
+
 ./scripts/benchmarks/run-locomo.sh
 
 # With options
+
 ./scripts/benchmarks/run-locomo.sh --max-conversations 10
 ./scripts/benchmarks/run-locomo.sh --skip-ingestion  # Reuse existing data
+
 ./scripts/benchmarks/run-locomo.sh --use-think       # Use think API
+
 ./scripts/benchmarks/run-locomo.sh --conversation conv-26  # Single conversation
+
 ```
 
 **Options:**
@@ -44,13 +51,17 @@ Tests conversational memory with multi-turn dialogues.
 Tests long-term memory across different categories.
 
 ```bash
+
 # Run from project root
+
 ./scripts/benchmarks/run-longmemeval.sh
 
 # With options
+
 ./scripts/benchmarks/run-longmemeval.sh --max-instances 50
 ./scripts/benchmarks/run-longmemeval.sh --category single-session-user
 ./scripts/benchmarks/run-longmemeval.sh --parallel 4  # Faster evaluation
+
 ```
 
 **Options:**
@@ -74,7 +85,9 @@ View benchmark results in a web UI:
 
 ```bash
 ./scripts/benchmarks/start-visualizer.sh
-# Opens at http://localhost:8001
+
+# Opens at <http://localhost:8001>
+
 ```
 
 ## Results

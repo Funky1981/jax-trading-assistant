@@ -13,7 +13,8 @@ type RiskHandler struct {
 
 func (s *Server) RegisterRisk(engine *app.RiskEngine) {
 	h := &RiskHandler{engine: engine}
-	s.mux.HandleFunc("/risk/calc", h.handleCalc)
+	// Protected endpoint - requires authentication
+	s.mux.HandleFunc("/risk/calc", s.protect(h.handleCalc))
 }
 
 type riskCalcRequest struct {
@@ -48,5 +49,7 @@ func (h *RiskHandler) handleCalc(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(out)
+	if err := json.NewEncoder(w).Encode(out); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }

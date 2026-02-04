@@ -1,6 +1,7 @@
-# Serena: Local Code Intelligence and Offline Use Guide
+﻿# Serena: Local Code Intelligence and Offline Use Guide
 
 ## What Serena is (plain English)
+
 Serena is a local code-intelligence backend that runs on your machine. It reads files from disk and uses language servers (the same kind of engines used by VS Code) to understand code structure: symbols, references, and safe edit boundaries. Serena can run as an MCP server, which lets tools like Codex call it for precise navigation and edits without sending entire files to a model.
 
 ## Why use it
@@ -18,6 +19,7 @@ Serena is a local code-intelligence backend that runs on your machine. It reads 
 - MCP server mode (exposes tools to external agents like Codex).
 
 ## How Serena works
+
 1) You define a project in `.serena/project.yml` (languages, ignores, read-only mode).
 2) Serena starts language servers for those languages and builds caches in `.serena/cache`.
 3) Tools query the caches and language servers for symbols and references.
@@ -30,6 +32,7 @@ Serena is a local code-intelligence backend that runs on your machine. It reads 
 - `.serena/logs/`: logs from indexing and health checks.
 
 ## Language servers used here
+
 These are local processes that parse code and answer symbol queries.
 - Go: `gopls` (from the Go toolchain)
 - Python: `pyright-langserver`
@@ -40,6 +43,7 @@ These are local processes that parse code and answer symbol queries.
 They communicate over stdin/stdout and do not need the internet to answer queries.
 
 ## MCP usage (how Codex talks to Serena)
+
 Serena can run as an MCP server. When enabled, Codex can call Serena tools such as:
 - list directories
 - search for patterns
@@ -57,9 +61,11 @@ This keeps most code navigation local and cheap, and only surfaces the needed sn
 - Store stable context in `.serena/memories/` and load on demand.
 
 ## Closed environment (offline / approval-gated) use
+
 The key idea is to pre-install everything once, with approvals, then run offline.
 
 ### External calls that may occur
+
 These happen only during install or first-time setup:
 - Serena package download (GitHub or PyPI via uvx).
 - Node packages for language servers (npm).
@@ -68,6 +74,7 @@ These happen only during install or first-time setup:
 Once installed, normal indexing and queries are local.
 
 ### How to set up for offline use
+
 1) Pre-install Serena and language servers during an approved window.
 2) Warm the caches by running `serena project index` once.
 3) Freeze or copy the installed assets and caches into your offline image.
@@ -104,4 +111,5 @@ Copy those into your offline image if you want zero downloads.
 - If your console encoding is cp1252, emoji output may fail; logs still capture results.
 
 ## Summary
+
 Serena is a local, language-server-backed tool that helps agents navigate and edit code with less token use. With a one-time, approved install, it can run fully offline. Most security risk is controllable by restricting network access and tool permissions.

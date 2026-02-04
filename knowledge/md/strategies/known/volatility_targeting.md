@@ -1,14 +1,17 @@
----
+﻿---
 title: "Volatility Targeting / Volatility Scaling"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "risk", "overlay"]
 ---
+
 ## What it is
+
 Scales exposure **down when volatility is high** and **up when volatility is low**, aiming for steadier risk and improved risk-adjusted returns.
 
 ## Why it can work (edge hypothesis)
+
 If expected returns don’t rise proportionally with volatility, scaling can improve Sharpe and reduce crash exposure.
 
 ## Best conditions
@@ -20,6 +23,7 @@ If expected returns don’t rise proportionally with volatility, scaling can imp
 - If your vol estimator lags too much
 
 ## Signal definition (implementation-friendly)
+
 Example:
 - Target portfolio vol = V*
 - Estimate recent vol Vhat (e.g., 20-day RV)

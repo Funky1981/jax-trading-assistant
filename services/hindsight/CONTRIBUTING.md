@@ -1,4 +1,4 @@
-# Contributing to Hindsight
+﻿# Contributing to Hindsight
 
 Thanks for your interest in contributing to Hindsight!
 
@@ -18,9 +18,11 @@ Thanks for your interest in contributing to Hindsight!
 3. Install dependencies:
    ```bash
    # Python dependencies
+
    uv sync --directory hindsight-api/
 
    # Node dependencies (uses npm workspaces)
+
    npm install
    ```
 
@@ -30,18 +32,21 @@ Thanks for your interest in contributing to Hindsight!
 
 ```bash
 ./scripts/dev/start-api.sh
+
 ```
 
 ### Running the Control Plane locally
 
 ```bash
 ./scripts/dev/start-control-plane.sh
+
 ```
 
 ### Running the documentation locally
 
 ```bash
 ./scripts/dev/start-docs.sh
+
 ```
 
 ### Running tests
@@ -49,6 +54,7 @@ Thanks for your interest in contributing to Hindsight!
 ```bash
 cd hindsight-api
 uv run pytest tests/
+
 ```
 
 ### Code style

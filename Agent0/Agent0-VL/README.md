@@ -1,11 +1,9 @@
-# Agent0-VL: Exploring Self-Evolving Agent for Tool-Integrated Vision-Language Reasoning
+﻿# Agent0-VL: Exploring Self-Evolving Agent for Tool-Integrated Vision-Language Reasoning
 
 <div align="center">
 
 [![Agent0-VL Paper](https://img.shields.io/badge/📄-Agent0--VL%20Paper-b31b1b)](https://arxiv.org/abs/2511.19900)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](../LICENSE)
-
-
 
 *A Self-Evolving Vision-Language Agent with Tool-Integrated Reasoning, Evaluation, and Self-Repair*
 
@@ -41,6 +39,7 @@ This closed-loop system allows Agent0-VL to achieve **zero external reward** sel
 ## 🔥 Key Features
 
 ### Dual-Role Architecture
+
 Agent0-VL operates through two synergistic roles within a single LVLM:
 
 - **🧠 Solver**: Performs multi-turn reasoning and dynamically invokes external tools (code interpreter, vision APIs) for grounded computation and visual perception.
@@ -129,8 +128,6 @@ Agent0-VL can be used independently as a **Process Reward Model (PRM)** to enhan
 - 🎯 Improves test-time scaling performance significantly
 - 💡 Demonstrates standalone utility beyond self-evolution
 
-
-
 ### Domain-Specific Performance
 
 Agent0-VL excels across different task domains:
@@ -145,14 +142,9 @@ Agent0-VL excels across different task domains:
 - 📊 **Chart Understanding**: +3.1% on ChartQA
 - ✅ Verifier's factual grounding reduces visual hallucinations
 
-
-
-
 **Code release coming soon!**
 
 ---
-
-
 
 ## 📚 Citation
 
@@ -165,6 +157,7 @@ If you find Agent0-VL helpful for your research, please cite our paper:
   journal={arXiv preprint arXiv:2511.19900},
   year={2025}
 }
+
 ```
 
 ---

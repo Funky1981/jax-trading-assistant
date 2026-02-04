@@ -1,4 +1,4 @@
-# Recipe: Self-Play Fine-Tuning (SPIN)
+﻿# Recipe: Self-Play Fine-Tuning (SPIN)
 
 Last updated: 05/31/2025.
 
@@ -19,6 +19,7 @@ verl Implementation Authors: [Chendong Wang](https://cdwang96.github.io/), [Chen
 ---
 
 ## Key Function (compute_online_dpo_loss) and Related works
+
 SPIN (Chen et al., 2024) proposes an iterative self-play mechanism to fine-tune language models. In each iteration, SPIN's training objective, when using a logistic loss function, is equivalent to Direct Preference Optimization (DPO) loss (Rafailov et al., 2023). 
 
 This `verl` recipe realizes SPIN's core concept by using DPO loss iteratively (Xu et al., 2023; Xiong et al., 2023; Snorkel AI, 2024). This means that in each iteration, we fine-tune the LLM using DPO loss for preference optimization. Notably, Xu et al. (2023) explored iterative preference optimization with pairwise cringe loss, while Xiong et al. (2023) discussed how to bridge theory and practice for RLHF under KL constraints using iterative training. The concept of iterative preference learning was also explored in online DPO (Guo et al., 2024), which focuses on direct alignment from online AI feedback. In online DPO, preference data is dynamically updated during training, allowing the model to learn from its own generated data.
@@ -33,7 +34,6 @@ Specifically, we developed the **`compute_online_dpo_loss`** function and built 
 * [Snorkel-Mistral-PairRM-DPO](https://huggingface.co/snorkelai/Snorkel-Mistral-PairRM-DPO) (Snorkel AI, 2024)
 * [Direct language model alignment from online ai feedback](https://arxiv.org/abs/2402.04792) (Guo et al., 2024)
 
-
 ## Our Online DPO Implementation
 
 Our `compute_online_dpo_loss` function adapts `verl`'s existing PPO infrastructure (based on `verl` v0.3.0.post1) for this iterative online DPO. Key aspects of our implementation include:
@@ -45,6 +45,7 @@ Our `compute_online_dpo_loss` function adapts `verl`'s existing PPO infrastructu
 * **Iterative Training Orchestration:** The `SpinTrainer` (in `spin_trainer.py`) manages the entire self-play loop: generation, preference labeling, optional reference model updates, and policy updates, enabling continuous self-improvement aligned with SPIN's principles.
 
 ---
+
 ## Algorithm
 
 This recipe implements an Online algorithm adapted to the `verl` Reinforcement Learning framework, which provides an alternative to PPO for fine-tuning language models.
@@ -67,6 +68,7 @@ The following steps outline how to set up the environment and run the SPIN recip
 1.  **Setup Environment (Example using Docker):**
     ```bash
     # Start a container with GPU access and shared memory
+
     docker run -it --name spin_test --gpus all \
         --shm-size=32g \
         --ipc=host \
@@ -76,34 +78,42 @@ The following steps outline how to set up the environment and run the SPIN recip
         /bin/bash
 
     # Inside the container or on your host machine:
+
     # Ensure /tmp is writable
+
     mkdir -p /tmp
     chmod 1777 /tmp
 
     # Install Python 3.10 (if not present) and venv
+
     sudo apt update
     sudo apt install -y python3.10 python3.10-venv tmux
     python3 -m ensurepip --upgrade
 
     # Create and activate a virtual environment
+
     python3 -m venv ~/.python/spin_env
     source ~/.python/spin_env/bin/activate
 
     # Install uv (fast package installer)
+
     python3 -m pip install uv
     ```
 
 2.  **Install verl and Dependencies:**
     ```bash
     # Clone the verl repository and checkout the spin branch
+
     cd ~
     git clone git@github.com:volcengine/verl.git && cd verl
 
     # Install flash-attn (handle potential build issues)
+
     python3 -m uv pip install wheel packaging
     python3 -m uv pip install flash-attn --no-build-isolation --no-deps
 
     # Install verl with sglang extras
+
     python3 -m uv pip install -e ".[sglang]"
     ```
     *Note: If `flash-attn` installation fails, try the manual steps again or consult its documentation.*
@@ -111,13 +121,16 @@ The following steps outline how to set up the environment and run the SPIN recip
 3.  **Login & Download Data/Model:**
     ```bash
     # Login to Weights & Biases (optional, for logging)
+
     export WANDB_API_KEY=<YOUR_WANDB_API_KEY>
     # wandb login
 
     # Download the GSM8K dataset
+
     python3 examples/data_preprocess/gsm8k.py --local_dir ~/data/gsm8k # Adjusted path
 
     # Download the base model (Example: Qwen2.5-3B-Instruct)
+
     huggingface-cli download Qwen/Qwen2.5-3B-Instruct --local-dir $HOME/models/Qwen2.5-3B-Instruct
     ```
 
@@ -128,10 +141,13 @@ The following steps outline how to set up the environment and run the SPIN recip
 5.  **Run Training:**
     ```bash
     # Set CUDA visible devices (adjust based on your hardware and config)
+
     export CUDA_VISIBLE_DEVICES=0,1,2,3
 
     # Launch the training script (e.g., test.sh or a custom script)
+
     # Ensure test.sh points to the correct config and main script
+
     bash recipe/spin/run_spin.sh
     ```
 

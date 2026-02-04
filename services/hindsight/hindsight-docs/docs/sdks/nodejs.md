@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 2
 ---
 
@@ -10,6 +10,7 @@ Official TypeScript/JavaScript client for the Hindsight API.
 
 ```bash
 npm install @vectorize-io/hindsight-client
+
 ```
 
 ## Quick Start
@@ -17,7 +18,7 @@ npm install @vectorize-io/hindsight-client
 ```typescript
 const { HindsightClient } = require('@vectorize-io/hindsight-client');
 
-const client = new HindsightClient({ baseUrl: 'http://localhost:8888' });
+const client = new HindsightClient({ baseUrl: '<http://localhost:8888'> });
 
 // Retain a memory
 await client.retain('my-bank', 'Alice works at Google');
@@ -31,6 +32,7 @@ for (const r of response.results) {
 // Reflect - generate response with disposition
 const answer = await client.reflect('my-bank', 'Tell me about Alice');
 console.log(answer.text);
+
 ```
 
 ## Client Initialization
@@ -39,8 +41,9 @@ console.log(answer.text);
 import { HindsightClient } from '@vectorize-io/hindsight-client';
 
 const client = new HindsightClient({
-    baseUrl: 'http://localhost:8888',
+    baseUrl: '<http://localhost:8888'>,
 });
+
 ```
 
 ## Core Operations
@@ -58,6 +61,7 @@ await client.retain('my-bank', 'Alice got promoted', {
     metadata: { source: 'slack' },
     async: false,  // Set true for background processing
 });
+
 ```
 
 ### Retain Batch
@@ -69,6 +73,7 @@ await client.retainBatch('my-bank', [
 ], {
     async: false,
 });
+
 ```
 
 ### Recall (Search)
@@ -87,6 +92,7 @@ const response = await client.recall('my-bank', 'What does Alice do?', {
     maxTokens: 4096,
     budget: 'high',  // 'low', 'mid', or 'high'
 });
+
 ```
 
 ### Reflect (Generate Response)
@@ -98,6 +104,7 @@ const answer = await client.reflect('my-bank', 'What should I know about Alice?'
 });
 
 console.log(answer.text);       // Generated response
+
 ```
 
 ## Bank Management
@@ -114,6 +121,7 @@ await client.createBank('my-bank', {
         empathy: 3,      // 1-5: detached to empathetic
     },
 });
+
 ```
 
 ### List Memories
@@ -126,4 +134,5 @@ const response = await client.listMemories('my-bank', {
     offset: 0,
 });
 console.log(response)
+
 ```

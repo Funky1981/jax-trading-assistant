@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 6
 ---
 
@@ -34,7 +34,7 @@ Make sure you've completed the [Quick Start](./quickstart) to install the client
 ```python
 from hindsight_client import Hindsight
 
-client = Hindsight(base_url="http://localhost:8888")
+client = Hindsight(base_url="<http://localhost:8888">)
 
 client.create_bank(
     bank_id="my-bank",
@@ -46,6 +46,7 @@ client.create_bank(
         "empathy": 3
     }
 )
+
 ```
 
 </TabItem>
@@ -54,7 +55,7 @@ client.create_bank(
 ```typescript
 import { HindsightClient } from '@vectorize-io/hindsight-client';
 
-const client = new HindsightClient({ baseUrl: 'http://localhost:8888' });
+const client = new HindsightClient({ baseUrl: '<http://localhost:8888'> });
 
 await client.createBank('my-bank', {
     name: 'Research Assistant',
@@ -65,20 +66,25 @@ await client.createBank('my-bank', {
         empathy: 3
     }
 });
+
 ```
 
 </TabItem>
 <TabItem value="cli" label="CLI">
 
 ```bash
+
 # Set background
+
 hindsight bank background my-bank "I am a research assistant specializing in ML"
 
 # Set disposition
+
 hindsight bank disposition my-bank \
     --skepticism 4 \
     --literalism 3 \
     --empathy 3
+
 ```
 
 </TabItem>
@@ -106,6 +112,7 @@ client.create_bank(
     I prioritize capital preservation over aggressive growth.
     I have seen multiple market crashes and believe in diversification."""
 )
+
 ```
 
 </TabItem>
@@ -117,6 +124,7 @@ await client.createBank('financial-advisor', {
     I prioritize capital preservation over aggressive growth.
     I have seen multiple market crashes and believe in diversification.`
 });
+
 ```
 
 </TabItem>

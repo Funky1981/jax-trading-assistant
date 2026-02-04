@@ -1,6 +1,6 @@
-# hindsight_client_api.DefaultApi
+﻿# hindsight_client_api.DefaultApi
 
-All URIs are relative to *http://localhost*
+All URIs are relative to *<<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>*>
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -26,8 +26,8 @@ Method | HTTP request | Description
 [**retain_memories**](DefaultApi.md#retain_memories) | **POST** /v1/default/banks/{bank_id}/memories | Retain memories
 [**update_bank_disposition**](DefaultApi.md#update_bank_disposition) | **PUT** /v1/default/banks/{bank_id}/profile | Update memory bank disposition
 
-
 # **add_bank_background**
+
 > BackgroundResponse add_bank_background(bank_id, add_background_request)
 
 Add/merge memory bank background
@@ -36,7 +36,6 @@ Add new background information or merge with existing. LLM intelligently resolve
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.add_background_request import AddBackgroundRequest
@@ -44,33 +43,36 @@ from hindsight_client_api.models.background_response import BackgroundResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     add_background_request = hindsight_client_api.AddBackgroundRequest() # AddBackgroundRequest | 
 
     try:
         # Add/merge memory bank background
+
         api_response = await api_instance.add_bank_background(bank_id, add_background_request)
         print("The response of DefaultApi->add_bank_background:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->add_bank_background: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -100,6 +102,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **cancel_operation**
+
 > object cancel_operation(bank_id, operation_id)
 
 Cancel a pending async operation
@@ -108,39 +111,41 @@ Cancel a pending async operation by removing it from the queue
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     operation_id = 'operation_id_example' # str | 
 
     try:
         # Cancel a pending async operation
+
         api_response = await api_instance.cancel_operation(bank_id, operation_id)
         print("The response of DefaultApi->cancel_operation:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->cancel_operation: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -170,6 +175,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **clear_bank_memories**
+
 > DeleteResponse clear_bank_memories(bank_id, type=type)
 
 Clear memory bank memories
@@ -178,40 +184,42 @@ Delete memory units for a memory bank. Optionally filter by type (world, experie
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.delete_response import DeleteResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     type = 'type_example' # str | Optional fact type filter (world, experience, opinion) (optional)
 
     try:
         # Clear memory bank memories
+
         api_response = await api_instance.clear_bank_memories(bank_id, type=type)
         print("The response of DefaultApi->clear_bank_memories:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->clear_bank_memories: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -241,6 +249,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **create_or_update_bank**
+
 > BankProfileResponse create_or_update_bank(bank_id, create_bank_request)
 
 Create or update memory bank
@@ -249,7 +258,6 @@ Create a new agent or update existing agent with disposition and background. Aut
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.bank_profile_response import BankProfileResponse
@@ -257,33 +265,36 @@ from hindsight_client_api.models.create_bank_request import CreateBankRequest
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     create_bank_request = hindsight_client_api.CreateBankRequest() # CreateBankRequest | 
 
     try:
         # Create or update memory bank
+
         api_response = await api_instance.create_or_update_bank(bank_id, create_bank_request)
         print("The response of DefaultApi->create_or_update_bank:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->create_or_update_bank: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -313,6 +324,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **delete_document**
+
 > object delete_document(bank_id, document_id)
 
 Delete a document
@@ -328,39 +340,41 @@ This operation cannot be undone.
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     document_id = 'document_id_example' # str | 
 
     try:
         # Delete a document
+
         api_response = await api_instance.delete_document(bank_id, document_id)
         print("The response of DefaultApi->delete_document:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->delete_document: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -390,6 +404,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_agent_stats**
+
 > object get_agent_stats(bank_id)
 
 Get statistics for memory bank
@@ -398,38 +413,39 @@ Get statistics about nodes and links for a specific agent
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
 
     try:
         # Get statistics for memory bank
+
         api_response = await api_instance.get_agent_stats(bank_id)
         print("The response of DefaultApi->get_agent_stats:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->get_agent_stats: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -458,6 +474,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_bank_profile**
+
 > BankProfileResponse get_bank_profile(bank_id)
 
 Get memory bank profile
@@ -466,39 +483,40 @@ Get disposition traits and background for a memory bank. Auto-creates agent with
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.bank_profile_response import BankProfileResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
 
     try:
         # Get memory bank profile
+
         api_response = await api_instance.get_bank_profile(bank_id)
         print("The response of DefaultApi->get_bank_profile:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->get_bank_profile: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -527,6 +545,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_chunk**
+
 > ChunkResponse get_chunk(chunk_id)
 
 Get chunk details
@@ -535,39 +554,40 @@ Get a specific chunk by its ID
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.chunk_response import ChunkResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     chunk_id = 'chunk_id_example' # str | 
 
     try:
         # Get chunk details
+
         api_response = await api_instance.get_chunk(chunk_id)
         print("The response of DefaultApi->get_chunk:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->get_chunk: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -596,6 +616,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_document**
+
 > DocumentResponse get_document(bank_id, document_id)
 
 Get document details
@@ -604,40 +625,42 @@ Get a specific document including its original text
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.document_response import DocumentResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     document_id = 'document_id_example' # str | 
 
     try:
         # Get document details
+
         api_response = await api_instance.get_document(bank_id, document_id)
         print("The response of DefaultApi->get_document:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->get_document: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -667,6 +690,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_entity**
+
 > EntityDetailResponse get_entity(bank_id, entity_id)
 
 Get entity details
@@ -675,40 +699,42 @@ Get detailed information about an entity including observations (mental model).
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.entity_detail_response import EntityDetailResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     entity_id = 'entity_id_example' # str | 
 
     try:
         # Get entity details
+
         api_response = await api_instance.get_entity(bank_id, entity_id)
         print("The response of DefaultApi->get_entity:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->get_entity: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -738,6 +764,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_graph**
+
 > GraphDataResponse get_graph(bank_id, type=type)
 
 Get memory graph data
@@ -746,40 +773,42 @@ Retrieve graph data for visualization, optionally filtered by type (world/experi
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.graph_data_response import GraphDataResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     type = 'type_example' # str |  (optional)
 
     try:
         # Get memory graph data
+
         api_response = await api_instance.get_graph(bank_id, type=type)
         print("The response of DefaultApi->get_graph:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->get_graph: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -809,6 +838,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_banks**
+
 > BankListResponse list_banks()
 
 List all memory banks
@@ -817,35 +847,37 @@ Get a list of all agents with their profiles
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.bank_list_response import BankListResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
 
     try:
         # List all memory banks
+
         api_response = await api_instance.list_banks()
         print("The response of DefaultApi->list_banks:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->list_banks: %s\n" % e)
+
 ```
-
-
 
 ### Parameters
 
@@ -873,6 +905,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_documents**
+
 > ListDocumentsResponse list_documents(bank_id, q=q, limit=limit, offset=offset)
 
 List documents
@@ -881,42 +914,46 @@ List documents with pagination and optional search. Documents are the source con
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.list_documents_response import ListDocumentsResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     q = 'q_example' # str |  (optional)
+
     limit = 100 # int |  (optional) (default to 100)
+
     offset = 0 # int |  (optional) (default to 0)
 
     try:
         # List documents
+
         api_response = await api_instance.list_documents(bank_id, q=q, limit=limit, offset=offset)
         print("The response of DefaultApi->list_documents:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->list_documents: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -948,6 +985,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_entities**
+
 > EntityListResponse list_entities(bank_id, limit=limit)
 
 List entities
@@ -956,40 +994,42 @@ List all entities (people, organizations, etc.) known by the bank, ordered by me
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.entity_list_response import EntityListResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     limit = 100 # int | Maximum number of entities to return (optional) (default to 100)
 
     try:
         # List entities
+
         api_response = await api_instance.list_entities(bank_id, limit=limit)
         print("The response of DefaultApi->list_entities:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->list_entities: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -1019,6 +1059,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_memories**
+
 > ListMemoryUnitsResponse list_memories(bank_id, type=type, q=q, limit=limit, offset=offset)
 
 List memory units
@@ -1027,43 +1068,48 @@ List memory units with pagination and optional full-text search. Supports filter
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.list_memory_units_response import ListMemoryUnitsResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     type = 'type_example' # str |  (optional)
+
     q = 'q_example' # str |  (optional)
+
     limit = 100 # int |  (optional) (default to 100)
+
     offset = 0 # int |  (optional) (default to 0)
 
     try:
         # List memory units
+
         api_response = await api_instance.list_memories(bank_id, type=type, q=q, limit=limit, offset=offset)
         print("The response of DefaultApi->list_memories:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->list_memories: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -1096,6 +1142,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_operations**
+
 > object list_operations(bank_id)
 
 List async operations
@@ -1104,38 +1151,39 @@ Get a list of all async operations (pending and failed) for a specific agent, in
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
 
     try:
         # List async operations
+
         api_response = await api_instance.list_operations(bank_id)
         print("The response of DefaultApi->list_operations:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->list_operations: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -1164,6 +1212,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **recall_memories**
+
 > RecallResponse recall_memories(bank_id, recall_request)
 
 Recall memory
@@ -1179,7 +1228,6 @@ Recall memory using semantic similarity and spreading activation.
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.recall_request import RecallRequest
@@ -1187,33 +1235,36 @@ from hindsight_client_api.models.recall_response import RecallResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     recall_request = hindsight_client_api.RecallRequest() # RecallRequest | 
 
     try:
         # Recall memory
+
         api_response = await api_instance.recall_memories(bank_id, recall_request)
         print("The response of DefaultApi->recall_memories:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->recall_memories: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -1243,6 +1294,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **reflect**
+
 > ReflectResponse reflect(bank_id, reflect_request)
 
 Reflect and generate answer
@@ -1259,7 +1311,6 @@ Reflect and formulate an answer using bank identity, world facts, and opinions.
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.reflect_request import ReflectRequest
@@ -1267,33 +1318,36 @@ from hindsight_client_api.models.reflect_response import ReflectResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     reflect_request = hindsight_client_api.ReflectRequest() # ReflectRequest | 
 
     try:
         # Reflect and generate answer
+
         api_response = await api_instance.reflect(bank_id, reflect_request)
         print("The response of DefaultApi->reflect:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->reflect: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -1323,6 +1377,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **regenerate_entity_observations**
+
 > EntityDetailResponse regenerate_entity_observations(bank_id, entity_id)
 
 Regenerate entity observations
@@ -1331,40 +1386,42 @@ Regenerate observations for an entity based on all facts mentioning it.
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.entity_detail_response import EntityDetailResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     entity_id = 'entity_id_example' # str | 
 
     try:
         # Regenerate entity observations
+
         api_response = await api_instance.regenerate_entity_observations(bank_id, entity_id)
         print("The response of DefaultApi->regenerate_entity_observations:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->regenerate_entity_observations: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -1394,6 +1451,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **retain_memories**
+
 > RetainResponse retain_memories(bank_id, retain_request)
 
 Retain memories
@@ -1431,7 +1489,6 @@ Retain memory items with automatic fact extraction.
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.retain_request import RetainRequest
@@ -1439,33 +1496,36 @@ from hindsight_client_api.models.retain_response import RetainResponse
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     retain_request = hindsight_client_api.RetainRequest() # RetainRequest | 
 
     try:
         # Retain memories
+
         api_response = await api_instance.retain_memories(bank_id, retain_request)
         print("The response of DefaultApi->retain_memories:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->retain_memories: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
@@ -1495,6 +1555,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **update_bank_disposition**
+
 > BankProfileResponse update_bank_disposition(bank_id, update_disposition_request)
 
 Update memory bank disposition
@@ -1503,7 +1564,6 @@ Update bank's disposition traits (skepticism, literalism, empathy)
 
 ### Example
 
-
 ```python
 import hindsight_client_api
 from hindsight_client_api.models.bank_profile_response import BankProfileResponse
@@ -1511,33 +1571,36 @@ from hindsight_client_api.models.update_disposition_request import UpdateDisposi
 from hindsight_client_api.rest import ApiException
 from pprint import pprint
 
-# Defining the host is optional and defaults to http://localhost
+# Defining the host is optional and defaults to <<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>
+
 # See configuration.py for a list of all supported configuration parameters.
+
 configuration = hindsight_client_api.Configuration(
-    host = "http://localhost"
+    host = "<<<<<<<<<<<<<<<<<<<<http://localhost>>>>>>>>>>>>>>>>>>>>"
 )
 
-
 # Enter a context with an instance of the API client
+
 async with hindsight_client_api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
+
     api_instance = hindsight_client_api.DefaultApi(api_client)
     bank_id = 'bank_id_example' # str | 
+
     update_disposition_request = hindsight_client_api.UpdateDispositionRequest() # UpdateDispositionRequest | 
 
     try:
         # Update memory bank disposition
+
         api_response = await api_instance.update_bank_disposition(bank_id, update_disposition_request)
         print("The response of DefaultApi->update_bank_disposition:\n")
         pprint(api_response)
     except Exception as e:
         print("Exception when calling DefaultApi->update_bank_disposition: %s\n" % e)
+
 ```
 
-
-
 ### Parameters
-
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------

@@ -1,4 +1,4 @@
-# 05 — go-UTCP “Memory Tools” (Retain/Recall/Reflect)
+﻿# 05 — go-UTCP “Memory Tools” (Retain/Recall/Reflect)
 
 **Goal:** Expose memory operations as tools Agent0 can call through go-UTCP.
 
@@ -14,6 +14,7 @@ Each tool:
 - returns a clean response DTO
 
 ## 5.1 — Contract-first (TDD)
+
 1) Define tool request/response structs in `libs/contracts`.
 2) Write tests that:
    - invalid payloads are rejected
@@ -25,18 +26,21 @@ Each tool:
 
 ```jsonokit
 { "bank":"trade_decisions", "item": { ...MemoryItem... } }
+
 ```
 
 `memory.recall` request:
 
 ```json
 { "bank":"trade_decisions", "query": { "q":"", "symbol":"AAPL", "tags":["earnings"] } }
+
 ```
 
 `memory.reflect` request:
 
 ```json
 { "bank":"trade_outcomes", "params": { "query":"Summarise what worked.", "window_days": 7, "prompt_hint":"Include outcomes with strong risk control." } }
+
 ```
 
 Note: `params.query` is required by Hindsight's reflect API.

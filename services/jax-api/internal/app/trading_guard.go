@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 
 	"jax-trading-assistant/services/jax-api/internal/domain"
@@ -76,10 +77,13 @@ func (g *TradingGuard) RecordFailure(ctx context.Context, stage string, err erro
 	g.mu.Unlock()
 
 	if g.audit != nil {
-		_ = g.audit.LogDecision(ctx, "trading_guard_halt", domain.AuditOutcomeError, map[string]any{
+		if err := g.audit.LogDecision(ctx, "trading_guard_halt", domain.AuditOutcomeError, map[string]any{
 			"stage":  stage,
 			"reason": message,
-		}, err)
+		}, err); err != nil {
+			// Log the audit error but don't fail the operation
+			log.Printf("warning: failed to log trading guard halt to audit: %v", err)
+		}
 	}
 }
 

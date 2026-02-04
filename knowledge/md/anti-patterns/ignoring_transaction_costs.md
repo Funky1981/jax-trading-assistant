@@ -1,14 +1,17 @@
----
+﻿---
 title: "Ignoring Transaction Costs / Slippage"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["anti-pattern", "execution", "costs"]
 ---
+
 ## Why it’s tempting
+
 Backtests look incredible when you assume perfect fills and tiny fees.
 
 ## Why it’s dangerous / usually wrong
+
 Costs and impact can drive expected returns to zero, especially for high turnover strategies like momentum or intraday mean reversion.
 
 ## How to detect it in Jax (guardrails)

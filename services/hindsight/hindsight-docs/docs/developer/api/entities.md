@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 7
 ---
 
@@ -30,7 +30,7 @@ When you retain information, the LLM extracts named entities from each fact:
 
 **Example:**
 
-```
+```text
 Content: "Alice works at Google in Mountain View. She specializes in TensorFlow."
 
 Entities extracted:
@@ -38,6 +38,7 @@ Entities extracted:
 - Google (organization)
 - Mountain View (location)
 - TensorFlow (product)
+
 ```
 
 ## Entity Resolution

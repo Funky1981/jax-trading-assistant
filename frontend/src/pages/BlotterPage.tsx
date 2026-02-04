@@ -1,4 +1,3 @@
-import { Stack, Typography } from '@mui/material';
 import { DataTable } from '../components';
 import { useDomain } from '../domain/store';
 import { selectOrders } from '../domain/selectors';
@@ -9,11 +8,11 @@ export function BlotterPage() {
   const orders = selectOrders(state).sort((a, b) => b.createdAt - a.createdAt);
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h4">Blotter</Typography>
-      <Typography variant="body2" color="text.secondary">
+    <div className="space-y-4">
+      <h1 className="text-3xl font-semibold">Blotter</h1>
+      <p className="text-sm text-muted-foreground">
         Execution history and activity log.
-      </Typography>
+      </p>
       <DataTable
         columns={[
           { key: 'symbol', label: 'Symbol' },
@@ -30,6 +29,6 @@ export function BlotterPage() {
         rows={orders}
         getRowId={(row) => row.id}
       />
-    </Stack>
+    </div>
   );
 }

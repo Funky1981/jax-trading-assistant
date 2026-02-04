@@ -1,9 +1,11 @@
-# Step 01: Foundation & Repo Setup
+﻿# Step 01: Foundation & Repo Setup
 
 ## Objective
+
 Establish a clean React frontend foundation with tooling, conventions, and a predictable structure that supports fast iteration and professional trading-grade reliability.
 
 ## Actions
+
 1. **Create the frontend workspace**
    - Add a new `frontend/` directory at the repo root.
    - Define an initial `src/` structure based on the architecture document.

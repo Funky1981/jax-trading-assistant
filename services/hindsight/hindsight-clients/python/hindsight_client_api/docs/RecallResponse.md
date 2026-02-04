@@ -1,4 +1,4 @@
-# RecallResponse
+﻿# RecallResponse
 
 Response model for recall endpoints.
 
@@ -17,17 +17,25 @@ Name | Type | Description | Notes
 from hindsight_client_api.models.recall_response import RecallResponse
 
 # TODO update the JSON string below
+
 json = "{}"
+
 # create an instance of RecallResponse from a JSON string
+
 recall_response_instance = RecallResponse.from_json(json)
+
 # print the JSON string representation of the object
+
 print(RecallResponse.to_json())
 
 # convert the object into a dict
-recall_response_dict = recall_response_instance.to_dict()
-# create an instance of RecallResponse from a dict
-recall_response_from_dict = RecallResponse.from_dict(recall_response_dict)
-```
-[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 
+recall_response_dict = recall_response_instance.to_dict()
+
+# create an instance of RecallResponse from a dict
+
+recall_response_from_dict = RecallResponse.from_dict(recall_response_dict)
+
+```n
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

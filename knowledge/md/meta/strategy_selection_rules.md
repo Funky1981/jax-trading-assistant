@@ -1,4 +1,4 @@
----
+﻿---
 title: "Strategy Selection Rules (Ensemble)"
 version: "1.0"
 status: "approved"
@@ -7,6 +7,7 @@ tags: ["meta", "allocation"]
 ---
 
 ## Principle
+
 Don’t pick a ‘winner’. Run an **ensemble** with:
 - small allocations,
 - regime gating,

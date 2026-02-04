@@ -1,14 +1,17 @@
----
+﻿---
 title: "Trend Following (Time-Series Momentum)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "trend", "futures", "multi-asset"]
 ---
+
 ## What it is
+
 A rules-based approach that goes **long when an instrument has been rising**, and **short when it has been falling**, usually using 1–12 month lookbacks.
 
 ## Why it can work (edge hypothesis)
+
 Behavioral under-reaction and slow-moving macro fundamentals can create persistence in returns. Trend strategies often perform in crisis environments where diversification breaks down.
 
 ## Best conditions
@@ -22,6 +25,7 @@ Behavioral under-reaction and slow-moving macro fundamentals can create persiste
 - Momentum crashes
 
 ## Signal definition (implementation-friendly)
+
 Example (simple):
 - Compute return over lookback L (e.g., 12 months, excluding last 1 week)
 - If return > 0 → long; if return < 0 → short

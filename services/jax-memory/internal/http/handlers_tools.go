@@ -104,6 +104,8 @@ func (s *Server) RegisterTools() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(toolResponse{Output: out})
+		if err := json.NewEncoder(w).Encode(toolResponse{Output: out}); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		}
 	})
 }

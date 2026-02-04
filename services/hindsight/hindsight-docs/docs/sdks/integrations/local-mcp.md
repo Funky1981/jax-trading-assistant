@@ -1,4 +1,4 @@
----
+ï»¿---
 sidebar_position: 2
 ---
 
@@ -14,9 +14,10 @@ This is ideal for:
 ## Quick Install
 
 ```bash
-curl -fsSL https://hindsight.vectorize.io/get-mcp | bash -s -- \
+curl -fsSL <<https://hindsight.vectorize.io/get-mcp>> | bash -s -- \
   --app claude-desktop \
   --set HINDSIGHT_API_LLM_API_KEY=sk-...
+
 ```
 
 This script will:
@@ -49,6 +50,7 @@ For other MCP clients, refer to their documentation for the configuration file l
     }
   }
 }
+
 ```
 
 ### With Custom Bank ID
@@ -68,6 +70,7 @@ By default, memories are stored in a bank called `mcp`. To use a different bank:
     }
   }
 }
+
 ```
 
 ## Environment Variables
@@ -86,10 +89,11 @@ All standard [Hindsight configuration variables](/developer/configuration) are s
 You can customize what gets stored by adding instructions to the tools. Re-run the install script with the additional `--set` flag:
 
 ```bash
-curl -fsSL https://hindsight.vectorize.io/get-mcp | bash -s -- \
+curl -fsSL <<https://hindsight.vectorize.io/get-mcp>> | bash -s -- \
   --app claude-desktop \
   --set HINDSIGHT_API_LLM_API_KEY=sk-... \
   --set HINDSIGHT_API_MCP_INSTRUCTIONS="Also store every action you take, code you write, and files you modify."
+
 ```
 
 These instructions are appended to the default tool descriptions, guiding Claude on when and how to use the memory tools.
@@ -106,7 +110,8 @@ Store information to long-term memory. This is a **fire-and-forget** operation â
 | `context` | string | No | Category for the memory (default: `general`) |
 
 **Example:**
-```json
+
+```n
 {
   "name": "retain",
   "arguments": {
@@ -114,14 +119,17 @@ Store information to long-term memory. This is a **fire-and-forget** operation â
     "context": "preferences"
   }
 }
+
 ```
 
 **Response:**
-```json
+
+```n
 {
   "status": "accepted",
   "message": "Memory storage initiated"
 }
+
 ```
 
 ### recall
@@ -135,7 +143,8 @@ Search memories to provide personalized responses.
 | `budget` | string | No | Search depth: `low`, `mid`, or `high` (default: `low`) |
 
 **Example:**
-```json
+
+```n
 {
   "name": "recall",
   "arguments": {
@@ -144,6 +153,7 @@ Search memories to provide personalized responses.
     "budget": "mid"
   }
 }
+
 ```
 
 ## How It Works
@@ -168,6 +178,7 @@ Make sure you've set the API key in your MCP configuration:
     "HINDSIGHT_API_LLM_API_KEY": "sk-..."
   }
 }
+
 ```
 
 ### Slow startup
@@ -188,6 +199,7 @@ Set `HINDSIGHT_API_LOG_LEVEL=debug` for verbose output:
     "HINDSIGHT_API_LOG_LEVEL": "debug"
   }
 }
+
 ```
 
 Logs are written to stderr and visible in Claude Code's MCP server output.

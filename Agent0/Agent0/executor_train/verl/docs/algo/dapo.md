@@ -1,4 +1,4 @@
-# Recipe: Decoupled Clip and Dynamic Sampling Policy Optimization (DAPO)
+﻿# Recipe: Decoupled Clip and Dynamic Sampling Policy Optimization (DAPO)
 
 Last updated: 06/19/2025.
 
@@ -16,17 +16,24 @@ Last updated: 06/19/2025.
 
 ```bash
 bash prepare_dapo_data.sh # This downloads the datasets to ${HOME}/verl/data by default
+
 ```
 
 2. Submit the job to the Ray cluster **from any machine**:
 
 ```bash
 cd verl # Repo root
-export RAY_ADDRESS="http://${RAY_IP:-localhost}:8265" # The Ray cluster address to connect to
+
+export RAY_ADDRESS="<http://${RAY_IP:-localhost}:8265"> # The Ray cluster address to connect to
+
 export WORKING_DIR="${PWD}" # The local directory to package to the Ray cluster
+
 # Set the runtime environment like env vars and pip packages for the Ray cluster in yaml
+
 export RUNTIME_ENV="./recipe/dapo/runtime_env.yaml" # This sets environment variables for the Ray cluster
+
 bash recipe/dapo/run_dapo_qwen2.5_32b.sh # or other scripts
+
 ```
 
 ## Reproduction Runs
@@ -54,6 +61,7 @@ actor_rollout_ref:
   actor:
     clip_ratio_low: 0.2
     clip_ratio_high: 0.28
+
 ```
 
 `clip_ratio_low` and `clip_ratio_high` specify the $\varepsilon_{\text {low }}$ and $\varepsilon_{\text {high }}$ in the DAPO objective.
@@ -64,6 +72,7 @@ Core relevant code:
 pg_losses1 = -advantages * ratio
 pg_losses2 = -advantages * torch.clamp(ratio, 1 - cliprange_low, 1 + cliprange_high)
 pg_losses = torch.maximum(pg_losses1, pg_losses2)
+
 ```
 
 ### Dynamic Sampling (with Group Filtering)
@@ -78,7 +87,9 @@ algorithm:
   filter_groups:
     enable: True
     metric: acc # score / seq_reward / seq_final_reward / ...
+
     max_num_gen_batches: 10 # Non-positive values mean no upper limit
+
 ```
 
 Setting `filter_groups.enable` to `True` will filter out groups whose outputs' `metric` are all the same, e.g., for `acc`, groups whose outputs' accuracies are all 1 or 0.
@@ -102,8 +113,10 @@ if num_prompt_in_batch < prompt_bsz:
         )
 else:
     # Align the batch
+
     traj_bsz = self.config.data.train_batch_size * self.config.actor_rollout_ref.rollout.n
     batch = batch[:traj_bsz]
+
 ```
 
 ### Flexible Loss Aggregation Mode (-> Token-level Loss)
@@ -114,7 +127,9 @@ An example configuration:
 actor_rollout_ref:
   actor:
     loss_agg_mode: "token-mean" # / "seq-mean-token-sum" / "seq-mean-token-mean"
+
     # NOTE: "token-mean" is the default behavior
+
 ```
 
 Setting `loss_agg_mode` to `token-mean` will mean the (policy gradient) loss across all the tokens in all the sequences in a mini-batch.
@@ -126,12 +141,17 @@ if loss_agg_mode == "token-mean":
     loss = verl_F.masked_mean(loss_mat, loss_mask)
 elif loss_agg_mode == "seq-mean-token-sum":
     seq_losses = torch.sum(loss_mat * loss_mask, dim=-1)  # token-sum
+
     loss = torch.mean(seq_losses)  # seq-mean
+
 elif loss_agg_mode == "seq-mean-token-mean":
     seq_losses = torch.sum(loss_mat * loss_mask, dim=-1) / torch.sum(loss_mask, dim=-1)  # token-mean
+
     loss = torch.mean(seq_losses)  # seq-mean
+
 else:
     raise ValueError(f"Invalid loss_agg_mode: {loss_agg_mode}")
+
 ```
 
 ### Overlong Reward Shaping
@@ -141,11 +161,13 @@ An example configuration:
 ```yaml
 data:
   max_response_length: 20480 # 16384 + 4096
+
 reward_model:
   overlong_buffer:
     enable: True
     len: 4096
     penalty_factor: 1.0
+
 ```
 
 Setting `overlong_buffer.enable` to `True` will penalize the outputs whose lengths are overlong but still within the hard context limit.
@@ -162,6 +184,7 @@ if self.overlong_buffer_cfg.enable:
     overlong_penalty_factor = self.overlong_buffer_cfg.penalty_factor
     overlong_reward = min(-exceed_len / overlong_buffer_len * overlong_penalty_factor, 0)
     reward += overlong_reward
+
 ```
 
 ## FAQ

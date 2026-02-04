@@ -1,14 +1,17 @@
----
+﻿---
 title: "Mean Reversion (VWAP / Bands)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "mean-reversion", "intraday", "equities", "crypto"]
 ---
+
 ## What it is
+
 Buys temporary dislocations away from a reference price (VWAP, moving average, statistical bands) expecting a pullback toward the mean.
 
 ## Why it can work (edge hypothesis)
+
 Liquidity provision, inventory pressure, and short-term overreaction can create temporary mispricings.
 
 ## Best conditions
@@ -22,6 +25,7 @@ Liquidity provision, inventory pressure, and short-term overreaction can create 
 - Volatility spikes (mean keeps moving)
 
 ## Signal definition (implementation-friendly)
+
 Example:
 - Reference = VWAP (intraday) or MA(20)
 - Enter when price deviates beyond k standard deviations (z-score)

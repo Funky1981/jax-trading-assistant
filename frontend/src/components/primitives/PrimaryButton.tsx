@@ -1,19 +1,10 @@
-import { Button, type ButtonProps } from '@mui/material';
-import { tokens } from '../../styles/tokens';
+import { Button, type ButtonProps } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-export function PrimaryButton({ sx, ...props }: ButtonProps) {
+export function PrimaryButton({ className, ...props }: ButtonProps) {
   return (
     <Button
-      variant="contained"
-      color="primary"
-      size="small"
-      sx={{
-        textTransform: 'none',
-        fontWeight: tokens.typography.weight.semibold,
-        paddingX: tokens.spacing.lg,
-        paddingY: tokens.spacing.sm,
-        ...sx,
-      }}
+      className={cn('font-semibold px-4 py-2', className)}
       {...props}
     />
   );

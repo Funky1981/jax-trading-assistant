@@ -1,4 +1,4 @@
-# On-Policy RL with Optimal Reward Baseline (OPO)
+﻿# On-Policy RL with Optimal Reward Baseline (OPO)
 
 Last updated: 06/02/2025.
 
@@ -18,14 +18,19 @@ To configure OPO within the framework, use the following YAML settings. These pa
 ```yaml
 algorithm:
   adv_estimator: opo  # Use OPO for optimal reward baseline 
+
 data:
   train_batch_size: 1024
 actor_rollout_ref:
   actor:
     ppo_mini_batch_size: 1024 # ppo_mini_batch_size should equal to train_batch_size to enable exact on-policy training
+
     entropy_coeff: 0 # disable entropy regularization
+
     use_kl_loss: False # disable kl regularization
-    kl_loss_coef: 0 
+
+    kl_loss_coef: 0
+
 ```
 
 ## Advanced Extensions

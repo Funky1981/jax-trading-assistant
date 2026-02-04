@@ -1,4 +1,4 @@
-# Security and Compliance
+﻿# Security and Compliance
 
 Trading systems handle sensitive data (API keys, account balances) and must comply with financial regulations. Ignoring security can expose you to data breaches, fraud or regulatory penalties.
 

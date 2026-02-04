@@ -1,4 +1,4 @@
-# verl image with verl v0.5
+﻿# verl image with verl v0.5
 
 ## Important packages version
 
@@ -11,6 +11,7 @@ sglang==0.4.8
 transformer_engine==2.5
 megatron.core==core_r0.13.0
 vidia-cudnn-cu12==9.8.0.87
+
 ```
 
 ## Target

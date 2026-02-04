@@ -1,4 +1,4 @@
-# Deployment and Infrastructure
+﻿# Deployment and Infrastructure
 
 Production‑ready systems need robust deployment strategies and infrastructure management. Jax consists of multiple services (API, ingest, memory, orchestrator, front‑end) that must be deployed, configured and scaled together.
 

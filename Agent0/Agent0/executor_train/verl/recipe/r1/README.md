@@ -1,6 +1,6 @@
-# DeepSeek R1 Reproduction
+﻿# DeepSeek R1 Reproduction
 
-This recipe is under development, if you are interested, checkout the TODO list and join this project! https://github.com/volcengine/verl/issues/708 
+This recipe is under development, if you are interested, checkout the TODO list and join this project! <https://github.com/volcengine/verl/issues/708> 
 
 ## Reproducing Evaluation
 

@@ -1,4 +1,4 @@
-# 09 — Observability (Logs, Metrics, Traces) + Retention Policy
+﻿# 09 — Observability (Logs, Metrics, Traces) + Retention Policy
 
 **Goal:** Make everything testable, debuggable, and safe to store.
 
@@ -10,6 +10,7 @@
   - `symbol`
 
 ## 9.2 — Metrics
+
 Track:
 - number of recalls per run
 - latency per tool call

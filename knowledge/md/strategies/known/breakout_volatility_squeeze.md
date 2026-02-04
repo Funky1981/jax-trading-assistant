@@ -1,14 +1,17 @@
----
+﻿---
 title: "Breakout (Volatility Squeeze)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "breakout", "trend", "volatility"]
 ---
+
 ## What it is
+
 Trades expansions from low-volatility consolidations, aiming to catch the start of a new directional move.
 
 ## Why it can work (edge hypothesis)
+
 Price compression can precede information releases and positioning shifts; breakouts can self-reinforce via stop orders and trend followers.
 
 ## Best conditions
@@ -22,6 +25,7 @@ Price compression can precede information releases and positioning shifts; break
 - Mean-reverting regimes
 
 ## Signal definition (implementation-friendly)
+
 Example:
 - Detect low-vol regime (BB width percentile or RV percentile)
 - Entry: break above/below consolidation range with confirmation (volume/imbalance)

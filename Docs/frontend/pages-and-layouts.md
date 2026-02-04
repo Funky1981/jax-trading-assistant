@@ -1,4 +1,4 @@
-# Pages & Layouts
+﻿# Pages & Layouts
 
 ## Page Composition Guidelines
 - Pages are assemblies of components, not custom one-off UI.
@@ -6,6 +6,7 @@
 - Navigation, app shell, and panels are reused across pages.
 
 ## Core Pages
+
 ### 1) Trading Dashboard
 - Purpose: real-time overview of market conditions and portfolio.
 - Components: Watchlist, MarketChart, OrderBook, PositionsTable, AlertsPanel.

@@ -1,4 +1,4 @@
-# 04 — Memory Banks & Schemas
+﻿# 04 — Memory Banks & Schemas
 
 **Goal:** Define *what* we store so recall works and reflection isn’t garbage-in-garbage-out.
 
@@ -10,6 +10,7 @@
 - `strategy_beliefs` — reflection output (higher-level insights)
 
 ## 4.2 — Canonical memory item shape
+
 Keep a consistent base envelope:
 
 ```json
@@ -23,6 +24,7 @@ Keep a consistent base envelope:
   "data": { "structured_fields": "go here" },
   "source": { "system": "dexter|agent0|user", "ref": "optional link/id" }
 }
+
 ```
 
 ## 4.3 — TDD requirements
@@ -34,6 +36,7 @@ Keep a consistent base envelope:
 - Add a golden-file test for JSON serialization.
 
 ## 4.4 — Query shapes
+
 Queries should support:
 - `symbol`
 - `type`
@@ -52,6 +55,7 @@ Example:
   "to": "2025-12-31T23:59:59Z",
   "tags": ["earnings","gap"]
 }
+
 ```
 
 ## 4.5 — Definition of Done

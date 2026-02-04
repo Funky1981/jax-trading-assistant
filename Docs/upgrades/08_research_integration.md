@@ -1,4 +1,4 @@
-# Research Integration
+﻿# Research Integration
 
 The Dexter service provides research summaries and fundamental insights that complement technical signals. Currently, research integration is optional and minimally implemented.
 

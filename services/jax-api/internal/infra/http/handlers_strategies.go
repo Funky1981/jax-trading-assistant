@@ -13,7 +13,8 @@ type StrategiesHandler struct {
 
 func (s *Server) RegisterStrategies(registry *app.StrategyRegistry) {
 	h := &StrategiesHandler{registry: registry}
-	s.mux.HandleFunc("/strategies", h.handleList)
+	// Protected endpoint - requires authentication
+	s.mux.HandleFunc("/strategies", s.protect(h.handleList))
 }
 
 func (h *StrategiesHandler) handleList(w http.ResponseWriter, r *http.Request) {
@@ -22,5 +23,7 @@ func (h *StrategiesHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"strategies": h.registry.List()})
+	if err := json.NewEncoder(w).Encode(map[string]any{"strategies": h.registry.List()}); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }

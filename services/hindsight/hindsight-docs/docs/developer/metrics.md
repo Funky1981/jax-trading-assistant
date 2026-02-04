@@ -1,9 +1,10 @@
-# Metrics
+﻿# Metrics
 
 Hindsight exposes Prometheus metrics at `/metrics` for monitoring.
 
 ```bash
-curl http://localhost:8888/metrics
+curl <http://localhost:8888/metrics>
+
 ```
 
 ## Available Metrics
@@ -31,4 +32,5 @@ scrape_configs:
   - job_name: 'hindsight'
     static_configs:
       - targets: ['localhost:8888']
+
 ```

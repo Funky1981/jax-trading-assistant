@@ -1,4 +1,4 @@
-# Multi-Turn Rollout Example (GSM8K)
+﻿# Multi-Turn Rollout Example (GSM8K)
 
 This example demonstrates how to perform **multi-turn rollout** using SGLang with a tool-calling capable model (e.g., Qwen2.5-3B) on the GSM8K dataset.
 
@@ -9,6 +9,7 @@ This example demonstrates how to perform **multi-turn rollout** using SGLang wit
 ```bash
 cd examples/data_preprocess
 python3 gsm8k_multiturn_w_tool.py
+
 ```
 
 This will download and preprocess the GSM8K dataset into ~/data/gsm8k/.
@@ -21,6 +22,7 @@ Use the standard 8-GPU script:
 ```bash
 cd your_verl_root_dir
 bash examples/sglang_multiturn/run_qwen2.5-3b_gsm8k_multiturn.sh
+
 ```
 
 If you have only 4 GPUs
@@ -28,7 +30,8 @@ Use the fallback 4-GPU script:
 
 ```bash
 cd your_verl_root_dir
-bash examples/sglang_multiturn/run_qwen2.5-3b_gsm8k_multiturn_4xgpu.sh 
+bash examples/sglang_multiturn/run_qwen2.5-3b_gsm8k_multiturn_4xgpu.sh
+
 ```
 
 ## Notes

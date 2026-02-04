@@ -1,4 +1,4 @@
-# Risk Engine Hardening
+﻿# Risk Engine Hardening
 
 The current `RiskEngine` calculates position sizing and risk based on a simple formula. For real trading, you need a more sophisticated and robust risk layer that accounts for portfolio constraints, volatility, and error handling.
 

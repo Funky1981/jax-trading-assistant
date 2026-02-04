@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"time"
 
+	"jax-trading-assistant/libs/resilience"
+
 	"github.com/alpacahq/alpaca-trade-api-go/v3/marketdata"
 )
 
 // AlpacaProvider implements the Provider interface for Alpaca Market Data
 type AlpacaProvider struct {
-	client *marketdata.Client
-	config ProviderConfig
+	client         *marketdata.Client
+	config         ProviderConfig
+	circuitBreaker *resilience.CircuitBreaker
 }
 
 // NewAlpacaProvider creates a new Alpaca provider
@@ -28,9 +31,14 @@ func NewAlpacaProvider(config ProviderConfig) (*AlpacaProvider, error) {
 		BaseURL:   baseURL,
 	})
 
+	// Create circuit breaker for this provider
+	cbConfig := resilience.DefaultConfig("alpaca-api")
+	cb := resilience.NewCircuitBreaker(cbConfig)
+
 	return &AlpacaProvider{
-		client: client,
-		config: config,
+		client:         client,
+		config:         config,
+		circuitBreaker: cb,
 	}, nil
 }
 
@@ -41,34 +49,41 @@ func (p *AlpacaProvider) Name() string {
 
 // GetQuote fetches a real-time or delayed quote
 func (p *AlpacaProvider) GetQuote(ctx context.Context, symbol string) (*Quote, error) {
-	snapshot, err := p.client.GetSnapshot(symbol, marketdata.GetSnapshotRequest{})
+	result, err := p.circuitBreaker.ExecuteWithContext(ctx, func() (any, error) {
+		snapshot, err := p.client.GetSnapshot(symbol, marketdata.GetSnapshotRequest{})
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrProviderError, err)
+		}
+
+		if snapshot == nil || snapshot.LatestTrade == nil {
+			return nil, ErrNoData
+		}
+
+		quote := &Quote{
+			Symbol:    symbol,
+			Price:     snapshot.LatestTrade.Price,
+			Timestamp: snapshot.LatestTrade.Timestamp,
+			Exchange:  snapshot.LatestTrade.Exchange,
+		}
+
+		if snapshot.LatestQuote != nil {
+			quote.Bid = snapshot.LatestQuote.BidPrice
+			quote.Ask = snapshot.LatestQuote.AskPrice
+			quote.BidSize = int64(snapshot.LatestQuote.BidSize)
+			quote.AskSize = int64(snapshot.LatestQuote.AskSize)
+		}
+
+		if snapshot.DailyBar != nil {
+			quote.Volume = int64(snapshot.DailyBar.Volume)
+		}
+
+		return quote, nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrProviderError, err)
+		return nil, err
 	}
-
-	if snapshot == nil || snapshot.LatestTrade == nil {
-		return nil, ErrNoData
-	}
-
-	quote := &Quote{
-		Symbol:    symbol,
-		Price:     snapshot.LatestTrade.Price,
-		Timestamp: snapshot.LatestTrade.Timestamp,
-		Exchange:  snapshot.LatestTrade.Exchange,
-	}
-
-	if snapshot.LatestQuote != nil {
-		quote.Bid = snapshot.LatestQuote.BidPrice
-		quote.Ask = snapshot.LatestQuote.AskPrice
-		quote.BidSize = int64(snapshot.LatestQuote.BidSize)
-		quote.AskSize = int64(snapshot.LatestQuote.AskSize)
-	}
-
-	if snapshot.DailyBar != nil {
-		quote.Volume = int64(snapshot.DailyBar.Volume)
-	}
-
-	return quote, nil
+	return result.(*Quote), nil
 }
 
 // GetCandles fetches historical OHLCV data

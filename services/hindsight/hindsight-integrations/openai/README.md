@@ -1,4 +1,4 @@
-# Hindsight-OpenAI
+﻿# Hindsight-OpenAI
 
 Drop-in replacement for OpenAI Python client with automatic Hindsight integration.
 
@@ -15,12 +15,16 @@ Drop-in replacement for OpenAI Python client with automatic Hindsight integratio
 This package is part of the Hindsight workspace. Install from the root:
 
 ```bash
+
 # From repository root
+
 uv sync
 
 # Or install just this package
+
 cd hindsight-integrations/openai
 uv pip install -e .
+
 ```
 
 ## Quick Start
@@ -31,14 +35,16 @@ uv pip install -e .
 from hindsight_openai import configure, OpenAI
 
 # Configure Hindsight integration once
+
 configure(
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="<<<<<http://localhost:8888",>>>>>
     agent_id="my-agent",
     store_conversations=True,
     inject_memories=True,
 )
 
 # Use OpenAI client as normal - Hindsight integration happens automatically
+
 client = OpenAI(api_key="sk-...")
 
 response = client.chat.completions.create(
@@ -49,6 +55,7 @@ response = client.chat.completions.create(
 )
 
 print(response.choices[0].message.content)
+
 ```
 
 ### Async Usage
@@ -57,7 +64,7 @@ print(response.choices[0].message.content)
 from hindsight_openai import configure, AsyncOpenAI
 
 configure(
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="<<<<<http://localhost:8888",>>>>>
     agent_id="my-agent",
 )
 
@@ -69,6 +76,7 @@ response = await client.chat.completions.create(
         {"role": "user", "content": "Remind me about my preferences"}
     ]
 )
+
 ```
 
 ## Configuration Options
@@ -77,7 +85,7 @@ The `configure()` function accepts the following parameters:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `hindsight_api_url` | str | `"http://localhost:8888"` | URL of your Hindsight API server |
+| `hindsight_api_url` | str | `"<http://localhost:8888"`> | URL of your Hindsight API server |
 | `agent_id` | str | `None` | **Required.** Agent identifier for memory operations |
 | `api_key` | str | `None` | Optional API key for Hindsight authentication |
 | `store_conversations` | bool | `True` | Store conversations to Hindsight |
@@ -99,12 +107,15 @@ When `inject_memories=True`, the wrapper:
 Example:
 
 ```python
+
 # Your code:
+
 messages = [
     {"role": "user", "content": "What's my favorite programming language?"}
 ]
 
 # What gets sent to OpenAI (automatically):
+
 messages = [
     {
         "role": "system",
@@ -112,6 +123,7 @@ messages = [
     },
     {"role": "user", "content": "What's my favorite programming language?"}
 ]
+
 ```
 
 ### Conversation Storage
@@ -133,19 +145,24 @@ This creates a searchable memory of all your AI conversations.
 from hindsight_openai import configure, OpenAI, reset_config
 
 # Configure globally
-configure(hindsight_api_url="http://localhost:8888", agent_id="agent-1")
+
+configure(hindsight_api_url="<<<<<http://localhost:8888",>>>>> agent_id="agent-1")
 
 client = OpenAI(api_key="sk-...")
 
 # Normal request with Hindsight
+
 response1 = client.chat.completions.create(...)
 
 # Temporarily disable
+
 reset_config()
 response2 = client.chat.completions.create(...)  # No Hindsight integration
 
 # Re-enable
-configure(hindsight_api_url="http://localhost:8888", agent_id="agent-1")
+
+configure(hindsight_api_url="<<<<<http://localhost:8888",>>>>> agent_id="agent-1")
+
 ```
 
 ### Using Document ID
@@ -154,16 +171,19 @@ Group related conversations together using a document ID:
 
 ```python
 configure(
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="<<<<<http://localhost:8888",>>>>>
     agent_id="my-agent",
     document_id="meeting-2024-01-15",  # All conversations tagged with this ID
+
 )
 
 client = OpenAI(api_key="sk-...")
 
 # All these calls will be stored under the same document
+
 response1 = client.chat.completions.create(...)
 response2 = client.chat.completions.create(...)
+
 ```
 
 ### Cleanup
@@ -172,7 +192,9 @@ response2 = client.chat.completions.create(...)
 from hindsight_openai import cleanup_interceptor
 
 # Clean up resources when done
+
 await cleanup_interceptor()
+
 ```
 
 ## Requirements
@@ -188,21 +210,29 @@ await cleanup_interceptor()
 
 ```bash
 uv run pytest tests
+
 ```
 
 ### Project Structure
 
-```
+```text
 hindsight-integrations/openai/
 ├── hindsight_openai/
 │   ├── __init__.py       # Main exports
+
 │   ├── client.py         # OpenAI client wrappers
+
 │   ├── config.py         # Global configuration
+
 │   └── interceptor.py    # Request/response interception logic
+
 ├── tests/
 │   └── test_client.py    # Test suite
+
 ├── pyproject.toml        # Package configuration
+
 └── README.md             # This file
+
 ```
 
 ## License

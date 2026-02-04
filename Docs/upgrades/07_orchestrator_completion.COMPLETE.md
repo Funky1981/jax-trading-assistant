@@ -1,4 +1,4 @@
-# Phase 3: Strategy & Intelligence - SUMMARY
+﻿# Phase 3: Strategy & Intelligence - SUMMARY
 
 **Date**: January 28, 2026  
 **Status**: Tasks 6-7 Complete (2/3), Task 8 Pending
@@ -51,7 +51,8 @@
     6. Retain decision to memory
 
 ### Architecture
-```
+
+```n
 OrchestrationRequest
   ↓
 [1. Recall Memories]
@@ -65,6 +66,7 @@ OrchestrationRequest
 [5. Tool Execution] → Results
   ↓
 [6. Retain Decision] → Memory
+
 ```
 
 ### Key Functions
@@ -93,6 +95,7 @@ OrchestrationRequest
 ## Files Modified/Created
 
 ### New Libraries
+
 1. **libs/agent0/client.go** (213 lines)
    - Agent0 HTTP client
    - PlanRequest/Response types
@@ -102,6 +105,7 @@ OrchestrationRequest
    - Mock client for testing
 
 ### Enhanced Services
+
 3. **services/jax-orchestrator/internal/app/orchestrator.go** (267 lines)
    - Memory-driven decision loop
    - Strategy signal integration

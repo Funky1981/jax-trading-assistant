@@ -1,4 +1,4 @@
-# Contributing to verl
+﻿# Contributing to verl
 
 Thank you for considering a contribution to verl! We welcome contributions of any kind - bug fixes, enhancements, documentation improvements, or even just feedback. Whether you're an experienced developer or this is your first open-source project, your help is invaluable.
 
@@ -16,7 +16,6 @@ Looking for ways to dive in? Check out these issues:
 - [Call for contribution](https://github.com/volcengine/verl/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22call%20for%20contribution%22)
 Furthermore, you can learn the development plan and roadmap via [RFC](https://github.com/volcengine/verl/issues?q=is%3Aissue%20state%3Aopen%20label%3ARFC) and [Roadmap](https://github.com/volcengine/verl/issues?q=state%3Aopen%20label%3A%22roadmap%22).
 
-
 ## Developing
 
 - **Python-only**: install verl via `pip install -e .[test,vllm]` or `pip install -e .[test,sglang]` and iterate quickly. For full dependency setup, check out the verl [installation doc](https://verl.readthedocs.io/en/latest/start/install.html).
@@ -28,10 +27,15 @@ We rely on pre-commit to keep our code consistent. To set it up:
 ```bash
 pip install pre-commit
 pre-commit install
+
 # for staged changes
+
 pre-commit run
+
 # for all files in the repo
+
 # pre-commit run --all-files
+
 ```
 
 ## Testing
@@ -51,21 +55,28 @@ If possible, please add CI test(s) for your new feature:
 3. Minimize the workload of the test script(s) (see existing scripts for examples).
 
 ## Building the Docs
+
 ```
+
 # Ensure verl is on your PYTHONPATH, e.g.:
+
 pip install -e .[test]
 
 # Install documentation dependencies
+
 pip install -r requirements-docs.txt
 
 # Generate HTML docs
+
 make clean
 make html
 
 # Preview locally
+
 python -m http.server -d _build/html/
-```
-Open your browser at http://localhost:8000 to explore the docs.
+
+```n
+Open your browser at <http://localhost:8000> to explore the docs.
 
 ## Pull Requests & Code Reviews
 

@@ -1,14 +1,17 @@
----
+﻿---
 title: "Market Making (Inventory-Aware) — Advanced / Venue Dependent"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "market-making", "hft", "microstructure"]
 ---
+
 ## What it is
+
 Provides bid/ask quotes to capture spread while managing inventory risk. This is **execution + microstructure heavy**.
 
 ## Why it can work (edge hypothesis)
+
 Earns spread/fees (or rebates) for providing liquidity, but requires excellent execution and risk control.
 
 ## Best conditions
@@ -22,6 +25,7 @@ Earns spread/fees (or rebates) for providing liquidity, but requires excellent e
 - Latency disadvantage
 
 ## Signal definition (implementation-friendly)
+
 Example (conceptual):
 - Quote around midprice with spread adjusted by inventory
 - Widen quotes as inventory becomes imbalanced

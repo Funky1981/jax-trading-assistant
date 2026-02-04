@@ -1,8 +1,9 @@
-# 06 — Agent0 Wiring with Memory (Recall -> Plan -> Act -> Retain)
+﻿# 06 — Agent0 Wiring with Memory (Recall -> Plan -> Act -> Retain)
 
 **Goal:** Make memory part of every decision loop.
 
 ## 6.1 — The orchestration pipeline
+
 For each “task” (e.g., evaluate symbol, review earnings):
 
 1) Gather context (Dexter snapshot + user constraints)

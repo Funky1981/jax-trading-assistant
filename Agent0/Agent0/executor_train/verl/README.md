@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
  👋 Hi, everyone! 
     verl is a RL training library initiated by <b>ByteDance Seed team</b> and maintained by the verl community.
     <br>
@@ -7,13 +7,13 @@
 
 <div align="center">
 
-<a href="https://deepwiki.com/volcengine/verl"><img src="https://devin.ai/assets/deepwiki-badge.png" alt="Ask DeepWiki.com" style="height:20px;"></a>
+<a href="<https://deepwiki.com/volcengine/verl">><img src="<https://devin.ai/assets/deepwiki-badge.png"> alt="Ask DeepWiki.com" style="height:20px;"></a>
 [![GitHub Repo stars](https://img.shields.io/github/stars/volcengine/verl)](https://github.com/volcengine/verl/stargazers)
 [![Twitter](https://img.shields.io/twitter/follow/verl_project)](https://twitter.com/verl_project)
-<a href="https://join.slack.com/t/verlgroup/shared_invite/zt-2w5p9o4c3-yy0x2Q56s_VlGLsJ93A6vA"><img src="https://img.shields.io/badge/Slack-verl-blueviolet?logo=slack&amp"></a>
-<a href="https://arxiv.org/pdf/2409.19256"><img src="https://img.shields.io/static/v1?label=EuroSys&message=Paper&color=red"></a>
+<a href="<https://join.slack.com/t/verlgroup/shared_invite/zt-2w5p9o4c3-yy0x2Q56s_VlGLsJ93A6vA">><img src="<https://img.shields.io/badge/Slack-verl-blueviolet?logo=slack&amp">></a>
+<a href="<https://arxiv.org/pdf/2409.19256">><img src="<https://img.shields.io/static/v1?label=EuroSys&message=Paper&color=red">></a>
 [![Documentation](https://img.shields.io/badge/documentation-blue)](https://verl.readthedocs.io/en/latest/)
-<a href="https://raw.githubusercontent.com/eric-haibin-lin/verl-community/refs/heads/main/WeChat.JPG"><img src="https://img.shields.io/badge/微信-green?logo=wechat&amp"></a>
+<a href="<https://raw.githubusercontent.com/eric-haibin-lin/verl-community/refs/heads/main/WeChat.JPG">><img src="<https://img.shields.io/badge/微信-green?logo=wechat&amp">></a>
 
 </div>
 
@@ -61,11 +61,11 @@ verl is fast with:
   <li>[2025/03] We introduced the programming model of verl at the [vLLM Beijing Meetup](https://mp.weixin.qq.com/s/n77GibL2corAtQHtVEAzfg) and [verl intro and updates](https://github.com/eric-haibin-lin/verl-community/blob/main/slides/verl-lmsys-meetup.pdf) at the [SGLang-LMSYS Org Meetup](https://lu.ma/ntjrr7ig) in Sunnyvale mid-March.</li>
   <li>[2025/03] We will present verl(HybridFlow) at EuroSys 2025. See you in Rotterdam!</li>
   <li>[2025/02] verl v0.2.0.post2 is released!</li>
-  <li>[2025/02] We presented verl in the <a href="https://lu.ma/ji7atxux">Bytedance/NVIDIA/Anyscale Ray Meetup</a>. See you in San Jose!</li>
+  <li>[2025/02] We presented verl in the <a href="<https://lu.ma/ji7atxux">>Bytedance/NVIDIA/Anyscale Ray Meetup</a>. See you in San Jose!</li>
   <li>[2025/01] [Doubao-1.5-pro](https://team.doubao.com/zh/special/doubao_1_5_pro) is released with SOTA-level performance on LLM & VLM. The RL scaling preview model is trained using verl, reaching OpenAI O1-level performance on math benchmarks (70.0 pass@1 on AIME).</li>
-  <li>[2024/12] verl is presented at Ray Forward 2024. Slides available <a href="https://github.com/eric-haibin-lin/verl-community/blob/main/slides/Ray_Forward_2024_%E5%B7%AB%E9%94%A1%E6%96%8C.pdf">here</a></li>
-  <li>[2024/12] The team presented <a href="https://neurips.cc/Expo/Conferences/2024/workshop/100677">Post-training LLMs: From Algorithms to Infrastructure</a> at NeurIPS 2024. <a href="https://github.com/eric-haibin-lin/verl-data/tree/neurips">Slides</a> and <a href="https://neurips.cc/Expo/Conferences/2024/workshop/100677">video</a> available.</li>
-  <li>[2024/10] verl is presented at Ray Summit. <a href="https://www.youtube.com/watch?v=MrhMcXkXvJU&list=PLzTswPQNepXntmT8jr9WaNfqQ60QwW7-U&index=37">Youtube video</a> available.</li>
+  <li>[2024/12] verl is presented at Ray Forward 2024. Slides available <a href="<https://github.com/eric-haibin-lin/verl-community/blob/main/slides/Ray_Forward_2024_%E5%B7%AB%E9%94%A1%E6%96%8C.pdf">>here</a></li>
+  <li>[2024/12] The team presented <a href="<<https://neurips.cc/Expo/Conferences/2024/workshop/100677">>>Post-training LLMs: From Algorithms to Infrastructure</a> at NeurIPS 2024. <a href="<https://github.com/eric-haibin-lin/verl-data/tree/neurips">>Slides</a> and <a href="<<https://neurips.cc/Expo/Conferences/2024/workshop/100677">>>video</a> available.</li>
+  <li>[2024/10] verl is presented at Ray Summit. <a href="<https://www.youtube.com/watch?v=MrhMcXkXvJU&list=PLzTswPQNepXntmT8jr9WaNfqQ60QwW7-U&index=37">>Youtube video</a> available.</li>
   <li>[2024/08] HybridFlow (verl) is accepted to EuroSys 2025.</li>
 </ul>   
 </details>
@@ -88,16 +88,16 @@ verl is fast with:
 
 ## Upcoming Features and Changes
 
-- Q3 Roadmap https://github.com/volcengine/verl/issues/2388
-- DeepSeek 671b optimizations with Megatron https://github.com/volcengine/verl/issues/1033
-- Multi-turn rollout and tools using optimizations https://github.com/volcengine/verl/issues/1882
+- Q3 Roadmap <https://github.com/volcengine/verl/issues/2388>
+- DeepSeek 671b optimizations with Megatron <https://github.com/volcengine/verl/issues/1033>
+- Multi-turn rollout and tools using optimizations <https://github.com/volcengine/verl/issues/1882>
 - [Agent integration](https://github.com/volcengine/verl/tree/main/verl/experimental/agent_loop)
-- Async and off-policy architecture https://github.com/volcengine/verl/pull/2231
-- List of breaking changes since v0.4 https://github.com/volcengine/verl/discussions/2270
+- Async and off-policy architecture <https://github.com/volcengine/verl/pull/2231>
+- List of breaking changes since v0.4 <https://github.com/volcengine/verl/discussions/2270>
 
 ## Getting Started
 
-<a href="https://verl.readthedocs.io/en/latest/index.html"><b>Documentation</b></a>
+<a href="<https://verl.readthedocs.io/en/latest/index.html">><b>Documentation</b></a>
 
 **Quickstart:**
 
@@ -108,7 +108,6 @@ verl is fast with:
 - [GRPO in verl](https://verl.readthedocs.io/en/latest/algo/grpo.html)
 
 **Running a PPO example step-by-step:**
-
 
 - [Prepare Data for Post-Training](https://verl.readthedocs.io/en/latest/preparation/prepare_data.html)
 - [Implement Reward Function for Dataset](https://verl.readthedocs.io/en/latest/preparation/reward_function.html)
@@ -164,18 +163,19 @@ SGLang is fully supported with verl, and SGLang RL Group is working extensively 
 ## Upgrade to FSDP2
 
 verl is fully embracing FSDP2! FSDP2 is recommended by torch distributed team, providing better throughput and memory usage, and is composable with other features (e.g. torch.compile). To enable FSDP2, simply use verl main and set the following options:
-```
+
+```n
 actor_rollout_ref.ref.strategy=fsdp2
 actor_rollout_ref.actor.strategy=fsdp2
 critic.strategy=fsdp2 
-reward_model.strategy=fsdp2 
-```
-Furthermore, FSDP2 cpu offloading is compatible with gradient accumulation. You can turn it on to save memory with `actor_rollout_ref.actor.fsdp_config.offload_policy=True`. For more details, see https://github.com/volcengine/verl/pull/1026
+reward_model.strategy=fsdp2
+
+```n
+Furthermore, FSDP2 cpu offloading is compatible with gradient accumulation. You can turn it on to save memory with `actor_rollout_ref.actor.fsdp_config.offload_policy=True`. For more details, see <https://github.com/volcengine/verl/pull/1026>
 
 ## AMD Support (ROCm Kernel)
 
 verl now supports FSDP as the training engine (Megatron support coming soon) and both integrates with vLLM and SGLang as inference engines. Please refer to [this document](https://github.com/volcengine/verl/blob/main/docs/amd_tutorial/amd_build_dockerfile_page.rst) for the installation guide and more information, and [this document](https://github.com/volcengine/verl/blob/main/docs/amd_tutorial/amd_vllm_page.rst) for the vLLM performance tuning for ROCm.
-
 
 ## Citation and acknowledgement
 
@@ -191,6 +191,7 @@ If you find the project helpful, please cite:
   year    = {2024},
   journal = {arXiv preprint arXiv: 2409.19256}
 }
+
 ```
 
 verl is inspired by the design of Nemo-Aligner, Deepspeed-chat and OpenRLHF. The project is adopted and contributed by Bytedance, Anyscale, LMSys.org, [Alibaba Qwen team](https://github.com/QwenLM/), Shanghai AI Lab, Tsinghua University, UC Berkeley, UCLA, UIUC, University of Hong Kong, ke.com, [All Hands AI](https://www.all-hands.dev/), [ModelBest](http://modelbest.cn/), JD AI Lab, Microsoft Research, [StepFun](https://www.stepfun.com/), Amazon, LinkedIn, Meituan, [Camel-AI](https://www.camel-ai.org/), [OpenManus](https://github.com/OpenManus), Xiaomi, NVIDIA research, [Baichuan](https://www.baichuan-ai.com/home), [RedNote](https://www.xiaohongshu.com/), [SwissAI](https://www.swiss-ai.org/), [Moonshot AI (Kimi)](https://www.moonshot-ai.com/), Baidu, Snowflake, Skywork.ai, JetBrains, [IceSword Lab](https://www.iceswordlab.com), and many more.
@@ -239,14 +240,14 @@ See [contributions guide](CONTRIBUTING.md)
 
 Founded in 2023, ByteDance Seed Team is dedicated to crafting the industry's most advanced AI foundation models. The team aspires to become a world-class research team and make significant contributions to the advancement of science and society. You can get to know Bytedance Seed better through the following channels👇
 <div>
-  <a href="https://team.doubao.com/">
-    <img src="https://img.shields.io/badge/Website-%231e37ff?style=for-the-badge&logo=bytedance&logoColor=white"></a>
-  <a href="https://github.com/user-attachments/assets/469535a8-42f2-4797-acdf-4f7a1d4a0c3e">
-    <img src="https://img.shields.io/badge/WeChat-07C160?style=for-the-badge&logo=wechat&logoColor=white"></a>
- <a href="https://www.xiaohongshu.com/user/profile/668e7e15000000000303157d?xsec_token=ABl2-aqekpytY6A8TuxjrwnZskU-6BsMRE_ufQQaSAvjc%3D&xsec_source=pc_search">
-    <img src="https://img.shields.io/badge/Xiaohongshu-%23FF2442?style=for-the-badge&logo=xiaohongshu&logoColor=white"></a>
-  <a href="https://www.zhihu.com/org/dou-bao-da-mo-xing-tuan-dui/">
-    <img src="https://img.shields.io/badge/zhihu-%230084FF?style=for-the-badge&logo=zhihu&logoColor=white"></a>
+  <a href="<https://team.doubao.com/">>
+    <img src="<https://img.shields.io/badge/Website-%231e37ff?style=for-the-badge&logo=bytedance&logoColor=white">></a>
+  <a href="<https://github.com/user-attachments/assets/469535a8-42f2-4797-acdf-4f7a1d4a0c3e">>
+    <img src="<https://img.shields.io/badge/WeChat-07C160?style=for-the-badge&logo=wechat&logoColor=white">></a>
+ <a href="<https://www.xiaohongshu.com/user/profile/668e7e15000000000303157d?xsec_token=ABl2-aqekpytY6A8TuxjrwnZskU-6BsMRE_ufQQaSAvjc%3D&xsec_source=pc_search">>
+    <img src="<https://img.shields.io/badge/Xiaohongshu-%23FF2442?style=for-the-badge&logo=xiaohongshu&logoColor=white">></a>
+  <a href="<https://www.zhihu.com/org/dou-bao-da-mo-xing-tuan-dui/">>
+    <img src="<https://img.shields.io/badge/zhihu-%230084FF?style=for-the-badge&logo=zhihu&logoColor=white">></a>
 
 </div>
 ---

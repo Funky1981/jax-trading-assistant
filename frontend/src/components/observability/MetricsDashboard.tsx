@@ -1,22 +1,18 @@
 import { useState } from 'react';
+import { Timeline, CheckCircle, XCircle, Info } from 'lucide-react';
+import { useRecentMetrics, useRunMetrics } from '../../hooks/useObservability';
+import type { MetricEvent } from '../../data/types';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Stack,
-  Chip,
   Table,
   TableBody,
   TableCell,
   TableHead,
+  TableHeader,
   TableRow,
-  CircularProgress,
-  Alert,
-} from '@mui/material';
-import { TrendingUp, CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
-import { useRecentMetrics, useRunMetrics } from '../../hooks/useObservability';
-import type { MetricEvent } from '../../data/types';
+} from '@/components/ui/table';
 
 export function MetricsDashboard() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -26,11 +22,24 @@ export function MetricsDashboard() {
   if (recentLoading) {
     return (
       <Card>
-        <CardContent>
-          <Stack alignItems="center" spacing={2}>
-            <CircularProgress />
-            <Typography>Loading metrics...</Typography>
-          </Stack>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Timeline className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">
+              Recent Metrics
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex gap-4 items-center">
+                <Skeleton className="h-5 w-5 rounded-full" />
+                <Skeleton className="h-4 w-[30%]" />
+                <Skeleton className="h-6 w-20 rounded-md" />
+                <Skeleton className="h-4 w-[15%]" />
+                <Skeleton className="h-4 w-[10%]" />
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
@@ -39,8 +48,18 @@ export function MetricsDashboard() {
   if (recentError) {
     return (
       <Card>
-        <CardContent>
-          <Alert severity="error">Failed to load metrics</Alert>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Timeline className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">
+              Recent Metrics
+            </h2>
+          </div>
+          <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+            <p className="text-sm text-destructive">
+              Failed to load metrics. Please check your connection.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
@@ -48,82 +67,88 @@ export function MetricsDashboard() {
 
   const getEventIcon = (event: string) => {
     if (event.includes('success') || event.includes('completed')) {
-      return <CheckCircle sx={{ color: 'success.main', fontSize: 18 }} />;
+      return <CheckCircle className="h-[18px] w-[18px] text-green-500" />;
     }
     if (event.includes('error') || event.includes('failed')) {
-      return <ErrorIcon sx={{ color: 'error.main', fontSize: 18 }} />;
+      return <XCircle className="h-[18px] w-[18px] text-red-500" />;
     }
-    return <TrendingUp sx={{ color: 'info.main', fontSize: 18 }} />;
+    return <Info className="h-[18px] w-[18px] text-blue-500" />;
   };
 
   return (
     <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Recent Metrics
-        </Typography>
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Timeline className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">
+            Recent Metrics
+          </h2>
+        </div>
         {recentMetrics && recentMetrics.length > 0 ? (
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Event</TableCell>
-                <TableCell>Source</TableCell>
-                <TableCell>Run ID</TableCell>
-                <TableCell>Duration</TableCell>
-                <TableCell>Time</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {recentMetrics.map((metric: MetricEvent, idx: number) => (
-                <TableRow
-                  key={idx}
-                  hover
-                  sx={{ cursor: metric.run_id ? 'pointer' : 'default' }}
-                  onClick={() => metric.run_id && setSelectedRunId(metric.run_id)}
-                >
-                  <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      {getEventIcon(metric.event)}
-                      <Typography variant="body2">{metric.event}</Typography>
-                    </Stack>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={metric.source} size="small" variant="outlined" />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="caption" fontFamily="monospace">
-                      {metric.run_id?.slice(0, 8) || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    {metric.latency_ms ? `${metric.latency_ms}ms` : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="caption">
-                      {new Date(metric.timestamp).toLocaleTimeString()}
-                    </Typography>
-                  </TableCell>
+          <div className="max-h-[400px] overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Run ID</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Time</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {recentMetrics.map((metric: MetricEvent, idx: number) => (
+                  <TableRow
+                    key={idx}
+                    className={metric.run_id ? 'cursor-pointer' : ''}
+                    onClick={() => metric.run_id && setSelectedRunId(metric.run_id)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getEventIcon(metric.event)}
+                        <span className="text-sm">{metric.event}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{metric.source}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs">
+                        {metric.run_id?.slice(0, 8) || '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {metric.latency_ms ? `${metric.latency_ms}ms` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs">
+                        {new Date(metric.timestamp).toLocaleTimeString()}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
-          <Typography color="text.secondary">No recent metrics</Typography>
+          <div className="py-16 text-center">
+            <p className="text-muted-foreground">No recent metrics available</p>
+          </div>
         )}
 
         {selectedRunId && runLoading && (
-          <Box sx={{ mt: 2 }}>
-            <CircularProgress size={20} />
-          </Box>
+          <div className="mt-4">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
         )}
 
         {selectedRunId && runMetrics && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2">Run Details: {selectedRunId.slice(0, 8)}</Typography>
-            <Typography variant="caption" color="text.secondary">
+          <div className="mt-4">
+            <h3 className="text-sm font-medium">Run Details: {selectedRunId.slice(0, 8)}</h3>
+            <p className="text-xs text-muted-foreground">
               {runMetrics.length} events
-            </Typography>
-          </Box>
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>

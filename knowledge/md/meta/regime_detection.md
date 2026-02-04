@@ -1,4 +1,4 @@
----
+﻿---
 title: "Regime Detection (Practical)"
 version: "1.0"
 status: "approved"
@@ -7,6 +7,7 @@ tags: ["meta", "regime"]
 ---
 
 ## Goal
+
 Estimate which market ‘mode’ we are in so Jax can adjust allocation:
 - **Trend**
 - **Range / Mean Reversion**
@@ -22,6 +23,7 @@ Estimate which market ‘mode’ we are in so Jax can adjust allocation:
 - Spread / depth metrics (liquidity)
 
 ## Output
+
 A probability vector, e.g.:
 - P(trend), P(range), P(stress), P(calm), P(liquidity_stress)
 

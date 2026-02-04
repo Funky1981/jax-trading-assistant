@@ -1,4 +1,4 @@
-# Task 9: Observability & Infrastructure - COMPLETE
+﻿# Task 9: Observability & Infrastructure - COMPLETE
 
 **Implementation Date**: January 28, 2026  
 **Status**: ✅ Complete  
@@ -35,7 +35,8 @@ Enhanced observability with structured metrics logging and created comprehensive
 - Use case: Monitor AI planning performance
 
 ### Metrics Output Format (JSON)
-```json
+
+```n
 {
   "ts": "2026-01-28T14:09:52Z",
   "level": "info",
@@ -47,6 +48,7 @@ Enhanced observability with structured metrics logging and created comprehensive
   "type": "buy",
   "confidence": 0.85
 }
+
 ```
 
 ### Test Coverage
@@ -73,13 +75,15 @@ Enhanced observability with structured metrics logging and created comprehensive
 6. **Memory retention**: Logs retain success/failure
 
 ### Example Log Output
-```
+
+```n
 {"event":"metric","level":"info","name":"memory_recall","provider":"hindsight","success":true,"tool":"recall","ts":"2026-01-28T14:09:52Z"}
 {"confidence":0.85,"event":"metric","level":"info","name":"strategy_signal","strategy":"rsi_momentum_v1","ts":"2026-01-28T14:09:52Z","type":"buy"}
 {"event":"metric","latency_ms":0,"level":"info","name":"research_query","service":"dexter","success":true,"ts":"2026-01-28T14:09:52Z"}
 {"confidence":0.7,"event":"metric","latency_ms":0,"level":"info","name":"agent0_plan","steps":2,"success":true,"ts":"2026-01-28T14:09:52Z"}
 {"bank":"trade_decisions","event":"metric","level":"info","name":"memory_retain","success":true,"ts":"2026-01-28T14:09:52Z"}
 {"event":"metric","latency_ms":0,"level":"info","name":"orchestration_run","stages":7,"success":true,"ts":"2026-01-28T14:09:52Z"}
+
 ```
 
 ---
@@ -95,25 +99,35 @@ Enhanced observability with structured metrics logging and created comprehensive
 4. **TestDockerComposeStack**: Check all services running
 
 ### Build Tag Strategy
-```go
+
+```n
 //go:build integration
 // +build integration
+
 ```
 
 **Run with tag**:
-```bash
+
+```n
 go test -tags=integration ./tests/integration/... -v
+
 ```
 
 **Skip by default** (no tag):
-```bash
+
+```n
 go test ./tests/integration/...  # Skips integration tests
+
 ```
 
 ### Environment Control
-```bash
+
+```
+
 # Skip integration tests explicitly
+
 SKIP_INTEGRATION=1 go test -tags=integration ./tests/integration/...
+
 ```
 
 ### Services Under Test
@@ -142,42 +156,58 @@ SKIP_INTEGRATION=1 go test -tags=integration ./tests/integration/...
 ### Running Services
 
 **Start core services**:
-```bash
+
+```n
 docker compose up -d
+
 ```
 
 **Start with jobs**:
-```bash
+
+```n
 docker compose --profile jobs up
+
 ```
 
 **Start with database**:
-```bash
+
+```n
 docker compose --profile db up -d
+
 ```
 
 **Check status**:
-```bash
+
+```n
 docker compose ps
 docker compose logs hindsight
+
 ```
 
 ### Integration Test Workflow
-```bash
+
+```
+
 # 1. Start services
+
 docker compose up -d
 
 # 2. Wait for healthy
+
 sleep 10
 
 # 3. Run integration tests
+
 go test -tags=integration ./tests/integration/... -v
 
 # 4. Check results
+
 # Services: ✅ hindsight, ✅ jax-memory, ✅ jax-api
 
 # 5. Stop services
+
 docker compose down
+
 ```
 
 ---
@@ -207,6 +237,7 @@ docker compose down
 ## 6. Files Created/Modified
 
 ### New Files
+
 1. **libs/observability/metrics_test.go** (183 lines)
    - 5 test functions for new metrics
    - JSON log capture helpers
@@ -224,6 +255,7 @@ docker compose down
    - Troubleshooting guide
 
 ### Modified Files
+
 4. **libs/observability/metrics.go** (+48 lines)
    - RecordStrategySignal()
    - RecordOrchestrationRun()
@@ -246,6 +278,7 @@ docker compose down
 ## 7. Metrics Summary
 
 ### Tracked Events
+
 1. **Memory operations**: Recall, Retain
 2. **Strategy signals**: Type, confidence, strategy name
 3. **Research queries**: Service, latency, success

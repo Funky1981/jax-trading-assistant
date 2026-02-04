@@ -1,9 +1,8 @@
-# Dexter 🤖
+﻿# Dexter 🤖
 
 Dexter is an autonomous financial research agent that thinks, plans, and learns as it works. It performs analysis using task planning, self-reflection, and real-time market data. Think Claude Code, but built specifically for financial research.
 
-
-<img width="979" height="651" alt="Screenshot 2025-10-14 at 6 12 35 PM" src="https://github.com/user-attachments/assets/5a2859d4-53cf-4638-998a-15cef3c98038" />
+<img width="979" height="651" alt="Screenshot 2025-10-14 at 6 12 35 PM" src="<https://github.com/user-attachments/assets/5a2859d4-53cf-4638-998a-15cef3c98038"> />
 
 ## Overview
 
@@ -18,8 +17,7 @@ Dexter takes complex financial questions and turns them into clear, step-by-step
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/virattt?style=social)](https://twitter.com/virattt)
 
-<img width="996" height="639" alt="Screenshot 2025-11-22 at 1 45 07 PM" src="https://github.com/user-attachments/assets/8915fd70-82c9-4775-bdf9-78d5baf28a8a" />
-
+<img width="996" height="639" alt="Screenshot 2025-11-22 at 1 45 07 PM" src="<https://github.com/user-attachments/assets/8915fd70-82c9-4775-bdf9-78d5baf28a8a"> />
 
 ### Prerequisites
 
@@ -33,51 +31,71 @@ Dexter takes complex financial questions and turns them into clear, step-by-step
 If you don't have Bun installed, you can install it using curl:
 
 **macOS/Linux:**
-```bash
-curl -fsSL https://bun.com/install | bash
+
+```n
+curl -fsSL <https://bun.com/install> | bash
+
 ```
 
 **Windows:**
-```bash
+
+```n
 powershell -c "irm bun.sh/install.ps1|iex"
+
 ```
 
 After installation, restart your terminal and verify Bun is installed:
-```bash
+
+```n
 bun --version
+
 ```
 
 ### Installing Dexter
 
 1. Clone the repository:
-```bash
-git clone https://github.com/virattt/dexter.git
+
+```n
+git clone <https://github.com/virattt/dexter.git>
 cd dexter
+
 ```
 
 2. Install dependencies with Bun:
-```bash
+
+```n
 bun install
+
 ```
 
 3. Set up your environment variables:
-```bash
+
+```
+
 # Create .env in dexter/ and add your API keys
+
 # OPENAI_API_KEY=your-openai-api-key
+
 # FINANCIAL_DATASETS_API_KEY=your-financial-datasets-api-key
+
 # TAVILY_API_KEY=your-tavily-api-key
+
 ```
 
 ### Usage
 
 Run Dexter in interactive mode:
-```bash
+
+```n
 bun start
+
 ```
 
 Or with watch mode for development:
-```bash
+
+```n
 bun dev
+
 ```
 
 ### Example Queries
@@ -111,7 +129,6 @@ Dexter uses a multi-agent architecture with specialized components:
 - **Schema Validation**: [Zod](https://zod.dev)
 - **Language**: TypeScript
 
-
 ### Changing Models
 
 Type `/model` in the CLI to switch between:
@@ -128,7 +145,6 @@ Type `/model` in the CLI to switch between:
 5. Create a Pull Request
 
 **Important**: Please keep your pull requests small and focused.  This will make it easier to review and merge.
-
 
 ## License
 

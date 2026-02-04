@@ -1,14 +1,17 @@
----
+﻿---
 title: "Pairs Trading (Stat Arb / Cointegration)"
 version: "1.0"
 status: "approved"
 created_utc: "2026-01-30"
 tags: ["strategy", "stat-arb", "market-neutral", "pairs"]
 ---
+
 ## What it is
+
 Trades the spread between two related assets: **short the rich / long the cheap** when their relationship deviates, expecting convergence.
 
 ## Why it can work (edge hypothesis)
+
 Relative-value relationships can revert due to fundamentals, shared risk factors, or market-making forces.
 
 ## Best conditions
@@ -22,6 +25,7 @@ Relative-value relationships can revert due to fundamentals, shared risk factors
 - Costs/borrow constraints
 
 ## Signal definition (implementation-friendly)
+
 Example:
 - Identify candidate pairs (distance/sector/fundamentals)
 - Estimate spread and z-score (or cointegration residual)

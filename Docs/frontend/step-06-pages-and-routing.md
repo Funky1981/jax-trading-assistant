@@ -1,9 +1,11 @@
-# Step 06: Pages & Routing
+﻿# Step 06: Pages & Routing
 
 ## Objective
+
 Compose full application pages from documented components and ensure navigation is consistent and fast.
 
 ## Actions
+
 1. Implement routing
    - Define core routes: dashboard, order ticket, blotter, portfolio, settings.
 

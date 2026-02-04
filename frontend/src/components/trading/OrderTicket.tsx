@@ -1,4 +1,3 @@
-import { Stack, Typography } from '@mui/material';
 import { useState } from 'react';
 import { PrimaryButton } from '../primitives/PrimaryButton';
 import { SelectInput } from '../primitives/SelectInput';
@@ -24,19 +23,13 @@ export function OrderTicket({ symbol, defaultPrice, onSubmit }: OrderTicketProps
   const [price, setPrice] = useState(() => defaultPrice ?? 0);
 
   return (
-    <Stack
-      spacing={2}
-      sx={{
-        padding: tokens.spacing.lg,
-        borderRadius: tokens.radius.md,
-        border: `1px solid ${tokens.colors.border}`,
-        backgroundColor: tokens.colors.surface,
-      }}
+    <div
+      className="space-y-4 p-6 rounded-md border border-border bg-card"
     >
-      <Typography variant="subtitle2">Order Ticket</Typography>
-      <Typography variant="body2" color="text.secondary">
+      <h3 className="text-sm font-medium">Order Ticket</h3>
+      <p className="text-sm text-muted-foreground">
         {symbol}
-      </Typography>
+      </p>
       <SelectInput
         label="Side"
         value={side}
@@ -61,6 +54,6 @@ export function OrderTicket({ symbol, defaultPrice, onSubmit }: OrderTicketProps
       >
         Place Order
       </PrimaryButton>
-    </Stack>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-# Jax Strategy Knowledge Base (MD-first)
+﻿# Jax Strategy Knowledge Base (MD-first)
 
 This repository is a **strategy + risk knowledge layer** for Jax.
 
@@ -22,6 +22,7 @@ Design goals:
 - `evaluation/` — backtesting standards to avoid self-deception
 
 ## Strategy lifecycle (tldr)
+
 1. **Candidate** (discovered) → 2. **Paper trade** → 3. **Small capital** → 4. **Approved** → 5. **Monitor & retire**
 
 Start with: `meta/strategy_lifecycle.md` and `evaluation/evaluation_protocol.md`.

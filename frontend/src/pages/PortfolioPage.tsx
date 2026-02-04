@@ -1,4 +1,3 @@
-import { Stack, Typography } from '@mui/material';
 import { PositionCard, RiskSummary } from '../components';
 import { calculateTotalExposure, calculateTotalUnrealizedPnl } from '../domain/calculations';
 import { useDomain } from '../domain/store';
@@ -11,17 +10,17 @@ export function PortfolioPage() {
   const pnl = calculateTotalUnrealizedPnl(positions);
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h4">Portfolio & Risk</Typography>
-      <Typography variant="body2" color="text.secondary">
+    <div className="space-y-4">
+      <h1 className="text-3xl font-semibold">Portfolio & Risk</h1>
+      <p className="text-sm text-muted-foreground">
         Positions, exposure, and risk thresholds.
-      </Typography>
+      </p>
       <RiskSummary exposure={exposure} pnl={pnl} limits={state.riskLimits} />
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+      <div className="flex flex-col md:flex-row gap-4">
         {positions.map((position) => (
           <PositionCard key={position.symbol} position={position} />
         ))}
-      </Stack>
-    </Stack>
+      </div>
+    </div>
   );
 }

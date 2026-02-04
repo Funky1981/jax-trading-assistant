@@ -1,4 +1,4 @@
-# Agent0 Series: Self-Evolving Agents from Zero Data
+﻿# Agent0 Series: Self-Evolving Agents from Zero Data
 
 <div align="center">
 
@@ -15,8 +15,6 @@
 <p align="center">
   <img src="figs/logo.png" width="60%">
 </p>
-
-
 
 ## 🔥 News
 
@@ -195,6 +193,7 @@ If you find our work helpful, please consider citing:
   journal={arXiv preprint arXiv:2511.16043},
   year={2025}
 }
+
 ```
 
 ### Agent0-VL
@@ -206,6 +205,7 @@ If you find our work helpful, please consider citing:
   journal={arXiv preprint arXiv:2511.19900},
   year={2025}
 }
+
 ```
 
 ---

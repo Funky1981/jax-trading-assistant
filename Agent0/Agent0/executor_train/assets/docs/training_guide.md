@@ -1,4 +1,4 @@
-## Training
+﻿## Training
 
 ### Data Preprocessing
 
@@ -6,7 +6,9 @@ Prepare the data for training using the provided scripts. More examples can be f
 
 ```bash
 python examples/data_preprocess/deepmath.py --data_source zwhe99/DeepMath-103K --local_dir data/deepmath_torl --sys_prompt_style torl
+
 # use simple_rl style for non-tool system prompt
+
 ```
 
 ### Single Node Training
@@ -15,6 +17,7 @@ We provide an integrated training script for each example. To train ToRL, run th
 
 ```bash
 bash examples/train/math_tir/train_1.5b_grpo.sh
+
 ```
 
 See more examples in [examples/train](/examples/train), where each folder is a separate project with its own training script. You can also submit a PR to add your own training script to the project.
@@ -30,15 +33,21 @@ See more examples in [examples/train](/examples/train), where each folder is a s
 ### Multi Node Training (Experimental)
 
 1. **Head Node**
-```bash
+
+```n
 ray start --head --dashboard-host=0.0.0.0 # start ray head node
+
 bash examples/train/acecoder/train.sh # train the model
+
 ```
 
 2. **Worker Node**
-```bash
+
+```n
 ray start --address='head_node_ip:6379' --block # start ray worker node
+
 # no need to run the training script on worker node
+
 ```
 
 ### Training Logs
