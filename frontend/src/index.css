@@ -72,6 +72,7 @@
 
 /* Custom scrollbar for dark mode */
 @layer utilities {
+  /* stylelint-disable-next-line property-no-unknown */
   .scrollbar-thin {
     scrollbar-width: thin;
   }

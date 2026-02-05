@@ -138,7 +138,7 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
       chartRef.current = null;
       seriesRef.current = null;
     };
-  }, [isOpen, symbol, timeframe]);
+  }, [data, isOpen, symbol, timeframe]);
 
   // Update data when symbol/timeframe changes
   useEffect(() => {
@@ -146,7 +146,7 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
       seriesRef.current.setData(data);
       chartRef.current?.timeScale().fitContent();
     }
-  }, [symbol, timeframe, isOpen]);
+  }, [data, symbol, timeframe, isOpen]);
 
   const summary = (
     <div className="flex items-center gap-2">
