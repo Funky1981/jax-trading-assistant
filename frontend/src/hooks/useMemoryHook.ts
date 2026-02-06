@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { buildUrl } from '@/config/api';
 
 export interface MemoryBank {
   id: string;
@@ -76,7 +77,7 @@ const mockEntries: MemoryEntry[] = [
 
 async function fetchMemoryBanks(): Promise<MemoryBank[]> {
   try {
-    const response = await fetch('http://localhost:8080/api/memory/banks');
+    const response = await fetch(buildUrl('JAX_API', '/api/memory/banks'));
     if (response.ok) {
       return response.json();
     }
@@ -89,7 +90,7 @@ async function fetchMemoryBanks(): Promise<MemoryBank[]> {
 
 async function fetchMemoryEntries(bankId: string): Promise<MemoryEntry[]> {
   try {
-    const response = await fetch(`http://localhost:8080/api/memory/banks/${bankId}/entries`);
+    const response = await fetch(`${buildUrl('JAX_API', '/api/memory/banks')}/${bankId}/entries`);
     if (response.ok) {
       return response.json();
     }
@@ -102,7 +103,7 @@ async function fetchMemoryEntries(bankId: string): Promise<MemoryEntry[]> {
 
 async function searchMemory(query: string): Promise<MemoryEntry[]> {
   try {
-    const response = await fetch(`http://localhost:8080/api/memory/search?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`${buildUrl('JAX_API', '/api/memory/search')}?q=${encodeURIComponent(query)}`);
     if (response.ok) {
       return response.json();
     }

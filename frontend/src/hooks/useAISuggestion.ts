@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { buildUrl } from '@/config/api';
 
 // Types matching the backend models
 export type Action = 'BUY' | 'SELL' | 'HOLD' | 'WATCH';
@@ -38,7 +39,7 @@ export interface AIConfig {
 
 // Fetch AI suggestion for a symbol
 async function fetchAISuggestion(request: SuggestionRequest): Promise<SuggestionResponse> {
-  const response = await fetch('http://localhost:8093/suggest', {
+  const response = await fetch(buildUrl('AGENT0_SERVICE', '/suggest'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -56,7 +57,7 @@ async function fetchAISuggestion(request: SuggestionRequest): Promise<Suggestion
 
 // Fetch AI service config
 async function fetchAIConfig(): Promise<AIConfig> {
-  const response = await fetch('http://localhost:8093/config');
+  const response = await fetch(buildUrl('AGENT0_SERVICE', '/config'));
   if (!response.ok) {
     throw new Error('Failed to fetch AI config');
   }
@@ -65,7 +66,7 @@ async function fetchAIConfig(): Promise<AIConfig> {
 
 // Fetch AI health
 async function fetchAIHealth(): Promise<{ status: string; provider: string }> {
-  const response = await fetch('http://localhost:8093/health');
+  const response = await fetch(buildUrl('AGENT0_SERVICE', '/health'));
   if (!response.ok) {
     throw new Error('AI service unhealthy');
   }

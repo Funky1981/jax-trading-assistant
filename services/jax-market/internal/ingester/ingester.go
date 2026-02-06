@@ -13,9 +13,10 @@ import (
 
 // Ingester handles market data ingestion and storage
 type Ingester struct {
-	client *marketdata.Client
-	db     *sql.DB
-	config *config.Config
+	client          *marketdata.Client
+	db              *sql.DB
+	config          *config.Config
+	metricsCallback func(successCount, errorCount int, duration time.Duration)
 }
 
 // New creates a new Ingester
@@ -25,6 +26,11 @@ func New(client *marketdata.Client, db *sql.DB, config *config.Config) *Ingester
 		db:     db,
 		config: config,
 	}
+}
+
+// SetMetricsCallback sets a callback function to report metrics
+func (i *Ingester) SetMetricsCallback(callback func(successCount, errorCount int, duration time.Duration)) {
+	i.metricsCallback = callback
 }
 
 // Start begins the ingestion scheduler
@@ -66,6 +72,11 @@ func (i *Ingester) ingestAll(ctx context.Context) {
 
 	duration := time.Since(start)
 	log.Printf("ingestion complete: %d success, %d errors in %v", successCount, errorCount, duration)
+
+	// Call metrics callback if set
+	if i.metricsCallback != nil {
+		i.metricsCallback(successCount, errorCount, duration)
+	}
 }
 
 // ingestSymbol ingests quote and candles for a single symbol

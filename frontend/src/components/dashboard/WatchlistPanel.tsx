@@ -12,6 +12,8 @@ import { useWatchlistSummary, WatchlistItem } from '@/hooks/useWatchlist';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
+import { Separator } from '@/components/ui/separator';
 import {
   Table,
   TableBody,
@@ -30,10 +32,12 @@ interface WatchlistPanelProps {
 const columnHelper = createColumnHelper<WatchlistItem>();
 
 export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
-  const { data: summary } = useWatchlistSummary();
+  const { data: summary, isError } = useWatchlistSummary();
   const { watchlist, isLoading } = useWatchlistSummary();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [newSymbol, setNewSymbol] = useState('');
+
+  const isDataLive = !isError && (watchlist?.length ?? 0) > 0;
 
   const columns = useMemo(
     () => [
@@ -123,9 +127,14 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
   });
 
   const summaryText = summary ? (
-    <span>
-      {summary.count} symbols • Top: {summary.topMover.symbol} ({formatPercent(summary.topMover.changePercent)})
-    </span>
+    <div className="flex items-center gap-3 text-xs">
+      <DataSourceBadge isLive={isDataLive} isError={isError} />
+      <span className="font-mono">{summary.count} symbols</span>
+      <Separator orientation="vertical" className="h-4" />
+      <span>
+        Top: {summary.topMover.symbol} ({formatPercent(summary.topMover.changePercent)})
+      </span>
+    </div>
   ) : null;
 
   return (

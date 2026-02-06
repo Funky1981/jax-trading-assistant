@@ -6,3 +6,4 @@ export * from './useMetrics';
 export * from './useMemoryHook';
 export * from './useStrategies';
 export * from './useRisk';
+export * from './useIBAccount';

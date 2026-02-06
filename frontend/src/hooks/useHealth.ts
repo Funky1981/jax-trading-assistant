@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { buildUrl } from '@/config/api';
 
 export interface ServiceHealth {
   name: string;

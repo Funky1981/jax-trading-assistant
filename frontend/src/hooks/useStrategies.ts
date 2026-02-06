@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { buildUrl } from '@/config/api';
 
 export interface Strategy {
   id: string;
@@ -19,87 +20,12 @@ export interface Strategy {
   };
 }
 
-// Mock strategies data
-const mockStrategies: Strategy[] = [
-  {
-    id: 'strat-momentum',
-    name: 'Momentum Alpha',
-    description: 'Trend-following strategy using RSI and MACD',
-    status: 'active',
-    performance: {
-      totalPnl: 12450.75,
-      winRate: 58.3,
-      trades: 127,
-      sharpe: 1.85,
-    },
-    lastSignal: {
-      symbol: 'NVDA',
-      action: 'buy',
-      timestamp: Date.now() - 1800000,
-      confidence: 0.78,
-    },
-  },
-  {
-    id: 'strat-meanrev',
-    name: 'Mean Reversion',
-    description: 'Counter-trend strategy on oversold/overbought conditions',
-    status: 'active',
-    performance: {
-      totalPnl: 8320.50,
-      winRate: 62.1,
-      trades: 89,
-      sharpe: 1.42,
-    },
-    lastSignal: {
-      symbol: 'TSLA',
-      action: 'sell',
-      timestamp: Date.now() - 3600000,
-      confidence: 0.65,
-    },
-  },
-  {
-    id: 'strat-earnings',
-    name: 'Earnings Gap',
-    description: 'Trades earnings surprise gaps',
-    status: 'paused',
-    performance: {
-      totalPnl: 3890.25,
-      winRate: 54.5,
-      trades: 44,
-      sharpe: 1.12,
-    },
-  },
-  {
-    id: 'strat-volatility',
-    name: 'Volatility Spike',
-    description: 'Captures volatility expansion moves',
-    status: 'active',
-    performance: {
-      totalPnl: -1250.00,
-      winRate: 42.8,
-      trades: 35,
-      sharpe: 0.68,
-    },
-    lastSignal: {
-      symbol: 'SPY',
-      action: 'buy',
-      timestamp: Date.now() - 7200000,
-      confidence: 0.52,
-    },
-  },
-];
-
 async function fetchStrategies(): Promise<Strategy[]> {
-  try {
-    const response = await fetch('http://localhost:8080/api/strategies');
-    if (response.ok) {
-      return response.json();
-    }
-  } catch {
-    // API not available
+  const response = await fetch(buildUrl('JAX_API', '/api/strategies'));
+  if (!response.ok) {
+    throw new Error('Strategies service unavailable');
   }
-  
-  return mockStrategies;
+  return response.json();
 }
 
 export function useStrategies() {
@@ -107,6 +33,7 @@ export function useStrategies() {
     queryKey: ['strategies'],
     queryFn: fetchStrategies,
     refetchInterval: 30000,
+    retry: false, // Don't retry since JAX API is not available
   });
 }
 

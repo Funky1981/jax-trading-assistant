@@ -8,7 +8,9 @@ import {
   Briefcase, 
   Settings,
   Receipt,
-  Activity
+  Activity,
+  TrendingUp,
+  Server
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -17,9 +19,10 @@ import JaxLogo from '@/images/jax_ai_trader.svg';
 
 const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, end: true },
-  { label: 'Order Ticket', path: '/order-ticket', icon: Receipt },
-  { label: 'Blotter', path: '/blotter', icon: FileText },
+  { label: 'Trading', path: '/trading', icon: TrendingUp },
+  { label: 'System', path: '/system', icon: Server },
   { label: 'Portfolio', path: '/portfolio', icon: Briefcase },
+  { label: 'Blotter', path: '/blotter', icon: FileText },
   { label: 'Settings', path: '/settings', icon: Settings },
 ];
 

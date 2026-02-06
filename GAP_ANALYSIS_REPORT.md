@@ -11,6 +11,7 @@
 The Jax Trading Assistant has a **well-documented architecture** but significant **implementation gaps** between the vision and reality. The system is designed as an AI-powered trading assistant with four core components (Dexter, Agent0, go-UTCP, Hindsight), but critical integration points are missing or incomplete.
 
 **Key Findings:**
+
 - ✅ **Strong foundation**: IB Bridge, Auth, Security, Database are production-ready
 - ⚠️ **Major gaps**: AI orchestration, signal generation, frontend integration
 - ❌ **Missing**: Agent0 HTTP service, Dexter production mode, orchestration API
@@ -22,7 +23,7 @@ The Jax Trading Assistant has a **well-documented architecture** but significant
 
 ### The Vision: Four-Component AI Trading Assistant
 
-```
+```text
 ┌─────────────┐
 │   Dexter    │  "The Senses"
 │  (Ingestion │  - Market/event ingestion
@@ -48,6 +49,7 @@ The Jax Trading Assistant has a **well-documented architecture** but significant
 ### Expected Data Flow (Per Documentation)
 
 **Trading Loop:**
+
 1. **Dexter** detects market events (gaps, earnings, volume spikes)
 2. **Dexter** generates initial signals
 3. **Orchestrator** recalls relevant memories from **Hindsight**
@@ -66,6 +68,7 @@ The Jax Trading Assistant has a **well-documented architecture** but significant
    - Real-time IB data
 
 **Key Promises from Docs:**
+
 - AI makes trading suggestions based on memory + signals
 - User sees AI reasoning/confidence in UI
 - System learns from past decisions (reflection → beliefs)
@@ -78,6 +81,7 @@ The Jax Trading Assistant has a **well-documented architecture** but significant
 ### ✅ Working Components
 
 #### A. Infrastructure (Production Ready)
+
 - **IB Bridge Service** (Python FastAPI)
   - Location: `services/ib-bridge/`
   - Status: ✅ Complete (Phase 3)
@@ -157,6 +161,7 @@ The Jax Trading Assistant has a **well-documented architecture** but significant
 ### ❌ Missing/Incomplete Components
 
 #### A. Agent0 Service (NOT RUNNING)
+
 - **Expected**: HTTP service at `http://localhost:????`
 - **Location**: `Agent0/Agent0/` (vendored Python code)
 - **Current Status**: ❌ **No HTTP server, just training code**
@@ -169,10 +174,11 @@ The Jax Trading Assistant has a **well-documented architecture** but significant
   - Integration with jax-orchestrator
 
 #### B. Dexter Service (MOCK MODE ONLY)
+
 - **Expected**: Production signal generation
 - **Location**: `dexter/src/tools-server.ts`
 - **Current Status**: ⚠️ **Runs in mock mode**
-- **Endpoints**: 
+- **Endpoints**:
   - ✅ `POST /tools` (dexter.research_company, dexter.compare_companies)
   - ❌ Real signal generation (gaps, earnings, volume)
 - **What's missing**:
@@ -182,6 +188,7 @@ The Jax Trading Assistant has a **well-documented architecture** but significant
   - Integration with jax-orchestrator
 
 #### C. jax-orchestrator HTTP API (MISSING)
+
 - **Expected**: `POST /api/v1/orchestrate`
 - **Current**: CLI tool only
 - **Frontend expects**:
@@ -195,6 +202,7 @@ The Jax Trading Assistant has a **well-documented architecture** but significant
   - Run status tracking
 
 #### D. Strategy Signal API (MISSING)
+
 - **Expected**: Strategy analysis endpoints
 - **Frontend expects**:
   - `GET /api/v1/strategies/{id}/signals?limit=50`
@@ -216,7 +224,8 @@ The Jax Trading Assistant has a **well-documented architecture** but significant
 **Problem**: Frontend has orchestration hooks but no backend API
 
 **Expected Flow:**
-```
+
+```text
 User clicks "Analyze AAPL" 
   → POST /api/v1/orchestrate {symbol: "AAPL"}
   → jax-orchestrator service
@@ -227,13 +236,15 @@ User clicks "Analyze AAPL"
 ```
 
 **Current Reality:**
-```
+
+```text
 User clicks "Analyze AAPL"
   → POST /api/v1/orchestrate
   → 404 Not Found ❌
 ```
 
 **Files that prove this:**
+
 - ✅ Frontend: `frontend/src/data/orchestration-service.ts` (expects API)
 - ✅ Frontend: `frontend/src/hooks/useOrchestration.ts` (calls API)
 - ❌ Backend: No HTTP endpoint in jax-api
@@ -244,7 +255,8 @@ User clicks "Analyze AAPL"
 **Problem**: Strategy signals not generated or exposed
 
 **Expected Flow:**
-```
+
+```text
 Dexter ingests market data
   → Detects gap/earnings/volume event
   → Generates signal
@@ -254,13 +266,15 @@ Dexter ingests market data
 ```
 
 **Current Reality:**
-```
+
+```text
 Frontend: useStrategySignals() hook exists
   → Calls /api/v1/strategies/{id}/signals
   → 404 Not Found ❌
 ```
 
 **What exists:**
+
 - ✅ Strategy logic: `libs/strategies/` (MACD, RSI, MA)
 - ✅ UI component: `StrategyMonitorPanel.tsx`
 - ❌ Signal generation pipeline
@@ -272,7 +286,8 @@ Frontend: useStrategySignals() hook exists
 **Problem**: Agent0 is training code, not a service
 
 **Expected:**
-```
+
+```text
 jax-orchestrator
   → HTTP POST to Agent0 service
   → {task: "analyze AAPL", context: "...", memories: [...]}
@@ -280,13 +295,15 @@ jax-orchestrator
 ```
 
 **Current Reality:**
-```
+
+```text
 jax-orchestrator has Agent0Client interface ✅
 libs/agent0/client.go exists ✅
 BUT: No Agent0 HTTP service running ❌
 ```
 
 **Required:**
+
 1. Create Agent0 HTTP service (Python FastAPI)
 2. Implement `/v1/plan` endpoint
 3. Implement `/v1/execute` endpoint
@@ -298,6 +315,7 @@ BUT: No Agent0 HTTP service running ❌
 **Problem**: Dexter tools server runs but doesn't generate real signals
 
 **Current:**
+
 ```typescript
 // dexter/src/tools-server.ts
 if (isMockMode()) {
@@ -306,6 +324,7 @@ if (isMockMode()) {
 ```
 
 **What's missing:**
+
 - Real market data ingestion
 - Event detection (gaps, earnings)
 - Signal generation logic
@@ -316,7 +335,8 @@ if (isMockMode()) {
 **Problem**: Memory retention works, but reflection doesn't
 
 **Expected (Docs/backend/08):**
-```
+
+```text
 Scheduled job (daily/weekly)
   → Pulls recent trade_decisions + trade_outcomes
   → Synthesizes: "what worked", "what failed", "patterns"
@@ -325,6 +345,7 @@ Scheduled job (daily/weekly)
 ```
 
 **Current:**
+
 - ✅ Memory retention: `POST /tools` (memory.retain) works
 - ✅ Memory recall: `POST /tools` (memory.recall) works
 - ❌ Reflection job: Not implemented
@@ -333,17 +354,20 @@ Scheduled job (daily/weekly)
 ### Gap 6: Frontend Data Layer Disconnected ❌
 
 **Frontend expects (Phase 5 docs):**
+
 - Auto-refresh signals every 10s
 - Auto-refresh metrics every 5s
 - Smart polling for orchestration status
 - Cache invalidation on mutations
 
 **Missing APIs block this:**
+
 - `/api/v1/orchestrate/*`
 - `/api/v1/strategies/{id}/signals`
 - `/api/v1/strategies/{id}/performance`
 
 **Frontend components ready:**
+
 - ✅ `MemoryBrowser` (works with jax-memory)
 - ✅ `HealthStatusWidget` (works with /health)
 - ✅ `MetricsDashboard` (works with /api/v1/metrics)
@@ -357,7 +381,8 @@ Scheduled job (daily/weekly)
 ### Integration 1: IB Data → Dexter → Signals ❌
 
 **What should happen:**
-```
+
+```text
 IB Bridge (running ✅)
   ↓ WebSocket stream
 Dexter ingestion service
@@ -370,6 +395,7 @@ Frontend displays signals
 ```
 
 **Current:**
+
 - IB Bridge ✅ works
 - Dexter ⚠️ mock mode only
 - No ingestion pipeline
@@ -379,7 +405,8 @@ Frontend displays signals
 ### Integration 2: Agent0 → Orchestrator → Frontend ❌
 
 **What should happen:**
-```
+
+```text
 User triggers analysis
   ↓ POST /api/v1/orchestrate
 jax-api (or jax-orchestrator HTTP)
@@ -392,6 +419,7 @@ Frontend shows suggestion
 ```
 
 **Current:**
+
 - jax-orchestrator ✅ logic exists (CLI)
 - Agent0 ❌ no HTTP service
 - No HTTP API wrapper
@@ -400,7 +428,8 @@ Frontend shows suggestion
 ### Integration 3: Memory → Agent0 Decisions ⚠️
 
 **What should happen:**
-```
+
+```text
 Agent0 receives recalled memories
   → Uses them in planning
   → References them in reasoning notes
@@ -408,6 +437,7 @@ Agent0 receives recalled memories
 ```
 
 **Current:**
+
 - Memory recall ✅ works (jax-memory)
 - jax-orchestrator ✅ calls memory
 - Agent0 ❌ not running
@@ -416,7 +446,8 @@ Agent0 receives recalled memories
 ### Integration 4: Reflection → Beliefs → Future Decisions ❌
 
 **What should happen:**
-```
+
+```text
 Daily reflection job
   → Analyzes past outcomes
   → Creates belief items
@@ -425,6 +456,7 @@ Daily reflection job
 ```
 
 **Current:**
+
 - ❌ No reflection job
 - ❌ No belief synthesis
 - ❌ No feedback loop
@@ -438,6 +470,7 @@ Daily reflection job
 **Goal:** User can trigger orchestration and see AI suggestions
 
 **Tasks:**
+
 1. **Create jax-orchestrator HTTP API** (2-3 days)
    - New file: `services/jax-orchestrator/cmd/server/main.go`
    - Endpoints:
@@ -470,13 +503,15 @@ Daily reflection job
    - Check data flows to UI components
 
 **Success Criteria:**
+
 - ✅ User clicks "Analyze AAPL" in UI
 - ✅ Orchestration runs (visible in logs)
 - ✅ AI suggestion appears in UI
 - ✅ Memory browser shows retained decision
 
 **Files to create:**
-```
+
+```text
 services/
   jax-orchestrator/
     cmd/server/main.go          # HTTP server
@@ -497,6 +532,7 @@ services/
 **Goal:** Frontend displays real trading signals
 
 **Tasks:**
+
 1. **Add Signal Storage** (1 day)
    - New migration: `000004_strategy_signals.up.sql`
    - Table: `strategy_signals`
@@ -523,13 +559,15 @@ services/
    - Test StrategyMonitorPanel updates
 
 **Success Criteria:**
+
 - ✅ Strategy signals appear in database
 - ✅ `/api/v1/strategies/{id}/signals` returns data
 - ✅ StrategyMonitorPanel shows signals
 - ✅ Signals auto-refresh every 10s
 
 **Files to create:**
-```
+
+```text
 db/postgres/migrations/
   000004_strategy_signals.up.sql
   000004_strategy_signals.down.sql
@@ -547,6 +585,7 @@ services/jax-api/internal/
 **Goal:** Real market data flows through system
 
 **Tasks:**
+
 1. **Enable Dexter Production Mode** (2 days)
    - Update `dexter/src/tools-server.ts`
    - Remove mock mode dependency
@@ -565,6 +604,7 @@ services/jax-api/internal/
    - Frontend displays via existing API
 
 **Success Criteria:**
+
 - ✅ Real IB quotes stored in database
 - ✅ Dexter detects gaps/events
 - ✅ Signals generated from real data
@@ -577,6 +617,7 @@ services/jax-api/internal/
 **Goal:** System learns from past decisions
 
 **Tasks:**
+
 1. **Create Reflection Job** (2 days)
    - New service: `services/jax-reflection/`
    - Scheduled job (daily/weekly)
@@ -595,6 +636,7 @@ services/jax-api/internal/
    - Agent0 uses in decision-making
 
 **Success Criteria:**
+
 - ✅ Reflection job runs on schedule
 - ✅ Beliefs stored in memory
 - ✅ Agent0 recalls beliefs
@@ -605,6 +647,7 @@ services/jax-api/internal/
 ### 🔥 Phase 5: Polish & Production Readiness (Low Priority)
 
 **Tasks:**
+
 1. Add comprehensive error handling
 2. Improve logging/observability
 3. Add integration tests
@@ -618,8 +661,9 @@ services/jax-api/internal/
 
 ### New Files Required
 
-#### High Priority
-```
+#### High Priority (Phase 1)
+
+```text
 services/jax-orchestrator/cmd/server/main.go
 services/jax-orchestrator/internal/handlers/orchestrate.go
 services/agent0-api/main.py
@@ -631,8 +675,9 @@ services/jax-api/internal/infra/http/handlers_signals.go
 services/jax-api/internal/app/signal_generator.go
 ```
 
-#### Medium Priority
-```
+#### Medium Priority (Phase 2-3)
+
+```text
 services/jax-ingest/main.go (market data pipeline)
 services/jax-reflection/main.go (reflection job)
 dexter/src/ingestion/event_detector.ts
@@ -641,8 +686,9 @@ dexter/src/signals/gap_detector.ts
 
 ### Files to Modify
 
-#### High Priority
-```
+#### Files to Modify - High Priority (Phase 1)
+
+```text
 services/jax-api/cmd/jax-api/main.go
   → Add orchestration proxy endpoint
   
@@ -657,8 +703,9 @@ libs/agent0/client.go
   → Update base URL configuration
 ```
 
-#### Medium Priority
-```
+#### Files to Modify - Medium Priority (Phase 2-3)
+
+```text
 dexter/src/tools-server.ts
   → Remove mock mode
   → Add real signal generation
@@ -674,7 +721,8 @@ services/jax-api/internal/infra/http/server.go
 ### Test Case 1: End-to-End Orchestration
 
 **Expected Flow:**
-```
+
+```text
 1. User: Click "Analyze AAPL" in frontend
 2. Frontend: POST /api/v1/orchestrate {symbol: "AAPL"}
 3. jax-orchestrator:
@@ -693,7 +741,8 @@ services/jax-api/internal/infra/http/server.go
 ### Test Case 2: Strategy Signals
 
 **Expected Flow:**
-```
+
+```text
 1. Background job: Run MACD strategy on AAPL
 2. Strategy: Generates "buy" signal at $150
 3. Database: Insert into strategy_signals
@@ -706,7 +755,8 @@ services/jax-api/internal/infra/http/server.go
 ### Test Case 3: IB Data Flow
 
 **Expected Flow:**
-```
+
+```text
 1. IB Gateway: Streaming quotes
 2. IB Bridge: Exposes via WebSocket
 3. jax-ingest: Consumes stream
@@ -723,28 +773,36 @@ services/jax-api/internal/infra/http/server.go
 ## 8. Key Questions Answered
 
 ### Q: Where should AI suggestions appear in the UI?
+
 **A:** Multiple places:
+
 1. **StrategyMonitorPanel** - Shows AI-generated signals
 2. **OrderTicketPanel** - AI suggests entry/stop/target
 3. **MemoryBrowserPanel** - Shows past AI decisions
 4. **New component needed**: "AI Assistant Panel" with orchestration results
 
 ### Q: Is Agent0 integrated with the frontend?
+
 **A:** ❌ No
+
 - Frontend has hooks ready (`useOrchestration.ts`)
 - Agent0 client library exists (`libs/agent0/client.go`)
 - BUT: No Agent0 HTTP service running
 - AND: No orchestration API endpoint
 
 ### Q: Is Dexter generating signals?
+
 **A:** ⚠️ Partially
+
 - Dexter tools server runs
 - Only in mock mode
 - No real event detection
 - No signal persistence
 
 ### Q: Is Hindsight storing/retrieving memories?
+
 **A:** ✅ Yes (partially)
+
 - jax-memory service works
 - Retention works
 - Recall works
@@ -752,8 +810,10 @@ services/jax-api/internal/infra/http/server.go
 - No production usage yet (CLI only)
 
 ### Q: What's the data flow from IB → Dexter → Agent0 → UI?
+
 **A:** Currently BROKEN:
-```
+
+```text
 IB Bridge ✅ (works)
     ↓
 [MISSING: Ingestion pipeline] ❌
@@ -768,7 +828,8 @@ Frontend ❌ (orphaned)
 ```
 
 **Should be:**
-```
+
+```text
 IB Bridge → jax-ingest → Dexter → Signal DB → jax-api → Frontend
           → Memory recall → Agent0 → Orchestration → Frontend
 ```
@@ -778,18 +839,21 @@ IB Bridge → jax-ingest → Dexter → Signal DB → jax-api → Frontend
 ## 9. Immediate Next Steps (Week 1)
 
 ### Day 1-2: Agent0 HTTP Service
+
 - Create `services/agent0-api/` Python FastAPI service
 - Implement `/v1/plan` endpoint with simple rule-based planner
 - Add to docker-compose.yml
 - Test with curl
 
 ### Day 3-4: Orchestrator HTTP API
+
 - Create `services/jax-orchestrator/cmd/server/main.go`
 - Wrap existing orchestrator logic
 - Add REST endpoints
 - Test end-to-end with Agent0
 
 ### Day 5: Frontend Integration
+
 - Verify frontend hooks work
 - Test orchestration trigger
 - Check memory browser updates
@@ -800,24 +864,28 @@ IB Bridge → jax-ingest → Dexter → Signal DB → jax-api → Frontend
 ## 10. Success Metrics
 
 ### Phase 1 Success (AI Visible)
+
 - [ ] User can trigger orchestration from UI
 - [ ] AI plan appears in UI (confidence %, reasoning)
 - [ ] Memory browser shows decision
 - [ ] Metrics dashboard shows orchestration events
 
 ### Phase 2 Success (Signals Flowing)
+
 - [ ] Strategy signals in database
 - [ ] StrategyMonitorPanel shows signals
 - [ ] Auto-refresh every 10s works
 - [ ] Signal history viewable
 
 ### Phase 3 Success (Real Data)
+
 - [ ] IB quotes stored continuously
 - [ ] Dexter detects real events
 - [ ] Signals based on real market data
 - [ ] End-to-end latency < 5s
 
 ### Phase 4 Success (Learning)
+
 - [ ] Reflection job runs daily
 - [ ] Beliefs stored in memory
 - [ ] Agent0 references beliefs in decisions
@@ -828,7 +896,7 @@ IB Bridge → jax-ingest → Dexter → Signal DB → jax-api → Frontend
 ## Appendix A: Service Port Map
 
 | Service | Port | Status | Purpose |
-|---------|------|--------|---------|
+| ------- | ---- | ------ | ------- |
 | hindsight | 8888 | ✅ Running | Memory backend |
 | jax-memory | 8090 | ✅ Running | Memory facade |
 | jax-api | 8081 | ✅ Running | Main API |
@@ -844,7 +912,7 @@ IB Bridge → jax-ingest → Dexter → Signal DB → jax-api → Frontend
 ## Appendix B: Documentation vs Reality Matrix
 
 | Feature | Documented | Implemented | Gap |
-|---------|-----------|-------------|-----|
+| ------- | ---------- | ----------- | --- |
 | IB Integration | ✅ Complete | ✅ Complete | None |
 | Memory Service | ✅ Complete | ✅ Complete | None |
 | Auth/Security | ✅ Complete | ✅ Complete | None |
@@ -858,6 +926,6 @@ IB Bridge → jax-ingest → Dexter → Signal DB → jax-api → Frontend
 
 ---
 
-**End of Report**
+## End of Report
 
 **Recommendation:** Prioritize Phase 1 (Agent0 + Orchestrator HTTP) to make the AI system visible and testable. This will unblock frontend integration and provide immediate value to users.

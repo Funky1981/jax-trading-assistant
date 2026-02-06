@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { buildUrl } from '@/config/api';
 
 export interface MetricEvent {
   id: string;
@@ -10,97 +11,12 @@ export interface MetricEvent {
   metadata?: Record<string, unknown>;
 }
 
-// Mock metrics data
-const mockMetrics: MetricEvent[] = [
-  {
-    id: 'm-001',
-    event: 'order.submitted',
-    source: 'jax-api',
-    duration: 45,
-    timestamp: Date.now() - 60000,
-    status: 'success',
-    metadata: { symbol: 'AAPL', side: 'buy' },
-  },
-  {
-    id: 'm-002',
-    event: 'market_data.tick',
-    source: 'ib-bridge',
-    duration: 12,
-    timestamp: Date.now() - 120000,
-    status: 'success',
-    metadata: { symbols: 8 },
-  },
-  {
-    id: 'm-003',
-    event: 'strategy.signal',
-    source: 'orchestrator',
-    duration: 156,
-    timestamp: Date.now() - 180000,
-    status: 'success',
-    metadata: { strategy: 'momentum', action: 'buy' },
-  },
-  {
-    id: 'm-004',
-    event: 'memory.query',
-    source: 'jax-memory',
-    duration: 89,
-    timestamp: Date.now() - 240000,
-    status: 'success',
-    metadata: { bank: 'trades', results: 25 },
-  },
-  {
-    id: 'm-005',
-    event: 'risk.check',
-    source: 'orchestrator',
-    duration: 234,
-    timestamp: Date.now() - 300000,
-    status: 'warning',
-    metadata: { exposure: 0.75, limit: 0.80 },
-  },
-  {
-    id: 'm-006',
-    event: 'order.rejected',
-    source: 'ib-bridge',
-    duration: 32,
-    timestamp: Date.now() - 360000,
-    status: 'error',
-    metadata: { reason: 'insufficient_margin' },
-  },
-  {
-    id: 'm-007',
-    event: 'health.check',
-    source: 'jax-api',
-    duration: 18,
-    timestamp: Date.now() - 420000,
-    status: 'success',
-  },
-  {
-    id: 'm-008',
-    event: 'position.updated',
-    source: 'jax-api',
-    duration: 67,
-    timestamp: Date.now() - 480000,
-    status: 'success',
-    metadata: { symbol: 'NVDA', pnl: 1250.50 },
-  },
-];
-
 async function fetchMetrics(): Promise<MetricEvent[]> {
-  try {
-    const response = await fetch('http://localhost:8080/api/metrics/events');
-    if (response.ok) {
-      return response.json();
-    }
-  } catch {
-    // API not available
+  const response = await fetch(buildUrl('JAX_API', '/api/metrics/events'));
+  if (!response.ok) {
+    throw new Error('Metrics service unavailable');
   }
-  
-  // Return mock data with updated timestamps
-  const now = Date.now();
-  return mockMetrics.map((metric, index) => ({
-    ...metric,
-    timestamp: now - (index + 1) * 60000,
-  }));
+  return response.json();
 }
 
 export function useMetrics() {
@@ -108,6 +24,7 @@ export function useMetrics() {
     queryKey: ['metrics'],
     queryFn: fetchMetrics,
     refetchInterval: 10000,
+    retry: false, // Don't retry since JAX API is not available
   });
 }
 

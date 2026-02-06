@@ -1,0 +1,105 @@
+/**
+ * Widget Grid Styles
+ * Custom styles for react-grid-layout integration with dark theme
+ */
+
+/* Grid container */
+.widget-grid-container {
+  position: relative;
+}
+
+.widget-grid {
+  min-height: 100%;
+}
+
+/* Grid item transitions */
+.react-grid-item {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform, box-shadow;
+}
+
+.react-grid-item.resizing {
+  z-index: 10;
+  will-change: width, height;
+}
+
+.react-grid-item.react-draggable-dragging {
+  z-index: 20;
+  will-change: transform;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+}
+
+/* Placeholder styling for dark theme */
+.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.2) !important;
+  border: 2px dashed hsl(var(--primary) / 0.5) !important;
+  border-radius: 0.5rem;
+  opacity: 1 !important;
+  transition: all 150ms ease;
+}
+
+/* Drag handle styling */
+.widget-drag-handle {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.widget-drag-handle:hover {
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+.widget-drag-handle:active {
+  background-color: hsl(var(--muted));
+}
+
+/* Resize handle styling */
+.react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  z-index: 10;
+}
+
+.react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid hsl(var(--muted-foreground) / 0.4);
+  border-bottom: 2px solid hsl(var(--muted-foreground) / 0.4);
+  transition: border-color 150ms ease;
+}
+
+.react-resizable-handle:hover::after {
+  border-right-color: hsl(var(--primary));
+  border-bottom-color: hsl(var(--primary));
+}
+
+/* Static mode - disable interactions */
+.react-grid-item.static .react-resizable-handle {
+  display: none;
+}
+
+/* Smooth layout animations */
+.react-grid-layout {
+  transition: height 200ms ease;
+}
+
+/* Grid item states */
+.react-grid-item > .react-resizable-handle {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 1;
+}

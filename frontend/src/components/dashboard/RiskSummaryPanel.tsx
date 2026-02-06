@@ -2,6 +2,8 @@ import { Shield } from 'lucide-react';
 import { useRiskSummary } from '@/hooks/useRisk';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Progress } from '@/components/ui/progress';
+import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
+import { Separator } from '@/components/ui/separator';
 import { cn, formatCurrency, formatPercent } from '@/lib/utils';
 
 interface RiskSummaryPanelProps {
@@ -10,13 +12,17 @@ interface RiskSummaryPanelProps {
 }
 
 export function RiskSummaryPanel({ isOpen, onToggle }: RiskSummaryPanelProps) {
-  const { data: summary, metrics, isLoading } = useRiskSummary();
+  const { data: summary, metrics, isLoading, isError } = useRiskSummary();
+
+  const isDataLive = !isError && metrics !== null;
 
   const summaryText = summary ? (
-    <div className="flex items-center gap-3">
-      <span>{formatCurrency(summary.exposure)}</span>
+    <div className="flex items-center gap-3 text-xs">
+      <DataSourceBadge isLive={isDataLive} isError={isError} />
+      <span className="font-mono">{formatCurrency(summary.exposure)}</span>
+      <Separator orientation="vertical" className="h-4" />
       <span className="text-muted-foreground">
-        ({summary.utilizationPercent.toFixed(1)}% utilized)
+        {summary.utilizationPercent.toFixed(1)}% utilized
       </span>
     </div>
   ) : null;

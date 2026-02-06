@@ -11,6 +11,8 @@ import {
 import { usePositionsSummary, Position } from '@/hooks/usePositions';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Button } from '@/components/ui/button';
+import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
+import { Separator } from '@/components/ui/separator';
 import {
   Table,
   TableBody,
@@ -29,8 +31,10 @@ interface PositionsPanelProps {
 const columnHelper = createColumnHelper<Position>();
 
 export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
-  const { data: summary, positions, isLoading } = usePositionsSummary();
+  const { data: summary, positions, isLoading, isError } = usePositionsSummary();
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  const isDataLive = !isError;
 
   const columns = useMemo(
     () => [
@@ -128,8 +132,12 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
   });
 
   const summaryText = summary ? (
-    <div className="flex items-center gap-3">
-      <span>{formatCurrency(summary.totalValue)}</span>
+    <div className="flex items-center gap-3 text-xs">
+      <DataSourceBadge isLive={isDataLive} isError={isError} />
+      <span className="font-mono">{summary.positionCount} positions</span>
+      <Separator orientation="vertical" className="h-4" />
+      <span className="font-mono">{formatCurrency(summary.totalValue)}</span>
+      <Separator orientation="vertical" className="h-4" />
       <span
         className={cn(
           'font-mono font-semibold',

@@ -49,6 +49,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	var dbConn *database.DB
 	if coreCfg.PostgresDSN != "" {
 		// Configure database connection with pooling and retry logic
 		dbConfig := database.DefaultConfig()
@@ -60,6 +61,7 @@ func main() {
 			log.Fatalf("failed to connect to database: %v", err)
 		}
 		defer db.Close()
+		dbConn = db
 
 		log.Printf("database connected: max_open=%d, max_idle=%d, max_lifetime=%v",
 			dbConfig.MaxOpenConns, dbConfig.MaxIdleConns, dbConfig.ConnMaxLifetime)
@@ -119,11 +121,17 @@ func main() {
 
 	var tradeStore app.TradeStore
 	var tradeSaver app.Storage
+	var signalStore app.SignalStore
 	if coreCfg.PostgresDSN != "" {
 		storeAdapter := adapters.NewUTCPStorageAdapter(storageSvc)
 		tradeStore = storeAdapter
 		tradeSaver = storeAdapter
 		auditLogger = app.NewAuditLogger(storeAdapter)
+
+		// Initialize signal store with direct database access
+		if dbConn != nil {
+			signalStore = adapters.NewPostgresSignalStore(dbConn.DB)
+		}
 	}
 
 	var dexter app.Dexter
@@ -146,10 +154,11 @@ func main() {
 	server.RegisterProcess(orchestrator, coreCfg.AccountSize, coreCfg.RiskPercent, 3)
 	server.RegisterTrades(tradeStore)
 	server.RegisterTradingGuard(tradingGuard)
+	server.RegisterSignals(signalStore)
 
 	addr := fmt.Sprintf(":%d", coreCfg.HTTPPort)
 	log.Printf("jax-core listening on %s", addr)
 	log.Printf("Public endpoints: /health, /auth/login, /auth/refresh")
-	log.Printf("Protected endpoints: /risk/*, /strategies, /trades, /symbols/*, /trading/*, /api/v1/metrics*")
+	log.Printf("Protected endpoints: /risk/*, /strategies, /trades, /symbols/*, /trading/*, /api/v1/metrics*, /api/v1/signals*")
 	log.Fatal(http.ListenAndServe(addr, server.Handler()))
 }

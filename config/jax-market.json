@@ -1,0 +1,38 @@
+{
+  "database_dsn": "postgresql://jax:jax@postgres:5432/jax?sslmode=disable",
+  "ingest_interval": 60,
+  "symbols": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "TSLA",
+    "META",
+    "NVDA",
+    "AMD",
+    "NFLX",
+    "SPY"
+  ],
+  "polygon": {
+    "enabled": false,
+    "api_key": "",
+    "tier": "free"
+  },
+  "alpaca": {
+    "enabled": false,
+    "api_key": "",
+    "api_secret": "",
+    "tier": "free"
+  },
+  "ib": {
+    "enabled": true,
+    "host": "host.docker.internal",
+    "port": 4002,
+    "client_id": 2
+  },
+  "cache": {
+    "enabled": false,
+    "redis_url": "",
+    "ttl": 60
+  }
+}

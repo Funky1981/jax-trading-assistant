@@ -27,15 +27,17 @@ Transform the Jax Trading Assistant from a collection of isolated services into 
 
 **Implementation:**
 
-1. **Create service directory structure**
+#### Step 1: Create service directory structure
+
 ```bash
 mkdir -p services/agent0-api
 cd services/agent0-api
 ```
 
-2. **Create files:**
+#### Step 2: Create files
 
 `services/agent0-api/main.py`:
+
 ```python
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -129,13 +131,15 @@ if __name__ == "__main__":
 ```
 
 `services/agent0-api/requirements.txt`:
-```
+
+```text
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
 pydantic==2.5.0
 ```
 
 `services/agent0-api/Dockerfile`:
+
 ```dockerfile
 FROM python:3.11-slim
 
@@ -151,7 +155,8 @@ EXPOSE 8094
 CMD ["python", "main.py"]
 ```
 
-3. **Test locally:**
+#### Step 3: Test locally
+
 ```bash
 cd services/agent0-api
 pip install -r requirements.txt
@@ -169,7 +174,8 @@ curl -X POST http://localhost:8094/v1/plan \
   }'
 ```
 
-4. **Add to docker-compose.yml:**
+#### Step 4: Add to docker-compose.yml
+
 ```yaml
   agent0-api:
     build:
@@ -190,10 +196,11 @@ curl -X POST http://localhost:8094/v1/plan \
 ```
 
 **Success Criteria:**
+
 - ✅ Service starts: `docker compose up agent0-api`
 - ✅ Health check passes: `curl http://localhost:8094/health`
 - ✅ Plan endpoint works: Returns PlanResponse
-- ✅ Logs show "Uvicorn running on http://0.0.0.0:8094"
+- ✅ Logs show "Uvicorn running on <http://0.0.0.0:8094>"
 
 ---
 
@@ -203,231 +210,209 @@ curl -X POST http://localhost:8094/v1/plan \
 
 **Implementation:**
 
-1. **Create HTTP server:**
+#### Step 1: Create HTTP server
 
 `services/jax-orchestrator/cmd/server/main.go`:
+
 ```go
 package main
 
 import (
-	"context"
-	"encoding/json"
-	"flag"
-	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"time"
+    "context"
+    "encoding/json"
+    "flag"
+    "fmt"
+    "log"
+    "net/http"
+    "os"
+    "time"
 
-	"jax-trading-assistant/libs/agent0"
-	"jax-trading-assistant/libs/contracts"
-	"jax-trading-assistant/libs/observability"
-	"jax-trading-assistant/libs/strategies"
-	"jax-trading-assistant/libs/utcp"
-	"jax-trading-assistant/services/jax-orchestrator/internal/app"
-	"jax-trading-assistant/services/jax-orchestrator/internal/config"
+    "jax-trading-assistant/libs/agent0"
+    "jax-trading-assistant/libs/contracts"
+    "jax-trading-assistant/libs/observability"
+    "jax-trading-assistant/libs/strategies"
+    "jax-trading-assistant/libs/utcp"
+    "jax-trading-assistant/services/jax-orchestrator/internal/app"
+    "jax-trading-assistant/services/jax-orchestrator/internal/config"
 )
 
 type Server struct {
-	orchestrator *app.Orchestrator
-	port         int
+    orchestrator *app.Orchestrator
+    port         int
 }
 
 func main() {
-	var port int
-	var providersPath string
-	flag.IntVar(&port, "port", 8093, "HTTP port")
-	flag.StringVar(&providersPath, "providers", "config/providers.json", "Providers path")
-	flag.Parse()
+    var port int
+    var providersPath string
+    flag.IntVar(&port, "port", 8093, "HTTP port")
+    flag.StringVar(&providersPath, "providers", "config/providers.json", "Providers path")
+    flag.Parse()
 
-	// Initialize UTCP client
-	client, err := utcp.NewUTCPClientFromFile(providersPath)
-	if err != nil {
-		log.Fatal(err)
-	}
+    // Initialize UTCP client
+    client, err := utcp.NewUTCPClientFromFile(providersPath)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// Initialize memory adapter
-	memorySvc := utcp.NewMemoryService(client)
-	memory := &memoryAdapter{svc: memorySvc}
+    // Initialize memory adapter
+    memorySvc := utcp.NewMemoryService(client)
+    memory := &memoryAdapter{svc: memorySvc}
 
-	// Initialize Agent0 client
-	agent0URL := os.Getenv("AGENT0_URL")
-	if agent0URL == "" {
-		agent0URL = "http://localhost:8094"
-	}
-	agentClient, err := agent0.New(agent0URL)
-	if err != nil {
-		log.Fatalf("failed to create agent0 client: %v", err)
-	}
-	agent := &agent0Adapter{client: agentClient}
+    // Initialize Agent0 client
+    agent0URL := os.Getenv("AGENT0_URL")
+    if agent0URL == "" {
+        agent0URL = "http://localhost:8094"
+    }
+    agentClient, err := agent0.New(agent0URL)
+    if err != nil {
+        log.Fatalf("failed to create agent0 client: %v", err)
+    }
+    agent := &agent0Adapter{client: agentClient}
 
-	// Initialize strategy registry (optional)
-	var strategyRegistry *strategies.Registry
-	// TODO: Load from config if needed
+    // Initialize strategy registry (optional)
+    var strategyRegistry *strategies.Registry
+    // TODO: Load from config if needed
 
-	// Create orchestrator
-	tools := &stubToolRunner{}
-	orch := app.NewOrchestrator(memory, agent, tools, strategyRegistry)
+    // Create orchestrator
+    tools := &stubToolRunner{}
+    orch := app.NewOrchestrator(memory, agent, tools, strategyRegistry)
 
-	// Start server
-	srv := &Server{
-		orchestrator: orch,
-		port:         port,
-	}
-	srv.Start()
+    // Start server
+    srv := &Server{
+        orchestrator: orch,
+        port:         port,
+    }
+    srv.Start()
 }
 
 func (s *Server) Start() {
-	mux := http.NewServeMux()
-	
-	// Health check
-	mux.HandleFunc("/health", s.handleHealth)
-	
-	// Orchestration endpoints
-	mux.HandleFunc("/api/v1/orchestrate", s.handleOrchestrate)
-	mux.HandleFunc("/api/v1/orchestrate/runs/", s.handleGetRun)
-	mux.HandleFunc("/api/v1/orchestrate/runs", s.handleListRuns)
-
-	addr := fmt.Sprintf(":%d", s.port)
-	log.Printf("Starting orchestrator HTTP server on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
-}
-
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"status":  "healthy",
-		"service": "jax-orchestrator",
-	})
-}
-
-type orchestrateRequest struct {
-	Symbol          string         `json:"symbol"`
-	Strategy        string         `json:"strategy,omitempty"`
-	Bank            string         `json:"bank,omitempty"`
-	UserContext     string         `json:"context,omitempty"`
-	Constraints     map[string]any `json:"constraints,omitempty"`
-	ResearchQueries []string       `json:"research_queries,omitempty"`
+    Symbol          string         `json:"symbol"`
+    Strategy        string         `json:"strategy,omitempty"`
+    Bank            string         `json:"bank,omitempty"`
+    UserContext     string         `json:"context,omitempty"`
+    Constraints     map[string]any `json:"constraints,omitempty"`
+    ResearchQueries []string       `json:"research_queries,omitempty"`
 }
 
 func (s *Server) handleOrchestrate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodPost {
+        http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
-	var req orchestrateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+    var req orchestrateRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
 
-	if req.Symbol == "" {
-		http.Error(w, "symbol is required", http.StatusBadRequest)
-		return
-	}
-	if req.Bank == "" {
-		req.Bank = "decisions" // default
-	}
+    if req.Symbol == "" {
+        http.Error(w, "symbol is required", http.StatusBadRequest)
+        return
+    }
+    if req.Bank == "" {
+        req.Bank = "decisions" // default
+    }
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
-	defer cancel()
+    ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+    defer cancel()
 
-	runID := observability.NewRunID()
-	ctx = observability.WithRunInfo(ctx, observability.RunInfo{
-		RunID:  runID,
-		TaskID: "orchestrate-" + req.Symbol,
-		Symbol: req.Symbol,
-	})
+    runID := observability.NewRunID()
+    ctx = observability.WithRunInfo(ctx, observability.RunInfo{
+        RunID:  runID,
+        TaskID: "orchestrate-" + req.Symbol,
+        Symbol: req.Symbol,
+    })
 
-	result, err := s.orchestrator.Run(ctx, app.OrchestrationRequest{
-		Bank:            req.Bank,
-		Symbol:          req.Symbol,
-		Strategy:        req.Strategy,
-		UserContext:     req.UserContext,
-		Constraints:     req.Constraints,
-		ResearchQueries: req.ResearchQueries,
-	})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+    result, err := s.orchestrator.Run(ctx, app.OrchestrationRequest{
+        Bank:            req.Bank,
+        Symbol:          req.Symbol,
+        Strategy:        req.Strategy,
+        UserContext:     req.UserContext,
+        Constraints:     req.Constraints,
+        ResearchQueries: req.ResearchQueries,
+    })
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
 
-	response := map[string]any{
-		"runId": runID,
-		"plan": map[string]any{
-			"summary":         result.Plan.Summary,
-			"steps":           result.Plan.Steps,
-			"action":          result.Plan.Action,
-			"confidence":      result.Plan.Confidence,
-			"reasoning_notes": result.Plan.ReasoningNotes,
-		},
-		"tools":     result.Tools,
-		"symbol":    req.Symbol,
-		"timestamp": time.Now().Format(time.RFC3339),
-	}
+    response := map[string]any{
+        "runId": runID,
+        "plan": map[string]any{
+            "summary":         result.Plan.Summary,
+            "steps":           result.Plan.Steps,
+            "action":          result.Plan.Action,
+            "confidence":      result.Plan.Confidence,
+            "reasoning_notes": result.Plan.ReasoningNotes,
+        },
+        "tools":     result.Tools,
+        "symbol":    req.Symbol,
+        "timestamp": time.Now().Format(time.RFC3339),
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(response)
 }
 
 // Stub implementations for other handlers
 func (s *Server) handleGetRun(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement run status tracking
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"status": "completed",
-		"message": "Run status tracking not yet implemented",
-	})
+    // TODO: Implement run status tracking
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]any{
+        "status": "completed",
+        "message": "Run status tracking not yet implemented",
+    })
 }
 
 func (s *Server) handleListRuns(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement run history
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode([]map[string]any{})
+    // TODO: Implement run history
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode([]map[string]any{})
 }
 
 // Adapters
 type memoryAdapter struct {
-	svc *utcp.MemoryService
+    svc *utcp.MemoryService
 }
 
 func (m *memoryAdapter) Recall(ctx context.Context, bank string, query contracts.MemoryQuery) ([]contracts.MemoryItem, error) {
-	out, err := m.svc.Recall(ctx, contracts.MemoryRecallRequest{Bank: bank, Query: query})
-	if err != nil {
-		return nil, err
-	}
-	return out.Items, nil
+    out, err := m.svc.Recall(ctx, contracts.MemoryRecallRequest{Bank: bank, Query: query})
+    if err != nil {
+        return nil, err
+    }
+    return out.Items, nil
 }
 
 func (m *memoryAdapter) Retain(ctx context.Context, bank string, item contracts.MemoryItem) (contracts.MemoryID, error) {
-	out, err := m.svc.Retain(ctx, contracts.MemoryRetainRequest{Bank: bank, Item: item})
-	if err != nil {
-		return "", err
-	}
-	return out.ID, nil
+    out, err := m.svc.Retain(ctx, contracts.MemoryRetainRequest{Bank: bank, Item: item})
+    if err != nil {
+        return "", err
+    }
+    return out.ID, nil
 }
 
 type agent0Adapter struct {
-	client *agent0.Client
+    client *agent0.Client
 }
 
 func (a *agent0Adapter) Plan(ctx context.Context, req agent0.PlanRequest) (agent0.PlanResponse, error) {
-	return a.client.Plan(ctx, req)
+    return a.client.Plan(ctx, req)
 }
 
 func (a *agent0Adapter) Execute(ctx context.Context, req agent0.ExecuteRequest) (agent0.ExecuteResponse, error) {
-	return a.client.Execute(ctx, req)
+    return a.client.Execute(ctx, req)
 }
 
 type stubToolRunner struct{}
 
 func (stubToolRunner) Execute(_ context.Context, _ app.PlanResult) ([]app.ToolRun, error) {
-	return []app.ToolRun{}, nil
+    return []app.ToolRun{}, nil
 }
 ```
 
-2. **Build and test:**
+#### Step 2: Build and test
+
 ```bash
 cd services/jax-orchestrator
 go build -o bin/server ./cmd/server
@@ -442,7 +427,8 @@ curl -X POST http://localhost:8093/api/v1/orchestrate \
   -d '{"symbol": "AAPL"}'
 ```
 
-3. **Add to docker-compose.yml:**
+#### Step 3: Add to docker-compose.yml
+
 ```yaml
   jax-orchestrator:
     build:
@@ -461,9 +447,10 @@ curl -X POST http://localhost:8093/api/v1/orchestrate \
       - ./config:/workspace/config:ro
 ```
 
-4. **Create Dockerfile:**
+#### Step 4: Create Dockerfile
 
 `services/jax-orchestrator/Dockerfile.server`:
+
 ```dockerfile
 FROM golang:1.22 AS builder
 WORKDIR /workspace
@@ -480,6 +467,7 @@ CMD ["/bin/orchestrator-server"]
 ```
 
 **Success Criteria:**
+
 - ✅ Server starts on port 8093
 - ✅ `/health` returns 200
 - ✅ `POST /api/v1/orchestrate` calls Agent0
@@ -494,18 +482,20 @@ CMD ["/bin/orchestrator-server"]
 
 **Implementation:**
 
-1. **Update environment config:**
+#### Step 1: Update environment config
 
 `frontend/.env`:
+
 ```env
 VITE_API_URL=http://localhost:8081
 VITE_MEMORY_API_URL=http://localhost:8090
 VITE_ORCHESTRATOR_API_URL=http://localhost:8093
 ```
 
-2. **Update http client (if needed):**
+#### Step 2: Update http client (if needed)
 
 `frontend/src/data/orchestration-service.ts`:
+
 ```typescript
 import { apiClient } from './http-client';
 // OR create dedicated client:
@@ -525,6 +515,7 @@ export const orchestrationService = {
 ```
 
 **Success Criteria:**
+
 - ✅ Frontend calls correct orchestrator URL
 - ✅ No CORS errors
 - ✅ Requests reach orchestrator
@@ -535,7 +526,8 @@ export const orchestrationService = {
 
 **Implementation:**
 
-1. **Start all services:**
+#### Step 1: Start all services
+
 ```bash
 docker compose up -d hindsight jax-memory ib-bridge agent0-api jax-orchestrator
 
@@ -547,7 +539,8 @@ curl http://localhost:8094/health  # agent0-api
 curl http://localhost:8093/health  # jax-orchestrator
 ```
 
-2. **Test orchestration flow:**
+#### Step 2: Test orchestration flow
+
 ```bash
 # Trigger orchestration
 curl -X POST http://localhost:8093/api/v1/orchestrate \
@@ -575,7 +568,8 @@ curl -X POST http://localhost:8093/api/v1/orchestrate \
 }
 ```
 
-3. **Verify memory retention:**
+#### Step 3: Verify memory retention
+
 ```bash
 # Check that decision was retained
 curl -X POST http://localhost:8090/tools \
@@ -592,7 +586,8 @@ curl -X POST http://localhost:8090/tools \
   }' | jq .
 ```
 
-4. **Test from frontend:**
+#### Step 4: Test from frontend
+
 ```typescript
 // In browser console or component
 const result = await orchestrationService.run({
@@ -604,6 +599,7 @@ console.log(result);
 ```
 
 **Success Criteria:**
+
 - ✅ Orchestration completes in < 5s
 - ✅ Agent0 returns plan
 - ✅ Memory shows retained decision
@@ -618,9 +614,10 @@ console.log(result);
 
 **Implementation:**
 
-1. **Create AI Assistant Panel:**
+#### Step 1: Create AI Assistant Panel
 
 `frontend/src/components/dashboard/AIAssistantPanel.tsx`:
+
 ```typescript
 import { Brain, TrendingUp, TrendingDown } from 'lucide-react';
 import { useState } from 'react';
@@ -719,9 +716,10 @@ export function AIAssistantPanel() {
 }
 ```
 
-2. **Add to Dashboard:**
+#### Step 2: Add to Dashboard
 
 `frontend/src/pages/DashboardPage.tsx`:
+
 ```typescript
 import { AIAssistantPanel } from '@/components/dashboard/AIAssistantPanel';
 
@@ -732,6 +730,7 @@ import { AIAssistantPanel } from '@/components/dashboard/AIAssistantPanel';
 ```
 
 **Success Criteria:**
+
 - ✅ User enters symbol, clicks Analyze
 - ✅ Loading state shows during orchestration
 - ✅ AI suggestion appears with confidence
@@ -762,6 +761,7 @@ import { AIAssistantPanel } from '@/components/dashboard/AIAssistantPanel';
 [See GAP_ANALYSIS_REPORT.md for detailed Phase 2 plan]
 
 **Summary:**
+
 1. Add signal storage (migration 000004)
 2. Create signal generation endpoints
 3. Background signal generator
@@ -772,6 +772,7 @@ import { AIAssistantPanel } from '@/components/dashboard/AIAssistantPanel';
 ## 📋 Phase 3: Real Market Data (Week 3)
 
 **Summary:**
+
 1. Enable Dexter production mode
 2. Create ingestion pipeline (IB → DB)
 3. Wire Dexter to signal generation
@@ -781,9 +782,10 @@ import { AIAssistantPanel } from '@/components/dashboard/AIAssistantPanel';
 
 ## 🔍 Validation Points
 
-### After Phase 1:
+### After Phase 1
 
 **Test Script:**
+
 ```bash
 #!/bin/bash
 echo "=== Phase 1 Validation ==="
@@ -820,7 +822,8 @@ echo "=== Validation Complete ==="
 Run: `chmod +x validate-phase1.sh && ./validate-phase1.sh`
 
 **Expected Output:**
-```
+
+```text
 1. Starting services... ✅
 2. Waiting... ✅
 3. Testing Agent0... {"status":"healthy",...} ✅
@@ -836,12 +839,14 @@ Run: `chmod +x validate-phase1.sh && ./validate-phase1.sh`
 ### Issue 1: Agent0 service won't start
 
 **Symptoms:**
-```
+
+```text
 agent0-api_1 exited with code 1
 ModuleNotFoundError: No module named 'fastapi'
 ```
 
 **Solution:**
+
 ```bash
 cd services/agent0-api
 pip install -r requirements.txt
@@ -852,11 +857,13 @@ docker compose build agent0-api
 ### Issue 2: Orchestrator can't connect to Agent0
 
 **Symptoms:**
-```
+
+```text
 failed to call agent0: connection refused
 ```
 
 **Solution:**
+
 - Check AGENT0_URL environment variable
 - Ensure agent0-api is running: `docker compose ps agent0-api`
 - Check network: `docker compose exec jax-orchestrator ping agent0-api`
@@ -864,12 +871,15 @@ failed to call agent0: connection refused
 ### Issue 3: Frontend CORS error
 
 **Symptoms:**
-```
+
+```text
 Access to fetch at 'http://localhost:8093/api/v1/orchestrate' has been blocked by CORS
 ```
 
 **Solution:**
+
 Add CORS middleware to orchestrator:
+
 ```go
 // In main.go
 mux := http.NewServeMux()
@@ -877,15 +887,15 @@ handler := enableCORS(mux)
 http.ListenAndServe(addr, handler)
 
 func enableCORS(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == "OPTIONS" {
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+        if r.Method == "OPTIONS" {
+            return
+        }
+        h.ServeHTTP(w, r)
+    })
 }
 ```
 
@@ -893,14 +903,14 @@ func enableCORS(h http.Handler) http.Handler {
 
 ## 📊 Success Metrics
 
-### Phase 1 Metrics:
+### Phase 1 Metrics
 
 - **Latency:** Orchestration completes in < 5s
 - **Reliability:** 99% success rate (no crashes)
 - **Memory:** < 200MB per service
 - **User Experience:** AI suggestion visible in < 5s from click
 
-### Monitoring:
+### Monitoring
 
 ```bash
 # Check orchestration performance
@@ -926,4 +936,4 @@ docker compose logs agent0-api | grep "POST /v1/plan"
 
 ---
 
-**Ready to start? Begin with Task 1.1: Create Agent0 HTTP Service**
+## Ready to start? Begin with Task 1.1: Create Agent0 HTTP Service

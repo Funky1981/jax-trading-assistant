@@ -1,44 +1,75 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Lock, Unlock, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DashboardGrid, DashboardPanel } from '@/components/layout';
+import { WidgetGrid, WidgetPanel, type Layouts } from '@/components/layout';
 import {
   HealthPanel,
   WatchlistPanel,
-  OrderTicketPanel,
   PositionsPanel,
   RiskSummaryPanel,
-  TradeBlotterPanel,
-  PriceChartPanel,
-  StrategyMonitorPanel,
-  MemoryBrowserPanel,
-  MetricsPanel,
-  AIAssistantPanel,
 } from '@/components/dashboard';
+import { cn } from '@/lib/utils';
 
-// Panel IDs for state management
-const PANEL_IDS = [
-  'health',
-  'watchlist',
-  'orderTicket',
-  'positions',
-  'risk',
-  'blotter',
-  'chart',
-  'strategy',
-  'memory',
-  'metrics',
-  'aiAssistant',
-] as const;
+// Panel IDs for the overview dashboard
+const PANEL_IDS = ['health', 'watchlist', 'positions', 'risk'] as const;
 
-type PanelId = typeof PANEL_IDS[number];
+type PanelId = (typeof PANEL_IDS)[number];
 
-// Storage key for persisting panel state
-const STORAGE_KEY = 'jax-dashboard-panels';
+// Storage keys
+const LAYOUTS_STORAGE_KEY = 'jax-dashboard-widget-layouts';
+const PANEL_STATE_STORAGE_KEY = 'jax-dashboard-panel-states';
 
-function loadPanelState(): Record<PanelId, boolean> {
+// Default layout for lg breakpoint (12 columns)
+const DEFAULT_LAYOUTS: Layouts = {
+  lg: [
+    { x: 0, y: 0, w: 4, h: 4, i: 'health' },
+    { x: 4, y: 0, w: 4, h: 5, i: 'watchlist' },
+    { x: 0, y: 4, w: 8, h: 4, i: 'positions' },
+    { x: 8, y: 0, w: 4, h: 5, i: 'risk' },
+  ],
+  md: [
+    { x: 0, y: 0, w: 5, h: 4, i: 'health' },
+    { x: 5, y: 0, w: 5, h: 5, i: 'watchlist' },
+    { x: 0, y: 4, w: 6, h: 4, i: 'positions' },
+    { x: 6, y: 4, w: 4, h: 5, i: 'risk' },
+  ],
+  sm: [
+    { x: 0, y: 0, w: 6, h: 4, i: 'health' },
+    { x: 0, y: 4, w: 6, h: 5, i: 'watchlist' },
+    { x: 0, y: 9, w: 6, h: 4, i: 'positions' },
+    { x: 0, y: 13, w: 6, h: 5, i: 'risk' },
+  ],
+  xs: [
+    { x: 0, y: 0, w: 4, h: 4, i: 'health' },
+    { x: 0, y: 4, w: 4, h: 5, i: 'watchlist' },
+    { x: 0, y: 9, w: 4, h: 4, i: 'positions' },
+    { x: 0, y: 13, w: 4, h: 5, i: 'risk' },
+  ],
+};
+
+function loadLayouts(): Layouts {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(LAYOUTS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return DEFAULT_LAYOUTS;
+}
+
+function saveLayouts(layouts: Layouts) {
+  try {
+    localStorage.setItem(LAYOUTS_STORAGE_KEY, JSON.stringify(layouts));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function loadPanelStates(): Record<PanelId, boolean> {
+  try {
+    const stored = localStorage.getItem(PANEL_STATE_STORAGE_KEY);
     if (stored) {
       return JSON.parse(stored);
     }
@@ -46,24 +77,42 @@ function loadPanelState(): Record<PanelId, boolean> {
     // Ignore storage errors
   }
   // Default: all panels expanded
-  return PANEL_IDS.reduce((acc, id) => ({ ...acc, [id]: true }), {} as Record<PanelId, boolean>);
+  return PANEL_IDS.reduce(
+    (acc, id) => ({ ...acc, [id]: true }),
+    {} as Record<PanelId, boolean>
+  );
 }
 
-function savePanelState(state: Record<PanelId, boolean>) {
+function savePanelStates(state: Record<PanelId, boolean>) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(PANEL_STATE_STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Ignore storage errors
   }
 }
 
 export function DashboardPage() {
-  const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelState);
+  const [isEditing, setIsEditing] = useState(false);
+  const [layouts, setLayouts] = useState<Layouts>(loadLayouts);
+  const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelStates);
 
-  // Persist panel state
+  // Persist layouts when they change
   useEffect(() => {
-    savePanelState(panelStates);
+    saveLayouts(layouts);
+  }, [layouts]);
+
+  // Persist panel states when they change
+  useEffect(() => {
+    savePanelStates(panelStates);
   }, [panelStates]);
+
+  const handleLayoutChange = useCallback((newLayouts: Layouts) => {
+    setLayouts(newLayouts);
+  }, []);
+
+  const handleResetLayout = useCallback(() => {
+    setLayouts(DEFAULT_LAYOUTS);
+  }, []);
 
   const togglePanel = useCallback((panelId: PanelId) => {
     setPanelStates((prev) => ({
@@ -73,32 +122,71 @@ export function DashboardPage() {
   }, []);
 
   const expandAll = useCallback(() => {
-    setPanelStates(PANEL_IDS.reduce((acc, id) => ({ ...acc, [id]: true }), {} as Record<PanelId, boolean>));
+    setPanelStates(
+      PANEL_IDS.reduce(
+        (acc, id) => ({ ...acc, [id]: true }),
+        {} as Record<PanelId, boolean>
+      )
+    );
   }, []);
 
   const collapseAll = useCallback(() => {
-    setPanelStates(PANEL_IDS.reduce((acc, id) => ({ ...acc, [id]: false }), {} as Record<PanelId, boolean>));
+    setPanelStates(
+      PANEL_IDS.reduce(
+        (acc, id) => ({ ...acc, [id]: false }),
+        {} as Record<PanelId, boolean>
+      )
+    );
   }, []);
 
   const allExpanded = PANEL_IDS.every((id) => panelStates[id]);
   const allCollapsed = PANEL_IDS.every((id) => !panelStates[id]);
 
   return (
-    <div className="space-y-6">
+    <div
+      className={cn(
+        'space-y-6',
+        isEditing && 'ring-2 ring-primary/20 rounded-lg p-4'
+      )}
+    >
       {/* Page Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
-            MARKET OVERVIEW
+            OVERVIEW
           </p>
           <h1 className="text-2xl font-bold md:text-3xl">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Monitor your trading system health, metrics, and performance in real-time.
+            Quick overview of your trading system. Customize the layout by
+            clicking the unlock button.
           </p>
         </div>
 
-        {/* Expand/Collapse Controls */}
+        {/* Controls */}
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditing(!isEditing)}
+          >
+            {isEditing ? (
+              <>
+                <Lock className="h-4 w-4 mr-1" />
+                Lock Layout
+              </>
+            ) : (
+              <>
+                <Unlock className="h-4 w-4 mr-1" />
+                Edit Layout
+              </>
+            )}
+          </Button>
+          {isEditing && (
+            <Button variant="outline" size="sm" onClick={handleResetLayout}>
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Reset Layout
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -120,90 +208,48 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Dashboard Grid */}
-      <DashboardGrid>
-        {/* Row 1: Health, Watchlist, Order Ticket */}
-        <DashboardPanel>
-          <HealthPanel
-            isOpen={panelStates.health}
-            onToggle={() => togglePanel('health')}
-          />
-        </DashboardPanel>
+      {/* Widget Grid */}
+      <WidgetGrid
+        layouts={layouts}
+        onLayoutChange={handleLayoutChange}
+        isEditable={isEditing}
+      >
+        <div key="health">
+          <WidgetPanel id="health" title="System Health" isEditable={isEditing}>
+            <HealthPanel
+              isOpen={panelStates.health}
+              onToggle={() => togglePanel('health')}
+            />
+          </WidgetPanel>
+        </div>
 
-        <DashboardPanel>
-          <WatchlistPanel
-            isOpen={panelStates.watchlist}
-            onToggle={() => togglePanel('watchlist')}
-          />
-        </DashboardPanel>
+        <div key="watchlist">
+          <WidgetPanel id="watchlist" title="Watchlist" isEditable={isEditing}>
+            <WatchlistPanel
+              isOpen={panelStates.watchlist}
+              onToggle={() => togglePanel('watchlist')}
+            />
+          </WidgetPanel>
+        </div>
 
-        <DashboardPanel>
-          <OrderTicketPanel
-            isOpen={panelStates.orderTicket}
-            onToggle={() => togglePanel('orderTicket')}
-          />
-        </DashboardPanel>
+        <div key="positions">
+          <WidgetPanel id="positions" title="Positions" isEditable={isEditing}>
+            <PositionsPanel
+              isOpen={panelStates.positions}
+              onToggle={() => togglePanel('positions')}
+            />
+          </WidgetPanel>
+        </div>
 
-        {/* Row 2: Positions (wide), Risk */}
-        <DashboardPanel colSpan={2}>
-          <PositionsPanel
-            isOpen={panelStates.positions}
-            onToggle={() => togglePanel('positions')}
-          />
-        </DashboardPanel>
-
-        <DashboardPanel>
-          <RiskSummaryPanel
-            isOpen={panelStates.risk}
-            onToggle={() => togglePanel('risk')}
-          />
-        </DashboardPanel>
-
-        {/* Row 3: Chart (wide), Blotter */}
-        <DashboardPanel colSpan={2}>
-          <PriceChartPanel
-            isOpen={panelStates.chart}
-            onToggle={() => togglePanel('chart')}
-          />
-        </DashboardPanel>
-
-        <DashboardPanel>
-          <TradeBlotterPanel
-            isOpen={panelStates.blotter}
-            onToggle={() => togglePanel('blotter')}
-          />
-        </DashboardPanel>
-
-        {/* Row 4: Strategy, Memory, Metrics */}
-        <DashboardPanel>
-          <StrategyMonitorPanel
-            isOpen={panelStates.strategy}
-            onToggle={() => togglePanel('strategy')}
-          />
-        </DashboardPanel>
-
-        <DashboardPanel>
-          <MemoryBrowserPanel
-            isOpen={panelStates.memory}
-            onToggle={() => togglePanel('memory')}
-          />
-        </DashboardPanel>
-
-        <DashboardPanel>
-          <MetricsPanel
-            isOpen={panelStates.metrics}
-            onToggle={() => togglePanel('metrics')}
-          />
-        </DashboardPanel>
-
-        {/* Row 5: AI Assistant (full width) */}
-        <DashboardPanel colSpan={3}>
-          <AIAssistantPanel
-            isOpen={panelStates.aiAssistant}
-            onToggle={() => togglePanel('aiAssistant')}
-          />
-        </DashboardPanel>
-      </DashboardGrid>
+        <div key="risk">
+          <WidgetPanel id="risk" title="Risk Summary" isEditable={isEditing}>
+            <RiskSummaryPanel
+              isOpen={panelStates.risk}
+              onToggle={() => togglePanel('risk')}
+            />
+          </WidgetPanel>
+        </div>
+      </WidgetGrid>
     </div>
   );
 }

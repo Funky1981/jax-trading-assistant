@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
-import { DashboardPage } from '@/pages/DashboardPage';
+import { DashboardPage, TradingPage, SystemPage } from '@/pages';
 
 // Placeholder pages - to be implemented
 function PlaceholderPage({ title }: { title: string }) {
@@ -19,7 +19,8 @@ export function AppRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<DashboardPage />} />
-        <Route path="/order-ticket" element={<PlaceholderPage title="Order Ticket" />} />
+        <Route path="/trading" element={<TradingPage />} />
+        <Route path="/system" element={<SystemPage />} />
         <Route path="/blotter" element={<PlaceholderPage title="Trade Blotter" />} />
         <Route path="/portfolio" element={<PlaceholderPage title="Portfolio" />} />
         <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
