@@ -18,6 +18,9 @@ COPY --from=build /out/jax-api /usr/local/bin/jax-api
 # Copy config files
 COPY config /config
 
+# Copy database migrations
+COPY db/postgres/migrations /db/postgres/migrations
+
 ENV PORT=8081
 EXPOSE 8081
 

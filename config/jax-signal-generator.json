@@ -1,0 +1,18 @@
+{
+  "database_dsn": "postgresql://jax:jax@postgres:5432/jax?sslmode=disable",
+  "generate_interval": 300,
+  "symbols": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "TSLA",
+    "META",
+    "NVDA",
+    "AMD",
+    "NFLX",
+    "SPY"
+  ],
+  "min_confidence": 0.6,
+  "signal_expiry": 24
+}
