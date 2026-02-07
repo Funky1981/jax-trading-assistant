@@ -12,7 +12,7 @@ interface HealthPanelProps {
 export function HealthPanel({ isOpen, onToggle }: HealthPanelProps) {
   const { data, isLoading } = useHealth();
 
-  const summary = data ? (
+  const summary = data && data.services && data.services.length > 0 ? (
     <div className="flex items-center gap-2">
       {data.services.slice(0, 3).map((service) => (
         <StatusDot key={service.name} status={service.status} />
@@ -33,7 +33,7 @@ export function HealthPanel({ isOpen, onToggle }: HealthPanelProps) {
       isLoading={isLoading}
     >
       <div className="space-y-3">
-        {data?.services.map((service) => (
+        {data?.services && data.services.length > 0 ? data.services.map((service) => (
           <div
             key={service.name}
             className="flex items-center justify-between rounded-md border border-border bg-muted/30 p-3"
@@ -66,8 +66,12 @@ export function HealthPanel({ isOpen, onToggle }: HealthPanelProps) {
               </Badge>
             </div>
           </div>
-        ))}
-        {data && (
+        )) : (
+          <div className="text-sm text-muted-foreground text-center py-4">
+            No service health data available
+          </div>
+        )}
+        {data && data.services && data.services.length > 0 && (
           <p className="text-xs text-muted-foreground text-right">
             Last checked: {formatTime(data.services[0]?.lastCheck || Date.now())}
           </p>

@@ -55,4 +55,40 @@ type SignalStore interface {
 
 	// RejectSignal rejects a signal and creates a trade_approvals record with approved=false
 	RejectSignal(ctx context.Context, id uuid.UUID, approvedBy, rejectionReason string) (*Signal, error)
+
+	// GetRecommendations returns signals with orchestration analysis (pending recommendations)
+	GetRecommendations(ctx context.Context, limit, offset int) (*RecommendationListResponse, error)
+
+	// GetRecommendation returns a single recommendation with full details
+	GetRecommendation(ctx context.Context, signalID uuid.UUID) (*Recommendation, error)
+}
+
+// OrchestrationRun represents an AI orchestration run from the database
+type OrchestrationRun struct {
+	ID               uuid.UUID  `json:"id"`
+	Symbol           string     `json:"symbol"`
+	TriggerType      string     `json:"trigger_type"`
+	TriggerID        *uuid.UUID `json:"trigger_id,omitempty"`
+	AgentSuggestion  *string    `json:"agent_suggestion,omitempty"`
+	Confidence       *float64   `json:"confidence,omitempty"`
+	Reasoning        *string    `json:"reasoning,omitempty"`
+	MemoriesRecalled int        `json:"memories_recalled"`
+	Status           string     `json:"status"`
+	StartedAt        time.Time  `json:"started_at"`
+	CompletedAt      *time.Time `json:"completed_at,omitempty"`
+	Error            *string    `json:"error,omitempty"`
+}
+
+// Recommendation combines a signal with its AI analysis
+type Recommendation struct {
+	Signal   Signal            `json:"signal"`
+	Analysis *OrchestrationRun `json:"ai_analysis,omitempty"`
+}
+
+// RecommendationListResponse contains the list of recommendations with pagination metadata
+type RecommendationListResponse struct {
+	Recommendations []Recommendation `json:"recommendations"`
+	Total           int              `json:"total"`
+	Limit           int              `json:"limit"`
+	Offset          int              `json:"offset"`
 }

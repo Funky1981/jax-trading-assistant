@@ -99,7 +99,7 @@ export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps
         )}
 
         {/* Entries */}
-        <div className="space-y-2 max-h-64 overflow-y-auto">
+        <div className="space-y-2">
           {isLoadingEntries ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               Loading...

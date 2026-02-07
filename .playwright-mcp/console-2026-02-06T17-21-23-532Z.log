@@ -1,0 +1,201 @@
+[    4136ms] [ERROR] Access to fetch at 'http://localhost:8081/health' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[    4136ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/health:0
+[    4136ms] [WARNING] Health API not available: TypeError: Failed to fetch
+    at fetchHealth (http://localhost:5175/src/hooks/useHealth.ts:45:28)
+    at Object.fetchFn [as fn] (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1123:14)
+    at run (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:822:49)
+    at Object.start (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:865:9)
+    at _a5.fetch (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1170:55)
+    at _a6.executeFetch_fn (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1678:51)
+    at _a6.onSubscribe (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1369:74)
+    at _a6.subscribe (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:24:10)
+    at http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:3388:56
+    at subscribeToStore (http://localhost:5175/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:6089:16) @ http://localhost:5175/src/hooks/useHealth.ts:53
+[    4138ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[    4138ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[    4138ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[    4139ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[    4139ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[    4139ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[    4140ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[    4140ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[    4140ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[    4141ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[    4142ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[    5693ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[    5694ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[    7725ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   10756ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   11780ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   12786ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   13821ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   14244ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   14244ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   14245ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   14245ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   14246ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   14246ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   14247ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   14247ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   14247ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   15853ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   16853ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   17889ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   20926ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   21954ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   22940ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   23979ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   24020ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   24368ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   24369ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   24369ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   24370ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   24370ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   24370ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   24371ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   24391ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   24391ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   29046ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   29092ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   30077ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   30144ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   32179ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   34165ms] [ERROR] Access to fetch at 'http://localhost:8081/health' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[   34166ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/health:0
+[   34166ms] [WARNING] Health API not available: TypeError: Failed to fetch
+    at fetchHealth (http://localhost:5175/src/hooks/useHealth.ts:45:28)
+    at Object.fetchFn [as fn] (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1123:14)
+    at run (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:822:49)
+    at Object.start (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:865:9)
+    at _a5.fetch (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1170:55)
+    at _a6.executeFetch_fn (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1678:51)
+    at http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1712:72 @ http://localhost:5175/src/hooks/useHealth.ts:53
+[   34446ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   34446ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   34447ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   34447ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   34447ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   34448ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   34448ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   34448ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   34449ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   35154ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   36179ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   37231ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   38256ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   40289ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   41234ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   42274ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   44521ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   44522ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   44522ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   44523ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   44523ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   44524ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   44524ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   44524ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   44525ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   45339ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   46370ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   47328ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   48350ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   48417ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   53393ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   53458ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   54417ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   54473ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   54570ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   54571ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   54571ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   54572ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   54572ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   54573ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   54573ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   54573ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   54574ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   56487ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   59439ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   60450ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   61505ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   62519ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   64189ms] [ERROR] Access to fetch at 'http://localhost:8081/health' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[   64190ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/health:0
+[   64190ms] [WARNING] Health API not available: TypeError: Failed to fetch
+    at fetchHealth (http://localhost:5175/src/hooks/useHealth.ts:45:28)
+    at Object.fetchFn [as fn] (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1123:14)
+    at run (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:822:49)
+    at Object.start (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:865:9)
+    at _a5.fetch (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1170:55)
+    at _a6.executeFetch_fn (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1678:51)
+    at http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1712:72 @ http://localhost:5175/src/hooks/useHealth.ts:53
+[   64532ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   64607ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   64607ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   64608ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   64608ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   64608ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   64609ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   64609ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   64609ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   64610ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   65470ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   66481ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   69548ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   70566ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   71496ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   72519ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   72581ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   74646ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   74647ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   74648ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   74648ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   74649ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   74649ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   74650ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   74650ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   74650ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   77538ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   77595ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   78550ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   78608ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   80625ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   83569ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   84585ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   84696ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   84696ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   84697ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   84697ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   84698ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   84698ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   84698ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   84699ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   84699ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   85653ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   86664ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   88681ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   89627ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   90644ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   93704ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   94220ms] [ERROR] Access to fetch at 'http://localhost:8081/health' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[   94220ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/health:0
+[   94221ms] [WARNING] Health API not available: TypeError: Failed to fetch
+    at fetchHealth (http://localhost:5175/src/hooks/useHealth.ts:45:28)
+    at Object.fetchFn [as fn] (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1123:14)
+    at run (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:822:49)
+    at Object.start (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:865:9)
+    at _a5.fetch (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1170:55)
+    at _a6.executeFetch_fn (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1678:51)
+    at http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1712:72 @ http://localhost:5175/src/hooks/useHealth.ts:53
+[   94735ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   94735ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   94736ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   94736ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   94737ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   94737ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   94737ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   94738ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   94738ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   94742ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   95677ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   96692ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   96755ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0

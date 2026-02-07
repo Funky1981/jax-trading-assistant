@@ -14,5 +14,8 @@
     "SPY"
   ],
   "min_confidence": 0.6,
-  "signal_expiry": 24
+  "signal_expiry": 24,
+  "orchestrator_url": "http://jax-orchestrator:8091",
+  "orchestration_enabled": true,
+  "confidence_threshold": 0.75
 }

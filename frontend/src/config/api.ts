@@ -5,13 +5,14 @@
 // Base URLs for backend services
 export const API_CONFIG = {
   // Main JAX API (handles positions, watchlist, orders, risk, etc.)
-  JAX_API: import.meta.env.VITE_JAX_API_URL || 'http://localhost:8081',
+  // In dev mode, use relative URLs so Vite proxy handles them  
+  JAX_API: import.meta.env.VITE_JAX_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:8081'),
   
   // Memory Service (Hindsight wrapper)
   MEMORY_SERVICE: import.meta.env.VITE_MEMORY_SERVICE_URL || 'http://localhost:8090',
   
   // IB Bridge (Interactive Brokers connectivity)
-  IB_BRIDGE: import.meta.env.VITE_IB_BRIDGE_URL || 'http://localhost:8092',
+  IB_BRIDGE: import.meta.env.VITE_IB_BRIDGE_URL || (import.meta.env.DEV ? '' : 'http://localhost:8092'),
   
   // Agent0 AI Service (trading suggestions)
   AGENT0_SERVICE: import.meta.env.VITE_AGENT0_SERVICE_URL || 'http://localhost:8093',

@@ -1,0 +1,127 @@
+[      -8ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[      -7ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[      -7ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[      -6ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[      -6ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[      -5ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[      -5ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[      -4ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[      -4ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[      -3ms] [ERROR] Access to fetch at 'http://localhost:8081/api/strategies' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/trading:0
+[      -3ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/strategies:0
+[      -2ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[      -2ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[      -1ms] [ERROR] Access to fetch at 'http://localhost:8081/api/orders' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/trading:0
+[      -1ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/orders:0
+[     889ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[     890ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[     890ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[     891ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[     891ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[     891ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[     892ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[     892ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[     892ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[     893ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[     894ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[     894ms] [ERROR] Access to fetch at 'http://localhost:8081/api/strategies' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/trading:0
+[     895ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/strategies:0
+[     895ms] [ERROR] Access to fetch at 'http://localhost:8081/api/orders' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/trading:0
+[     895ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/orders:0
+[    1915ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[    1916ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[    3926ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[    5929ms] [ERROR] Access to fetch at 'http://localhost:8081/api/orders' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/trading:0
+[    5929ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/orders:0
+[    6935ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[    7950ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[    8944ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[    9955ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   10926ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   10927ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   10927ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   10928ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   10928ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   10929ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   10929ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   10931ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   10931ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   10958ms] [ERROR] Access to fetch at 'http://localhost:8081/api/orders' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/trading:0
+[   10959ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/orders:0
+[   11968ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   12965ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   13980ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   15994ms] [ERROR] Access to fetch at 'http://localhost:8081/api/orders' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[   15994ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/orders:0
+[   16987ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   18000ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   18997ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   20009ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   20026ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   20958ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   20958ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   20959ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   20959ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   20960ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   20960ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   20960ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   20961ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   20961ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   21010ms] [ERROR] Access to fetch at 'http://localhost:8081/api/orders' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[   21010ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/orders:0
+[   25030ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   25046ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   26030ms] [ERROR] Access to fetch at 'http://localhost:8081/api/orders' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[   26030ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/orders:0
+[   26084ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   26115ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   28135ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   31845ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   31846ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   31846ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   31847ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   31847ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   31848ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   31848ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   31849ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   31849ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   31850ms] [ERROR] Access to fetch at 'http://localhost:8081/api/strategies' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[   31850ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/strategies:0
+[   31851ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   31851ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   31852ms] [ERROR] Access to fetch at 'http://localhost:8081/api/orders' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[   31852ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/api/orders:0
+[   31854ms] [ERROR] Access to fetch at 'http://localhost:8081/health' from origin 'http://localhost:5175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5175/:0
+[   31854ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8081/health:0
+[   31855ms] [WARNING] Health API not available: TypeError: Failed to fetch
+    at fetchHealth (http://localhost:5175/src/hooks/useHealth.ts:45:28)
+    at Object.fetchFn [as fn] (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1123:14)
+    at run (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:822:49)
+    at Object.start (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:865:9)
+    at _a5.fetch (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1170:55)
+    at _a6.executeFetch_fn (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1678:51)
+    at _a6.onSubscribe (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:1369:74)
+    at _a6.subscribe (http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:24:10)
+    at http://localhost:5175/node_modules/.vite/deps/@tanstack_react-query.js?v=e0852edc:3388:56
+    at subscribeToStore (http://localhost:5175/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:6089:16) @ http://localhost:5175/src/hooks/useHealth.ts:53
+[   32886ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   32887ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   34933ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   37936ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   38972ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   40003ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   41044ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   41953ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[   41954ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[   41955ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[   41955ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[   41956ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[   41972ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[   41973ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[   41974ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0
+[   41974ms] [WARNING] IB Bridge not available, using mock watchlist data @ http://localhost:5175/src/hooks/useWatchlist.ts:37
+[   43070ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   44018ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   45040ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/positions:0
+[   48124ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0
+[   49136ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/account:0

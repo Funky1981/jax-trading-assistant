@@ -190,7 +190,7 @@ export function MetricsPanel({ isOpen, onToggle }: MetricsPanelProps) {
         </div>
 
         {/* Table */}
-        <div className="rounded-md border border-border max-h-64 overflow-auto">
+        <div className="rounded-md border border-border">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

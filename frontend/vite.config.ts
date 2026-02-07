@@ -11,6 +11,28 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    proxy: {
+      '/health': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '/quotes': {
+        target: 'http://localhost:8092',
+        changeOrigin: true,
+      },
+      '/positions': {
+        target: 'http://localhost:8092',
+        changeOrigin: true,
+      },
+      '/account': {
+        target: 'http://localhost:8092',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     chunkSizeWarningLimit: 1000, // Suppress warning for chunks > 500KB

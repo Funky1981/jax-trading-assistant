@@ -3,16 +3,16 @@ FROM golang:1.24 AS builder
 
 WORKDIR /workspace
 
-# Copy go mod files
+# Copy go mod files from root
 COPY go.mod go.sum ./
 COPY libs/ ./libs/
+COPY services/jax-signal-generator/ ./services/jax-signal-generator/
+
+WORKDIR /workspace/services/jax-signal-generator
 RUN go mod download
 
-# Copy source
-COPY . .
-
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/jax-signal-generator ./services/jax-signal-generator/cmd/jax-signal-generator
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /bin/jax-signal-generator ./cmd/jax-signal-generator
 
 # Runtime stage
 FROM alpine:latest

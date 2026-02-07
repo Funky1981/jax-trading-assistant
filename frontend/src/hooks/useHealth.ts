@@ -59,12 +59,18 @@ const mockHealthData: HealthData = {
 async function fetchHealth(): Promise<HealthData> {
   // Try to fetch from actual API
   try {
-    const response = await fetch('http://localhost:8080/health');
+    const response = await fetch(buildUrl('JAX_API', '/health'));
     if (response.ok) {
-      return response.json();
+      const apiResponse = await response.json();
+      // Check if response has services array
+      if (apiResponse.services && Array.isArray(apiResponse.services)) {
+        return apiResponse;
+      }
+      // API returned simple health check, use mock data with updated status
+      console.log('JAX API health check OK, using mock service data');
     }
-  } catch {
-    // API not available, use mock data
+  } catch (error) {
+    console.warn('Health API not available:', error);
   }
   
   // Return mock data with some randomization
@@ -82,7 +88,9 @@ export function useHealth() {
   return useQuery({
     queryKey: ['health'],
     queryFn: fetchHealth,
-    refetchInterval: 10000, // Poll every 10 seconds
+    refetchInterval: 30000, // Poll every 30 seconds instead of 10
+    retry: false, // Don't retry
+    staleTime: 15000, // Consider fresh for 15 seconds
   });
 }
 

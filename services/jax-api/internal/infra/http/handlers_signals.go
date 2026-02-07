@@ -1,10 +1,16 @@
 package httpapi
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"jax-trading-assistant/services/jax-api/internal/app"
 
@@ -183,6 +189,13 @@ func (h *SignalsHandler) handleApprove(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 
+	// Trigger trade execution asynchronously
+	go func() {
+		if err := h.triggerTradeExecution(id, req.ApprovedBy); err != nil {
+			log.Printf("Failed to trigger trade execution for signal %s: %v", id, err)
+		}
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(signal); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
@@ -224,4 +237,49 @@ func (h *SignalsHandler) handleReject(w http.ResponseWriter, r *http.Request, id
 	if err := json.NewEncoder(w).Encode(signal); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
+}
+
+// triggerTradeExecution calls the trade executor service to execute an approved signal
+func (h *SignalsHandler) triggerTradeExecution(signalID uuid.UUID, approvedBy string) error {
+	tradeExecutorURL := os.Getenv("TRADE_EXECUTOR_URL")
+	if tradeExecutorURL == "" {
+		tradeExecutorURL = "http://localhost:8097"
+	}
+
+	payload := map[string]interface{}{
+		"signal_id":   signalID.String(),
+		"approved_by": approvedBy,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, 
+		tradeExecutorURL+"/api/v1/execute", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to call trade executor: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errorResp map[string]interface{}
+		json.NewDecoder(resp.Body).Decode(&errorResp)
+		return fmt.Errorf("trade execution failed: %v", errorResp)
+	}
+
+	log.Printf("Successfully triggered trade execution for signal %s", signalID)
+	return nil
 }

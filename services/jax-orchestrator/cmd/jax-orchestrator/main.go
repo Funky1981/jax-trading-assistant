@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"jax-trading-assistant/libs/agent0"
 	"jax-trading-assistant/libs/contracts"
 	"jax-trading-assistant/libs/observability"
+	"jax-trading-assistant/libs/strategies"
 	"jax-trading-assistant/libs/utcp"
 	"jax-trading-assistant/services/jax-orchestrator/internal/app"
 	"jax-trading-assistant/services/jax-orchestrator/internal/config"
@@ -46,8 +48,9 @@ func main() {
 	memory := memoryAdapter{svc: memorySvc}
 	agent := stubAgent{}
 	tools := stubToolRunner{}
+	strategyRegistry := strategies.NewRegistry()
 
-	orch := app.NewOrchestrator(memory, agent, tools)
+	orch := app.NewOrchestrator(memory, agent, tools, strategyRegistry)
 	result, err := orch.Run(ctx, app.OrchestrationRequest{
 		Bank:        cfg.Bank,
 		Symbol:      cfg.Symbol,
@@ -84,17 +87,25 @@ func (m memoryAdapter) Retain(ctx context.Context, bank string, item contracts.M
 
 type stubAgent struct{}
 
-func (stubAgent) Plan(_ context.Context, input app.PlanInput) (app.PlanResult, error) {
+func (stubAgent) Plan(_ context.Context, req agent0.PlanRequest) (agent0.PlanResponse, error) {
 	summary := "Decision recorded."
-	if strings.TrimSpace(input.Symbol) != "" {
-		summary = "Reviewed " + strings.ToUpper(input.Symbol) + " and recorded a decision."
+	if strings.TrimSpace(req.Symbol) != "" {
+		summary = "Reviewed " + strings.ToUpper(req.Symbol) + " and recorded a decision."
 	}
-	return app.PlanResult{
+	return agent0.PlanResponse{
 		Summary:        summary,
 		Steps:          []string{"review inputs", "determine action"},
 		Action:         "skipped",
 		Confidence:     0.0,
 		ReasoningNotes: "stub agent in use",
+	}, nil
+}
+
+func (stubAgent) Execute(_ context.Context, _ agent0.ExecuteRequest) (agent0.ExecuteResponse, error) {
+	return agent0.ExecuteResponse{
+		ToolCalls: nil,
+		Success:   true,
+		Summary:   "stub agent - no tools executed",
 	}, nil
 }
 

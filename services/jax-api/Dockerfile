@@ -1,14 +1,17 @@
 FROM golang:1.24 AS build
 
-WORKDIR /src
+WORKDIR /workspace
 
 # Copy module files and local libs first for better caching
 COPY go.mod go.sum ./
 COPY libs/ ./libs/
+COPY internal/ ./internal/
+COPY services/jax-api/ ./services/jax-api/
+
+WORKDIR /workspace/services/jax-api
 RUN go mod download
 
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/jax-api ./services/jax-api/cmd/jax-api
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/jax-api ./cmd/jax-api
 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates

@@ -39,7 +39,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
 }
 
 export function createHttpClient(options: HttpClientOptions = {}) {
-  const baseUrl = options.baseUrl ?? 'http://localhost:8080';
+  const baseUrl = options.baseUrl ?? 'http://localhost:8081';
   const timeoutMs = options.timeoutMs ?? 10_000;
 
   async function request<T>(method: HttpMethod, path: string, body?: unknown) {

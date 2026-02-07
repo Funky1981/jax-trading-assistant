@@ -11,7 +11,8 @@ import (
 )
 
 func main() {
-	fmt.Println("=== IB Bridge Go Client Test ===\n")
+	fmt.Println("=== IB Bridge Go Client Test ===")
+	fmt.Println()
 
 	// Create IB provider
 	fmt.Println("🔌 Connecting to IB Bridge...")
@@ -20,7 +21,8 @@ func main() {
 		log.Fatalf("Failed to create IB provider: %v", err)
 	}
 	defer provider.Close()
-	fmt.Println("✅ Connected to IB Bridge\n")
+	fmt.Println("✅ Connected to IB Bridge")
+	fmt.Println()
 
 	ctx := context.Background()
 
@@ -41,7 +43,8 @@ func main() {
 	fmt.Println("\n=== Test 4: Direct Client Access ===")
 	testDirectClient()
 
-	fmt.Println("\n🎉 All tests completed successfully!")
+	fmt.Println()
+	fmt.Println("🎉 All tests completed successfully!")
 }
 
 func testGetQuote(ctx context.Context, provider *ib.Provider, symbol string) {

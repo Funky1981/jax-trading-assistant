@@ -14,8 +14,6 @@ replace jax-trading-assistant/libs/testing => ./libs/testing
 
 replace jax-trading-assistant/libs/marketdata => ./libs/marketdata
 
-replace jax-trading-assistant/libs/marketdata/ib => ./libs/marketdata/ib
-
 replace jax-trading-assistant/libs/resilience => ./libs/resilience
 
 replace jax-trading-assistant/libs/strategies => ./libs/strategies
@@ -30,7 +28,6 @@ require (
 	jax-trading-assistant/libs/database v0.0.0-00010101000000-000000000000
 	jax-trading-assistant/libs/ingest v0.0.0-00010101000000-000000000000
 	jax-trading-assistant/libs/marketdata v0.0.0
-	jax-trading-assistant/libs/marketdata/ib v0.0.0-00010101000000-000000000000
 	jax-trading-assistant/libs/strategies v0.0.0
 	jax-trading-assistant/libs/testing v0.0.0-00010101000000-000000000000
 	jax-trading-assistant/libs/utcp v0.0.0

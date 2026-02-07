@@ -1,0 +1,20 @@
+go 1.25.4
+
+use (
+	.
+	./libs/agent0
+	./libs/contracts
+	./libs/database
+	./libs/dexter
+	./libs/ingest
+	./libs/marketdata
+	./libs/observability
+	./libs/resilience
+	./libs/strategies
+	./libs/testing
+	./libs/trading/executor
+	./libs/utcp
+	./services/jax-orchestrator
+	./services/jax-trade-executor
+	./tools
+)

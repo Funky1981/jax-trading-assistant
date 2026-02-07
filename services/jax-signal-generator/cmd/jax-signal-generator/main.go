@@ -15,6 +15,7 @@ import (
 	"jax-trading-assistant/libs/strategies"
 	"jax-trading-assistant/services/jax-signal-generator/internal/config"
 	"jax-trading-assistant/services/jax-signal-generator/internal/generator"
+	"jax-trading-assistant/services/jax-signal-generator/internal/orchestrator"
 )
 
 type Metrics struct {
@@ -67,7 +68,17 @@ func main() {
 	log.Printf("registered %d strategies", len(registry.List()))
 
 	// Create signal generator (use the underlying sql.DB)
-	gen := generator.New(db.DB, registry, cfg.Symbols, metricsCallback)
+	gen := generator.New(db.DB, registry, cfg.Symbols, metricsCallback).
+		WithConfidenceThreshold(cfg.ConfidenceThreshold)
+
+	// Add orchestrator integration if enabled
+	if cfg.OrchestrationEnabled && cfg.OrchestratorURL != "" {
+		orchClient := orchestrator.NewClient(cfg.OrchestratorURL)
+		gen = gen.WithOrchestrator(orchClient)
+		log.Printf("orchestration enabled (URL: %s, threshold: %.2f)", cfg.OrchestratorURL, cfg.ConfidenceThreshold)
+	} else {
+		log.Println("orchestration disabled")
+	}
 
 	// Start HTTP server
 	go startHTTPServer()

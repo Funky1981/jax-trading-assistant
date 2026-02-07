@@ -7,11 +7,14 @@ import (
 
 // Config holds signal generator configuration
 type Config struct {
-	DatabaseDSN      string   `json:"database_dsn"`
-	GenerateInterval int      `json:"generate_interval"` // seconds
-	Symbols          []string `json:"symbols"`
-	MinConfidence    float64  `json:"min_confidence"`
-	SignalExpiry     int      `json:"signal_expiry"` // hours
+	DatabaseDSN          string   `json:"database_dsn"`
+	GenerateInterval     int      `json:"generate_interval"` // seconds
+	Symbols              []string `json:"symbols"`
+	MinConfidence        float64  `json:"min_confidence"`
+	SignalExpiry         int      `json:"signal_expiry"` // hours
+	OrchestratorURL      string   `json:"orchestrator_url"`
+	OrchestrationEnabled bool     `json:"orchestration_enabled"`
+	ConfidenceThreshold  float64  `json:"confidence_threshold"` // threshold for auto-orchestration
 }
 
 // Load reads configuration from a JSON file
@@ -36,6 +39,9 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.SignalExpiry == 0 {
 		cfg.SignalExpiry = 24 // 24 hours
+	}
+	if cfg.ConfidenceThreshold == 0 {
+		cfg.ConfidenceThreshold = 0.75 // 75% confidence triggers orchestration
 	}
 
 	return &cfg, nil
