@@ -14,7 +14,7 @@ A poorly configured deployment can negate the work done in development. Reliable
 
 2. **Define docker‑compose for local development**
    - Include all services, Postgres, Dexter (if needed) and any message brokers or caches.
-   - Provide a `make -f root-files/Makefile up` and `make -f root-files/Makefile down` script to simplify spin‑up and teardown.
+   - Provide a `make up` and `make down` script to simplify spin‑up and teardown.
 
 3. **Choose a production orchestrator**
    - Decide on Kubernetes, Amazon ECS, or another orchestrator for running containers in production.

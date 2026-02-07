@@ -39,11 +39,12 @@ jax-trading assistant/
   config/
     providers.json              # UTCP provider definitions (http/local)
 
+  docker-compose.yml            # Main docker compose for services
+
   db/
     postgres/
       schema.sql                # Postgres schema for storage provider
-
-      root-files/docker-compose.yml  # Main docker compose for services
+      docker-compose.yml        # Local Postgres for development
 
   scripts/
     test.ps1                    # Local quality gate (gofmt, golangci-lint, go test)

@@ -46,9 +46,12 @@ This repo follows **Clean Architecture / Hexagonal** principles:
 - **config/**
   - `providers.json`: UTCP provider definitions (http/local)
 
+- **docker-compose.yml**
+  - Main compose file for core services
+
 - **db/postgres/**
   - `schema.sql`: Postgres schema for storage provider
-  - `root-files/docker-compose.yml`: main docker compose for services
+  - `docker-compose.yml`: local Postgres for development
 
 - **cmd/**
   - `jax-utcp-smoke/`: UTCP smoke test entrypoint
@@ -77,7 +80,7 @@ This repo follows **Clean Architecture / Hexagonal** principles:
 
 ## Testing & quality
 
-- **Primary**: `go test ./...` or `make -f root-files/Makefile test`
+- **Primary**: `go test ./...` or `make test`
 - **Lint**: `golangci-lint run ./...`
 - **Scripted**: `scripts/test.ps1` (gofmt + lint + tests)
 

@@ -2,7 +2,7 @@
 
 **Goal:** one command starts the core backend stack.
 
-Primary compose file: `root-files/docker-compose.yml` at repo root.
+Primary compose file: `docker-compose.yml` at repo root.
 
 Default services:
 - hindsight (memory backend)
@@ -24,7 +24,7 @@ Notes:
 - `JAX_SYMBOL`
 
 ## Commands
-- `docker compose -f root-files/docker-compose.yml up -d`
+- `docker compose up -d`
 - `docker compose --profile db up -d`
 - `docker compose --profile jobs up`
 

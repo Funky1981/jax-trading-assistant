@@ -17,10 +17,10 @@
 - Use `go test ./...` as the baseline test command
 
 ## Baseline commands
-- `make -f root-files/Makefile test` -> runs unit tests
-- `make -f root-files/Makefile lint` -> runs lint
-- `make -f root-files/Makefile up` -> starts docker compose
-- `make -f root-files/Makefile down` -> stops docker compose
+- `make test` -> runs unit tests
+- `make lint` -> runs lint
+- `make up` -> starts docker compose
+- `make down` -> stops docker compose
 
 ## Testing rules (start now)
 - If Codex adds a new package, it must include at least:

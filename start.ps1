@@ -17,12 +17,12 @@ Write-Host "`nStarting backend services (Docker)..." -ForegroundColor Cyan
 
 # Start postgres first
 Write-Host "  Starting postgres..." -ForegroundColor Gray
-docker compose -f root-files/docker-compose.yml up -d postgres 2>$null
+docker compose up -d postgres 2>$null
 Start-Sleep -Seconds 3
 
 # Wait for postgres to be healthy
 for ($i = 1; $i -le 10; $i++) {
-    $pgStatus = docker compose -f root-files/docker-compose.yml ps postgres --format json 2>$null | ConvertFrom-Json
+    $pgStatus = docker compose ps postgres --format json 2>$null | ConvertFrom-Json
     if ($pgStatus.Health -eq "healthy") {
         Write-Host "  Postgres is ready" -ForegroundColor Green
         break
@@ -33,7 +33,7 @@ for ($i = 1; $i -le 10; $i++) {
 
 # Start other services
 Write-Host "  Starting hindsight, jax-memory, jax-api..." -ForegroundColor Gray
-docker compose -f root-files/docker-compose.yml up -d hindsight jax-memory jax-api 2>$null
+docker compose up -d hindsight jax-memory jax-api 2>$null
 
 # Wait for services to be ready
 Write-Host "`nWaiting for services to be ready..." -ForegroundColor Yellow

@@ -57,7 +57,7 @@ Write-Host ""
 Write-Host "Starting IB Bridge service..." -ForegroundColor Yellow
 Write-Host ""
 
-docker compose -f root-files/docker-compose.yml up -d ib-bridge
+docker compose up -d ib-bridge
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
@@ -90,7 +90,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "1. View logs:" -ForegroundColor White
-    Write-Host "   docker compose -f root-files/docker-compose.yml logs -f ib-bridge" -ForegroundColor Gray
+    Write-Host "   docker compose logs -f ib-bridge" -ForegroundColor Gray
     Write-Host ""
     Write-Host "2. Test the API:" -ForegroundColor White
     Write-Host "   curl http://localhost:8092/health" -ForegroundColor Gray
@@ -101,7 +101,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "   python test_bridge.py" -ForegroundColor Gray
     Write-Host ""
     Write-Host "4. Stop the service:" -ForegroundColor White
-    Write-Host "   docker compose -f root-files/docker-compose.yml down ib-bridge" -ForegroundColor Gray
+    Write-Host "   docker compose down ib-bridge" -ForegroundColor Gray
     Write-Host ""
     Write-Host "📚 Full documentation: services\ib-bridge\TESTING.md" -ForegroundColor Cyan
     Write-Host ""
@@ -109,6 +109,6 @@ if ($LASTEXITCODE -eq 0) {
 } else {
     Write-Host ""
     Write-Host "❌ Failed to start IB Bridge service" -ForegroundColor Red
-    Write-Host "   Check the logs: docker compose -f root-files/docker-compose.yml logs ib-bridge" -ForegroundColor Yellow
+    Write-Host "   Check the logs: docker compose logs ib-bridge" -ForegroundColor Yellow
     exit 1
 }

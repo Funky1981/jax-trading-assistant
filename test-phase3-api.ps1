@@ -103,7 +103,7 @@ try {
 # Verify database state
 Write-Host "`n===== Database Verification =====" -ForegroundColor Cyan
 Write-Host "Signal counts by status:" -ForegroundColor Cyan
-$dbOutput = docker compose -f root-files/docker-compose.yml exec postgres psql -U jax -d jax -t -c 'SELECT status, COUNT(*) FROM strategy_signals GROUP BY status ORDER BY status;' 2>$null
+$dbOutput = docker compose exec postgres psql -U jax -d jax -t -c 'SELECT status, COUNT(*) FROM strategy_signals GROUP BY status ORDER BY status;' 2>$null
 Write-Host $dbOutput -ForegroundColor White
 
 Write-Host "`n===== Phase 3 API Testing COMPLETE =====" -ForegroundColor Green
