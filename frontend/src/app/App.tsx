@@ -1,6 +1,8 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { HashRouter, Route, Routes } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
-import { DashboardPage, TradingPage, SystemPage } from '@/pages';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { TradingPage } from '@/pages/TradingPage';
+import { SystemPage } from '@/pages/SystemPage';
 
 // Placeholder pages - to be implemented
 function PlaceholderPage({ title }: { title: string }) {
@@ -18,12 +20,12 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/trading" element={<TradingPage />} />
-        <Route path="/system" element={<SystemPage />} />
-        <Route path="/blotter" element={<PlaceholderPage title="Trade Blotter" />} />
-        <Route path="/portfolio" element={<PlaceholderPage title="Portfolio" />} />
-        <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
+        <Route key="dashboard" path="/" element={<DashboardPage />} />
+        <Route key="trading" path="/trading" element={<TradingPage />} />
+        <Route key="system" path="/system" element={<SystemPage />} />
+        <Route key="blotter" path="/blotter" element={<PlaceholderPage title="Trade Blotter" />} />
+        <Route key="portfolio" path="/portfolio" element={<PlaceholderPage title="Portfolio" />} />
+        <Route key="settings" path="/settings" element={<PlaceholderPage title="Settings" />} />
       </Route>
     </Routes>
   );
@@ -31,8 +33,13 @@ export function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <AppRoutes />
-    </BrowserRouter>
+    </HashRouter>
   );
 }

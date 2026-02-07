@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { 
   Menu, 
   X, 
@@ -28,6 +28,9 @@ const navItems = [
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  console.log('AppShell rendering, current path:', location.pathname);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -75,7 +78,10 @@ export function AppShell() {
                 key={item.path}
                 to={item.path}
                 end={item.end}
-                onClick={() => setSidebarOpen(false)}
+                onClick={(e) => {
+                  console.log(`🔗 NavLink clicked: ${item.label} -> ${item.path}`);
+                  setSidebarOpen(false);
+                }}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
@@ -135,7 +141,7 @@ export function AppShell() {
 
         {/* Page Content */}
         <main className="p-4 md:p-6 lg:p-8">
-          <Outlet />
+          <Outlet key={location.pathname} />
         </main>
       </div>
     </div>

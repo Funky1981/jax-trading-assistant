@@ -41,6 +41,11 @@ function savePanelState(state: Record<PanelId, boolean>) {
 }
 
 export function SystemPage() {
+  useEffect(() => {
+    console.log('⚙️ SystemPage MOUNTED');
+    return () => console.log('⚙️ SystemPage UNMOUNTED');
+  }, []);
+
   const [panelStates, setPanelStates] =
     useState<Record<PanelId, boolean>>(loadPanelState);
 

@@ -52,6 +52,11 @@ function savePanelState(state: Record<PanelId, boolean>) {
 }
 
 export function TradingPage() {
+  useEffect(() => {
+    console.log('📊 TradingPage MOUNTED');
+    return () => console.log('📊 TradingPage UNMOUNTED');
+  }, []);
+
   const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelState);
 
   // Persist panel state
