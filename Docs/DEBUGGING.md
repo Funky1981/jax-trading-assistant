@@ -54,7 +54,7 @@ docker compose build --no-cache
 
 ### Services Won't Start
 
-**Symptom:** `start.ps1` exits with code 1
+**Symptom:** `root-files/start.ps1` exits with code 1
 
 **Debug Steps:**
 
@@ -113,7 +113,7 @@ docker compose exec postgres psql -U jax -d jax -c "SELECT 1"
 
 ### Health Check Failures
 
-**Symptom:** `start.ps1` says "Backend services may not be fully ready"
+**Symptom:** `root-files/start.ps1` says "Backend services may not be fully ready"
 
 **Debug Steps:**
 
@@ -271,7 +271,7 @@ docker compose down --rmi all
 
 # Start fresh
 
-docker compose up -d
+docker compose -f root-files/docker-compose.yml up -d
 
 ```
 

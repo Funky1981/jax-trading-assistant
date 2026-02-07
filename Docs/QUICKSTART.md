@@ -15,7 +15,7 @@ If you plan to use IB market data or trading, follow the consolidated setup guid
 ### One-Command Start (Recommended)
 
 ```powershell
-.\start.ps1
+.\root-files\start.ps1
 
 ```
 
@@ -34,7 +34,7 @@ This automatically:
 
 # Then run:
 
-.\stop.ps1
+.\root-files\stop.ps1
 
 ```
 
@@ -46,7 +46,7 @@ This automatically:
 
 # Start core backend (Hindsight memory + JAX services)
 
-docker compose up -d
+docker compose -f root-files/docker-compose.yml up -d
 
 # Wait for services to be ready (~30 seconds)
 
@@ -152,7 +152,7 @@ docker compose down
 # Rebuild from scratch
 
 docker compose build --no-cache
-docker compose up -d
+docker compose -f root-files/docker-compose.yml up -d
 
 ```
 

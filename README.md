@@ -10,6 +10,10 @@
 - Quick start: `Docs/QUICKSTART.md`
 - IB setup & bridge: `Docs/IB_GUIDE.md`
 
+## Repository Layout Note
+
+Operational scripts and root-level config files (compose, scripts, binaries, etc.) live under `root-files/` so the repo root stays minimal.
+
 ## Services
 
 - **Jax API**: `go run ./services/jax-api/cmd/jax-api`
@@ -33,7 +37,7 @@ Use local `.env` files (or shell env vars) for secrets and keep them untracked.
 
 - `scripts/test.ps1`
 - `go test ./...`
-- `make test`
+- `make -f root-files/Makefile test`
 - Lint: `golangci-lint run ./...`
 
 ## Storage

@@ -48,7 +48,7 @@ This repo follows **Clean Architecture / Hexagonal** principles:
 
 - **db/postgres/**
   - `schema.sql`: Postgres schema for storage provider
-  - `docker-compose.yml`: local Postgres for development
+  - `root-files/docker-compose.yml`: main docker compose for services
 
 - **cmd/**
   - `jax-utcp-smoke/`: UTCP smoke test entrypoint
@@ -77,7 +77,7 @@ This repo follows **Clean Architecture / Hexagonal** principles:
 
 ## Testing & quality
 
-- **Primary**: `go test ./...` or `make test`
+- **Primary**: `go test ./...` or `make -f root-files/Makefile test`
 - **Lint**: `golangci-lint run ./...`
 - **Scripted**: `scripts/test.ps1` (gofmt + lint + tests)
 
@@ -110,4 +110,3 @@ Dexter tests:
 
 - The repo is actively scaffolding with WIP modules; consult `Docs/backend/` for the authoritative implementation plan.
 - Vendored upstreams are pinned; see each `UPSTREAM.md` for commit references.
-

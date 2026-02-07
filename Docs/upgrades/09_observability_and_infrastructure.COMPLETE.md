@@ -139,7 +139,7 @@ SKIP_INTEGRATION=1 go test -tags=integration ./tests/integration/...
 
 ## 4. Docker Compose Enhancements
 
-### Existing Services (docker-compose.yml)
+### Existing Services (root-files/docker-compose.yml)
 
 **Core services** (always running):
 - `hindsight`: Memory backend with API
@@ -158,7 +158,7 @@ SKIP_INTEGRATION=1 go test -tags=integration ./tests/integration/...
 **Start core services**:
 
 ```n
-docker compose up -d
+docker compose -f root-files/docker-compose.yml up -d
 
 ```
 
@@ -190,7 +190,7 @@ docker compose logs hindsight
 
 # 1. Start services
 
-docker compose up -d
+docker compose -f root-files/docker-compose.yml up -d
 
 # 2. Wait for healthy
 
@@ -227,7 +227,7 @@ docker compose down
 - **Fast feedback**: Runs in <1s when services down
 
 ### Infrastructure
-- **One-command startup**: `docker compose up -d`
+- **One-command startup**: `docker compose -f root-files/docker-compose.yml up -d`
 - **Service profiles**: jobs, db for selective startup
 - **Local dev parity**: Matches production architecture
 - **Debugging friendly**: Easy log access

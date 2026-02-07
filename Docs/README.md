@@ -12,6 +12,7 @@ This directory contains the canonical documentation for the Jax Trading Assistan
 - **Implementation summary**: `IMPLEMENTATION_SUMMARY.md`
 - **IB setup & bridge**: `IB_GUIDE.md`
 - **Phase 3 condensed**: `PHASE_3.md`
+- **Phase 4 workspace**: `phase4/`
 
 ## Development Guides
 

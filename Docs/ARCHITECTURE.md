@@ -43,7 +43,7 @@ jax-trading assistant/
     postgres/
       schema.sql                # Postgres schema for storage provider
 
-      docker-compose.yml        # Local Postgres for development
+      root-files/docker-compose.yml  # Main docker compose for services
 
   scripts/
     test.ps1                    # Local quality gate (gofmt, golangci-lint, go test)

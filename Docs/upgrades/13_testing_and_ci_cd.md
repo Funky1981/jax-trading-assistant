@@ -40,5 +40,5 @@ Relying on manual tests invites regressions. Automated testing and CI/CD catch i
    - Require at least one peer review on each pull request. Automate checks for unreviewed changes or failing status checks.
 
 7. **Documentation**
-   - Document how to run tests locally (`scripts/test.ps1`, `make test`) and how to troubleshoot failing pipelines.
+   - Document how to run tests locally (`scripts/test.ps1`, `make -f root-files/Makefile test`) and how to troubleshoot failing pipelines.
    - Provide guidelines for writing new tests and adding them to the suite.
