@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { TradingPage } from '@/pages/TradingPage';
@@ -16,30 +16,32 @@ function PlaceholderPage({ title }: { title: string }) {
   );
 }
 
-export function AppRoutes() {
-  return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route key="dashboard" path="/" element={<DashboardPage />} />
-        <Route key="trading" path="/trading" element={<TradingPage />} />
-        <Route key="system" path="/system" element={<SystemPage />} />
-        <Route key="blotter" path="/blotter" element={<PlaceholderPage title="Trade Blotter" />} />
-        <Route key="portfolio" path="/portfolio" element={<PlaceholderPage title="Portfolio" />} />
-        <Route key="settings" path="/settings" element={<PlaceholderPage title="Settings" />} />
-      </Route>
-    </Routes>
-  );
-}
+export const routes = [
+  {
+    path: '/',
+    element: <AppShell />,
+    children: [
+      { index: true, element: <DashboardPage /> },
+      { path: 'trading', element: <TradingPage /> },
+      { path: 'system', element: <SystemPage /> },
+      { path: 'blotter', element: <PlaceholderPage title="Trade Blotter" /> },
+      { path: 'portfolio', element: <PlaceholderPage title="Portfolio" /> },
+      { path: 'settings', element: <PlaceholderPage title="Settings" /> },
+    ],
+  },
+];
+
+export const router = createBrowserRouter(
+  routes,
+  {
+    basename: import.meta.env.BASE_URL,
+    future: {
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    },
+  }
+);
 
 export default function App() {
-  return (
-    <HashRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true,
-      }}
-    >
-      <AppRoutes />
-    </HashRouter>
-  );
+  return <RouterProvider router={router} />;
 }
