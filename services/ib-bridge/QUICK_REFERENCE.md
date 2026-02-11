@@ -325,7 +325,7 @@ docker compose up -d ib-bridge
 - **Main README**: `services/ib-bridge/README.md`
 - **Testing Guide**: `services/ib-bridge/TESTING.md`
 - **Go Client**: `libs/marketdata/ib/README.md`
-- **Complete Summary**: `Docs/PHASE_3_SUMMARY.md`
+- **Complete Summary**: `Docs/PHASE_3.md`
 
 ## 🔗 Useful Links
 

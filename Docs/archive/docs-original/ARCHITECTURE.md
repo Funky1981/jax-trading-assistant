@@ -39,11 +39,10 @@ jax-trading assistant/
   config/
     providers.json              # UTCP provider definitions (http/local)
 
-  docker-compose.yml            # Main docker compose for services
-
   db/
     postgres/
       schema.sql                # Postgres schema for storage provider
+
       docker-compose.yml        # Local Postgres for development
 
   scripts/
