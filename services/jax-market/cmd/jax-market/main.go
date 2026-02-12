@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -26,6 +27,8 @@ type Metrics struct {
 	LastIngestTime     time.Time `json:"last_ingest_time"`
 	LastIngestDuration string    `json:"last_ingest_duration"`
 	SymbolCount        int       `json:"symbol_count"`
+	StaleQuotes        int       `json:"stale_quotes"`
+	LastStaleCheck     time.Time `json:"last_stale_check"`
 	Uptime             string    `json:"uptime"`
 }
 
@@ -117,17 +120,20 @@ func main() {
 
 	// Initialize ingester with metrics callback
 	ing := ingester.New(mdClient, db.DB, cfg)
-	ing.SetMetricsCallback(func(success, failed int, duration time.Duration) {
+	ing.SetMetricsCallback(func(success, failed int, duration time.Duration, staleCount int) {
 		atomic.AddInt64(&metrics.TotalIngestions, 1)
 		atomic.AddInt64(&metrics.SuccessfulIngests, int64(success))
 		atomic.AddInt64(&metrics.FailedIngests, int64(failed))
 		metrics.LastIngestTime = time.Now()
 		metrics.LastIngestDuration = duration.String()
+		metrics.StaleQuotes = staleCount
+		metrics.LastStaleCheck = time.Now()
 	})
 
 	// Start HTTP server for health checks and metrics
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/metrics", handleMetrics)
+	http.HandleFunc("/metrics/prometheus", handlePrometheusMetrics)
 
 	server := &http.Server{
 		Addr:    ":" + httpPort,
@@ -183,8 +189,47 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 		LastIngestTime:     metrics.LastIngestTime,
 		LastIngestDuration: metrics.LastIngestDuration,
 		SymbolCount:        metrics.SymbolCount,
+		StaleQuotes:        metrics.StaleQuotes,
+		LastStaleCheck:     metrics.LastStaleCheck,
 		Uptime:             time.Since(startTime).String(),
 	}
 
 	json.NewEncoder(w).Encode(currentMetrics)
+}
+
+func handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+	uptime := time.Since(startTime).Seconds()
+
+	fmt.Fprintf(w, "# HELP jax_market_ingestions_total Total ingestion runs\n")
+	fmt.Fprintf(w, "# TYPE jax_market_ingestions_total counter\n")
+	fmt.Fprintf(w, "jax_market_ingestions_total %d\n", atomic.LoadInt64(&metrics.TotalIngestions))
+
+	fmt.Fprintf(w, "# HELP jax_market_ingestions_success_total Successful ingestions\n")
+	fmt.Fprintf(w, "# TYPE jax_market_ingestions_success_total counter\n")
+	fmt.Fprintf(w, "jax_market_ingestions_success_total %d\n", atomic.LoadInt64(&metrics.SuccessfulIngests))
+
+	fmt.Fprintf(w, "# HELP jax_market_ingestions_failed_total Failed ingestions\n")
+	fmt.Fprintf(w, "# TYPE jax_market_ingestions_failed_total counter\n")
+	fmt.Fprintf(w, "jax_market_ingestions_failed_total %d\n", atomic.LoadInt64(&metrics.FailedIngests))
+
+	fmt.Fprintf(w, "# HELP jax_market_last_ingest_duration_seconds Last ingest duration\n")
+	fmt.Fprintf(w, "# TYPE jax_market_last_ingest_duration_seconds gauge\n")
+	if metrics.LastIngestDuration != "" {
+		if d, err := time.ParseDuration(metrics.LastIngestDuration); err == nil {
+			fmt.Fprintf(w, "jax_market_last_ingest_duration_seconds %.2f\n", d.Seconds())
+		} else {
+			fmt.Fprintf(w, "jax_market_last_ingest_duration_seconds 0\n")
+		}
+	} else {
+		fmt.Fprintf(w, "jax_market_last_ingest_duration_seconds 0\n")
+	}
+
+	fmt.Fprintf(w, "# HELP jax_market_stale_quotes Stale quote count\n")
+	fmt.Fprintf(w, "# TYPE jax_market_stale_quotes gauge\n")
+	fmt.Fprintf(w, "jax_market_stale_quotes %d\n", metrics.StaleQuotes)
+
+	fmt.Fprintf(w, "# HELP jax_market_uptime_seconds Service uptime\n")
+	fmt.Fprintf(w, "# TYPE jax_market_uptime_seconds gauge\n")
+	fmt.Fprintf(w, "jax_market_uptime_seconds %.0f\n", uptime)
 }

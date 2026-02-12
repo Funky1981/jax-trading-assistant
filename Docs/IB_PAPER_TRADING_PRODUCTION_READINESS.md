@@ -21,9 +21,9 @@ It is intended as a practical handoff checklist for getting to production-like p
 
 ### Interactive Brokers integration
 
-- IB Gateway setup flow is documented (API enablement, trusted IP, paper port 7497).
+- IB Gateway setup flow is documented (API enablement, trusted IP, paper port 4002).
 - IB bridge service is documented as available on `:8092` with health checks.
-- IB mode/port guidance is explicit (`7497` paper, `7496` live).
+- IB mode/port guidance is explicit (`4002` paper via IB Gateway, `7497` paper via TWS, `7496` live).
 - Troubleshooting paths exist for common IB connectivity issues.
 
 ### Delivery planning
@@ -37,7 +37,7 @@ It is intended as a practical handoff checklist for getting to production-like p
 
 ## 1) Real-time data ingestion pipeline (Critical)
 
-**Gap:** IB bridge exists, but end-to-end ingestion from IB → internal pipelines → storage is not fully validated/wired.
+**Gap:** IB bridge exists, but end-to-end ingestion from IB → internal pipelines → storage requires hardened validation and stale-feed monitoring.
 
 **Required work:**
 - Finalize subscription/consumer path for IB quotes/candles.

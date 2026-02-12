@@ -15,8 +15,8 @@
   },
   "ib": {
     "enabled": true,
-    "host": "127.0.0.1",
-    "port": 7497,
+    "host": "host.docker.internal",
+    "port": 4002,
     "client_id": 1
   },
   "cache": {

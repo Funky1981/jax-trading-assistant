@@ -16,7 +16,8 @@ type Ingester struct {
 	client          *marketdata.Client
 	db              *sql.DB
 	config          *config.Config
-	metricsCallback func(successCount, errorCount int, duration time.Duration)
+	metricsCallback func(successCount, errorCount int, duration time.Duration, staleCount int)
+	lastCandleRun   time.Time
 }
 
 // New creates a new Ingester
@@ -29,7 +30,7 @@ func New(client *marketdata.Client, db *sql.DB, config *config.Config) *Ingester
 }
 
 // SetMetricsCallback sets a callback function to report metrics
-func (i *Ingester) SetMetricsCallback(callback func(successCount, errorCount int, duration time.Duration)) {
+func (i *Ingester) SetMetricsCallback(callback func(successCount, errorCount int, duration time.Duration, staleCount int)) {
 	i.metricsCallback = callback
 }
 
@@ -39,8 +40,8 @@ func (i *Ingester) Start(ctx context.Context) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	// Run immediately on startup
-	i.ingestAll(ctx)
+	// Run immediately on startup with candle backfill
+	i.ingestAll(ctx, true)
 
 	for {
 		select {
@@ -48,26 +49,45 @@ func (i *Ingester) Start(ctx context.Context) {
 			log.Printf("ingester stopped")
 			return
 		case <-ticker.C:
-			i.ingestAll(ctx)
+			i.ingestAll(ctx, false)
 		}
 	}
 }
 
 // ingestAll ingests data for all configured symbols
-func (i *Ingester) ingestAll(ctx context.Context) {
+func (i *Ingester) ingestAll(ctx context.Context, forceBackfill bool) {
 	log.Printf("starting ingestion for %d symbols", len(i.config.Symbols))
 	start := time.Now()
 
 	successCount := 0
 	errorCount := 0
+	staleCount := 0
+
+	shouldBackfill := forceBackfill || i.shouldBackfill()
 
 	for _, symbol := range i.config.Symbols {
-		if err := i.ingestSymbol(ctx, symbol); err != nil {
+		if err := i.ingestQuote(ctx, symbol); err != nil {
 			log.Printf("failed to ingest %s: %v", symbol, err)
 			errorCount++
 		} else {
 			successCount++
 		}
+
+		if shouldBackfill {
+			if err := i.ingestCandles(ctx, symbol, i.config.CandleBackfill); err != nil {
+				log.Printf("failed to backfill candles for %s: %v", symbol, err)
+				errorCount++
+			}
+		}
+	}
+
+	if shouldBackfill {
+		i.lastCandleRun = time.Now().UTC()
+	}
+
+	staleCount = i.checkStaleQuotes(ctx)
+	if staleCount > 0 {
+		log.Printf("stale quote check: %d symbol(s) older than %ds", staleCount, i.config.StaleQuoteSecs)
 	}
 
 	duration := time.Since(start)
@@ -75,12 +95,19 @@ func (i *Ingester) ingestAll(ctx context.Context) {
 
 	// Call metrics callback if set
 	if i.metricsCallback != nil {
-		i.metricsCallback(successCount, errorCount, duration)
+		i.metricsCallback(successCount, errorCount, duration, staleCount)
 	}
 }
 
-// ingestSymbol ingests quote and candles for a single symbol
-func (i *Ingester) ingestSymbol(ctx context.Context, symbol string) error {
+func (i *Ingester) shouldBackfill() bool {
+	if i.lastCandleRun.IsZero() {
+		return true
+	}
+	return time.Since(i.lastCandleRun) >= 24*time.Hour
+}
+
+// ingestQuote ingests the latest quote for a symbol
+func (i *Ingester) ingestQuote(ctx context.Context, symbol string) error {
 	// Fetch current quote
 	quote, err := i.client.GetQuote(ctx, symbol)
 	if err != nil {
@@ -92,8 +119,18 @@ func (i *Ingester) ingestSymbol(ctx context.Context, symbol string) error {
 		return fmt.Errorf("failed to store quote: %w", err)
 	}
 
-	// Fetch daily candles (last 30 days)
-	candles, err := i.client.GetCandles(ctx, symbol, marketdata.Timeframe1Day, 30)
+	log.Printf("ingested %s: price=$%.2f", symbol, quote.Price)
+	return nil
+}
+
+// ingestCandles backfills daily candles for a single symbol
+func (i *Ingester) ingestCandles(ctx context.Context, symbol string, limit int) error {
+	if limit <= 0 {
+		return nil
+	}
+
+	// Fetch daily candles
+	candles, err := i.client.GetCandles(ctx, symbol, marketdata.Timeframe1Day, limit)
 	if err != nil {
 		return fmt.Errorf("failed to get candles: %w", err)
 	}
@@ -103,7 +140,7 @@ func (i *Ingester) ingestSymbol(ctx context.Context, symbol string) error {
 		return fmt.Errorf("failed to store candles: %w", err)
 	}
 
-	log.Printf("ingested %s: price=$%.2f, %d candles", symbol, quote.Price, len(candles))
+	log.Printf("backfilled %s candles: %d", symbol, len(candles))
 	return nil
 }
 
@@ -180,4 +217,22 @@ func (i *Ingester) storeCandles(ctx context.Context, candles []marketdata.Candle
 	}
 
 	return nil
+}
+
+func (i *Ingester) checkStaleQuotes(ctx context.Context) int {
+	if i.config.StaleQuoteSecs <= 0 {
+		return 0
+	}
+
+	query := `
+		SELECT COUNT(*)
+		FROM quotes
+		WHERE updated_at < NOW() - ($1 * INTERVAL '1 second')
+	`
+	var count int
+	if err := i.db.QueryRowContext(ctx, query, i.config.StaleQuoteSecs).Scan(&count); err != nil {
+		log.Printf("stale quote check failed: %v", err)
+		return 0
+	}
+	return count
 }

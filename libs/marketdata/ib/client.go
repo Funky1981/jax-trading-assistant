@@ -77,6 +77,13 @@ func (c *Client) PlaceOrder(ctx context.Context, req *OrderRequest) (*OrderRespo
 	return &resp, err
 }
 
+// GetOrderStatus returns order status details
+func (c *Client) GetOrderStatus(ctx context.Context, orderID int) (*OrderStatusResponse, error) {
+	var resp OrderStatusResponse
+	err := c.get(ctx, fmt.Sprintf("/orders/%d", orderID), &resp)
+	return &resp, err
+}
+
 // GetPositions gets current positions
 func (c *Client) GetPositions(ctx context.Context) (*PositionsResponse, error) {
 	var resp PositionsResponse

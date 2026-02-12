@@ -27,6 +27,8 @@ type Config struct {
 	RiskPerTrade   float64
 	MaxPositionPct float64
 	OrderType      string // MKT, LMT, STP
+	MaxOpenPos     int
+	MaxDailyLoss   float64
 }
 
 func loadConfig() Config {
@@ -37,6 +39,8 @@ func loadConfig() Config {
 		RiskPerTrade:   getEnvFloat("RISK_PER_TRADE", 0.01),   // 1% default
 		MaxPositionPct: getEnvFloat("MAX_POSITION_PCT", 0.20), // 20% default
 		OrderType:      getEnv("ORDER_TYPE", "LMT"),           // Limit orders by default
+		MaxOpenPos:     getEnvInt("MAX_OPEN_POSITIONS", 10),
+		MaxDailyLoss:   getEnvFloat("MAX_DAILY_LOSS", 0),
 	}
 }
 
@@ -52,6 +56,16 @@ func getEnvFloat(key string, defaultValue float64) float64 {
 		var f float64
 		if _, err := fmt.Sscanf(value, "%f", &f); err == nil {
 			return f
+		}
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		var i int
+		if _, err := fmt.Sscanf(value, "%d", &i); err == nil {
+			return i
 		}
 	}
 	return defaultValue
@@ -105,6 +119,7 @@ func main() {
 	// Setup HTTP routes
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", server.handleHealth)
+	mux.HandleFunc("/metrics/prometheus", server.handlePrometheusMetrics)
 	mux.HandleFunc("/api/v1/execute", server.handleExecute)
 	mux.HandleFunc("/api/v1/trades", server.handleGetTrades)
 	mux.HandleFunc("/api/v1/trades/", server.handleGetTrade)
@@ -135,6 +150,10 @@ func main() {
 	log.Printf("Risk per trade: %.2f%%", config.RiskPerTrade*100)
 	log.Printf("Max position size: %.2f%%", config.MaxPositionPct*100)
 	log.Printf("Order type: %s", config.OrderType)
+	log.Printf("Max open positions: %d", config.MaxOpenPos)
+	if config.MaxDailyLoss > 0 {
+		log.Printf("Max daily loss: %.2f", config.MaxDailyLoss)
+	}
 
 	if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatalf("Server error: %v", err)
@@ -170,6 +189,29 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+func (s *Server) handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+
+	var total, today int
+	query := `
+		SELECT COUNT(*) FROM trades
+	`
+	_ = s.db.QueryRowContext(r.Context(), query).Scan(&total)
+
+	queryToday := `
+		SELECT COUNT(*) FROM trades WHERE created_at >= date_trunc('day', NOW())
+	`
+	_ = s.db.QueryRowContext(r.Context(), queryToday).Scan(&today)
+
+	fmt.Fprintf(w, "# HELP jax_trade_executor_trades_total Total trades\n")
+	fmt.Fprintf(w, "# TYPE jax_trade_executor_trades_total counter\n")
+	fmt.Fprintf(w, "jax_trade_executor_trades_total %d\n", total)
+
+	fmt.Fprintf(w, "# HELP jax_trade_executor_trades_today_total Trades created today\n")
+	fmt.Fprintf(w, "# TYPE jax_trade_executor_trades_today_total counter\n")
+	fmt.Fprintf(w, "jax_trade_executor_trades_today_total %d\n", today)
+}
+
 type ExecuteRequest struct {
 	SignalID   uuid.UUID `json:"signal_id"`
 	ApprovedBy string    `json:"approved_by"`
@@ -186,6 +228,7 @@ type ExecuteResponse struct {
 
 type TradeDetails struct {
 	ID            string    `json:"id"`
+	SignalID      string    `json:"signal_id"`
 	Symbol        string    `json:"symbol"`
 	Direction     string    `json:"direction"`
 	Quantity      int       `json:"quantity"`
@@ -197,6 +240,8 @@ type TradeDetails struct {
 	PositionValue float64   `json:"position_value"`
 	RRRatio       float64   `json:"rr_ratio"`
 	Status        string    `json:"status"`
+	FilledQty     int       `json:"filled_qty"`
+	AvgFillPrice  float64   `json:"avg_fill_price"`
 	SubmittedAt   time.Time `json:"submitted_at"`
 }
 
@@ -243,6 +288,7 @@ func (s *Server) handleExecute(w http.ResponseWriter, r *http.Request) {
 			result.Direction, result.Quantity, result.Symbol),
 		Trade: &TradeDetails{
 			ID:            result.TradeID.String(),
+			SignalID:      result.SignalID.String(),
 			Symbol:        result.Symbol,
 			Direction:     result.Direction,
 			Quantity:      result.Quantity,
@@ -257,8 +303,10 @@ func (s *Server) handleExecute(w http.ResponseWriter, r *http.Request) {
 				StopLoss:   result.StopLoss,
 				TakeProfit: result.TakeProfit,
 			}),
-			Status:      result.Status,
-			SubmittedAt: result.SubmittedAt,
+			Status:       result.Status,
+			FilledQty:    result.FilledQty,
+			AvgFillPrice: result.AvgFillPrice,
+			SubmittedAt:  result.SubmittedAt,
 		},
 	})
 }
@@ -279,6 +327,11 @@ func (s *Server) executeTrade(ctx context.Context, signalID uuid.UUID, approvedB
 	account, err := s.ibClient.GetAccount(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account info: %w", err)
+	}
+
+	// 3b. Risk gates
+	if err := s.checkRiskGates(ctx); err != nil {
+		return nil, err
 	}
 
 	accountInfo := executor.AccountInfo{
@@ -316,7 +369,10 @@ func (s *Server) executeTrade(ctx context.Context, signalID uuid.UUID, approvedB
 		return nil, fmt.Errorf("order rejected: %s", orderResp.Message)
 	}
 
-	// 7. Create trade record
+	// 7. Get initial order status
+	orderStatus, _ := s.ibClient.GetOrderStatus(ctx, orderResp.OrderID)
+
+	// 8. Create trade record
 	tradeID := uuid.New()
 	riskAmount := float64(quantity) * (signal.EntryPrice - signal.StopLoss)
 	if signal.SignalType == "SELL" {
@@ -337,23 +393,32 @@ func (s *Server) executeTrade(ctx context.Context, signalID uuid.UUID, approvedB
 		StopLoss:      signal.StopLoss,
 		TakeProfit:    signal.TakeProfit,
 		StrategyID:    signal.StrategyID,
-		Status:        "pending",
+		Status:        "submitted",
 		RiskAmount:    riskAmount,
 		RiskPercent:   riskPercent,
 		PositionValue: positionValue,
 		SubmittedAt:   time.Now().UTC(),
 	}
 
-	// 8. Store trade in database
+	if orderStatus != nil {
+		trade.Status = orderStatus.Status
+		trade.FilledQty = orderStatus.FilledQty
+		trade.AvgFillPrice = orderStatus.AvgFillPrice
+	}
+
+	// 9. Store trade in database
 	if err := s.storeTrade(ctx, &trade); err != nil {
 		log.Printf("Warning: Failed to store trade record: %v", err)
 		// Don't fail the request - order was placed successfully
 	}
 
-	// 9. Update trade approval with order ID
+	// 10. Update trade approval with order ID
 	if err := s.updateTradeApproval(ctx, signalID, fmt.Sprintf("%d", orderResp.OrderID)); err != nil {
 		log.Printf("Warning: Failed to update trade approval: %v", err)
 	}
+
+	// 11. Poll for status update in background
+	go s.pollOrderStatus(trade.TradeID, orderResp.OrderID)
 
 	return &trade, nil
 }
@@ -390,8 +455,8 @@ func (s *Server) getSignal(ctx context.Context, signalID uuid.UUID) (*executor.S
 
 func (s *Server) storeTrade(ctx context.Context, trade *executor.TradeResult) error {
 	query := `
-		INSERT INTO trades (id, symbol, direction, entry, stop, targets, strategy_id, notes, risk, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO trades (id, signal_id, symbol, direction, entry, stop, targets, strategy_id, notes, risk, order_status, filled_qty, avg_fill_price, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 
 	targetsJSON, _ := json.Marshal([]float64{trade.TakeProfit})
@@ -409,6 +474,7 @@ func (s *Server) storeTrade(ctx context.Context, trade *executor.TradeResult) er
 
 	_, err := s.db.ExecContext(ctx, query,
 		trade.TradeID.String(),
+		trade.SignalID.String(),
 		trade.Symbol,
 		trade.Direction,
 		trade.EntryPrice,
@@ -417,6 +483,9 @@ func (s *Server) storeTrade(ctx context.Context, trade *executor.TradeResult) er
 		trade.StrategyID,
 		notes,
 		riskJSON,
+		trade.Status,
+		trade.FilledQty,
+		trade.AvgFillPrice,
 		trade.SubmittedAt,
 	)
 
@@ -441,7 +510,8 @@ func (s *Server) handleGetTrades(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := `
-		SELECT id, symbol, direction, entry, stop, targets, strategy_id, notes, risk, created_at
+		SELECT id, signal_id, symbol, direction, entry, stop, targets, strategy_id, notes, risk,
+		       order_status, filled_qty, avg_fill_price, created_at
 		FROM trades
 		ORDER BY created_at DESC
 		LIMIT 100
@@ -457,19 +527,23 @@ func (s *Server) handleGetTrades(w http.ResponseWriter, r *http.Request) {
 	var trades []map[string]interface{}
 	for rows.Next() {
 		var (
-			id, symbol, direction, strategyID string
-			entry, stop                       float64
-			notes                             sql.NullString
-			targets, risk                     []byte
-			createdAt                         time.Time
+			id, signalID, symbol, direction, strategyID string
+			entry, stop                                 float64
+			notes                                       sql.NullString
+			targets, risk                               []byte
+			orderStatus                                 sql.NullString
+			filledQty                                   sql.NullInt64
+			avgFillPrice                                sql.NullFloat64
+			createdAt                                   time.Time
 		)
 
-		if err := rows.Scan(&id, &symbol, &direction, &entry, &stop, &targets, &strategyID, &notes, &risk, &createdAt); err != nil {
+		if err := rows.Scan(&id, &signalID, &symbol, &direction, &entry, &stop, &targets, &strategyID, &notes, &risk, &orderStatus, &filledQty, &avgFillPrice, &createdAt); err != nil {
 			continue
 		}
 
 		trade := map[string]interface{}{
 			"id":          id,
+			"signal_id":   signalID,
 			"symbol":      symbol,
 			"direction":   direction,
 			"entry":       entry,
@@ -480,6 +554,15 @@ func (s *Server) handleGetTrades(w http.ResponseWriter, r *http.Request) {
 
 		if notes.Valid {
 			trade["notes"] = notes.String
+		}
+		if orderStatus.Valid {
+			trade["order_status"] = orderStatus.String
+		}
+		if filledQty.Valid {
+			trade["filled_qty"] = filledQty.Int64
+		}
+		if avgFillPrice.Valid {
+			trade["avg_fill_price"] = avgFillPrice.Float64
 		}
 
 		var targetsArray []float64
@@ -498,6 +581,79 @@ func (s *Server) handleGetTrades(w http.ResponseWriter, r *http.Request) {
 		"trades": trades,
 		"count":  len(trades),
 	})
+}
+
+func (s *Server) checkRiskGates(ctx context.Context) error {
+	if s.config.MaxOpenPos > 0 {
+		positions, err := s.ibClient.GetPositions(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to fetch positions for risk gate: %w", err)
+		}
+		open := 0
+		for _, pos := range positions.Positions {
+			if pos.Quantity != 0 {
+				open++
+			}
+		}
+		if open >= s.config.MaxOpenPos {
+			return fmt.Errorf("risk gate: open positions %d exceeds max %d", open, s.config.MaxOpenPos)
+		}
+	}
+
+	if s.config.MaxDailyLoss > 0 {
+		query := `
+			SELECT COALESCE(SUM((risk->>'amount')::numeric), 0)
+			FROM trades
+			WHERE created_at >= date_trunc('day', NOW())
+		`
+		var totalRisk float64
+		if err := s.db.QueryRowContext(ctx, query).Scan(&totalRisk); err != nil {
+			return fmt.Errorf("failed to calculate daily risk: %w", err)
+		}
+		if totalRisk >= s.config.MaxDailyLoss {
+			return fmt.Errorf("risk gate: daily risk %.2f exceeds max %.2f", totalRisk, s.config.MaxDailyLoss)
+		}
+	}
+	return nil
+}
+
+func (s *Server) pollOrderStatus(tradeID uuid.UUID, orderID int) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			status, err := s.ibClient.GetOrderStatus(ctx, orderID)
+			if err != nil {
+				log.Printf("order status poll failed for %d: %v", orderID, err)
+				continue
+			}
+			if err := s.updateTradeStatus(context.Background(), tradeID, status); err != nil {
+				log.Printf("failed to update trade status for %s: %v", tradeID, err)
+			}
+			if status.Status == "Filled" || status.Status == "Cancelled" {
+				return
+			}
+		}
+	}
+}
+
+func (s *Server) updateTradeStatus(ctx context.Context, tradeID uuid.UUID, status *ib.OrderStatusResponse) error {
+	query := `
+		UPDATE trades
+		SET order_status = $1,
+		    filled_qty = $2,
+		    avg_fill_price = $3
+		WHERE id = $4
+	`
+	_, err := s.db.ExecContext(ctx, query, status.Status, status.FilledQty, status.AvgFillPrice, tradeID.String())
+	return err
 }
 
 func (s *Server) handleGetTrade(w http.ResponseWriter, r *http.Request) {

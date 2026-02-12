@@ -21,6 +21,7 @@ from models import (
     CandlesResponse,
     OrderRequest,
     OrderResponse,
+    OrderStatusResponse,
     PositionsResponse,
     AccountResponse,
     HealthResponse,
@@ -198,6 +199,19 @@ async def place_order(request: OrderRequest):
         )
     except Exception as e:
         logger.error(f"Failed to place order: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/orders/{order_id}", response_model=OrderStatusResponse)
+async def get_order_status(order_id: int):
+    """Get order status for a given order ID"""
+    try:
+        if not ib_client.is_connected():
+            raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
+
+        return await ib_client.get_order_status(order_id)
+    except Exception as e:
+        logger.error(f"Failed to get order status for {order_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

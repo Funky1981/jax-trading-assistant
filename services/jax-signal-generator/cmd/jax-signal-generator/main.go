@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -131,6 +132,7 @@ func metricsCallback(generated int, failed int, duration time.Duration) {
 func startHTTPServer() {
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/metrics", handleMetrics)
+	http.HandleFunc("/metrics/prometheus", handlePrometheusMetrics)
 
 	log.Println("HTTP server listening on :8096")
 	if err := http.ListenAndServe(":8096", nil); err != nil {
@@ -152,4 +154,33 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics.Uptime = time.Since(startTime).String()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(metrics)
+}
+
+func handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+	uptime := time.Since(startTime).Seconds()
+
+	fmt.Fprintf(w, "# HELP jax_signal_generator_runs_total Total generator runs\n")
+	fmt.Fprintf(w, "# TYPE jax_signal_generator_runs_total counter\n")
+	fmt.Fprintf(w, "jax_signal_generator_runs_total %d\n", metrics.TotalRuns)
+
+	fmt.Fprintf(w, "# HELP jax_signal_generator_signals_generated_total Total signals generated\n")
+	fmt.Fprintf(w, "# TYPE jax_signal_generator_signals_generated_total counter\n")
+	fmt.Fprintf(w, "jax_signal_generator_signals_generated_total %d\n", metrics.SignalsGenerated)
+
+	fmt.Fprintf(w, "# HELP jax_signal_generator_failed_runs_total Failed generator runs\n")
+	fmt.Fprintf(w, "# TYPE jax_signal_generator_failed_runs_total counter\n")
+	fmt.Fprintf(w, "jax_signal_generator_failed_runs_total %d\n", metrics.FailedRuns)
+
+	fmt.Fprintf(w, "# HELP jax_signal_generator_last_run_timestamp_seconds Last run timestamp\n")
+	fmt.Fprintf(w, "# TYPE jax_signal_generator_last_run_timestamp_seconds gauge\n")
+	if !metrics.LastRunTime.IsZero() {
+		fmt.Fprintf(w, "jax_signal_generator_last_run_timestamp_seconds %d\n", metrics.LastRunTime.Unix())
+	} else {
+		fmt.Fprintf(w, "jax_signal_generator_last_run_timestamp_seconds 0\n")
+	}
+
+	fmt.Fprintf(w, "# HELP jax_signal_generator_uptime_seconds Service uptime\n")
+	fmt.Fprintf(w, "# TYPE jax_signal_generator_uptime_seconds gauge\n")
+	fmt.Fprintf(w, "jax_signal_generator_uptime_seconds %.0f\n", uptime)
 }

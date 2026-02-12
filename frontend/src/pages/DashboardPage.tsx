@@ -7,11 +7,13 @@ import {
   WatchlistPanel,
   PositionsPanel,
   RiskSummaryPanel,
+  AIAssistantPanel,
+  SignalsQueuePanel,
 } from '@/components/dashboard';
 import { cn } from '@/lib/utils';
 
 // Panel IDs for the overview dashboard
-const PANEL_IDS = ['health', 'watchlist', 'positions', 'risk'] as const;
+const PANEL_IDS = ['health', 'watchlist', 'positions', 'risk', 'signalsQueue', 'aiAssistant'] as const;
 
 type PanelId = (typeof PANEL_IDS)[number];
 
@@ -26,24 +28,32 @@ const DEFAULT_LAYOUTS: Layouts = {
     { x: 4, y: 0, w: 4, h: 5, i: 'watchlist' },
     { x: 0, y: 4, w: 8, h: 4, i: 'positions' },
     { x: 8, y: 0, w: 4, h: 5, i: 'risk' },
+    { x: 0, y: 8, w: 12, h: 6, i: 'signalsQueue' },
+    { x: 0, y: 14, w: 12, h: 6, i: 'aiAssistant' },
   ],
   md: [
     { x: 0, y: 0, w: 5, h: 4, i: 'health' },
     { x: 5, y: 0, w: 5, h: 5, i: 'watchlist' },
     { x: 0, y: 4, w: 6, h: 4, i: 'positions' },
     { x: 6, y: 4, w: 4, h: 5, i: 'risk' },
+    { x: 0, y: 9, w: 10, h: 6, i: 'signalsQueue' },
+    { x: 0, y: 15, w: 10, h: 6, i: 'aiAssistant' },
   ],
   sm: [
     { x: 0, y: 0, w: 6, h: 4, i: 'health' },
     { x: 0, y: 4, w: 6, h: 5, i: 'watchlist' },
     { x: 0, y: 9, w: 6, h: 4, i: 'positions' },
     { x: 0, y: 13, w: 6, h: 5, i: 'risk' },
+    { x: 0, y: 18, w: 6, h: 6, i: 'signalsQueue' },
+    { x: 0, y: 24, w: 6, h: 6, i: 'aiAssistant' },
   ],
   xs: [
     { x: 0, y: 0, w: 4, h: 4, i: 'health' },
     { x: 0, y: 4, w: 4, h: 5, i: 'watchlist' },
     { x: 0, y: 9, w: 4, h: 4, i: 'positions' },
     { x: 0, y: 13, w: 4, h: 5, i: 'risk' },
+    { x: 0, y: 18, w: 4, h: 6, i: 'signalsQueue' },
+    { x: 0, y: 24, w: 4, h: 6, i: 'aiAssistant' },
   ],
 };
 
@@ -51,7 +61,8 @@ function loadLayouts(): Layouts {
   try {
     const stored = localStorage.getItem(LAYOUTS_STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored) as Layouts;
+      return mergeLayouts(parsed, DEFAULT_LAYOUTS);
     }
   } catch {
     // Ignore storage errors
@@ -71,7 +82,14 @@ function loadPanelStates(): Record<PanelId, boolean> {
   try {
     const stored = localStorage.getItem(PANEL_STATE_STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored) as Record<PanelId, boolean>;
+      return {
+        ...PANEL_IDS.reduce(
+          (acc, id) => ({ ...acc, [id]: true }),
+          {} as Record<PanelId, boolean>
+        ),
+        ...parsed,
+      };
     }
   } catch {
     // Ignore storage errors
@@ -81,6 +99,23 @@ function loadPanelStates(): Record<PanelId, boolean> {
     (acc, id) => ({ ...acc, [id]: true }),
     {} as Record<PanelId, boolean>
   );
+}
+
+function mergeLayouts(current: Layouts, defaults: Layouts): Layouts {
+  const result: Layouts = { ...current };
+  (Object.keys(defaults) as Array<keyof Layouts>).forEach((breakpoint) => {
+    const currentItems = current[breakpoint] ?? [];
+    const defaultItems = defaults[breakpoint] ?? [];
+    const currentIds = new Set(currentItems.map((item) => item.i));
+    const merged = [...currentItems];
+    defaultItems.forEach((item) => {
+      if (!currentIds.has(item.i)) {
+        merged.push(item);
+      }
+    });
+    result[breakpoint] = merged;
+  });
+  return result;
 }
 
 function savePanelStates(state: Record<PanelId, boolean>) {
@@ -251,6 +286,24 @@ export function DashboardPage() {
             <RiskSummaryPanel
               isOpen={panelStates.risk}
               onToggle={() => togglePanel('risk')}
+            />
+          </WidgetPanel>
+        </div>
+
+        <div key="signalsQueue">
+          <WidgetPanel id="signalsQueue" title="Trading Approvals" isEditable={isEditing}>
+            <SignalsQueuePanel
+              isOpen={panelStates.signalsQueue}
+              onToggle={() => togglePanel('signalsQueue')}
+            />
+          </WidgetPanel>
+        </div>
+
+        <div key="aiAssistant">
+          <WidgetPanel id="aiAssistant" title="AI Trading Assistant" isEditable={isEditing}>
+            <AIAssistantPanel
+              isOpen={panelStates.aiAssistant}
+              onToggle={() => togglePanel('aiAssistant')}
             />
           </WidgetPanel>
         </div>

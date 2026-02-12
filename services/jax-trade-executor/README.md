@@ -129,6 +129,8 @@ List all trades (last 100)
 | `IB_BRIDGE_URL` | IB Bridge service URL | `http://localhost:8092` | ✅ |
 | `RISK_PER_TRADE` | Risk % per trade (0.01 = 1%) | `0.01` | ❌ |
 | `MAX_POSITION_PCT` | Max position size % (0.2 = 20%) | `0.20` | ❌ |
+| `MAX_OPEN_POSITIONS` | Max open positions allowed | `10` | ❌ |
+| `MAX_DAILY_LOSS` | Max daily risk budget (absolute $) | `0` | ❌ |
 | `ORDER_TYPE` | Order type (LMT, MKT, STP) | `LMT` | ❌ |
 | `PORT` | HTTP server port | `8097` | ❌ |
 

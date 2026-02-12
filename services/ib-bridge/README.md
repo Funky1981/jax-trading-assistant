@@ -35,6 +35,7 @@ Go (jax-api) <--> HTTP/WebSocket <--> IB Bridge (Python) <--> IB Gateway
 ### Trading
 
 - `POST /orders` - Place an order
+- `GET /orders/{id}` - Get order status
 - `GET /positions` - Get current positions
 - `GET /account` - Get account information
 

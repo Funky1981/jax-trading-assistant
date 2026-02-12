@@ -122,3 +122,54 @@ export interface OrchestrationResult {
   duration?: number;
   status?: 'completed' | 'failed' | 'running';
 }
+
+export interface Signal {
+  id: string;
+  symbol: string;
+  strategy_id: string;
+  signal_type: string;
+  confidence: number;
+  entry_price?: number | null;
+  stop_loss?: number | null;
+  take_profit?: number | null;
+  reasoning?: string | null;
+  generated_at: string;
+  expires_at?: string | null;
+  status: string;
+  orchestration_run_id?: string | null;
+  created_at: string;
+}
+
+export interface SignalListResponse {
+  signals: Signal[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface OrchestrationRun {
+  id: string;
+  symbol: string;
+  trigger_type: string;
+  trigger_id?: string | null;
+  agent_suggestion?: string | null;
+  confidence?: number | null;
+  reasoning?: string | null;
+  memories_recalled?: number;
+  status: string;
+  started_at: string;
+  completed_at?: string | null;
+  error?: string | null;
+}
+
+export interface Recommendation {
+  signal: Signal;
+  ai_analysis?: OrchestrationRun | null;
+}
+
+export interface RecommendationListResponse {
+  recommendations: Recommendation[];
+  total: number;
+  limit: number;
+  offset: number;
+}

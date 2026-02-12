@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: jax-market
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ["jax-market:8095"]
+  - job_name: jax-signal-generator
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ["jax-signal-generator:8096"]
+  - job_name: jax-orchestrator
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ["jax-orchestrator:8091"]
+  - job_name: jax-trade-executor
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ["jax-trade-executor:8097"]
+  - job_name: jax-api
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ["jax-api:8081"]

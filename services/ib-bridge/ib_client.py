@@ -15,7 +15,8 @@ from models import (
     QuoteResponse,
     Candle,
     Position,
-    AccountResponse
+    AccountResponse,
+    OrderStatusResponse
 )
 
 logger = logging.getLogger(__name__)
@@ -242,6 +243,39 @@ class IBClient:
             
         except Exception as e:
             logger.error(f"Error placing order for {symbol}: {e}")
+            raise
+
+    async def get_order_status(self, order_id: int) -> OrderStatusResponse:
+        """Get order status for a specific order ID"""
+        try:
+            trade = None
+            for t in self.ib.trades():
+                if t.order and t.order.orderId == order_id:
+                    trade = t
+                    break
+
+            if trade is None:
+                return OrderStatusResponse(
+                    order_id=order_id,
+                    status="Unknown",
+                    filled_qty=0,
+                    avg_fill_price=0.0,
+                    last_update=datetime.utcnow().isoformat()
+                )
+
+            status = trade.orderStatus.status if trade.orderStatus else "Unknown"
+            filled = int(trade.orderStatus.filled) if trade.orderStatus else 0
+            avg_fill = float(trade.orderStatus.avgFillPrice) if trade.orderStatus else 0.0
+
+            return OrderStatusResponse(
+                order_id=order_id,
+                status=status,
+                filled_qty=filled,
+                avg_fill_price=avg_fill,
+                last_update=datetime.utcnow().isoformat()
+            )
+        except Exception as e:
+            logger.error(f"Error getting order status for {order_id}: {e}")
             raise
     
     async def get_positions(self) -> List[Position]:

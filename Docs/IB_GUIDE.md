@@ -13,7 +13,8 @@ This guide consolidates IB Gateway setup, configuration, and the IB bridge integ
 3. **Enable API Access**
    - Configure → Settings → API → Settings
    - Enable **ActiveX and Socket Clients**
-   - Port `7497` (paper) or `7496` (live)
+   - **IB Gateway (paper)**: `4002` (recommended)
+   - **TWS (paper)**: `7497` (legacy)
    - Trusted IPs: `127.0.0.1`
 4. **Start the IB Bridge (Python)**
    - `docker compose up ib-bridge`
@@ -23,7 +24,8 @@ This guide consolidates IB Gateway setup, configuration, and the IB bridge integ
 
 | Mode | Host | Port | Notes |
 | --- | --- | --- | --- |
-| Paper | 127.0.0.1 | 7497 | Recommended for testing |
+| Paper (IB Gateway) | 127.0.0.1 | 4002 | Recommended for testing |
+| Paper (TWS) | 127.0.0.1 | 7497 | Legacy paper port |
 | Live | 127.0.0.1 | 7496 | Use with caution |
 
 ## Configuration Example
@@ -32,8 +34,8 @@ This guide consolidates IB Gateway setup, configuration, and the IB bridge integ
 {
   "ib": {
     "enabled": true,
-    "host": "127.0.0.1",
-    "port": 7497,
+    "host": "host.docker.internal",
+    "port": 4002,
     "client_id": 1
   }
 }
@@ -41,9 +43,9 @@ This guide consolidates IB Gateway setup, configuration, and the IB bridge integ
 
 ## Current Implementation Status
 
-- **IB bridge**: documented as production-ready (FastAPI + ib_insync) and exposed on `8092`.
-- **Go provider**: relies on the IB bridge HTTP client.
-- **Ingestion wiring**: still requires validation from IB → ingest → storage.
+- **IB bridge**: production-ready (FastAPI + ib_insync) and exposed on `8092` for trading/account APIs.
+- **Go provider**: `jax-market` connects directly to IB Gateway for market data ingestion.
+- **Ingestion wiring**: validated via `jax-market` → Postgres `quotes`/`candles`.
 
 ## Troubleshooting
 

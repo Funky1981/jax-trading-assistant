@@ -58,6 +58,8 @@ type TradeResult struct {
 	TakeProfit    float64
 	StrategyID    string
 	Status        string // pending, filled, rejected, cancelled
+	FilledQty     int
+	AvgFillPrice  float64
 	RiskAmount    float64
 	RiskPercent   float64
 	PositionValue float64

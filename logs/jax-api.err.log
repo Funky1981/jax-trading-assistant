@@ -1,0 +1,31 @@
+2026/02/11 16:22:30 database connected: max_open=25, max_idle=5, max_lifetime=5m0s
+2026/02/11 16:22:30 WARNING: knowledge registry health check failed: strategyregistry: health check failed: failed to connect to `user=postgres database=jax_knowledge`: [::1]:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01)
+2026/02/11 16:22:30 WARNING: JWT authentication disabled: JWT_SECRET environment variable is required
+2026/02/11 16:22:30 Set JWT_SECRET environment variable to enable authentication
+2026/02/11 16:22:30 WARNING: Authentication endpoints not registered (JWT not configured)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 WARNING: Running without authentication (development mode)
+2026/02/11 16:22:30 jax-core listening on :8081
+2026/02/11 16:22:30 Public endpoints: /health, /auth/login, /auth/refresh
+2026/02/11 16:22:30 Protected endpoints: /risk/*, /strategies, /trades, /symbols/*, /trading/*, /api/v1/metrics*, /api/v1/signals*
+2026/02/11 17:31:56 Successfully triggered trade execution for signal 0da5e910-8eee-432d-b261-1db34f7a5ba8
+2026/02/11 17:32:12 Successfully triggered trade execution for signal 44321184-2300-4062-b370-e50c1bd78eb6
+2026/02/11 17:34:42 Successfully triggered trade execution for signal fc30ee54-62bc-4965-97c3-ba868ea1bd32
+2026/02/11 17:34:55 Successfully triggered trade execution for signal 41d5574a-73da-434e-b16b-8c0f26db6cc9
+2026/02/11 17:35:10 Successfully triggered trade execution for signal 98a61c6c-8b7e-4713-ac69-163d42461d19

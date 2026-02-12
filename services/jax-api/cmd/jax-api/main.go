@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"jax-trading-assistant/internal/strategyregistry"
@@ -149,12 +150,23 @@ func main() {
 	server.RegisterHealth()
 	server.RegisterAuth()
 	server.RegisterMetrics()
+	if dbConn != nil {
+		server.RegisterPrometheusMetrics(dbConn.DB)
+	}
 	server.RegisterRisk(riskEngine)
 	server.RegisterStrategies(strategyRegistry)
+	if dbConn != nil {
+		server.RegisterStrategyV1(strategyRegistry, dbConn.DB)
+	}
 	server.RegisterProcess(orchestrator, coreCfg.AccountSize, coreCfg.RiskPercent, 3)
 	server.RegisterTrades(tradeStore)
 	server.RegisterTradingGuard(tradingGuard)
 	server.RegisterSignals(signalStore)
+	server.RegisterRecommendations(signalStore)
+	if dbConn != nil {
+		orchestratorURL := os.Getenv("JAX_ORCHESTRATOR_URL")
+		server.RegisterOrchestrationV1(dbConn.DB, orchestratorURL)
+	}
 
 	addr := fmt.Sprintf(":%d", coreCfg.HTTPPort)
 	log.Printf("jax-core listening on %s", addr)

@@ -73,6 +73,15 @@ class OrderResponse(BaseModel):
     message: str
 
 
+class OrderStatusResponse(BaseModel):
+    """Response with order status details"""
+    order_id: int
+    status: str
+    filled_qty: int
+    avg_fill_price: float
+    last_update: str
+
+
 class Position(BaseModel):
     """Position information"""
     symbol: str

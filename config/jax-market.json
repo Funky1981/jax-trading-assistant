@@ -1,6 +1,8 @@
 {
   "database_dsn": "postgresql://jax:jax@postgres:5432/jax?sslmode=disable",
   "ingest_interval": 60,
+  "candle_backfill": 250,
+  "stale_quote_seconds": 300,
   "symbols": [
     "AAPL",
     "MSFT",

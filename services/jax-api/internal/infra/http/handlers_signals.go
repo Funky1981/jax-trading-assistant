@@ -120,6 +120,9 @@ func (h *SignalsHandler) handleSignal(w http.ResponseWriter, r *http.Request) {
 		case "reject":
 			// POST /api/v1/signals/{id}/reject
 			h.handleReject(w, r, id)
+		case "analyze":
+			// POST /api/v1/signals/{id}/analyze
+			h.handleAnalyze(w, r, id)
 		default:
 			http.NotFound(w, r)
 		}
@@ -156,6 +159,15 @@ type ApprovalRequest struct {
 	ApprovedBy        string `json:"approved_by"`
 	ModificationNotes string `json:"modification_notes,omitempty"`
 	RejectionReason   string `json:"rejection_reason,omitempty"`
+}
+
+type AnalyzeSignalRequest struct {
+	Context string `json:"context,omitempty"`
+}
+
+type AnalyzeSignalResponse struct {
+	RunID  string `json:"runId"`
+	Status string `json:"status"`
 }
 
 // handleApprove handles POST /api/v1/signals/{id}/approve
@@ -239,6 +251,121 @@ func (h *SignalsHandler) handleReject(w http.ResponseWriter, r *http.Request, id
 	}
 }
 
+// handleAnalyze handles POST /api/v1/signals/{id}/analyze - trigger AI analysis for a signal
+func (h *SignalsHandler) handleAnalyze(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse request body (optional context)
+	var req AnalyzeSignalRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err.Error() != "EOF" {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Load signal
+	signal, err := h.store.GetSignal(r.Context(), id)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Build context
+	contextStr := buildSignalContext(signal, req.Context)
+
+	// Trigger orchestrator
+	orchestratorURL := os.Getenv("JAX_ORCHESTRATOR_URL")
+	if orchestratorURL == "" {
+		orchestratorURL = "http://jax-orchestrator:8091"
+	}
+
+	payload := map[string]interface{}{
+		"signal_id":    id.String(),
+		"symbol":       signal.Symbol,
+		"trigger_type": "signal",
+		"context":      contextStr,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, "failed to marshal request", http.StatusInternalServerError)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, orchestratorURL+"/orchestrate", bytes.NewBuffer(jsonData))
+	if err != nil {
+		http.Error(w, "failed to create request", http.StatusInternalServerError)
+		return
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		http.Error(w, "failed to call orchestrator", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		http.Error(w, "failed to trigger orchestration", http.StatusBadGateway)
+		return
+	}
+
+	var orchResp struct {
+		RunID  string `json:"run_id"`
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&orchResp); err != nil {
+		http.Error(w, "failed to parse orchestrator response", http.StatusBadGateway)
+		return
+	}
+
+	runID, err := uuid.Parse(orchResp.RunID)
+	if err == nil {
+		_ = h.store.LinkOrchestration(r.Context(), id, runID)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(AnalyzeSignalResponse{
+		RunID:  orchResp.RunID,
+		Status: orchResp.Status,
+	})
+}
+
+func buildSignalContext(signal *app.Signal, extra string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Signal: %s %s\n", signal.SignalType, signal.Symbol))
+	sb.WriteString(fmt.Sprintf("Strategy: %s\n", signal.StrategyID))
+	sb.WriteString(fmt.Sprintf("Confidence: %.2f\n", signal.Confidence))
+	if signal.EntryPrice != nil {
+		sb.WriteString(fmt.Sprintf("Entry: %.2f\n", *signal.EntryPrice))
+	}
+	if signal.StopLoss != nil {
+		sb.WriteString(fmt.Sprintf("Stop Loss: %.2f\n", *signal.StopLoss))
+	}
+	if signal.TakeProfit != nil {
+		sb.WriteString(fmt.Sprintf("Take Profit: %.2f\n", *signal.TakeProfit))
+	}
+	if signal.Reasoning != nil && *signal.Reasoning != "" {
+		sb.WriteString(fmt.Sprintf("Reasoning: %s\n", *signal.Reasoning))
+	}
+	if extra != "" {
+		sb.WriteString("\nAdditional Context:\n")
+		sb.WriteString(extra)
+	}
+	return sb.String()
+}
+
 // triggerTradeExecution calls the trade executor service to execute an approved signal
 func (h *SignalsHandler) triggerTradeExecution(signalID uuid.UUID, approvedBy string) error {
 	tradeExecutorURL := os.Getenv("TRADE_EXECUTOR_URL")
@@ -259,7 +386,7 @@ func (h *SignalsHandler) triggerTradeExecution(signalID uuid.UUID, approvedBy st
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, 
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
 		tradeExecutorURL+"/api/v1/execute", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)

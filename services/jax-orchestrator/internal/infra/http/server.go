@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -36,6 +37,7 @@ func NewServer(orchestrator *app.Orchestrator, db *sql.DB) *Server {
 func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/health", s.handleHealth)
 	s.mux.HandleFunc("/orchestrate", s.handleOrchestrate)
+	s.mux.HandleFunc("/metrics/prometheus", s.handlePrometheusMetrics)
 }
 
 // ServeHTTP implements http.Handler
@@ -63,6 +65,37 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"service": "jax-orchestrator",
 		"status":  "healthy",
 	})
+}
+
+func (s *Server) handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+
+	total, completed, failed := 0, 0, 0
+	query := `
+		SELECT
+			COUNT(*) AS total,
+			COUNT(*) FILTER (WHERE status = 'completed') AS completed,
+			COUNT(*) FILTER (WHERE status = 'failed') AS failed
+		FROM orchestration_runs
+	`
+	if err := s.db.QueryRowContext(r.Context(), query).Scan(&total, &completed, &failed); err != nil {
+		fmt.Fprintf(w, "# HELP jax_orchestrator_metrics_error Metrics query error\n")
+		fmt.Fprintf(w, "# TYPE jax_orchestrator_metrics_error gauge\n")
+		fmt.Fprintf(w, "jax_orchestrator_metrics_error 1\n")
+		return
+	}
+
+	fmt.Fprintf(w, "# HELP jax_orchestrator_runs_total Total orchestration runs\n")
+	fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_total counter\n")
+	fmt.Fprintf(w, "jax_orchestrator_runs_total %d\n", total)
+
+	fmt.Fprintf(w, "# HELP jax_orchestrator_runs_completed_total Completed orchestration runs\n")
+	fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_completed_total counter\n")
+	fmt.Fprintf(w, "jax_orchestrator_runs_completed_total %d\n", completed)
+
+	fmt.Fprintf(w, "# HELP jax_orchestrator_runs_failed_total Failed orchestration runs\n")
+	fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_failed_total counter\n")
+	fmt.Fprintf(w, "jax_orchestrator_runs_failed_total %d\n", failed)
 }
 
 func (s *Server) handleOrchestrate(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +229,7 @@ func (s *Server) runOrchestration(runID uuid.UUID, symbol, contextStr string, si
 	}()
 
 	// Call Agent0 service
-	agent0Response, err := s.callAgent0(ctx, symbol, contextStr)
+	agent0Response, rawResponse, err := s.callAgent0(ctx, symbol, contextStr)
 	if err != nil {
 		log.Printf("agent0 call failed for run %s: %v", runID, err)
 		s.updateOrchestrationError(ctx, runID, err.Error())
@@ -204,7 +237,7 @@ func (s *Server) runOrchestration(runID uuid.UUID, symbol, contextStr string, si
 	}
 
 	// Update orchestration run with results
-	if err := s.updateOrchestrationComplete(ctx, runID, agent0Response); err != nil {
+	if err := s.updateOrchestrationComplete(ctx, runID, agent0Response, rawResponse); err != nil {
 		log.Printf("failed to update orchestration run %s: %v", runID, err)
 		return
 	}
@@ -214,11 +247,13 @@ func (s *Server) runOrchestration(runID uuid.UUID, symbol, contextStr string, si
 
 // Agent0Response represents the response from agent0-service
 type Agent0Response struct {
-	Suggestion string  `json:"suggestion"`
-	Confidence float64 `json:"confidence"`
+	Action     string   `json:"action"`
+	Confidence float64  `json:"confidence"`
+	Reasoning  string   `json:"reasoning"`
+	KeyFactors []string `json:"key_factors"`
 }
 
-func (s *Server) callAgent0(ctx context.Context, symbol, contextStr string) (Agent0Response, error) {
+func (s *Server) callAgent0(ctx context.Context, symbol, contextStr string) (Agent0Response, json.RawMessage, error) {
 	// TODO: Get agent0 URL from config
 	agent0URL := "http://agent0-service:8093/suggest"
 
@@ -229,12 +264,12 @@ func (s *Server) callAgent0(ctx context.Context, symbol, contextStr string) (Age
 
 	bodyBytes, err := json.Marshal(requestBody)
 	if err != nil {
-		return Agent0Response{}, fmt.Errorf("marshal request: %w", err)
+		return Agent0Response{}, nil, fmt.Errorf("marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, agent0URL, strings.NewReader(string(bodyBytes)))
 	if err != nil {
-		return Agent0Response{}, fmt.Errorf("create request: %w", err)
+		return Agent0Response{}, nil, fmt.Errorf("create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -242,32 +277,46 @@ func (s *Server) callAgent0(ctx context.Context, symbol, contextStr string) (Age
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return Agent0Response{}, fmt.Errorf("execute request: %w", err)
+		return Agent0Response{}, nil, fmt.Errorf("execute request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return Agent0Response{}, fmt.Errorf("agent0 returned status %d", resp.StatusCode)
+		return Agent0Response{}, nil, fmt.Errorf("agent0 returned status %d", resp.StatusCode)
+	}
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return Agent0Response{}, nil, fmt.Errorf("read response: %w", err)
 	}
 
 	var result Agent0Response
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return Agent0Response{}, fmt.Errorf("decode response: %w", err)
+	if err := json.Unmarshal(respBytes, &result); err != nil {
+		return Agent0Response{}, respBytes, fmt.Errorf("decode response: %w", err)
 	}
 
-	return result, nil
+	return result, respBytes, nil
 }
 
-func (s *Server) updateOrchestrationComplete(ctx context.Context, runID uuid.UUID, response Agent0Response) error {
+func (s *Server) updateOrchestrationComplete(ctx context.Context, runID uuid.UUID, response Agent0Response, raw json.RawMessage) error {
+	confidence := response.Confidence
+	if confidence > 1 {
+		confidence = confidence / 100
+	}
+	if confidence > 1 {
+		confidence = 1
+	}
 	query := `
 		UPDATE orchestration_runs
 		SET agent_suggestion = $1,
 			confidence = $2,
+			reasoning = $3,
+			agent_response = $4,
 			status = 'completed',
 			completed_at = NOW()
-		WHERE id = $3
+		WHERE id = $5
 	`
-	_, err := s.db.ExecContext(ctx, query, response.Suggestion, response.Confidence, runID)
+	_, err := s.db.ExecContext(ctx, query, response.Action, confidence, response.Reasoning, raw, runID)
 	return err
 }
 

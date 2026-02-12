@@ -168,7 +168,8 @@ class Agent0:
             )
             if response.status_code == 200:
                 data = response.json()
-                for mem in data.get("memories", []):
+                memories_data = data.get("memories", []) if isinstance(data, dict) else data
+                for mem in memories_data or []:
                     memories.append(MemoryContext(
                         memory_id=mem.get("id", ""),
                         content=mem.get("content", ""),
@@ -200,13 +201,19 @@ class Agent0:
         # Build prompt
         market_data_str = "No market data available"
         if market_data:
+            def fmt_float(value, prefix="", suffix=""):
+                if value is None:
+                    return "N/A"
+                return f"{prefix}{value:.2f}{suffix}"
+
+            volume = market_data.volume if market_data.volume is not None else "N/A"
             market_data_str = f"""
 Symbol: {symbol}
-Current Price: ${market_data.price:.2f}
-Change: ${market_data.change:.2f} ({market_data.change_percent:.2f}%)
-Volume: {market_data.volume or 'N/A'}
-High: ${market_data.high:.2f if market_data.high else 'N/A'}
-Low: ${market_data.low:.2f if market_data.low else 'N/A'}
+Current Price: {fmt_float(market_data.price, '$')}
+Change: {fmt_float(market_data.change, '$')} ({fmt_float(market_data.change_percent, '', '%')})
+Volume: {volume}
+High: {fmt_float(market_data.high, '$')}
+Low: {fmt_float(market_data.low, '$')}
 """
         
         memories_str = "No relevant memories found."
@@ -245,19 +252,42 @@ Low: ${market_data.low:.2f if market_data.low else 'N/A'}
             }
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
-            raise
+            suggestion_data = {
+                "action": "HOLD",
+                "confidence": 10,
+                "signal_strength": "weak",
+                "reasoning": f"LLM unavailable: {e}. Returning safe HOLD.",
+                "key_factors": ["LLM unavailable", "Fallback response"],
+                "time_horizon": "swing",
+                "risk_level": "high",
+                "stop_loss_pct": 5.0,
+                "position_size_pct": 1.0,
+            }
         
         # Build response
         llm_info = get_llm_info()
         
+        def safe_enum(enum_cls, value, default):
+            try:
+                return enum_cls(value)
+            except Exception:
+                return enum_cls(default)
+
+        confidence = suggestion_data.get("confidence", 50)
+        if isinstance(confidence, (int, float)):
+            if confidence <= 1:
+                confidence = confidence * 100
+        else:
+            confidence = 50
+
         return SuggestionResponse(
             symbol=symbol,
-            action=Action(suggestion_data.get("action", "WATCH")),
-            confidence=suggestion_data.get("confidence", 50),
-            signal_strength=SignalStrength(suggestion_data.get("signal_strength", "moderate")),
+            action=safe_enum(Action, suggestion_data.get("action", "WATCH"), "WATCH"),
+            confidence=confidence,
+            signal_strength=safe_enum(SignalStrength, suggestion_data.get("signal_strength", "moderate"), "moderate"),
             reasoning=suggestion_data.get("reasoning", "No reasoning provided"),
             key_factors=suggestion_data.get("key_factors", []),
-            time_horizon=TimeHorizon(suggestion_data.get("time_horizon", "swing")),
+            time_horizon=safe_enum(TimeHorizon, suggestion_data.get("time_horizon", "swing"), "swing"),
             entry_price=suggestion_data.get("entry_price"),
             target_price=suggestion_data.get("target_price"),
             stop_loss=suggestion_data.get("stop_loss"),

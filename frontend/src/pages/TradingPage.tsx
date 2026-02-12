@@ -11,6 +11,7 @@ import {
   PriceChartPanel,
   StrategyMonitorPanel,
   AIAssistantPanel,
+  SignalsQueuePanel,
 } from '@/components/dashboard';
 
 // Panel IDs for state management
@@ -22,6 +23,7 @@ const PANEL_IDS = [
   'blotter',
   'chart',
   'strategy',
+  'signalsQueue',
   'aiAssistant',
 ] as const;
 
@@ -174,6 +176,14 @@ export function TradingPage() {
         </DashboardPanel>
 
         {/* Row 4: AI Assistant (full width) */}
+        <DashboardPanel colSpan={3}>
+          <SignalsQueuePanel
+            isOpen={panelStates.signalsQueue}
+            onToggle={() => togglePanel('signalsQueue')}
+          />
+        </DashboardPanel>
+
+        {/* Row 5: AI Assistant (full width) */}
         <DashboardPanel colSpan={3}>
           <AIAssistantPanel
             isOpen={panelStates.aiAssistant}

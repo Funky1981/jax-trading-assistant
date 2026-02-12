@@ -70,6 +70,15 @@ type OrderResponse struct {
 	Message string `json:"message"`
 }
 
+// OrderStatusResponse is the response for order status
+type OrderStatusResponse struct {
+	OrderID      int     `json:"order_id"`
+	Status       string  `json:"status"`
+	FilledQty    int     `json:"filled_qty"`
+	AvgFillPrice float64 `json:"avg_fill_price"`
+	LastUpdate   string  `json:"last_update"`
+}
+
 // Position represents position information
 type Position struct {
 	Symbol      string  `json:"symbol"`

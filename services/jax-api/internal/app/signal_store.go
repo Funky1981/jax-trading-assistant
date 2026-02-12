@@ -56,6 +56,9 @@ type SignalStore interface {
 	// RejectSignal rejects a signal and creates a trade_approvals record with approved=false
 	RejectSignal(ctx context.Context, id uuid.UUID, approvedBy, rejectionReason string) (*Signal, error)
 
+	// LinkOrchestration links a signal to an orchestration run
+	LinkOrchestration(ctx context.Context, signalID, runID uuid.UUID) error
+
 	// GetRecommendations returns signals with orchestration analysis (pending recommendations)
 	GetRecommendations(ctx context.Context, limit, offset int) (*RecommendationListResponse, error)
 

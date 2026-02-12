@@ -1,0 +1,98 @@
+graph LR
+    subgraph EXT[" EXTERNAL SYSTEMS "]
+        IB[IB Gateway :4002]
+        POLYGON[Polygon API]
+        ALPACA[Alpaca API]
+        LLM[LLM Provider]
+    end
+
+    subgraph UI[" FRONTEND "]
+        FE[React Frontend :5173]
+    end
+
+    subgraph GATE[" API LAYER "]
+        API[jax-api :8081]
+    end
+
+    subgraph CORE[" CORE SERVICES "]
+        ORCH[Orchestrator :8091]
+        MKT[Market Data :8095]
+        SIG[Signal Gen :8096]
+        EXEC[Trade Executor :8097]
+        MEM[Memory :8090]
+        INGEST[Ingest Service]
+    end
+
+    subgraph INTEGRATION[" INTEGRATION "]
+        IBB[IB Bridge :8092]
+        AGENT[Agent0 :8093]
+    end
+
+    subgraph DATA[" DATA LAYER "]
+        HIND[Hindsight :8888]
+        DB[(PostgreSQL :5433)]
+    end
+
+    subgraph OBS[" OBSERVABILITY "]
+        PROM[Prometheus :9090]
+        GRAF[Grafana :3001]
+    end
+
+    FE --> API
+    
+    API --> ORCH
+    API --> EXEC
+    API --> MEM
+    API --> AGENT
+    
+    ORCH --> MEM
+    ORCH --> AGENT
+    ORCH --> SIG
+    
+    SIG --> MKT
+    SIG --> DB
+    
+    EXEC --> IBB
+    EXEC --> DB
+    
+    MKT --> DB
+    MKT --> IBB
+    MKT --> POLYGON
+    MKT --> ALPACA
+    
+    INGEST --> MEM
+    INGEST --> DB
+    
+    IBB --> IB
+    
+    AGENT --> MEM
+    AGENT --> IBB
+    AGENT --> LLM
+    AGENT --> DB
+    
+    MEM --> HIND
+    
+    ORCH --> DB
+    
+    API -.-> PROM
+    ORCH -.-> PROM
+    MKT -.-> PROM
+    SIG -.-> PROM
+    EXEC -.-> PROM
+    PROM --> GRAF
+
+    classDef frontend fill:#1976d2,stroke:#0d47a1,stroke-width:3px,color:#fff,font-size:16px,font-weight:bold
+    classDef api fill:#f57c00,stroke:#e65100,stroke-width:3px,color:#fff,font-size:16px,font-weight:bold
+    classDef core fill:#7b1fa2,stroke:#4a148c,stroke-width:3px,color:#fff,font-size:16px,font-weight:bold
+    classDef integration fill:#388e3c,stroke:#1b5e20,stroke-width:3px,color:#fff,font-size:16px,font-weight:bold
+    classDef backend fill:#c2185b,stroke:#880e4f,stroke-width:3px,color:#fff,font-size:16px,font-weight:bold
+    classDef external fill:#fbc02d,stroke:#f57f17,stroke-width:3px,color:#000,font-size:16px,font-weight:bold
+    classDef obs fill:#5e35b1,stroke:#311b92,stroke-width:3px,color:#fff,font-size:16px,font-weight:bold
+
+    class FE frontend
+    class API api
+    class ORCH,MKT,SIG,EXEC,INGEST,MEM core
+    class IBB,AGENT integration
+    class HIND,DB backend
+    class IB,POLYGON,ALPACA,LLM external
+    class PROM,GRAF obs

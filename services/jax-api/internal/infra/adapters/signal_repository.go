@@ -261,3 +261,14 @@ func (s *PostgresSignalStore) RejectSignal(ctx context.Context, id uuid.UUID, ap
 
 	return &sig, nil
 }
+
+// LinkOrchestration links a signal to an orchestration run
+func (s *PostgresSignalStore) LinkOrchestration(ctx context.Context, signalID, runID uuid.UUID) error {
+	query := `
+		UPDATE strategy_signals
+		SET orchestration_run_id = $1
+		WHERE id = $2
+	`
+	_, err := s.db.ExecContext(ctx, query, runID, signalID)
+	return err
+}

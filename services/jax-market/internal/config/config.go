@@ -9,6 +9,8 @@ import (
 type Config struct {
 	DatabaseDSN    string        `json:"database_dsn"`
 	IngestInterval int           `json:"ingest_interval"` // seconds
+	CandleBackfill int           `json:"candle_backfill"` // number of daily candles to backfill
+	StaleQuoteSecs int           `json:"stale_quote_seconds"`
 	Symbols        []string      `json:"symbols"`
 	Polygon        PolygonConfig `json:"polygon"`
 	Alpaca         AlpacaConfig  `json:"alpaca"`
@@ -56,6 +58,13 @@ func Load(path string) (*Config, error) {
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, err
+	}
+
+	if config.CandleBackfill == 0 {
+		config.CandleBackfill = 250
+	}
+	if config.StaleQuoteSecs == 0 {
+		config.StaleQuoteSecs = 300
 	}
 
 	// Apply environment variable overrides

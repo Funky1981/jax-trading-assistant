@@ -1,0 +1,227 @@
+═══════════════════════════════════════════════════════════════════════════════
+   JAX TRADING ASSISTANT - SYSTEM ARCHITECTURE (TEXT VIEW)
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            EXTERNAL SYSTEMS                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • IB Gateway/TWS (Port 4002) - Interactive Brokers trading platform        │
+│  • Polygon API - Market data provider                                       │
+│  • Alpaca API - Market data provider                                        │
+│  • LLM Providers - Ollama (local), OpenAI, Anthropic                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      ▲
+                                      │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              FRONTEND LAYER                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  React/Vite Frontend (Port 5173)                                            │
+│    • Dashboard                                                               │
+│    • Trading UI                                                              │
+│    • System Monitor                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              API GATEWAY                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  jax-api (Port 8081)                                                        │
+│    • REST API endpoints                                                      │
+│    • JWT Authentication                                                      │
+│    • CORS policies                                                           │
+│    • Rate limiting                                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+                    │           │           │           │
+        ┌───────────┼───────────┼───────────┼───────────┼───────────┐
+        ▼           ▼           ▼           ▼           ▼           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             CORE SERVICES                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  jax-orchestrator (Port 8091)                                               │
+│    • Agent0 pipeline orchestration                                           │
+│    • Workflow management                                                     │
+│                                                                              │
+│  jax-market (Port 8095)                                                     │
+│    • Market data aggregation                                                 │
+│    • Multi-source integration                                                │
+│                                                                              │
+│  jax-signal-generator (Port 8096)                                           │
+│    • Trading signal generation                                               │
+│    • Strategy execution                                                      │
+│                                                                              │
+│  jax-trade-executor (Port 8097)                                             │
+│    • Trade execution                                                         │
+│    • Risk management                                                         │
+│    • Position sizing                                                         │
+│                                                                              │
+│  jax-memory (Port 8090)                                                     │
+│    • UTCP memory facade                                                      │
+│    • retain/recall/reflect operations                                        │
+│                                                                              │
+│  jax-ingest                                                                 │
+│    • Data ingestion                                                          │
+│    • Dexter integration                                                      │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                    │           │
+        ┌───────────┴───────────┴───────────┐
+        ▼                                   ▼
+┌─────────────────────────────┐   ┌─────────────────────────────┐
+│   INTEGRATION SERVICES       │   │     DATA LAYER              │
+├─────────────────────────────┤   ├─────────────────────────────┤
+│                              │   │                             │
+│  ib-bridge (Port 8092)      │   │  Hindsight (Port 8888)     │
+│    • Python FastAPI          │   │    • Vector storage         │
+│    • ib_insync client       │   │    • Memory backend         │
+│    • IB Gateway connection  │   │                             │
+│                              │   │  PostgreSQL (Port 5433)    │
+│  agent0-service (Port 8093) │   │    • Trades                 │
+│    • AI agent workflows      │   │    • Positions              │
+│    • LLM integration         │   │    • Market data            │
+│    • Memory access           │   │    • Strategies             │
+│                              │   │                             │
+└─────────────────────────────┘   └─────────────────────────────┘
+                    │                           │
+                    └──────────┬────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          OBSERVABILITY STACK                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Prometheus (Port 9090)                                                     │
+│    • Metrics collection from all services                                    │
+│                                                                              │
+│  Grafana (Port 3001)                                                        │
+│    • Dashboards and visualizations                                           │
+│    • System monitoring                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                            SHARED LIBRARIES (libs/)
+═══════════════════════════════════════════════════════════════════════════════
+
+  ┌──────────────────┬──────────────────┬──────────────────┐
+  │  UTCP            │  Contracts       │  Observability   │
+  │  Tool Protocol   │  DTOs/Schemas    │  Logging/Tracing │
+  └──────────────────┴──────────────────┴──────────────────┘
+
+  ┌──────────────────┬──────────────────┬──────────────────┐
+  │  Auth            │  Trading         │  Resilience      │
+  │  JWT/Security    │  Domain Logic    │  Retry/Breakers  │
+  └──────────────────┴──────────────────┴──────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              KEY DATA FLOWS
+═══════════════════════════════════════════════════════════════════════════════
+
+TRADING FLOW:
+  1. Frontend ──► API ──► Signal Generator ──► Market Service
+  2. Signal Generator ──► Trade Executor ──► IB Bridge ──► IB Gateway
+  3. Trade Executor ──► PostgreSQL (store trades)
+
+MEMORY FLOW:
+  1. Agent0 Service ──► Memory Service ──► Hindsight (vector storage)
+  2. Orchestrator ──► Memory Service (retain/recall operations)
+
+MARKET DATA FLOW:
+  1. IB Bridge ──► Market Service ──► PostgreSQL
+  2. External APIs (Polygon/Alpaca) ──► Market Service ──► PostgreSQL
+  3. Market Service ──► Signal Generator (analysis)
+
+MONITORING FLOW:
+  All Services ──► Prometheus ──► Grafana Dashboards
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                          ARCHITECTURE PRINCIPLES
+═══════════════════════════════════════════════════════════════════════════════
+
+Clean Architecture / Hexagonal Architecture:
+
+  1. SERVICE BOUNDARIES
+     • Each service under services/ has its own internal/ packages
+     • Clear separation of concerns
+
+  2. DEPENDENCY RULES
+     • internal/domain  → No external dependencies
+     • internal/app     → May import domain only
+     • internal/infra   → Implements adapters, imports app + domain
+
+  3. SHARED STABILITY
+     • Common code in libs/ is well-tested and stable
+     • Used across multiple services
+
+  4. INTERFACE ORIENTATION
+     • Interfaces defined in consuming layers
+     • Implementations in infrastructure layer
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              PORT REFERENCE
+═══════════════════════════════════════════════════════════════════════════════
+
+  5173 - Frontend (React/Vite)
+  8081 - jax-api (Main API Gateway)
+  8090 - jax-memory (Memory Service)
+  8091 - jax-orchestrator (Orchestration)
+  8092 - ib-bridge (IB Gateway Client)
+  8093 - agent0-service (AI Agent)
+  8095 - jax-market (Market Data)
+  8096 - jax-signal-generator (Signals)
+  8097 - jax-trade-executor (Trade Execution)
+  8888 - Hindsight (Memory Backend)
+  5433 - PostgreSQL (Database)
+  9090 - Prometheus (Metrics)
+  3001 - Grafana (Dashboards)
+  4002 - IB Gateway/TWS (External)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SERVICE DESCRIPTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+services/jax-api/
+  Main REST API gateway. Handles authentication, CORS, rate limiting.
+  Routes requests to appropriate backend services.
+
+services/jax-orchestrator/
+  Manages Agent0 pipeline workflows and service coordination.
+
+services/jax-market/
+  Aggregates market data from multiple sources (IB, Polygon, Alpaca).
+  Stores historical data in PostgreSQL.
+
+services/jax-signal-generator/
+  Generates trading signals based on configured strategies.
+  Analyzes market data and produces actionable signals.
+
+services/jax-trade-executor/
+  Executes trades with integrated risk management.
+  Position sizing, risk checks, order placement via IB Bridge.
+
+services/jax-memory/
+  UTCP-compliant memory service facade over Hindsight.
+  Provides retain, recall, and reflect operations.
+
+services/jax-ingest/
+  Data ingestion service with Dexter integration.
+  Processes and stores research data.
+
+services/ib-bridge/
+  Python FastAPI service connecting to Interactive Brokers.
+  Uses ib_insync library for TWS/Gateway communication.
+
+services/agent0-service/
+  AI agent service with LLM integration.
+  Supports Ollama (local), OpenAI, and Anthropic.
+
+services/hindsight/
+  Vendored upstream memory backend with vector storage capabilities.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+  Generated: February 12, 2026
+  Repository: jax-trading-assistant
+═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,68 @@
+{
+  "id": null,
+  "uid": "jax-paper-trading",
+  "title": "JAX Paper Trading Overview",
+  "tags": ["jax", "paper"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Market Ingestions",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "jax_market_ingestions_total", "legendFormat": "runs" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Stale Quotes",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "jax_market_stale_quotes", "legendFormat": "stale" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Signals Generated",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "jax_signal_generator_signals_generated_total", "legendFormat": "signals" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Orchestration Runs",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "jax_orchestrator_runs_total", "legendFormat": "runs" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Trades Total",
+      "gridPos": { "x": 0, "y": 4, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "jax_trade_executor_trades_total", "legendFormat": "trades" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Signals Rate",
+      "gridPos": { "x": 6, "y": 4, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "rate(jax_signal_generator_signals_generated_total[5m])", "legendFormat": "signals/sec" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Orchestration Runs Rate",
+      "gridPos": { "x": 18, "y": 4, "w": 6, "h": 6 },
+      "targets": [
+        { "expr": "rate(jax_orchestrator_runs_total[5m])", "legendFormat": "runs/sec" }
+      ]
+    }
+  ]
+}

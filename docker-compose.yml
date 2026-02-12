@@ -34,7 +34,7 @@ services:
       PORT: 8092
       LOG_LEVEL: ${IB_LOG_LEVEL:-INFO}
       IB_GATEWAY_HOST: ${IB_GATEWAY_HOST:-host.docker.internal}
-      IB_GATEWAY_PORT: ${IB_GATEWAY_PORT:-7497}
+      IB_GATEWAY_PORT: ${IB_GATEWAY_PORT:-4002}
       IB_CLIENT_ID: ${IB_CLIENT_ID:-1}
       AUTO_CONNECT: ${IB_AUTO_CONNECT:-true}
       PAPER_TRADING: ${IB_PAPER_TRADING:-true}
@@ -58,12 +58,15 @@ services:
       PORT: 8093
       LOG_LEVEL: ${AGENT0_LOG_LEVEL:-INFO}
       # LLM Provider Configuration (default: Ollama - FREE)
-      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+      AGENT0_LLM_PROVIDER: ${AGENT0_LLM_PROVIDER:-ollama}
+      AGENT0_OLLAMA_HOST: ${AGENT0_OLLAMA_HOST:-http://host.docker.internal:11434}
+      AGENT0_OLLAMA_MODEL: ${AGENT0_OLLAMA_MODEL:-phi3:3.8b}
       # Optional: OpenAI (paid)
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      AGENT0_OPENAI_API_KEY: ${AGENT0_OPENAI_API_KEY:-}
+      AGENT0_OPENAI_MODEL: ${AGENT0_OPENAI_MODEL:-gpt-4o-mini}
+      # Optional: Anthropic (paid)
+      AGENT0_ANTHROPIC_API_KEY: ${AGENT0_ANTHROPIC_API_KEY:-}
+      AGENT0_ANTHROPIC_MODEL: ${AGENT0_ANTHROPIC_MODEL:-claude-3-haiku-20240307}
       # Optional: Anthropic (paid)
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-3-haiku-20240307}
@@ -133,6 +136,8 @@ services:
       IB_BRIDGE_URL: ${IB_BRIDGE_URL:-http://ib-bridge:8092}
       RISK_PER_TRADE: ${RISK_PER_TRADE:-0.01}
       MAX_POSITION_PCT: ${MAX_POSITION_PCT:-0.20}
+      MAX_OPEN_POSITIONS: ${MAX_OPEN_POSITIONS:-10}
+      MAX_DAILY_LOSS: ${MAX_DAILY_LOSS:-0}
       ORDER_TYPE: ${ORDER_TYPE:-LMT}
       PORT: 8097
     ports:
@@ -167,6 +172,7 @@ services:
       IB_BRIDGE_URL: ${IB_BRIDGE_URL:-http://ib-bridge:8092}
       AGENT0_SERVICE_URL: ${AGENT0_SERVICE_URL:-http://agent0-service:8093}
       TRADE_EXECUTOR_URL: ${TRADE_EXECUTOR_URL:-http://jax-trade-executor:8097}
+      JAX_ORCHESTRATOR_URL: ${JAX_ORCHESTRATOR_URL:-http://jax-orchestrator:8091}
     ports:
       - "${API_PORT:-8081}:${API_PORT:-8081}"
     depends_on:
@@ -219,7 +225,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jax}
       POSTGRES_DB: ${POSTGRES_DB:-jax}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - jax-postgres:/var/lib/postgresql/data
       - ./db/postgres/migrations:/docker-entrypoint-initdb.d:ro
@@ -228,6 +234,28 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - jax-market
+      - jax-signal-generator
+      - jax-orchestrator
+      - jax-trade-executor
+      - jax-api
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
 
 volumes:
   jax-postgres:
