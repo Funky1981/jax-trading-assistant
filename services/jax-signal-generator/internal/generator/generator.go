@@ -8,10 +8,17 @@ import (
 	"time"
 
 	"jax-trading-assistant/libs/strategies"
-	"jax-trading-assistant/services/jax-signal-generator/internal/orchestrator"
 
 	"github.com/google/uuid"
 )
+
+// OrchestrationTrigger defines the integration contract used to trigger
+// downstream orchestration. Phase 1 introduces this interface so the signal
+// generator can use either HTTP or in-process orchestration without changing
+// generation logic.
+type OrchestrationTrigger interface {
+	TriggerOrchestration(ctx context.Context, signalID uuid.UUID, symbol, context string) (uuid.UUID, error)
+}
 
 // Generator generates trading signals by running strategies against market data
 type Generator struct {
@@ -19,7 +26,7 @@ type Generator struct {
 	registry            *strategies.Registry
 	symbols             []string
 	metricsCallback     func(generated int, failed int, duration time.Duration)
-	orchestratorClient  *orchestrator.Client
+	orchestratorClient  OrchestrationTrigger
 	confidenceThreshold float64
 }
 
@@ -35,7 +42,7 @@ func New(db *sql.DB, registry *strategies.Registry, symbols []string, callback f
 }
 
 // WithOrchestrator adds orchestrator integration
-func (g *Generator) WithOrchestrator(client *orchestrator.Client) *Generator {
+func (g *Generator) WithOrchestrator(client OrchestrationTrigger) *Generator {
 	g.orchestratorClient = client
 	return g
 }

@@ -1,4 +1,4 @@
-.PHONY: help test lint fmt up down knowledge-up knowledge-down knowledge-schema knowledge-ingest
+.PHONY: help test lint fmt up down knowledge-up knowledge-down knowledge-schema knowledge-ingest branch-guard branch-publish
 
 # Default DSN for knowledge database
 KNOWLEDGE_DSN ?= postgres://postgres:postgres@localhost:5432/jax_knowledge?sslmode=disable
@@ -54,3 +54,9 @@ knowledge-ingest-dry:
 	@echo "Dry-run ingesting knowledge from knowledge/md..."
 	cd tools && go run ./cmd/ingest --root ../knowledge/md --dsn "$(KNOWLEDGE_DSN)" --dry-run=true
 
+
+branch-guard:
+	bash scripts/branch-guard.sh
+
+branch-publish:
+	bash scripts/branch-guard.sh --publish
