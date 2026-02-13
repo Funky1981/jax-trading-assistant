@@ -1,0 +1,8 @@
+# Ignore current snapshots - only commit baselines
+*/current.json
+
+# Ignore diff files - these are local debugging artifacts
+*/diff-*.json
+
+# Keep baseline files for comparison
+!*/baseline-*.json

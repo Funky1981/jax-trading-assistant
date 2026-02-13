@@ -4,15 +4,21 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	jaxtesting "jax-trading-assistant/libs/testing"
 )
 
 func TestRSIMomentumStrategy_Oversold(t *testing.T) {
 	strategy := NewRSIMomentumStrategy()
 
+	fixedTime := time.Date(2026, 2, 13, 9, 30, 0, 0, time.UTC)
+	clock := jaxtesting.FixedClock{T: fixedTime}
+	ctx := jaxtesting.WithClock(context.Background(), clock)
+
 	input := AnalysisInput{
 		Symbol:      "AAPL",
 		Price:       150.0,
-		Timestamp:   time.Now(),
+		Timestamp:   jaxtesting.Now(ctx),
 		RSI:         25.0, // Oversold
 		ATR:         2.5,
 		MarketTrend: "bullish",
@@ -20,7 +26,7 @@ func TestRSIMomentumStrategy_Oversold(t *testing.T) {
 		AvgVolume20: 800000,
 	}
 
-	signal, err := strategy.Analyze(context.Background(), input)
+	signal, err := strategy.Analyze(ctx, input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -45,10 +51,14 @@ func TestRSIMomentumStrategy_Oversold(t *testing.T) {
 func TestRSIMomentumStrategy_Overbought(t *testing.T) {
 	strategy := NewRSIMomentumStrategy()
 
+	fixedTime := time.Date(2026, 2, 13, 10, 0, 0, 0, time.UTC)
+	clock := jaxtesting.FixedClock{T: fixedTime}
+	ctx := jaxtesting.WithClock(context.Background(), clock)
+
 	input := AnalysisInput{
 		Symbol:      "TSLA",
 		Price:       200.0,
-		Timestamp:   time.Now(),
+		Timestamp:   jaxtesting.Now(ctx),
 		RSI:         75.0, // Overbought
 		ATR:         5.0,
 		MarketTrend: "bearish",
@@ -56,7 +66,7 @@ func TestRSIMomentumStrategy_Overbought(t *testing.T) {
 		AvgVolume20: 1500000,
 	}
 
-	signal, err := strategy.Analyze(context.Background(), input)
+	signal, err := strategy.Analyze(ctx, input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -77,15 +87,19 @@ func TestRSIMomentumStrategy_Overbought(t *testing.T) {
 func TestRSIMomentumStrategy_Neutral(t *testing.T) {
 	strategy := NewRSIMomentumStrategy()
 
+	fixedTime := time.Date(2026, 2, 13, 11, 0, 0, 0, time.UTC)
+	clock := jaxtesting.FixedClock{T: fixedTime}
+	ctx := jaxtesting.WithClock(context.Background(), clock)
+
 	input := AnalysisInput{
 		Symbol:    "MSFT",
 		Price:     300.0,
-		Timestamp: time.Now(),
+		Timestamp: jaxtesting.Now(ctx),
 		RSI:       50.0, // Neutral
 		ATR:       3.0,
 	}
 
-	signal, err := strategy.Analyze(context.Background(), input)
+	signal, err := strategy.Analyze(ctx, input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -102,10 +116,14 @@ func TestRSIMomentumStrategy_Neutral(t *testing.T) {
 func TestMACDCrossoverStrategy_Bullish(t *testing.T) {
 	strategy := NewMACDCrossoverStrategy()
 
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	clock := jaxtesting.FixedClock{T: fixedTime}
+	ctx := jaxtesting.WithClock(context.Background(), clock)
+
 	input := AnalysisInput{
 		Symbol:    "NVDA",
 		Price:     500.0,
-		Timestamp: time.Now(),
+		Timestamp: jaxtesting.Now(ctx),
 		MACD: MACD{
 			Value:     2.5,
 			Signal:    1.0,
@@ -118,7 +136,7 @@ func TestMACDCrossoverStrategy_Bullish(t *testing.T) {
 		AvgVolume20: 2500000,
 	}
 
-	signal, err := strategy.Analyze(context.Background(), input)
+	signal, err := strategy.Analyze(ctx, input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -139,10 +157,14 @@ func TestMACDCrossoverStrategy_Bullish(t *testing.T) {
 func TestMACDCrossoverStrategy_Bearish(t *testing.T) {
 	strategy := NewMACDCrossoverStrategy()
 
+	fixedTime := time.Date(2026, 2, 13, 13, 0, 0, 0, time.UTC)
+	clock := jaxtesting.FixedClock{T: fixedTime}
+	ctx := jaxtesting.WithClock(context.Background(), clock)
+
 	input := AnalysisInput{
 		Symbol:    "AMD",
 		Price:     100.0,
-		Timestamp: time.Now(),
+		Timestamp: jaxtesting.Now(ctx),
 		MACD: MACD{
 			Value:     -2.0,
 			Signal:    -0.5,
@@ -155,7 +177,7 @@ func TestMACDCrossoverStrategy_Bearish(t *testing.T) {
 		AvgVolume20: 1000000,
 	}
 
-	signal, err := strategy.Analyze(context.Background(), input)
+	signal, err := strategy.Analyze(ctx, input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -172,10 +194,14 @@ func TestMACDCrossoverStrategy_Bearish(t *testing.T) {
 func TestMACrossoverStrategy_GoldenCross(t *testing.T) {
 	strategy := NewMACrossoverStrategy()
 
+	fixedTime := time.Date(2026, 2, 13, 14, 0, 0, 0, time.UTC)
+	clock := jaxtesting.FixedClock{T: fixedTime}
+	ctx := jaxtesting.WithClock(context.Background(), clock)
+
 	input := AnalysisInput{
 		Symbol:      "SPY",
 		Price:       450.0,
-		Timestamp:   time.Now(),
+		Timestamp:   jaxtesting.Now(ctx),
 		SMA20:       445.0,
 		SMA50:       440.0,
 		SMA200:      430.0,
@@ -185,7 +211,7 @@ func TestMACrossoverStrategy_GoldenCross(t *testing.T) {
 		AvgVolume20: 40000000,
 	}
 
-	signal, err := strategy.Analyze(context.Background(), input)
+	signal, err := strategy.Analyze(ctx, input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -206,10 +232,14 @@ func TestMACrossoverStrategy_GoldenCross(t *testing.T) {
 func TestMACrossoverStrategy_DeathCross(t *testing.T) {
 	strategy := NewMACrossoverStrategy()
 
+	fixedTime := time.Date(2026, 2, 13, 15, 0, 0, 0, time.UTC)
+	clock := jaxtesting.FixedClock{T: fixedTime}
+	ctx := jaxtesting.WithClock(context.Background(), clock)
+
 	input := AnalysisInput{
 		Symbol:      "QQQ",
 		Price:       350.0,
-		Timestamp:   time.Now(),
+		Timestamp:   jaxtesting.Now(ctx),
 		SMA20:       352.0,
 		SMA50:       360.0,
 		SMA200:      370.0,
@@ -219,7 +249,7 @@ func TestMACrossoverStrategy_DeathCross(t *testing.T) {
 		AvgVolume20: 25000000,
 	}
 
-	signal, err := strategy.Analyze(context.Background(), input)
+	signal, err := strategy.Analyze(ctx, input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

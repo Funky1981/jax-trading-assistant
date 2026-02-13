@@ -1,0 +1,38 @@
+{
+  "name": "tsla-volatility",
+  "description": "TSLA high volatility scenario with wide price swings and extreme RSI",
+  "timestamp": "2026-02-13T14:45:00Z",
+  "market_data": {
+    "TSLA": {
+      "symbol": "TSLA",
+      "price": 245.75,
+      "volume": 3456789,
+      "bid": 245.20,
+      "ask": 246.30,
+      "indicators": {
+        "rsi": 78.5,
+        "sma20": 238.00,
+        "sma50": 242.00,
+        "sma200": 230.00,
+        "atr": 8.50,
+        "macd_value": 3.45,
+        "macd_signal": 2.10,
+        "macd_histogram": 1.35,
+        "bb_upper": 258.00,
+        "bb_middle": 238.00,
+        "bb_lower": 218.00,
+        "avg_volume_20": 2800000
+      },
+      "metadata": {
+        "sector": "Consumer Cyclical",
+        "market_cap": "Large Cap",
+        "beta": "2.1",
+        "short_interest": "15.2%"
+      }
+    }
+  },
+  "portfolio": {
+    "cash": 100000.00,
+    "positions": []
+  }
+}

@@ -1,0 +1,98 @@
+%% Proposed Two-Runtime Architecture (ADR-0012)
+%% Status: Target state after 6-9 month migration
+
+graph TB
+    subgraph Frontend["Frontend (React)"]
+        UI[Web UI<br/>:5173]
+    end
+
+    subgraph TraderRuntime["cmd/trader - Production Runtime"]
+        TLoader[Artifact Loader<br/>SHA-256 Verify]
+        TMarket[Market Data Module]
+        TStrategy[Strategy Engine<br/>Deterministic]
+        TRisk[Risk Engine<br/>Position Sizing]
+        TExec[Execution Engine]
+        TAudit[Audit Logger<br/>Hash+Version]
+        
+        TLoader --> TStrategy
+        TMarket --> TStrategy
+        TStrategy --> TRisk
+        TRisk --> TExec
+        TExec --> TAudit
+    end
+
+    subgraph ResearchRuntime["cmd/research - Experimental Runtime"]
+        RBacktest[Backtest Engine<br/>Deterministic Seed]
+        RDexter[Dexter Client<br/>Company Research]
+        RAgent0[Agent0 Client<br/>AI Planning]
+        RHindsight[Hindsight Client<br/>Memory]
+        RArtifact[Artifact Builder<br/>Canonical JSON+Hash]
+        
+        RBacktest --> RArtifact
+        RDexter --> RArtifact
+        RAgent0 --> RArtifact
+        RHindsight --> RBacktest
+    end
+
+    subgraph ArtifactGate["Artifact Promotion Gate"]
+        AStore[(Artifact Metadata<br/>Postgres)]
+        ABlob[(Artifact Blobs<br/>S3/MinIO)]
+        AApproval{Approval Workflow<br/>DRAFT→VALIDATED<br/>→REVIEWED→APPROVED}
+        
+        RArtifact --> AStore
+        RArtifact --> ABlob
+        AStore --> AApproval
+        AApproval --> AStore
+    end
+
+    subgraph ExternalBoundaries["External Services"]
+        IBBridge[IB Bridge<br/>:8092<br/>Python FastAPI]
+        Hindsight[Hindsight<br/>:8888<br/>Vector Memory]
+        IBGateway[IB Gateway<br/>TWS/Paper]
+        Polygon[Polygon API]
+        Alpaca[Alpaca API]
+    end
+
+    subgraph Infrastructure["Infrastructure"]
+        Postgres[(PostgreSQL<br/>:5433)]
+        Prometheus[Prometheus<br/>:9090]
+        Grafana[Grafana<br/>:3001]
+    end
+
+    %% Frontend connections
+    UI -->|HTTP API| TStrategy
+    UI -->|WebSocket| TExec
+
+    %% Trader runtime connections
+    TLoader -->|Load APPROVED<br/>artifacts only| AStore
+    TLoader -->|Fetch blob| ABlob
+    TMarket -->|Market data| IBBridge
+    TMarket -->|Fallback| Polygon
+    TMarket -->|Fallback| Alpaca
+    TExec -->|Place orders| IBBridge
+    TAudit -->|Trades+Audit| Postgres
+    
+    %% Research runtime connections
+    RBacktest -->|Historical<br/>data| Postgres
+    RHindsight -->|Vector<br/>memory| Hindsight
+    
+    %% External boundaries
+    IBBridge -->|TWS API| IBGateway
+    
+    %% Observability
+    TraderRuntime -.->|Metrics| Prometheus
+    ResearchRuntime -.->|Metrics| Prometheus
+    Prometheus --> Grafana
+
+    %% Styling
+    classDef trader fill:#d4edda,stroke:#28a745,stroke-width:3px
+    classDef research fill:#fff3cd,stroke:#ffc107,stroke-width:3px
+    classDef gate fill:#cce5ff,stroke:#004085,stroke-width:3px
+    classDef external fill:#f8d7da,stroke:#721c24,stroke-width:2px
+    classDef infra fill:#e2e3e5,stroke:#383d41,stroke-width:2px
+    
+    class TraderRuntime trader
+    class ResearchRuntime research
+    class ArtifactGate gate
+    class ExternalBoundaries external
+    class Infrastructure infra

@@ -1,0 +1,37 @@
+{
+  "name": "aapl-rally",
+  "description": "AAPL bullish trend scenario with strong momentum and rising moving averages",
+  "timestamp": "2026-02-13T09:30:00Z",
+  "market_data": {
+    "AAPL": {
+      "symbol": "AAPL",
+      "price": 185.50,
+      "volume": 1234567,
+      "bid": 185.45,
+      "ask": 185.55,
+      "indicators": {
+        "rsi": 65.0,
+        "sma20": 183.00,
+        "sma50": 180.00,
+        "sma200": 175.00,
+        "atr": 2.50,
+        "macd_value": 1.25,
+        "macd_signal": 0.95,
+        "macd_histogram": 0.30,
+        "bb_upper": 188.00,
+        "bb_middle": 183.00,
+        "bb_lower": 178.00,
+        "avg_volume_20": 1100000
+      },
+      "metadata": {
+        "sector": "Technology",
+        "market_cap": "Large Cap",
+        "earnings_date": "2026-04-30"
+      }
+    }
+  },
+  "portfolio": {
+    "cash": 100000.00,
+    "positions": []
+  }
+}

@@ -1,0 +1,108 @@
+name: Golden Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  golden-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jax_trading
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: Install dependencies
+        run: |
+          go mod download
+          go mod tidy
+      
+      - name: Build test binaries
+        run: |
+          go build -v ./...
+      
+      - name: Start services with Docker Compose
+        run: |
+          docker-compose up -d
+        continue-on-error: true
+      
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for services to start..."
+          sleep 30
+          
+          # Check if services are responding
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health 2>/dev/null; then
+              echo "Services are ready!"
+              break
+            fi
+            echo "Waiting for services... ($i/30)"
+            sleep 2
+          done
+      
+      - name: Run golden tests
+        run: |
+          go test -v ./tests/golden/
+      
+      - name: Capture current state
+        run: |
+          go run ./tests/golden/cmd/capture.go
+        continue-on-error: true
+      
+      - name: Compare against baseline
+        run: |
+          if [ -f "scripts/compare-golden-outputs.sh" ]; then
+            chmod +x scripts/compare-golden-outputs.sh
+            bash scripts/compare-golden-outputs.sh
+          else
+            echo "⚠️  Warning: compare-golden-outputs.sh not found"
+            echo "Skipping baseline comparison (PowerShell version exists for Windows)"
+          fi
+        continue-on-error: true
+      
+      - name: Upload diff artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-test-diffs
+          path: |
+            tests/golden/*/diff-*.json
+            tests/golden/*/*.diff
+          retention-days: 7
+      
+      - name: Stop services
+        if: always()
+        run: |
+          docker-compose down

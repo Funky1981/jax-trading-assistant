@@ -1,0 +1,37 @@
+{
+  "name": "msft-consolidation",
+  "description": "MSFT sideways market with low volatility and converging moving averages",
+  "timestamp": "2026-02-13T10:15:00Z",
+  "market_data": {
+    "MSFT": {
+      "symbol": "MSFT",
+      "price": 412.30,
+      "volume": 845230,
+      "bid": 412.25,
+      "ask": 412.35,
+      "indicators": {
+        "rsi": 52.0,
+        "sma20": 412.00,
+        "sma50": 411.50,
+        "sma200": 410.00,
+        "atr": 1.80,
+        "macd_value": 0.15,
+        "macd_signal": 0.12,
+        "macd_histogram": 0.03,
+        "bb_upper": 415.00,
+        "bb_middle": 412.00,
+        "bb_lower": 409.00,
+        "avg_volume_20": 900000
+      },
+      "metadata": {
+        "sector": "Technology",
+        "market_cap": "Large Cap",
+        "dividend_yield": "0.78%"
+      }
+    }
+  },
+  "portfolio": {
+    "cash": 100000.00,
+    "positions": []
+  }
+}

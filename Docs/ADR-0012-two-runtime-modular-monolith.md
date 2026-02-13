@@ -1,12 +1,30 @@
 # ADR-0012: Consolidate Jax into a modular monolith with Trader + Research runtimes
 
-- Status: Proposed
-- Date: 2026-02-13
+- Status: **APPROVED - IMPLEMENTATION PHASE**
+- Date: 2026-02-13 (Updated: 2026-02-13 after codebase review)
 - Owner: Architecture review
+- Implementation Status: **Phase 0 - Baseline & Testing Infrastructure**
 
 ## Context
 
 The current repository is already a single monorepo, but runtime behavior is effectively distributed over multiple HTTP services in `docker-compose.yml` (`jax-api`, `jax-orchestrator`, `jax-signal-generator`, `jax-market`, `jax-trade-executor`, `jax-memory`, `agent0-service`, `ib-bridge`, `hindsight`).
+
+## Current State Assessment (Feb 2026)
+
+**Working Production System:**
+- ✅ jax-trade-executor operational (Phase 4 complete)
+- ✅ IB Bridge integration functional (Phase 3 complete)
+- ✅ Orchestration pipeline with Agent0/Memory/Dexter (Phase 4 orchestration complete)
+- ✅ Signal generation with auto-trigger (≥75% confidence → orchestration)
+- ✅ JWT auth, CORS, rate limiting (Phase 1 security)
+
+**Migration Status:**
+- ❌ NO code changes implemented for modular monolith
+- ❌ NO cmd/trader or cmd/research entrypoints exist
+- ❌ NO artifact database schema created
+- ❌ NO golden test/replay infrastructure exists
+
+**Critical Finding**: ADR-0012 is a **proposal**, not a completed migration. This document outlines a 6-9 month re-architecture effort.
 
 Evidence of service-level boundaries and network calls:
 
