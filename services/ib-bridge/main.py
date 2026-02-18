@@ -7,7 +7,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -154,7 +154,7 @@ async def get_quote(symbol: str):
 
 @app.post("/candles/{symbol}", response_model=CandlesResponse)
 async def get_candles(symbol: str, request: CandlesRequest):
-    """Get historical candles for a symbol"""
+    """Get historical candles for a symbol (POST with full options)"""
     try:
         if not ib_client.is_connected():
             raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
@@ -171,6 +171,52 @@ async def get_candles(symbol: str, request: CandlesRequest):
             candles=candles,
             count=len(candles)
         )
+    except Exception as e:
+        logger.error(f"Failed to get candles for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/candles/{symbol}", response_model=CandlesResponse)
+async def get_candles_simple(
+    symbol: str,
+    limit: int = Query(default=250, ge=1, le=1000, description="Number of bars to return"),
+    timeframe: str = Query(default="1D", description="Timeframe: 1 (1-min), 5, 15, 60 (1-hour), 1D, 1W"),
+):
+    """Get historical candles via GET — used by jax-market ib-bridge provider.
+
+    Timeframe values match the Go marketdata.Timeframe constants:
+      1=1-min, 5=5-min, 15=15-min, 60=1-hour, 1D=daily, 1W=weekly
+    """
+    try:
+        if not ib_client.is_connected():
+            raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
+
+        # Map Go timeframe constants to IB duration / bar_size.
+        # Daily: IB allows up to "1 Y" (~252 bars); scale up for larger limits.
+        years = max(1, (limit + 251) // 252)  # ceiling division, no math import needed
+        bar_configs = {
+            "1":  ("3 D",           "1 min"),
+            "5":  ("7 D",           "5 mins"),
+            "15": ("14 D",          "15 mins"),
+            "60": (f"{max(1, (limit + 31) // 32)} D", "1 hour"),
+            "1D": (f"{years} Y",    "1 day"),
+            "1W": (f"{years} Y",    "1 week"),
+        }
+        duration, bar_size = bar_configs.get(timeframe, (f"{years} Y", "1 day"))
+
+        candles = await ib_client.get_candles(
+            symbol=symbol,
+            duration=duration,
+            bar_size=bar_size,
+            what_to_show="TRADES",
+        )
+
+        # IB may return slightly more bars than asked — trim to requested limit
+        if len(candles) > limit:
+            candles = candles[-limit:]
+
+        return CandlesResponse(symbol=symbol, candles=candles, count=len(candles))
+
     except Exception as e:
         logger.error(f"Failed to get candles for {symbol}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

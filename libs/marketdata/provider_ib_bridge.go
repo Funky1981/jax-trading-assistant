@@ -124,9 +124,68 @@ func (p *IBBridgeProvider) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-// GetCandles is not supported by the IB bridge — return ErrNoData.
-func (p *IBBridgeProvider) GetCandles(_ context.Context, _ string, _ Timeframe, _ int) ([]Candle, error) {
-	return nil, fmt.Errorf("%w: candles not supported by ib-bridge provider", ErrNoData)
+// GetCandles fetches historical OHLCV bars from the IB bridge GET /candles/{symbol} endpoint.
+func (p *IBBridgeProvider) GetCandles(ctx context.Context, symbol string, timeframe Timeframe, limit int) ([]Candle, error) {
+	reqURL := fmt.Sprintf("%s/candles/%s?limit=%d&timeframe=%s", p.baseURL, symbol, limit, string(timeframe))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to build candles request: %v", ErrProviderError, err)
+	}
+
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%w: ib-bridge candles unreachable: %v", ErrProviderError, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%w: ib-bridge returned HTTP %d for candles %s", ErrProviderError, resp.StatusCode, symbol)
+	}
+
+	var result struct {
+		Symbol  string `json:"symbol"`
+		Candles []struct {
+			Timestamp string  `json:"timestamp"`
+			Open      float64 `json:"open"`
+			High      float64 `json:"high"`
+			Low       float64 `json:"low"`
+			Close     float64 `json:"close"`
+			Volume    int64   `json:"volume"`
+			VWAP      float64 `json:"vwap"`
+		} `json:"candles"`
+		Count int `json:"count"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("%w: failed to decode candles response: %v", ErrProviderError, err)
+	}
+
+	if len(result.Candles) == 0 {
+		return nil, fmt.Errorf("%w: no candle data returned for %s", ErrNoData, symbol)
+	}
+
+	candles := make([]Candle, 0, len(result.Candles))
+	for _, c := range result.Candles {
+		// IB returns daily bars as "2006-01-02"; intraday as RFC3339
+		var ts time.Time
+		if t, err := time.Parse("2006-01-02", c.Timestamp); err == nil {
+			ts = t
+		} else if t, err := time.Parse(time.RFC3339, c.Timestamp); err == nil {
+			ts = t
+		} else {
+			ts = time.Now()
+		}
+		candles = append(candles, Candle{
+			Symbol:    symbol,
+			Timestamp: ts,
+			Open:      c.Open,
+			High:      c.High,
+			Low:       c.Low,
+			Close:     c.Close,
+			Volume:    c.Volume,
+			VWAP:      c.VWAP,
+		})
+	}
+	return candles, nil
 }
 
 // GetTrades is not supported by the IB bridge — return ErrNoData.
