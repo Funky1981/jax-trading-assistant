@@ -10,17 +10,31 @@
 - Quick start: `Docs/QUICKSTART.md`
 - IB setup & bridge: `Docs/IB_GUIDE.md`
 
-## Services
+## Architecture
 
-- **Jax API**: `go run ./services/jax-api/cmd/jax-api`
-  - Endpoints: `GET /health`, `POST /risk/calc`, `GET /strategies`, `POST /symbols/{symbol}/process`, `GET /trades`, `GET /trades/{id}`
-- **Jax Memory**: `go run ./services/jax-memory/cmd/jax-memory`
-  - UTCP endpoint: `POST /tools` (`memory.retain`, `memory.recall`, `memory.reflect`)
+Jax uses a **modular monolith** with two runtime entrypoints (ADR-0012):
 
-Vendored repos:
-- `services/hindsight/` (pinned commit in `services/hindsight/UPSTREAM.md`)
-- `dexter/`
-- `Agent0/`
+| Runtime | Port | Role |
+|---------|------|------|
+| `cmd/trader` | 8100 | Deterministic trade execution — loads approved strategy artifacts only |
+| `cmd/research` | 8091 | Orchestration pipeline — Agent0, memory, Dexter integration |
+
+External boundaries kept as separate processes:
+- **jax-api** (8081) — REST API for the frontend dashboard
+- **ib-bridge** (8092) — Interactive Brokers Gateway adapter
+- **agent0-service** (8093) — LLM/AI agent
+- **jax-memory** (8090) — Memory layer (Hindsight)
+- **jax-market** (8095) — Market data feed
+
+## Quick Start
+
+```powershell
+docker compose up -d
+```
+
+Services start automatically. Trader and research runtimes load approved strategy artifacts from Postgres on startup.
+
+See `Docs/QUICKSTART.md` for full setup including IB Gateway connection.
 
 ## Environment
 
