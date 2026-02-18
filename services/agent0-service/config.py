@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     jax_api_url: str = "http://jax-api:8081"
     
     # Request timeouts
-    llm_timeout: int = 60  # LLM can be slow
+    llm_timeout: int = 300  # LLM can be slow; 300s covers cold-load + generation on CPU
     api_timeout: int = 10
     
     # Caching

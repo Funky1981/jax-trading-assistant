@@ -21,10 +21,10 @@ func TestCalculatePositionSize(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
-		signal        Signal
+		name           string
+		signal         Signal
 		expectedShares int
-		expectError   bool
+		expectError    bool
 	}{
 		{
 			name: "normal BUY signal",
@@ -36,8 +36,10 @@ func TestCalculatePositionSize(t *testing.T) {
 				StopLoss:   145.00, // $5 risk per share
 				TakeProfit: 160.00,
 			},
-			expectedShares: 200, // $1000 risk / $5 per share = 200 shares
-			expectError:   false,
+			// Risk-based: $1000 / $5 = 200 shares, position = $30k.
+			// Capped by MaxPositionValuePct (20% of $100k = $20k): 20000/150 = 133.
+			expectedShares: 133,
+			expectError:    false,
 		},
 		{
 			name: "zero stop distance",
@@ -50,7 +52,7 @@ func TestCalculatePositionSize(t *testing.T) {
 				TakeProfit: 210.00,
 			},
 			expectedShares: 0,
-			expectError:   true,
+			expectError:    true,
 		},
 		{
 			name: "exceeds max position value",
@@ -62,27 +64,30 @@ func TestCalculatePositionSize(t *testing.T) {
 				StopLoss:   49000.00, // $1000 risk per share
 				TakeProfit: 55000.00,
 			},
-			expectedShares: 4, // Max $20k position / $50k = 4 shares
-			expectError:   false,
+			// Risk-based: $1000 / $1000 = 1 share, position = $50k.
+			// Capped by MaxPositionValuePct (20% of $100k = $20k): 20000/50000 = 0 shares.
+			// 0 < MinPositionSize(1) → error.
+			expectedShares: 0,
+			expectError:    true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			shares, err := executor.CalculatePositionSize(tt.signal, account)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if shares != tt.expectedShares {
 				t.Errorf("expected %d shares, got %d", tt.expectedShares, shares)
 			}
@@ -136,11 +141,11 @@ func TestValidateSignal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := executor.ValidateSignal(tt.signal)
-			
+
 			if tt.expectError && err == nil {
 				t.Errorf("expected error but got none")
 			}
-			
+
 			if !tt.expectError && err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}

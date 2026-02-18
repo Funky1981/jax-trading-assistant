@@ -89,5 +89,6 @@ type StrategyMetadata struct {
 	EventTypes  []string
 	MinRR       float64
 	MaxRisk     float64
-	Timeframes  []string // "1m", "5m", "1h", "1d"
+	Timeframes  []string               // "1m", "5m", "1h", "1d"
+	Extra       map[string]interface{} // ADR-0012 Phase 4: Artifact tracking (artifact_id, artifact_hash)
 }

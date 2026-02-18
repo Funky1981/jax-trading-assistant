@@ -52,7 +52,32 @@ async function fetchAISuggestion(request: SuggestionRequest): Promise<Suggestion
     throw new Error(error.detail || `HTTP ${response.status}`);
   }
 
-  return response.json();
+  // The Python agent0-service returns a flat SuggestionResponse — adapt it to
+  // the nested frontend contract: { suggestion: AISuggestion, provider, model }.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await response.json();
+
+  const suggestion: AISuggestion = {
+    symbol: data.symbol,
+    action: data.action,
+    // Python returns confidence as 0–100; frontend expects 0–1
+    confidence: typeof data.confidence === 'number' ? data.confidence / 100 : 0,
+    reasoning: data.reasoning ?? '',
+    risk_assessment: data.risk?.risk_level ?? '',
+    entry_price: data.entry_price ?? undefined,
+    target_price: data.target_price ?? undefined,
+    stop_loss: data.stop_loss ?? undefined,
+    position_size_pct: data.risk?.position_size_pct ?? undefined,
+    timeframe: data.time_horizon ?? undefined,
+    timestamp: data.generated_at ?? new Date().toISOString(),
+  };
+
+  return {
+    suggestion,
+    provider: data.provider ?? '',
+    model: data.model_used ?? '',
+    tokens_used: data.tokens_used,
+  };
 }
 
 // Fetch AI service config

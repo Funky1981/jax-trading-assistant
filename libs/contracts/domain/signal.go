@@ -15,4 +15,5 @@ type Signal struct {
 	Reason     string                 `json:"reason"`
 	StrategyID string                 `json:"strategy_id"`
 	Indicators map[string]interface{} `json:"indicators"`
+	ArtifactID string                 `json:"artifact_id,omitempty"` // ADR-0012 Phase 4: Artifact promotion gate
 }

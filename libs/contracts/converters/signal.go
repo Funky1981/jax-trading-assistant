@@ -1,6 +1,8 @@
 package converters
 
 import (
+	"strings"
+
 	"jax-trading-assistant/libs/contracts/domain"
 	"jax-trading-assistant/libs/strategies"
 )
@@ -11,7 +13,7 @@ func SignalToDomain(strategyID string, sig strategies.Signal) domain.Signal {
 		ID:         "", // Will be set by caller (e.g., UUID)
 		Symbol:     sig.Symbol,
 		Timestamp:  sig.Timestamp,
-		Type:       string(sig.Type),
+		Type:       strings.ToUpper(string(sig.Type)), // Database expects uppercase
 		Confidence: sig.Confidence,
 		EntryPrice: sig.EntryPrice,
 		StopLoss:   sig.StopLoss,
@@ -25,7 +27,7 @@ func SignalToDomain(strategyID string, sig strategies.Signal) domain.Signal {
 // SignalFromDomain converts a domain.Signal back to strategies.Signal
 func SignalFromDomain(sig domain.Signal) strategies.Signal {
 	return strategies.Signal{
-		Type:       strategies.SignalType(sig.Type),
+		Type:       strategies.SignalType(strings.ToLower(sig.Type)), // Convert back to lowercase
 		Symbol:     sig.Symbol,
 		Timestamp:  sig.Timestamp,
 		Confidence: sig.Confidence,

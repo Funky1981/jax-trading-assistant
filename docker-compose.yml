@@ -109,44 +109,62 @@ services:
       start_period: 30s
       retries: 3
 
-  jax-signal-generator:
+  # ── ADR-0012 Phase 5: Jax Trader Runtime (cmd/trader) ──────────────────────
+  # Deterministic: signal generation + trade execution + artifact gate.
+  # Replaces: jax-signal-generator (8096) + jax-trade-executor (8097)
+  jax-trader:
     build:
       context: .
-      dockerfile: services/jax-signal-generator/Dockerfile
+      dockerfile: cmd/trader/Dockerfile
+      args:
+        VERSION: "${VERSION:-0.1.0}"
+        BUILD_TIME: "${BUILD_TIME:-unknown}"
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://jax:jax@postgres:5432/jax}
-    ports:
-      - "8096:8096"
-    depends_on:
-      - postgres
-      - jax-orchestrator
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8096/health || exit 1"]
-      interval: 60s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
-
-  jax-trade-executor:
-    build:
-      context: .
-      dockerfile: services/jax-trade-executor/Dockerfile
-    environment:
-      POSTGRES_DSN: ${DATABASE_URL:-postgresql://jax:jax@postgres:5432/jax}
       IB_BRIDGE_URL: ${IB_BRIDGE_URL:-http://ib-bridge:8092}
+      PORT: "8100"
+      EXECUTION_ENABLED: ${EXECUTION_ENABLED:-true}
       RISK_PER_TRADE: ${RISK_PER_TRADE:-0.01}
       MAX_POSITION_PCT: ${MAX_POSITION_PCT:-0.20}
       MAX_OPEN_POSITIONS: ${MAX_OPEN_POSITIONS:-10}
       MAX_DAILY_LOSS: ${MAX_DAILY_LOSS:-0}
       ORDER_TYPE: ${ORDER_TYPE:-LMT}
-      PORT: 8097
     ports:
-      - "8097:8097"
+      - "8100:8100"
     depends_on:
       - postgres
       - ib-bridge
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8097/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8100/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  # ── ADR-0012 Phase 5: Jax Research Runtime (cmd/research) ───────────────────
+  # Orchestration pipeline: Agent0 + memory + Dexter. Same API as jax-orchestrator.
+  # Replaces: jax-orchestrator (8091)
+  jax-research:
+    build:
+      context: .
+      dockerfile: cmd/research/Dockerfile
+      args:
+        VERSION: "${VERSION:-0.1.0}"
+        BUILD_TIME: "${BUILD_TIME:-unknown}"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://jax:jax@postgres:5432/jax}
+      MEMORY_SERVICE_URL: ${MEMORY_SERVICE_URL:-http://jax-memory:8090}
+      AGENT0_SERVICE_URL: ${AGENT0_SERVICE_URL:-http://agent0-service:8093}
+      DEXTER_SERVICE_URL: ${DEXTER_SERVICE_URL:-}
+      PORT: "8091"
+    ports:
+      - "8091:8091"
+    depends_on:
+      - postgres
+      - jax-memory
+      - agent0-service
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8091/health || exit 1"]
       interval: 30s
       timeout: 10s
       start_period: 30s
@@ -171,8 +189,9 @@ services:
       API_PORT: ${API_PORT:-8081}
       IB_BRIDGE_URL: ${IB_BRIDGE_URL:-http://ib-bridge:8092}
       AGENT0_SERVICE_URL: ${AGENT0_SERVICE_URL:-http://agent0-service:8093}
-      TRADE_EXECUTOR_URL: ${TRADE_EXECUTOR_URL:-http://jax-trade-executor:8097}
-      JAX_ORCHESTRATOR_URL: ${JAX_ORCHESTRATOR_URL:-http://jax-orchestrator:8091}
+      # ADR-0012 Phase 5: routes to new runtimes
+      TRADE_EXECUTOR_URL: ${TRADE_EXECUTOR_URL:-http://jax-trader:8100}
+      JAX_ORCHESTRATOR_URL: ${JAX_ORCHESTRATOR_URL:-http://jax-research:8091}
     ports:
       - "${API_PORT:-8081}:${API_PORT:-8081}"
     depends_on:
@@ -180,26 +199,8 @@ services:
       - postgres
       - ib-bridge
       - agent0-service
-      - jax-trade-executor
-
-  jax-orchestrator:
-    build:
-      context: .
-      dockerfile: services/jax-orchestrator/Dockerfile
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://jax:jax@postgres:5432/jax}
-    ports:
-      - "8091:8091"
-    depends_on:
-      - postgres
-      - jax-memory
-      - agent0-service
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8091/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
+      - jax-trader
+      - jax-research
 
   jax-ingest:
     profiles:
@@ -243,9 +244,8 @@ services:
       - "9090:9090"
     depends_on:
       - jax-market
-      - jax-signal-generator
-      - jax-orchestrator
-      - jax-trade-executor
+      - jax-trader
+      - jax-research
       - jax-api
 
   grafana:

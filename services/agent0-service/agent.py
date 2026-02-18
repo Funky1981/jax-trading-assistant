@@ -50,6 +50,7 @@ class Agent0:
                     "system": system,
                     "stream": False,
                     "format": "json",
+                    "keep_alive": "30m",  # Keep model loaded between calls
                 },
                 timeout=settings.llm_timeout,
             )
@@ -62,8 +63,17 @@ class Agent0:
                 "Ollama is not running. Please install Ollama from https://ollama.ai "
                 "and run 'ollama serve' in a terminal. Then pull a model with 'ollama pull llama3.2'"
             )
+        except httpx.TimeoutException:
+            logger.error(
+                f"Ollama timed out after {settings.llm_timeout}s — model may be loading. "
+                f"Consider a smaller model: ollama pull phi3:3.8b"
+            )
+            raise RuntimeError(
+                f"Ollama timed out ({settings.llm_timeout}s). The model is still loading on CPU. "
+                "Try again in a moment, or switch to a smaller model."
+            )
         except Exception as e:
-            logger.error(f"Ollama error: {e}")
+            logger.error(f"Ollama error: {e!r}")
             raise
     
     async def _call_openai(self, prompt: str, system: str = SYSTEM_PROMPT) -> str:
@@ -251,12 +261,12 @@ Low: {fmt_float(market_data.low, '$')}
                 "position_size_pct": 2.0,
             }
         except Exception as e:
-            logger.error(f"LLM call failed: {e}")
+            logger.error(f"LLM call failed: {e!r}")
             suggestion_data = {
                 "action": "HOLD",
                 "confidence": 10,
                 "signal_strength": "weak",
-                "reasoning": f"LLM unavailable: {e}. Returning safe HOLD.",
+                "reasoning": f"LLM unavailable: {e!r}. Returning safe HOLD.",
                 "key_factors": ["LLM unavailable", "Fallback response"],
                 "time_horizon": "swing",
                 "risk_level": "high",
