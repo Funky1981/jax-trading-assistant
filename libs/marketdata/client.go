@@ -62,6 +62,8 @@ func NewClient(config *Config) (*Client, error) {
 			provider, err = NewAlpacaProvider(pc)
 		case ProviderIB:
 			provider, err = NewIBProvider(pc)
+		case ProviderIBBridge:
+			provider, err = NewIBBridgeProvider(pc)
 		default:
 			log.Printf("unknown provider: %s", pc.Name)
 			continue

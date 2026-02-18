@@ -7,15 +7,16 @@ import (
 
 // Config holds jax-market configuration
 type Config struct {
-	DatabaseDSN    string        `json:"database_dsn"`
-	IngestInterval int           `json:"ingest_interval"` // seconds
-	CandleBackfill int           `json:"candle_backfill"` // number of daily candles to backfill
-	StaleQuoteSecs int           `json:"stale_quote_seconds"`
-	Symbols        []string      `json:"symbols"`
-	Polygon        PolygonConfig `json:"polygon"`
-	Alpaca         AlpacaConfig  `json:"alpaca"`
-	IB             IBConfig      `json:"ib"`
-	Cache          CacheConfig   `json:"cache"`
+	DatabaseDSN    string         `json:"database_dsn"`
+	IngestInterval int            `json:"ingest_interval"` // seconds
+	CandleBackfill int            `json:"candle_backfill"` // number of daily candles to backfill
+	StaleQuoteSecs int            `json:"stale_quote_seconds"`
+	Symbols        []string       `json:"symbols"`
+	Polygon        PolygonConfig  `json:"polygon"`
+	Alpaca         AlpacaConfig   `json:"alpaca"`
+	IB             IBConfig       `json:"ib"`
+	IBBridge       IBBridgeConfig `json:"ib_bridge"`
+	Cache          CacheConfig    `json:"cache"`
 }
 
 // PolygonConfig holds Polygon.io configuration
@@ -33,12 +34,18 @@ type AlpacaConfig struct {
 	Tier      string `json:"tier"`
 }
 
-// IBConfig holds Interactive Brokers Gateway configuration
+// IBConfig holds Interactive Brokers Gateway configuration (direct Go SDK)
 type IBConfig struct {
 	Enabled  bool   `json:"enabled"`
 	Host     string `json:"host"`      // Default: "127.0.0.1"
 	Port     int    `json:"port"`      // 7497 for paper, 7496 for live
 	ClientID int    `json:"client_id"` // Any integer to identify connection
+}
+
+// IBBridgeConfig holds configuration for the Python IB HTTP bridge
+type IBBridgeConfig struct {
+	Enabled bool   `json:"enabled"`
+	URL     string `json:"url"` // Base URL, e.g. "http://ib-bridge:8092"
 }
 
 // CacheConfig holds cache configuration

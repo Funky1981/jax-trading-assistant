@@ -109,6 +109,19 @@ func main() {
 		})
 	}
 
+	if cfg.IBBridge.Enabled {
+		bridgeURL := cfg.IBBridge.URL
+		if bridgeURL == "" {
+			bridgeURL = "http://ib-bridge:8092"
+		}
+		mdConfig.Providers = append(mdConfig.Providers, marketdata.ProviderConfig{
+			Name:        marketdata.ProviderIBBridge,
+			IBBridgeURL: bridgeURL,
+			Priority:    1, // Highest priority when using bridge (proven delayed-data support)
+			Enabled:     true,
+		})
+	}
+
 	mdClient, err := marketdata.NewClient(mdConfig)
 	if err != nil {
 		log.Fatalf("failed to create market data client: %v", err)

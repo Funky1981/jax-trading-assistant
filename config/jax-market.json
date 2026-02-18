@@ -27,10 +27,14 @@
     "tier": "free"
   },
   "ib": {
-    "enabled": true,
+    "enabled": false,
     "host": "host.docker.internal",
     "port": 4002,
     "client_id": 2
+  },
+  "ib_bridge": {
+    "enabled": true,
+    "url": "http://ib-bridge:8092"
   },
   "cache": {
     "enabled": false,

@@ -1,0 +1,31 @@
+# Third-party / vendored repos not needed for Go builds
+Agent0/
+dexter/
+services/hindsight/
+
+# Frontend build artefacts
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Logs, tmp, and local state
+logs/
+tmp/
+*.log
+
+# Test outputs and coverage
+**/*_test_output/
+**/coverage.out
+**/coverage.html
+
+# Editor / OS artefacts
+.vscode/
+.idea/
+**/.DS_Store
+**/Thumbs.db
+
+# Git history (large)
+.git/
+
+# Docker-specific
+**/.dockerignore

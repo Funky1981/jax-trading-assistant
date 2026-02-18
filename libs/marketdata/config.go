@@ -9,9 +9,10 @@ import (
 type ProviderType string
 
 const (
-	ProviderPolygon ProviderType = "polygon"
-	ProviderAlpaca  ProviderType = "alpaca"
-	ProviderIB      ProviderType = "ib" // Interactive Brokers Gateway
+	ProviderPolygon  ProviderType = "polygon"
+	ProviderAlpaca   ProviderType = "alpaca"
+	ProviderIB       ProviderType = "ib"        // Interactive Brokers Gateway (direct Go SDK)
+	ProviderIBBridge ProviderType = "ib-bridge" // IB via Python HTTP bridge
 )
 
 // Config holds market data client configuration
@@ -30,10 +31,13 @@ type ProviderConfig struct {
 	Priority  int    // Lower number = higher priority (1 is highest)
 	Enabled   bool
 
-	// IB-specific fields (format: "host:port:clientID" in APIKey, e.g. "127.0.0.1:7497:1")
+	// IB-specific fields (direct Go SDK connection)
 	IBHost     string // IB Gateway host (default: 127.0.0.1)
 	IBPort     int    // IB Gateway port (7497 for paper, 7496 for live)
 	IBClientID int    // IB client ID (any integer)
+
+	// IBBridge-specific fields (HTTP bridge connection)
+	IBBridgeURL string // Base URL of the Python IB bridge, e.g. "http://ib-bridge:8092"
 }
 
 // CacheConfig holds caching configuration
@@ -66,8 +70,8 @@ func (c *Config) Validate() error {
 		if p.Name == "" {
 			return errors.New("provider name cannot be empty")
 		}
-		// IB doesn't need API key (uses socket connection with Gateway login)
-		if p.Name != ProviderIB && p.APIKey == "" {
+		// IB and IB-Bridge don't need API keys (socket / HTTP bridge connection)
+		if p.Name != ProviderIB && p.Name != ProviderIBBridge && p.APIKey == "" {
 			return errors.New("provider API key cannot be empty")
 		}
 		if p.Name == ProviderAlpaca && p.APISecret == "" {

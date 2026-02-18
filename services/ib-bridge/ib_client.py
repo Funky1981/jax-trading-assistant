@@ -52,6 +52,9 @@ class IBClient:
             
             # Request market data type (1=live, 2=frozen, 3=delayed, 4=delayed-frozen)
             self.ib.reqMarketDataType(3)  # Use delayed data by default for safety
+            # Wait for the Gateway to acknowledge the data-type switch before
+            # any quote requests fire (reqMarketDataType is async on the IB side).
+            await asyncio.sleep(1.5)
             
         except Exception as e:
             self._connected = False
@@ -124,7 +127,8 @@ class IBClient:
             ticker = self.ib.reqMktData(contract, '', False, False)
             
             # Wait for data to populate
-            await asyncio.sleep(0.5)
+            # Delayed data (type 3) takes longer than live — use 2s
+            await asyncio.sleep(2.0)
             
             # Extract quote data
             quote = QuoteResponse(
