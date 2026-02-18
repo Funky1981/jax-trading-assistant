@@ -288,6 +288,7 @@ func (s *Store) GetApproval(ctx context.Context, artifactID uuid.UUID) (*Approva
 
 	var approval Approval
 	var previousState, approvedBy, reportURI, reviewNotes, reviewer sql.NullString
+	var stateChangedBy, stateChangeReason sql.NullString
 	var approvedAt, reviewedAt sql.NullTime
 	var validationRunID *uuid.UUID
 
@@ -304,9 +305,9 @@ func (s *Store) GetApproval(ctx context.Context, artifactID uuid.UUID) (*Approva
 		&reviewNotes,
 		&reviewer,
 		&reviewedAt,
-		&approval.StateChangedBy,
+		&stateChangedBy,
 		&approval.StateChangedAt,
-		&approval.StateChangeReason,
+		&stateChangeReason,
 		&approval.CreatedAt,
 		&approval.UpdatedAt,
 	)
@@ -342,6 +343,12 @@ func (s *Store) GetApproval(ctx context.Context, artifactID uuid.UUID) (*Approva
 	}
 	if reviewedAt.Valid {
 		approval.ReviewedAt = &reviewedAt.Time
+	}
+	if stateChangedBy.Valid {
+		approval.StateChangedBy = stateChangedBy.String
+	}
+	if stateChangeReason.Valid {
+		approval.StateChangeReason = stateChangeReason.String
 	}
 
 	return &approval, nil

@@ -14,7 +14,5 @@ use (
 	./libs/testing
 	./libs/trading/executor
 	./libs/utcp
-	./services/jax-orchestrator
-	./services/jax-trade-executor
 	./tools
 )
