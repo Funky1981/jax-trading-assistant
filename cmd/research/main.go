@@ -41,6 +41,7 @@ type Config struct {
 	MemoryServiceURL string
 	Agent0ServiceURL string
 	DexterServiceURL string
+	HindsightURL     string // used by the in-process memory proxy
 }
 
 func main() {
@@ -99,6 +100,11 @@ func main() {
 	// Build HTTP server
 	mux := http.NewServeMux()
 	registerRoutes(mux, orchSvc, db)
+
+	// ADR-0012 Phase 6: memory proxy (replaces jax-memory service).
+	// agent0-service can now point MEMORY_SERVICE_URL at jax-research:8091.
+	memStore := buildMemoryStore()
+	registerMemoryRoutes(mux, memStore)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -350,6 +356,7 @@ func loadConfig() Config {
 		MemoryServiceURL: envOrDefault("MEMORY_SERVICE_URL", "http://jax-memory:8090"),
 		Agent0ServiceURL: envOrDefault("AGENT0_SERVICE_URL", "http://agent0-service:8093"),
 		DexterServiceURL: envOrDefault("DEXTER_SERVICE_URL", ""),
+		HindsightURL:     envOrDefault("HINDSIGHT_URL", ""),
 	}
 }
 

@@ -63,7 +63,8 @@ func main() {
 	log.Printf("port: %s", cfg.Port)
 
 	// Initialize database connection pool
-	ctx := context.Background()
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	defer ctxCancel()
 	dbPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("failed to create database pool: %v", err)
@@ -137,6 +138,11 @@ func main() {
 	// Create HTTP server
 	mux := http.NewServeMux()
 
+	// ADR-0012 Phase 6: launch in-process replacements for removed microservices.
+	// startMarketIngester replaces jax-market; startFrontendAPIServer replaces jax-api.
+	go startMarketIngester(ctx, dbPool)
+	go startFrontendAPIServer(ctx, dbPool, registry)
+
 	// Health check endpoint
 	mux.HandleFunc("/health", handleHealth(sigGen))
 
@@ -180,10 +186,11 @@ func main() {
 	<-sigChan
 
 	log.Println("shutdown signal received, gracefully stopping...")
+	ctxCancel() // signal background goroutines to stop
 
 	// Graceful shutdown with timeout
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("server shutdown error: %v", err)
