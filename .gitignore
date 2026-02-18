@@ -17,6 +17,9 @@ venv/
 
 # Go
 /bin/
+build/
+tmp/
+*.exe
 
 # OS / Editor
 .DS_Store
