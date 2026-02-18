@@ -283,23 +283,44 @@ class IBClient:
             raise
     
     async def get_positions(self) -> List[Position]:
-        """Get current positions"""
+        """Get current positions with real market pricing via portfolioItems().
+
+        ib-insync's portfolio() returns PortfolioItem objects which carry the
+        live (or delayed) marketPrice, marketValue and unrealizedPNL that IB
+        Gateway pushes automatically for every account position — no separate
+        market data subscription is needed.
+        """
         try:
-            positions = self.ib.positions()
-            
+            portfolio_items = self.ib.portfolio()
+
             result = []
-            for pos in positions:
+            for item in portfolio_items:
+                # Skip non-STK items (options, futures, etc.) for now
+                sec_type = getattr(item.contract, 'secType', '')
+                if sec_type and sec_type != 'STK':
+                    logger.debug(f"Skipping non-STK position: {item.contract.symbol} ({sec_type})")
+                    continue
+
+                market_price = float(item.marketPrice) if item.marketPrice == item.marketPrice else 0.0  # NaN guard
+                market_value = float(item.marketValue) if item.marketValue == item.marketValue else 0.0
+                unrealized = float(item.unrealizedPNL) if item.unrealizedPNL == item.unrealizedPNL else 0.0
+                realized   = float(item.realizedPNL)   if item.realizedPNL   == item.realizedPNL   else 0.0
+
                 position = Position(
-                    symbol=pos.contract.symbol,
-                    quantity=int(pos.position),
-                    avg_cost=float(pos.avgCost),
-                    market_value=float(pos.position * pos.avgCost),
-                    account=pos.account
+                    symbol=item.contract.symbol,
+                    contract_id=int(item.contract.conId or 0),
+                    quantity=int(item.position),
+                    avg_cost=float(item.averageCost),
+                    market_price=market_price,
+                    market_value=market_value,
+                    unrealized_pnl=unrealized,
+                    realized_pnl=realized,
+                    account=item.account
                 )
                 result.append(position)
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error getting positions: {e}")
             raise

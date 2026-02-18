@@ -83,11 +83,15 @@ class OrderStatusResponse(BaseModel):
 
 
 class Position(BaseModel):
-    """Position information"""
+    """Position information with real IB market pricing"""
     symbol: str
+    contract_id: int
     quantity: int
-    avg_cost: float
-    market_value: float
+    avg_cost: float       # average cost per share (cost basis)
+    market_price: float   # real-time (or delayed) market price per share
+    market_value: float   # quantity * market_price
+    unrealized_pnl: float # market_value - (avg_cost * quantity)
+    realized_pnl: float
     account: str
 
 

@@ -14,74 +14,17 @@ export interface HealthData {
   overall: 'healthy' | 'degraded' | 'unhealthy';
 }
 
-// Mock data for when backend is not available
-const mockHealthData: HealthData = {
-  overall: 'healthy',
-  services: [
-    {
-      name: 'JAX API',
-      status: 'healthy',
-      lastCheck: Date.now(),
-      latency: 45,
-      message: 'All endpoints responding',
-    },
-    {
-      name: 'Memory Service',
-      status: 'healthy',
-      lastCheck: Date.now(),
-      latency: 23,
-      message: 'Connected to PostgreSQL',
-    },
-    {
-      name: 'IB Bridge',
-      status: 'degraded',
-      lastCheck: Date.now(),
-      latency: 156,
-      message: 'High latency detected',
-    },
-    {
-      name: 'Market Data',
-      status: 'healthy',
-      lastCheck: Date.now(),
-      latency: 12,
-      message: 'Streaming active',
-    },
-    {
-      name: 'Orchestrator',
-      status: 'healthy',
-      lastCheck: Date.now(),
-      latency: 34,
-      message: 'Processing signals',
-    },
-  ],
-};
-
 async function fetchHealth(): Promise<HealthData> {
-  // Try to fetch from actual API
-  try {
-    const response = await fetch(buildUrl('JAX_API', '/health'));
-    if (response.ok) {
-      const apiResponse = await response.json();
-      // Check if response has services array
-      if (apiResponse.services && Array.isArray(apiResponse.services)) {
-        return apiResponse;
-      }
-      // API returned simple health check, use mock data with updated status
-      console.log('JAX API health check OK, using mock service data');
-    }
-  } catch (error) {
-    console.warn('Health API not available:', error);
+  const response = await fetch(buildUrl('JAX_API', '/health'));
+  if (!response.ok) {
+    throw new Error(`Health endpoint returned HTTP ${response.status}`);
   }
-  
-  // Return mock data with some randomization
-  return {
-    ...mockHealthData,
-    services: mockHealthData.services.map((service) => ({
-      ...service,
-      lastCheck: Date.now(),
-      latency: service.latency ? service.latency + Math.floor(Math.random() * 20 - 10) : undefined,
-    })),
-  };
+  const apiResponse = await response.json();
+  if (apiResponse.services && Array.isArray(apiResponse.services)) {
+    return apiResponse as HealthData;
+  }
+  // API is reachable but doesn't expose per-service breakdown yet
+  throw new Error('Health endpoint does not return per-service data');
 }
 
 export function useHealth() {

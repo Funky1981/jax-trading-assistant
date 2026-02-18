@@ -14,25 +14,26 @@ export interface Position {
 }
 
 async function fetchPositions(): Promise<Position[]> {
-  // Get real positions from IB Bridge
   const response = await fetch(buildUrl('IB_BRIDGE', '/positions'));
   if (!response.ok) {
-    throw new Error(`IB Bridge unavailable: ${response.statusText}`);
+    throw new Error(`IB Bridge positions unavailable (HTTP ${response.status})`);
   }
-  
+
   const data = await response.json();
-  
-  // Transform IB positions to our format
+
   return data.positions.map((pos: any) => ({
-    id: `${pos.contract_id}`,
+    id: `${pos.contract_id || pos.symbol}`,
     symbol: pos.symbol,
-    quantity: pos.position,
-    avgPrice: pos.avg_cost || 0,
-    marketPrice: pos.market_price || pos.avg_cost,
-    pnl: pos.unrealized_pnl || 0,
-    pnlPercent: pos.avg_cost ? ((pos.unrealized_pnl || 0) / (pos.avg_cost * pos.position)) * 100 : 0,
-    marketValue: pos.market_value || 0,
-    costBasis: (pos.avg_cost || 0) * pos.position,
+    quantity: pos.quantity,
+    avgPrice: pos.avg_cost ?? 0,
+    marketPrice: pos.market_price,          // real price — no avg_cost fallback
+    pnl: pos.unrealized_pnl ?? 0,
+    pnlPercent:
+      pos.avg_cost && pos.quantity
+        ? (pos.unrealized_pnl / (pos.avg_cost * pos.quantity)) * 100
+        : 0,
+    marketValue: pos.market_value ?? 0,
+    costBasis: (pos.avg_cost ?? 0) * pos.quantity,
   }));
 }
 
