@@ -210,6 +210,9 @@ func ingestCandles(ctx context.Context, pool *pgxpool.Pool, client *marketdata.C
 		}
 	}
 
-	log.Printf("market ingester: candles %s count=%d", symbol, len(candles))
+	observability.LogEvent(ctx, "info", "candles.ingested", map[string]any{
+		"symbol": symbol,
+		"count":  len(candles),
+	})
 	return nil
 }
