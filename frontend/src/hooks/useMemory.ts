@@ -38,6 +38,10 @@ export function useMemoryBanks() {
   return useQuery({
     queryKey: ['memory', 'banks'],
     queryFn: () => memoryService.listBanks(),
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchInterval: (query) => (query.state.error ? false : 60_000),
+    staleTime: 30_000,
   });
 }
 
