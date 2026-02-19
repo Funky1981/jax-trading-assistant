@@ -54,13 +54,13 @@ export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps
             </SelectTrigger>
             <SelectContent>
               {banks?.map((bank) => (
+                // React.Fragment with key: Radix clones SelectItem children
+                // without preserving the key prop, causing React warnings.
                 <SelectItem key={bank.id} value={bank.id}>
-                  <div className="flex items-center justify-between w-full">
-                    <span>{bank.name}</span>
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {bank.entryCount}
-                    </Badge>
-                  </div>
+                  <span>{bank.name}</span>
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {bank.entryCount}
+                  </Badge>
                 </SelectItem>
               ))}
             </SelectContent>

@@ -23,8 +23,8 @@ export function useMetrics() {
   return useQuery({
     queryKey: ['metrics'],
     queryFn: fetchMetrics,
-    refetchInterval: 10000,
-    retry: false, // Don't retry since JAX API is not available
+    refetchInterval: (query) => (query.state.error ? false : 10_000),
+    retry: false,
   });
 }
 

@@ -71,8 +71,6 @@ export const router = createBrowserRouter(
     basename: import.meta.env.BASE_URL,
     future: {
       v7_relativeSplatPath: true,
-      // @ts-expect-error v7_startTransition is valid at runtime but missing from v6.26.x type definitions
-      v7_startTransition: true,
     },
   }
 );
@@ -80,7 +78,14 @@ export const router = createBrowserRouter(
 export default function App() {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <RouterProvider
+        router={router}
+        future={{
+          // Opt in to v7 behaviour: state updates wrapped in startTransition
+          // This flag lives on RouterProvider in v6.26.x, not createBrowserRouter
+          v7_startTransition: true,
+        }}
+      />
     </AuthProvider>
   );
 }

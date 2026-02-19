@@ -110,19 +110,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setIsLoading(false);
             return;
           }
+
+          // Auth IS required — restore session from localStorage
+          const token = readToken();
+          if (token && !isTokenExpired(token)) {
+            setUser(decodeUser(token));
+          }
+          setIsLoading(false);
+          return;
         }
       } catch {
-        // Backend unreachable — assume auth not required for now (dev environment)
-        setUser({ username: 'anonymous', role: 'user', anonymous: true });
-        setIsLoading(false);
-        return;
+        // Network error (backend unreachable)
       }
 
-      // Auth IS required — restore session from localStorage
-      const token = readToken();
-      if (token && !isTokenExpired(token)) {
-        setUser(decodeUser(token));
-      }
+      // /auth/status returned non-ok (404, 502, etc.) or network failed
+      // → treat as auth disabled (dev environment with backend not yet started)
+      setUser({ username: 'anonymous', role: 'user', anonymous: true });
       setIsLoading(false);
     }
     void init();
