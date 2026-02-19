@@ -127,11 +127,6 @@ function savePanelStates(state: Record<PanelId, boolean>) {
 }
 
 export function DashboardPage() {
-  useEffect(() => {
-    console.log('🏠 DashboardPage MOUNTED');
-    return () => console.log('🏠 DashboardPage UNMOUNTED');
-  }, []);
-
   const [isEditing, setIsEditing] = useState(false);
   const [layouts, setLayouts] = useState<Layouts>(loadLayouts);
   const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelStates);

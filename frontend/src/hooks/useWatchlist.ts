@@ -49,9 +49,9 @@ export function useWatchlist() {
   return useQuery({
     queryKey: ['watchlist'],
     queryFn: fetchWatchlist,
-    refetchInterval: 10000, // Slow down to 10 seconds
-    retry: false, // Don't retry failed requests
-    staleTime: 5000, // Consider data fresh for 5 seconds
+    refetchInterval: (query) => (query.state.error ? false : 10_000),
+    retry: false,
+    staleTime: 5000,
   });
 }
 
