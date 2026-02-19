@@ -52,7 +52,7 @@ export function useApproveSignal() {
 
       previousRecs.forEach(([key, data]) => {
         if (!data) return;
-        const filtered = data.recommendations.filter((rec) => rec.signal.id !== signalId);
+        const filtered = data.recommendations.filter((rec) => rec.signal?.id !== signalId);
         queryClient.setQueryData<RecommendationListResponse>(key, {
           ...data,
           recommendations: filtered,
@@ -101,7 +101,7 @@ export function useRejectSignal() {
 
       previousRecs.forEach(([key, data]) => {
         if (!data) return;
-        const filtered = data.recommendations.filter((rec) => rec.signal.id !== signalId);
+        const filtered = data.recommendations.filter((rec) => rec.signal?.id !== signalId);
         queryClient.setQueryData<RecommendationListResponse>(key, {
           ...data,
           recommendations: filtered,

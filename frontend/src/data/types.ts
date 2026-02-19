@@ -163,7 +163,7 @@ export interface OrchestrationRun {
 }
 
 export interface Recommendation {
-  signal: Signal;
+  signal?: Signal | null;
   ai_analysis?: OrchestrationRun | null;
 }
 

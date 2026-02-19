@@ -214,7 +214,9 @@ export function SignalsQueuePanel({ isOpen, onToggle }: SignalsQueuePanelProps) 
   const recommendationMap = useMemo(() => {
     const map = new Map<string, Recommendation>();
     recResponse?.recommendations?.forEach((rec) => {
-      map.set(rec.signal.id, rec);
+      if (rec.signal?.id) {
+        map.set(rec.signal.id, rec);
+      }
     });
     return map;
   }, [recResponse]);
