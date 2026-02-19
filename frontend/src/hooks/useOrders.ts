@@ -29,12 +29,50 @@ export interface CreateOrderRequest {
   stopPrice?: number;
 }
 
+function normalizeStatus(raw?: string): OrderStatus {
+  switch (raw?.toLowerCase()) {
+    case 'filled': return 'filled';
+    case 'pending': return 'pending';
+    case 'partfilled':
+    case 'partial': return 'partial';
+    case 'cancelled': return 'cancelled';
+    default: return 'rejected';
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapApiTrade(raw: any): Order {
+  return {
+    id: raw.id ?? '',
+    symbol: raw.symbol ?? '',
+    side: (raw.direction ?? raw.side ?? 'buy').toLowerCase() as OrderSide,
+    type: (raw.type ?? 'market') as OrderType,
+    quantity: raw.quantity ?? raw.filled_qty ?? 0,
+    price: raw.price ?? raw.entry,
+    stopPrice: raw.stop_price ?? raw.stop,
+    status: normalizeStatus(raw.order_status ?? raw.status),
+    filledQuantity: raw.filled_qty ?? raw.filledQuantity ?? 0,
+    avgFillPrice: raw.avg_fill_price ?? raw.avgFillPrice,
+    createdAt: raw.created_at
+      ? new Date(raw.created_at).getTime()
+      : (raw.createdAt ?? Date.now()),
+    updatedAt: raw.updated_at
+      ? new Date(raw.updated_at).getTime()
+      : raw.created_at
+      ? new Date(raw.created_at).getTime()
+      : (raw.updatedAt ?? Date.now()),
+  };
+}
+
 async function fetchOrders(): Promise<Order[]> {
   const response = await fetch(buildUrl('JAX_API', '/api/v1/trades'));
   if (!response.ok) {
     throw new Error('Orders service unavailable');
   }
-  return response.json();
+  const data = await response.json();
+  // API returns { trades: [...] } envelope with snake_case fields
+  const raw = Array.isArray(data) ? data : (data.trades ?? []);
+  return raw.map(mapApiTrade);
 }
 
 export function useOrders() {

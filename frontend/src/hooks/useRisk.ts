@@ -48,8 +48,8 @@ export function useRiskMetrics() {
   return useQuery({
     queryKey: ['risk', 'metrics'],
     queryFn: fetchRiskMetrics,
-    refetchInterval: 10000,
-    retry: false, // Don't retry since JAX API is not available
+    refetchInterval: (query) => (query.state.error ? false : 10_000),
+    retry: false,
   });
 }
 

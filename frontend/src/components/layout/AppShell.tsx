@@ -33,8 +33,6 @@ export function AppShell() {
   const location = useLocation();
   const { user, authRequired, logout } = useAuth();
 
-  console.log('AppShell rendering, current path:', location.pathname);
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Mobile overlay */}
@@ -81,8 +79,7 @@ export function AppShell() {
                 key={item.path}
                 to={item.path}
                 end={item.end}
-                onClick={(e) => {
-                  console.log(`🔗 NavLink clicked: ${item.label} -> ${item.path}`);
+                onClick={() => {
                   setSidebarOpen(false);
                 }}
                 className={({ isActive }) =>

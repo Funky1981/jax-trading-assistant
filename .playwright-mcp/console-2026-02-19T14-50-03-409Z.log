@@ -1,0 +1,80 @@
+[    1134ms] [ERROR] Error handled by React Router default ErrorBoundary: TypeError: orders.filter is not a function
+    at useOrdersSummary (http://localhost:5173/src/hooks/useOrders.ts:22:21)
+    at TradeBlotterPanel (http://localhost:5173/src/components/dashboard/TradeBlotterPanel.tsx:58:48)
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:18509:20)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:5654:24)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:7475:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:8525:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:997:72)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12561:98)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12424:43)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12408:13) @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=e0852edc:4072
+[    1136ms] [ERROR] Error handled by React Router default ErrorBoundary: TypeError: orders.filter is not a function
+    at useOrdersSummary (http://localhost:5173/src/hooks/useOrders.ts:22:21)
+    at TradeBlotterPanel (http://localhost:5173/src/components/dashboard/TradeBlotterPanel.tsx:58:48)
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:18509:20)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:5654:24)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:7475:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:8525:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:997:72)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12561:98)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12424:43)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12408:13) @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=e0852edc:4072
+[    1138ms] [ERROR] Error handled by React Router default ErrorBoundary: TypeError: orders.filter is not a function
+    at useOrdersSummary (http://localhost:5173/src/hooks/useOrders.ts:22:21)
+    at TradeBlotterPanel (http://localhost:5173/src/components/dashboard/TradeBlotterPanel.tsx:58:48)
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:18509:20)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:5654:24)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:7475:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:8525:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:997:72)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12561:98)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12424:43)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12408:13) @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=e0852edc:4072
+[    1139ms] [ERROR] Error handled by React Router default ErrorBoundary: TypeError: orders.filter is not a function
+    at useOrdersSummary (http://localhost:5173/src/hooks/useOrders.ts:22:21)
+    at TradeBlotterPanel (http://localhost:5173/src/components/dashboard/TradeBlotterPanel.tsx:58:48)
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:18509:20)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:5654:24)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:7475:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:8525:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:997:72)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12561:98)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12424:43)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12408:13) @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=e0852edc:4072
+[    1149ms] [ERROR] %o
+
+%s
+
+%s
+ TypeError: orders.filter is not a function
+    at useOrdersSummary (http://localhost:5173/src/hooks/useOrders.ts:22:21)
+    at TradeBlotterPanel (http://localhost:5173/src/components/dashboard/TradeBlotterPanel.tsx:58:48)
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:18509:20)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:5654:24)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:7475:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:8525:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:997:72)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12561:98)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12424:43)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12408:13) The above error occurred in the <TradeBlotterPanel> component. React will try to recreate this component tree from scratch using the error boundary you provided, RenderErrorBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:7000
+[    1150ms] [ERROR] React Router caught the following error during render TypeError: orders.filter is not a function
+    at useOrdersSummary (http://localhost:5173/src/hooks/useOrders.ts:22:21)
+    at TradeBlotterPanel (http://localhost:5173/src/components/dashboard/TradeBlotterPanel.tsx:58:48)
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:18509:20)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:5654:24)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:7475:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:8525:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:997:72)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12561:98)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12424:43)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=e0852edc:12408:13) {componentStack: 
+    at TradeBlotterPanel (http://localhost:5173/s…/deps/@tanstack_react-query.js?v=e0852edc:3168:3)} @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=e0852edc:4117
+[    2884ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/SPY:0
+[    3003ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/QQQ:0
+[    3006ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AAPL:0
+[    3006ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/TSLA:0
+[    3007ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/NVDA:0
+[    3007ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMD:0
+[    5038ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/META:0
+[    5135ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8092/quotes/AMZN:0

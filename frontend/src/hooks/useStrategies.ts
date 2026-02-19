@@ -25,15 +25,17 @@ async function fetchStrategies(): Promise<Strategy[]> {
   if (!response.ok) {
     throw new Error('Strategies service unavailable');
   }
-  return response.json();
+  const data = await response.json();
+  // API returns { strategies: [...] } envelope
+  return Array.isArray(data) ? data : (data.strategies ?? []);
 }
 
 export function useStrategies() {
   return useQuery({
     queryKey: ['strategies'],
     queryFn: fetchStrategies,
-    refetchInterval: 30000,
-    retry: false, // Don't retry since JAX API is not available
+    refetchInterval: (query) => (query.state.error ? false : 30_000),
+    retry: false,
   });
 }
 

@@ -11,12 +11,35 @@ export interface MetricEvent {
   metadata?: Record<string, unknown>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapApiMetric(raw: any): MetricEvent {
+  const startTs = raw.started_at ? new Date(raw.started_at).getTime() : (raw.timestamp ?? Date.now());
+  const endTs = raw.completed_at ? new Date(raw.completed_at).getTime() : startTs;
+  const statusMap: Record<string, MetricEvent['status']> = {
+    completed: 'success',
+    failed: 'error',
+    running: 'warning',
+  };
+  return {
+    id: raw.id ?? crypto.randomUUID(),
+    event: raw.event ?? (raw.symbol ? `analysis:${raw.symbol}` : 'metric'),
+    source: raw.source ?? raw.symbol ?? 'system',
+    duration: raw.duration ?? Math.max(0, endTs - startTs),
+    timestamp: raw.timestamp ?? startTs,
+    status: raw.status in statusMap ? statusMap[raw.status] : (raw.status ?? 'success'),
+    metadata: raw.metadata ?? { confidence: raw.confidence, symbol: raw.symbol },
+  };
+}
+
 async function fetchMetrics(): Promise<MetricEvent[]> {
   const response = await fetch(buildUrl('JAX_API', '/api/v1/metrics'));
   if (!response.ok) {
     throw new Error('Metrics service unavailable');
   }
-  return response.json();
+  const data = await response.json();
+  // API returns { metrics: [...] } envelope with snake_case / different field names
+  const raw = Array.isArray(data) ? data : (data.metrics ?? []);
+  return raw.map(mapApiMetric);
 }
 
 export function useMetrics() {
