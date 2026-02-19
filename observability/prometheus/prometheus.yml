@@ -2,22 +2,24 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: jax-market
+  # ADR-0012 Phase 6: consolidated services
+  # jax-trader:8081 = frontend API (signals, trades, orchestration metrics)
+  - job_name: jax-trader-api
     metrics_path: /metrics/prometheus
     static_configs:
-      - targets: ["jax-market:8095"]
-  - job_name: jax-signal-generator
+      - targets: ["jax-trader:8081"]
+
+  # jax-trader:8100 = internal trader metrics
+  - job_name: jax-trader-internal
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["jax-trader:8100"]
+
+  # jax-research:8091 = orchestration / research runtime
+  - job_name: jax-research
     metrics_path: /metrics/prometheus
     static_configs:
-      - targets: ["jax-signal-generator:8096"]
-  - job_name: jax-orchestrator
-    metrics_path: /metrics/prometheus
-    static_configs:
-      - targets: ["jax-orchestrator:8091"]
-  - job_name: jax-trade-executor
-    metrics_path: /metrics/prometheus
-    static_configs:
-      - targets: ["jax-trade-executor:8097"]
+      - targets: ["jax-research:8091"]
   - job_name: jax-api
     metrics_path: /metrics/prometheus
     static_configs:

@@ -17,17 +17,18 @@ import (
 	"time"
 
 	"jax-trading-assistant/libs/marketdata"
+	"jax-trading-assistant/libs/observability"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ingesterConfig holds market ingestion settings read from env.
 type ingesterConfig struct {
-	IBBridgeURL     string
-	Symbols         []string
-	IngestInterval  time.Duration
-	CandleBackfill  int
-	StaleQuoteSecs  int
+	IBBridgeURL    string
+	Symbols        []string
+	IngestInterval time.Duration
+	CandleBackfill int
+	StaleQuoteSecs int
 }
 
 func loadIngesterConfig() ingesterConfig {
@@ -100,8 +101,11 @@ func startMarketIngester(ctx context.Context, pool *pgxpool.Pool) {
 	}
 	defer client.Close()
 
-	log.Printf("market ingester started: %d symbol(s), interval=%s, backfill=%d",
-		len(cfg.Symbols), cfg.IngestInterval, cfg.CandleBackfill)
+	observability.LogEvent(ctx, "info", "ingester.started", map[string]any{
+		"symbols":  len(cfg.Symbols),
+		"interval": cfg.IngestInterval.String(),
+		"backfill": cfg.CandleBackfill,
+	})
 
 	var lastCandleRun time.Time
 
@@ -133,7 +137,7 @@ func startMarketIngester(ctx context.Context, pool *pgxpool.Pool) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("market ingester stopped")
+			observability.LogEvent(ctx, "info", "ingester.stopped", nil)
 			return
 		case <-ticker.C:
 			runOnce(false)
@@ -168,7 +172,10 @@ func ingestQuote(ctx context.Context, pool *pgxpool.Pool, client *marketdata.Cli
 		return fmt.Errorf("upsert quote: %w", err)
 	}
 
-	log.Printf("market ingester: quote %s price=%.2f", symbol, quote.Price)
+	observability.LogEvent(ctx, "info", "quote.ingested", map[string]any{
+		"symbol": symbol,
+		"price":  quote.Price,
+	})
 	return nil
 }
 

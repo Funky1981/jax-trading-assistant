@@ -18,6 +18,9 @@ func LogEvent(ctx context.Context, level string, event string, fields map[string
 	}
 
 	info := RunInfoFromContext(ctx)
+	if info.FlowID != "" {
+		payload["flow_id"] = info.FlowID
+	}
 	if info.RunID != "" {
 		payload["run_id"] = info.RunID
 	}

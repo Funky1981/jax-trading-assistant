@@ -4,33 +4,34 @@
 // ADR-0012 Phase 6: consolidates jax-api into the trader runtime.
 //
 // Routes (JWT-protected unless marked public):
-//   Public:
-//     GET  /health
-//     POST /auth/login
-//     POST /auth/refresh
-//   Protected:
-//     GET  /api/v1/signals          – list strategy_signals
-//     GET  /api/v1/signals/{id}     – single signal
-//     POST /api/v1/signals/{id}/approve
-//     POST /api/v1/signals/{id}/reject
-//     POST /api/v1/signals/{id}/analyze
-//     GET  /api/v1/recommendations  – same source, formatted for UI
-//     GET  /api/v1/recommendations/{id}
-//     GET  /trades                  – list trades
-//     GET  /trades/{id}             – single trade
-//     POST /api/v1/orchestrate      – proxy → jax-research
-//     GET  /api/v1/orchestrate/runs
-//     GET  /api/v1/orchestrate/runs/{id}
-//     GET  /api/v1/metrics
-//     GET  /api/v1/metrics/runs/{id}
-//     GET  /strategies              – list strategies (from registry)
-//     GET  /api/v1/strategies
-//     GET  /api/v1/strategies/{id}
-//     GET  /trading/guard
-//     POST /trading/guard/outcome
-//     POST /risk/calc
-//     POST /symbols/{symbol}        – trigger analysis
-//     GET  /metrics/prometheus      – Prometheus text format
+//
+//	Public:
+//	  GET  /health
+//	  POST /auth/login
+//	  POST /auth/refresh
+//	Protected:
+//	  GET  /api/v1/signals          – list strategy_signals
+//	  GET  /api/v1/signals/{id}     – single signal
+//	  POST /api/v1/signals/{id}/approve
+//	  POST /api/v1/signals/{id}/reject
+//	  POST /api/v1/signals/{id}/analyze
+//	  GET  /api/v1/recommendations  – same source, formatted for UI
+//	  GET  /api/v1/recommendations/{id}
+//	  GET  /trades                  – list trades
+//	  GET  /trades/{id}             – single trade
+//	  POST /api/v1/orchestrate      – proxy → jax-research
+//	  GET  /api/v1/orchestrate/runs
+//	  GET  /api/v1/orchestrate/runs/{id}
+//	  GET  /api/v1/metrics
+//	  GET  /api/v1/metrics/runs/{id}
+//	  GET  /strategies              – list strategies (from registry)
+//	  GET  /api/v1/strategies
+//	  GET  /api/v1/strategies/{id}
+//	  GET  /trading/guard
+//	  POST /trading/guard/outcome
+//	  POST /risk/calc
+//	  POST /symbols/{symbol}        – trigger analysis
+//	  GET  /metrics/prometheus      – Prometheus text format
 package main
 
 import (
@@ -48,6 +49,7 @@ import (
 
 	"jax-trading-assistant/libs/auth"
 	"jax-trading-assistant/libs/middleware"
+	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/strategies"
 
 	"github.com/google/uuid"
@@ -151,7 +153,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	// ── Prometheus ────────────────────────────────────────────────────────────
 	mux.HandleFunc("/metrics/prometheus", prometheusHandler(pool))
 
-	handler := middleware.CORS(corsConfig)(rateLimiter.Middleware(mux))
+	handler := middleware.FlowID(middleware.CORS(corsConfig)(rateLimiter.Middleware(mux)))
 
 	srv := &http.Server{
 		Addr:         ":" + fCfg.APIPort,
@@ -331,6 +333,10 @@ func signalApprove(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, i
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	observability.LogEvent(r.Context(), "info", "signal.approved", map[string]any{
+		"signal_id":   id,
+		"approved_by": req.ApprovedBy,
+	})
 	signalGetOne(w, r, pool, id)
 }
 
@@ -349,11 +355,18 @@ func signalReject(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, id
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	observability.LogEvent(r.Context(), "info", "signal.rejected_user", map[string]any{
+		"signal_id":       id,
+		"approved_by":     req.ApprovedBy,
+		"rejection_reason": req.RejectionReason,
+	})
 	signalGetOne(w, r, pool, id)
 }
 
 func signalAnalyze(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, id, orchestratorURL string) {
-	type req struct{ Context string `json:"context,omitempty"` }
+	type req struct {
+		Context string `json:"context,omitempty"`
+	}
 	var body req
 	_ = json.NewDecoder(r.Body).Decode(&body)
 
@@ -388,6 +401,11 @@ func signalAnalyze(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, i
 			`UPDATE strategy_signals SET orchestration_run_id=$1 WHERE id=$2`,
 			parsedRun, id)
 	}
+	observability.LogEvent(r.Context(), "info", "signal.analysis_triggered", map[string]any{
+		"signal_id": id,
+		"run_id":    runID,
+		"symbol":    sym,
+	})
 
 	jsonOK(w, map[string]string{"runId": runID, "status": "running"})
 }
@@ -445,20 +463,20 @@ func recommendationDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 // ── Trades ────────────────────────────────────────────────────────────────────
 
 type Trade struct {
-	ID            string          `json:"id"`
-	Symbol        string          `json:"symbol"`
-	Direction     string          `json:"direction"`
-	Entry         float64         `json:"entry"`
-	Stop          float64         `json:"stop"`
-	Targets       json.RawMessage `json:"targets"`
-	StrategyID    string          `json:"strategy_id"`
-	Notes         *string         `json:"notes,omitempty"`
-	Risk          json.RawMessage `json:"risk,omitempty"`
-	SignalID       *string         `json:"signal_id,omitempty"`
-	OrderStatus   *string         `json:"order_status,omitempty"`
-	FilledQty     *int            `json:"filled_qty,omitempty"`
-	AvgFillPrice  *float64        `json:"avg_fill_price,omitempty"`
-	CreatedAt     time.Time       `json:"created_at"`
+	ID           string          `json:"id"`
+	Symbol       string          `json:"symbol"`
+	Direction    string          `json:"direction"`
+	Entry        float64         `json:"entry"`
+	Stop         float64         `json:"stop"`
+	Targets      json.RawMessage `json:"targets"`
+	StrategyID   string          `json:"strategy_id"`
+	Notes        *string         `json:"notes,omitempty"`
+	Risk         json.RawMessage `json:"risk,omitempty"`
+	SignalID     *string         `json:"signal_id,omitempty"`
+	OrderStatus  *string         `json:"order_status,omitempty"`
+	FilledQty    *int            `json:"filled_qty,omitempty"`
+	AvgFillPrice *float64        `json:"avg_fill_price,omitempty"`
+	CreatedAt    time.Time       `json:"created_at"`
 }
 
 func tradesListHandler(pool *pgxpool.Pool) http.HandlerFunc {
@@ -762,10 +780,10 @@ func tradingGuardHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			 FROM strategy_signals`).Scan(&totalToday, &failedToday)
 
 		jsonOK(w, map[string]any{
-			"enabled":           true,
+			"enabled":            true,
 			"consecutive_losses": 0,
-			"total_today":       totalToday,
-			"status":            "active",
+			"total_today":        totalToday,
+			"status":             "active",
 		})
 	}
 }

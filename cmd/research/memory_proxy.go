@@ -4,9 +4,10 @@
 // and jax-memory can be removed from docker-compose (ADR-0012 Phase 6).
 //
 // Endpoints exposed:
-//   POST /tools                 – UTCP tool dispatcher (memory.retain/recall/reflect)
-//   GET  /v1/memory/banks       – list available banks
-//   GET  /v1/memory/search      – search memories (delegated to recall)
+//
+//	POST /tools                 – UTCP tool dispatcher (memory.retain/recall/reflect)
+//	GET  /v1/memory/banks       – list available banks
+//	GET  /v1/memory/search      – search memories (delegated to recall)
 package main
 
 import (
