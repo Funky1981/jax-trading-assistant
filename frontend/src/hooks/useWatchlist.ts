@@ -51,6 +51,7 @@ export function useWatchlist() {
     queryFn: fetchWatchlist,
     refetchInterval: (query) => (query.state.error ? false : 10_000),
     retry: false,
+    refetchOnWindowFocus: false,
     staleTime: 5000,
   });
 }

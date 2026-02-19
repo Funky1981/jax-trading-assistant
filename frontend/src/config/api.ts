@@ -25,14 +25,21 @@ export const API_CONFIG = {
 } as const;
 
 /**
- * Absolute base URLs for health probing — always use explicit hosts, never proxy-relative.
- * These are used only by useHealth to fan out to individual service /health endpoints.
+ * Full URLs for health probing — each entry is the complete URL to GET.
+ * In DEV, jax-trader and jax-research are routed through the Vite proxy to
+ * avoid CORS. IB Bridge already sets CORS headers so it can be called directly.
  */
-export const HEALTH_PROBE_URLS: Record<string, string> = {
-  'jax-trader':   import.meta.env.VITE_JAX_API_URL        || 'http://localhost:8081',
-  'jax-research': import.meta.env.VITE_RESEARCH_SERVICE_URL || 'http://localhost:8091',
-  'ib-bridge':    import.meta.env.VITE_IB_BRIDGE_URL       || 'http://localhost:8092',
-};
+export const HEALTH_PROBE_URLS: Record<string, string> = import.meta.env.DEV
+  ? {
+      'jax-trader':   '/health',
+      'jax-research': '/research-health',
+      'ib-bridge':    'http://localhost:8092/health',
+    }
+  : {
+      'jax-trader':   (import.meta.env.VITE_JAX_API_URL          || 'http://localhost:8081') + '/health',
+      'jax-research': (import.meta.env.VITE_RESEARCH_SERVICE_URL  || 'http://localhost:8091') + '/health',
+      'ib-bridge':    (import.meta.env.VITE_IB_BRIDGE_URL         || 'http://localhost:8092') + '/health',
+    };
 
 // API Endpoints
 export const ENDPOINTS = {

@@ -37,6 +37,12 @@ export default defineConfig({
         target: 'http://localhost:8092',
         changeOrigin: true,
       },
+      // Proxy jax-research health to avoid CORS (browser → 5173 → 8091)
+      '/research-health': {
+        target: 'http://localhost:8091',
+        changeOrigin: true,
+        rewrite: () => '/health',
+      },
     },
   },
   build: {

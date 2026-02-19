@@ -14,10 +14,7 @@ export interface HealthData {
   overall: 'healthy' | 'degraded' | 'unhealthy';
 }
 
-const SERVICES = Object.entries(HEALTH_PROBE_URLS).map(([name, base]) => ({
-  name,
-  url: `${base}/health`,
-}));
+const SERVICES = Object.entries(HEALTH_PROBE_URLS).map(([name, url]) => ({ name, url }));
 
 async function pingService(name: string, url: string): Promise<ServiceHealth> {
   const start = Date.now();
