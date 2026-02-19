@@ -8,12 +8,12 @@ export function SettingsPage() {
         Customize your layout and preferences.
       </p>
       <SelectInput
-        label="Theme"
         value="dark"
         options={[
           { label: 'Dark', value: 'dark' },
           { label: 'Light', value: 'light' },
         ]}
+        placeholder="Select theme"
       />
       <TextInput label="Default Order Size" type="number" value={100} />
       <div className="flex items-center gap-2">

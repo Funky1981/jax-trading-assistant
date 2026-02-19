@@ -1,5 +1,6 @@
 //go:build ignore
 // +build ignore
+
 // Archived entry point — service consolidated into cmd/trader (ADR-0012 Phase 5).
 // Kept for reference only. Not compiled in normal builds.
 

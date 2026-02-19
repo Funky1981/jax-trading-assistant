@@ -70,7 +70,6 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - ib-bridge
-      - jax-research
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8093/health"]
       interval: 30s

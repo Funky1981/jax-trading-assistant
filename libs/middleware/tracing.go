@@ -1,9 +1,11 @@
 // tracing.go — FlowID propagation middleware for all HTTP handlers.
 // A flow_id traces the full lifecycle of a trade decision:
-//   quote ingested → signal generated → orchestration → approval → execution
+//
+//	quote ingested → signal generated → orchestration → approval → execution
 //
 // Usage:
-//   handler = middleware.FlowID(existingHandler)
+//
+//	handler = middleware.FlowID(existingHandler)
 //
 // The middleware reads X-Flow-ID from the request header. If absent it
 // generates a new one via observability.NewFlowID(). The id is injected into

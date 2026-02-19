@@ -31,10 +31,10 @@ export function OrderTicket({ symbol, defaultPrice, onSubmit }: OrderTicketProps
         {symbol}
       </p>
       <SelectInput
-        label="Side"
         value={side}
-        onChange={(event) => setSide(event.target.value as Side)}
+        onValueChange={(value) => setSide(value as Side)}
         options={sideOptions}
+        placeholder="Select side"
       />
       <TextInput
         label="Quantity"

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Timeline, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Activity, CheckCircle, XCircle, Info } from 'lucide-react';
 import { useRecentMetrics, useRunMetrics } from '../../hooks/useObservability';
 import type { MetricEvent } from '../../data/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,7 +24,7 @@ export function MetricsDashboard() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 mb-5">
-            <Timeline className="h-5 w-5 text-primary" />
+            <Activity className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">
               Recent Metrics
             </h2>
@@ -50,7 +50,7 @@ export function MetricsDashboard() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 mb-4">
-            <Timeline className="h-5 w-5 text-primary" />
+            <Activity className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">
               Recent Metrics
             </h2>
@@ -79,7 +79,7 @@ export function MetricsDashboard() {
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-center gap-2 mb-5">
-          <Timeline className="h-5 w-5 text-primary" />
+          <Activity className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">
             Recent Metrics
           </h2>

@@ -356,8 +356,8 @@ func signalReject(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, id
 		return
 	}
 	observability.LogEvent(r.Context(), "info", "signal.rejected_user", map[string]any{
-		"signal_id":       id,
-		"approved_by":     req.ApprovedBy,
+		"signal_id":        id,
+		"approved_by":      req.ApprovedBy,
 		"rejection_reason": req.RejectionReason,
 	})
 	signalGetOne(w, r, pool, id)
