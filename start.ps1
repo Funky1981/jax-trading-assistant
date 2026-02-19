@@ -32,8 +32,8 @@ for ($i = 1; $i -le 10; $i++) {
 }
 
 # Start other services
-Write-Host "  Starting hindsight, jax-memory, jax-api..." -ForegroundColor Gray
-docker compose up -d hindsight jax-memory jax-api 2>$null
+Write-Host "  Starting jax-trader and jax-research..." -ForegroundColor Gray
+docker compose up -d jax-trader jax-research 2>$null
 
 # Wait for services to be ready
 Write-Host "`nWaiting for services to be ready..." -ForegroundColor Yellow
@@ -41,7 +41,7 @@ Start-Sleep -Seconds 10
 
 # Check health
 $apiHealthy = $false
-$memoryHealthy = $false
+$researchHealthy = $false
 
 for ($i = 1; $i -le 6; $i++) {
     try {
@@ -50,11 +50,11 @@ for ($i = 1; $i -le 6; $i++) {
     } catch { }
 
     try {
-        $memoryResponse = Invoke-WebRequest -Uri "http://localhost:8090/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
-        if ($memoryResponse.StatusCode -eq 200) { $memoryHealthy = $true }
+        $researchResponse = Invoke-WebRequest -Uri "http://localhost:8091/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
+        if ($researchResponse.StatusCode -eq 200) { $researchHealthy = $true }
     } catch { }
 
-    if ($apiHealthy -and $memoryHealthy) {
+    if ($apiHealthy -and $researchHealthy) {
         Write-Host "Backend services are ready!" -ForegroundColor Green
         break
     }
@@ -65,7 +65,7 @@ for ($i = 1; $i -le 6; $i++) {
     }
 }
 
-if (-not ($apiHealthy -and $memoryHealthy)) {
+if (-not ($apiHealthy -and $researchHealthy)) {
     Write-Host "Backend services may not be fully ready, continuing anyway..." -ForegroundColor Yellow
 }
 
