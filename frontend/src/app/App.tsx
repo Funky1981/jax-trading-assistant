@@ -78,14 +78,7 @@ export const router = createBrowserRouter(
 export default function App() {
   return (
     <AuthProvider>
-      <RouterProvider
-        router={router}
-        future={{
-          // Opt in to v7 behaviour: state updates wrapped in startTransition
-          // This flag lives on RouterProvider in v6.26.x, not createBrowserRouter
-          v7_startTransition: true,
-        }}
-      />
+      <RouterProvider router={router} />
     </AuthProvider>
   );
 }

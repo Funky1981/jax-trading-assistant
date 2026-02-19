@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { 
   Menu, 
   X, 
@@ -30,7 +30,6 @@ const navItems = [
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
   const { user, authRequired, logout } = useAuth();
 
   return (
@@ -161,7 +160,7 @@ export function AppShell() {
 
         {/* Page Content */}
         <main className="p-4 md:p-6 lg:p-8">
-          <Outlet key={location.pathname} />
+          <Outlet />
         </main>
       </div>
     </div>
