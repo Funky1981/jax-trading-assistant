@@ -99,6 +99,12 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	mux := http.NewServeMux()
 
 	// ── Auth ──────────────────────────────────────────────────────────────────
+	// /auth/status is always public — frontend uses it to decide whether to show login
+	authEnabled := jwtManager != nil
+	mux.HandleFunc("/auth/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]bool{"enabled": authEnabled})
+	})
 	if jwtManager != nil {
 		mux.HandleFunc("/auth/login", auth.LoginHandler(jwtManager))
 		mux.HandleFunc("/auth/refresh", auth.RefreshHandler(jwtManager))

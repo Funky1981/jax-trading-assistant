@@ -1,8 +1,10 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { TradingPage } from '@/pages/TradingPage';
 import { SystemPage } from '@/pages/SystemPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 // Placeholder pages - to be implemented
 function PlaceholderPage({ title }: { title: string }) {
@@ -16,10 +18,42 @@ function PlaceholderPage({ title }: { title: string }) {
   );
 }
 
+// ── Protected route ────────────────────────────────────────────────────────────
+// If auth is required and the user has no valid token, redirect to /login.
+// If auth is disabled (dev mode), renders children immediately.
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, authRequired } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    // Spinner while /auth/status is resolving — keeps layout stable
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      </div>
+    );
+  }
+
+  if (authRequired && !isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
 export const routes = [
   {
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
     path: '/',
-    element: <AppShell />,
+    element: (
+      <ProtectedRoute>
+        <AppShell />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'trading', element: <TradingPage /> },
@@ -44,5 +78,9 @@ export const router = createBrowserRouter(
 );
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
 }

@@ -95,7 +95,7 @@ services:
       PORT: "8100"
       # ADR-0012 Phase 6: frontend API (replaces jax-api on port 8081)
       API_PORT: "8081"
-      JWT_SECRET: ${JWT_SECRET:-insecure-dev-secret-change-in-production}
+      JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRY: ${JWT_EXPIRY:-24h}
       JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-168h}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}

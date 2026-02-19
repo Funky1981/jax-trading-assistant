@@ -10,12 +10,14 @@ import {
   Receipt,
   Activity,
   TrendingUp,
-  Server
+  Server,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import JaxLogo from '@/images/jax_ai_trader.svg';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, end: true },
@@ -29,6 +31,7 @@ const navItems = [
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { user, authRequired, logout } = useAuth();
 
   console.log('AppShell rendering, current path:', location.pathname);
 
@@ -98,7 +101,21 @@ export function AppShell() {
           </nav>
 
           {/* Sidebar Footer */}
-          <div className="border-t border-border p-4">
+          <div className="border-t border-border p-4 space-y-2">
+            {authRequired && user && !user.anonymous && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground truncate">{user.username}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  title="Sign out"
+                  onClick={logout}
+                >
+                  <LogOut className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Activity className="h-3 w-3 text-success" />
               <span>System Online</span>
@@ -136,6 +153,12 @@ export function AppShell() {
                 Live Session
               </span>
             </div>
+            {authRequired && user && !user.anonymous && (
+              <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5">
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </Button>
+            )}
           </div>
         </header>
 

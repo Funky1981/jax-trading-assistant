@@ -26,6 +26,27 @@ export function buildUrl(baseUrl: string, path: string, params?: Record<string, 
   return url.toString();
 }
 
+// ── Auth token injection ───────────────────────────────────────────────────────
+// Reads directly from localStorage using the same key as AuthContext so that
+// there is no import cycle (http-client does not import AuthContext).
+
+const TOKEN_KEY = 'jax_token';
+
+function getAuthToken(): string | null {
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split('.')[1])) as { exp?: number };
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      localStorage.removeItem(TOKEN_KEY);
+      return null;
+    }
+    return token;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -44,11 +65,16 @@ export function createHttpClient(options: HttpClientOptions = {}) {
 
   async function request<T>(method: HttpMethod, path: string, body?: unknown) {
     const url = buildUrl(baseUrl, path);
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+    const token = getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const init: RequestInit = {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: body ? JSON.stringify(body) : undefined,
     };
 
