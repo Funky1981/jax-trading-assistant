@@ -12,7 +12,7 @@ export interface MetricEvent {
 }
 
 async function fetchMetrics(): Promise<MetricEvent[]> {
-  const response = await fetch(buildUrl('JAX_API', '/api/metrics/events'));
+  const response = await fetch(buildUrl('JAX_API', '/api/v1/metrics'));
   if (!response.ok) {
     throw new Error('Metrics service unavailable');
   }

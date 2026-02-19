@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { buildUrl } from '@/config/api';
+import { memoryClient } from '@/data/http-client';
 
 export interface MemoryBank {
   id: string;
@@ -22,27 +22,15 @@ export interface MemoryEntry {
 // All data must come from the real jax-memory / jax-api endpoints.
 
 async function fetchMemoryBanks(): Promise<MemoryBank[]> {
-  const response = await fetch(buildUrl('JAX_API', '/api/memory/banks'));
-  if (!response.ok) {
-    throw new Error(`Memory banks unavailable (HTTP ${response.status})`);
-  }
-  return response.json();
+  return memoryClient.get<MemoryBank[]>('/v1/memory/banks');
 }
 
 async function fetchMemoryEntries(bankId: string): Promise<MemoryEntry[]> {
-  const response = await fetch(`${buildUrl('JAX_API', '/api/memory/banks')}/${bankId}/entries`);
-  if (!response.ok) {
-    throw new Error(`Memory entries unavailable (HTTP ${response.status})`);
-  }
-  return response.json();
+  return memoryClient.get<MemoryEntry[]>(`/v1/memory/banks/${bankId}/entries`);
 }
 
 async function searchMemory(query: string): Promise<MemoryEntry[]> {
-  const response = await fetch(`${buildUrl('JAX_API', '/api/memory/search')}?q=${encodeURIComponent(query)}`);
-  if (!response.ok) {
-    throw new Error(`Memory search unavailable (HTTP ${response.status})`);
-  }
-  return response.json();
+  return memoryClient.get<MemoryEntry[]>(`/v1/memory/search?q=${encodeURIComponent(query)}`);
 }
 
 export function useMemoryBanks() {

@@ -14,7 +14,8 @@ export function useSignals(params: UseSignalsParams = {}) {
   return useQuery({
     queryKey: ['signals', params],
     queryFn: () => signalsService.list(params),
-    refetchInterval: 10_000,
+    refetchInterval: (query) => (query.state.error ? false : 10_000),
+    retry: false,
   });
 }
 
@@ -22,7 +23,8 @@ export function useRecommendations(limit = 50, offset = 0) {
   return useQuery({
     queryKey: ['recommendations', limit, offset],
     queryFn: () => signalsService.listRecommendations({ limit, offset }),
-    refetchInterval: 10_000,
+    refetchInterval: (query) => (query.state.error ? false : 10_000),
+    retry: false,
   });
 }
 

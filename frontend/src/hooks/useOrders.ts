@@ -30,7 +30,7 @@ export interface CreateOrderRequest {
 }
 
 async function fetchOrders(): Promise<Order[]> {
-  const response = await fetch(buildUrl('JAX_API', '/api/orders'));
+  const response = await fetch(buildUrl('JAX_API', '/api/v1/trades'));
   if (!response.ok) {
     throw new Error('Orders service unavailable');
   }
@@ -41,8 +41,8 @@ export function useOrders() {
   return useQuery({
     queryKey: ['orders'],
     queryFn: fetchOrders,
-    refetchInterval: 5000,
-    retry: false, // Don't retry since JAX API is not available
+    refetchInterval: (query) => (query.state.error ? false : 5_000),
+    retry: false,
   });
 }
 

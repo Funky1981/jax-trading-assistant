@@ -125,6 +125,8 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	// ── Trades ────────────────────────────────────────────────────────────────
 	mux.HandleFunc("/trades", protect(tradesListHandler(pool)))
 	mux.HandleFunc("/trades/", protect(tradeDetailHandler(pool)))
+	mux.HandleFunc("/api/v1/trades", protect(tradesListHandler(pool)))
+	mux.HandleFunc("/api/v1/trades/", protect(tradeDetailHandler(pool)))
 
 	// ── Orchestration ─────────────────────────────────────────────────────────
 	mux.HandleFunc("/api/v1/orchestrate", protect(orchestrateHandler(fCfg.OrchestratorURL)))

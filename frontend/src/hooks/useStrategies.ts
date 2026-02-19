@@ -21,7 +21,7 @@ export interface Strategy {
 }
 
 async function fetchStrategies(): Promise<Strategy[]> {
-  const response = await fetch(buildUrl('JAX_API', '/api/strategies'));
+  const response = await fetch(buildUrl('JAX_API', '/api/v1/strategies'));
   if (!response.ok) {
     throw new Error('Strategies service unavailable');
   }
