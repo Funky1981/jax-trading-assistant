@@ -9,6 +9,8 @@ import (
 	"math"
 	"time"
 
+	"jax-trading-assistant/libs/risk"
+
 	"github.com/google/uuid"
 )
 
@@ -79,16 +81,22 @@ type Service struct {
 	store      TradeStore
 	orderType  string
 	riskParams RiskParameters
+	// enforcer applies versioned policy constraints (L16) on top of the
+	// engine's built-in position-level checks. May be nil (no-op).
+	enforcer   *risk.Enforcer
 }
 
-// NewService creates a new execution service
-func NewService(engine *Engine, broker BrokerClient, store TradeStore, orderType string, riskParams RiskParameters) *Service {
+// NewService creates a new execution service.
+// enforcer may be nil; when non-nil, portfolio-level policy gates (L16) are
+// applied before every order submission.
+func NewService(engine *Engine, broker BrokerClient, store TradeStore, orderType string, riskParams RiskParameters, enforcer *risk.Enforcer) *Service {
 	return &Service{
 		engine:     engine,
 		broker:     broker,
 		store:      store,
 		orderType:  orderType,
 		riskParams: riskParams,
+		enforcer:   enforcer,
 	}
 }
 
@@ -206,31 +214,55 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 
 // checkRiskGates verifies risk constraints before execution
 func (s *Service) checkRiskGates(ctx context.Context) error {
-	// Check max open positions
-	if s.riskParams.MaxOpenPositions > 0 {
+	// Fetch current positions (needed by both engine and enforcer checks)
+	var openPositions int
+	if s.riskParams.MaxOpenPositions > 0 || s.enforcer != nil {
 		positions, err := s.broker.GetPositions(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch positions for risk gate: %w", err)
 		}
-		open := 0
 		for _, pos := range positions.Positions {
 			if pos.Quantity != 0 {
-				open++
+				openPositions++
 			}
 		}
-		if open >= s.riskParams.MaxOpenPositions {
-			return fmt.Errorf("risk gate: open positions %d exceeds max %d", open, s.riskParams.MaxOpenPositions)
+		// Engine-level max-positions check (backwards-compat with RiskParameters)
+		if s.riskParams.MaxOpenPositions > 0 && openPositions >= s.riskParams.MaxOpenPositions {
+			return fmt.Errorf("risk gate: open positions %d exceeds max %d", openPositions, s.riskParams.MaxOpenPositions)
 		}
 	}
 
-	// Check max daily loss
-	if s.riskParams.MaxDailyLoss > 0 {
+	// Fetch daily risk (needed by both engine and enforcer checks)
+	var dailyRiskDollar float64
+	if s.riskParams.MaxDailyLoss > 0 || s.enforcer != nil {
 		totalRisk, err := s.store.GetDailyRisk(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to calculate daily risk: %w", err)
 		}
-		if totalRisk >= s.riskParams.MaxDailyLoss {
+		dailyRiskDollar = totalRisk
+		// Engine-level dollar daily-loss check
+		if s.riskParams.MaxDailyLoss > 0 && totalRisk >= s.riskParams.MaxDailyLoss {
 			return fmt.Errorf("risk gate: daily risk %.2f exceeds max %.2f", totalRisk, s.riskParams.MaxDailyLoss)
+		}
+	}
+
+	// L16: Policy-level portfolio gate (versioned, logged with violation codes)
+	if s.enforcer != nil {
+		account, err := s.broker.GetAccount(ctx)
+		netLiq := 0.0
+		if err == nil {
+			netLiq = account.NetLiquidation
+		}
+		state := risk.PortfolioState{
+			NetLiquidation:  netLiq,
+			OpenPositions:   openPositions,
+			DailyLossDollar: dailyRiskDollar,
+			// CurrentDrawdown: supplied by L08 edge-stability monitor once implemented
+		}
+		if vs := s.enforcer.CheckPortfolio(state); !vs.IsEmpty() {
+			log.Printf("[RISK VIOLATION] policy=%s violations=%s",
+				s.enforcer.Policy().Version, vs.Error())
+			return fmt.Errorf("risk policy violation: %w", vs)
 		}
 	}
 

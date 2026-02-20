@@ -9,6 +9,7 @@ import (
 
 	"jax-trading-assistant/libs/contracts/converters"
 	"jax-trading-assistant/libs/contracts/domain"
+	"jax-trading-assistant/libs/risk"
 	"jax-trading-assistant/libs/strategies"
 
 	"github.com/google/uuid"
@@ -19,6 +20,9 @@ import (
 type InProcessSignalGenerator struct {
 	db       *pgxpool.Pool
 	registry *strategies.Registry
+	// enforcer applies L16 risk policy (stop-distance) before signals are stored.
+	// May be nil; when nil signals are not filtered by policy.
+	enforcer *risk.Enforcer
 }
 
 // New creates a new in-process signal generator
@@ -27,6 +31,12 @@ func New(db *pgxpool.Pool, registry *strategies.Registry) *InProcessSignalGenera
 		db:       db,
 		registry: registry,
 	}
+}
+
+// SetEnforcer wires in a risk.Enforcer for L16 stop-distance policy checks.
+// Call this after New() before the first GenerateSignals call.
+func (g *InProcessSignalGenerator) SetEnforcer(e *risk.Enforcer) {
+	g.enforcer = e
 }
 
 // GenerateSignals implements services.SignalGenerator
@@ -67,6 +77,22 @@ func (g *InProcessSignalGenerator) GenerateSignals(ctx context.Context, symbols 
 				if metadata, err := g.registry.GetMetadata(strategyID); err == nil && metadata.Extra != nil {
 					if artifactID, ok := metadata.Extra["artifact_id"].(string); ok {
 						domainSignal.ArtifactID = artifactID
+					}
+				}
+
+				// L16: Risk policy — check stop distance before storing the signal.
+				// Account equity and position value are unknown here; only structural
+				// stop-distance checks will fire (AccountEquity=0 skips risk-fraction gates).
+				if g.enforcer != nil {
+					siInput := risk.SignalInput{
+						Symbol:     domainSignal.Symbol,
+						EntryPrice: domainSignal.EntryPrice,
+						StopLoss:   domainSignal.StopLoss,
+					}
+					if vs := g.enforcer.CheckSignal(siInput); !vs.IsEmpty() {
+						log.Printf("[RISK VIOLATION] signal rejected policy=%s symbol=%s strategy=%s: %s",
+							g.enforcer.Policy().Version, domainSignal.Symbol, strategyID, vs.Error())
+						continue
 					}
 				}
 

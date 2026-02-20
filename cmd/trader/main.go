@@ -18,6 +18,7 @@ import (
 	artifactsModule "jax-trading-assistant/internal/modules/artifacts"
 	"jax-trading-assistant/internal/modules/execution"
 	"jax-trading-assistant/internal/trader/signalgenerator"
+	"jax-trading-assistant/libs/risk"
 	"jax-trading-assistant/libs/strategies"
 
 	"github.com/google/uuid"
@@ -77,6 +78,16 @@ func main() {
 	}
 	log.Println("database connection established")
 
+	// L16: Load risk policy from config/risk-constraints.json.
+	// Engine and signal generator enforce these constraints at runtime.
+	riskPolicy, err := risk.LoadPolicy("config/risk-constraints.json")
+	if err != nil {
+		log.Fatalf("failed to load risk policy: %v", err)
+	}
+	log.Printf("risk policy loaded: version=%s from=%q sizing=%s",
+		riskPolicy.Version, riskPolicy.LoadedFrom, riskPolicy.SizingModel)
+	riskEnforcer := risk.NewEnforcer(riskPolicy)
+
 	// Initialize strategy registry
 	registry := strategies.NewRegistry()
 
@@ -95,6 +106,7 @@ func main() {
 
 	// Create in-process signal generator
 	sigGen := signalgenerator.New(dbPool, registry)
+	sigGen.SetEnforcer(riskEnforcer)
 	log.Println("in-process signal generator initialized")
 
 	// Initialize execution service (optional - only if enabled and IB Bridge available)
@@ -104,13 +116,14 @@ func main() {
 		ibClient := execution.NewIBClient(cfg.IBBridgeURL)
 		log.Printf("IB Bridge client connected to %s", cfg.IBBridgeURL)
 
-		// Create risk parameters
+		// L16: derive RiskParameters from the loaded policy (policy is source of truth
+		// for risk values; env vars handle infrastructure like port, DB URL).
 		riskParams := execution.RiskParameters{
-			MaxRiskPerTrade:     cfg.MaxRiskPerTrade,
+			MaxRiskPerTrade:     riskPolicy.Position.MaxRiskPerTrade,
 			MinPositionSize:     cfg.MinPositionSize,
 			MaxPositionSize:     cfg.MaxPositionSize,
 			MaxPositionValuePct: cfg.MaxPositionValuePct,
-			MaxOpenPositions:    cfg.MaxOpenPositions,
+			MaxOpenPositions:    riskPolicy.Portfolio.MaxPositions,
 			MaxDailyLoss:        cfg.MaxDailyLoss,
 		}
 
@@ -124,8 +137,8 @@ func main() {
 		} else {
 			tradeStore := execution.NewPostgresTradeStore(sqlDB)
 
-			// Create execution service
-			execService = execution.NewService(engine, ibClient, tradeStore, cfg.DefaultOrderType, riskParams)
+			// Create execution service (L16: enforcer gates portfolio-level constraints)
+			execService = execution.NewService(engine, ibClient, tradeStore, cfg.DefaultOrderType, riskParams, riskEnforcer)
 			log.Println("execution service initialized")
 			log.Printf("  IB Bridge: %s", cfg.IBBridgeURL)
 			log.Printf("  max risk per trade: %.2f%%", cfg.MaxRiskPerTrade*100)
