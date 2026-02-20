@@ -12,3 +12,7 @@ pydantic-settings==2.1.0
 
 # Utilities
 python-dotenv==1.0.0
+
+# Market data & technical analysis
+yfinance>=0.2.38
+pandas>=2.0.0

@@ -22,6 +22,10 @@ from models import (
     ChatRequest, ChatResponse
 )
 from prompts import SYSTEM_PROMPT, SUGGESTION_PROMPT, NO_DATA_RESPONSE
+from data_providers import (
+    fetch_historical_bars, compute_technicals, format_technicals,
+    fetch_news, format_news,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -198,16 +202,43 @@ class Agent0:
         request_id = str(uuid.uuid4())[:8]
         symbol = request.symbol.upper()
         
-        # Fetch context
+        # Fetch context (all run concurrently)
+        import asyncio
         market_data = None
         memories = []
-        
-        if request.include_market_data:
-            market_data = await self._fetch_market_data(symbol)
-        
-        if request.include_memory:
-            memories = await self._fetch_memories(symbol)
-        
+        technicals_str = "Not available (IB Gateway not connected)"
+        news_str = "No recent news found"
+
+        market_task = self._fetch_market_data(symbol) if request.include_market_data else asyncio.sleep(0, result=None)
+        memory_task = self._fetch_memories(symbol) if request.include_memory else asyncio.sleep(0, result=[])
+        bars_task = fetch_historical_bars(settings.ib_bridge_url, symbol, limit=60, timeframe="1D")
+        news_task = fetch_news(symbol, limit=5)
+
+        market_data, memories, bars, news_items = await asyncio.gather(
+            market_task, memory_task, bars_task, news_task,
+            return_exceptions=True,
+        )
+        # Gracefully handle any task failures
+        if isinstance(market_data, Exception):
+            logger.warning(f"Market data fetch failed: {market_data}")
+            market_data = None
+        if isinstance(memories, Exception):
+            logger.warning(f"Memory fetch failed: {memories}")
+            memories = []
+        if isinstance(bars, Exception):
+            logger.warning(f"Historical bars fetch failed: {bars}")
+            bars = []
+        if isinstance(news_items, Exception):
+            logger.warning(f"News fetch failed: {news_items}")
+            news_items = []
+
+        if bars:
+            tech = compute_technicals(bars)
+            current_price = market_data.price if market_data else None
+            technicals_str = format_technicals(tech, current_price)
+        if news_items:
+            news_str = format_news(news_items)
+
         # Build prompt
         market_data_str = "No market data available"
         if market_data:
@@ -234,10 +265,12 @@ Low: {fmt_float(market_data.low, '$')}
             ])
         
         context_str = request.context or "No additional context provided."
-        
+
         prompt = SUGGESTION_PROMPT.format(
             symbol=symbol,
             market_data=market_data_str,
+            technicals=technicals_str,
+            news=news_str,
             memories=memories_str,
             context=context_str,
         )

@@ -55,6 +55,12 @@ SUGGESTION_PROMPT = """Analyze {symbol} and provide a trading suggestion.
 ## Current Market Data
 {market_data}
 
+## Technical Indicators
+{technicals}
+
+## Recent News Headlines
+{news}
+
 ## Relevant History & Memories
 {memories}
 
@@ -64,10 +70,11 @@ SUGGESTION_PROMPT = """Analyze {symbol} and provide a trading suggestion.
 ## Your Task
 Based on the above information, provide your trading suggestion.
 Remember to:
-1. Consider the current price action and trend
-2. Factor in any relevant news or events
-3. Apply appropriate risk management
-4. Be specific about entry, target, and stop loss levels
+1. Weight the technical indicators (RSI, MACD, trend) heavily for timing
+2. Factor in news sentiment — positive news supports BUY, negative supports SELL or WATCH
+3. Use Bollinger Band position to assess overbought/oversold conditions
+4. Apply appropriate risk management with stop loss and targets
+5. Be specific about entry, target, and stop loss levels
 
 Respond with JSON only, no additional text."""
 
