@@ -42,14 +42,14 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = None
     anthropic_model: str = "claude-3-haiku-20240307"  # Cheapest Claude
     
-    # Memory service for context
-    memory_service_url: str = "http://jax-memory:8090"
+    # Memory service for context (ADR-0012 Phase 6: memory proxy in jax-research)
+    memory_service_url: str = "http://jax-research:8091"
     
     # IB Bridge for market data
     ib_bridge_url: str = "http://ib-bridge:8092"
     
-    # JAX API for additional data
-    jax_api_url: str = "http://jax-api:8081"
+    # JAX Trader (replaces jax-api; ADR-0012 Phase 6)
+    jax_api_url: str = "http://jax-trader:8081"
     
     # Request timeouts
     llm_timeout: int = 300  # LLM can be slow; 300s covers cold-load + generation on CPU
