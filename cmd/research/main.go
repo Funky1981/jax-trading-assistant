@@ -42,6 +42,8 @@ type Config struct {
 	Agent0ServiceURL string
 	DexterServiceURL string
 	HindsightURL     string // used by the in-process memory proxy
+	// DatasetDir is the directory for the L03 dataset catalog (catalog.json).
+	DatasetDir string
 }
 
 func main() {
@@ -97,9 +99,16 @@ func main() {
 		orchSvc = orchSvc.WithDexter(dexterAdapter)
 	}
 
+	// L04: backtest engine + dataset registry
+	btDeps, err := newBacktestDeps(registry, cfg.DatasetDir)
+	if err != nil {
+		log.Fatalf("failed to initialise backtest deps: %v", err)
+	}
+	log.Printf("backtest dataset catalog → %s", cfg.DatasetDir)
+
 	// Build HTTP server
 	mux := http.NewServeMux()
-	registerRoutes(mux, orchSvc, db)
+	registerRoutes(mux, orchSvc, db, btDeps)
 
 	// ADR-0012 Phase 6: memory proxy (replaces jax-memory service).
 	// agent0-service can now point MEMORY_SERVICE_URL at jax-research:8091.
@@ -137,10 +146,12 @@ func main() {
 
 // registerRoutes wires up all HTTP routes.
 // Routes match the jax-orchestrator API surface exactly for backwards compatibility.
-func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB) {
+func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, btDeps *backtestDeps) {
 	mux.HandleFunc("/health", handleHealth)
 	mux.HandleFunc("/orchestrate", handleOrchestrate(svc, db))
 	mux.HandleFunc("/metrics/prometheus", handlePrometheus(db))
+	// L04: backtest endpoint
+	mux.HandleFunc("/backtest", handleBacktest(btDeps))
 }
 
 // handleHealth returns a simple liveness response.
@@ -357,6 +368,7 @@ func loadConfig() Config {
 		Agent0ServiceURL: envOrDefault("AGENT0_SERVICE_URL", "http://agent0-service:8093"),
 		DexterServiceURL: envOrDefault("DEXTER_SERVICE_URL", ""),
 		HindsightURL:     envOrDefault("HINDSIGHT_URL", ""),
+		DatasetDir:       envOrDefault("DATASET_DIR", "data/datasets"),
 	}
 }
 
