@@ -129,11 +129,15 @@ export function useRejectSignal() {
 export function useAnalyzeSignal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ signalId, context }: { signalId: string; context?: string }) =>
-      signalsService.analyze(signalId, context),
-    onSuccess: () => {
+    mutationFn: ({ signalId, context }: { signalId: string; context?: string }) => {
+      return signalsService.analyze(signalId, context);
+    },
+    onSuccess: (_data, _variables) => {
       queryClient.invalidateQueries({ queryKey: ['signals'] });
       queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    },
+    onError: (error) => {
+      console.error('[useAnalyzeSignal] Analysis failed:', error);
     },
   });
 }

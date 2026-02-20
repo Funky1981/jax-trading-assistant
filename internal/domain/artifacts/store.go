@@ -181,9 +181,12 @@ func (s *Store) GetArtifactByHash(ctx context.Context, hash string) (*Artifact, 
 }
 
 // ListApprovedArtifacts returns all artifacts in APPROVED or ACTIVE state
+// Optimized to fetch all data in single query (no N+1)
 func (s *Store) ListApprovedArtifacts(ctx context.Context) ([]*Artifact, error) {
 	query := `
-		SELECT a.id
+		SELECT a.id, a.artifact_id, a.schema_version, a.strategy_name, a.strategy_version, a.code_ref,
+		       a.params, a.data_window_from, a.data_window_to, a.symbols, a.validation,
+		       a.risk_profile, a.hash, a.signature, a.created_by, a.created_at
 		FROM strategy_artifacts a
 		JOIN artifact_approvals ap ON a.id = ap.artifact_id
 		WHERE ap.state IN ('APPROVED', 'ACTIVE')
@@ -199,16 +202,64 @@ func (s *Store) ListApprovedArtifacts(ctx context.Context) ([]*Artifact, error) 
 
 	var artifacts []*Artifact
 	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
+		var artifact Artifact
+		var codeRef sql.NullString
+		var dataWindowFrom, dataWindowTo sql.NullTime
+		var symbols []string
+		var paramsJSON, validationJSON, riskProfileJSON []byte
+		var signature sql.NullString
 
-		artifact, err := s.GetArtifactByID(ctx, id)
+		err := rows.Scan(
+			&artifact.ID,
+			&artifact.ArtifactID,
+			&artifact.SchemaVersion,
+			&artifact.Strategy.Name,
+			&artifact.Strategy.Version,
+			&codeRef,
+			&paramsJSON,
+			&dataWindowFrom,
+			&dataWindowTo,
+			&symbols,
+			&validationJSON,
+			&riskProfileJSON,
+			&artifact.Hash,
+			&signature,
+			&artifact.CreatedBy,
+			&artifact.CreatedAt,
+		)
+
 		if err != nil {
 			return nil, err
 		}
-		artifacts = append(artifacts, artifact)
+
+		artifact.Strategy.CodeRef = codeRef.String
+		artifact.Signature = signature.String
+
+		if err := json.Unmarshal(paramsJSON, &artifact.Strategy.Params); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal params: %w", err)
+		}
+
+		if err := json.Unmarshal(riskProfileJSON, &artifact.RiskProfile); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal risk_profile: %w", err)
+		}
+
+		if dataWindowFrom.Valid && dataWindowTo.Valid {
+			artifact.DataWindow = &DataWindow{
+				From:    dataWindowFrom.Time,
+				To:      dataWindowTo.Time,
+				Symbols: symbols,
+			}
+		}
+
+		if len(validationJSON) > 0 {
+			var validation ValidationInfo
+			if err := json.Unmarshal(validationJSON, &validation); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal validation: %w", err)
+			}
+			artifact.Validation = &validation
+		}
+
+		artifacts = append(artifacts, &artifact)
 	}
 
 	return artifacts, rows.Err()

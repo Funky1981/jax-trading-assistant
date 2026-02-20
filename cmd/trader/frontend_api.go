@@ -37,6 +37,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -183,6 +184,30 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	defer cancel()
 	_ = srv.Shutdown(shutCtx)
 	log.Println("frontend API server stopped")
+}
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+// nullStrPtr converts a sql.NullString to *string (nil when not valid).
+func nullStrPtr(n sql.NullString) *string {
+	if !n.Valid {
+		return nil
+	}
+	return &n.String
+}
+
+// OrchestrationRunRow is a serialisable representation of an orchestration_runs row.
+type OrchestrationRunRow struct {
+	ID              string     `json:"id"`
+	Symbol          string     `json:"symbol"`
+	TriggerType     string     `json:"trigger_type"`
+	AgentSuggestion *string    `json:"agent_suggestion,omitempty"`
+	Confidence      *float64   `json:"confidence,omitempty"`
+	Reasoning       *string    `json:"reasoning,omitempty"`
+	Status          string     `json:"status"`
+	StartedAt       time.Time  `json:"started_at"`
+	CompletedAt     *time.Time `json:"completed_at,omitempty"`
+	Error           *string    `json:"error,omitempty"`
 }
 
 // ── Signal types ─────────────────────────────────────────────────────────────
@@ -381,15 +406,21 @@ func signalAnalyze(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, i
 	// Build context from signal row.
 	row := pool.QueryRow(r.Context(),
 		`SELECT symbol, strategy_id, signal_type, confidence, reasoning FROM strategy_signals WHERE id=$1`, id)
-	var sym, stratID, sigType, reasoning string
+	var sym, stratID, sigType string
+	var reasoning sql.NullString
 	var conf float64
 	if err := row.Scan(&sym, &stratID, &sigType, &conf, &reasoning); err != nil {
-		http.Error(w, "signal not found", http.StatusNotFound)
+		http.Error(w, "signal not found: "+err.Error(), http.StatusNotFound)
 		return
 	}
 
+	reasoningText := ""
+	if reasoning.Valid {
+		reasoningText = reasoning.String
+	}
+
 	ctx := fmt.Sprintf("Signal: %s %s\nStrategy: %s\nConfidence: %.0f%%\nReasoning: %s\n%s",
-		sigType, sym, stratID, conf*100, reasoning, body.Context)
+		sigType, sym, stratID, conf*100, reasoningText, body.Context)
 
 	payload := map[string]any{
 		"signal_id":    id,
@@ -420,6 +451,12 @@ func signalAnalyze(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, i
 
 // ── Recommendations ───────────────────────────────────────────────────────────
 
+// RecommendationRow pairs a signal with its AI orchestration run (if any).
+type RecommendationRow struct {
+	Signal     *Signal              `json:"signal"`
+	AIAnalysis *OrchestrationRunRow `json:"ai_analysis,omitempty"`
+}
+
 func recommendationsListHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -429,25 +466,69 @@ func recommendationsListHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		limit := parseIntParam(r.URL.Query().Get("limit"), 50)
 		offset := parseIntParam(r.URL.Query().Get("offset"), 0)
 
-		rows, err := pool.Query(r.Context(),
-			`SELECT`+signalSelectCols+` FROM strategy_signals
-			 WHERE status IN ('pending','approved')
-			 ORDER BY confidence DESC, generated_at DESC
-			 LIMIT $1 OFFSET $2`, limit, offset)
+		// Join signals with their latest orchestration run (if any).
+		// Order: signals with AI first, then by most recent.
+		rows, err := pool.Query(r.Context(), `
+			SELECT
+				s.id::text, s.symbol, s.strategy_id, s.signal_type, s.confidence,
+				s.entry_price, s.stop_loss, s.take_profit, s.reasoning, s.status,
+				s.generated_at, s.expires_at, s.orchestration_run_id::text, s.created_at,
+				o.id::text, o.symbol, o.trigger_type, o.agent_suggestion, o.confidence,
+				o.reasoning, o.status, o.started_at, o.completed_at, o.error
+			FROM strategy_signals s
+			LEFT JOIN orchestration_runs o ON o.id = s.orchestration_run_id
+			WHERE s.status IN ('pending','approved')
+			ORDER BY (s.orchestration_run_id IS NOT NULL) DESC, s.generated_at DESC
+			LIMIT $1 OFFSET $2`, limit, offset)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		defer rows.Close()
 
-		result := []*Signal{}
+		result := []*RecommendationRow{}
 		for rows.Next() {
-			s, err := scanSignal(rows)
+			var s Signal
+			var runID, runSymbol, runTrigger, runSuggestion, runReasoning, runStatus, runError sql.NullString
+			var runConf sql.NullFloat64
+			var runStarted *time.Time
+			var runCompleted *time.Time
+			err := rows.Scan(
+				&s.ID, &s.Symbol, &s.StrategyID, &s.SignalType, &s.Confidence,
+				&s.EntryPrice, &s.StopLoss, &s.TakeProfit, &s.Reasoning, &s.Status,
+				&s.GeneratedAt, &s.ExpiresAt, &s.OrchestrationRunID, &s.CreatedAt,
+				&runID, &runSymbol, &runTrigger, &runSuggestion, &runConf,
+				&runReasoning, &runStatus, &runStarted, &runCompleted, &runError,
+			)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			result = append(result, s)
+			rec := &RecommendationRow{Signal: &s}
+			if runID.Valid {
+				var conf *float64
+				if runConf.Valid {
+					v := runConf.Float64
+					conf = &v
+				}
+				startedAt := time.Time{}
+				if runStarted != nil {
+					startedAt = *runStarted
+				}
+				rec.AIAnalysis = &OrchestrationRunRow{
+					ID:              runID.String,
+					Symbol:          runSymbol.String,
+					TriggerType:     runTrigger.String,
+					AgentSuggestion: nullStrPtr(runSuggestion),
+					Confidence:      conf,
+					Reasoning:       nullStrPtr(runReasoning),
+					Status:          runStatus.String,
+					StartedAt:       startedAt,
+					CompletedAt:     runCompleted,
+					Error:           nullStrPtr(runError),
+				}
+			}
+			result = append(result, rec)
 		}
 		jsonOK(w, map[string]any{"recommendations": result, "total": len(result)})
 	}

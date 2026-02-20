@@ -8,6 +8,12 @@ Use these instructions as the default behavior for all coding tasks in this repo
 - Prefer edits in first-party code; avoid vendored code unless explicitly requested.
 - Explain planned checks, run the smallest valid verification set, and report what was run/skipped.
 - Keep behavior stable unless the task explicitly asks for behavior change.
+- **CRITICAL**: When fixing bugs or implementing features that affect the user interface:
+  - **DO NOT** claim something is fixed by only testing the backend API
+  - **ALWAYS** verify the end-to-end user flow works (frontend → backend → database → response)
+  - Add proper error handling with visible feedback (console.log, alerts, or UI notifications)
+  - Test with actual user actions (button clicks, form submissions) not just API curl commands
+  - If you cannot directly test the frontend, explicitly tell the user to verify in the browser and provide debugging steps
 
 ## Repository Boundaries
 

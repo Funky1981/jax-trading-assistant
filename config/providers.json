@@ -30,7 +30,7 @@
     {
       "id": "memory",
       "transport": "http",
-      "endpoint": "http://jax-memory:8090/tools"
+      "endpoint": "http://jax-research:8091/tools"
     }
   ]
 }

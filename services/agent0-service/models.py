@@ -180,3 +180,22 @@ class ErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
     request_id: Optional[str] = None
+
+
+# ── Go orchestration layer contract ───────────────────────────────────────────
+# Matches libs/agent0/client.go PlanRequest / PlanResponse structs.
+
+class PlanRequest(BaseModel):
+    task: str = Field(..., description="Task description")
+    context: Optional[str] = Field(None, description="Additional context")
+    symbol: Optional[str] = Field(None, description="Stock symbol")
+    constraints: Optional[dict] = Field(None, description="Trading constraints")
+    memories: Optional[List[dict]] = Field(None, description="Pre-loaded memories")
+
+
+class PlanResponse(BaseModel):
+    summary: str
+    steps: List[str]
+    action: str
+    confidence: float  # 0.0-1.0
+    reasoning_notes: str

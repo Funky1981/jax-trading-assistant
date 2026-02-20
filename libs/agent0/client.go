@@ -41,7 +41,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	c := &Client{
 		baseURL: u,
 		httpClient: &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout: 5 * time.Minute, // LLM inference can be slow; allow up to 5 minutes
 		},
 	}
 	for _, opt := range opts {

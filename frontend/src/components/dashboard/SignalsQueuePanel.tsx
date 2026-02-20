@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Brain, CheckCircle2, XCircle, AlertTriangle, Clock, Sparkles } from 'lucide-react';
 import { CollapsiblePanel, StatusDot } from './CollapsiblePanel';
 import { Badge } from '@/components/ui/badge';
@@ -204,12 +204,44 @@ function RecommendationCard({
 
 export function SignalsQueuePanel({ isOpen, onToggle }: SignalsQueuePanelProps) {
   const [approver, setApprover] = useState('dashboard@local');
-  const { data: signalsResponse, isLoading } = useSignals({ status: 'pending', limit: 20 });
-  const { data: recResponse } = useRecommendations(20, 0);
+  const [runningAnalyses, setRunningAnalyses] = useState<Set<string>>(new Set());
+  const { data: signalsResponse, isLoading, refetch } = useSignals({ status: 'pending', limit: 20 });
+  const { data: recResponse, refetch: refetchRecs } = useRecommendations(20, 0);
 
   const approveMutation = useApproveSignal();
   const rejectMutation = useRejectSignal();
   const analyzeMutation = useAnalyzeSignal();
+
+  // Watch for successful analysis start
+  useEffect(() => {
+    if (analyzeMutation.isSuccess && analyzeMutation.data && analyzeMutation.variables) {
+      const { signalId } = analyzeMutation.variables;
+      
+      // Track as running
+      setRunningAnalyses(prev => new Set(prev).add(signalId));
+      
+      // Poll for updates every 5 seconds for up to 10 minutes (Ollama can be slow)
+      const pollInterval = setInterval(() => {
+        refetch();
+        refetchRecs();
+      }, 5000);
+      
+      // Stop after 10 minutes
+      const stopTimeout = setTimeout(() => {
+        clearInterval(pollInterval);
+        setRunningAnalyses(prev => {
+          const next = new Set(prev);
+          next.delete(signalId);
+          return next;
+        });
+      }, 600000);
+
+      return () => {
+        clearInterval(pollInterval);
+        clearTimeout(stopTimeout);
+      };
+    }
+  }, [analyzeMutation.isSuccess, analyzeMutation.data, analyzeMutation.variables, refetch, refetchRecs]);
 
   const recommendationMap = useMemo(() => {
     const map = new Map<string, Recommendation>();
@@ -261,6 +293,9 @@ export function SignalsQueuePanel({ isOpen, onToggle }: SignalsQueuePanelProps) 
 
         {signals.map((signal) => {
           const rec = recommendationMap.get(signal.id);
+          const isAnalyzing = analyzeMutation.isPending && analyzeMutation.variables?.signalId === signal.id;
+          const isRunning = runningAnalyses.has(signal.id);
+          
           return (
             <RecommendationCard
               key={signal.id}
@@ -269,10 +304,12 @@ export function SignalsQueuePanel({ isOpen, onToggle }: SignalsQueuePanelProps) 
               approver={approver}
               onApprove={() => approveMutation.mutate({ signalId: signal.id, approvedBy: approver })}
               onReject={() => rejectMutation.mutate({ signalId: signal.id, approvedBy: approver })}
-              onAnalyze={() => analyzeMutation.mutate({ signalId: signal.id })}
+              onAnalyze={() => {
+                analyzeMutation.mutate({ signalId: signal.id });
+              }}
               isApproving={approveMutation.isPending && approveMutation.variables?.signalId === signal.id}
               isRejecting={rejectMutation.isPending && rejectMutation.variables?.signalId === signal.id}
-              isAnalyzing={analyzeMutation.isPending && analyzeMutation.variables?.signalId === signal.id}
+              isAnalyzing={isAnalyzing || isRunning}
             />
           );
         })}

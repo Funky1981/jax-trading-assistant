@@ -16,7 +16,8 @@ from config import settings, get_llm_info
 from models import (
     SuggestionRequest, SuggestionResponse,
     ChatRequest, ChatResponse,
-    HealthResponse, ErrorResponse
+    HealthResponse, ErrorResponse,
+    PlanRequest, PlanResponse,
 )
 from agent import agent0
 
@@ -149,6 +150,46 @@ async def get_suggestion(request: SuggestionRequest):
     except Exception as e:
         logger.error(f"Suggestion failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate suggestion: {e}")
+
+
+# ── /v1/plan ─────────────────────────────────────────────────────────────────
+# This endpoint is called by the Go orchestration layer (libs/agent0/client.go).
+# It adapts the Go PlanRequest format to the existing /suggest logic.
+
+@app.post("/v1/plan", response_model=PlanResponse, tags=["AI"])
+async def plan(request: PlanRequest):
+    """
+    Planning endpoint for the Go orchestration layer.
+    Accepts PlanRequest and maps to /suggest internally.
+    """
+    symbol = request.symbol or ""
+    # Attempt to extract symbol from task if not provided
+    if not symbol and request.task:
+        for word in request.task.split():
+            if word.isupper() and 2 <= len(word) <= 5:
+                symbol = word
+                break
+
+    suggest_req = SuggestionRequest(
+        symbol=symbol or "UNKNOWN",
+        context=f"{request.task}\n{request.context or ''}".strip(),
+        include_memory=True,
+        include_market_data=bool(symbol),
+    )
+    try:
+        result = await agent0.get_suggestion(suggest_req)
+        return PlanResponse(
+            summary=result.reasoning[:300] if result.reasoning else "",
+            steps=result.key_factors or [],
+            action=result.action.value,
+            confidence=result.confidence / 100.0,  # normalize 0-100 → 0-1
+            reasoning_notes=result.reasoning or "",
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Plan failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate plan: {e}")
 
 
 @app.post("/chat", response_model=ChatResponse, tags=["AI"])

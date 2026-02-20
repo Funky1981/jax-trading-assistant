@@ -1,0 +1,68 @@
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /shadow-validator cmd/shadow-validator/main.go
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates bash postgresql-client
+
+WORKDIR /root/
+COPY --from=builder /shadow-validator .
+COPY scripts/run-shadow-validation.ps1 ./run-continuous-validation.sh
+
+# Convert PowerShell script to bash equivalent
+RUN cat > run-continuous-validation.sh << 'EOF'
+#!/bin/bash
+set -e
+
+DURATION_HOURS=${DURATION_HOURS:-120}
+CHECK_INTERVAL_MINUTES=${CHECK_INTERVAL_MINUTES:-60}
+PRODUCTION_DB=${PRODUCTION_DATABASE_URL}
+SHADOW_DB=${SHADOW_DATABASE_URL}
+
+echo "🔍 ADR-0012 Phase 4.3: Shadow Mode Validation"
+echo ""
+echo "Configuration:"
+echo "  Duration: $DURATION_HOURS hours"
+echo "  Check interval: $CHECK_INTERVAL_MINUTES minutes"
+echo ""
+
+start_time=$(date +%s)
+end_time=$((start_time + DURATION_HOURS * 3600))
+checks=0
+
+while [ $(date +%s) -lt $end_time ]; do
+    checks=$((checks + 1))
+    echo "[$(date '+%H:%M:%S')] Check #$checks"
+    
+    if ./shadow-validator; then
+        echo "  ✅ PASS - All decisions match"
+    else
+        echo "  ❌ FAIL - Discrepancies detected!"
+        echo ""
+        echo "💥 SHADOW VALIDATION FAILED"
+        exit 1
+    fi
+    
+    echo "  Next check in $CHECK_INTERVAL_MINUTES minutes"
+    echo ""
+    
+    sleep $((CHECK_INTERVAL_MINUTES * 60))
+done
+
+echo ""
+echo "═══════════════════════════════════════════════════════"
+echo "  SHADOW VALIDATION COMPLETE"
+echo "═══════════════════════════════════════════════════════"
+echo ""
+echo "🎉 SUCCESS: Zero discrepancies detected!"
+echo "✅ Safe to proceed with production cutover"
+EOF
+
+RUN chmod +x run-continuous-validation.sh
+
+CMD ["./run-continuous-validation.sh"]

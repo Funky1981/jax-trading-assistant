@@ -1,0 +1,31 @@
+{
+  "captured": "2026-02-13T00:00:00Z",
+  "service": "jax-orchestrator",
+  "endpoint": "/api/v1/orchestration/runs",
+  "method": "GET",
+  "response": {
+    "runs": [
+      {
+        "id": "orch_baseline_001",
+        "signal_id": "sig_baseline_001",
+        "plan": {
+          "action": "execute_trade",
+          "symbol": "AAPL",
+          "reasoning": "RSI oversold reversal signal with high confidence",
+          "risk_assessment": "LOW"
+        },
+        "result": {
+          "status": "SUCCESS",
+          "trade_id": "trade_baseline_001",
+          "executed_at": "2026-02-13T14:31:00Z"
+        },
+        "created_at": "2026-02-13T14:30:30Z"
+      }
+    ]
+  },
+  "metadata": {
+    "version": "baseline",
+    "count": 1,
+    "note": "This is a template baseline. Regenerate from live system using: go run tests/golden/cmd/capture.go"
+  }
+}

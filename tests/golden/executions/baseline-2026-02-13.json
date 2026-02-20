@@ -1,0 +1,31 @@
+{
+  "captured": "2026-02-13T00:00:00Z",
+  "service": "jax-trade-executor",
+  "endpoint": "/api/v1/trades",
+  "method": "GET",
+  "response": {
+    "trades": [
+      {
+        "id": "trade_baseline_001",
+        "signal_id": "sig_baseline_001",
+        "artifact_id": "strat_rsi_momentum_2026-02-01T00:00:00Z",
+        "artifact_hash": "a3f8c2d1e4b7a9f0c2e5d8b1a4f7c0e3d6b9a2f5c8e1d4b7a0f3c6e9d2b5a8f1",
+        "symbol": "AAPL",
+        "action": "BUY",
+        "quantity": 10,
+        "price": 150.30,
+        "status": "FILLED",
+        "executed_at": "2026-02-13T14:31:00Z",
+        "metadata": {
+          "order_type": "LMT",
+          "position_size_pct": 0.05
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "version": "baseline",
+    "count": 1,
+    "note": "This is a template baseline. Regenerate from live system using: go run tests/golden/cmd/capture.go"
+  }
+}

@@ -136,9 +136,9 @@ class IBClient:
                 price=float(ticker.last) if ticker.last and ticker.last == ticker.last else 0.0,  # Check for NaN
                 bid=float(ticker.bid) if ticker.bid and ticker.bid == ticker.bid else 0.0,
                 ask=float(ticker.ask) if ticker.ask and ticker.ask == ticker.ask else 0.0,
-                bid_size=int(ticker.bidSize) if ticker.bidSize else 0,
-                ask_size=int(ticker.askSize) if ticker.askSize else 0,
-                volume=int(ticker.volume) if ticker.volume else 0,
+                bid_size=int(ticker.bidSize) if ticker.bidSize and ticker.bidSize == ticker.bidSize else 0,
+                ask_size=int(ticker.askSize) if ticker.askSize and ticker.askSize == ticker.askSize else 0,
+                volume=int(ticker.volume) if ticker.volume and ticker.volume == ticker.volume else 0,
                 timestamp=datetime.utcnow().isoformat(),
                 exchange=contract.exchange if hasattr(contract, 'exchange') else 'SMART'
             )
@@ -374,9 +374,9 @@ class IBClient:
                     price=float(ticker.last) if ticker.last and ticker.last == ticker.last else 0.0,
                     bid=float(ticker.bid) if ticker.bid and ticker.bid == ticker.bid else 0.0,
                     ask=float(ticker.ask) if ticker.ask and ticker.ask == ticker.ask else 0.0,
-                    bid_size=int(ticker.bidSize) if ticker.bidSize else 0,
-                    ask_size=int(ticker.askSize) if ticker.askSize else 0,
-                    volume=int(ticker.volume) if ticker.volume else 0,
+                    bid_size=int(ticker.bidSize) if ticker.bidSize and ticker.bidSize == ticker.bidSize else 0,
+                    ask_size=int(ticker.askSize) if ticker.askSize and ticker.askSize == ticker.askSize else 0,
+                    volume=int(ticker.volume) if ticker.volume and ticker.volume == ticker.volume else 0,
                     timestamp=datetime.utcnow().isoformat(),
                     exchange=contract.exchange if hasattr(contract, 'exchange') else 'SMART'
                 )

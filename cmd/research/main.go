@@ -353,7 +353,7 @@ func loadConfig() Config {
 	return Config{
 		DatabaseURL:      envOrDefault("DATABASE_URL", "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"),
 		Port:             envOrDefault("PORT", "8091"),
-		MemoryServiceURL: envOrDefault("MEMORY_SERVICE_URL", "http://jax-memory:8090"),
+		MemoryServiceURL: envOrDefault("MEMORY_SERVICE_URL", "http://localhost:8091/tools"),
 		Agent0ServiceURL: envOrDefault("AGENT0_SERVICE_URL", "http://agent0-service:8093"),
 		DexterServiceURL: envOrDefault("DEXTER_SERVICE_URL", ""),
 		HindsightURL:     envOrDefault("HINDSIGHT_URL", ""),

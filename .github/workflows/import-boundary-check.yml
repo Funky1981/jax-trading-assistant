@@ -1,0 +1,98 @@
+name: Import Boundary Enforcement
+
+on:
+  push:
+    branches: [main, work]
+  pull_request:
+    paths:
+      - 'cmd/trader/**'
+      - 'cmd/research/**'
+      - 'internal/**'
+      - 'libs/**'
+
+jobs:
+  check-trader-boundaries:
+    name: Verify Trader Import Boundaries
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+      
+      - name: Check trader runtime boundaries
+        run: |
+          echo "🔍 Checking cmd/trader import boundaries..."
+          
+          # Get all imports from trader runtime
+          TRADER_IMPORTS=$(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}' ./cmd/trader/... 2>/dev/null | sort -u)
+          
+          # Forbidden packages for production trader
+          FORBIDDEN=(
+            "jax-trading-assistant/libs/agent0"
+            "jax-trading-assistant/libs/dexter"  
+            "jax-trading-assistant/internal/modules/backtest"
+            "jax-trading-assistant/cmd/research"
+            "github.com/agent0"
+          )
+          
+          VIOLATIONS_FOUND=0
+          
+          for pkg in "${FORBIDDEN[@]}"; do
+            if echo "$TRADER_IMPORTS" | grep -q "$pkg"; then
+              echo "❌ VIOLATION: cmd/trader imports forbidden package: $pkg"
+              VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
+            fi
+          done
+          
+          if [ $VIOLATIONS_FOUND -gt 0 ]; then
+            echo ""
+            echo "💥 IMPORT BOUNDARY VIOLATION DETECTED"
+            echo ""
+            echo "The trader runtime MUST NOT import research/AI packages."
+            echo "This violates ADR-0012 security boundaries."
+            echo ""
+            echo "Trader can only use:"
+            echo "  ✅ internal/domain/artifacts"
+            echo "  ✅ internal/modules/execution"
+            echo "  ✅ internal/modules/orchestration"
+            echo "  ✅ libs/marketdata"
+            echo "  ✅ libs/trading"
+            echo ""
+            echo "Research runtime (cmd/research) can use:"
+            echo "  ✅ All trader packages"
+            echo "  ✅ libs/agent0"
+            echo "  ✅ libs/dexter"
+            echo "  ✅ internal/modules/backtest"
+            echo ""
+            exit 1
+          fi
+          
+          echo "✅ All import boundaries respected"
+      
+      - name: Check research runtime boundaries
+        run: |
+          echo "🔍 Checking cmd/research import boundaries..."
+          
+          # Research CAN import everything (no restrictions)
+          # Just verify it compiles
+          if ! go list ./cmd/research/... > /dev/null 2>&1; then
+            echo "❌ cmd/research does not compile"
+            exit 1
+          fi
+          
+          echo "✅ Research runtime compiles successfully"
+      
+      - name: Verify no circular dependencies
+        run: |
+          echo "🔍 Checking for circular dependencies..."
+          
+          if go list -f '{{.ImportPath}}' ./... 2>&1 | grep -q "import cycle"; then
+            echo "❌ CIRCULAR DEPENDENCY DETECTED"
+            go list -f '{{.ImportPath}}' ./... 2>&1 | grep "import cycle"
+            exit 1
+          fi
+          
+          echo "✅ No circular dependencies found"

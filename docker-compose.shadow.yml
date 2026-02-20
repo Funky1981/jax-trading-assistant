@@ -1,0 +1,97 @@
+# Shadow Mode Override for ADR-0012 Phase 4.3 Validation
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.shadow.yml up -d
+
+services:
+  # Shadow database for parallel validation
+  postgres-shadow:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jax}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jax}
+      POSTGRES_DB: jax_shadow
+    ports:
+      - "5434:5432"
+    volumes:
+      - jax-postgres-shadow:/var/lib/postgresql/data
+      - ./db/postgres/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jax} -d jax_shadow"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Shadow trader runtime (writes to shadow DB)
+  trader-shadow:
+    build:
+      context: .
+      dockerfile: cmd/trader/Dockerfile
+      args:
+        VERSION: "${VERSION:-0.1.0-shadow}"
+        BUILD_TIME: "${BUILD_TIME:-unknown}"
+    environment:
+      # Shadow mode configuration
+      DATABASE_URL: postgresql://jax:jax@postgres-shadow:5432/jax_shadow
+      IB_BRIDGE_URL: ${IB_BRIDGE_URL:-http://ib-bridge:8092}
+      PORT: "8102"
+      API_PORT: "8083"
+      
+      # Same config as production for fair comparison
+      JWT_SECRET: ${JWT_SECRET:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      JAX_ORCHESTRATOR_URL: ${JAX_ORCHESTRATOR_URL:-http://jax-research:8091}
+      
+      # Market ingestion (same symbols as production)
+      MARKET_SYMBOLS: ${MARKET_SYMBOLS:-AAPL,MSFT,GOOGL,AMZN,TSLA,META,NVDA,AMD,NFLX,SPY}
+      INGEST_INTERVAL_SECS: ${INGEST_INTERVAL_SECS:-60}
+      CANDLE_BACKFILL: ${CANDLE_BACKFILL:-250}
+      
+      # SHADOW MODE: DRY RUN (don't actually submit orders to IB)
+      EXECUTION_ENABLED: "false"
+      SHADOW_MODE: "true"
+      
+      # Risk params (same as production)
+      RISK_PER_TRADE: ${RISK_PER_TRADE:-0.01}
+      MAX_POSITION_PCT: ${MAX_POSITION_PCT:-0.20}
+      MAX_OPEN_POSITIONS: ${MAX_OPEN_POSITIONS:-10}
+      MAX_DAILY_LOSS: ${MAX_DAILY_LOSS:-0}
+      ORDER_TYPE: ${ORDER_TYPE:-LMT}
+      
+    ports:
+      - "8102:8102"
+      - "8083:8083"
+    depends_on:
+      postgres-shadow:
+        condition: service_healthy
+      ib-bridge:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8102/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    labels:
+      com.jax.mode: "shadow"
+      com.jax.adr: "ADR-0012-Phase4.3"
+
+  # Shadow validator service (runs comparisons)
+  shadow-validator:
+    build:
+      context: .
+      dockerfile: Dockerfile.shadow-validator
+    environment:
+      PRODUCTION_DATABASE_URL: postgresql://jax:jax@postgres:5432/jax
+      SHADOW_DATABASE_URL: postgresql://jax:jax@postgres-shadow:5432/jax_shadow
+      COMPARISON_WINDOW_HOURS: "24"
+      CHECK_INTERVAL_MINUTES: "60"
+    depends_on:
+      - postgres
+      - postgres-shadow
+      - jax-trader
+      - trader-shadow
+    volumes:
+      - ./shadow-reports:/reports
+    command: ["./run-continuous-validation.sh"]
+
+volumes:
+  jax-postgres-shadow:

@@ -14,10 +14,6 @@ COPY libs/ ./libs/
 # Copy internal modules
 COPY internal/ ./internal/
 
-# Copy service modules required by go.work
-COPY services/jax-orchestrator/ ./services/jax-orchestrator/
-COPY services/jax-trade-executor/ ./services/jax-trade-executor/
-
 # Copy tools module required by go.work
 COPY tools/ ./tools/
 

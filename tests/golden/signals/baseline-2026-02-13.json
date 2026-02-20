@@ -1,0 +1,29 @@
+{
+  "captured": "2026-02-13T00:00:00Z",
+  "service": "jax-signal-generator",
+  "endpoint": "/api/v1/signals",
+  "method": "GET",
+  "response": {
+    "signals": [
+      {
+        "id": "sig_baseline_001",
+        "strategy_name": "rsi_momentum",
+        "artifact_id": "strat_rsi_momentum_2026-02-01T00:00:00Z",
+        "symbol": "AAPL",
+        "action": "BUY",
+        "confidence": 0.85,
+        "price": 150.25,
+        "timestamp": "2026-02-13T14:30:00Z",
+        "metadata": {
+          "rsi": 28.5,
+          "signal_type": "oversold_reversal"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "version": "baseline",
+    "count": 1,
+    "note": "This is a template baseline. Regenerate from live system using: go run tests/golden/cmd/capture.go"
+  }
+}
