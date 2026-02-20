@@ -80,7 +80,8 @@ function RecommendationCard({
   isAnalyzing: boolean;
 }) {
   const analysis = recommendation?.ai_analysis;
-  const hasAI = Boolean(analysis);
+  const hasAI = analysis?.status === 'completed';
+  const hasFailed = analysis?.status === 'failed';
 
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
@@ -186,15 +187,15 @@ function RecommendationCard({
           <XCircle className="h-4 w-4 mr-2" />
           {isRejecting ? 'Rejecting...' : 'Reject'}
         </Button>
-        {!hasAI && (
+        {(!hasAI) && (
           <Button
-            variant="secondary"
+            variant={hasFailed ? 'destructive' : 'secondary'}
             onClick={onAnalyze}
             disabled={isAnalyzing}
             className="min-w-[140px]"
           >
             <Brain className="h-4 w-4 mr-2" />
-            {isAnalyzing ? 'Analyzing...' : 'Run AI'}
+            {isAnalyzing ? 'Analyzing...' : hasFailed ? 'Retry AI' : 'Run AI'}
           </Button>
         )}
       </div>

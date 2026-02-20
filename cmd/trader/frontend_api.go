@@ -478,7 +478,7 @@ func recommendationsListHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			FROM strategy_signals s
 			LEFT JOIN orchestration_runs o ON o.id = s.orchestration_run_id
 			WHERE s.status IN ('pending','approved')
-			ORDER BY (s.orchestration_run_id IS NOT NULL) DESC, s.generated_at DESC
+			ORDER BY (o.status = 'completed') DESC NULLS LAST, s.generated_at DESC
 			LIMIT $1 OFFSET $2`, limit, offset)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
