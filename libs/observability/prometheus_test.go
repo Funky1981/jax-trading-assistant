@@ -179,10 +179,10 @@ func TestHistogram_Observe(t *testing.T) {
 	r.WriteText(&buf)
 	out := buf.String()
 
-	assertContains(t, out, `latency_bucket{le="0.01"} 1`)  // only 0.005
-	assertContains(t, out, `latency_bucket{le="0.1"} 2`)   // 0.005 + 0.05 (cumulative)
-	assertContains(t, out, `latency_bucket{le="1"} 3`)     // 0.005 + 0.05 + 0.5 (cumulative)
-	assertContains(t, out, `latency_bucket{le="+Inf"} 4`)  // all 4
+	assertContains(t, out, `latency_bucket{le="0.01"} 1`) // only 0.005
+	assertContains(t, out, `latency_bucket{le="0.1"} 2`)  // 0.005 + 0.05 (cumulative)
+	assertContains(t, out, `latency_bucket{le="1"} 3`)    // 0.005 + 0.05 + 0.5 (cumulative)
+	assertContains(t, out, `latency_bucket{le="+Inf"} 4`) // all 4
 	assertContains(t, out, `latency_count 4`)
 }
 

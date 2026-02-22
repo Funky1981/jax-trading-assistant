@@ -38,9 +38,9 @@ const (
 
 // PhaseResult contains the detected phase plus the triggering event if any.
 type PhaseResult struct {
-	Phase     Phase
-	Event     *calendar.EconEvent // nil for PhaseNormal
-	TimeToGo  time.Duration       // positive = event in future, negative = past (post-event)
+	Phase      Phase
+	Event      *calendar.EconEvent // nil for PhaseNormal
+	TimeToGo   time.Duration       // positive = event in future, negative = past (post-event)
 	DetectedAt time.Time
 }
 
@@ -197,9 +197,9 @@ const (
 
 // GateResult is the full verdict from EventGate.
 type GateResult struct {
-	Decision   GateDecision
-	Phase      Phase
-	Reason     string
+	Decision     GateDecision
+	Phase        Phase
+	Reason       string
 	TriggerEvent *calendar.EconEvent
 }
 
@@ -280,22 +280,22 @@ func (g *EventGate) Check(strategyID string, now time.Time, currencies ...string
 // Signal is a lightweight representation of a trade signal for bucketing.
 // Callers attach their own full signal and embed it via UserData.
 type Signal struct {
-	ID         string
-	StrategyID string
-	Symbol     string
-	Currency   string
+	ID          string
+	StrategyID  string
+	Symbol      string
+	Currency    string
 	GeneratedAt time.Time
-	UserData   interface{}
+	UserData    interface{}
 }
 
 // Bucket groups signals that share a triggering calendar event.
 type Bucket struct {
 	// EventID is the EventID of the anchoring calendar event, or "baseline"
 	// when no event is nearby.
-	EventID  string
-	Event    *calendar.EconEvent
-	Phase    Phase
-	Signals  []Signal
+	EventID string
+	Event   *calendar.EconEvent
+	Phase   Phase
+	Signals []Signal
 }
 
 // EventBucketizer assigns incoming signals to event buckets based on proximity

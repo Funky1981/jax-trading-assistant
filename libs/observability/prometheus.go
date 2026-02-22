@@ -39,9 +39,9 @@ type metric interface {
 }
 
 type metricDesc struct {
-	name   string
-	help   string
-	mtype  string // "counter", "gauge", "histogram"
+	name  string
+	help  string
+	mtype string // "counter", "gauge", "histogram"
 }
 
 // NewRegistry creates an empty registry.
@@ -265,10 +265,10 @@ var DefaultBuckets = []float64{
 
 // Histogram tracks observations across configurable buckets.
 type Histogram struct {
-	d       metricDesc
-	bounds  []float64 // upper bounds, sorted ascending
-	mu      sync.RWMutex
-	rows    map[string]*histRow
+	d      metricDesc
+	bounds []float64 // upper bounds, sorted ascending
+	mu     sync.RWMutex
+	rows   map[string]*histRow
 }
 
 type histRow struct {

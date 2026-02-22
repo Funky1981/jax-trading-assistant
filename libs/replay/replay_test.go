@@ -162,18 +162,18 @@ func TestTraceStore_RecordedAtIsSet(t *testing.T) {
 func TestSimBroker_MarketBuyFill(t *testing.T) {
 	broker := NewSimBroker(DefaultSimBrokerConfig(), 100_000)
 	order := SimOrder{
-		ID:    "ord-001",
-		Symbol: "AAPL",
-		Side:  SideBuy,
-		Type:  OrderMarket,
-		Quantity: 10,
+		ID:          "ord-001",
+		Symbol:      "AAPL",
+		Side:        SideBuy,
+		Type:        OrderMarket,
+		Quantity:    10,
 		SubmittedAt: mustTime("2024-01-05T09:30:00Z"),
 	}
 	broker.SubmitOrder(order)
 
 	candle := Candle{
 		Timestamp: mustTime("2024-01-05T09:31:00Z"),
-		Open: 180.0, High: 181.0, Low: 179.0, Close: 180.5, Volume: 10000,
+		Open:      180.0, High: 181.0, Low: 179.0, Close: 180.5, Volume: 10000,
 	}
 	fills := broker.ProcessCandle(candle)
 	if len(fills) != 1 {
@@ -206,7 +206,7 @@ func TestSimBroker_LimitOrderNotTriggered(t *testing.T) {
 	// Candle low is 179 — does not reach limit 175.
 	candle := Candle{
 		Timestamp: mustTime("2024-01-05T09:31:00Z"),
-		Open: 180.0, High: 181.0, Low: 179.0, Close: 180.5,
+		Open:      180.0, High: 181.0, Low: 179.0, Close: 180.5,
 	}
 	fills := broker.ProcessCandle(candle)
 	if len(fills) != 0 {
@@ -230,7 +230,7 @@ func TestSimBroker_LimitOrderTriggered(t *testing.T) {
 	// Low dips to 177 — limit hit.
 	candle := Candle{
 		Timestamp: mustTime("2024-01-05T09:31:00Z"),
-		Open: 180.0, High: 181.0, Low: 177.0, Close: 180.5,
+		Open:      180.0, High: 181.0, Low: 177.0, Close: 180.5,
 	}
 	fills := broker.ProcessCandle(candle)
 	if len(fills) != 1 {
@@ -242,19 +242,19 @@ func TestSimBroker_StopOrderTriggered(t *testing.T) {
 	broker := NewSimBroker(DefaultSimBrokerConfig(), 100_000)
 	// Protective stop on a short: buy-stop triggers when price breaks up.
 	order := SimOrder{
-		ID:        "ord-001",
-		Symbol:    "AAPL",
-		Side:      SideBuy,
-		Type:      OrderStop,
-		Quantity:  10,
-		StopPrice: 182.0,
+		ID:          "ord-001",
+		Symbol:      "AAPL",
+		Side:        SideBuy,
+		Type:        OrderStop,
+		Quantity:    10,
+		StopPrice:   182.0,
 		SubmittedAt: mustTime("2024-01-05T09:30:00Z"),
 	}
 	broker.SubmitOrder(order)
 
 	candle := Candle{
 		Timestamp: mustTime("2024-01-05T09:31:00Z"),
-		Open: 180.0, High: 183.0, Low: 179.0, Close: 182.5,
+		Open:      180.0, High: 183.0, Low: 179.0, Close: 182.5,
 	}
 	fills := broker.ProcessCandle(candle)
 	if len(fills) != 1 {
@@ -271,9 +271,9 @@ func TestSimBroker_EquityTracking(t *testing.T) {
 	broker.SubmitOrder(SimOrder{ID: "o1", Symbol: "AAPL",
 		Side: SideBuy, Type: OrderMarket, Quantity: 10})
 	broker.ProcessCandle(Candle{
-		Symbol: "AAPL",
+		Symbol:    "AAPL",
 		Timestamp: mustTime("2024-01-05T09:31:00Z"),
-		Open: 100.0, High: 102.0, Low: 99.0, Close: 101.0,
+		Open:      100.0, High: 102.0, Low: 99.0, Close: 101.0,
 	})
 	// Equity should reflect position marked to close.
 	eq := broker.Equity()
@@ -383,5 +383,3 @@ func TestBuildResult_WinRate(t *testing.T) {
 		t.Fatalf("want win rate 0.5, got %f", r.WinRate)
 	}
 }
-
-

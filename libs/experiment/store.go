@@ -77,15 +77,15 @@ func (p RunParams) ParamHash() string {
 
 // RunMetrics holds the measured output of a single run.
 type RunMetrics struct {
-	TotalTrades    int     `json:"total_trades"`
-	WinningTrades  int     `json:"winning_trades"`
-	LosingTrades   int     `json:"losing_trades"`
-	WinRate        float64 `json:"win_rate"`
-	TotalReturn    float64 `json:"total_return"`
-	AnnualisedRet  float64 `json:"annualised_return,omitempty"`
-	MaxDrawdown    float64 `json:"max_drawdown"`
-	SharpeRatio    float64 `json:"sharpe_ratio"`
-	FinalCapital   float64 `json:"final_capital,omitempty"`
+	TotalTrades   int     `json:"total_trades"`
+	WinningTrades int     `json:"winning_trades"`
+	LosingTrades  int     `json:"losing_trades"`
+	WinRate       float64 `json:"win_rate"`
+	TotalReturn   float64 `json:"total_return"`
+	AnnualisedRet float64 `json:"annualised_return,omitempty"`
+	MaxDrawdown   float64 `json:"max_drawdown"`
+	SharpeRatio   float64 `json:"sharpe_ratio"`
+	FinalCapital  float64 `json:"final_capital,omitempty"`
 	// WalkForward fields (populated for WF runs)
 	WFER           float64 `json:"wfer,omitempty"`
 	PassRate       float64 `json:"pass_rate,omitempty"`

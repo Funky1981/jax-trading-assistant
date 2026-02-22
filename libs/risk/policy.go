@@ -4,10 +4,10 @@
 //
 // Policies are loaded from config/risk-constraints.json and enforced at two
 // points in the trading pipeline:
-//   1. Signal generation — stop-distance and per-trade risk checks filter
-//      signals before they are stored or presented for approval.
-//   2. Pre-execution — portfolio-level gates (open positions, daily loss,
-//      account size) block order submission when a constraint is breached.
+//  1. Signal generation — stop-distance and per-trade risk checks filter
+//     signals before they are stored or presented for approval.
+//  2. Pre-execution — portfolio-level gates (open positions, daily loss,
+//     account size) block order submission when a constraint is breached.
 //
 // A Violation carries a machine-readable Code so callers can log, alert, or
 // route on specific breach types without string matching.
@@ -225,8 +225,8 @@ type SignalInput struct {
 
 // PortfolioState carries current portfolio values needed for portfolio-level gates.
 type PortfolioState struct {
-	NetLiquidation float64
-	OpenPositions  int
+	NetLiquidation  float64
+	OpenPositions   int
 	DailyLossDollar float64
 	// CurrentDrawdown is the current peak-to-trough drawdown fraction (0–1).
 	CurrentDrawdown float64

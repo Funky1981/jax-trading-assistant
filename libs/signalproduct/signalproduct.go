@@ -67,8 +67,8 @@ type SignalProduct struct {
 	TakeProfit float64 `json:"take_profit,omitempty"`
 
 	// Attribution.
-	StrategyID  string `json:"strategy_id"`
-	ArtifactID  string `json:"artifact_id,omitempty"`
+	StrategyID   string `json:"strategy_id"`
+	ArtifactID   string `json:"artifact_id,omitempty"`
 	ExperimentID string `json:"experiment_id,omitempty"`
 
 	// Lifecycle.

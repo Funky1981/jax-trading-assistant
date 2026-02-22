@@ -36,7 +36,7 @@ func buildStore(t *testing.T, events []calendar.EconEvent) *calendar.Store {
 
 func nfpAt(ts time.Time) calendar.EconEvent {
 	return calendar.EconEvent{
-		ID: calendar.EventID("US", "Non-Farm Payrolls", ts),
+		ID:      calendar.EventID("US", "Non-Farm Payrolls", ts),
 		Country: "US", Currency: "USD",
 		Title: "Non-Farm Payrolls", Impact: calendar.ImpactHigh,
 		ScheduledAt: ts, Source: "test",
@@ -121,7 +121,7 @@ func TestPhaseDetector_BlackoutBeatsPreEvent(t *testing.T) {
 
 	e1 := nfpAt(t1)
 	e2 := calendar.EconEvent{
-		ID: calendar.EventID("US", "CPI", t2),
+		ID:      calendar.EventID("US", "CPI", t2),
 		Country: "US", Currency: "USD", Title: "CPI",
 		Impact: calendar.ImpactHigh, ScheduledAt: t2, Source: "test",
 	}

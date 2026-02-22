@@ -200,36 +200,36 @@ const (
 
 // SimOrder is an order submitted to the SimBroker.
 type SimOrder struct {
-	ID           string
-	StrategyID   string
-	Symbol       string
-	Side         OrderSide
-	Type         OrderType
-	Quantity     float64
-	LimitPrice   float64 // for limit orders
-	StopPrice    float64 // for stop/stop-limit orders
-	SubmittedAt  time.Time
+	ID          string
+	StrategyID  string
+	Symbol      string
+	Side        OrderSide
+	Type        OrderType
+	Quantity    float64
+	LimitPrice  float64 // for limit orders
+	StopPrice   float64 // for stop/stop-limit orders
+	SubmittedAt time.Time
 }
 
 // Fill represents a completed execution.
 type Fill struct {
-	OrderID     string
-	Symbol      string
-	Side        OrderSide
-	Quantity    float64
-	FillPrice   float64
-	FilledAt    time.Time
-	Slippage    float64 // in price units
-	Commission  float64
+	OrderID    string
+	Symbol     string
+	Side       OrderSide
+	Quantity   float64
+	FillPrice  float64
+	FilledAt   time.Time
+	Slippage   float64 // in price units
+	Commission float64
 }
 
 // Position tracks an open position in the SimBroker.
 type Position struct {
-	Symbol       string
-	Side         OrderSide
-	Quantity     float64
-	EntryPrice   float64
-	OpenedAt     time.Time
+	Symbol         string
+	Side           OrderSide
+	Quantity       float64
+	EntryPrice     float64
+	OpenedAt       time.Time
 	RelatedOrderID string
 }
 
@@ -382,13 +382,13 @@ func (b *SimBroker) tryFill(o SimOrder, c Candle) (Fill, bool) {
 	slippage := math.Abs(fillPrice-c.Open) * o.Quantity
 
 	return Fill{
-		OrderID:   o.ID,
-		Symbol:    o.Symbol,
-		Side:      o.Side,
-		Quantity:  o.Quantity,
-		FillPrice: fillPrice,
-		FilledAt:  c.Timestamp,
-		Slippage:  slippage,
+		OrderID:    o.ID,
+		Symbol:     o.Symbol,
+		Side:       o.Side,
+		Quantity:   o.Quantity,
+		FillPrice:  fillPrice,
+		FilledAt:   c.Timestamp,
+		Slippage:   slippage,
 		Commission: commission,
 	}, true
 }
@@ -433,7 +433,7 @@ type PlaybackResult struct {
 	LossTrades    int
 	WinRate       float64
 	// TotalSlippage is the sum of all fill slippages in price units × qty.
-	TotalSlippage  float64
+	TotalSlippage   float64
 	TotalCommission float64
 }
 
@@ -510,7 +510,7 @@ func (s *Simulator) Run(_ context.Context, signals []PlaybackSignal, candles []C
 					_, _ = s.trace.Append(TraceEntry{
 						StrategyID:   sig.StrategyID,
 						Symbol:       sig.Symbol,
-						SignalPrice:   c.Open,
+						SignalPrice:  c.Open,
 						StopLoss:     sig.StopLoss,
 						PositionSize: sig.Quantity,
 						Decision:     DecisionEmit,

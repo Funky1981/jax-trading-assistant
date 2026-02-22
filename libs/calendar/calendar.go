@@ -7,7 +7,7 @@
 //   - Source:    an interface that providers (CSV, API, DB) implement
 //   - Store:     a thread-safe in-memory + persistence layer for events
 //   - Feed:      orchestrates multiple Sources with deduplication and
-//                verification (L20-level redundancy)
+//     verification (L20-level redundancy)
 package calendar
 
 import (

@@ -253,8 +253,8 @@ func TestLatencyTracker_TradingPaused_WhenHighLatency(t *testing.T) {
 
 	for range 10 {
 		lt.Record(LatencyObservation{
-			Category: "order_submit",
-			Latency:  500 * time.Millisecond, // > threshold
+			Category:   "order_submit",
+			Latency:    500 * time.Millisecond, // > threshold
 			RecordedAt: time.Now(),
 		})
 	}
@@ -275,8 +275,8 @@ func TestLatencyTracker_NotPaused_WhenLowLatency(t *testing.T) {
 
 	for range 10 {
 		lt.Record(LatencyObservation{
-			Category: "order_submit",
-			Latency:  10 * time.Millisecond,
+			Category:   "order_submit",
+			Latency:    10 * time.Millisecond,
 			RecordedAt: time.Now(),
 		})
 	}
@@ -294,8 +294,8 @@ func TestLatencyTracker_NotPaused_BelowMinSamples(t *testing.T) {
 
 	for range 5 { // only 5 obs, min=20
 		lt.Record(LatencyObservation{
-			Category: "order_submit",
-			Latency:  999 * time.Millisecond,
+			Category:   "order_submit",
+			Latency:    999 * time.Millisecond,
 			RecordedAt: time.Now(),
 		})
 	}

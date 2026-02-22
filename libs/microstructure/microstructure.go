@@ -43,9 +43,9 @@ func (t Tick) SpreadBps() float64 {
 // TickStore is a bounded ring buffer of recent ticks for each symbol.
 // It is safe for concurrent use.
 type TickStore struct {
-	mu      sync.RWMutex
+	mu       sync.RWMutex
 	maxTicks int
-	ticks   map[string][]Tick // symbol → ring buffer (in append order)
+	ticks    map[string][]Tick // symbol → ring buffer (in append order)
 }
 
 // NewTickStore creates a TickStore that retains at most maxTicks ticks per symbol.
@@ -134,32 +134,32 @@ func AnalyseSpread(symbol string, ticks []Tick) SpreadStats {
 
 // FillObservation is one data point for the slippage model.
 type FillObservation struct {
-	Symbol       string
+	Symbol string
 	// SlippageBps is the observed slippage in basis points for this fill
 	// (signed: positive = paid more / received less than expected).
-	SlippageBps  float64
+	SlippageBps float64
 	// Quantity is the fill size (used as weight in weighted average).
-	Quantity     float64
-	EventPhase   string    // e.g. "blackout", "pre_event", "normal"
-	ObservedAt   time.Time
+	Quantity   float64
+	EventPhase string // e.g. "blackout", "pre_event", "normal"
+	ObservedAt time.Time
 }
 
 // SlippageStats summarises the model's estimates for a symbol/phase bucket.
 type SlippageStats struct {
-	Symbol       string
-	EventPhase   string
-	Count        int
-	MeanBps      float64
-	P95Bps       float64
-	MaxBps       float64
+	Symbol     string
+	EventPhase string
+	Count      int
+	MeanBps    float64
+	P95Bps     float64
+	MaxBps     float64
 }
 
 // SlippageModel maintains per-symbol, per-phase rolling slippage statistics.
 // It is safe for concurrent use.
 type SlippageModel struct {
-	mu      sync.RWMutex
-	maxObs  int
-	obs     map[string][]FillObservation // key = symbol+"|"+phase
+	mu     sync.RWMutex
+	maxObs int
+	obs    map[string][]FillObservation // key = symbol+"|"+phase
 }
 
 // NewSlippageModel creates a model retaining at most maxObs observations per bucket.
@@ -254,11 +254,11 @@ type ReturnSeries struct {
 
 // CorrelationAlert is fired when a pairwise correlation spike is detected.
 type CorrelationAlert struct {
-	SymbolA        string
-	SymbolB        string
-	Correlation    float64
-	Threshold      float64
-	DetectedAt     time.Time
+	SymbolA     string
+	SymbolB     string
+	Correlation float64
+	Threshold   float64
+	DetectedAt  time.Time
 }
 
 // CorrelationMonitorConfig controls detection sensitivity.
@@ -376,8 +376,8 @@ func pearson(x, y []float64, minWindow int) (float64, bool) {
 // LatencyObservation is one round-trip latency measurement.
 type LatencyObservation struct {
 	// Category tags the type of call: "order_submit", "order_ack", "fill_ack", etc.
-	Category  string
-	Latency   time.Duration
+	Category   string
+	Latency    time.Duration
 	RecordedAt time.Time
 }
 

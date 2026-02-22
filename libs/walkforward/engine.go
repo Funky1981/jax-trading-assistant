@@ -93,9 +93,9 @@ type Result struct {
 	ISResult *backtest.Result
 
 	// Aggregate metrics across all OOS windows.
-	MeanOOSReturn float64 // mean of AnnualisedRet across windows
-	WFER          float64 // WF Efficiency Ratio = MeanOOSReturn / IS annualised return
-	PassRate      float64 // fraction of windows with positive OOS return
+	MeanOOSReturn  float64 // mean of AnnualisedRet across windows
+	WFER           float64 // WF Efficiency Ratio = MeanOOSReturn / IS annualised return
+	PassRate       float64 // fraction of windows with positive OOS return
 	TotalOOSTrades int
 
 	// Stability score in [0, 1]: fraction of windows beating 0 return,

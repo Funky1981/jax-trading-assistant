@@ -83,7 +83,7 @@ type Service struct {
 	riskParams RiskParameters
 	// enforcer applies versioned policy constraints (L16) on top of the
 	// engine's built-in position-level checks. May be nil (no-op).
-	enforcer   *risk.Enforcer
+	enforcer *risk.Enforcer
 }
 
 // NewService creates a new execution service.

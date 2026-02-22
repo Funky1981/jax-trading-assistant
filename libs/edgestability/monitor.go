@@ -132,9 +132,9 @@ type strategySeries struct {
 // Monitor tracks edge stability across one or more strategies.
 // Strategies are added implicitly as outcomes are recorded.
 type Monitor struct {
-	mu       sync.Mutex
-	cfg      Config
-	series   map[string]*strategySeries // keyed by strategyID
+	mu     sync.Mutex
+	cfg    Config
+	series map[string]*strategySeries // keyed by strategyID
 }
 
 // New creates a new Monitor with the given Config.

@@ -112,8 +112,8 @@ func TestHealthMonitor_PartialFailure_NonCritical(t *testing.T) {
 
 	haltCalled := false
 	m := NewHealthMonitor(cfg, func(_ string) { haltCalled = true },
-		failProbe("feed"),   // not critical
-		okProbe("broker"))   // critical, passes
+		failProbe("feed"), // not critical
+		okProbe("broker")) // critical, passes
 
 	m.RunOnce(context.Background())
 	if haltCalled {

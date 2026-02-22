@@ -75,14 +75,14 @@ func DefaultMonitorConfig() MonitorConfig {
 
 // HealthMonitor runs periodic integrity checks and escalates to halt.
 type HealthMonitor struct {
-	cfg            MonitorConfig
-	probes         []HealthProbe
-	haltCb         HaltCallback
-	mu             sync.RWMutex
-	latest         map[string]CheckResult
-	failStreak     int
-	halted         bool
-	criticalSet    map[string]bool
+	cfg         MonitorConfig
+	probes      []HealthProbe
+	haltCb      HaltCallback
+	mu          sync.RWMutex
+	latest      map[string]CheckResult
+	failStreak  int
+	halted      bool
+	criticalSet map[string]bool
 }
 
 // NewHealthMonitor creates a HealthMonitor.
@@ -235,14 +235,14 @@ const (
 
 // Incident represents an operational event that requires attention.
 type Incident struct {
-	ID         string         `json:"id"`
-	Title      string         `json:"title"`
-	Severity   Severity       `json:"severity"`
-	Status     IncidentStatus `json:"status"`
-	Source     string         `json:"source"`   // e.g. "health_monitor", "operator"
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	Notes      []string       `json:"notes,omitempty"`
+	ID        string         `json:"id"`
+	Title     string         `json:"title"`
+	Severity  Severity       `json:"severity"`
+	Status    IncidentStatus `json:"status"`
+	Source    string         `json:"source"` // e.g. "health_monitor", "operator"
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	Notes     []string       `json:"notes,omitempty"`
 }
 
 const incidentFile = "incidents.json"
@@ -483,12 +483,12 @@ func (c *OverrideController) Since() time.Time {
 
 // GuardReport is a summary of the current system safety state.
 type GuardReport struct {
-	Override    OverrideState
+	Override       OverrideState
 	OverrideReason string
-	IsHalted    bool
-	FailStreak  int
-	ProbeStates map[string]CheckResult
-	OpenIncidents int
+	IsHalted       bool
+	FailStreak     int
+	ProbeStates    map[string]CheckResult
+	OpenIncidents  int
 }
 
 // BuildReport assembles a GuardReport from the monitor, controller, and log.
