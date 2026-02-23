@@ -14,6 +14,8 @@ replace jax-trading-assistant/libs/testing => ./libs/testing
 
 replace jax-trading-assistant/libs/marketdata => ./libs/marketdata
 
+replace jax-trading-assistant/libs/backtest => ./libs/backtest
+
 replace jax-trading-assistant/libs/resilience => ./libs/resilience
 
 replace jax-trading-assistant/libs/strategies => ./libs/strategies
@@ -25,6 +27,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	jax-trading-assistant/libs/contracts v0.0.0
+	jax-trading-assistant/libs/backtest v0.0.0
 	jax-trading-assistant/libs/database v0.0.0-00010101000000-000000000000
 	jax-trading-assistant/libs/ingest v0.0.0-00010101000000-000000000000
 	jax-trading-assistant/libs/marketdata v0.0.0

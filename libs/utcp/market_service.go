@@ -42,3 +42,14 @@ func (s *MarketDataService) GetEarnings(ctx context.Context, in GetEarningsInput
 	}
 	return out, nil
 }
+
+func (s *MarketDataService) GetNews(ctx context.Context, in GetNewsInput) (GetNewsOutput, error) {
+	if in.Limit == 0 {
+		in.Limit = 20
+	}
+	var out GetNewsOutput
+	if err := s.client.CallTool(ctx, MarketDataProviderID, ToolMarketGetNews, in, &out); err != nil {
+		return GetNewsOutput{}, err
+	}
+	return out, nil
+}

@@ -3,7 +3,7 @@
     {
       "id": "market-data",
       "transport": "http",
-      "endpoint": "http://market-service:8080/tools"
+      "endpoint": "http://jax-trader:8100/tools"
     },
     {
       "id": "risk",
@@ -34,4 +34,3 @@
     }
   ]
 }
-
