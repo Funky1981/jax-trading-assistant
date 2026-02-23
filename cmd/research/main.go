@@ -18,10 +18,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
+	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/internal/modules/orchestration"
+	"jax-trading-assistant/libs/middleware"
+	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/strategies"
 
 	"github.com/google/uuid"
@@ -98,6 +103,7 @@ func main() {
 	if dexterAdapter != nil {
 		orchSvc = orchSvc.WithDexter(dexterAdapter)
 	}
+	orchSvc = orchSvc.WithAudit(audit.New(db))
 
 	// L04: backtest engine + dataset registry
 	btDeps, err := newBacktestDeps(registry, cfg.DatasetDir)
@@ -106,9 +112,14 @@ func main() {
 	}
 	log.Printf("backtest dataset catalog → %s", cfg.DatasetDir)
 
+	runnerWorkers := envIntOrDefault("RESEARCH_RUNNER_WORKERS", 2)
+	researchRunner := newResearchRunnerManager(btDeps, runnerWorkers)
+	defer researchRunner.Stop()
+	log.Printf("research runner workers: %d", runnerWorkers)
+
 	// Build HTTP server
 	mux := http.NewServeMux()
-	registerRoutes(mux, orchSvc, db, btDeps)
+	registerRoutes(mux, orchSvc, db, btDeps, researchRunner)
 
 	// ADR-0012 Phase 6: memory proxy (replaces jax-memory service).
 	// agent0-service can now point MEMORY_SERVICE_URL at jax-research:8091.
@@ -117,7 +128,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
-		Handler:      mux,
+		Handler:      middleware.FlowID(mux),
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  120 * time.Second,
@@ -146,12 +157,14 @@ func main() {
 
 // registerRoutes wires up all HTTP routes.
 // Routes match the jax-orchestrator API surface exactly for backwards compatibility.
-func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, btDeps *backtestDeps) {
+func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, btDeps *backtestDeps, runner *researchRunnerManager) {
 	mux.HandleFunc("/health", handleHealth)
 	mux.HandleFunc("/orchestrate", handleOrchestrate(svc, db))
 	mux.HandleFunc("/metrics/prometheus", handlePrometheus(db))
 	// L04: backtest endpoint
 	mux.HandleFunc("/backtest", handleBacktest(btDeps))
+	mux.HandleFunc("/research/projects/run", handleResearchProjectRun(runner))
+	mux.HandleFunc("/research/projects/runs/", handleResearchProjectRunStatus(runner))
 }
 
 // handleHealth returns a simple liveness response.
@@ -205,12 +218,20 @@ func handleOrchestrate(svc *orchestration.Service, db *sql.DB) http.HandlerFunc 
 			}
 		}
 
+		flowID := observability.FlowIDFromContext(r.Context())
+		if flowID == "" {
+			flowID = observability.NewFlowID()
+		}
+
 		// Create run record in DB
 		runID := uuid.New()
 		if err := createOrchestrationRun(r.Context(), db, runID, req.Symbol, req.TriggerType, signalID); err != nil {
 			log.Printf("failed to create orchestration run: %v", err)
 			http.Error(w, "failed to create orchestration run", http.StatusInternalServerError)
 			return
+		}
+		if err := createRunRecord(r.Context(), db, runID, flowID, req.Symbol); err != nil {
+			log.Printf("failed to create parent run record: %v", err)
 		}
 
 		// Enrich context from DB if signal ID available
@@ -222,7 +243,7 @@ func handleOrchestrate(svc *orchestration.Service, db *sql.DB) http.HandlerFunc 
 		}
 
 		// Run asynchronously — return immediately with run ID
-		go runOrchestration(svc, db, runID, req.Symbol, enrichedCtx)
+		go runOrchestration(svc, db, runID, flowID, req.Symbol, enrichedCtx)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -234,12 +255,17 @@ func handleOrchestrate(svc *orchestration.Service, db *sql.DB) http.HandlerFunc 
 }
 
 // runOrchestration executes the pipeline and writes the result back to Postgres.
-func runOrchestration(svc *orchestration.Service, db *sql.DB, runID uuid.UUID, symbol, contextStr string) {
-	ctx := context.Background()
+func runOrchestration(svc *orchestration.Service, db *sql.DB, runID uuid.UUID, flowID, symbol, contextStr string) {
+	ctx := observability.WithRunInfo(context.Background(), observability.RunInfo{
+		RunID:  runID.String(),
+		Symbol: symbol,
+		FlowID: flowID,
+	})
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("orchestration run %s panicked: %v", runID, r)
 			updateRunError(ctx, db, runID, fmt.Sprintf("panic: %v", r))
+			_ = updateParentRunError(ctx, db, runID, fmt.Sprintf("panic: %v", r))
 		}
 	}()
 
@@ -251,12 +277,14 @@ func runOrchestration(svc *orchestration.Service, db *sql.DB, runID uuid.UUID, s
 	if err != nil {
 		log.Printf("orchestration run %s failed: %v", runID, err)
 		updateRunError(ctx, db, runID, err.Error())
+		_ = updateParentRunError(ctx, db, runID, err.Error())
 		return
 	}
 
 	if err := updateRunComplete(ctx, db, runID, result); err != nil {
 		log.Printf("failed to persist run %s: %v", runID, err)
 	}
+	_ = updateParentRunComplete(ctx, db, runID, result)
 	log.Printf("orchestration run %s complete: action=%s confidence=%.2f",
 		runID, result.Plan.Action, result.Plan.Confidence)
 }
@@ -314,6 +342,18 @@ func createOrchestrationRun(ctx context.Context, db *sql.DB, runID uuid.UUID, sy
 	return err
 }
 
+func createRunRecord(ctx context.Context, db *sql.DB, orchestrationRunID uuid.UUID, flowID, symbol string) error {
+	summary, _ := json.Marshal(map[string]any{
+		"symbol":             symbol,
+		"orchestrationRunId": orchestrationRunID.String(),
+	})
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO runs (run_type, status, flow_id, source, orchestration_run_id, summary, started_at)
+		VALUES ('orchestration', 'running', $1, 'research', $2, $3::jsonb, NOW())
+	`, flowID, orchestrationRunID, string(summary))
+	return err
+}
+
 func fetchSignalContext(ctx context.Context, db *sql.DB, signalID uuid.UUID) (string, error) {
 	var sym, stratID, sigType, reasoning string
 	var conf, entry, stop, take float64
@@ -358,6 +398,33 @@ func updateRunError(ctx context.Context, db *sql.DB, runID uuid.UUID, msg string
 	)
 }
 
+func updateParentRunComplete(ctx context.Context, db *sql.DB, orchestrationRunID uuid.UUID, result orchestration.OrchestrationResult) error {
+	summary, _ := json.Marshal(map[string]any{
+		"action":     result.Plan.Action,
+		"confidence": result.Plan.Confidence,
+		"tools":      result.Tools,
+	})
+	_, err := db.ExecContext(ctx, `
+		UPDATE runs
+		SET status = 'completed',
+		    summary = $2::jsonb,
+		    completed_at = NOW()
+		WHERE orchestration_run_id = $1
+	`, orchestrationRunID, string(summary))
+	return err
+}
+
+func updateParentRunError(ctx context.Context, db *sql.DB, orchestrationRunID uuid.UUID, errMsg string) error {
+	_, err := db.ExecContext(ctx, `
+		UPDATE runs
+		SET status = 'failed',
+		    error = $2,
+		    completed_at = NOW()
+		WHERE orchestration_run_id = $1
+	`, orchestrationRunID, errMsg)
+	return err
+}
+
 // ── Config ────────────────────────────────────────────────────────────────────
 
 func loadConfig() Config {
@@ -377,4 +444,16 @@ func envOrDefault(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func envIntOrDefault(key string, def int) int {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return def
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil || v <= 0 {
+		return def
+	}
+	return v
 }

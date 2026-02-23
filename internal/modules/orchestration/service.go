@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/libs/agent0"
 	"jax-trading-assistant/libs/contracts"
 	"jax-trading-assistant/libs/dexter"
@@ -43,6 +44,7 @@ type Service struct {
 	dexter     DexterClient
 	tools      ToolRunner
 	strategies *strategies.Registry
+	audit      *audit.Service
 }
 
 // NewService creates a new orchestration service
@@ -58,6 +60,11 @@ func NewService(memory MemoryClient, agent Agent0Client, tools ToolRunner, strat
 // WithDexter adds Dexter research capabilities
 func (s *Service) WithDexter(dexter DexterClient) *Service {
 	s.dexter = dexter
+	return s
+}
+
+func (s *Service) WithAudit(auditSvc *audit.Service) *Service {
+	s.audit = auditSvc
 	return s
 }
 
@@ -228,6 +235,30 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 		return OrchestrationResult{}, err
 	}
 	observability.RecordAgent0Plan(ctx, time.Since(planStart), len(agentPlan.Steps), agentPlan.Confidence, nil)
+
+	if s.audit != nil {
+		flowID := observability.FlowIDFromContext(ctx)
+		runInfo := observability.RunInfoFromContext(ctx)
+		valid, trace := audit.ValidatePlanShape(agentPlan.Summary, agentPlan.Action, agentPlan.Confidence, agentPlan.Steps)
+		decisionID, _ := s.audit.LogAIDecision(ctx, audit.AIDecisionRecord{
+			RunID:       runInfo.RunID,
+			FlowID:      flowID,
+			Role:        "planner",
+			Provider:    "agent0",
+			Model:       "agent0-plan",
+			Prompt:      map[string]any{"context": planReq.Context, "constraints": planReq.Constraints, "symbol": planReq.Symbol},
+			Response:    map[string]any{"summary": agentPlan.Summary, "steps": agentPlan.Steps, "action": agentPlan.Action, "confidence": agentPlan.Confidence, "reasoning": agentPlan.ReasoningNotes},
+			SchemaValid: valid,
+			Decision:    agentPlan.Action,
+			Reasoning:   agentPlan.ReasoningNotes,
+			RuleTrace:   trace,
+		})
+		_ = s.audit.LogAIAcceptance(ctx, decisionID, valid, "schema_validator", "plan schema validation", trace)
+		if !valid {
+			runErr = fmt.Errorf("agent plan failed schema validation")
+			return OrchestrationResult{}, runErr
+		}
+	}
 
 	// 5. Build plan result
 	plan := PlanResult{

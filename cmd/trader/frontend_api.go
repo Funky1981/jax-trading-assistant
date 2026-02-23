@@ -52,6 +52,7 @@ import (
 	"jax-trading-assistant/libs/middleware"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/strategies"
+	"jax-trading-assistant/libs/strategytypes"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -79,7 +80,7 @@ func envStr(key, def string) string {
 
 // startFrontendAPIServer launches the jax-api-compatible HTTP server.
 // It runs until ctx is cancelled.
-func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strategies.Registry) {
+func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strategies.Registry, strategyTypeReg *strategytypes.Registry) {
 	fCfg := loadFrontendAPIConfig()
 
 	jwtManager, err := auth.NewJWTManagerFromEnv()
@@ -148,6 +149,8 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	mux.HandleFunc("/strategies", protect(strategiesListHandler(reg)))
 	mux.HandleFunc("/api/v1/strategies", protect(strategiesListHandler(reg)))
 	mux.HandleFunc("/api/v1/strategies/", protect(strategiesDetailHandler(reg)))
+	mux.HandleFunc("/api/v1/strategy-types", protect(strategyTypesListHandler(strategyTypeReg)))
+	mux.HandleFunc("/api/v1/strategy-types/", protect(strategyTypesDetailHandler(strategyTypeReg)))
 
 	// ── Trading guard ─────────────────────────────────────────────────────────
 	mux.HandleFunc("/trading/guard", protect(tradingGuardHandler(pool)))
@@ -161,6 +164,9 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 
 	// ── Prometheus ────────────────────────────────────────────────────────────
 	mux.HandleFunc("/metrics/prometheus", prometheusHandler(pool))
+
+	// Codex packs additive API surface (instances, backtests, research, testing, audit)
+	registerCodexAPIRoutes(mux, protect, pool, fCfg.OrchestratorURL)
 
 	handler := middleware.FlowID(middleware.CORS(corsConfig)(rateLimiter.Middleware(mux)))
 
@@ -216,6 +222,7 @@ type Signal struct {
 	ID                 string     `json:"id"`
 	Symbol             string     `json:"symbol"`
 	StrategyID         string     `json:"strategy_id"`
+	InstanceID         *string    `json:"instance_id,omitempty"`
 	SignalType         string     `json:"signal_type"`
 	Confidence         float64    `json:"confidence"`
 	EntryPrice         *float64   `json:"entry_price,omitempty"`
@@ -234,14 +241,14 @@ func scanSignal(row interface {
 }) (*Signal, error) {
 	var s Signal
 	return &s, row.Scan(
-		&s.ID, &s.Symbol, &s.StrategyID, &s.SignalType, &s.Confidence,
+		&s.ID, &s.Symbol, &s.StrategyID, &s.InstanceID, &s.SignalType, &s.Confidence,
 		&s.EntryPrice, &s.StopLoss, &s.TakeProfit, &s.Reasoning, &s.Status,
 		&s.GeneratedAt, &s.ExpiresAt, &s.OrchestrationRunID, &s.CreatedAt,
 	)
 }
 
 const signalSelectCols = `
-	id::text, symbol, strategy_id, signal_type, confidence,
+	id::text, symbol, strategy_id, instance_id::text, signal_type, confidence,
 	entry_price, stop_loss, take_profit, reasoning, status,
 	generated_at, expires_at, orchestration_run_id::text, created_at`
 
@@ -853,6 +860,40 @@ func strategiesDetailHandler(reg *strategies.Registry) http.HandlerFunc {
 	}
 }
 
+func strategyTypesListHandler(reg *strategytypes.Registry) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if reg == nil {
+			jsonOK(w, []strategytypes.StrategyMetadata{})
+			return
+		}
+		jsonOK(w, reg.ListMetadata())
+	}
+}
+
+func strategyTypesDetailHandler(reg *strategytypes.Registry) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		id := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/v1/strategy-types/"), "/")
+		if id == "" || reg == nil {
+			http.NotFound(w, r)
+			return
+		}
+		meta, ok := reg.Get(id)
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		jsonOK(w, meta.Metadata())
+	}
+}
+
 // ── Trading guard ─────────────────────────────────────────────────────────────
 
 func tradingGuardHandler(pool *pgxpool.Pool) http.HandlerFunc {
@@ -1040,6 +1081,9 @@ func proxyPost(ctx context.Context, url string, body []byte) ([]byte, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if flowID := observability.FlowIDFromContext(ctx); flowID != "" {
+		req.Header.Set("X-Flow-ID", flowID)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err

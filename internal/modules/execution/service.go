@@ -108,6 +108,17 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 		return nil, fmt.Errorf("failed to get signal: %w", err)
 	}
 
+	// Codex v1: per-instance guardrails + flatten-by-close enforcement.
+	if signal.InstanceID != "" {
+		if checker, ok := s.store.(interface {
+			CheckInstanceExecutionAllowed(context.Context, string) error
+		}); ok {
+			if err := checker.CheckInstanceExecutionAllowed(ctx, signal.InstanceID); err != nil {
+				return nil, fmt.Errorf("instance guardrail blocked execution: %w", err)
+			}
+		}
+	}
+
 	// 2. Validate signal
 	if err := s.engine.ValidateSignal(*signal); err != nil {
 		return nil, fmt.Errorf("signal validation failed: %w", err)
@@ -180,6 +191,7 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 		StopLoss:      signal.StopLoss,
 		TakeProfit:    signal.TakeProfit,
 		StrategyID:    signal.StrategyID,
+		InstanceID:    signal.InstanceID,
 		Status:        "submitted",
 		RiskAmount:    riskAmount,
 		RiskPercent:   riskPercent,
@@ -311,15 +323,24 @@ func NewPostgresTradeStore(db *sql.DB) *PostgresTradeStore {
 func (s *PostgresTradeStore) GetSignal(ctx context.Context, signalID uuid.UUID) (*Signal, error) {
 	// ADR-0012 Phase 4: Include artifact_id in signal retrieval
 	query := `
-		SELECT s.id, s.symbol, s.signal_type, s.entry_price, s.stop_loss, s.take_profit, 
-		       s.strategy_id, s.confidence, s.artifact_id, 
+		SELECT s.id, s.symbol, s.signal_type, s.entry_price, s.stop_loss, s.take_profit,
+		       s.strategy_id, s.confidence, s.instance_id, s.artifact_id,
 		       a.hash AS artifact_hash
 		FROM strategy_signals s
 		LEFT JOIN strategy_artifacts a ON s.artifact_id = a.id
-		WHERE s.id = $1 AND s.status = 'approved'
+		WHERE s.id = $1
+		  AND s.status = 'approved'
+		  AND s.artifact_id IS NOT NULL
+		  AND EXISTS (
+		      SELECT 1
+		      FROM artifact_approvals ap
+		      WHERE ap.artifact_id = s.artifact_id
+		        AND ap.state IN ('APPROVED', 'ACTIVE')
+		  )
 	`
 
 	var signal Signal
+	var instanceIDPtr *uuid.UUID
 	var artifactIDPtr *uuid.UUID
 	var artifactHashPtr *string
 
@@ -332,6 +353,7 @@ func (s *PostgresTradeStore) GetSignal(ctx context.Context, signalID uuid.UUID) 
 		&signal.TakeProfit,
 		&signal.StrategyID,
 		&signal.Confidence,
+		&instanceIDPtr,
 		&artifactIDPtr,
 		&artifactHashPtr,
 	)
@@ -343,6 +365,9 @@ func (s *PostgresTradeStore) GetSignal(ctx context.Context, signalID uuid.UUID) 
 		return nil, err
 	}
 
+	if instanceIDPtr != nil {
+		signal.InstanceID = instanceIDPtr.String()
+	}
 	// Convert nullable artifact_id/hash to strings
 	if artifactIDPtr != nil {
 		signal.ArtifactID = artifactIDPtr.String()
@@ -358,8 +383,8 @@ func (s *PostgresTradeStore) GetSignal(ctx context.Context, signalID uuid.UUID) 
 func (s *PostgresTradeStore) StoreTrade(ctx context.Context, trade *TradeResult) error {
 	// ADR-0012 Phase 4: Include artifact_id and artifact_hash
 	query := `
-		INSERT INTO trades (id, signal_id, symbol, direction, entry, stop, targets, strategy_id, notes, risk, order_status, filled_qty, avg_fill_price, created_at, artifact_id, artifact_hash)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		INSERT INTO trades (id, signal_id, instance_id, symbol, direction, entry, stop, targets, strategy_id, notes, risk, order_status, filled_qty, avg_fill_price, created_at, artifact_id, artifact_hash)
+		VALUES ($1, $2, NULLIF($3,'')::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 	`
 
 	targetsJSON, _ := json.Marshal([]float64{trade.TakeProfit})
@@ -392,6 +417,7 @@ func (s *PostgresTradeStore) StoreTrade(ctx context.Context, trade *TradeResult)
 	_, err := s.db.ExecContext(ctx, query,
 		trade.TradeID.String(),
 		trade.SignalID.String(),
+		trade.InstanceID,
 		trade.Symbol,
 		trade.Direction,
 		trade.EntryPrice,
@@ -446,4 +472,110 @@ func (s *PostgresTradeStore) GetDailyRisk(ctx context.Context) (float64, error) 
 	var totalRisk float64
 	err := s.db.QueryRowContext(ctx, query).Scan(&totalRisk)
 	return totalRisk, err
+}
+
+// CheckInstanceExecutionAllowed enforces per-instance limits and flatten window.
+func (s *PostgresTradeStore) CheckInstanceExecutionAllowed(ctx context.Context, instanceID string) error {
+	var (
+		enabled    bool
+		tz         string
+		flattenAt  string
+		configText string
+	)
+	err := s.db.QueryRowContext(ctx, `
+		SELECT enabled, session_timezone, flatten_by_close_time, config::text
+		FROM strategy_instances
+		WHERE id = $1::uuid
+	`, instanceID).Scan(&enabled, &tz, &flattenAt, &configText)
+	if err != nil {
+		return fmt.Errorf("load instance %s: %w", instanceID, err)
+	}
+	if !enabled {
+		return fmt.Errorf("instance is disabled")
+	}
+	if tz == "" {
+		tz = "America/New_York"
+	}
+	if flattenAt == "" {
+		flattenAt = "15:55"
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		loc = time.UTC
+	}
+	now := time.Now().In(loc)
+	var hh, mm int
+	if _, err := fmt.Sscanf(flattenAt, "%d:%d", &hh, &mm); err == nil {
+		flattenTs := time.Date(now.Year(), now.Month(), now.Day(), hh, mm, 0, 0, loc)
+		if !now.Before(flattenTs) {
+			return fmt.Errorf("post-flatten execution rejected at %s", flattenAt)
+		}
+	}
+
+	cfg := map[string]any{}
+	if configText != "" {
+		_ = json.Unmarshal([]byte(configText), &cfg)
+	}
+	maxTrades := intFromAny(cfg["maxTradesPerDay"], 1000)
+	maxOpenPositions := intFromAny(cfg["maxOpenPositions"], 1000)
+	maxDailyLoss := floatFromAny(cfg["maxDailyLoss"], 0)
+
+	var tradesToday int
+	err = s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM trades
+		WHERE instance_id = $1::uuid
+		  AND created_at >= date_trunc('day', NOW())
+	`, instanceID).Scan(&tradesToday)
+	if err == nil && maxTrades > 0 && tradesToday >= maxTrades {
+		return fmt.Errorf("max trades/day reached (%d)", maxTrades)
+	}
+
+	var openPositions int
+	err = s.db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT symbol)
+		FROM trades
+		WHERE instance_id = $1::uuid
+		  AND COALESCE(order_status, '') NOT IN ('Filled', 'Cancelled')
+		  AND created_at >= NOW() - INTERVAL '1 day'
+	`, instanceID).Scan(&openPositions)
+	if err == nil && maxOpenPositions > 0 && openPositions >= maxOpenPositions {
+		return fmt.Errorf("max open positions reached (%d)", maxOpenPositions)
+	}
+
+	if maxDailyLoss > 0 {
+		var riskAtStake float64
+		_ = s.db.QueryRowContext(ctx, `
+			SELECT COALESCE(SUM((risk->>'amount')::numeric), 0)
+			FROM trades
+			WHERE instance_id = $1::uuid
+			  AND created_at >= date_trunc('day', NOW())
+		`, instanceID).Scan(&riskAtStake)
+		if riskAtStake >= maxDailyLoss {
+			return fmt.Errorf("max daily loss/risk reached (%.2f)", maxDailyLoss)
+		}
+	}
+	return nil
+}
+
+func intFromAny(v any, def int) int {
+	switch n := v.(type) {
+	case float64:
+		return int(n)
+	case int:
+		return n
+	default:
+		return def
+	}
+}
+
+func floatFromAny(v any, def float64) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case int:
+		return float64(n)
+	default:
+		return def
+	}
 }

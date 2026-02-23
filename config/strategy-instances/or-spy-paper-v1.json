@@ -1,0 +1,15 @@
+{
+  "name": "or-spy-paper-v1",
+  "strategyTypeId": "opening_range_to_close_v1",
+  "strategyId": "opening_range_to_close_v1",
+  "enabled": false,
+  "sessionTimezone": "America/New_York",
+  "flattenByCloseTime": "15:55",
+  "config": {
+    "symbols": ["SPY"],
+    "openingRangeMins": 30,
+    "holdBars": 3,
+    "minVolumeMultiple": 1.2,
+    "maxTradesPerDay": 1
+  }
+}

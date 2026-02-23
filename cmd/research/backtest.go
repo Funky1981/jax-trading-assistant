@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -101,79 +102,90 @@ func handleBacktest(deps *backtestDeps) http.HandlerFunc {
 			return
 		}
 
-		if err := validateBacktestRequest(req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		startDate, _ := time.Parse(dateFmt, req.StartDate)
-		endDate, _ := time.Parse(dateFmt, req.EndDate)
-
-		// Load dataset from registry.
-		ds, err := deps.datasets.Get(req.DatasetID)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("dataset not found: %v", err), http.StatusBadRequest)
-			return
-		}
-
-		// Guard against mutated files breaking reproducibility.
-		if err := deps.datasets.VerifyHash(req.DatasetID); err != nil {
-			log.Printf("[backtest] WARNING: dataset integrity failure: %v", err)
-			http.Error(w, fmt.Sprintf("dataset integrity check failed: %v", err), http.StatusConflict)
-			return
-		}
-
-		csvSrc, err := deps.datasets.LoadDataSource(r.Context(), req.DatasetID)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to load dataset: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		cfg := backtest.Config{
-			StrategyName:   req.Strategy,
-			Symbols:        req.Symbols,
-			StartDate:      startDate,
-			EndDate:        endDate,
-			DataSource:     csvSrc,
-			Seed:           req.Seed,
-			InitialCapital: req.InitialCapital,
-			RiskPerTrade:   req.RiskPerTrade,
-		}
-
-		log.Printf("[backtest] running strategy=%q symbols=%v dataset=%s seed=%d",
-			req.Strategy, req.Symbols, req.DatasetID, req.Seed)
-
-		result, err := deps.engine.Run(r.Context(), cfg)
+		resp, err := runBacktest(r.Context(), deps, req)
 		if err != nil {
 			log.Printf("[backtest] error: %v", err)
-			http.Error(w, fmt.Sprintf("backtest failed: %v", err), http.StatusInternalServerError)
+			status := http.StatusInternalServerError
+			if err == errInvalidBacktestRequest {
+				status = http.StatusBadRequest
+			}
+			if err == errDatasetIntegrity {
+				status = http.StatusConflict
+			}
+			http.Error(w, fmt.Sprintf("backtest failed: %v", err), status)
 			return
 		}
-
-		resp := BacktestResponse{
-			RunID:         result.RunID,
-			Strategy:      req.Strategy,
-			Symbols:       result.Symbols,
-			Seed:          result.Seed,
-			DurationMs:    result.DurationMs,
-			TotalTrades:   result.TotalTrades,
-			WinningTrades: result.WinningTrades,
-			LosingTrades:  result.LosingTrades,
-			WinRate:       result.WinRate,
-			TotalReturn:   result.TotalReturn,
-			SharpeRatio:   result.SharpeRatio,
-			MaxDrawdown:   result.MaxDrawdown,
-			FinalCapital:  result.FinalCapital,
-			DatasetID:     ds.ID,
-			DatasetHash:   ds.Hash[:12],
-		}
-
-		log.Printf("[backtest] complete run=%s trades=%d winRate=%.1f%% totalReturn=%.2f%%",
-			result.RunID, result.TotalTrades, result.WinRate*100, result.TotalReturn*100)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp) //nolint:errcheck
 	}
+}
+
+var (
+	errInvalidBacktestRequest = fmt.Errorf("invalid backtest request")
+	errDatasetIntegrity       = fmt.Errorf("dataset integrity check failed")
+)
+
+func runBacktest(ctx context.Context, deps *backtestDeps, req BacktestRequest) (BacktestResponse, error) {
+	if err := validateBacktestRequest(req); err != nil {
+		return BacktestResponse{}, fmt.Errorf("%w: %v", errInvalidBacktestRequest, err)
+	}
+
+	startDate, _ := time.Parse(dateFmt, req.StartDate)
+	endDate, _ := time.Parse(dateFmt, req.EndDate)
+
+	ds, err := deps.datasets.Get(req.DatasetID)
+	if err != nil {
+		return BacktestResponse{}, fmt.Errorf("%w: dataset not found: %v", errInvalidBacktestRequest, err)
+	}
+	if err := deps.datasets.VerifyHash(req.DatasetID); err != nil {
+		log.Printf("[backtest] WARNING: dataset integrity failure: %v", err)
+		return BacktestResponse{}, fmt.Errorf("%w: %v", errDatasetIntegrity, err)
+	}
+	csvSrc, err := deps.datasets.LoadDataSource(ctx, req.DatasetID)
+	if err != nil {
+		return BacktestResponse{}, fmt.Errorf("failed to load dataset: %w", err)
+	}
+
+	cfg := backtest.Config{
+		StrategyName:   req.Strategy,
+		Symbols:        req.Symbols,
+		StartDate:      startDate,
+		EndDate:        endDate,
+		DataSource:     csvSrc,
+		Seed:           req.Seed,
+		InitialCapital: req.InitialCapital,
+		RiskPerTrade:   req.RiskPerTrade,
+	}
+
+	log.Printf("[backtest] running strategy=%q symbols=%v dataset=%s seed=%d",
+		req.Strategy, req.Symbols, req.DatasetID, req.Seed)
+	result, err := deps.engine.Run(ctx, cfg)
+	if err != nil {
+		return BacktestResponse{}, err
+	}
+
+	log.Printf("[backtest] complete run=%s trades=%d winRate=%.1f%% totalReturn=%.2f%%",
+		result.RunID, result.TotalTrades, result.WinRate*100, result.TotalReturn*100)
+
+	resp := BacktestResponse{
+		RunID:         result.RunID,
+		Strategy:      req.Strategy,
+		Symbols:       result.Symbols,
+		Seed:          result.Seed,
+		DurationMs:    result.DurationMs,
+		TotalTrades:   result.TotalTrades,
+		WinningTrades: result.WinningTrades,
+		LosingTrades:  result.LosingTrades,
+		WinRate:       result.WinRate,
+		TotalReturn:   result.TotalReturn,
+		SharpeRatio:   result.SharpeRatio,
+		MaxDrawdown:   result.MaxDrawdown,
+		FinalCapital:  result.FinalCapital,
+		DatasetID:     ds.ID,
+		DatasetHash:   ds.Hash[:12],
+	}
+	return resp, nil
 }
 
 // validateBacktestRequest returns an error for any missing required field.

@@ -18,6 +18,7 @@ type Signal struct {
 	TakeProfit   float64
 	StrategyID   string
 	Confidence   float64
+	InstanceID   string // Codex v1: strategy instance attribution
 	ArtifactID   string // ADR-0012 Phase 4: Artifact tracking
 	ArtifactHash string // ADR-0012 Phase 4: Immutability guarantee
 }
@@ -61,6 +62,7 @@ type TradeResult struct {
 	StopLoss      float64
 	TakeProfit    float64
 	StrategyID    string
+	InstanceID    string
 	Status        string // pending, submitted, filled, rejected, cancelled
 	FilledQty     int
 	AvgFillPrice  float64

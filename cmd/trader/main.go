@@ -10,7 +10,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,6 +22,7 @@ import (
 	"jax-trading-assistant/internal/trader/signalgenerator"
 	"jax-trading-assistant/libs/risk"
 	"jax-trading-assistant/libs/strategies"
+	"jax-trading-assistant/libs/strategytypes"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -78,6 +81,10 @@ func main() {
 	}
 	log.Println("database connection established")
 
+	if err := loadStrategyInstancesFromDir(ctx, dbPool, filepath.Join("config", "strategy-instances")); err != nil {
+		log.Printf("strategy instance bootstrap warning: %v", err)
+	}
+
 	// L16: Load risk policy from config/risk-constraints.json.
 	// Engine and signal generator enforce these constraints at runtime.
 	riskPolicy, err := risk.LoadPolicy("config/risk-constraints.json")
@@ -90,6 +97,7 @@ func main() {
 
 	// Initialize strategy registry
 	registry := strategies.NewRegistry()
+	strategyTypeRegistry := strategytypes.DefaultRegistry()
 
 	// ADR-0012 Phase 4: Load strategies from APPROVED artifacts only
 	// This implements the artifact-based promotion gate
@@ -150,14 +158,16 @@ func main() {
 
 	// Create HTTP server
 	mux := http.NewServeMux()
+	marketTools := newMarketTools(dbPool, cfg.IBBridgeURL)
 
 	// ADR-0012 Phase 6: launch in-process replacements for removed microservices.
 	// startMarketIngester replaces jax-market; startFrontendAPIServer replaces jax-api.
 	go startMarketIngester(ctx, dbPool)
-	go startFrontendAPIServer(ctx, dbPool, registry)
+	go startFrontendAPIServer(ctx, dbPool, registry, strategyTypeRegistry)
 
 	// Health check endpoint
 	mux.HandleFunc("/health", handleHealth(sigGen))
+	mux.HandleFunc("/tools", marketTools.handler())
 
 	// ADR-0012 Phase 4: Artifact promotion workflow API
 	artifactHandlers.RegisterRoutes(mux)
@@ -321,6 +331,10 @@ func handleGenerateSignals(sigGen *signalgenerator.InProcessSignalGenerator) htt
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if !strings.EqualFold(os.Getenv("ALLOW_LIVE_TRADING"), "true") {
+			http.Error(w, "live execution disabled: set ALLOW_LIVE_TRADING=true to enable /api/v1/execute", http.StatusForbidden)
 			return
 		}
 
