@@ -62,7 +62,9 @@ export function useApproveSignal() {
 
       return { previousSignals, previousRecs };
     },
-    onError: (_err, _vars, context) => {
+    onError: (err, vars, context) => {
+      void err;
+      void vars;
       context?.previousSignals?.forEach(([key, data]) => {
         queryClient.setQueryData(key, data);
       });
@@ -111,7 +113,9 @@ export function useRejectSignal() {
 
       return { previousSignals, previousRecs };
     },
-    onError: (_err, _vars, context) => {
+    onError: (err, vars, context) => {
+      void err;
+      void vars;
       context?.previousSignals?.forEach(([key, data]) => {
         queryClient.setQueryData(key, data);
       });
@@ -132,7 +136,9 @@ export function useAnalyzeSignal() {
     mutationFn: ({ signalId, context }: { signalId: string; context?: string }) => {
       return signalsService.analyze(signalId, context);
     },
-    onSuccess: (_data, _variables) => {
+    onSuccess: (data, variables) => {
+      void data;
+      void variables;
       queryClient.invalidateQueries({ queryKey: ['signals'] });
       queryClient.invalidateQueries({ queryKey: ['recommendations'] });
     },

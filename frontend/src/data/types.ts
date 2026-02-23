@@ -173,3 +173,165 @@ export interface RecommendationListResponse {
   limit: number;
   offset: number;
 }
+
+export interface StrategyTypeMetadata {
+  id: string;
+  name: string;
+  version?: string;
+  description?: string;
+  requiredInputs?: string[];
+  tags?: string[];
+}
+
+export interface StrategyInstance {
+  id: string;
+  name: string;
+  strategyTypeId: string;
+  strategyId?: string;
+  enabled: boolean;
+  sessionTimezone: string;
+  flattenByCloseTime: string;
+  configJson: Record<string, unknown>;
+  configHash?: string;
+  artifactId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BacktestRunStats {
+  trades?: number;
+  totalTrades?: number;
+  winRate?: number;
+  avgR?: number;
+  maxDrawdown?: number;
+  sharpe?: number;
+  pnl?: number;
+  finalCapital?: number;
+  totalReturn?: number;
+  [key: string]: unknown;
+}
+
+export interface BacktestTrade {
+  symbol: string;
+  side: string;
+  entryPrice?: number | null;
+  exitPrice?: number | null;
+  quantity?: number | null;
+  pnl?: number | null;
+  pnlPct?: number | null;
+  openedAt?: string | null;
+  closedAt?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BacktestRunBySymbol {
+  symbol: string;
+  trades: number;
+  winRate: number;
+  pnl: number;
+}
+
+export interface BacktestRunSummary {
+  id: string;
+  runId: string;
+  instanceId?: string;
+  strategyId?: string;
+  symbols?: string[];
+  from?: string;
+  to?: string;
+  status: string;
+  stats: BacktestRunStats;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt?: string;
+}
+
+export interface BacktestRunDetail extends BacktestRunSummary {
+  parentRunId?: string;
+  config?: Record<string, unknown>;
+  bySymbol?: BacktestRunBySymbol[];
+  trades?: BacktestTrade[];
+  error?: string;
+}
+
+export interface ResearchProject {
+  id: string;
+  name: string;
+  description?: string;
+  owner?: string;
+  status?: string;
+  baseInstanceId?: string;
+  parameterGrid?: Record<string, unknown>;
+  trainFrom?: string | null;
+  trainTo?: string | null;
+  testFrom?: string | null;
+  testTo?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ResearchProjectRun {
+  id: string;
+  backtestRunId?: string;
+  status: string;
+  parameters?: Record<string, unknown>;
+  metrics?: Record<string, unknown>;
+  rankScore?: number;
+  lineage?: Record<string, unknown>;
+  error?: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+}
+
+export interface TestingGateStatus {
+  gate: string;
+  status: string;
+  lastRunId?: string;
+  details?: Record<string, unknown>;
+  lastRunAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface TestRunSummary {
+  id: string;
+  runId?: string;
+  testName: string;
+  status: string;
+  summary?: Record<string, unknown>;
+  artifactUri?: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  createdAt?: string | null;
+}
+
+export interface TriggerTestResponse {
+  gate: string;
+  testRunId: string;
+  status: string;
+  artifactUri?: string;
+  summary?: Record<string, unknown>;
+}
+
+export interface RunSummary {
+  id: string;
+  runType: string;
+  status: string;
+  flowId?: string;
+  source?: string;
+  instanceId?: string;
+  summary?: Record<string, unknown>;
+  startedAt?: string;
+  completedAt?: string | null;
+  error?: string;
+}
+
+export interface RunTimelineEvent {
+  id: string;
+  type: string;
+  category?: string;
+  action?: string;
+  outcome?: string;
+  message?: string;
+  metadata?: Record<string, unknown>;
+  ts?: string;
+}

@@ -7,15 +7,16 @@ import {
   FileText, 
   Briefcase, 
   Settings,
-  Receipt,
   Activity,
   TrendingUp,
   Server,
   LogOut,
+  FlaskConical,
+  BarChart3,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import JaxLogo from '@/images/jax_ai_trader.svg';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -23,6 +24,9 @@ const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, end: true },
   { label: 'Trading', path: '/trading', icon: TrendingUp },
   { label: 'System', path: '/system', icon: Server },
+  { label: 'Research', path: '/research', icon: FlaskConical },
+  { label: 'Analysis', path: '/analysis', icon: BarChart3 },
+  { label: 'Testing', path: '/testing', icon: ShieldCheck },
   { label: 'Portfolio', path: '/portfolio', icon: Briefcase },
   { label: 'Blotter', path: '/blotter', icon: FileText },
   { label: 'Settings', path: '/settings', icon: Settings },
@@ -62,6 +66,7 @@ export function AppShell() {
               variant="ghost"
               size="icon"
               className="ml-auto md:hidden"
+              aria-label="Close sidebar"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="h-5 w-5" />
@@ -106,6 +111,7 @@ export function AppShell() {
                   size="icon"
                   className="h-6 w-6 shrink-0"
                   title="Sign out"
+                  aria-label="Sign out"
                   onClick={logout}
                 >
                   <LogOut className="h-3 w-3" />
@@ -128,6 +134,7 @@ export function AppShell() {
             variant="ghost"
             size="icon"
             className="md:hidden"
+            aria-label="Open sidebar"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="h-5 w-5" />

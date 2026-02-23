@@ -1,5 +1,4 @@
 import { Badge } from '@/components/ui/badge';
-import { tokens } from '../../styles/tokens';
 
 interface PnLIndicatorProps {
   value: number;

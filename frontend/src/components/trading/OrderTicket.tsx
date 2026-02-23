@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { PrimaryButton } from '../primitives/PrimaryButton';
 import { SelectInput } from '../primitives/SelectInput';
 import { TextInput } from '../primitives/TextInput';
-import { tokens } from '../../styles/tokens';
 import type { OrderDraft } from '../../domain/models';
 import type { Side } from '../../domain/types';
 

@@ -1,21 +1,36 @@
 import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes } from '../App';
 import { DomainProvider } from '../../domain/store';
+import { AuthProvider } from '../../contexts/AuthContext';
+
+const fetchMock = vi.fn();
+
+afterEach(() => {
+  fetchMock.mockReset();
+  vi.unstubAllGlobals();
+});
 
 describe('AppRoutes', () => {
-  it('renders the blotter page for /blotter', () => {
+  it('renders the blotter page for /blotter', async () => {
     const router = createMemoryRouter(routes, {
       initialEntries: ['/blotter'],
     });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: false }),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
 
     render(
       <DomainProvider>
-        <RouterProvider router={router} />
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
       </DomainProvider>
     );
 
-    expect(screen.getByRole('heading', { name: 'Blotter' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Trade Blotter' })).toBeInTheDocument();
   });
 });

@@ -3,6 +3,9 @@ import { AppShell } from '@/components/layout/AppShell';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { TradingPage } from '@/pages/TradingPage';
 import { SystemPage } from '@/pages/SystemPage';
+import { ResearchPage } from '@/pages/ResearchPage';
+import { AnalysisPage } from '@/pages/AnalysisPage';
+import { TestingPage } from '@/pages/TestingPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
@@ -58,6 +61,9 @@ export const routes = [
       { index: true, element: <DashboardPage /> },
       { path: 'trading', element: <TradingPage /> },
       { path: 'system', element: <SystemPage /> },
+      { path: 'research', element: <ResearchPage /> },
+      { path: 'analysis', element: <AnalysisPage /> },
+      { path: 'testing', element: <TestingPage /> },
       { path: 'blotter', element: <PlaceholderPage title="Trade Blotter" /> },
       { path: 'portfolio', element: <PlaceholderPage title="Portfolio" /> },
       { path: 'settings', element: <PlaceholderPage title="Settings" /> },
