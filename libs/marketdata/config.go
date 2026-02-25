@@ -9,10 +9,11 @@ import (
 type ProviderType string
 
 const (
-	ProviderPolygon  ProviderType = "polygon"
-	ProviderAlpaca   ProviderType = "alpaca"
-	ProviderIB       ProviderType = "ib"        // Interactive Brokers Gateway (direct Go SDK)
-	ProviderIBBridge ProviderType = "ib-bridge" // IB via Python HTTP bridge
+	ProviderPolygon           ProviderType = "polygon"
+	ProviderAlpaca            ProviderType = "alpaca"
+	ProviderIB                ProviderType = "ib"        // Interactive Brokers Gateway (direct Go SDK)
+	ProviderIBBridge          ProviderType = "ib-bridge" // IB via Python HTTP bridge
+	ProviderFinancialDatasets ProviderType = "financial-datasets"
 )
 
 // Config holds market data client configuration

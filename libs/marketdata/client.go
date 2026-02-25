@@ -60,6 +60,8 @@ func NewClient(config *Config) (*Client, error) {
 			provider, err = NewPolygonProvider(pc)
 		case ProviderAlpaca:
 			provider, err = NewAlpacaProvider(pc)
+		case ProviderFinancialDatasets:
+			provider, err = NewFinancialDatasetsProvider(pc)
 		case ProviderIB:
 			provider, err = NewIBProvider(pc)
 		case ProviderIBBridge:

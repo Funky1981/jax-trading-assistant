@@ -72,6 +72,14 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 			Enabled:  true,
 		})
 	}
+	if fdKey := strings.TrimSpace(os.Getenv("FINANCIAL_DATASETS_API_KEY")); fdKey != "" {
+		providers = append(providers, marketdata.ProviderConfig{
+			Name:     marketdata.ProviderFinancialDatasets,
+			APIKey:   fdKey,
+			Priority: 4,
+			Enabled:  true,
+		})
+	}
 	if len(providers) > 0 {
 		cfg := &marketdata.Config{Providers: providers}
 		mdClient, err := marketdata.NewClient(cfg)
@@ -337,6 +345,7 @@ type eventAggregator struct {
 	httpClient    *http.Client
 	polygonKey    string
 	finnhubKey    string
+	newsApiKey    string
 	failClosed    bool
 	calendarStore *calendar.Store
 	store         *eventStore
@@ -349,6 +358,7 @@ func newEventAggregator(httpClient *http.Client, pool *pgxpool.Pool) *eventAggre
 		httpClient:    httpClient,
 		polygonKey:    strings.TrimSpace(os.Getenv("POLYGON_API_KEY")),
 		finnhubKey:    strings.TrimSpace(os.Getenv("FINNHUB_API_KEY")),
+		newsApiKey:    strings.TrimSpace(os.Getenv("NEWSAPI_KEY")),
 		failClosed:    strings.EqualFold(os.Getenv("APP_ENV"), "production") || strings.EqualFold(os.Getenv("ENV"), "production"),
 		calendarStore: store,
 		store:         newEventStore(pool),
@@ -398,6 +408,16 @@ func (e *eventAggregator) getNews(ctx context.Context, symbol string, limit int,
 			observability.LogEvent(ctx, "warn", "events.persist_news_failed", map[string]any{
 				"symbol": symbol,
 				"source": "finnhub",
+				"error":  pErr.Error(),
+			})
+		}
+		return out, nil
+	}
+	if out, err := e.getNewsAPI(ctx, symbol, limit, fromRaw, toRaw); err == nil && len(out) > 0 {
+		if pErr := e.store.SaveNews(ctx, symbol, "newsapi", out); pErr != nil {
+			observability.LogEvent(ctx, "warn", "events.persist_news_failed", map[string]any{
+				"symbol": symbol,
+				"source": "newsapi",
 				"error":  pErr.Error(),
 			})
 		}
@@ -563,6 +583,80 @@ func (e *eventAggregator) getFinnhubNews(ctx context.Context, symbol string, lim
 		})
 	}
 	return out, nil
+}
+
+func (e *eventAggregator) getNewsAPI(ctx context.Context, symbol string, limit int, fromRaw, toRaw string) ([]utcp.NewsEntry, error) {
+	if e.newsApiKey == "" {
+		return nil, errors.New("newsapi key missing")
+	}
+	endpoint := "https://newsapi.org/v2/everything"
+	u, _ := url.Parse(endpoint)
+	q := u.Query()
+	q.Set("q", symbol)
+	q.Set("sortBy", "publishedAt")
+	q.Set("pageSize", strconv.Itoa(limit))
+	q.Set("language", "en")
+	if strings.TrimSpace(fromRaw) != "" {
+		q.Set("from", strings.TrimSpace(fromRaw))
+	}
+	if strings.TrimSpace(toRaw) != "" {
+		q.Set("to", strings.TrimSpace(toRaw))
+	}
+	u.RawQuery = q.Encode()
+
+	var payload struct {
+		Status   string `json:"status"`
+		Articles []struct {
+			Source struct {
+				Name string `json:"name"`
+			} `json:"source"`
+			Author      string `json:"author"`
+			Title       string `json:"title"`
+			Description string `json:"description"`
+			URL         string `json:"url"`
+			PublishedAt string `json:"publishedAt"`
+		} `json:"articles"`
+	}
+	if err := e.fetchNewsAPIJSON(ctx, u.String(), &payload); err != nil {
+		return nil, err
+	}
+	out := make([]utcp.NewsEntry, 0, len(payload.Articles))
+	for _, row := range payload.Articles {
+		ts, _ := time.Parse(time.RFC3339, strings.TrimSpace(row.PublishedAt))
+		if ts.IsZero() {
+			ts = time.Now().UTC()
+		}
+		out = append(out, utcp.NewsEntry{
+			Timestamp: ts.UTC(),
+			Headline:  row.Title,
+			Summary:   row.Description,
+			URL:       row.URL,
+			Source:    row.Source.Name,
+			Category:  "company_news",
+		})
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out, nil
+}
+
+func (e *eventAggregator) fetchNewsAPIJSON(ctx context.Context, endpoint string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-Api-Key", e.newsApiKey)
+	resp, err := e.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return fmt.Errorf("newsapi HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	return json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(out)
 }
 
 func (e *eventAggregator) getCalendarMacro(limit int) []utcp.NewsEntry {
