@@ -472,6 +472,9 @@ func runnerExpandParameterGrid(grid map[string]any, maxCombos int) []map[string]
 
 func runnerApplyCombo(req BacktestRequest, combo map[string]any) BacktestRequest {
 	out := req
+	if out.Parameters == nil {
+		out.Parameters = map[string]any{}
+	}
 	for key, value := range combo {
 		switch key {
 		case "strategyId", "strategy", "strategyConfigId":
@@ -498,6 +501,22 @@ func runnerApplyCombo(req BacktestRequest, combo map[string]any) BacktestRequest
 			if vv := runnerStringSlice(value); len(vv) > 0 {
 				out.Symbols = vv
 			}
+		case "parameters":
+			if paramMap, ok := value.(map[string]any); ok {
+				for k, v := range paramMap {
+					out.Parameters[k] = v
+				}
+			}
+		case "sessionTimezone":
+			if s := strings.TrimSpace(fmt.Sprintf("%v", value)); s != "" {
+				out.SessionTimezone = s
+			}
+		case "flattenByCloseTime":
+			if s := strings.TrimSpace(fmt.Sprintf("%v", value)); s != "" {
+				out.FlattenByCloseTime = s
+			}
+		default:
+			out.Parameters[key] = value
 		}
 	}
 	return out

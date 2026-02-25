@@ -260,16 +260,19 @@ func instancesDetailHandler(pool *pgxpool.Pool, strategyTypeReg *strategytypes.R
 }
 
 type backtestRunRequest struct {
-	InstanceID       string   `json:"instanceId"`
-	StrategyID       string   `json:"strategyId"`
-	StrategyConfigID string   `json:"strategyConfigId"`
-	From             string   `json:"from"`
-	To               string   `json:"to"`
-	SymbolsOverride  []string `json:"symbolsOverride"`
-	DatasetID        string   `json:"datasetId"`
-	Seed             int64    `json:"seed"`
-	InitialCapital   float64  `json:"initialCapital"`
-	RiskPerTrade     float64  `json:"riskPerTrade"`
+	InstanceID         string         `json:"instanceId"`
+	StrategyID         string         `json:"strategyId"`
+	StrategyConfigID   string         `json:"strategyConfigId"`
+	From               string         `json:"from"`
+	To                 string         `json:"to"`
+	SymbolsOverride    []string       `json:"symbolsOverride"`
+	DatasetID          string         `json:"datasetId"`
+	Seed               int64          `json:"seed"`
+	InitialCapital     float64        `json:"initialCapital"`
+	RiskPerTrade       float64        `json:"riskPerTrade"`
+	Parameters         map[string]any `json:"parameters,omitempty"`
+	SessionTimezone    string         `json:"sessionTimezone,omitempty"`
+	FlattenByCloseTime string         `json:"flattenByCloseTime,omitempty"`
 }
 
 func backtestRunHandler(pool *pgxpool.Pool, orchestratorURL string) http.HandlerFunc {
@@ -1470,6 +1473,21 @@ func runBacktestAndPersist(ctx context.Context, pool *pgxpool.Pool, orchestrator
 	if req.StrategyID == "" {
 		req.StrategyID = "rsi_momentum_v1"
 	}
+	if req.InstanceID != "" {
+		if req.Parameters == nil || req.SessionTimezone == "" || req.FlattenByCloseTime == "" {
+			if params, tz, flatten, err := loadInstanceBacktestConfig(ctx, pool, req.InstanceID); err == nil {
+				if req.Parameters == nil {
+					req.Parameters = params
+				}
+				if req.SessionTimezone == "" {
+					req.SessionTimezone = tz
+				}
+				if req.FlattenByCloseTime == "" {
+					req.FlattenByCloseTime = flatten
+				}
+			}
+		}
+	}
 	symbols := req.SymbolsOverride
 	if len(symbols) == 0 {
 		symbols = []string{envStr("BACKTEST_DEFAULT_SYMBOL", "SPY")}
@@ -1488,6 +1506,15 @@ func runBacktestAndPersist(ctx context.Context, pool *pgxpool.Pool, orchestrator
 		"seed":            req.Seed,
 		"initial_capital": req.InitialCapital,
 		"risk_per_trade":  req.RiskPerTrade,
+	}
+	if len(req.Parameters) > 0 {
+		payload["parameters"] = req.Parameters
+	}
+	if req.SessionTimezone != "" {
+		payload["session_timezone"] = req.SessionTimezone
+	}
+	if req.FlattenByCloseTime != "" {
+		payload["flatten_by_close_time"] = req.FlattenByCloseTime
 	}
 	body, _ := json.Marshal(payload)
 	respRaw, err := proxyPost(ctx, orchestratorURL+"/backtest", body)
@@ -2188,6 +2215,31 @@ func parseStrategyParams(config json.RawMessage) (map[string]any, error) {
 		return params, nil
 	}
 	return raw, nil
+}
+
+func loadInstanceBacktestConfig(ctx context.Context, pool *pgxpool.Pool, instanceID string) (map[string]any, string, string, error) {
+	var cfgRaw string
+	var tz string
+	var flatten string
+	err := pool.QueryRow(ctx, `
+		SELECT COALESCE(config::text, '{}'), COALESCE(session_timezone, ''), COALESCE(flatten_by_close_time, '')
+		FROM strategy_instances
+		WHERE id = $1::uuid
+	`, instanceID).Scan(&cfgRaw, &tz, &flatten)
+	if err != nil {
+		return nil, "", "", err
+	}
+	params, err := parseStrategyParams(json.RawMessage(cfgRaw))
+	if err != nil {
+		return nil, tz, flatten, err
+	}
+	if tz == "" {
+		tz = "America/New_York"
+	}
+	if flatten == "" {
+		flatten = "15:55"
+	}
+	return params, tz, flatten, nil
 }
 
 func strOrEmpty(v *string) string {

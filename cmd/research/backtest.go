@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,20 +13,24 @@ import (
 	"jax-trading-assistant/internal/modules/backtest"
 	"jax-trading-assistant/libs/dataset"
 	"jax-trading-assistant/libs/strategies"
+	"jax-trading-assistant/libs/strategytypes"
 )
 
 // ─── Backtest HTTP handler (L04) ──────────────────────────────────────────────
 
 // backtestDeps are created once at startup and closed over per request.
 type backtestDeps struct {
-	engine   *backtest.Engine
-	datasets *dataset.Registry
+	engine          *backtest.Engine
+	datasets        *dataset.Registry
+	strategyReg     *strategies.Registry
+	strategyTypeReg *strategytypes.Registry
+	db              *sql.DB
 }
 
 // newBacktestDeps wires up the backtest engine and dataset registry.
 // The dataset catalog directory is configurable via DATASET_DIR env var;
 // it defaults to "data/datasets" relative to the working directory.
-func newBacktestDeps(registry *strategies.Registry, datasetDir string) (*backtestDeps, error) {
+func newBacktestDeps(registry *strategies.Registry, datasetDir string, db *sql.DB) (*backtestDeps, error) {
 	if datasetDir == "" {
 		datasetDir = filepath.Join("data", "datasets")
 	}
@@ -36,8 +41,11 @@ func newBacktestDeps(registry *strategies.Registry, datasetDir string) (*backtes
 	}
 
 	return &backtestDeps{
-		engine:   backtest.New(registry),
-		datasets: ds,
+		engine:          backtest.New(registry),
+		datasets:        ds,
+		strategyReg:     registry,
+		strategyTypeReg: strategytypes.DefaultRegistry(),
+		db:              db,
 	}, nil
 }
 
@@ -61,6 +69,12 @@ type BacktestRequest struct {
 	DatasetID string `json:"dataset_id"`
 	// Seed makes the run deterministic.  0 = auto-generate from wall clock.
 	Seed int64 `json:"seed"`
+	// Parameters are optional strategy-specific tuning inputs.
+	Parameters map[string]any `json:"parameters,omitempty"`
+	// SessionTimezone controls session date grouping for event strategies.
+	SessionTimezone string `json:"session_timezone,omitempty"`
+	// FlattenByCloseTime is used by same-day strategies for end-of-session rules.
+	FlattenByCloseTime string `json:"flatten_by_close_time,omitempty"`
 }
 
 // BacktestResponse is the JSON payload returned on success.
@@ -153,6 +167,26 @@ func runBacktest(ctx context.Context, deps *backtestDeps, req BacktestRequest) (
 	csvSrc, err := deps.datasets.LoadDataSource(ctx, req.DatasetID)
 	if err != nil {
 		return BacktestResponse{}, fmt.Errorf("failed to load dataset: %w", err)
+	}
+
+	if deps.strategyTypeReg != nil {
+		if _, ok := deps.strategyTypeReg.Get(req.Strategy); ok {
+			resp, err := runStrategyTypeBacktest(ctx, deps, req, csvSrc, startDate, endDate)
+			if err != nil {
+				return BacktestResponse{}, err
+			}
+			resp.DatasetID = ds.ID
+			resp.DatasetHash = ds.Hash
+			resp.DatasetName = ds.Name
+			resp.DatasetSymbol = ds.Symbol
+			resp.DatasetSource = ds.Source
+			resp.DatasetSchemaVer = ds.SchemaVer
+			resp.DatasetRecordCount = ds.RecordCount
+			resp.DatasetStartDate = ds.StartDate.UTC().Format(time.RFC3339)
+			resp.DatasetEndDate = ds.EndDate.UTC().Format(time.RFC3339)
+			resp.DatasetFilePath = ds.FilePath
+			return resp, nil
+		}
 	}
 
 	cfg := backtest.Config{

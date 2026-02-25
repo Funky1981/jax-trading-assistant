@@ -117,7 +117,7 @@ func main() {
 	orchSvc = orchSvc.WithAudit(audit.New(db))
 
 	// L04: backtest engine + dataset registry
-	btDeps, err := newBacktestDeps(registry, cfg.DatasetDir)
+	btDeps, err := newBacktestDeps(registry, cfg.DatasetDir, db)
 	if err != nil {
 		log.Fatalf("failed to initialise backtest deps: %v", err)
 	}
