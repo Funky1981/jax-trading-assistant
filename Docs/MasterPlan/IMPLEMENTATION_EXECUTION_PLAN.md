@@ -123,3 +123,27 @@ Any row moved to `DONE` must include:
 1. Assign owners in Section 4.
 2. Confirm Week 1 and Week 2 capacity and scope lock.
 3. Start Task 1 through Task 4 and update this file daily.
+
+## 10. Status Update (2026-02-25)
+**Completed (evidence captured in git history on branch `work`):**
+1. Tasks 1-4 (runtime mode policy, provider policy, synthetic backtest gating).
+2. Tasks 5-7 (provenance fields, APIs, dataset provenance gate).
+3. Tasks 8-12 (event schema, normalization, APIs, dataset snapshots + Gate 1 recon).
+4. Tasks 13-18 (strategy types registry, IBM pack strategies, deterministic tests).
+5. Tasks 19-21 (research backtest persistence, parameter sweeps, walk-forward wiring).
+6. Strategytypes backtest integration with event sentiment/materiality persistence.
+7. NewsAPI + FinancialDatasets fallbacks; Polygon can be disabled via `POLYGON_ENABLED=false`.
+
+**Evidence pointers (commits):**
+- `4c6cfb4`, `9579b4f`, `996c259`, `19ee219`, `f887549`, `d9626aa` (phases 0-3, provenance/event/data/UI).
+- `c25721a`, `eb7259a` (IBM strategies + deterministic tests).
+- `b68c049`, `ec86b95` (strategytypes backtests + event sentiment/materiality).
+- `cc5a9c5`, `39d6f08`, `929677f`, `d45df1b`, `7ac6969` (provider wiring/priorities).
+
+**Remaining priority work (next up):**
+1. Task 22: execution lifecycle persistence (order intents, fills).
+2. Task 23: idempotency + duplicate suppression.
+3. Task 24: restart-safe execution processing tests.
+4. Task 25-26: flatten-by-close proof + PnL reconciliation model.
+5. Task 27-28: AI decision logging + timeline endpoints.
+6. Task 29-30: UI completion + gate automation.
