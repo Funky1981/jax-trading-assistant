@@ -20,10 +20,15 @@ import (
 )
 
 func syntheticBacktestAllowed() bool {
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("ALLOW_SYNTHETIC_BACKTEST_DATA")), "true") {
+	mode := runtimepolicy.CurrentMode()
+	if !mode.AllowsSyntheticBacktest() {
+		return false
+	}
+	raw := strings.TrimSpace(os.Getenv("ALLOW_SYNTHETIC_BACKTEST_DATA"))
+	if raw == "" {
 		return true
 	}
-	return runtimepolicy.CurrentMode().AllowsSyntheticBacktest()
+	return strings.EqualFold(raw, "true")
 }
 
 type BacktestEngine struct {

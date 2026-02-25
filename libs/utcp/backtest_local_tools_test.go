@@ -6,6 +6,25 @@ import (
 	"time"
 )
 
+func TestSyntheticBacktestAllowed_ModeAndEnv(t *testing.T) {
+	t.Setenv("ALLOW_SYNTHETIC_BACKTEST_DATA", "")
+	t.Setenv("JAX_RUNTIME_MODE", "dev")
+	if !syntheticBacktestAllowed() {
+		t.Fatalf("dev mode should allow synthetic backtest by default")
+	}
+
+	t.Setenv("ALLOW_SYNTHETIC_BACKTEST_DATA", "false")
+	if syntheticBacktestAllowed() {
+		t.Fatalf("dev mode with explicit false should disallow synthetic backtest")
+	}
+
+	t.Setenv("ALLOW_SYNTHETIC_BACKTEST_DATA", "true")
+	t.Setenv("JAX_RUNTIME_MODE", "paper")
+	if syntheticBacktestAllowed() {
+		t.Fatalf("paper mode must disallow synthetic backtest even when override is true")
+	}
+}
+
 func TestBacktestTools_RunAndGet(t *testing.T) {
 	t.Setenv("JAX_RUNTIME_MODE", "dev")
 	registry := NewLocalRegistry()

@@ -93,12 +93,23 @@ func systemRuntimeHandler() http.HandlerFunc {
 			"executionEnabled":          strings.EqualFold(os.Getenv("EXECUTION_ENABLED"), "true"),
 			"strictProviderPolicy":      mode.EnforceStrictProviderPolicy(),
 			"noSyntheticTruthPaths":     mode.EnforceNoSyntheticTruthPaths(),
-			"allowSyntheticBacktests":   mode.AllowsSyntheticBacktest() || strings.EqualFold(os.Getenv("ALLOW_SYNTHETIC_BACKTEST_DATA"), "true"),
+			"allowSyntheticBacktests":   allowSyntheticBacktests(mode),
 			"providersConfigPath":       envStr("PROVIDERS_CONFIG_PATH", "config/providers.json"),
 			"checkedAt":                 time.Now().UTC(),
 			"environmentProductionLike": strings.EqualFold(os.Getenv("APP_ENV"), "production") || strings.EqualFold(os.Getenv("ENV"), "production"),
 		})
 	}
+}
+
+func allowSyntheticBacktests(mode runtimepolicy.Mode) bool {
+	if !mode.AllowsSyntheticBacktest() {
+		return false
+	}
+	raw := strings.TrimSpace(os.Getenv("ALLOW_SYNTHETIC_BACKTEST_DATA"))
+	if raw == "" {
+		return true
+	}
+	return strings.EqualFold(raw, "true")
 }
 
 func systemProvidersHandler() http.HandlerFunc {
