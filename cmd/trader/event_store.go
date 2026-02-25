@@ -204,6 +204,26 @@ func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) err
 	if in.Attributes == nil {
 		in.Attributes = map[string]any{}
 	}
+	classification := classifyEvent(eventClassificationInput{
+		Kind:       in.EventKind,
+		Title:      in.Title,
+		Summary:    in.Summary,
+		Severity:   in.Severity,
+		Symbols:    in.Symbols,
+		Attributes: in.Attributes,
+	})
+	if in.Attributes["sentiment"] == nil {
+		in.Attributes["sentiment"] = classification.Sentiment
+	}
+	if in.Attributes["materiality"] == nil {
+		in.Attributes["materiality"] = classification.Impact
+	}
+	if in.Attributes["classification"] == nil {
+		in.Attributes["classification"] = classification.Class
+	}
+	if in.Attributes["tags"] == nil {
+		in.Attributes["tags"] = classification.Tags
+	}
 
 	if err := s.ensureSource(ctx, in.SourceID, in.SourceName, in.ProviderType); err != nil {
 		return err

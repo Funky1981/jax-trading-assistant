@@ -175,10 +175,14 @@ func fetchEventBuckets(ctx context.Context, db *sql.DB, symbol string, start, en
 				Guidance:    stringFromMap(attrs, "guidance"),
 			})
 		case "news":
+			materiality := stringFromMap(attrs, "materiality")
+			if materiality == "" {
+				materiality = materialityFromSeverity(severity)
+			}
 			news[dayKey] = append(news[dayKey], strategytypes.NewsEvent{
 				Timestamp:   eventTime,
 				Category:    stringFromMap(attrs, "category"),
-				Materiality: materialityFromSeverity(severity),
+				Materiality: materiality,
 				Sentiment:   sentimentFromPayload(attrs, payload),
 			})
 		}
