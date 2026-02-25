@@ -29,6 +29,8 @@ type TradeStore interface {
 	UpdateTradeApproval(ctx context.Context, signalID uuid.UUID, orderID string) error
 	UpdateTradeStatus(ctx context.Context, tradeID uuid.UUID, status *BrokerOrderStatus) error
 	GetDailyRisk(ctx context.Context) (float64, error)
+	StoreOrderIntent(ctx context.Context, intent *OrderIntent) (string, error)
+	UpdateOrderIntentStatus(ctx context.Context, signalID uuid.UUID, status *BrokerOrderStatus) error
 }
 
 // BrokerAccountInfo represents broker account information
@@ -84,6 +86,20 @@ type Service struct {
 	// enforcer applies versioned policy constraints (L16) on top of the
 	// engine's built-in position-level checks. May be nil (no-op).
 	enforcer *risk.Enforcer
+}
+
+// OrderIntent records an execution request before/while the broker order is live.
+type OrderIntent struct {
+	SignalID      uuid.UUID
+	InstanceID    string
+	Symbol        string
+	Side          string
+	Quantity      int
+	OrderType     string
+	LimitPrice    *float64
+	StopPrice     *float64
+	Status        string
+	BrokerOrderID string
 }
 
 // NewService creates a new execution service.
@@ -173,6 +189,26 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 	// 8. Get initial order status
 	orderStatus, _ := s.broker.GetOrderStatus(ctx, orderResp.OrderID)
 
+	// 8b. Record order intent
+	intentStatus := "submitted"
+	if orderStatus != nil && orderStatus.Status != "" {
+		intentStatus = orderStatus.Status
+	}
+	if _, err := s.store.StoreOrderIntent(ctx, &OrderIntent{
+		SignalID:      signalID,
+		InstanceID:    signal.InstanceID,
+		Symbol:        signal.Symbol,
+		Side:          orderReq.Action,
+		Quantity:      orderReq.Quantity,
+		OrderType:     orderReq.OrderType,
+		LimitPrice:    orderReq.LimitPrice,
+		StopPrice:     orderReq.StopPrice,
+		Status:        intentStatus,
+		BrokerOrderID: fmt.Sprintf("%d", orderResp.OrderID),
+	}); err != nil {
+		log.Printf("Warning: Failed to store order intent: %v", err)
+	}
+
 	// 9. Calculate risk metrics
 	riskAmount := float64(quantity) * math.Abs(signal.EntryPrice-signal.StopLoss)
 	riskPercent := riskAmount / accountInfo.NetLiquidation
@@ -216,6 +252,13 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 	// 12. Update trade approval with order ID
 	if err := s.store.UpdateTradeApproval(ctx, signalID, trade.OrderID); err != nil {
 		log.Printf("Warning: Failed to update trade approval: %v", err)
+	}
+
+	// 12b. Update order intent status (if available)
+	if orderStatus != nil {
+		if err := s.store.UpdateOrderIntentStatus(ctx, signalID, orderStatus); err != nil {
+			log.Printf("Warning: Failed to update order intent status: %v", err)
+		}
 	}
 
 	// 13. Poll for status updates in background
@@ -459,6 +502,9 @@ func (s *PostgresTradeStore) UpdateTradeStatus(ctx context.Context, tradeID uuid
 		WHERE id = $4
 	`
 	_, err := s.db.ExecContext(ctx, query, status.Status, status.FilledQty, status.AvgFillPrice, tradeID.String())
+	if err == nil {
+		_ = s.updateIntentAndFill(ctx, tradeID, status)
+	}
 	return err
 }
 
@@ -472,6 +518,100 @@ func (s *PostgresTradeStore) GetDailyRisk(ctx context.Context) (float64, error) 
 	var totalRisk float64
 	err := s.db.QueryRowContext(ctx, query).Scan(&totalRisk)
 	return totalRisk, err
+}
+
+// StoreOrderIntent writes to order_intents for the current signal/order.
+func (s *PostgresTradeStore) StoreOrderIntent(ctx context.Context, intent *OrderIntent) (string, error) {
+	if intent == nil {
+		return "", fmt.Errorf("order intent is nil")
+	}
+	metadata, _ := json.Marshal(map[string]any{
+		"brokerOrderId": intent.BrokerOrderID,
+	})
+	var id string
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO order_intents (
+			instance_id, signal_id, flow_id, symbol, side, quantity, order_type,
+			limit_price, stop_price, status, metadata
+		)
+		VALUES (
+			NULLIF($1,'')::uuid, $2, NULL, $3, $4, $5, $6,
+			$7, $8, $9, $10::jsonb
+		)
+		RETURNING id::text
+	`, intent.InstanceID, intent.SignalID, intent.Symbol, intent.Side, intent.Quantity, intent.OrderType,
+		intent.LimitPrice, intent.StopPrice, intent.Status, string(metadata)).Scan(&id)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
+// UpdateOrderIntentStatus updates the most recent intent for a signal.
+func (s *PostgresTradeStore) UpdateOrderIntentStatus(ctx context.Context, signalID uuid.UUID, status *BrokerOrderStatus) error {
+	if status == nil {
+		return nil
+	}
+	metadata, _ := json.Marshal(map[string]any{
+		"filledQty":    status.FilledQty,
+		"avgFillPrice": status.AvgFillPrice,
+	})
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE order_intents
+		SET status = $2,
+		    metadata = metadata || $3::jsonb,
+		    updated_at = NOW()
+		WHERE id = (
+			SELECT id
+			FROM order_intents
+			WHERE signal_id = $1
+			ORDER BY created_at DESC
+			LIMIT 1
+		)
+	`, signalID, status.Status, string(metadata))
+	return err
+}
+
+func (s *PostgresTradeStore) updateIntentAndFill(ctx context.Context, tradeID uuid.UUID, status *BrokerOrderStatus) error {
+	if status == nil {
+		return nil
+	}
+	var (
+		signalID uuid.UUID
+		symbol   string
+		side     string
+	)
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT signal_id, symbol, direction
+		FROM trades
+		WHERE id = $1
+	`, tradeID).Scan(&signalID, &symbol, &side); err != nil {
+		return err
+	}
+	_ = s.UpdateOrderIntentStatus(ctx, signalID, status)
+
+	if status.FilledQty <= 0 && status.AvgFillPrice <= 0 {
+		return nil
+	}
+	// Insert fill if not already recorded.
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO fills (
+			intent_id, trade_id, broker_order_id, symbol, side, filled_qty, avg_fill_price, status, metadata
+		)
+		SELECT
+			oi.id, $1, $2, $3, $4, $5, $6, $7, $8::jsonb
+		FROM order_intents oi
+		WHERE oi.signal_id = $9
+		AND NOT EXISTS (
+			SELECT 1 FROM fills f
+			WHERE f.trade_id = $1
+			  AND f.broker_order_id = $2
+		)
+		ORDER BY oi.created_at DESC
+		LIMIT 1
+	`, tradeID.String(), fmt.Sprintf("%d", status.OrderID), symbol, side, status.FilledQty, status.AvgFillPrice, status.Status,
+		`{}`, signalID)
+	return err
 }
 
 // CheckInstanceExecutionAllowed enforces per-instance limits and flatten window.
