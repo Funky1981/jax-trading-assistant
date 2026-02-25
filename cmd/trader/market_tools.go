@@ -68,7 +68,7 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 			Name:     marketdata.ProviderPolygon,
 			APIKey:   polygonKey,
 			Tier:     envStr("POLYGON_TIER", "starter"),
-			Priority: 3,
+			Priority: 4,
 			Enabled:  true,
 		})
 	}
@@ -76,7 +76,7 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 		providers = append(providers, marketdata.ProviderConfig{
 			Name:     marketdata.ProviderFinancialDatasets,
 			APIKey:   fdKey,
-			Priority: 4,
+			Priority: 5,
 			Enabled:  true,
 		})
 	}
