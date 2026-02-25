@@ -53,12 +53,22 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 			Enabled:     true,
 		})
 	}
+	if alpacaKey := strings.TrimSpace(os.Getenv("ALPACA_API_KEY")); alpacaKey != "" {
+		alpacaSecret := strings.TrimSpace(os.Getenv("ALPACA_API_SECRET"))
+		providers = append(providers, marketdata.ProviderConfig{
+			Name:      marketdata.ProviderAlpaca,
+			APIKey:    alpacaKey,
+			APISecret: alpacaSecret,
+			Priority:  2,
+			Enabled:   true,
+		})
+	}
 	if polygonKey := strings.TrimSpace(os.Getenv("POLYGON_API_KEY")); polygonKey != "" {
 		providers = append(providers, marketdata.ProviderConfig{
 			Name:     marketdata.ProviderPolygon,
 			APIKey:   polygonKey,
 			Tier:     envStr("POLYGON_TIER", "starter"),
-			Priority: 2,
+			Priority: 3,
 			Enabled:  true,
 		})
 	}
