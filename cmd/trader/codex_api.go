@@ -1573,6 +1573,24 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 			"output":     output,
 		})
 	}
+	if testType == "data_recon" {
+		recon := datasetReconciliationSummary(ctx, pool)
+		reconStatus := "passed"
+		exitCode := 0
+		if toString(recon["status"]) == "failed" {
+			reconStatus = "failed"
+			overall = "failed"
+			exitCode = 1
+		}
+		results = append(results, map[string]any{
+			"command":    "dataset-hash-reconciliation",
+			"status":     reconStatus,
+			"exitCode":   exitCode,
+			"durationMs": 0,
+			"output":     toJSONString(recon),
+			"summary":    recon,
+		})
+	}
 	summary := map[string]any{
 		"gate":      gate,
 		"testType":  testType,
@@ -1716,6 +1734,121 @@ func writeDataReconCSV(pool *pgxpool.Pool, dir string) {
 		out.WriteString(fmt.Sprintf("%s,%s,%d\n", sanitizeCSV(symbol), day.Format("2006-01-02"), bars))
 	}
 	_ = os.WriteFile(file, []byte(out.String()), 0o644)
+
+	datasetFile := filepath.Join(dir, "dataset_recon.csv")
+	if pool == nil {
+		_ = os.WriteFile(datasetFile, []byte("run_id,dataset_id,run_hash,snapshot_hash,status,error\n,,,,,database pool unavailable\n"), 0o644)
+		return
+	}
+	dsRows, err := pool.Query(context.Background(), `
+		SELECT
+			COALESCE(b.external_run_id, b.id::text) AS run_id,
+			COALESCE(b.dataset_id,'') AS dataset_id,
+			COALESCE(b.dataset_hash,'') AS run_hash,
+			COALESCE(s.dataset_hash,'') AS snapshot_hash
+		FROM backtest_runs b
+		LEFT JOIN dataset_snapshots s ON s.dataset_id = b.dataset_id
+		WHERE b.created_at >= NOW() - INTERVAL '30 days'
+		ORDER BY b.created_at DESC
+		LIMIT 2000
+	`)
+	if err != nil {
+		_ = os.WriteFile(datasetFile, []byte("run_id,dataset_id,run_hash,snapshot_hash,status,error\n,,,,,"+sanitizeCSV(err.Error())+"\n"), 0o644)
+		return
+	}
+	defer dsRows.Close()
+	var dsOut strings.Builder
+	dsOut.WriteString("run_id,dataset_id,run_hash,snapshot_hash,status\n")
+	for dsRows.Next() {
+		var runID, datasetID, runHash, snapHash string
+		if err := dsRows.Scan(&runID, &datasetID, &runHash, &snapHash); err != nil {
+			continue
+		}
+		status := "ok"
+		switch {
+		case strings.TrimSpace(datasetID) == "":
+			status = "missing_dataset_id"
+		case strings.TrimSpace(snapHash) == "":
+			status = "missing_snapshot"
+		case strings.TrimSpace(runHash) == "":
+			status = "missing_run_hash"
+		case runHash != snapHash:
+			status = "hash_mismatch"
+		}
+		dsOut.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s\n",
+			sanitizeCSV(runID), sanitizeCSV(datasetID), sanitizeCSV(runHash), sanitizeCSV(snapHash), sanitizeCSV(status)))
+	}
+	_ = os.WriteFile(datasetFile, []byte(dsOut.String()), 0o644)
+}
+
+func datasetReconciliationSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
+	result := map[string]any{
+		"status":             "passed",
+		"checkedRuns":        0,
+		"missingDatasetID":   0,
+		"missingSnapshot":    0,
+		"missingRunHash":     0,
+		"hashMismatch":       0,
+		"windowDays":         30,
+		"checkedAt":          time.Now().UTC().Format(time.RFC3339),
+		"blockingViolations": 0,
+	}
+	if pool == nil {
+		result["status"] = "failed"
+		result["error"] = "database pool unavailable"
+		result["blockingViolations"] = 1
+		return result
+	}
+	rows, err := pool.Query(ctx, `
+		SELECT
+			COALESCE(b.dataset_id,'') AS dataset_id,
+			COALESCE(b.dataset_hash,'') AS run_hash,
+			COALESCE(s.dataset_hash,'') AS snapshot_hash
+		FROM backtest_runs b
+		LEFT JOIN dataset_snapshots s ON s.dataset_id = b.dataset_id
+		WHERE b.created_at >= NOW() - INTERVAL '30 days'
+	`)
+	if err != nil {
+		result["status"] = "failed"
+		result["error"] = err.Error()
+		result["blockingViolations"] = 1
+		return result
+	}
+	defer rows.Close()
+
+	checked := 0
+	missingDatasetID := 0
+	missingSnapshot := 0
+	missingRunHash := 0
+	hashMismatch := 0
+	for rows.Next() {
+		checked++
+		var datasetID, runHash, snapHash string
+		if err := rows.Scan(&datasetID, &runHash, &snapHash); err != nil {
+			continue
+		}
+		switch {
+		case strings.TrimSpace(datasetID) == "":
+			missingDatasetID++
+		case strings.TrimSpace(snapHash) == "":
+			missingSnapshot++
+		case strings.TrimSpace(runHash) == "":
+			missingRunHash++
+		case runHash != snapHash:
+			hashMismatch++
+		}
+	}
+	blocking := missingDatasetID + missingSnapshot + missingRunHash + hashMismatch
+	result["checkedRuns"] = checked
+	result["missingDatasetID"] = missingDatasetID
+	result["missingSnapshot"] = missingSnapshot
+	result["missingRunHash"] = missingRunHash
+	result["hashMismatch"] = hashMismatch
+	result["blockingViolations"] = blocking
+	if blocking > 0 {
+		result["status"] = "failed"
+	}
+	return result
 }
 
 func writePnLReconFiles(pool *pgxpool.Pool, dir string, summary map[string]any) {
