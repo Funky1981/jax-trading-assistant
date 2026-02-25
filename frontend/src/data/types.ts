@@ -335,3 +335,113 @@ export interface RunTimelineEvent {
   metadata?: Record<string, unknown>;
   ts?: string;
 }
+
+export interface EventSummary {
+  id: string;
+  kind: string;
+  title: string;
+  summary?: string;
+  severity?: string;
+  eventTime?: string;
+  sourceId?: string;
+  primarySymbol?: string;
+  symbols?: string[];
+  confidence?: number;
+  attributes?: Record<string, unknown>;
+  createdAt?: string;
+}
+
+export interface EventRaw {
+  id: string;
+  sourceId: string;
+  sourceEventId: string;
+  kind: string;
+  eventTime: string;
+  receivedAt: string;
+  symbol?: string;
+  payload?: Record<string, unknown>;
+  contentHash?: string;
+  flowId?: string;
+  dataSourceType?: string;
+  sourceProvider?: string;
+  isSynthetic?: boolean;
+  syntheticReason?: string;
+  provenanceVerifiedAt?: string | null;
+  createdAt?: string;
+}
+
+export interface EventDetail extends EventSummary {
+  raw?: EventRaw[];
+}
+
+export interface EventTimelineEvent {
+  type: string;
+  ts?: string;
+  message?: string;
+  rawId?: string;
+  flowId?: string;
+  payload?: Record<string, unknown>;
+  symbol?: string;
+  relevance?: number;
+  mappingMethod?: string;
+  isPrimary?: boolean;
+  eventId?: string;
+}
+
+export interface EventListResponse {
+  events: EventSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface EventTimelineResponse {
+  eventId: string;
+  timeline: EventTimelineEvent[];
+  totalRows?: number;
+}
+
+export interface EventClassification {
+  class: string;
+  impact: string;
+  sentiment: string;
+  horizon: string;
+  tags?: string[];
+  explanation?: string;
+}
+
+export interface DatasetSnapshot {
+  datasetId: string;
+  datasetHash: string;
+  name?: string;
+  symbol?: string;
+  source?: string;
+  schemaVer?: string;
+  recordCount?: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  filePath?: string;
+  metadata?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+  lastSeenAt?: string;
+  linkCount?: number;
+}
+
+export interface DatasetSnapshotLink {
+  runType: 'run' | 'backtest_run';
+  runRefId: string;
+  observedHash: string;
+  linkedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface DatasetListResponse {
+  datasets: DatasetSnapshot[];
+  limit: number;
+  offset: number;
+}
+
+export interface DatasetDetail extends DatasetSnapshot {
+  links?: DatasetSnapshotLink[];
+}
