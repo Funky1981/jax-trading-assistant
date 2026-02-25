@@ -41,6 +41,9 @@ type strategyInstanceDTO struct {
 }
 
 func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool, orchestratorURL string) {
+	mux.HandleFunc("/api/v1/events", protect(eventsHandler(pool)))
+	mux.HandleFunc("/api/v1/events/", protect(eventsDetailHandler(pool)))
+
 	mux.HandleFunc("/api/v1/instances", protect(instancesHandler(pool)))
 	mux.HandleFunc("/api/v1/instances/", protect(instancesDetailHandler(pool)))
 
@@ -268,7 +271,8 @@ func backtestRunsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		instanceID := r.URL.Query().Get("instanceId")
 		query := `
 			SELECT id::text, external_run_id, COALESCE(instance_id::text,''), strategy_type_id, symbols, run_from, run_to,
-			       status, stats::text, started_at, completed_at, created_at
+			       status, stats::text, COALESCE(dataset_id,''), COALESCE(dataset_hash,''), data_source_type, COALESCE(source_provider,''),
+			       is_synthetic, COALESCE(synthetic_reason,''), provenance_verified_at, started_at, completed_at, created_at
 			FROM backtest_runs
 			WHERE ($1 = '' OR instance_id::text = $1)
 			ORDER BY started_at DESC
@@ -281,11 +285,13 @@ func backtestRunsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		defer rows.Close()
 		out := make([]map[string]any, 0, limit)
 		for rows.Next() {
-			var id, runID, iid, sid, status, stats string
+			var id, runID, iid, sid, status, stats, datasetID, datasetHash, dataSourceType, sourceProvider, syntheticReason string
+			var isSynthetic bool
 			var symbols []string
 			var from, to, started, created time.Time
-			var completed *time.Time
-			if err := rows.Scan(&id, &runID, &iid, &sid, &symbols, &from, &to, &status, &stats, &started, &completed, &created); err == nil {
+			var completed, provenanceVerifiedAt *time.Time
+			if err := rows.Scan(&id, &runID, &iid, &sid, &symbols, &from, &to, &status, &stats, &datasetID, &datasetHash,
+				&dataSourceType, &sourceProvider, &isSynthetic, &syntheticReason, &provenanceVerifiedAt, &started, &completed, &created); err == nil {
 				out = append(out, map[string]any{
 					"id":          id,
 					"runId":       runID,
@@ -296,6 +302,15 @@ func backtestRunsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 					"to":          to,
 					"status":      status,
 					"stats":       json.RawMessage(stats),
+					"datasetId":   datasetID,
+					"datasetHash": datasetHash,
+					"provenance": map[string]any{
+						"dataSourceType":       dataSourceType,
+						"sourceProvider":       sourceProvider,
+						"isSynthetic":          isSynthetic,
+						"syntheticReason":      syntheticReason,
+						"provenanceVerifiedAt": provenanceVerifiedAt,
+					},
 					"startedAt":   started,
 					"completedAt": completed,
 					"createdAt":   created,
@@ -318,17 +333,21 @@ func backtestRunDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		var (
-			rowID, runID, iid, sid, status, stats, cfg, errText string
-			symbols                                             []string
-			from, to, started, created                          time.Time
-			completed                                           *time.Time
+			rowID, runID, iid, sid, status, stats, cfg, errText, datasetID, datasetHash, dataSourceType, sourceProvider, syntheticReason string
+			symbols                                                                                                                      []string
+			from, to, started, created                                                                                                   time.Time
+			completed, provenanceVerifiedAt                                                                                              *time.Time
+			isSynthetic                                                                                                                  bool
 		)
 		err := pool.QueryRow(r.Context(), `
 			SELECT id::text, external_run_id, COALESCE(instance_id::text,''), strategy_type_id, symbols, run_from, run_to,
-			       status, stats::text, config_snapshot::text, started_at, completed_at, COALESCE(error,''), created_at
+			       status, stats::text, config_snapshot::text, COALESCE(dataset_id,''), COALESCE(dataset_hash,''), data_source_type,
+			       COALESCE(source_provider,''), is_synthetic, COALESCE(synthetic_reason,''), provenance_verified_at,
+			       started_at, completed_at, COALESCE(error,''), created_at
 			FROM backtest_runs
 			WHERE external_run_id = $1 OR id::text = $1
-		`, id).Scan(&rowID, &runID, &iid, &sid, &symbols, &from, &to, &status, &stats, &cfg, &started, &completed, &errText, &created)
+		`, id).Scan(&rowID, &runID, &iid, &sid, &symbols, &from, &to, &status, &stats, &cfg, &datasetID, &datasetHash, &dataSourceType,
+			&sourceProvider, &isSynthetic, &syntheticReason, &provenanceVerifiedAt, &started, &completed, &errText, &created)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				http.NotFound(w, r)
@@ -423,6 +442,15 @@ func backtestRunDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			"status":      status,
 			"stats":       json.RawMessage(stats),
 			"config":      json.RawMessage(cfg),
+			"datasetId":   datasetID,
+			"datasetHash": datasetHash,
+			"provenance": map[string]any{
+				"dataSourceType":       dataSourceType,
+				"sourceProvider":       sourceProvider,
+				"isSynthetic":          isSynthetic,
+				"syntheticReason":      syntheticReason,
+				"provenanceVerifiedAt": provenanceVerifiedAt,
+			},
 			"trades":      trades,
 			"bySymbol":    bySymbol,
 			"startedAt":   started,
@@ -582,10 +610,13 @@ func researchProjectsDetailHandler(pool *pgxpool.Pool, orchestratorURL string) h
 				"status":    "running",
 			}
 			_ = pool.QueryRow(r.Context(), `
-				INSERT INTO runs (run_type, status, flow_id, source, instance_id, summary, started_at)
-				VALUES ('research', 'running', $1, 'api', NULLIF($2,'')::uuid, $3::jsonb, NOW())
+				INSERT INTO runs (
+					run_type, status, flow_id, source, instance_id, summary, started_at,
+					data_source_type, source_provider, dataset_id, is_synthetic, provenance_verified_at
+				)
+				VALUES ('research', 'running', $1, 'api', NULLIF($2,'')::uuid, $3::jsonb, NOW(), 'real', 'research.project', NULLIF($4,''), FALSE, NOW())
 				RETURNING id::text
-			`, flowID, baseReq.InstanceID, toJSONString(summaryStart)).Scan(&parentRunID)
+			`, flowID, baseReq.InstanceID, toJSONString(summaryStart), baseReq.DatasetID).Scan(&parentRunID)
 
 			orchestratorURL = strings.TrimRight(strings.TrimSpace(orchestratorURL), "/")
 			if orchestratorURL == "" {
@@ -889,7 +920,8 @@ func runsListHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		limit := parseIntParam(r.URL.Query().Get("limit"), 100)
 		rows, err := pool.Query(r.Context(), `
 			SELECT id::text, run_type, status, COALESCE(flow_id,''), COALESCE(source,''), COALESCE(instance_id::text,''), summary::text,
-			       started_at, completed_at, COALESCE(error,'')
+			       COALESCE(dataset_id,''), COALESCE(dataset_hash,''), data_source_type, COALESCE(source_provider,''), is_synthetic,
+			       COALESCE(synthetic_reason,''), provenance_verified_at, started_at, completed_at, COALESCE(error,'')
 			FROM runs
 			ORDER BY started_at DESC
 			LIMIT $1
@@ -901,10 +933,12 @@ func runsListHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		defer rows.Close()
 		out := make([]map[string]any, 0, limit)
 		for rows.Next() {
-			var id, runType, status, flowID, source, instanceID, summary, errText string
+			var id, runType, status, flowID, source, instanceID, summary, errText, datasetID, datasetHash, dataSourceType, sourceProvider, syntheticReason string
+			var isSynthetic bool
 			var started time.Time
-			var completed *time.Time
-			if err := rows.Scan(&id, &runType, &status, &flowID, &source, &instanceID, &summary, &started, &completed, &errText); err == nil {
+			var completed, provenanceVerifiedAt *time.Time
+			if err := rows.Scan(&id, &runType, &status, &flowID, &source, &instanceID, &summary, &datasetID, &datasetHash, &dataSourceType,
+				&sourceProvider, &isSynthetic, &syntheticReason, &provenanceVerifiedAt, &started, &completed, &errText); err == nil {
 				out = append(out, map[string]any{
 					"id":          id,
 					"runType":     runType,
@@ -913,6 +947,15 @@ func runsListHandler(pool *pgxpool.Pool) http.HandlerFunc {
 					"source":      source,
 					"instanceId":  instanceID,
 					"summary":     json.RawMessage(summary),
+					"datasetId":   datasetID,
+					"datasetHash": datasetHash,
+					"provenance": map[string]any{
+						"dataSourceType":       dataSourceType,
+						"sourceProvider":       sourceProvider,
+						"isSynthetic":          isSynthetic,
+						"syntheticReason":      syntheticReason,
+						"provenanceVerifiedAt": provenanceVerifiedAt,
+					},
 					"startedAt":   started,
 					"completedAt": completed,
 					"error":       errText,
@@ -965,16 +1008,19 @@ func runsDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		var (
-			id, runType, status, flowID, source, instanceID, summary, errText string
-			started                                                           time.Time
-			completed                                                         *time.Time
+			id, runType, status, flowID, source, instanceID, summary, errText, datasetID, datasetHash, dataSourceType, sourceProvider, syntheticReason string
+			started                                                                                                                                    time.Time
+			completed, provenanceVerifiedAt                                                                                                            *time.Time
+			isSynthetic                                                                                                                                bool
 		)
 		err := pool.QueryRow(r.Context(), `
 			SELECT id::text, run_type, status, COALESCE(flow_id,''), COALESCE(source,''), COALESCE(instance_id::text,''),
-			       summary::text, started_at, completed_at, COALESCE(error,'')
+			       summary::text, COALESCE(dataset_id,''), COALESCE(dataset_hash,''), data_source_type, COALESCE(source_provider,''),
+			       is_synthetic, COALESCE(synthetic_reason,''), provenance_verified_at, started_at, completed_at, COALESCE(error,'')
 			FROM runs
 			WHERE id = $1::uuid
-		`, runID).Scan(&id, &runType, &status, &flowID, &source, &instanceID, &summary, &started, &completed, &errText)
+		`, runID).Scan(&id, &runType, &status, &flowID, &source, &instanceID, &summary, &datasetID, &datasetHash, &dataSourceType, &sourceProvider,
+			&isSynthetic, &syntheticReason, &provenanceVerifiedAt, &started, &completed, &errText)
 		if err != nil {
 			http.NotFound(w, r)
 			return
@@ -987,6 +1033,15 @@ func runsDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			"source":      source,
 			"instanceId":  instanceID,
 			"summary":     json.RawMessage(summary),
+			"datasetId":   datasetID,
+			"datasetHash": datasetHash,
+			"provenance": map[string]any{
+				"dataSourceType":       dataSourceType,
+				"sourceProvider":       sourceProvider,
+				"isSynthetic":          isSynthetic,
+				"syntheticReason":      syntheticReason,
+				"provenanceVerifiedAt": provenanceVerifiedAt,
+			},
 			"startedAt":   started,
 			"completedAt": completed,
 			"error":       errText,
@@ -1430,23 +1485,35 @@ func runBacktestAndPersist(ctx context.Context, pool *pgxpool.Pool, orchestrator
 	_, _ = pool.Exec(ctx, `
 		INSERT INTO backtest_runs (
 			external_run_id, instance_id, strategy_type_id, strategy_config_id, symbols, run_from, run_to,
-			seed, dataset_id, status, stats, config_snapshot, started_at, completed_at, flow_id
+			seed, dataset_id, status, stats, config_snapshot, started_at, completed_at, flow_id,
+			data_source_type, source_provider, dataset_hash, is_synthetic, provenance_verified_at
 		) VALUES (
 			$1, NULLIF($2,'')::uuid, $3, $4, $5, $6, $7,
-			$8, $9, 'completed', $10::jsonb, $11::jsonb, NOW(), NOW(), $12
+			$8, $9, 'completed', $10::jsonb, $11::jsonb, NOW(), NOW(), $12,
+			'real', 'research.backtest', NULLIF($13,''), FALSE, NOW()
 		)
 		ON CONFLICT (external_run_id)
-		DO UPDATE SET stats = EXCLUDED.stats, completed_at = NOW()
+		DO UPDATE SET
+			stats = EXCLUDED.stats,
+			completed_at = NOW(),
+			data_source_type = EXCLUDED.data_source_type,
+			source_provider = EXCLUDED.source_provider,
+			dataset_hash = EXCLUDED.dataset_hash,
+			is_synthetic = EXCLUDED.is_synthetic,
+			provenance_verified_at = EXCLUDED.provenance_verified_at
 	`, runID, req.InstanceID, req.StrategyID, req.StrategyConfigID, symbols, fromDate.UTC(), toDate.UTC(),
-		req.Seed, req.DatasetID, string(statsJSON), string(cfgJSON), observability.FlowIDFromContext(ctx))
+		req.Seed, req.DatasetID, string(statsJSON), string(cfgJSON), observability.FlowIDFromContext(ctx), toString(upstream["dataset_hash"]))
 
 	runRowID := uuid.NewString()
 	_ = pool.QueryRow(ctx, `
-		INSERT INTO runs (run_type, status, flow_id, source, instance_id, summary, started_at, completed_at, backtest_run_id)
+		INSERT INTO runs (
+			run_type, status, flow_id, source, instance_id, summary, started_at, completed_at, backtest_run_id,
+			data_source_type, source_provider, dataset_id, dataset_hash, is_synthetic, provenance_verified_at
+		)
 		VALUES ('backtest', 'completed', $1, $2, NULLIF($3,'')::uuid, $4::jsonb, NOW(), NOW(),
-		        (SELECT id FROM backtest_runs WHERE external_run_id=$5))
+		        (SELECT id FROM backtest_runs WHERE external_run_id=$5), 'real', 'research.backtest', NULLIF($6,''), NULLIF($7,''), FALSE, NOW())
 		RETURNING id::text
-	`, observability.FlowIDFromContext(ctx), source, req.InstanceID, string(statsJSON), runID).Scan(&runRowID)
+	`, observability.FlowIDFromContext(ctx), source, req.InstanceID, string(statsJSON), runID, req.DatasetID, toString(upstream["dataset_hash"])).Scan(&runRowID)
 
 	return map[string]any{
 		"runId":       runID,

@@ -13,10 +13,18 @@ import (
 	"time"
 
 	sharedbacktest "jax-trading-assistant/libs/backtest"
+	"jax-trading-assistant/libs/runtimepolicy"
 	"jax-trading-assistant/libs/strategies"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
+
+func syntheticBacktestAllowed() bool {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("ALLOW_SYNTHETIC_BACKTEST_DATA")), "true") {
+		return true
+	}
+	return runtimepolicy.CurrentMode().AllowsSyntheticBacktest()
+}
 
 type BacktestEngine struct {
 	mu    sync.RWMutex
@@ -223,6 +231,9 @@ func (e *BacktestEngine) persistRun(ctx context.Context, in RunStrategyInput, ru
 	if e.store == nil {
 		return nil
 	}
+	dataSourceType := "real"
+	sourceProvider := "postgres.candles"
+	isSynthetic := false
 	statsJSON, _ := json.Marshal(run.Stats)
 	configJSON, _ := json.Marshal(map[string]any{
 		"strategyConfigId": in.StrategyConfigID,
@@ -239,21 +250,29 @@ func (e *BacktestEngine) persistRun(ctx context.Context, in RunStrategyInput, ru
 	err := e.store.QueryRowContext(ctx, `
 		INSERT INTO backtest_runs (
 			external_run_id, instance_id, strategy_type_id, strategy_config_id, symbols, run_from, run_to,
-			seed, dataset_id, status, stats, config_snapshot, flow_id, started_at, completed_at
+			seed, dataset_id, status, stats, config_snapshot, flow_id, started_at, completed_at,
+			data_source_type, source_provider, dataset_hash, is_synthetic, synthetic_reason, provenance_verified_at
 		) VALUES (
 			$1, NULLIF($2,'')::uuid, $3, $4, $5, $6, $7,
-			$8, $9, 'completed', $10::jsonb, $11::jsonb, $12, $13, $14
+			$8, $9, 'completed', $10::jsonb, $11::jsonb, $12, $13, $14,
+			$15, $16, $17, $18, $19, NOW()
 		)
 		ON CONFLICT (external_run_id)
 		DO UPDATE SET
 			stats = EXCLUDED.stats,
 			config_snapshot = EXCLUDED.config_snapshot,
-			completed_at = EXCLUDED.completed_at
+			completed_at = EXCLUDED.completed_at,
+			data_source_type = EXCLUDED.data_source_type,
+			source_provider = EXCLUDED.source_provider,
+			dataset_hash = EXCLUDED.dataset_hash,
+			is_synthetic = EXCLUDED.is_synthetic,
+			synthetic_reason = EXCLUDED.synthetic_reason,
+			provenance_verified_at = EXCLUDED.provenance_verified_at
 		RETURNING id::text
 	`,
 		run.RunID, in.InstanceID, normalizeStrategyID(in.StrategyConfigID), in.StrategyConfigID, in.Symbols,
 		in.From.UTC(), in.To.UTC(), in.Seed, in.DatasetID, string(statsJSON), string(configJSON),
-		in.FlowID, startedAt, completedAt,
+		in.FlowID, startedAt, completedAt, dataSourceType, sourceProvider, "", isSynthetic, "",
 	).Scan(&runPK)
 	if err != nil {
 		return err
@@ -320,6 +339,9 @@ func (e *BacktestEngine) buildDataSource(ctx context.Context, symbols []string, 
 		indicators: make(map[string]map[int64]strategies.AnalysisInput, len(symbols)),
 	}
 	if e.store == nil {
+		if !syntheticBacktestAllowed() {
+			return nil, fmt.Errorf("synthetic backtest candles disabled in runtime mode %s", runtimepolicy.CurrentMode())
+		}
 		for _, symbol := range symbols {
 			sym := strings.ToUpper(strings.TrimSpace(symbol))
 			candles := syntheticCandles(sym, from.UTC(), to.UTC())

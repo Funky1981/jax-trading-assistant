@@ -62,6 +62,23 @@ func (c ProvidersConfig) Validate() error {
 		default:
 			return fmt.Errorf("providers config: providers[%d] has unsupported transport %q", i, p.Transport)
 		}
+
+		dataSourceType := strings.ToLower(strings.TrimSpace(p.DataSourceType))
+		if dataSourceType == "" {
+			dataSourceType = "unknown"
+		}
+		switch dataSourceType {
+		case "real", "synthetic", "unknown":
+			// ok
+		default:
+			return fmt.Errorf("providers config: providers[%d] has unsupported data_source_type %q", i, p.DataSourceType)
+		}
+		if p.IsSynthetic && dataSourceType == "real" {
+			return fmt.Errorf("providers config: providers[%d] is_synthetic=true conflicts with data_source_type=real", i)
+		}
+		if dataSourceType == "synthetic" && strings.TrimSpace(p.SyntheticReason) == "" {
+			return fmt.Errorf("providers config: providers[%d] data_source_type=synthetic requires synthetic_reason", i)
+		}
 	}
 
 	return nil

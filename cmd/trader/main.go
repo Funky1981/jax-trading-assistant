@@ -21,8 +21,10 @@ import (
 	"jax-trading-assistant/internal/modules/execution"
 	"jax-trading-assistant/internal/trader/signalgenerator"
 	"jax-trading-assistant/libs/risk"
+	"jax-trading-assistant/libs/runtimepolicy"
 	"jax-trading-assistant/libs/strategies"
 	"jax-trading-assistant/libs/strategytypes"
+	"jax-trading-assistant/libs/utcp"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -40,6 +42,7 @@ type Config struct {
 	Port             string
 	IBBridgeURL      string
 	ExecutionEnabled bool
+	RuntimeMode      runtimepolicy.Mode
 	// Execution risk parameters
 	MaxRiskPerTrade     float64
 	MinPositionSize     int
@@ -60,11 +63,18 @@ func main() {
 	}
 
 	// Load configuration from environment
-	cfg := loadConfig()
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatalf("invalid runtime configuration: %v", err)
+	}
 
 	log.Printf("starting jax-trader v%s (built: %s)", version, buildTime)
 	log.Printf("database: %s", maskDSN(cfg.DatabaseURL))
 	log.Printf("port: %s", cfg.Port)
+	log.Printf("runtime mode: %s", cfg.RuntimeMode)
+	if err := validateStartupProviderPolicy(cfg.RuntimeMode); err != nil {
+		log.Fatalf("startup provider policy failed: %v", err)
+	}
 
 	// Initialize database connection pool
 	ctx, ctxCancel := context.WithCancel(context.Background())
@@ -98,6 +108,9 @@ func main() {
 	// Initialize strategy registry
 	registry := strategies.NewRegistry()
 	strategyTypeRegistry := strategytypes.DefaultRegistry()
+	if err := validateEventProviderReadiness(ctx, dbPool, strategyTypeRegistry, cfg.RuntimeMode); err != nil {
+		log.Fatalf("event provider readiness failed: %v", err)
+	}
 
 	// ADR-0012 Phase 4: Load strategies from APPROVED artifacts only
 	// This implements the artifact-based promotion gate
@@ -222,12 +235,27 @@ func main() {
 	log.Println("jax-trader stopped")
 }
 
-func loadConfig() Config {
+func loadConfig() (Config, error) {
 	cfg := Config{
 		DatabaseURL: os.Getenv("DATABASE_URL"),
 		Port:        os.Getenv("PORT"),
 		IBBridgeURL: os.Getenv("IB_BRIDGE_URL"),
 	}
+	modeRaw := strings.TrimSpace(os.Getenv("JAX_RUNTIME_MODE"))
+	if modeRaw == "" {
+		modeRaw = strings.TrimSpace(os.Getenv("APP_RUNTIME_MODE"))
+	}
+	if modeRaw == "" {
+		modeRaw = strings.TrimSpace(os.Getenv("APP_ENV"))
+	}
+	if modeRaw == "" {
+		modeRaw = strings.TrimSpace(os.Getenv("ENV"))
+	}
+	mode, err := runtimepolicy.ParseMode(modeRaw)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.RuntimeMode = mode
 
 	// Parse execution settings
 	if os.Getenv("EXECUTION_ENABLED") == "true" {
@@ -262,7 +290,80 @@ func loadConfig() Config {
 		log.Println("IB_BRIDGE_URL not set, using default")
 	}
 
-	return cfg
+	return cfg, nil
+}
+
+func validateStartupProviderPolicy(mode runtimepolicy.Mode) error {
+	path := strings.TrimSpace(os.Getenv("PROVIDERS_CONFIG_PATH"))
+	if path == "" {
+		path = filepath.Join("config", "providers.json")
+	}
+	cfg, err := utcp.LoadProvidersConfig(path)
+	if err != nil {
+		if mode.EnforceStrictProviderPolicy() {
+			return fmt.Errorf("load providers config %q: %w", path, err)
+		}
+		log.Printf("provider policy warning: unable to load %q in %s mode: %v", path, mode, err)
+		return nil
+	}
+	if err := utcp.ValidateRuntimeProviderPolicy(mode, cfg); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateEventProviderReadiness(ctx context.Context, db *pgxpool.Pool, registry *strategytypes.Registry, mode runtimepolicy.Mode) error {
+	rows, err := db.Query(ctx, `
+		SELECT strategy_type_id
+		FROM strategy_instances
+		WHERE enabled = TRUE
+	`)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "strategy_instances") && strings.Contains(strings.ToLower(err.Error()), "does not exist") {
+			log.Printf("event provider readiness skipped: strategy_instances table missing (migrations not fully applied)")
+			return nil
+		}
+		return fmt.Errorf("query enabled strategy instances: %w", err)
+	}
+	defer rows.Close()
+
+	needsEventData := false
+	for rows.Next() {
+		var strategyTypeID string
+		if err := rows.Scan(&strategyTypeID); err != nil {
+			return err
+		}
+		st, ok := registry.Get(strategyTypeID)
+		if !ok {
+			continue
+		}
+		req := st.Metadata().RequiredInputs
+		if req.NeedsNews || req.NeedsEarnings {
+			needsEventData = true
+			break
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if !needsEventData {
+		return nil
+	}
+
+	hasPolygon := strings.TrimSpace(os.Getenv("POLYGON_API_KEY")) != ""
+	hasFinnhub := strings.TrimSpace(os.Getenv("FINNHUB_API_KEY")) != ""
+	if hasPolygon || hasFinnhub {
+		return nil
+	}
+
+	productionLike := mode == runtimepolicy.ModeLive ||
+		strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "production") ||
+		strings.EqualFold(strings.TrimSpace(os.Getenv("ENV")), "production")
+	if productionLike {
+		return fmt.Errorf("enabled event-dependent strategies require POLYGON_API_KEY or FINNHUB_API_KEY in production/live mode")
+	}
+	log.Printf("event provider warning: enabled event-dependent strategies but no POLYGON_API_KEY/FINNHUB_API_KEY; running degraded outside production")
+	return nil
 }
 
 // parseFloatEnv parses a float from environment variable with a default value

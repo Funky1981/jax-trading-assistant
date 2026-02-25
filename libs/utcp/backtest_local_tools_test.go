@@ -7,6 +7,7 @@ import (
 )
 
 func TestBacktestTools_RunAndGet(t *testing.T) {
+	t.Setenv("JAX_RUNTIME_MODE", "dev")
 	registry := NewLocalRegistry()
 	engine := NewBacktestEngine()
 	if err := RegisterBacktestTools(registry, engine); err != nil {
@@ -52,6 +53,7 @@ func TestBacktestTools_RunAndGet(t *testing.T) {
 }
 
 func TestBacktestTools_GetUnknownRunIsError(t *testing.T) {
+	t.Setenv("JAX_RUNTIME_MODE", "dev")
 	registry := NewLocalRegistry()
 	engine := NewBacktestEngine()
 	if err := RegisterBacktestTools(registry, engine); err != nil {

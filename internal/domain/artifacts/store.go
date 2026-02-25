@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -425,6 +426,26 @@ func (s *Store) UpdateApprovalState(ctx context.Context, artifactID uuid.UUID, t
 	approval := &Approval{State: currentState}
 	if !approval.CanTransitionTo(toState) {
 		return fmt.Errorf("invalid state transition: %s -> %s", currentState, toState)
+	}
+	if toState == StateApproved || toState == StateActive {
+		var (
+			dataSourceType       string
+			isSynthetic          bool
+			provenanceVerifiedAt sql.NullTime
+		)
+		err = tx.QueryRow(ctx, `
+			SELECT COALESCE(data_source_type,'unknown'), COALESCE(is_synthetic,false), provenance_verified_at
+			FROM strategy_artifacts
+			WHERE id = $1
+		`, artifactID).Scan(&dataSourceType, &isSynthetic, &provenanceVerifiedAt)
+		if err != nil {
+			return fmt.Errorf("failed to verify provenance before promotion: %w", err)
+		}
+		dataSourceType = strings.ToLower(strings.TrimSpace(dataSourceType))
+		if isSynthetic || dataSourceType == "synthetic" || dataSourceType == "unknown" || !provenanceVerifiedAt.Valid {
+			return fmt.Errorf("artifact promotion blocked: provenance invalid (data_source_type=%s is_synthetic=%t verified=%t)",
+				dataSourceType, isSynthetic, provenanceVerifiedAt.Valid)
+		}
 	}
 
 	// Update approval state

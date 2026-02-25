@@ -16,6 +16,7 @@ import (
 
 	"jax-trading-assistant/libs/calendar"
 	"jax-trading-assistant/libs/marketdata"
+	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/utcp"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -69,7 +70,7 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 		}
 	}
 
-	mt.events = newEventAggregator(mt.httpClient)
+	mt.events = newEventAggregator(mt.httpClient, pool)
 	return mt
 }
 
@@ -328,9 +329,10 @@ type eventAggregator struct {
 	finnhubKey    string
 	failClosed    bool
 	calendarStore *calendar.Store
+	store         *eventStore
 }
 
-func newEventAggregator(httpClient *http.Client) *eventAggregator {
+func newEventAggregator(httpClient *http.Client, pool *pgxpool.Pool) *eventAggregator {
 	storeDir := envStr("CALENDAR_STORE_DIR", "data/calendar")
 	store, _ := calendar.OpenStore(storeDir)
 	return &eventAggregator{
@@ -339,14 +341,29 @@ func newEventAggregator(httpClient *http.Client) *eventAggregator {
 		finnhubKey:    strings.TrimSpace(os.Getenv("FINNHUB_API_KEY")),
 		failClosed:    strings.EqualFold(os.Getenv("APP_ENV"), "production") || strings.EqualFold(os.Getenv("ENV"), "production"),
 		calendarStore: store,
+		store:         newEventStore(pool),
 	}
 }
 
 func (e *eventAggregator) getEarnings(ctx context.Context, symbol string, limit int) ([]utcp.EarningsEntry, error) {
 	if out, err := e.getPolygonEarnings(ctx, symbol, limit); err == nil && len(out) > 0 {
+		if pErr := e.store.SaveEarnings(ctx, symbol, "polygon", out); pErr != nil {
+			observability.LogEvent(ctx, "warn", "events.persist_earnings_failed", map[string]any{
+				"symbol": symbol,
+				"source": "polygon",
+				"error":  pErr.Error(),
+			})
+		}
 		return out, nil
 	}
 	if out, err := e.getFinnhubEarnings(ctx, symbol, limit); err == nil && len(out) > 0 {
+		if pErr := e.store.SaveEarnings(ctx, symbol, "finnhub", out); pErr != nil {
+			observability.LogEvent(ctx, "warn", "events.persist_earnings_failed", map[string]any{
+				"symbol": symbol,
+				"source": "finnhub",
+				"error":  pErr.Error(),
+			})
+		}
 		return out, nil
 	}
 	if e.failClosed {
@@ -357,13 +374,34 @@ func (e *eventAggregator) getEarnings(ctx context.Context, symbol string, limit 
 
 func (e *eventAggregator) getNews(ctx context.Context, symbol string, limit int, fromRaw, toRaw string) ([]utcp.NewsEntry, error) {
 	if out, err := e.getPolygonNews(ctx, symbol, limit); err == nil && len(out) > 0 {
+		if pErr := e.store.SaveNews(ctx, symbol, "polygon", out); pErr != nil {
+			observability.LogEvent(ctx, "warn", "events.persist_news_failed", map[string]any{
+				"symbol": symbol,
+				"source": "polygon",
+				"error":  pErr.Error(),
+			})
+		}
 		return out, nil
 	}
 	if out, err := e.getFinnhubNews(ctx, symbol, limit, fromRaw, toRaw); err == nil && len(out) > 0 {
+		if pErr := e.store.SaveNews(ctx, symbol, "finnhub", out); pErr != nil {
+			observability.LogEvent(ctx, "warn", "events.persist_news_failed", map[string]any{
+				"symbol": symbol,
+				"source": "finnhub",
+				"error":  pErr.Error(),
+			})
+		}
 		return out, nil
 	}
 	macro := e.getCalendarMacro(limit)
 	if len(macro) > 0 {
+		if pErr := e.store.SaveMacroNews(ctx, "calendar", macro); pErr != nil {
+			observability.LogEvent(ctx, "warn", "events.persist_news_failed", map[string]any{
+				"symbol": symbol,
+				"source": "calendar",
+				"error":  pErr.Error(),
+			})
+		}
 		return macro, nil
 	}
 	if e.failClosed {

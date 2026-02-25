@@ -34,7 +34,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8092/health')\""]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8092/health')"]
       interval: 30s
       timeout: 10s
       start_period: 40s
@@ -119,9 +119,12 @@ services:
     ports:
       - "8100:8100"
       - "8081:8081"
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - ib-bridge
+      postgres:
+        condition: service_healthy
+      ib-bridge:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/health || exit 1"]
       interval: 30s

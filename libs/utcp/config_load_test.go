@@ -99,3 +99,30 @@ func TestLoadProvidersConfig_UnknownFieldRejected(t *testing.T) {
 		t.Fatalf("expected error, got nil")
 	}
 }
+
+func TestLoadProvidersConfig_SyntheticRequiresReason(t *testing.T) {
+	path := writeTempFile(t, "providers.json", `{
+  "providers": [
+    { "id": "market-data", "transport": "http", "endpoint": "http://localhost:8100/tools", "data_source_type": "synthetic" }
+  ]
+}`)
+
+	_, err := LoadProvidersConfig(path)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
+
+func TestLoadProvidersConfig_ValidWithDataSourceType(t *testing.T) {
+	path := writeTempFile(t, "providers.json", `{
+  "providers": [
+    { "id": "market-data", "transport": "http", "endpoint": "http://localhost:8100/tools", "data_source_type": "real" },
+    { "id": "risk", "transport": "local", "data_source_type": "unknown" }
+  ]
+}`)
+
+	_, err := LoadProvidersConfig(path)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+}

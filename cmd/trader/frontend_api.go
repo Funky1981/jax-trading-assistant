@@ -51,8 +51,10 @@ import (
 	"jax-trading-assistant/libs/auth"
 	"jax-trading-assistant/libs/middleware"
 	"jax-trading-assistant/libs/observability"
+	"jax-trading-assistant/libs/runtimepolicy"
 	"jax-trading-assistant/libs/strategies"
 	"jax-trading-assistant/libs/strategytypes"
+	"jax-trading-assistant/libs/utcp"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -76,6 +78,72 @@ func envStr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func systemRuntimeHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		mode := runtimepolicy.CurrentMode()
+		jsonOK(w, map[string]any{
+			"runtimeMode":               mode.String(),
+			"allowLiveTrading":          strings.EqualFold(os.Getenv("ALLOW_LIVE_TRADING"), "true"),
+			"executionEnabled":          strings.EqualFold(os.Getenv("EXECUTION_ENABLED"), "true"),
+			"strictProviderPolicy":      mode.EnforceStrictProviderPolicy(),
+			"noSyntheticTruthPaths":     mode.EnforceNoSyntheticTruthPaths(),
+			"allowSyntheticBacktests":   mode.AllowsSyntheticBacktest() || strings.EqualFold(os.Getenv("ALLOW_SYNTHETIC_BACKTEST_DATA"), "true"),
+			"providersConfigPath":       envStr("PROVIDERS_CONFIG_PATH", "config/providers.json"),
+			"checkedAt":                 time.Now().UTC(),
+			"environmentProductionLike": strings.EqualFold(os.Getenv("APP_ENV"), "production") || strings.EqualFold(os.Getenv("ENV"), "production"),
+		})
+	}
+}
+
+func systemProvidersHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		mode := runtimepolicy.CurrentMode()
+		path := envStr("PROVIDERS_CONFIG_PATH", "config/providers.json")
+		cfg, err := utcp.LoadProvidersConfig(path)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("load providers config: %v", err), http.StatusInternalServerError)
+			return
+		}
+		policyErr := utcp.ValidateRuntimeProviderPolicy(mode, cfg)
+		providers := make([]map[string]any, 0, len(cfg.Providers))
+		for _, p := range cfg.Providers {
+			dsType := strings.TrimSpace(strings.ToLower(p.DataSourceType))
+			if dsType == "" {
+				dsType = "unknown"
+			}
+			providers = append(providers, map[string]any{
+				"id":              p.ID,
+				"transport":       p.Transport,
+				"endpoint":        p.Endpoint,
+				"dataSourceType":  dsType,
+				"sourceProvider":  p.SourceProvider,
+				"isSynthetic":     p.IsSynthetic || dsType == "synthetic",
+				"syntheticReason": p.SyntheticReason,
+			})
+		}
+		resp := map[string]any{
+			"runtimeMode":          mode.String(),
+			"strictProviderPolicy": mode.EnforceStrictProviderPolicy(),
+			"policyPass":           policyErr == nil,
+			"providers":            providers,
+			"path":                 path,
+			"checkedAt":            time.Now().UTC(),
+		}
+		if policyErr != nil {
+			resp["policyError"] = policyErr.Error()
+		}
+		jsonOK(w, resp)
+	}
 }
 
 // startFrontendAPIServer launches the jax-api-compatible HTTP server.
@@ -121,6 +189,8 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 			"uptime":  time.Since(startTime).Round(time.Second).String(),
 		})
 	})
+	mux.HandleFunc("/api/v1/system/runtime", protect(systemRuntimeHandler()))
+	mux.HandleFunc("/api/v1/system/providers", protect(systemProvidersHandler()))
 
 	// ── Signals ───────────────────────────────────────────────────────────────
 	mux.HandleFunc("/api/v1/signals", protect(signalsListHandler(pool)))

@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -27,7 +28,9 @@ import (
 	"jax-trading-assistant/internal/modules/orchestration"
 	"jax-trading-assistant/libs/middleware"
 	"jax-trading-assistant/libs/observability"
+	"jax-trading-assistant/libs/runtimepolicy"
 	"jax-trading-assistant/libs/strategies"
+	"jax-trading-assistant/libs/utcp"
 
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -48,14 +51,22 @@ type Config struct {
 	DexterServiceURL string
 	HindsightURL     string // used by the in-process memory proxy
 	// DatasetDir is the directory for the L03 dataset catalog (catalog.json).
-	DatasetDir string
+	DatasetDir  string
+	RuntimeMode runtimepolicy.Mode
 }
 
 func main() {
-	cfg := loadConfig()
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatalf("invalid runtime configuration: %v", err)
+	}
 
 	log.Printf("starting jax-research v%s (built: %s)", version, buildTime)
 	log.Printf("port: %s", cfg.Port)
+	log.Printf("runtime mode: %s", cfg.RuntimeMode)
+	if err := validateStartupProviderPolicy(cfg.RuntimeMode); err != nil {
+		log.Fatalf("startup provider policy failed: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -348,8 +359,11 @@ func createRunRecord(ctx context.Context, db *sql.DB, orchestrationRunID uuid.UU
 		"orchestrationRunId": orchestrationRunID.String(),
 	})
 	_, err := db.ExecContext(ctx, `
-		INSERT INTO runs (run_type, status, flow_id, source, orchestration_run_id, summary, started_at)
-		VALUES ('orchestration', 'running', $1, 'research', $2, $3::jsonb, NOW())
+		INSERT INTO runs (
+			run_type, status, flow_id, source, orchestration_run_id, summary, started_at,
+			data_source_type, source_provider, is_synthetic, provenance_verified_at
+		)
+		VALUES ('orchestration', 'running', $1, 'research', $2, $3::jsonb, NOW(), 'real', 'research.orchestration', FALSE, NOW())
 	`, flowID, orchestrationRunID, string(summary))
 	return err
 }
@@ -427,7 +441,21 @@ func updateParentRunError(ctx context.Context, db *sql.DB, orchestrationRunID uu
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-func loadConfig() Config {
+func loadConfig() (Config, error) {
+	modeRaw := strings.TrimSpace(os.Getenv("JAX_RUNTIME_MODE"))
+	if modeRaw == "" {
+		modeRaw = strings.TrimSpace(os.Getenv("APP_RUNTIME_MODE"))
+	}
+	if modeRaw == "" {
+		modeRaw = strings.TrimSpace(os.Getenv("APP_ENV"))
+	}
+	if modeRaw == "" {
+		modeRaw = strings.TrimSpace(os.Getenv("ENV"))
+	}
+	mode, err := runtimepolicy.ParseMode(modeRaw)
+	if err != nil {
+		return Config{}, err
+	}
 	return Config{
 		DatabaseURL:      envOrDefault("DATABASE_URL", "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"),
 		Port:             envOrDefault("PORT", "8091"),
@@ -436,7 +464,24 @@ func loadConfig() Config {
 		DexterServiceURL: envOrDefault("DEXTER_SERVICE_URL", ""),
 		HindsightURL:     envOrDefault("HINDSIGHT_URL", ""),
 		DatasetDir:       envOrDefault("DATASET_DIR", "data/datasets"),
+		RuntimeMode:      mode,
+	}, nil
+}
+
+func validateStartupProviderPolicy(mode runtimepolicy.Mode) error {
+	path := strings.TrimSpace(os.Getenv("PROVIDERS_CONFIG_PATH"))
+	if path == "" {
+		path = filepath.Join("config", "providers.json")
 	}
+	cfg, err := utcp.LoadProvidersConfig(path)
+	if err != nil {
+		if mode.EnforceStrictProviderPolicy() {
+			return fmt.Errorf("load providers config %q: %w", path, err)
+		}
+		log.Printf("provider policy warning: unable to load %q in %s mode: %v", path, mode, err)
+		return nil
+	}
+	return utcp.ValidateRuntimeProviderPolicy(mode, cfg)
 }
 
 func envOrDefault(key, def string) string {

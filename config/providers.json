@@ -3,34 +3,42 @@
     {
       "id": "market-data",
       "transport": "http",
-      "endpoint": "http://jax-trader:8100/tools"
+      "endpoint": "http://jax-trader:8100/tools",
+      "data_source_type": "real",
+      "source_provider": "jax-trader.market-tools"
     },
     {
       "id": "risk",
-      "transport": "local"
+      "transport": "local",
+      "data_source_type": "unknown"
     },
     {
       "id": "backtest",
-      "transport": "local"
+      "transport": "local",
+      "data_source_type": "unknown"
     },
     {
       "id": "broker",
       "transport": "http",
-      "endpoint": "http://broker-sim:8080/tools"
+      "endpoint": "http://broker-sim:8080/tools",
+      "data_source_type": "unknown"
     },
     {
       "id": "storage",
-      "transport": "local"
+      "transport": "local",
+      "data_source_type": "unknown"
     },
     {
       "id": "dexter",
       "transport": "http",
-      "endpoint": "http://dexter:3000/tools"
+      "endpoint": "http://dexter:3000/tools",
+      "data_source_type": "real"
     },
     {
       "id": "memory",
       "transport": "http",
-      "endpoint": "http://jax-research:8091/tools"
+      "endpoint": "http://jax-research:8091/tools",
+      "data_source_type": "real"
     }
   ]
 }
