@@ -80,8 +80,16 @@ type BacktestResponse struct {
 	MaxDrawdown   float64 `json:"max_drawdown"`
 	FinalCapital  float64 `json:"final_capital"`
 	// DatasetInfo shows which dataset was used (for reproducibility).
-	DatasetID   string `json:"dataset_id"`
-	DatasetHash string `json:"dataset_hash,omitempty"`
+	DatasetID          string `json:"dataset_id"`
+	DatasetHash        string `json:"dataset_hash,omitempty"`
+	DatasetName        string `json:"dataset_name,omitempty"`
+	DatasetSymbol      string `json:"dataset_symbol,omitempty"`
+	DatasetSource      string `json:"dataset_source,omitempty"`
+	DatasetSchemaVer   string `json:"dataset_schema_ver,omitempty"`
+	DatasetRecordCount int    `json:"dataset_record_count,omitempty"`
+	DatasetStartDate   string `json:"dataset_start_date,omitempty"`
+	DatasetEndDate     string `json:"dataset_end_date,omitempty"`
+	DatasetFilePath    string `json:"dataset_file_path,omitempty"`
 }
 
 // ─── handler ──────────────────────────────────────────────────────────────────
@@ -169,21 +177,29 @@ func runBacktest(ctx context.Context, deps *backtestDeps, req BacktestRequest) (
 		result.RunID, result.TotalTrades, result.WinRate*100, result.TotalReturn*100)
 
 	resp := BacktestResponse{
-		RunID:         result.RunID,
-		Strategy:      req.Strategy,
-		Symbols:       result.Symbols,
-		Seed:          result.Seed,
-		DurationMs:    result.DurationMs,
-		TotalTrades:   result.TotalTrades,
-		WinningTrades: result.WinningTrades,
-		LosingTrades:  result.LosingTrades,
-		WinRate:       result.WinRate,
-		TotalReturn:   result.TotalReturn,
-		SharpeRatio:   result.SharpeRatio,
-		MaxDrawdown:   result.MaxDrawdown,
-		FinalCapital:  result.FinalCapital,
-		DatasetID:     ds.ID,
-		DatasetHash:   ds.Hash[:12],
+		RunID:              result.RunID,
+		Strategy:           req.Strategy,
+		Symbols:            result.Symbols,
+		Seed:               result.Seed,
+		DurationMs:         result.DurationMs,
+		TotalTrades:        result.TotalTrades,
+		WinningTrades:      result.WinningTrades,
+		LosingTrades:       result.LosingTrades,
+		WinRate:            result.WinRate,
+		TotalReturn:        result.TotalReturn,
+		SharpeRatio:        result.SharpeRatio,
+		MaxDrawdown:        result.MaxDrawdown,
+		FinalCapital:       result.FinalCapital,
+		DatasetID:          ds.ID,
+		DatasetHash:        ds.Hash,
+		DatasetName:        ds.Name,
+		DatasetSymbol:      ds.Symbol,
+		DatasetSource:      ds.Source,
+		DatasetSchemaVer:   ds.SchemaVer,
+		DatasetRecordCount: ds.RecordCount,
+		DatasetStartDate:   ds.StartDate.UTC().Format(time.RFC3339),
+		DatasetEndDate:     ds.EndDate.UTC().Format(time.RFC3339),
+		DatasetFilePath:    ds.FilePath,
 	}
 	return resp, nil
 }

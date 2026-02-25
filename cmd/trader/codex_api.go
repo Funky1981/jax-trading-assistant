@@ -42,7 +42,10 @@ type strategyInstanceDTO struct {
 
 func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool, orchestratorURL string) {
 	mux.HandleFunc("/api/v1/events", protect(eventsHandler(pool)))
+	mux.HandleFunc("/api/v1/events/classify", protect(eventsClassifyHandler(pool)))
 	mux.HandleFunc("/api/v1/events/", protect(eventsDetailHandler(pool)))
+	mux.HandleFunc("/api/v1/datasets", protect(datasetsListHandler(pool)))
+	mux.HandleFunc("/api/v1/datasets/", protect(datasetsDetailHandler(pool)))
 
 	mux.HandleFunc("/api/v1/instances", protect(instancesHandler(pool)))
 	mux.HandleFunc("/api/v1/instances/", protect(instancesDetailHandler(pool)))
@@ -1514,6 +1517,13 @@ func runBacktestAndPersist(ctx context.Context, pool *pgxpool.Pool, orchestrator
 		        (SELECT id FROM backtest_runs WHERE external_run_id=$5), 'real', 'research.backtest', NULLIF($6,''), NULLIF($7,''), FALSE, NOW())
 		RETURNING id::text
 	`, observability.FlowIDFromContext(ctx), source, req.InstanceID, string(statsJSON), runID, req.DatasetID, toString(upstream["dataset_hash"])).Scan(&runRowID)
+	if err := persistDatasetSnapshotAndLinks(ctx, pool, req.DatasetID, toString(upstream["dataset_hash"]), upstream, runRowID, runID); err != nil {
+		observability.LogEvent(ctx, "warn", "dataset.snapshot_link_failed", map[string]any{
+			"dataset_id": req.DatasetID,
+			"run_id":     runID,
+			"error":      err.Error(),
+		})
+	}
 
 	return map[string]any{
 		"runId":       runID,

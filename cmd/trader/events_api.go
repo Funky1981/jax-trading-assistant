@@ -14,6 +14,38 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+func eventsClassifyHandler(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req struct {
+			Kind       string         `json:"kind"`
+			Title      string         `json:"title"`
+			Summary    string         `json:"summary"`
+			Severity   string         `json:"severity"`
+			Symbols    []string       `json:"symbols"`
+			Attributes map[string]any `json:"attributes"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON", http.StatusBadRequest)
+			return
+		}
+		classification := classifyEvent(eventClassificationInput{
+			Kind:       req.Kind,
+			Title:      req.Title,
+			Summary:    req.Summary,
+			Severity:   req.Severity,
+			Symbols:    req.Symbols,
+			Attributes: req.Attributes,
+		})
+		jsonOK(w, map[string]any{
+			"classification": classification,
+		})
+	}
+}
+
 func eventsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -114,6 +146,10 @@ func eventsDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 		if len(parts) > 1 && parts[1] == "timeline" {
 			eventTimelineHandler(w, r, pool, eventID)
+			return
+		}
+		if len(parts) > 1 && parts[1] == "classify" {
+			eventClassifyByID(w, r, pool, eventID)
 			return
 		}
 		eventDetailGet(w, r, pool, eventID)
@@ -326,6 +362,47 @@ func eventTimelineHandler(w http.ResponseWriter, r *http.Request, pool *pgxpool.
 		"eventId":   eventID,
 		"timeline":  timeline,
 		"totalRows": len(timeline),
+	})
+}
+
+func eventClassifyByID(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, eventID string) {
+	var (
+		kind, title, summary, severity, attrs string
+	)
+	var symbols []string
+	err := pool.QueryRow(r.Context(), `
+		SELECT
+			n.event_kind, n.title, COALESCE(n.summary,''), COALESCE(n.severity,''), n.attributes::text,
+			COALESCE(array_agg(DISTINCT sm.symbol) FILTER (WHERE sm.symbol IS NOT NULL), '{}')
+		FROM event_normalized n
+		LEFT JOIN event_symbol_map sm ON sm.normalized_event_id = n.id
+		WHERE n.id = $1::uuid
+		GROUP BY n.id, n.event_kind, n.title, n.summary, n.severity, n.attributes
+	`, eventID).Scan(&kind, &title, &summary, &severity, &attrs, &symbols)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, schemaAwareError(err), http.StatusInternalServerError)
+		return
+	}
+	if strings.TrimSpace(attrs) == "" {
+		attrs = "{}"
+	}
+	var attrObj map[string]any
+	_ = json.Unmarshal([]byte(attrs), &attrObj)
+	classification := classifyEvent(eventClassificationInput{
+		Kind:       kind,
+		Title:      title,
+		Summary:    summary,
+		Severity:   severity,
+		Symbols:    symbols,
+		Attributes: attrObj,
+	})
+	jsonOK(w, map[string]any{
+		"eventId":        eventID,
+		"classification": classification,
 	})
 }
 
