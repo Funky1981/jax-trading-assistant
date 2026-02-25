@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Download } from 'lucide-react';
+import { Download, Sparkles } from 'lucide-react';
 import { backtestService } from '@/data/backtest-service';
-import type { BacktestRunBySymbol, BacktestTrade } from '@/data/types';
+import { datasetsService } from '@/data/datasets-service';
+import { eventsService } from '@/data/events-service';
+import type { BacktestRunBySymbol, BacktestTrade, EventSummary } from '@/data/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,6 +24,24 @@ export function AnalysisPage() {
     queryFn: () => backtestService.get(runId),
     enabled: runId.length > 0,
   });
+  const [eventSymbol, setEventSymbol] = useState('');
+  const datasetQuery = useQuery({
+    queryKey: ['dataset-detail', runDetailQuery.data?.datasetId],
+    queryFn: () => datasetsService.get(runDetailQuery.data?.datasetId ?? ''),
+    enabled: Boolean(runDetailQuery.data?.datasetId),
+  });
+  const eventsQuery = useQuery({
+    queryKey: ['events-for-run', eventSymbol, runDetailQuery.data?.from, runDetailQuery.data?.to],
+    queryFn: () =>
+      eventsService.list({
+        symbol: eventSymbol,
+        from: runDetailQuery.data?.from,
+        to: runDetailQuery.data?.to,
+        limit: 50,
+      }),
+    enabled: Boolean(eventSymbol),
+  });
+  const [classifications, setClassifications] = useState<Record<string, string>>({});
   const timelineQuery = useQuery({
     queryKey: ['analysis-run-timeline', runDetailQuery.data?.parentRunId],
     queryFn: () => backtestService.getRunTimeline(runDetailQuery.data?.parentRunId ?? ''),
@@ -37,6 +57,16 @@ export function AnalysisPage() {
       return detail.bySymbol;
     }
     return aggregateBySymbol(detail.trades ?? []);
+  }, [runDetailQuery.data]);
+
+  useEffect(() => {
+    if (!runDetailQuery.data) {
+      return;
+    }
+    const symbols = runDetailQuery.data.symbols ?? [];
+    if (symbols.length > 0) {
+      setEventSymbol(symbols[0]);
+    }
   }, [runDetailQuery.data]);
 
   const onDownloadCsv = () => {
@@ -113,6 +143,45 @@ export function AnalysisPage() {
 
       {runDetailQuery.data && (
         <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Dataset Provenance</CardTitle>
+              <CardDescription>Snapshot and hash used for this run.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-3">
+              <div>
+                <p className="text-sm font-medium">Dataset ID</p>
+                <p className="text-sm text-muted-foreground">{runDetailQuery.data.datasetId ?? '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Dataset Hash</p>
+                <p className="text-sm text-muted-foreground">{runDetailQuery.data.datasetHash ?? '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Source</p>
+                <p className="text-sm text-muted-foreground">{runDetailQuery.data.provenance?.sourceProvider ?? '-'}</p>
+              </div>
+              {datasetQuery.data && (
+                <>
+                  <div>
+                    <p className="text-sm font-medium">Dataset Name</p>
+                    <p className="text-sm text-muted-foreground">{datasetQuery.data.name ?? '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Symbol</p>
+                    <p className="text-sm text-muted-foreground">{datasetQuery.data.symbol ?? '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Date Range</p>
+                    <p className="text-sm text-muted-foreground">
+                      {fmtDate(datasetQuery.data.startDate)} → {fmtDate(datasetQuery.data.endDate)}
+                    </p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
             <MetricCard title="Trades" value={numOrDash(runDetailQuery.data.stats.trades ?? runDetailQuery.data.stats.totalTrades)} />
             <MetricCard title="Win Rate" value={pctOrDash(runDetailQuery.data.stats.winRate)} />
@@ -183,6 +252,71 @@ export function AnalysisPage() {
                       <TableCell>{numOrDash(trade.pnl)}</TableCell>
                       <TableCell>{numOrDash(trade.metadata?.rMultiple)}</TableCell>
                       <TableCell>{stringOrDash(trade.metadata?.exitReason)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Events</CardTitle>
+              <CardDescription>News and macro events around this run.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Select
+                value={eventSymbol || 'none'}
+                onValueChange={(value) => setEventSymbol(value === 'none' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select symbol" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select symbol</SelectItem>
+                  {(runDetailQuery.data.symbols ?? []).map((symbol) => (
+                    <SelectItem key={symbol} value={symbol}>
+                      {symbol}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Kind</TableHead>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Classify</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(eventsQuery.data?.events ?? []).map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell>{fmtDate(event.eventTime)}</TableCell>
+                      <TableCell>{event.kind}</TableCell>
+                      <TableCell>{event.severity ?? '-'}</TableCell>
+                      <TableCell>{event.title}</TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const classification = await eventsService.classifyById(event.id);
+                            setClassifications((prev) => ({
+                              ...prev,
+                              [event.id]: `${classification.class} / ${classification.impact} / ${classification.sentiment}`,
+                            }));
+                          }}
+                        >
+                          <Sparkles className="mr-1 h-4 w-4" />
+                          Classify
+                        </Button>
+                        {classifications[event.id] && (
+                          <div className="text-xs text-muted-foreground mt-1">{classifications[event.id]}</div>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -289,4 +423,3 @@ function pctOrDash(value: unknown): string {
 function stringOrDash(value: unknown): string {
   return typeof value === 'string' && value.length > 0 ? value : '-';
 }
-

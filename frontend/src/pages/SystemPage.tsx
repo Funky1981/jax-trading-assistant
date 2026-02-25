@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DashboardGrid, DashboardPanel } from '@/components/layout';
@@ -7,6 +8,10 @@ import {
   MetricsPanel,
   MemoryBrowserPanel,
 } from '@/components/dashboard';
+import { eventsService } from '@/data/events-service';
+import { datasetsService } from '@/data/datasets-service';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 // Panel IDs for state management
 const PANEL_IDS = ['health', 'metrics', 'memory'] as const;
@@ -43,6 +48,15 @@ function savePanelState(state: Record<PanelId, boolean>) {
 export function SystemPage() {
   const [panelStates, setPanelStates] =
     useState<Record<PanelId, boolean>>(loadPanelState);
+
+  const eventsQuery = useQuery({
+    queryKey: ['system-events'],
+    queryFn: () => eventsService.list({ limit: 20 }),
+  });
+  const datasetsQuery = useQuery({
+    queryKey: ['system-datasets'],
+    queryFn: () => datasetsService.list({ limit: 20 }),
+  });
 
   // Persist panel state
   useEffect(() => {
@@ -139,7 +153,76 @@ export function SystemPage() {
             onToggle={() => togglePanel('memory')}
           />
         </DashboardPanel>
+
+        <DashboardPanel colSpan={2}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Events</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Kind</TableHead>
+                    <TableHead>Symbol</TableHead>
+                    <TableHead>Title</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(eventsQuery.data?.events ?? []).map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell>{fmtDate(event.eventTime)}</TableCell>
+                      <TableCell>{event.kind}</TableCell>
+                      <TableCell>{event.primarySymbol || '-'}</TableCell>
+                      <TableCell>{event.title}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </DashboardPanel>
+
+        <DashboardPanel>
+          <Card>
+            <CardHeader>
+              <CardTitle>Dataset Snapshots</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Symbol</TableHead>
+                    <TableHead>Hash</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(datasetsQuery.data?.datasets ?? []).map((dataset) => (
+                    <TableRow key={dataset.datasetId}>
+                      <TableCell>{dataset.name || dataset.datasetId}</TableCell>
+                      <TableCell>{dataset.symbol || '-'}</TableCell>
+                      <TableCell>{dataset.datasetHash?.slice(0, 8) || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </DashboardPanel>
       </DashboardGrid>
     </div>
   );
+}
+
+function fmtDate(raw?: string | null): string {
+  if (!raw) {
+    return '-';
+  }
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) {
+    return raw;
+  }
+  return d.toLocaleString();
 }

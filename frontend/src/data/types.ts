@@ -241,6 +241,9 @@ export interface BacktestRunSummary {
   to?: string;
   status: string;
   stats: BacktestRunStats;
+  datasetId?: string;
+  datasetHash?: string;
+  provenance?: ProvenanceInfo;
   startedAt?: string;
   completedAt?: string;
   createdAt?: string;
@@ -320,6 +323,9 @@ export interface RunSummary {
   source?: string;
   instanceId?: string;
   summary?: Record<string, unknown>;
+  datasetId?: string;
+  datasetHash?: string;
+  provenance?: ProvenanceInfo;
   startedAt?: string;
   completedAt?: string | null;
   error?: string;
@@ -334,6 +340,14 @@ export interface RunTimelineEvent {
   message?: string;
   metadata?: Record<string, unknown>;
   ts?: string;
+}
+
+export interface ProvenanceInfo {
+  dataSourceType?: string;
+  sourceProvider?: string;
+  isSynthetic?: boolean;
+  syntheticReason?: string;
+  provenanceVerifiedAt?: string | null;
 }
 
 export interface EventSummary {

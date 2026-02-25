@@ -18,6 +18,9 @@ interface BacktestRunSummaryDTO {
   to?: string;
   status: string;
   stats?: BacktestRunStats;
+  datasetId?: string;
+  datasetHash?: string;
+  provenance?: Record<string, unknown>;
   startedAt?: string;
   completedAt?: string;
   createdAt?: string;
@@ -42,6 +45,9 @@ function toSummary(dto: BacktestRunSummaryDTO): BacktestRunSummary {
     to: dto.to,
     status: dto.status,
     stats: dto.stats ?? {},
+    datasetId: dto.datasetId,
+    datasetHash: dto.datasetHash,
+    provenance: dto.provenance,
     startedAt: dto.startedAt,
     completedAt: dto.completedAt,
     createdAt: dto.createdAt,
@@ -106,4 +112,3 @@ export const backtestService = {
     return out.timeline ?? [];
   },
 };
-

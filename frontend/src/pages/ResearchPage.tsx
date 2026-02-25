@@ -5,7 +5,8 @@ import { Play, Upload, Download, Save, Plus, RefreshCw } from 'lucide-react';
 import { instancesService } from '@/data/instances-service';
 import { backtestService } from '@/data/backtest-service';
 import { researchService } from '@/data/research-service';
-import type { ResearchProject, StrategyInstance } from '@/data/types';
+import { datasetsService } from '@/data/datasets-service';
+import type { DatasetSnapshot, ResearchProject, StrategyInstance } from '@/data/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -80,6 +81,7 @@ export function ResearchPage() {
   const [editorError, setEditorError] = useState<string>('');
   const [symbolsOverride, setSymbolsOverride] = useState('SPY');
   const [runRange, setRunRange] = useState(getInitialDateRange());
+  const [datasetId, setDatasetId] = useState('');
   const [runsInstanceFilter, setRunsInstanceFilter] = useState('all');
   const [runsLimit, setRunsLimit] = useState(100);
   const [projectGridText, setProjectGridText] = useState('{\n  "riskPerTrade": [0.005, 0.01]\n}');
@@ -115,6 +117,10 @@ export function ResearchPage() {
         instanceId: runsInstanceFilter === 'all' ? undefined : runsInstanceFilter,
         limit: runsLimit,
       }),
+  });
+  const datasetsQuery = useQuery({
+    queryKey: ['datasets'],
+    queryFn: () => datasetsService.list({ limit: 200 }),
   });
   const projectRunsQuery = useQuery({
     queryKey: ['research-project-runs', selectedProjectId],
@@ -216,6 +222,7 @@ export function ResearchPage() {
         from: runRange.fromStr,
         to: runRange.toStr,
         symbolsOverride: symbols,
+        datasetId: datasetId || undefined,
       });
     },
     onSuccess: async () => {
@@ -261,6 +268,7 @@ export function ResearchPage() {
       return researchService.runProject(project.id, {
         from: runRange.fromStr,
         to: runRange.toStr,
+        datasetId: datasetId || undefined,
       });
     },
     onSuccess: async () => {
@@ -281,6 +289,10 @@ export function ResearchPage() {
     setEditor(defaultEditorState);
     setEditorError('');
   };
+
+  const selectedDataset = useMemo(() => {
+    return (datasetsQuery.data?.datasets ?? []).find((ds) => ds.datasetId === datasetId);
+  }, [datasetsQuery.data, datasetId]);
 
   const onImportConfig = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -526,6 +538,28 @@ export function ResearchPage() {
                     onChange={(event) => setSymbolsOverride(event.target.value)}
                     placeholder="Symbols override (comma-separated)"
                   />
+                  <Select value={datasetId || 'none'} onValueChange={(value) => setDatasetId(value === 'none' ? '' : value)}>
+                    <SelectTrigger className="col-span-2">
+                      <SelectValue placeholder="Dataset snapshot (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Use runtime default</SelectItem>
+                      {(datasetsQuery.data?.datasets ?? []).map((dataset) => (
+                        <SelectItem key={dataset.datasetId} value={dataset.datasetId}>
+                          {dataset.name || dataset.datasetId} {dataset.symbol ? `(${dataset.symbol})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedDataset && (
+                    <div className="col-span-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                      <div>Dataset: {selectedDataset.name || selectedDataset.datasetId}</div>
+                      <div>Hash: {selectedDataset.datasetHash}</div>
+                      <div>
+                        Range: {fmtDate(selectedDataset.startDate)} → {fmtDate(selectedDataset.endDate)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -717,6 +751,7 @@ export function ResearchPage() {
                   <TableRow>
                     <TableHead>Run ID</TableHead>
                     <TableHead>Instance</TableHead>
+                    <TableHead>Dataset</TableHead>
                     <TableHead>From</TableHead>
                     <TableHead>To</TableHead>
                     <TableHead>Win Rate</TableHead>
@@ -733,6 +768,7 @@ export function ResearchPage() {
                     >
                       <TableCell>{run.runId}</TableCell>
                       <TableCell>{run.instanceId || '-'}</TableCell>
+                      <TableCell>{run.datasetId ? run.datasetId.slice(0, 8) : '-'}</TableCell>
                       <TableCell>{fmtDate(run.from)}</TableCell>
                       <TableCell>{fmtDate(run.to)}</TableCell>
                       <TableCell>{num(run.stats.winRate)}</TableCell>
@@ -756,4 +792,3 @@ function num(value: unknown): string {
   }
   return value.toFixed(4);
 }
-
