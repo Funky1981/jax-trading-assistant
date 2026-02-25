@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"jax-trading-assistant/libs/observability"
+	"jax-trading-assistant/libs/strategytypes"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -40,15 +41,15 @@ type strategyInstanceDTO struct {
 	UpdatedAt          time.Time       `json:"updatedAt"`
 }
 
-func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool, orchestratorURL string) {
+func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool, orchestratorURL string, strategyTypeReg *strategytypes.Registry) {
 	mux.HandleFunc("/api/v1/events", protect(eventsHandler(pool)))
 	mux.HandleFunc("/api/v1/events/classify", protect(eventsClassifyHandler(pool)))
 	mux.HandleFunc("/api/v1/events/", protect(eventsDetailHandler(pool)))
 	mux.HandleFunc("/api/v1/datasets", protect(datasetsListHandler(pool)))
 	mux.HandleFunc("/api/v1/datasets/", protect(datasetsDetailHandler(pool)))
 
-	mux.HandleFunc("/api/v1/instances", protect(instancesHandler(pool)))
-	mux.HandleFunc("/api/v1/instances/", protect(instancesDetailHandler(pool)))
+	mux.HandleFunc("/api/v1/instances", protect(instancesHandler(pool, strategyTypeReg)))
+	mux.HandleFunc("/api/v1/instances/", protect(instancesDetailHandler(pool, strategyTypeReg)))
 
 	mux.HandleFunc("/api/v1/backtests/run", protect(backtestRunHandler(pool, orchestratorURL)))
 	mux.HandleFunc("/api/v1/backtests/runs", protect(backtestRunsHandler(pool)))
@@ -73,7 +74,7 @@ func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 	mux.HandleFunc("/api/v1/test-runs", protect(testRunsHandler(pool)))
 }
 
-func instancesHandler(pool *pgxpool.Pool) http.HandlerFunc {
+func instancesHandler(pool *pgxpool.Pool, strategyTypeReg *strategytypes.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -119,8 +120,12 @@ func instancesHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				http.Error(w, "name and strategyTypeId are required", http.StatusBadRequest)
 				return
 			}
-			if len(req.ConfigJSON) == 0 {
+			if req.ConfigJSON == nil {
 				req.ConfigJSON = json.RawMessage(`{}`)
+			}
+			if err := validateStrategyInstance(strategyTypeReg, req.StrategyTypeID, req.ConfigJSON); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			hash := hashConfig(req.ConfigJSON)
 			row := pool.QueryRow(r.Context(), `
@@ -150,8 +155,14 @@ func instancesHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				http.Error(w, "id is required", http.StatusBadRequest)
 				return
 			}
-			if len(req.ConfigJSON) == 0 {
+			if req.ConfigJSON == nil {
 				req.ConfigJSON = json.RawMessage(`{}`)
+			}
+			if req.StrategyTypeID != "" {
+				if err := validateStrategyInstance(strategyTypeReg, req.StrategyTypeID, req.ConfigJSON); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
 			}
 			hash := hashConfig(req.ConfigJSON)
 			_, err := pool.Exec(r.Context(), `
@@ -180,7 +191,7 @@ func instancesHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
-func instancesDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
+func instancesDetailHandler(pool *pgxpool.Pool, strategyTypeReg *strategytypes.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/v1/instances/")
 		parts := strings.Split(strings.Trim(path, "/"), "/")
@@ -194,22 +205,39 @@ func instancesDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			action = parts[1]
 		}
 		if r.Method == http.MethodPut && action == "" {
-			var req strategyInstanceDTO
+			var req struct {
+				Enabled    *bool           `json:"enabled"`
+				ConfigJSON json.RawMessage `json:"configJson"`
+			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, "invalid JSON", http.StatusBadRequest)
 				return
 			}
-			if len(req.ConfigJSON) == 0 {
-				req.ConfigJSON = json.RawMessage(`{}`)
+			configRaw := ""
+			hash := ""
+			if req.ConfigJSON != nil {
+				if len(req.ConfigJSON) == 0 {
+					req.ConfigJSON = json.RawMessage(`{}`)
+				}
+				configRaw = string(req.ConfigJSON)
+				hash = hashConfig(req.ConfigJSON)
+				strategyTypeID := instanceStrategyTypeID(r.Context(), pool, id)
+				if err := validateStrategyInstance(strategyTypeReg, strategyTypeID, req.ConfigJSON); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
 			}
-			hash := hashConfig(req.ConfigJSON)
+			var enabled sql.NullBool
+			if req.Enabled != nil {
+				enabled = sql.NullBool{Bool: *req.Enabled, Valid: true}
+			}
 			_, err := pool.Exec(r.Context(), `
 				UPDATE strategy_instances
 				SET enabled = COALESCE($2, enabled),
 				    config = COALESCE(NULLIF($3,'')::jsonb, config),
 				    config_hash = COALESCE(NULLIF($4,''), config_hash)
 				WHERE id = $1::uuid
-			`, id, req.Enabled, string(req.ConfigJSON), hash)
+			`, id, enabled, configRaw, hash)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -2129,6 +2157,39 @@ func hashConfig(raw json.RawMessage) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func validateStrategyInstance(reg *strategytypes.Registry, strategyTypeID string, config json.RawMessage) error {
+	if reg == nil {
+		return nil
+	}
+	strategyTypeID = strings.TrimSpace(strategyTypeID)
+	if strategyTypeID == "" || strings.EqualFold(strategyTypeID, "legacy") {
+		return nil
+	}
+	st, ok := reg.Get(strategyTypeID)
+	if !ok {
+		return fmt.Errorf("unknown strategyTypeId: %s", strategyTypeID)
+	}
+	params, err := parseStrategyParams(config)
+	if err != nil {
+		return err
+	}
+	return st.Validate(params)
+}
+
+func parseStrategyParams(config json.RawMessage) (map[string]any, error) {
+	if len(config) == 0 {
+		return map[string]any{}, nil
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(config, &raw); err != nil {
+		return nil, fmt.Errorf("invalid configJson: %w", err)
+	}
+	if params, ok := raw["parameters"].(map[string]any); ok {
+		return params, nil
+	}
+	return raw, nil
+}
+
 func strOrEmpty(v *string) string {
 	if v == nil {
 		return ""
@@ -2153,6 +2214,16 @@ func instanceStrategyID(ctx context.Context, pool *pgxpool.Pool, instanceID stri
 		return "rsi_momentum_v1"
 	}
 	return strategyID
+}
+
+func instanceStrategyTypeID(ctx context.Context, pool *pgxpool.Pool, instanceID string) string {
+	var strategyTypeID string
+	_ = pool.QueryRow(ctx, `
+		SELECT COALESCE(strategy_type_id, '')
+		FROM strategy_instances
+		WHERE id = $1::uuid
+	`, instanceID).Scan(&strategyTypeID)
+	return strategyTypeID
 }
 
 func runFlowID(ctx context.Context, pool *pgxpool.Pool, runID string) string {

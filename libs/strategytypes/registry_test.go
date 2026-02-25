@@ -25,11 +25,11 @@ func sampleCandles(start time.Time) map[string][]Candle {
 	return map[string][]Candle{"1m": out}
 }
 
-func TestDefaultRegistry_HasFiveTypes(t *testing.T) {
+func TestDefaultRegistry_HasEightTypes(t *testing.T) {
 	r := DefaultRegistry()
 	all := r.ListMetadata()
-	if len(all) != 5 {
-		t.Fatalf("expected 5 strategy types, got %d", len(all))
+	if len(all) != 8 {
+		t.Fatalf("expected 8 strategy types, got %d", len(all))
 	}
 	last := ""
 	for _, m := range all {
@@ -84,6 +84,30 @@ func TestNewsStrategy_MissingNewsError(t *testing.T) {
 	sessionStart := time.Date(2025, 1, 2, 9, 30, 0, 0, time.UTC)
 	_, err := s.Generate(context.Background(), StrategyInput{
 		Symbol:  "AAPL",
+		Candles: sampleCandles(sessionStart),
+	})
+	if err == nil {
+		t.Fatal("expected missing required inputs error")
+	}
+}
+
+func TestNewsShockMomentum_MissingNewsError(t *testing.T) {
+	s := NewNewsShockMomentum()
+	sessionStart := time.Date(2025, 1, 2, 9, 30, 0, 0, time.UTC)
+	_, err := s.Generate(context.Background(), StrategyInput{
+		Symbol:  "MSFT",
+		Candles: sampleCandles(sessionStart),
+	})
+	if err == nil {
+		t.Fatal("expected missing required inputs error")
+	}
+}
+
+func TestEventGapContinuation_MissingEarningsError(t *testing.T) {
+	s := NewEventGapContinuation()
+	sessionStart := time.Date(2025, 1, 2, 9, 30, 0, 0, time.UTC)
+	_, err := s.Generate(context.Background(), StrategyInput{
+		Symbol:  "MSFT",
 		Candles: sampleCandles(sessionStart),
 	})
 	if err == nil {

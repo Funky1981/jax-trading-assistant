@@ -21,8 +21,11 @@ func DefaultRegistry() *Registry {
 	r := NewRegistry()
 	_ = r.Register(NewSameDayEarningsDrift())
 	_ = r.Register(NewSameDayNewsRepricing())
+	_ = r.Register(NewNewsShockMomentum())
 	_ = r.Register(NewOpeningRangeToClose())
+	_ = r.Register(NewEventGapContinuation())
 	_ = r.Register(NewPanicReversion())
+	_ = r.Register(NewPairsEventRelative())
 	_ = r.Register(NewIndexFlow())
 	return r
 }

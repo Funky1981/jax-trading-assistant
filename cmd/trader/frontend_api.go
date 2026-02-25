@@ -247,7 +247,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	mux.HandleFunc("/metrics/prometheus", prometheusHandler(pool))
 
 	// Codex packs additive API surface (instances, backtests, research, testing, audit)
-	registerCodexAPIRoutes(mux, protect, pool, fCfg.OrchestratorURL)
+	registerCodexAPIRoutes(mux, protect, pool, fCfg.OrchestratorURL, strategyTypeReg)
 
 	handler := middleware.FlowID(middleware.CORS(corsConfig)(rateLimiter.Middleware(mux)))
 
