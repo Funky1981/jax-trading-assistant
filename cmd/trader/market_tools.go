@@ -63,7 +63,8 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 			Enabled:   true,
 		})
 	}
-	if polygonKey := strings.TrimSpace(os.Getenv("POLYGON_API_KEY")); polygonKey != "" {
+	if polygonKey := strings.TrimSpace(os.Getenv("POLYGON_API_KEY")); polygonKey != "" &&
+		!strings.EqualFold(strings.TrimSpace(os.Getenv("POLYGON_ENABLED")), "false") {
 		providers = append(providers, marketdata.ProviderConfig{
 			Name:     marketdata.ProviderPolygon,
 			APIKey:   polygonKey,
