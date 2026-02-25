@@ -46,20 +46,33 @@ func (p *FinancialDatasetsProvider) GetQuote(ctx context.Context, symbol string)
 	u.RawQuery = q.Encode()
 
 	var payload struct {
+		Snapshot struct {
+			Price float64 `json:"price"`
+			Time  string  `json:"time"`
+		} `json:"snapshot"`
 		Price float64 `json:"price"`
 		Time  string  `json:"time"`
 	}
 	if err := p.fetchJSON(ctx, u.String(), &payload); err != nil {
 		return nil, err
 	}
-	ts, _ := parseFDTime(payload.Time)
-	if ts.IsZero() {
-		ts = time.Now().UTC()
+	price := payload.Price
+	ts := payload.Time
+	if payload.Snapshot.Price != 0 || payload.Snapshot.Time != "" {
+		price = payload.Snapshot.Price
+		ts = payload.Snapshot.Time
+	}
+	if price == 0 {
+		return nil, fmt.Errorf("financial-datasets snapshot missing price")
+	}
+	parsedTS, _ := parseFDTime(ts)
+	if parsedTS.IsZero() {
+		parsedTS = time.Now().UTC()
 	}
 	return &Quote{
 		Symbol:    symbol,
-		Price:     payload.Price,
-		Timestamp: ts.UTC(),
+		Price:     price,
+		Timestamp: parsedTS.UTC(),
 	}, nil
 }
 
@@ -75,7 +88,7 @@ func (p *FinancialDatasetsProvider) GetCandles(ctx context.Context, symbol strin
 	if limit <= 0 {
 		limit = 200
 	}
-	endpoint := p.baseURL + "/prices"
+	endpoint := p.baseURL + "/prices/"
 	u, _ := url.Parse(endpoint)
 	q := u.Query()
 	q.Set("ticker", symbol)
@@ -85,6 +98,7 @@ func (p *FinancialDatasetsProvider) GetCandles(ctx context.Context, symbol strin
 	u.RawQuery = q.Encode()
 
 	var payload struct {
+		Ticker string `json:"ticker"`
 		Prices []struct {
 			Time   string  `json:"time"`
 			Open   float64 `json:"open"`
