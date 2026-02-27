@@ -2042,12 +2042,21 @@ func executionPathSummary(ctx context.Context, pool *pgxpool.Pool) map[string]an
 		result["error"] = "database pool unavailable"
 		return result
 	}
+	var intentCount int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM order_intents WHERE created_at >= NOW() - INTERVAL '30 days'`).Scan(&intentCount); err == nil {
+		if intentCount == 0 {
+			result["status"] = "skipped"
+			result["reason"] = "no order intents in window"
+			return result
+		}
+	}
 	rows, err := pool.Query(ctx, `
 		SELECT t.id::text, COALESCE(f.id::text,''), COALESCE(i.id::text,'')
 		FROM trades t
 		LEFT JOIN fills f ON f.trade_id = t.id
 		LEFT JOIN order_intents i ON i.signal_id = t.signal_id
 		WHERE t.created_at >= NOW() - INTERVAL '30 days'
+		  AND t.signal_id IS NOT NULL
 	`)
 	if err != nil {
 		result["status"] = "failed"
@@ -2076,6 +2085,7 @@ func executionPathSummary(ctx context.Context, pool *pgxpool.Pool) map[string]an
 	result["missingIntentLink"] = missingIntents
 	if checked == 0 {
 		result["status"] = "skipped"
+		result["reason"] = "no signal-linked trades in window"
 		return result
 	}
 	if missingFills > 0 || missingIntents > 0 {
