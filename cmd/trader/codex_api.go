@@ -1042,32 +1042,136 @@ func runsDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		runID := parts[0]
 		if len(parts) > 1 && parts[1] == "timeline" {
 			flowID := runFlowID(r.Context(), pool, runID)
+			type timelineEntry struct {
+				ts    time.Time
+				entry map[string]any
+			}
+			entries := make([]timelineEntry, 0, 96)
 			rows, _ := pool.Query(r.Context(), `
 				SELECT id, category, action, outcome, message, metadata::text, timestamp
 				FROM audit_events
 				WHERE correlation_id = $1
 				ORDER BY timestamp ASC
 			`, flowID)
-			timeline := make([]map[string]any, 0, 64)
 			if rows != nil {
 				defer rows.Close()
 				for rows.Next() {
 					var id, cat, action, outcome, message, meta string
 					var ts time.Time
 					if err := rows.Scan(&id, &cat, &action, &outcome, &message, &meta, &ts); err == nil {
-						timeline = append(timeline, map[string]any{
-							"id":       id,
-							"type":     "audit",
-							"category": cat,
-							"action":   action,
-							"outcome":  outcome,
-							"message":  message,
-							"metadata": json.RawMessage(meta),
-							"ts":       ts,
+						entries = append(entries, timelineEntry{
+							ts: ts,
+							entry: map[string]any{
+								"id":       id,
+								"type":     "audit",
+								"category": cat,
+								"action":   action,
+								"outcome":  outcome,
+								"message":  message,
+								"metadata": json.RawMessage(meta),
+								"ts":       ts,
+							},
 						})
 					}
 				}
 			}
+
+			aiRows, _ := pool.Query(r.Context(), `
+				SELECT id::text, COALESCE(role,''), COALESCE(provider,''), COALESCE(model,''),
+				       COALESCE(decision,''), COALESCE(reasoning,''), schema_valid,
+				       COALESCE(prompt::text,'{}'), COALESCE(response::text,'{}'), COALESCE(rule_trace::text,'{}'),
+				       created_at
+				FROM ai_decisions
+				WHERE (flow_id = $1 OR run_id = NULLIF($2,'')::uuid)
+				ORDER BY created_at ASC
+			`, flowID, runID)
+			if aiRows != nil {
+				defer aiRows.Close()
+				for aiRows.Next() {
+					var id, role, provider, model, decision, reasoning, prompt, response, trace string
+					var valid bool
+					var ts time.Time
+					if err := aiRows.Scan(&id, &role, &provider, &model, &decision, &reasoning, &valid, &prompt, &response, &trace, &ts); err == nil {
+						outcome := "invalid"
+						if valid {
+							outcome = "valid"
+						}
+						message := strings.TrimSpace(decision)
+						if message == "" {
+							message = "AI decision"
+						}
+						entries = append(entries, timelineEntry{
+							ts: ts,
+							entry: map[string]any{
+								"id":       id,
+								"type":     "ai_decision",
+								"category": "ai",
+								"action":   fmt.Sprintf("%s/%s", provider, role),
+								"outcome":  outcome,
+								"message":  message,
+								"metadata": map[string]any{
+									"model":       model,
+									"reasoning":   reasoning,
+									"prompt":      json.RawMessage(prompt),
+									"response":    json.RawMessage(response),
+									"rule_trace":  json.RawMessage(trace),
+									"schemaValid": valid,
+								},
+								"ts": ts,
+							},
+						})
+					}
+				}
+			}
+
+			acceptRows, _ := pool.Query(r.Context(), `
+				SELECT a.id::text, a.decision_id::text, a.accepted, COALESCE(a.accepted_by,''), COALESCE(a.reason,''),
+				       COALESCE(a.rule_trace::text,'{}'), a.created_at
+				FROM ai_decision_acceptance a
+				JOIN ai_decisions d ON d.id = a.decision_id
+				WHERE (d.flow_id = $1 OR d.run_id = NULLIF($2,'')::uuid)
+				ORDER BY a.created_at ASC
+			`, flowID, runID)
+			if acceptRows != nil {
+				defer acceptRows.Close()
+				for acceptRows.Next() {
+					var id, decisionID, acceptedBy, reason, trace string
+					var accepted bool
+					var ts time.Time
+					if err := acceptRows.Scan(&id, &decisionID, &accepted, &acceptedBy, &reason, &trace, &ts); err == nil {
+						outcome := "rejected"
+						if accepted {
+							outcome = "accepted"
+						}
+						entries = append(entries, timelineEntry{
+							ts: ts,
+							entry: map[string]any{
+								"id":       id,
+								"type":     "ai_acceptance",
+								"category": "ai",
+								"action":   "acceptance",
+								"outcome":  outcome,
+								"message":  reason,
+								"metadata": map[string]any{
+									"decisionId": decisionID,
+									"acceptedBy": acceptedBy,
+									"ruleTrace":  json.RawMessage(trace),
+								},
+								"ts": ts,
+							},
+						})
+					}
+				}
+			}
+
+			sort.Slice(entries, func(i, j int) bool {
+				return entries[i].ts.Before(entries[j].ts)
+			})
+			timeline := make([]map[string]any, 0, len(entries))
+			for _, entry := range entries {
+				timeline = append(timeline, entry.entry)
+			}
+
 			jsonOK(w, map[string]any{"runId": runID, "timeline": timeline})
 			return
 		}
