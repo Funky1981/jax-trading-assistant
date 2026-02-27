@@ -20,6 +20,12 @@ if (-not $env:DATABASE_URL) {
     $env:DATABASE_URL = "postgresql://jax:jax@postgres:5432/jax"
 }
 
+# Build latest service images unless explicitly skipped.
+if ($env:JAX_SKIP_BUILD -ne "true") {
+    Write-Host "  Building jax-trader and jax-research..." -ForegroundColor Gray
+    docker compose build jax-trader jax-research 2>$null
+}
+
 # Start postgres first
 Write-Host "  Starting postgres..." -ForegroundColor Gray
 docker compose up -d postgres 2>$null

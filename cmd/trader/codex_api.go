@@ -1991,7 +1991,7 @@ func artifactPromotionSummary(ctx context.Context, pool *pgxpool.Pool) map[strin
 		return result
 	}
 	rows, err := pool.Query(ctx, `
-		SELECT i.id::text, i.artifact_id::text, COALESCE(a.state,'')
+		SELECT i.id::text, i.artifact_id::text, COALESCE(a.state::text,'')
 		FROM strategy_instances i
 		LEFT JOIN artifact_approvals a ON a.artifact_id = i.artifact_id
 		WHERE i.artifact_id IS NOT NULL
@@ -2254,6 +2254,9 @@ func shadowParitySummary(ctx context.Context) map[string]any {
 func repoRoot() string {
 	if root := strings.TrimSpace(os.Getenv("JAX_REPO_ROOT")); root != "" {
 		return root
+	}
+	if _, err := os.Stat("/app/src/go.mod"); err == nil {
+		return "/app/src"
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
