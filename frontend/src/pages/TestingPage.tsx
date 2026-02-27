@@ -8,7 +8,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { HelpHint } from '@/components/ui/help-hint';
 
-type TriggerName = 'data' | 'pnl' | 'failure' | 'flatten';
+type TriggerName =
+  | 'all'
+  | 'config'
+  | 'replay'
+  | 'artifact'
+  | 'execution'
+  | 'data'
+  | 'pnl'
+  | 'failure'
+  | 'flatten'
+  | 'ai'
+  | 'provenance'
+  | 'shadow';
 
 export function TestingPage() {
   const queryClient = useQueryClient();
@@ -23,8 +35,18 @@ export function TestingPage() {
   const healthQuery = useHealth();
 
   const triggerMutation = useMutation({
-    mutationFn: async (trigger: TriggerName): Promise<TriggerTestResponse> => {
+    mutationFn: async (trigger: TriggerName): Promise<TriggerTestResponse | { status: string }> => {
       switch (trigger) {
+        case 'all':
+          return testingService.triggerAllGates();
+        case 'config':
+          return testingService.triggerConfigIntegrity();
+        case 'replay':
+          return testingService.triggerDeterministicReplay();
+        case 'artifact':
+          return testingService.triggerArtifactPromotion();
+        case 'execution':
+          return testingService.triggerExecutionIntegration();
         case 'data':
           return testingService.triggerDataRecon();
         case 'pnl':
@@ -33,6 +55,12 @@ export function TestingPage() {
           return testingService.triggerFailureSuite();
         case 'flatten':
           return testingService.triggerFlattenProof();
+        case 'ai':
+          return testingService.triggerAIAudit();
+        case 'provenance':
+          return testingService.triggerProvenanceIntegrity();
+        case 'shadow':
+          return testingService.triggerShadowParity();
       }
     },
     onSuccess: async () => {
@@ -63,7 +91,7 @@ export function TestingPage() {
             Trust Gates Checklist
             <HelpHint text="Each gate produces an artifact report and status." />
           </CardTitle>
-          <CardDescription>Gate0..Gate7 with latest state and artifact links.</CardDescription>
+          <CardDescription>Gate0..Gate10 with latest state and artifact links.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="w-full overflow-x-auto">
@@ -136,6 +164,26 @@ export function TestingPage() {
           <CardDescription>These endpoints are guarded server-side and reject in live mode.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Button variant="secondary" onClick={() => triggerMutation.mutate('all')} disabled={triggerMutation.isPending}>
+            <Play className="mr-1 h-4 w-4" />
+            Run All Gates
+          </Button>
+          <Button onClick={() => triggerMutation.mutate('config')} disabled={triggerMutation.isPending}>
+            <Play className="mr-1 h-4 w-4" />
+            Run Config Integrity
+          </Button>
+          <Button onClick={() => triggerMutation.mutate('replay')} disabled={triggerMutation.isPending}>
+            <Play className="mr-1 h-4 w-4" />
+            Run Deterministic Replay
+          </Button>
+          <Button onClick={() => triggerMutation.mutate('artifact')} disabled={triggerMutation.isPending}>
+            <Play className="mr-1 h-4 w-4" />
+            Run Artifact Promotion
+          </Button>
+          <Button onClick={() => triggerMutation.mutate('execution')} disabled={triggerMutation.isPending}>
+            <Play className="mr-1 h-4 w-4" />
+            Run Execution Integration
+          </Button>
           <Button onClick={() => triggerMutation.mutate('data')} disabled={triggerMutation.isPending}>
             <Play className="mr-1 h-4 w-4" />
             Run Data Reconciliation
@@ -151,6 +199,18 @@ export function TestingPage() {
           <Button variant="outline" onClick={() => triggerMutation.mutate('flatten')} disabled={triggerMutation.isPending}>
             <Play className="mr-1 h-4 w-4" />
             Run Flatten Proof
+          </Button>
+          <Button onClick={() => triggerMutation.mutate('ai')} disabled={triggerMutation.isPending}>
+            <Play className="mr-1 h-4 w-4" />
+            Run AI Audit
+          </Button>
+          <Button onClick={() => triggerMutation.mutate('provenance')} disabled={triggerMutation.isPending}>
+            <Play className="mr-1 h-4 w-4" />
+            Run Provenance Integrity
+          </Button>
+          <Button onClick={() => triggerMutation.mutate('shadow')} disabled={triggerMutation.isPending}>
+            <Play className="mr-1 h-4 w-4" />
+            Run Shadow Parity
           </Button>
           {triggerMutation.isError && (
             <p className="flex items-center gap-1 text-sm text-destructive">

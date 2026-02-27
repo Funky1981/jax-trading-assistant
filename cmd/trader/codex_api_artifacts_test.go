@@ -11,18 +11,19 @@ import (
 func TestTestingArtifactMappings(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
+		gate            string
 		testType        string
 		wantDir         string
 		wantPrimaryFile string
 	}{
-		{testType: "data_recon", wantDir: "data_recon", wantPrimaryFile: "summary.md"},
-		{testType: "pnl_recon", wantDir: "pnl_recon", wantPrimaryFile: "pnl_recon.md"},
-		{testType: "failure_suite", wantDir: "failure_tests", wantPrimaryFile: "report.md"},
-		{testType: "flatten_proof", wantDir: "flatten", wantPrimaryFile: "proof.md"},
+		{gate: "Gate1", testType: "data_recon", wantDir: "gate1", wantPrimaryFile: "summary.md"},
+		{gate: "Gate5", testType: "pnl_recon", wantDir: "gate5", wantPrimaryFile: "pnl_recon.md"},
+		{gate: "Gate6", testType: "failure_suite", wantDir: "gate6", wantPrimaryFile: "report.md"},
+		{gate: "Gate7", testType: "flatten_proof", wantDir: "gate7", wantPrimaryFile: "proof.md"},
 	}
 	for _, tc := range cases {
-		if got := testingArtifactDir(tc.testType); got != tc.wantDir {
-			t.Fatalf("testingArtifactDir(%q) = %q, want %q", tc.testType, got, tc.wantDir)
+		if got := testingArtifactDir(tc.gate, tc.testType); got != tc.wantDir {
+			t.Fatalf("testingArtifactDir(%q, %q) = %q, want %q", tc.gate, tc.testType, got, tc.wantDir)
 		}
 		if got := testingPrimaryArtifactFile(tc.testType); got != tc.wantPrimaryFile {
 			t.Fatalf("testingPrimaryArtifactFile(%q) = %q, want %q", tc.testType, got, tc.wantPrimaryFile)
@@ -73,7 +74,7 @@ func TestWriteTestingArtifactReportCreatesExpectedFiles(t *testing.T) {
 		if _, err := os.Stat(artifactFile); err != nil {
 			t.Fatalf("primary artifact missing for %q: %v", tc.testType, err)
 		}
-		artifactDir := filepath.Join("reports", testingArtifactDir(tc.testType), datePath)
+		artifactDir := filepath.Join("reports", testingArtifactDir("GateX", tc.testType), datePath)
 		for _, rel := range tc.extraArtifacts {
 			if _, err := os.Stat(filepath.Join(artifactDir, rel)); err != nil {
 				t.Fatalf("extra artifact %q missing for %q: %v", rel, tc.testType, err)

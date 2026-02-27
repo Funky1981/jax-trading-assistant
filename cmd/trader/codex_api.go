@@ -59,12 +59,20 @@ func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 	mux.HandleFunc("/api/v1/research/projects/", protect(researchProjectsDetailHandler(pool, orchestratorURL)))
 
 	mux.HandleFunc("/api/v1/testing/status", protect(testingStatusHandler(pool)))
+	mux.HandleFunc("/api/v1/testing/config-integrity", protect(testingTriggerHandler(pool, "Gate0", "config_integrity")))
 	mux.HandleFunc("/api/v1/testing/recon/data", protect(testingTriggerHandler(pool, "Gate1", "data_recon")))
+	mux.HandleFunc("/api/v1/testing/replay", protect(testingTriggerHandler(pool, "Gate2", "deterministic_replay")))
+	mux.HandleFunc("/api/v1/testing/artifact-promotion", protect(testingTriggerHandler(pool, "Gate3", "artifact_promotion")))
+	mux.HandleFunc("/api/v1/testing/execution-path", protect(testingTriggerHandler(pool, "Gate4", "execution_integration")))
 	mux.HandleFunc("/api/v1/testing/recon/pnl", protect(testingTriggerHandler(pool, "Gate5", "pnl_recon")))
 	mux.HandleFunc("/api/v1/testing/recon/pnl/corrections", protect(pnlCorrectionsHandler(pool)))
 	mux.HandleFunc("/api/v1/testing/failure-suite", protect(testingTriggerHandler(pool, "Gate6", "failure_suite")))
 	mux.HandleFunc("/api/v1/testing/failure-tests/run", protect(testingTriggerHandler(pool, "Gate6", "failure_suite")))
 	mux.HandleFunc("/api/v1/testing/flatten-proof", protect(testingTriggerHandler(pool, "Gate7", "flatten_proof")))
+	mux.HandleFunc("/api/v1/testing/ai-audit", protect(testingTriggerHandler(pool, "Gate8", "ai_audit")))
+	mux.HandleFunc("/api/v1/testing/provenance", protect(testingTriggerHandler(pool, "Gate9", "provenance_integrity")))
+	mux.HandleFunc("/api/v1/testing/shadow-parity", protect(testingTriggerHandler(pool, "Gate10", "shadow_parity")))
+	mux.HandleFunc("/api/v1/testing/run-all", protect(testingRunAllHandler(pool)))
 
 	mux.HandleFunc("/api/v1/runs", protect(runsListHandler(pool)))
 	mux.HandleFunc("/api/v1/runs/", protect(runsDetailHandler(pool)))
@@ -72,6 +80,7 @@ func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 	mux.HandleFunc("/api/v1/ai-decisions", protect(aiDecisionsHandler(pool)))
 	mux.HandleFunc("/api/v1/ai-decisions/", protect(aiDecisionDetailHandler(pool)))
 	mux.HandleFunc("/api/v1/gates", protect(gatesHandler(pool)))
+	mux.HandleFunc("/api/v1/gates/history", protect(testRunsHandler(pool)))
 	mux.HandleFunc("/api/v1/test-runs", protect(testRunsHandler(pool)))
 }
 
@@ -904,7 +913,7 @@ func testingStatusHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				}
 			}
 		}
-		expected := []string{"Gate0", "Gate1", "Gate2", "Gate3", "Gate4", "Gate5", "Gate6", "Gate7"}
+		expected := []string{"Gate0", "Gate1", "Gate2", "Gate3", "Gate4", "Gate5", "Gate6", "Gate7", "Gate8", "Gate9", "Gate10"}
 		out := make([]map[string]any, 0, len(expected))
 		for _, gate := range expected {
 			if existing, ok := statusByGate[gate]; ok {
@@ -934,45 +943,87 @@ func testingTriggerHandler(pool *pgxpool.Pool, gate, testType string) http.Handl
 			http.Error(w, "testing endpoints are paper-only", http.StatusForbidden)
 			return
 		}
-		started := time.Now().UTC()
-		artifactPath, summary := runTrustGateJob(r.Context(), pool, gate, testType)
-		statusValue := "completed"
-		gateStatus := "passed"
-		switch strings.ToLower(toString(summary["status"])) {
-		case "failed":
-			statusValue = "failed"
-			gateStatus = "failed"
-		case "skipped":
-			statusValue = "completed"
-			gateStatus = "skipped"
+		result := runGateAndPersist(r.Context(), pool, gate, testType)
+		jsonOK(w, result)
+	}
+}
+
+func testingRunAllHandler(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
 		}
-		summary["artifactUri"] = artifactPath
-		summaryJSON, _ := json.Marshal(summary)
-		var runID string
-		if pool != nil {
-			_ = pool.QueryRow(r.Context(), `
-				INSERT INTO test_runs (test_name, status, summary, artifact_uri, started_at, completed_at)
-				VALUES ($1, $2, $3::jsonb, $4, $5, NOW())
-				RETURNING id::text
-			`, testType, statusValue, string(summaryJSON), artifactPath, started).Scan(&runID)
-			_, _ = pool.Exec(r.Context(), `
-				INSERT INTO gate_status (gate_name, status, last_run_id, details, last_run_at)
-				VALUES ($1, $2, $3::uuid, $4::jsonb, NOW())
-				ON CONFLICT (gate_name)
-				DO UPDATE SET
-					status = EXCLUDED.status,
-					last_run_id = EXCLUDED.last_run_id,
-					details = EXCLUDED.details,
-					last_run_at = NOW()
-			`, gate, gateStatus, runID, string(summaryJSON))
+		if strings.EqualFold(os.Getenv("ALLOW_LIVE_TRADING"), "true") {
+			http.Error(w, "testing endpoints are paper-only", http.StatusForbidden)
+			return
+		}
+		gates := []struct {
+			gate     string
+			testType string
+		}{
+			{"Gate0", "config_integrity"},
+			{"Gate1", "data_recon"},
+			{"Gate2", "deterministic_replay"},
+			{"Gate3", "artifact_promotion"},
+			{"Gate4", "execution_integration"},
+			{"Gate5", "pnl_recon"},
+			{"Gate6", "failure_suite"},
+			{"Gate7", "flatten_proof"},
+			{"Gate8", "ai_audit"},
+			{"Gate9", "provenance_integrity"},
+			{"Gate10", "shadow_parity"},
+		}
+		results := make([]map[string]any, 0, len(gates))
+		for _, gate := range gates {
+			results = append(results, runGateAndPersist(r.Context(), pool, gate.gate, gate.testType))
 		}
 		jsonOK(w, map[string]any{
-			"gate":        gate,
-			"testRunId":   runID,
-			"status":      statusValue,
-			"artifactUri": artifactPath,
-			"summary":     summary,
+			"status": "completed",
+			"runs":   results,
 		})
+	}
+}
+
+func runGateAndPersist(ctx context.Context, pool *pgxpool.Pool, gate, testType string) map[string]any {
+	started := time.Now().UTC()
+	artifactPath, summary := runTrustGateJob(ctx, pool, gate, testType)
+	statusValue := "completed"
+	gateStatus := "passed"
+	switch strings.ToLower(toString(summary["status"])) {
+	case "failed":
+		statusValue = "failed"
+		gateStatus = "failed"
+	case "skipped":
+		statusValue = "completed"
+		gateStatus = "skipped"
+	}
+	summary["artifactUri"] = artifactPath
+	summaryJSON, _ := json.Marshal(summary)
+	var runID string
+	if pool != nil {
+		_ = pool.QueryRow(ctx, `
+			INSERT INTO test_runs (test_name, status, summary, artifact_uri, started_at, completed_at)
+			VALUES ($1, $2, $3::jsonb, $4, $5, NOW())
+			RETURNING id::text
+		`, testType, statusValue, string(summaryJSON), artifactPath, started).Scan(&runID)
+		_, _ = pool.Exec(ctx, `
+			INSERT INTO gate_status (gate_name, status, last_run_id, details, last_run_at)
+			VALUES ($1, $2, $3::uuid, $4::jsonb, NOW())
+			ON CONFLICT (gate_name)
+			DO UPDATE SET
+				status = EXCLUDED.status,
+				last_run_id = EXCLUDED.last_run_id,
+				details = EXCLUDED.details,
+				last_run_at = NOW()
+		`, gate, gateStatus, runID, string(summaryJSON))
+	}
+	return map[string]any{
+		"gate":        gate,
+		"testRunId":   runID,
+		"status":      statusValue,
+		"artifactUri": artifactPath,
+		"summary":     summary,
 	}
 }
 
@@ -1739,6 +1790,16 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 	overall := "passed"
 	skipped := 0
 	passed := 0
+	updateCounts := func(status string) {
+		switch status {
+		case "passed":
+			passed++
+		case "skipped":
+			skipped++
+		case "failed":
+			overall = "failed"
+		}
+	}
 	for _, cmdSpec := range commands {
 		start := time.Now().UTC()
 		if _, err := exec.LookPath(cmdSpec.Name); err != nil {
@@ -1754,7 +1815,7 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 		}
 		cmd := exec.CommandContext(timeoutCtx, cmdSpec.Name, cmdSpec.Args...)
 		if cmdSpec.Name == "go" {
-			cmd.Dir = "/app/src"
+			cmd.Dir = repoRoot()
 		}
 		var out bytes.Buffer
 		cmd.Stdout = &out
@@ -1781,9 +1842,7 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 			"durationMs": duration,
 			"output":     output,
 		})
-		if status == "passed" {
-			passed++
-		}
+		updateCounts(status)
 	}
 	if pool != nil {
 		dbStart := time.Now().UTC()
@@ -1803,9 +1862,7 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 			"durationMs": time.Since(dbStart).Milliseconds(),
 			"output":     dbOutput,
 		})
-		if dbStatus == "passed" {
-			passed++
-		}
+		updateCounts(dbStatus)
 	}
 	if testType == "data_recon" {
 		recon := datasetReconciliationSummary(ctx, pool)
@@ -1813,7 +1870,6 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 		exitCode := 0
 		if toString(recon["status"]) == "failed" {
 			reconStatus = "failed"
-			overall = "failed"
 			exitCode = 1
 		}
 		results = append(results, map[string]any{
@@ -1824,6 +1880,27 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 			"output":     toJSONString(recon),
 			"summary":    recon,
 		})
+		updateCounts(reconStatus)
+	}
+	switch testType {
+	case "config_integrity":
+		status := appendGateSummary(&results, "config-integrity", configIntegritySummary(ctx, pool))
+		updateCounts(status)
+	case "artifact_promotion":
+		status := appendGateSummary(&results, "artifact-promotion", artifactPromotionSummary(ctx, pool))
+		updateCounts(status)
+	case "execution_integration":
+		status := appendGateSummary(&results, "execution-path-integrity", executionPathSummary(ctx, pool))
+		updateCounts(status)
+	case "ai_audit":
+		status := appendGateSummary(&results, "ai-audit", aiAuditSummary(ctx, pool))
+		updateCounts(status)
+	case "provenance_integrity":
+		status := appendGateSummary(&results, "provenance-integrity", provenanceIntegritySummary(ctx, pool))
+		updateCounts(status)
+	case "shadow_parity":
+		status := appendGateSummary(&results, "shadow-parity", shadowParitySummary(ctx))
+		updateCounts(status)
 	}
 	if overall != "failed" && passed == 0 && skipped > 0 {
 		overall = "skipped"
@@ -1839,12 +1916,388 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 	return artifactPath, summary
 }
 
+func appendGateSummary(results *[]map[string]any, command string, summary map[string]any) string {
+	status := strings.ToLower(toString(summary["status"]))
+	if status == "" {
+		status = "passed"
+	}
+	exitCode := 0
+	if status == "failed" {
+		exitCode = 1
+	}
+	*results = append(*results, map[string]any{
+		"command":    command,
+		"status":     status,
+		"exitCode":   exitCode,
+		"durationMs": 0,
+		"output":     toJSONString(summary),
+		"summary":    summary,
+	})
+	return status
+}
+
+func configIntegritySummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
+	result := map[string]any{
+		"status":            "passed",
+		"missingTables":     []string{},
+		"missingConfigHash": 0,
+	}
+	if pool == nil {
+		result["status"] = "failed"
+		result["error"] = "database pool unavailable"
+		return result
+	}
+	required := []string{
+		"strategy_instances",
+		"backtest_runs",
+		"runs",
+		"test_runs",
+		"gate_status",
+		"strategy_artifacts",
+		"artifact_approvals",
+		"dataset_snapshots",
+	}
+	missing := make([]string, 0, len(required))
+	for _, table := range required {
+		var reg sql.NullString
+		if err := pool.QueryRow(ctx, "SELECT to_regclass($1)", "public."+table).Scan(&reg); err != nil || !reg.Valid {
+			missing = append(missing, table)
+		}
+	}
+	result["missingTables"] = missing
+	if len(missing) > 0 {
+		result["status"] = "failed"
+	}
+	var missingConfig int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM strategy_instances WHERE config_hash IS NULL OR config_hash = ''`).Scan(&missingConfig); err == nil {
+		result["missingConfigHash"] = missingConfig
+		if missingConfig > 0 {
+			result["status"] = "failed"
+		}
+	}
+	return result
+}
+
+func artifactPromotionSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
+	result := map[string]any{
+		"status":           "passed",
+		"instancesChecked": 0,
+		"invalidArtifacts": 0,
+		"missingArtifacts": 0,
+	}
+	if pool == nil {
+		result["status"] = "failed"
+		result["error"] = "database pool unavailable"
+		return result
+	}
+	rows, err := pool.Query(ctx, `
+		SELECT i.id::text, i.artifact_id::text, COALESCE(a.state,'')
+		FROM strategy_instances i
+		LEFT JOIN artifact_approvals a ON a.artifact_id = i.artifact_id
+		WHERE i.artifact_id IS NOT NULL
+	`)
+	if err != nil {
+		result["status"] = "failed"
+		result["error"] = err.Error()
+		return result
+	}
+	defer rows.Close()
+	checked := 0
+	invalid := 0
+	missing := 0
+	for rows.Next() {
+		checked++
+		var instanceID, artifactID, state string
+		if err := rows.Scan(&instanceID, &artifactID, &state); err != nil {
+			continue
+		}
+		if strings.TrimSpace(artifactID) == "" {
+			missing++
+			continue
+		}
+		normalized := strings.ToUpper(strings.TrimSpace(state))
+		if normalized != "APPROVED" && normalized != "ACTIVE" {
+			invalid++
+		}
+	}
+	result["instancesChecked"] = checked
+	result["invalidArtifacts"] = invalid
+	result["missingArtifacts"] = missing
+	if invalid > 0 || missing > 0 {
+		result["status"] = "failed"
+	}
+	return result
+}
+
+func executionPathSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
+	result := map[string]any{
+		"status":            "passed",
+		"checkedTrades":     0,
+		"missingFills":      0,
+		"missingIntentLink": 0,
+		"windowDays":        30,
+	}
+	if pool == nil {
+		result["status"] = "failed"
+		result["error"] = "database pool unavailable"
+		return result
+	}
+	rows, err := pool.Query(ctx, `
+		SELECT t.id::text, COALESCE(f.id::text,''), COALESCE(i.id::text,'')
+		FROM trades t
+		LEFT JOIN fills f ON f.trade_id = t.id
+		LEFT JOIN order_intents i ON i.signal_id = t.signal_id
+		WHERE t.created_at >= NOW() - INTERVAL '30 days'
+	`)
+	if err != nil {
+		result["status"] = "failed"
+		result["error"] = err.Error()
+		return result
+	}
+	defer rows.Close()
+	checked := 0
+	missingFills := 0
+	missingIntents := 0
+	for rows.Next() {
+		checked++
+		var tradeID, fillID, intentID string
+		if err := rows.Scan(&tradeID, &fillID, &intentID); err != nil {
+			continue
+		}
+		if strings.TrimSpace(fillID) == "" {
+			missingFills++
+		}
+		if strings.TrimSpace(intentID) == "" {
+			missingIntents++
+		}
+	}
+	result["checkedTrades"] = checked
+	result["missingFills"] = missingFills
+	result["missingIntentLink"] = missingIntents
+	if checked == 0 {
+		result["status"] = "skipped"
+		return result
+	}
+	if missingFills > 0 || missingIntents > 0 {
+		result["status"] = "failed"
+	}
+	return result
+}
+
+func aiAuditSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
+	result := map[string]any{
+		"status":            "passed",
+		"decisions":         0,
+		"invalidSchema":     0,
+		"missingAcceptance": 0,
+		"windowDays":        30,
+	}
+	if pool == nil {
+		result["status"] = "failed"
+		result["error"] = "database pool unavailable"
+		return result
+	}
+	rows, err := pool.Query(ctx, `
+		SELECT d.id::text, d.schema_valid, COALESCE(a.id::text,'')
+		FROM ai_decisions d
+		LEFT JOIN ai_decision_acceptance a ON a.decision_id = d.id
+		WHERE d.created_at >= NOW() - INTERVAL '30 days'
+	`)
+	if err != nil {
+		result["status"] = "failed"
+		result["error"] = err.Error()
+		return result
+	}
+	defer rows.Close()
+	decisions := 0
+	invalid := 0
+	missingAccept := 0
+	for rows.Next() {
+		decisions++
+		var id, acceptanceID string
+		var schemaValid bool
+		if err := rows.Scan(&id, &schemaValid, &acceptanceID); err != nil {
+			continue
+		}
+		if !schemaValid {
+			invalid++
+		}
+		if strings.TrimSpace(acceptanceID) == "" {
+			missingAccept++
+		}
+	}
+	result["decisions"] = decisions
+	result["invalidSchema"] = invalid
+	result["missingAcceptance"] = missingAccept
+	if decisions == 0 {
+		result["status"] = "skipped"
+		return result
+	}
+	if invalid > 0 || missingAccept > 0 {
+		result["status"] = "failed"
+	}
+	return result
+}
+
+func provenanceIntegritySummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
+	result := map[string]any{
+		"status":            "passed",
+		"checkedRows":       0,
+		"missingSource":     0,
+		"missingVerifiedAt": 0,
+		"syntheticRows":     0,
+		"windowDays":        30,
+	}
+	if pool == nil {
+		result["status"] = "failed"
+		result["error"] = "database pool unavailable"
+		return result
+	}
+	rows, err := pool.Query(ctx, `
+		SELECT data_source_type, source_provider, is_synthetic, provenance_verified_at
+		FROM runs
+		WHERE started_at >= NOW() - INTERVAL '30 days'
+	`)
+	if err != nil {
+		result["status"] = "failed"
+		result["error"] = err.Error()
+		return result
+	}
+	defer rows.Close()
+	checked := 0
+	missingSource := 0
+	missingVerified := 0
+	synthetic := 0
+	for rows.Next() {
+		checked++
+		var dataSource, sourceProvider string
+		var syntheticRow bool
+		var verifiedAt *time.Time
+		if err := rows.Scan(&dataSource, &sourceProvider, &syntheticRow, &verifiedAt); err != nil {
+			continue
+		}
+		if strings.TrimSpace(dataSource) == "" || strings.TrimSpace(sourceProvider) == "" {
+			missingSource++
+		}
+		if verifiedAt == nil {
+			missingVerified++
+		}
+		if syntheticRow {
+			synthetic++
+		}
+	}
+	result["checkedRows"] = checked
+	result["missingSource"] = missingSource
+	result["missingVerifiedAt"] = missingVerified
+	result["syntheticRows"] = synthetic
+	if checked == 0 {
+		result["status"] = "skipped"
+		return result
+	}
+	if missingSource > 0 || missingVerified > 0 || synthetic > 0 {
+		result["status"] = "failed"
+	}
+	return result
+}
+
+func shadowParitySummary(ctx context.Context) map[string]any {
+	result := map[string]any{
+		"status":       "skipped",
+		"prodTrades":   0,
+		"shadowTrades": 0,
+		"windowDays":   7,
+	}
+	shadowURL := strings.TrimSpace(os.Getenv("SHADOW_DATABASE_URL"))
+	if shadowURL == "" {
+		result["reason"] = "SHADOW_DATABASE_URL not set"
+		return result
+	}
+	prodURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	if prodURL == "" {
+		result["status"] = "failed"
+		result["error"] = "DATABASE_URL not set"
+		return result
+	}
+	shadowPool, err := pgxpool.New(ctx, shadowURL)
+	if err != nil {
+		result["status"] = "failed"
+		result["error"] = fmt.Sprintf("shadow db connect: %v", err)
+		return result
+	}
+	defer shadowPool.Close()
+	prodPool, err := pgxpool.New(ctx, prodURL)
+	if err != nil {
+		result["status"] = "failed"
+		result["error"] = fmt.Sprintf("prod db connect: %v", err)
+		return result
+	}
+	defer prodPool.Close()
+	var prodTrades, shadowTrades int
+	_ = prodPool.QueryRow(ctx, `SELECT COUNT(*) FROM trades WHERE created_at >= NOW() - INTERVAL '7 days'`).Scan(&prodTrades)
+	_ = shadowPool.QueryRow(ctx, `SELECT COUNT(*) FROM trades WHERE created_at >= NOW() - INTERVAL '7 days'`).Scan(&shadowTrades)
+	result["prodTrades"] = prodTrades
+	result["shadowTrades"] = shadowTrades
+	if prodTrades == 0 && shadowTrades == 0 {
+		result["status"] = "skipped"
+		result["reason"] = "no trades to compare"
+		return result
+	}
+	if prodTrades != shadowTrades {
+		result["status"] = "failed"
+		result["difference"] = prodTrades - shadowTrades
+		return result
+	}
+	result["status"] = "passed"
+	return result
+}
+
+func repoRoot() string {
+	if root := strings.TrimSpace(os.Getenv("JAX_REPO_ROOT")); root != "" {
+		return root
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	current := cwd
+	for i := 0; i < 6; i++ {
+		if _, err := os.Stat(filepath.Join(current, "go.mod")); err == nil {
+			return current
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			break
+		}
+		current = parent
+	}
+	return cwd
+}
+
 func trustGateCommands(testType string) []trustGateCommand {
 	switch testType {
+	case "config_integrity":
+		return []trustGateCommand{
+			{Name: "go", Args: []string{"test", "./cmd/trader/..."}},
+			{Name: "go", Args: []string{"test", "./cmd/research/..."}},
+		}
 	case "data_recon":
 		return []trustGateCommand{
 			{Name: "go", Args: []string{"test", "./tests/replay/..."}},
 			{Name: "go", Args: []string{"test", "-tags=golden", "./tests/golden/..."}},
+		}
+	case "deterministic_replay":
+		return []trustGateCommand{
+			{Name: "go", Args: []string{"test", "./tests/replay/..."}},
+			{Name: "go", Args: []string{"test", "-tags=golden", "./tests/golden/..."}},
+		}
+	case "artifact_promotion":
+		return []trustGateCommand{
+			{Name: "go", Args: []string{"test", "./internal/modules/artifacts/..."}},
+			{Name: "go", Args: []string{"test", "./cmd/artifact-approver/..."}},
+		}
+	case "execution_integration":
+		return []trustGateCommand{
+			{Name: "go", Args: []string{"test", "./internal/modules/execution/..."}},
 		}
 	case "pnl_recon":
 		return []trustGateCommand{
@@ -1860,6 +2313,18 @@ func trustGateCommands(testType string) []trustGateCommand {
 		return []trustGateCommand{
 			{Name: "go", Args: []string{"test", "./internal/modules/execution/...", "-run", "Flatten|Close|EOD"}},
 		}
+	case "ai_audit":
+		return []trustGateCommand{
+			{Name: "go", Args: []string{"test", "./internal/modules/orchestration/..."}},
+		}
+	case "provenance_integrity":
+		return []trustGateCommand{
+			{Name: "go", Args: []string{"test", "./cmd/trader/..."}},
+		}
+	case "shadow_parity":
+		return []trustGateCommand{
+			{Name: "go", Args: []string{"test", "./cmd/shadow-validator/..."}},
+		}
 	default:
 		return []trustGateCommand{
 			{Name: "go", Args: []string{"test", "./cmd/trader/..."}},
@@ -1869,7 +2334,7 @@ func trustGateCommands(testType string) []trustGateCommand {
 
 func writeTestingArtifactReport(pool *pgxpool.Pool, gate, testType string, summary map[string]any) string {
 	datePath := time.Now().UTC().Format("2006-01-02")
-	artifactDir := testingArtifactDir(testType)
+	artifactDir := testingArtifactDir(gate, testType)
 	relPath := filepath.ToSlash(filepath.Join("reports", artifactDir, datePath, testingPrimaryArtifactFile(testType)))
 	dir := filepath.FromSlash(filepath.Join("reports", artifactDir, datePath))
 	_ = os.MkdirAll(dir, 0o755)
@@ -1909,7 +2374,11 @@ func writeTestingArtifactReport(pool *pgxpool.Pool, gate, testType string, summa
 	return "/" + relPath
 }
 
-func testingArtifactDir(testType string) string {
+func testingArtifactDir(gate, testType string) string {
+	normalized := strings.ToLower(strings.TrimSpace(gate))
+	if normalized != "" {
+		return normalized
+	}
 	switch testType {
 	case "data_recon":
 		return "data_recon"
