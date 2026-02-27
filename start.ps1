@@ -43,8 +43,8 @@ for ($i = 1; $i -le 10; $i++) {
 }
 
 # Start other services
-Write-Host "  Starting jax-trader and jax-research..." -ForegroundColor Gray
-docker compose up -d --force-recreate jax-trader jax-research 2>$null
+Write-Host "  Starting core services..." -ForegroundColor Gray
+docker compose up -d --force-recreate jax-trader jax-research ib-bridge agent0-service hindsight prometheus grafana 2>$null
 
 # Wait for services to be ready
 Write-Host "`nWaiting for services to be ready..." -ForegroundColor Yellow
