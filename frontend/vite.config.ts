@@ -25,6 +25,10 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '/reports': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '/quotes': {
         target: 'http://localhost:8092',
         changeOrigin: true,
@@ -35,6 +39,10 @@ export default defineConfig({
       },
       '/account': {
         target: 'http://localhost:8092',
+        changeOrigin: true,
+      },
+      '/v1/memory': {
+        target: 'http://localhost:8091',
         changeOrigin: true,
       },
       // Proxy jax-research health to avoid CORS (browser → 5173 → 8091)

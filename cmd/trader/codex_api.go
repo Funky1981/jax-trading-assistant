@@ -61,6 +61,7 @@ func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 	mux.HandleFunc("/api/v1/testing/status", protect(testingStatusHandler(pool)))
 	mux.HandleFunc("/api/v1/testing/recon/data", protect(testingTriggerHandler(pool, "Gate1", "data_recon")))
 	mux.HandleFunc("/api/v1/testing/recon/pnl", protect(testingTriggerHandler(pool, "Gate5", "pnl_recon")))
+	mux.HandleFunc("/api/v1/testing/recon/pnl/corrections", protect(pnlCorrectionsHandler(pool)))
 	mux.HandleFunc("/api/v1/testing/failure-suite", protect(testingTriggerHandler(pool, "Gate6", "failure_suite")))
 	mux.HandleFunc("/api/v1/testing/failure-tests/run", protect(testingTriggerHandler(pool, "Gate6", "failure_suite")))
 	mux.HandleFunc("/api/v1/testing/flatten-proof", protect(testingTriggerHandler(pool, "Gate7", "flatten_proof")))
@@ -275,6 +276,22 @@ type backtestRunRequest struct {
 	FlattenByCloseTime string         `json:"flattenByCloseTime,omitempty"`
 }
 
+type clientRequestError struct {
+	msg string
+}
+
+func (e clientRequestError) Error() string {
+	return e.msg
+}
+
+func clientRequestMessage(err error) (string, bool) {
+	var cre clientRequestError
+	if errors.As(err, &cre) {
+		return cre.msg, true
+	}
+	return "", false
+}
+
 func backtestRunHandler(pool *pgxpool.Pool, orchestratorURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -288,6 +305,13 @@ func backtestRunHandler(pool *pgxpool.Pool, orchestratorURL string) http.Handler
 		}
 		out, err := runBacktestAndPersist(r.Context(), pool, strings.TrimRight(orchestratorURL, "/"), req, "api")
 		if err != nil {
+			if msg, ok := clientRequestMessage(err); ok {
+				http.Error(w, msg, http.StatusBadRequest)
+				return
+			}
+			if writeProxyError(w, err) {
+				return
+			}
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
@@ -683,6 +707,9 @@ func researchProjectsDetailHandler(pool *pgxpool.Pool, orchestratorURL string) h
 					SET status='failed', error=$2, completed_at=NOW()
 					WHERE id = $1::uuid
 				`, parentRunID, err.Error())
+				if writeProxyError(w, err) {
+					return
+				}
 				http.Error(w, err.Error(), http.StatusBadGateway)
 				return
 			}
@@ -911,9 +938,13 @@ func testingTriggerHandler(pool *pgxpool.Pool, gate, testType string) http.Handl
 		artifactPath, summary := runTrustGateJob(r.Context(), pool, gate, testType)
 		statusValue := "completed"
 		gateStatus := "passed"
-		if strings.EqualFold(toString(summary["status"]), "failed") {
+		switch strings.ToLower(toString(summary["status"])) {
+		case "failed":
 			statusValue = "failed"
 			gateStatus = "failed"
+		case "skipped":
+			statusValue = "completed"
+			gateStatus = "skipped"
 		}
 		summary["artifactUri"] = artifactPath
 		summaryJSON, _ := json.Marshal(summary)
@@ -1467,6 +1498,9 @@ func runBacktestAndPersist(ctx context.Context, pool *pgxpool.Pool, orchestrator
 	if req.DatasetID == "" {
 		req.DatasetID = envStr("BACKTEST_DATASET_ID", "")
 	}
+	if req.DatasetID == "" {
+		return nil, clientRequestError{msg: "dataset_id is required (research runtime has no live broker connection)"}
+	}
 	if req.StrategyID == "" {
 		req.StrategyID = req.StrategyConfigID
 	}
@@ -1599,9 +1633,25 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 	commands := trustGateCommands(testType)
 	results := make([]map[string]any, 0, len(commands))
 	overall := "passed"
+	skipped := 0
+	passed := 0
 	for _, cmdSpec := range commands {
 		start := time.Now().UTC()
+		if _, err := exec.LookPath(cmdSpec.Name); err != nil {
+			results = append(results, map[string]any{
+				"command":    cmdSpec.Name + " " + strings.Join(cmdSpec.Args, " "),
+				"status":     "skipped",
+				"exitCode":   -1,
+				"durationMs": 0,
+				"output":     fmt.Sprintf("executable not found: %v", err),
+			})
+			skipped++
+			continue
+		}
 		cmd := exec.CommandContext(timeoutCtx, cmdSpec.Name, cmdSpec.Args...)
+		if cmdSpec.Name == "go" {
+			cmd.Dir = "/app/src"
+		}
 		var out bytes.Buffer
 		cmd.Stdout = &out
 		cmd.Stderr = &out
@@ -1627,6 +1677,31 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 			"durationMs": duration,
 			"output":     output,
 		})
+		if status == "passed" {
+			passed++
+		}
+	}
+	if pool != nil {
+		dbStart := time.Now().UTC()
+		dbStatus := "passed"
+		dbExit := 0
+		dbOutput := "ok"
+		if _, err := pool.Exec(ctx, "SELECT 1"); err != nil {
+			dbStatus = "failed"
+			dbExit = 1
+			dbOutput = err.Error()
+			overall = "failed"
+		}
+		results = append(results, map[string]any{
+			"command":    "db-ping",
+			"status":     dbStatus,
+			"exitCode":   dbExit,
+			"durationMs": time.Since(dbStart).Milliseconds(),
+			"output":     dbOutput,
+		})
+		if dbStatus == "passed" {
+			passed++
+		}
 	}
 	if testType == "data_recon" {
 		recon := datasetReconciliationSummary(ctx, pool)
@@ -1645,6 +1720,9 @@ func runTrustGateJob(ctx context.Context, pool *pgxpool.Pool, gate, testType str
 			"output":     toJSONString(recon),
 			"summary":    recon,
 		})
+	}
+	if overall != "failed" && passed == 0 && skipped > 0 {
+		overall = "skipped"
 	}
 	summary := map[string]any{
 		"gate":      gate,
@@ -1688,9 +1766,10 @@ func trustGateCommands(testType string) []trustGateCommand {
 func writeTestingArtifactReport(pool *pgxpool.Pool, gate, testType string, summary map[string]any) string {
 	datePath := time.Now().UTC().Format("2006-01-02")
 	artifactDir := testingArtifactDir(testType)
-	dir := filepath.Join("reports", artifactDir, datePath)
+	relPath := filepath.ToSlash(filepath.Join("reports", artifactDir, datePath, testingPrimaryArtifactFile(testType)))
+	dir := filepath.FromSlash(filepath.Join("reports", artifactDir, datePath))
 	_ = os.MkdirAll(dir, 0o755)
-	file := filepath.Join(dir, testingPrimaryArtifactFile(testType))
+	file := filepath.FromSlash(relPath)
 	var buf strings.Builder
 	buf.WriteString(fmt.Sprintf("# %s\n\n", testType))
 	buf.WriteString(fmt.Sprintf("- gate: %s\n", gate))
@@ -1723,7 +1802,7 @@ func writeTestingArtifactReport(pool *pgxpool.Pool, gate, testType string, summa
 	case "flatten_proof":
 		writeFlattenProof(pool, dir, summary)
 	}
-	return file
+	return "/" + relPath
 }
 
 func testingArtifactDir(testType string) string {
@@ -1908,12 +1987,16 @@ func datasetReconciliationSummary(ctx context.Context, pool *pgxpool.Pool) map[s
 
 func writePnLReconFiles(pool *pgxpool.Pool, dir string, summary map[string]any) {
 	csvFile := filepath.Join(dir, "fills.csv")
+	correctionsFile := filepath.Join(dir, "corrections.csv")
 	if pool == nil {
 		_ = os.WriteFile(csvFile, []byte("trade_id,symbol,side,qty,price,status,error\n,,,,,,database pool unavailable\n"), 0o644)
+		_ = os.WriteFile(correctionsFile, []byte("trade_id,delta,reason,source,created_at,error\n,,,,,database pool unavailable\n"), 0o644)
 		var md strings.Builder
 		md.WriteString("# pnl_recon\n\n")
 		md.WriteString(fmt.Sprintf("- generated: %s\n", time.Now().UTC().Format(time.RFC3339)))
 		md.WriteString("- rows: 0\n")
+		md.WriteString("- corrections: 0\n")
+		md.WriteString("- corrections_total: 0\n")
 		md.WriteString("- status: failed\n")
 		md.WriteString("- reason: database pool unavailable\n")
 		_ = os.WriteFile(filepath.Join(dir, "pnl_recon.md"), []byte(md.String()), 0o644)
@@ -1952,10 +2035,43 @@ func writePnLReconFiles(pool *pgxpool.Pool, dir string, summary map[string]any) 
 	}
 	_ = os.WriteFile(csvFile, []byte(out.String()), 0o644)
 
+	var (
+		correctionsCount int
+		correctionsTotal float64
+	)
+	corrRows, err := pool.Query(context.Background(), `
+		SELECT trade_id, delta, reason, COALESCE(source,''), created_at
+		FROM pnl_corrections
+		ORDER BY created_at DESC
+		LIMIT 2000
+	`)
+	if err != nil {
+		_ = os.WriteFile(correctionsFile, []byte("trade_id,delta,reason,source,created_at,error\n,,,,,"+sanitizeCSV(err.Error())+"\n"), 0o644)
+	} else {
+		defer corrRows.Close()
+		var corrOut strings.Builder
+		corrOut.WriteString("trade_id,delta,reason,source,created_at\n")
+		for corrRows.Next() {
+			var tradeID, reason, source string
+			var delta float64
+			var createdAt time.Time
+			if err := corrRows.Scan(&tradeID, &delta, &reason, &source, &createdAt); err != nil {
+				continue
+			}
+			corrOut.WriteString(fmt.Sprintf("%s,%.6f,%s,%s,%s\n",
+				sanitizeCSV(tradeID), delta, sanitizeCSV(reason), sanitizeCSV(source), createdAt.UTC().Format(time.RFC3339)))
+			correctionsCount++
+			correctionsTotal += delta
+		}
+		_ = os.WriteFile(correctionsFile, []byte(corrOut.String()), 0o644)
+	}
+
 	var md strings.Builder
 	md.WriteString("# pnl_recon\n\n")
 	md.WriteString(fmt.Sprintf("- generated: %s\n", time.Now().UTC().Format(time.RFC3339)))
 	md.WriteString(fmt.Sprintf("- rows: %d\n", count))
+	md.WriteString(fmt.Sprintf("- corrections: %d\n", correctionsCount))
+	md.WriteString(fmt.Sprintf("- corrections_total: %.4f\n", correctionsTotal))
 	md.WriteString(fmt.Sprintf("- status: %s\n", toString(summary["status"])))
 	_ = os.WriteFile(filepath.Join(dir, "pnl_recon.md"), []byte(md.String()), 0o644)
 }
@@ -1966,6 +2082,7 @@ func writeFlattenProof(pool *pgxpool.Pool, dir string, summary map[string]any) {
 		content := fmt.Sprintf("# flatten proof\n\n- generated: %s\n- status: failed\n- reason: database pool unavailable\n",
 			time.Now().UTC().Format(time.RFC3339))
 		_ = os.WriteFile(filepath.Join(dir, "proof.md"), []byte(content), 0o644)
+		_ = os.WriteFile(filepath.Join(dir, "violations.csv"), []byte("trade_id,instance_id,symbol,created_at_local,flatten_by_close_time,error\n,,,,,database pool unavailable\n"), 0o644)
 		return
 	}
 	var breaches int
@@ -1980,9 +2097,40 @@ func writeFlattenProof(pool *pgxpool.Pool, dir string, summary map[string]any) {
 		status = "failed"
 		summary["status"] = "failed"
 	}
+	writeFlattenViolations(pool, dir)
 	content := fmt.Sprintf("# flatten proof\n\n- generated: %s\n- status: %s\n- trades_after_flatten: %d\n",
 		time.Now().UTC().Format(time.RFC3339), status, breaches)
 	_ = os.WriteFile(filepath.Join(dir, "proof.md"), []byte(content), 0o644)
+}
+
+func writeFlattenViolations(pool *pgxpool.Pool, dir string) {
+	csvFile := filepath.Join(dir, "violations.csv")
+	rows, err := pool.Query(context.Background(), `
+		SELECT t.id, t.instance_id::text, t.symbol,
+		       to_char((t.created_at AT TIME ZONE si.session_timezone), 'YYYY-MM-DD HH24:MI:SS') AS created_local,
+		       si.flatten_by_close_time
+		FROM trades t
+		JOIN strategy_instances si ON si.id = t.instance_id
+		WHERE to_char((t.created_at AT TIME ZONE si.session_timezone), 'HH24:MI') > si.flatten_by_close_time
+		ORDER BY t.created_at DESC
+		LIMIT 2000
+	`)
+	if err != nil {
+		_ = os.WriteFile(csvFile, []byte("trade_id,instance_id,symbol,created_at_local,flatten_by_close_time,error\n,,,,,"+sanitizeCSV(err.Error())+"\n"), 0o644)
+		return
+	}
+	defer rows.Close()
+	var out strings.Builder
+	out.WriteString("trade_id,instance_id,symbol,created_at_local,flatten_by_close_time\n")
+	for rows.Next() {
+		var tradeID, instanceID, symbol, createdLocal, flattenAt string
+		if err := rows.Scan(&tradeID, &instanceID, &symbol, &createdLocal, &flattenAt); err != nil {
+			continue
+		}
+		out.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s\n",
+			sanitizeCSV(tradeID), sanitizeCSV(instanceID), sanitizeCSV(symbol), sanitizeCSV(createdLocal), sanitizeCSV(flattenAt)))
+	}
+	_ = os.WriteFile(csvFile, []byte(out.String()), 0o644)
 }
 
 func sanitizeCSV(raw string) string {
@@ -1990,6 +2138,113 @@ func sanitizeCSV(raw string) string {
 	raw = strings.ReplaceAll(raw, "\r", " ")
 	raw = strings.ReplaceAll(raw, ",", " ")
 	return strings.TrimSpace(raw)
+}
+
+func pnlCorrectionsHandler(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			var req struct {
+				TradeID  string         `json:"tradeId"`
+				Delta    float64        `json:"delta"`
+				Reason   string         `json:"reason"`
+				Source   string         `json:"source,omitempty"`
+				Metadata map[string]any `json:"metadata,omitempty"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, "invalid JSON", http.StatusBadRequest)
+				return
+			}
+			if strings.TrimSpace(req.TradeID) == "" {
+				http.Error(w, "tradeId is required", http.StatusBadRequest)
+				return
+			}
+			if strings.TrimSpace(req.Reason) == "" {
+				http.Error(w, "reason is required", http.StatusBadRequest)
+				return
+			}
+			if pool == nil {
+				http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+				return
+			}
+			meta, _ := json.Marshal(req.Metadata)
+			var id string
+			err := pool.QueryRow(r.Context(), `
+				INSERT INTO pnl_corrections (trade_id, delta, reason, source, metadata)
+				VALUES ($1, $2, $3, NULLIF($4,''), $5::jsonb)
+				RETURNING id::text
+			`, req.TradeID, req.Delta, req.Reason, req.Source, string(meta)).Scan(&id)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			jsonOK(w, map[string]any{"id": id})
+		case http.MethodGet:
+			if pool == nil {
+				http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+				return
+			}
+			tradeID := strings.TrimSpace(r.URL.Query().Get("trade_id"))
+			limit := 100
+			if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+				if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 && parsed <= 1000 {
+					limit = parsed
+				}
+			}
+			query := `
+				SELECT id::text, trade_id, delta, reason, COALESCE(source,''), metadata::text, created_at
+				FROM pnl_corrections
+			`
+			args := []any{}
+			if tradeID != "" {
+				query += " WHERE trade_id = $1"
+				args = append(args, tradeID)
+			}
+			query += " ORDER BY created_at DESC LIMIT $2"
+			args = append(args, limit)
+			if tradeID == "" {
+				query = strings.Replace(query, "$2", "$1", 1)
+				args = []any{limit}
+			}
+			rows, err := pool.Query(r.Context(), query, args...)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			defer rows.Close()
+			out := make([]map[string]any, 0, 32)
+			for rows.Next() {
+				var (
+					id      string
+					tid     string
+					delta   float64
+					reason  string
+					source  string
+					metaRaw string
+					created time.Time
+				)
+				if err := rows.Scan(&id, &tid, &delta, &reason, &source, &metaRaw, &created); err != nil {
+					continue
+				}
+				meta := map[string]any{}
+				if metaRaw != "" {
+					_ = json.Unmarshal([]byte(metaRaw), &meta)
+				}
+				out = append(out, map[string]any{
+					"id":        id,
+					"tradeId":   tid,
+					"delta":     delta,
+					"reason":    reason,
+					"source":    source,
+					"metadata":  meta,
+					"createdAt": created,
+				})
+			}
+			jsonOK(w, out)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
 }
 
 func parseOptionalDate(v any) *time.Time {

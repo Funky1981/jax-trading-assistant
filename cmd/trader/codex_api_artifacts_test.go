@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -49,9 +50,9 @@ func TestWriteTestingArtifactReportCreatesExpectedFiles(t *testing.T) {
 		extraArtifacts []string
 	}{
 		{testType: "data_recon", extraArtifacts: []string{"recon.csv", "summary.md"}},
-		{testType: "pnl_recon", extraArtifacts: []string{"fills.csv", "pnl_recon.md"}},
+		{testType: "pnl_recon", extraArtifacts: []string{"fills.csv", "corrections.csv", "pnl_recon.md"}},
 		{testType: "failure_suite", extraArtifacts: []string{"report.md"}},
-		{testType: "flatten_proof", extraArtifacts: []string{"proof.md"}},
+		{testType: "flatten_proof", extraArtifacts: []string{"proof.md", "violations.csv"}},
 	}
 
 	for _, tc := range cases {
@@ -68,7 +69,8 @@ func TestWriteTestingArtifactReportCreatesExpectedFiles(t *testing.T) {
 			},
 		}
 		artifactPath := writeTestingArtifactReport(nil, "GateX", tc.testType, summary)
-		if _, err := os.Stat(artifactPath); err != nil {
+		artifactFile := filepath.FromSlash(strings.TrimPrefix(artifactPath, "/"))
+		if _, err := os.Stat(artifactFile); err != nil {
 			t.Fatalf("primary artifact missing for %q: %v", tc.testType, err)
 		}
 		artifactDir := filepath.Join("reports", testingArtifactDir(tc.testType), datePath)

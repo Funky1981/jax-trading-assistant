@@ -1,11 +1,15 @@
 import { SelectInput, TextInput } from '../components';
+import { HelpHint } from '@/components/ui/help-hint';
 
 export function SettingsPage() {
   return (
-    <div className="space-y-4 max-w-lg">
-      <h1 className="text-3xl font-semibold">Settings</h1>
+    <div className="space-y-4 w-full max-w-lg">
+      <h1 className="flex items-center gap-2 text-3xl font-semibold">
+        Settings
+        <HelpHint text="Customize UI defaults and preferences." />
+      </h1>
       <p className="text-sm text-muted-foreground">
-        Customize your layout and preferences.
+        Adjust basic preferences for the UI.
       </p>
       <SelectInput
         value="dark"

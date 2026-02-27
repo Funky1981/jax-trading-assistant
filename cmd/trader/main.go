@@ -18,6 +18,7 @@ import (
 
 	"jax-trading-assistant/internal/domain/artifacts"
 	artifactsModule "jax-trading-assistant/internal/modules/artifacts"
+	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/internal/modules/execution"
 	"jax-trading-assistant/internal/trader/signalgenerator"
 	"jax-trading-assistant/libs/risk"
@@ -157,9 +158,11 @@ func main() {
 			log.Printf("warning: failed to create SQL DB for execution: %v (execution disabled)", err)
 		} else {
 			tradeStore := execution.NewPostgresTradeStore(sqlDB)
+			auditSvc := audit.New(sqlDB)
 
 			// Create execution service (L16: enforcer gates portfolio-level constraints)
-			execService = execution.NewService(engine, ibClient, tradeStore, cfg.DefaultOrderType, riskParams, riskEnforcer)
+			execService = execution.NewService(engine, ibClient, tradeStore, cfg.DefaultOrderType, riskParams, riskEnforcer).
+				WithAudit(auditSvc)
 			log.Println("execution service initialized")
 			log.Printf("  IB Bridge: %s", cfg.IBBridgeURL)
 			log.Printf("  max risk per trade: %.2f%%", cfg.MaxRiskPerTrade*100)

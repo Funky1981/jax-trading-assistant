@@ -6,6 +6,7 @@ import type { TriggerTestResponse } from '@/data/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { HelpHint } from '@/components/ui/help-hint';
 
 type TriggerName = 'data' | 'pnl' | 'failure' | 'flatten';
 
@@ -45,10 +46,13 @@ export function TestingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">TRUST GATES</p>
-        <h1 className="text-2xl font-bold md:text-3xl">Testing</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">SAFETY CHECKS</p>
+        <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
+          Testing
+          <HelpHint text="Run reconciliation and safety checks. These are paper-mode only." />
+        </h1>
         <p className="text-muted-foreground mt-1">
-          Validate trust gates, run paper-only reconciliation jobs, and inspect latest diagnostics.
+          Run the safety checks that prove data integrity and paper-trading readiness.
         </p>
       </div>
 
@@ -57,11 +61,13 @@ export function TestingPage() {
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" />
             Trust Gates Checklist
+            <HelpHint text="Each gate produces an artifact report and status." />
           </CardTitle>
           <CardDescription>Gate0..Gate7 with latest state and artifact links.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[640px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Gate</TableHead>
@@ -93,7 +99,8 @@ export function TestingPage() {
                 );
               })}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -102,10 +109,11 @@ export function TestingPage() {
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
             Quick Diagnostics
+            <HelpHint text="Health checks for the running services." />
           </CardTitle>
           <CardDescription>Health checks for trader, research, and IB bridge runtime.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(healthQuery.data?.services ?? []).map((service) => (
             <div key={service.name} className="rounded-md border border-border p-3">
               <p className="text-sm font-medium">{service.name}</p>
@@ -123,10 +131,11 @@ export function TestingPage() {
           <CardTitle className="flex items-center gap-2">
             <FlaskConical className="h-5 w-5" />
             Run Tests (Paper Mode)
+            <HelpHint text="Triggers runbook jobs that write reports under /reports." />
           </CardTitle>
           <CardDescription>These endpoints are guarded server-side and reject in live mode.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
+        <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button onClick={() => triggerMutation.mutate('data')} disabled={triggerMutation.isPending}>
             <Play className="mr-1 h-4 w-4" />
             Run Data Reconciliation
@@ -154,10 +163,14 @@ export function TestingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Test Runs</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Recent Test Runs
+            <HelpHint text="Latest test runs with links to generated artifacts." />
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[600px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Test</TableHead>
@@ -186,7 +199,8 @@ export function TestingPage() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -218,4 +232,3 @@ function statusBadge(status: string) {
 function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
-

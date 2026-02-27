@@ -85,7 +85,7 @@ export function MetricsDashboard() {
           </h2>
         </div>
         {recentMetrics && recentMetrics.length > 0 ? (
-          <div className="max-h-[400px] overflow-auto">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>

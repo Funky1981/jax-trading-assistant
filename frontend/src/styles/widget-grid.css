@@ -12,6 +12,18 @@
   min-height: 100%;
 }
 
+/* Avoid internal widget scrollbars; require resize/expand instead */
+.widget-panel,
+.widget-panel * {
+  scrollbar-width: none;
+}
+
+.widget-panel *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 /* Grid item transitions */
 .react-grid-item {
   transition: transform 200ms ease, box-shadow 200ms ease;

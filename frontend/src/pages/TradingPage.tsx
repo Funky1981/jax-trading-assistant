@@ -13,6 +13,7 @@ import {
   AIAssistantPanel,
   SignalsQueuePanel,
 } from '@/components/dashboard';
+import { HelpHint } from '@/components/ui/help-hint';
 
 // Panel IDs for state management
 const PANEL_IDS = [
@@ -87,19 +88,23 @@ export function TradingPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
             TRADING TOOLS
           </p>
-          <h1 className="text-2xl font-bold md:text-3xl">Trading</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
+            Trading
+            <HelpHint text="Use the panels below to monitor markets, submit orders, and review signals." />
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Execute trades, monitor positions, and analyze market data.
+            Monitor markets, place paper orders, and review signals in one place.
           </p>
         </div>
 
         {/* Expand/Collapse Controls */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={expandAll}
             disabled={allExpanded}
+            className="w-full sm:w-auto"
           >
             <ChevronDown className="h-4 w-4 mr-1" />
             Expand All
@@ -109,6 +114,7 @@ export function TradingPage() {
             size="sm"
             onClick={collapseAll}
             disabled={allCollapsed}
+            className="w-full sm:w-auto"
           >
             <ChevronUp className="h-4 w-4 mr-1" />
             Collapse All

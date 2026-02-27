@@ -15,6 +15,11 @@ if (-not (Test-Path ".env")) {
 # Start backend services
 Write-Host "`nStarting backend services (Docker)..." -ForegroundColor Cyan
 
+# Force container-friendly DATABASE_URL unless explicitly set in this session.
+if (-not $env:DATABASE_URL) {
+    $env:DATABASE_URL = "postgresql://jax:jax@postgres:5432/jax"
+}
+
 # Start postgres first
 Write-Host "  Starting postgres..." -ForegroundColor Gray
 docker compose up -d postgres 2>$null
@@ -33,7 +38,7 @@ for ($i = 1; $i -le 10; $i++) {
 
 # Start other services
 Write-Host "  Starting jax-trader and jax-research..." -ForegroundColor Gray
-docker compose up -d jax-trader jax-research 2>$null
+docker compose up -d --force-recreate jax-trader jax-research 2>$null
 
 # Wait for services to be ready
 Write-Host "`nWaiting for services to be ready..." -ForegroundColor Yellow

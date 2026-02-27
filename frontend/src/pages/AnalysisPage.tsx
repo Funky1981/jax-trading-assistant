@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { HelpHint } from '@/components/ui/help-hint';
 
 export function AnalysisPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -101,16 +102,22 @@ export function AnalysisPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">RUN ANALYSIS</p>
-        <h1 className="text-2xl font-bold md:text-3xl">Analysis</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">BACKTEST ANALYSIS</p>
+        <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
+          Analysis
+          <HelpHint text="Inspect a backtest run, review trades, and correlate with events." />
+        </h1>
         <p className="text-muted-foreground mt-1">
-          Inspect backtest metrics, symbol-level breakdown, trades, and run timeline.
+          Review backtest results, trades, and the timeline for a selected run.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Run Selector</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Run Selector
+            <HelpHint text="Choose a run to load metrics. You can also open this page with ?runId=..." />
+          </CardTitle>
           <CardDescription>Select a run or open this page with `?runId=...`.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -145,10 +152,13 @@ export function AnalysisPage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Dataset Provenance</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Dataset Provenance
+                <HelpHint text="Shows dataset snapshot and hash so results can be reproduced." />
+              </CardTitle>
               <CardDescription>Snapshot and hash used for this run.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-3">
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <p className="text-sm font-medium">Dataset ID</p>
                 <p className="text-sm text-muted-foreground">{runDetailQuery.data.datasetId ?? '-'}</p>
@@ -174,7 +184,7 @@ export function AnalysisPage() {
                   <div>
                     <p className="text-sm font-medium">Date Range</p>
                     <p className="text-sm text-muted-foreground">
-                      {fmtDate(datasetQuery.data.startDate)} → {fmtDate(datasetQuery.data.endDate)}
+                      {fmtDate(datasetQuery.data.startDate)} to {fmtDate(datasetQuery.data.endDate)}
                     </p>
                   </div>
                 </>
@@ -182,7 +192,7 @@ export function AnalysisPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
             <MetricCard title="Trades" value={numOrDash(runDetailQuery.data.stats.trades ?? runDetailQuery.data.stats.totalTrades)} />
             <MetricCard title="Win Rate" value={pctOrDash(runDetailQuery.data.stats.winRate)} />
             <MetricCard title="Avg R" value={numOrDash(runDetailQuery.data.stats.avgR)} />
@@ -196,10 +206,11 @@ export function AnalysisPage() {
               <CardTitle>By Symbol</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Symbol</TableHead>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[520px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Symbol</TableHead>
                     <TableHead>Trades</TableHead>
                     <TableHead>Win Rate</TableHead>
                     <TableHead>P/L</TableHead>
@@ -215,7 +226,8 @@ export function AnalysisPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
@@ -228,10 +240,11 @@ export function AnalysisPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Symbol</TableHead>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[900px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Symbol</TableHead>
                     <TableHead>Entry Time</TableHead>
                     <TableHead>Entry</TableHead>
                     <TableHead>Exit Time</TableHead>
@@ -255,7 +268,8 @@ export function AnalysisPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
@@ -281,46 +295,48 @@ export function AnalysisPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Kind</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Classify</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(eventsQuery.data?.events ?? []).map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell>{fmtDate(event.eventTime)}</TableCell>
-                      <TableCell>{event.kind}</TableCell>
-                      <TableCell>{event.severity ?? '-'}</TableCell>
-                      <TableCell>{event.title}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={async () => {
-                            const classification = await eventsService.classifyById(event.id);
-                            setClassifications((prev) => ({
-                              ...prev,
-                              [event.id]: `${classification.class} / ${classification.impact} / ${classification.sentiment}`,
-                            }));
-                          }}
-                        >
-                          <Sparkles className="mr-1 h-4 w-4" />
-                          Classify
-                        </Button>
-                        {classifications[event.id] && (
-                          <div className="text-xs text-muted-foreground mt-1">{classifications[event.id]}</div>
-                        )}
-                      </TableCell>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[860px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Kind</TableHead>
+                      <TableHead>Severity</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Classify</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {(eventsQuery.data?.events ?? []).map((event) => (
+                      <TableRow key={event.id}>
+                        <TableCell>{fmtDate(event.eventTime)}</TableCell>
+                        <TableCell>{event.kind}</TableCell>
+                        <TableCell>{event.severity ?? '-'}</TableCell>
+                        <TableCell>{event.title}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              const classification = await eventsService.classifyById(event.id);
+                              setClassifications((prev) => ({
+                                ...prev,
+                                [event.id]: `${classification.class} / ${classification.impact} / ${classification.sentiment}`,
+                              }));
+                            }}
+                          >
+                            <Sparkles className="mr-1 h-4 w-4" />
+                            Classify
+                          </Button>
+                          {classifications[event.id] && (
+                            <div className="text-xs text-muted-foreground mt-1">{classifications[event.id]}</div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
@@ -329,10 +345,11 @@ export function AnalysisPage() {
               <CardTitle>Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[760px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Timestamp</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Action</TableHead>
                     <TableHead>Outcome</TableHead>
@@ -350,7 +367,8 @@ export function AnalysisPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </>

@@ -9,6 +9,8 @@ import (
 	"math"
 	"time"
 
+	"jax-trading-assistant/internal/modules/audit"
+	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/risk"
 
 	"github.com/google/uuid"
@@ -25,9 +27,12 @@ type BrokerClient interface {
 // TradeStore interface for database operations
 type TradeStore interface {
 	GetSignal(ctx context.Context, signalID uuid.UUID) (*Signal, error)
+	GetTradeBySignal(ctx context.Context, signalID uuid.UUID) (*TradeResult, error)
+	GetLatestOrderIntentBySignal(ctx context.Context, signalID uuid.UUID) (*OrderIntentSummary, error)
 	StoreTrade(ctx context.Context, trade *TradeResult) error
 	UpdateTradeApproval(ctx context.Context, signalID uuid.UUID, orderID string) error
 	UpdateTradeStatus(ctx context.Context, tradeID uuid.UUID, status *BrokerOrderStatus) error
+	UpdateOrderIntentStatusByTrade(ctx context.Context, tradeID uuid.UUID, status *BrokerOrderStatus) error
 	GetDailyRisk(ctx context.Context) (float64, error)
 	StoreOrderIntent(ctx context.Context, intent *OrderIntent) (string, error)
 	UpdateOrderIntentStatus(ctx context.Context, signalID uuid.UUID, status *BrokerOrderStatus) error
@@ -86,6 +91,7 @@ type Service struct {
 	// enforcer applies versioned policy constraints (L16) on top of the
 	// engine's built-in position-level checks. May be nil (no-op).
 	enforcer *risk.Enforcer
+	audit    *audit.Service
 }
 
 // OrderIntent records an execution request before/while the broker order is live.
@@ -98,6 +104,13 @@ type OrderIntent struct {
 	OrderType     string
 	LimitPrice    *float64
 	StopPrice     *float64
+	Status        string
+	BrokerOrderID string
+}
+
+// OrderIntentSummary is a minimal view for idempotency checks.
+type OrderIntentSummary struct {
+	ID            string
 	Status        string
 	BrokerOrderID string
 }
@@ -116,8 +129,17 @@ func NewService(engine *Engine, broker BrokerClient, store TradeStore, orderType
 	}
 }
 
+func (s *Service) WithAudit(auditSvc *audit.Service) *Service {
+	s.audit = auditSvc
+	return s
+}
+
 // ExecuteTrade executes a trade for an approved signal
 func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approvedBy string) (*TradeResult, error) {
+	if existing, err := s.store.GetTradeBySignal(ctx, signalID); err == nil && existing != nil {
+		return existing, nil
+	}
+
 	// 1. Fetch signal from database
 	signal, err := s.store.GetSignal(ctx, signalID)
 	if err != nil {
@@ -176,6 +198,24 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 		StopPrice:  orderReq.StopPrice,
 	}
 
+	// 6b. Idempotency guard: block duplicate broker submissions if an intent already exists.
+	if intent, err := s.store.GetLatestOrderIntentBySignal(ctx, signalID); err == nil && intent != nil {
+		if intent.BrokerOrderID != "" && !isTerminalOrderStatus(intent.Status) {
+			if s.audit != nil {
+				flowID := observability.FlowIDFromContext(ctx)
+				_ = s.audit.LogAuditEvent(ctx, flowID, "execution", "idempotency_guard", "blocked",
+					"duplicate broker submission blocked",
+					map[string]any{
+						"signal_id":       signalID.String(),
+						"intent_id":       intent.ID,
+						"intent_status":   intent.Status,
+						"broker_order_id": intent.BrokerOrderID,
+					})
+			}
+			return nil, fmt.Errorf("order already submitted for signal %s (intent %s, status %s)", signalID, intent.ID, intent.Status)
+		}
+	}
+
 	// 7. Place order with broker
 	orderResp, err := s.broker.PlaceOrder(ctx, brokerOrderReq)
 	if err != nil {
@@ -194,7 +234,7 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 	if orderStatus != nil && orderStatus.Status != "" {
 		intentStatus = orderStatus.Status
 	}
-	if _, err := s.store.StoreOrderIntent(ctx, &OrderIntent{
+	intentID, err := s.store.StoreOrderIntent(ctx, &OrderIntent{
 		SignalID:      signalID,
 		InstanceID:    signal.InstanceID,
 		Symbol:        signal.Symbol,
@@ -205,7 +245,8 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 		StopPrice:     orderReq.StopPrice,
 		Status:        intentStatus,
 		BrokerOrderID: fmt.Sprintf("%d", orderResp.OrderID),
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("Warning: Failed to store order intent: %v", err)
 	}
 
@@ -241,6 +282,10 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 		trade.Status = orderStatus.Status
 		trade.FilledQty = orderStatus.FilledQty
 		trade.AvgFillPrice = orderStatus.AvgFillPrice
+	}
+
+	if intentID == "" {
+		log.Printf("Warning: order intent ID missing for trade %s", tradeID)
 	}
 
 	// 11. Store trade in database
@@ -342,6 +387,9 @@ func (s *Service) pollOrderStatus(tradeID uuid.UUID, orderID int) {
 				log.Printf("order status poll failed for %d: %v", orderID, err)
 				continue
 			}
+			if err := s.store.UpdateOrderIntentStatusByTrade(context.Background(), tradeID, status); err != nil {
+				log.Printf("failed to update order intent status for %s: %v", tradeID, err)
+			}
 			if err := s.store.UpdateTradeStatus(context.Background(), tradeID, status); err != nil {
 				log.Printf("failed to update trade status for %s: %v", tradeID, err)
 			}
@@ -420,6 +468,149 @@ func (s *PostgresTradeStore) GetSignal(ctx context.Context, signalID uuid.UUID) 
 	}
 
 	return &signal, nil
+}
+
+// GetTradeBySignal returns the latest trade for a signal, if one exists.
+func (s *PostgresTradeStore) GetTradeBySignal(ctx context.Context, signalID uuid.UUID) (*TradeResult, error) {
+	var (
+		idStr           string
+		symbol          string
+		direction       string
+		entry           float64
+		stop            float64
+		targetsRaw      []byte
+		strategyID      string
+		statusRaw       sql.NullString
+		filledQtyRaw    sql.NullInt64
+		avgFillRaw      sql.NullFloat64
+		createdAt       time.Time
+		riskRaw         []byte
+		instanceIDPtr   *uuid.UUID
+		artifactIDPtr   *uuid.UUID
+		artifactHashPtr *string
+	)
+
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id::text, symbol, direction, entry, stop, targets, strategy_id,
+		       order_status, filled_qty, avg_fill_price, created_at, risk,
+		       instance_id, artifact_id, artifact_hash
+		FROM trades
+		WHERE signal_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, signalID).Scan(
+		&idStr,
+		&symbol,
+		&direction,
+		&entry,
+		&stop,
+		&targetsRaw,
+		&strategyID,
+		&statusRaw,
+		&filledQtyRaw,
+		&avgFillRaw,
+		&createdAt,
+		&riskRaw,
+		&instanceIDPtr,
+		&artifactIDPtr,
+		&artifactHashPtr,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	tradeID, err := uuid.Parse(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid trade id %q: %w", idStr, err)
+	}
+
+	var targets []float64
+	if len(targetsRaw) > 0 {
+		_ = json.Unmarshal(targetsRaw, &targets)
+	}
+	if len(targets) == 0 {
+		targets = []float64{0}
+	}
+
+	var (
+		quantity      int
+		orderID       string
+		riskAmount    float64
+		riskPercent   float64
+		positionValue float64
+	)
+	if len(riskRaw) > 0 {
+		var riskMap map[string]any
+		if json.Unmarshal(riskRaw, &riskMap) == nil {
+			quantity = intFromAny(riskMap["quantity"], 0)
+			orderID, _ = riskMap["order_id"].(string)
+			riskAmount = floatFromAny(riskMap["amount"], 0)
+			riskPercent = floatFromAny(riskMap["percent"], 0)
+			positionValue = floatFromAny(riskMap["position_value"], 0)
+		}
+	}
+
+	trade := &TradeResult{
+		TradeID:       tradeID,
+		SignalID:      signalID,
+		OrderID:       orderID,
+		Symbol:        symbol,
+		Direction:     direction,
+		Quantity:      quantity,
+		EntryPrice:    entry,
+		StopLoss:      stop,
+		TakeProfit:    targets[0],
+		StrategyID:    strategyID,
+		Status:        statusRaw.String,
+		FilledQty:     int(filledQtyRaw.Int64),
+		AvgFillPrice:  avgFillRaw.Float64,
+		RiskAmount:    riskAmount,
+		RiskPercent:   riskPercent,
+		PositionValue: positionValue,
+		SubmittedAt:   createdAt,
+	}
+
+	if instanceIDPtr != nil {
+		trade.InstanceID = instanceIDPtr.String()
+	}
+	if artifactIDPtr != nil {
+		trade.ArtifactID = artifactIDPtr.String()
+	}
+	if artifactHashPtr != nil {
+		trade.ArtifactHash = *artifactHashPtr
+	}
+
+	return trade, nil
+}
+
+// GetLatestOrderIntentBySignal fetches the most recent order intent for a signal.
+func (s *PostgresTradeStore) GetLatestOrderIntentBySignal(ctx context.Context, signalID uuid.UUID) (*OrderIntentSummary, error) {
+	var (
+		intentID      string
+		status        sql.NullString
+		brokerOrderID sql.NullString
+	)
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id::text, status, metadata->>'brokerOrderId'
+		FROM order_intents
+		WHERE signal_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, signalID).Scan(&intentID, &status, &brokerOrderID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &OrderIntentSummary{
+		ID:            intentID,
+		Status:        status.String,
+		BrokerOrderID: brokerOrderID.String,
+	}, nil
 }
 
 // StoreTrade stores a trade record in database
@@ -525,6 +716,23 @@ func (s *PostgresTradeStore) StoreOrderIntent(ctx context.Context, intent *Order
 	if intent == nil {
 		return "", fmt.Errorf("order intent is nil")
 	}
+	if intent.BrokerOrderID != "" {
+		var existingID string
+		err := s.db.QueryRowContext(ctx, `
+			SELECT id::text
+			FROM order_intents
+			WHERE signal_id = $1
+			  AND metadata->>'brokerOrderId' = $2
+			ORDER BY created_at DESC
+			LIMIT 1
+		`, intent.SignalID, intent.BrokerOrderID).Scan(&existingID)
+		if err == nil {
+			return existingID, nil
+		}
+		if err != nil && err != sql.ErrNoRows {
+			return "", err
+		}
+	}
 	metadata, _ := json.Marshal(map[string]any{
 		"brokerOrderId": intent.BrokerOrderID,
 	})
@@ -570,6 +778,22 @@ func (s *PostgresTradeStore) UpdateOrderIntentStatus(ctx context.Context, signal
 		)
 	`, signalID, status.Status, string(metadata))
 	return err
+}
+
+// UpdateOrderIntentStatusByTrade updates the most recent intent using a trade lookup.
+func (s *PostgresTradeStore) UpdateOrderIntentStatusByTrade(ctx context.Context, tradeID uuid.UUID, status *BrokerOrderStatus) error {
+	if status == nil {
+		return nil
+	}
+	var signalID uuid.UUID
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT signal_id
+		FROM trades
+		WHERE id = $1
+	`, tradeID).Scan(&signalID); err != nil {
+		return err
+	}
+	return s.UpdateOrderIntentStatus(ctx, signalID, status)
 }
 
 func (s *PostgresTradeStore) updateIntentAndFill(ctx context.Context, tradeID uuid.UUID, status *BrokerOrderStatus) error {
@@ -717,5 +941,14 @@ func floatFromAny(v any, def float64) float64 {
 		return float64(n)
 	default:
 		return def
+	}
+}
+
+func isTerminalOrderStatus(status string) bool {
+	switch status {
+	case "Filled", "Cancelled", "Rejected":
+		return true
+	default:
+		return false
 	}
 }

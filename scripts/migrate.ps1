@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 
 <#
 .SYNOPSIS
@@ -106,8 +106,8 @@ switch ($Action) {
 }
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✓ Migration action completed successfully" -ForegroundColor Green
+    Write-Host "Migration action completed successfully." -ForegroundColor Green
 } else {
-    Write-Host "✗ Migration action failed with exit code: $LASTEXITCODE" -ForegroundColor Red
+    Write-Host "Migration action failed with exit code: $LASTEXITCODE" -ForegroundColor Red
     exit $LASTEXITCODE
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { HelpHint } from '@/components/ui/help-hint';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -28,12 +29,15 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6 p-8 rounded-lg border border-border bg-card shadow-sm">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm space-y-6 p-6 sm:p-8 rounded-lg border border-border bg-card shadow-sm">
         {/* Logo / Title */}
         <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">JAX Trading</h1>
-          <p className="text-sm text-muted-foreground">Sign in to continue</p>
+          <h1 className="flex items-center justify-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+            JAX Trading
+            <HelpHint text="Use your local admin credentials to access the dashboard." />
+          </h1>
+          <p className="text-sm text-muted-foreground">Sign in to access the workspace</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -70,7 +74,7 @@ export function LoginPage() {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm
                          placeholder-muted-foreground focus:outline-none focus:ring-2
                          focus:ring-ring focus:border-transparent"
-              placeholder="••••••••"
+              placeholder="********"
             />
           </div>
 
@@ -87,12 +91,12 @@ export function LoginPage() {
                        hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring
                        disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
         <p className="text-center text-xs text-muted-foreground">
-          JAX Trading Assistant — local instance
+          JAX Trading Assistant - local instance
         </p>
       </div>
     </div>

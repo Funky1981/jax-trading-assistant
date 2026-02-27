@@ -195,19 +195,19 @@ export function DashboardGrid({
         return (
           <Card
             key={widget.id}
-            className="transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+            className="overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
             style={{
               gridColumn: `${widget.x + 1} / span ${widget.w}`,
               gridRow: `${widget.y + 1} / span ${widget.h}`,
             }}
           >
-            <CardContent className="p-5 h-full flex flex-col">
+            <CardContent className="p-5 h-full flex flex-col overflow-hidden">
               <div className="mb-3 pb-2 border-b">
                 <h3 className="text-base font-semibold">
                   {definition?.title ?? widget.id}
                 </h3>
               </div>
-              <div className="flex-1 overflow-auto">
+              <div className="flex-1">
                 {renderWidget(widget, {
                   positions,
                   orders,

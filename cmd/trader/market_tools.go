@@ -63,7 +63,11 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 			Enabled:   true,
 		})
 	}
-	if polygonKey := strings.TrimSpace(os.Getenv("POLYGON_API_KEY")); polygonKey != "" &&
+	polygonKey := strings.TrimSpace(os.Getenv("POLYGON_API_KEY"))
+	if polygonKey == "" {
+		polygonKey = strings.TrimSpace(os.Getenv("MASSIVE_API_KEY"))
+	}
+	if polygonKey != "" &&
 		!strings.EqualFold(strings.TrimSpace(os.Getenv("POLYGON_ENABLED")), "false") {
 		providers = append(providers, marketdata.ProviderConfig{
 			Name:     marketdata.ProviderPolygon,
@@ -345,6 +349,8 @@ func parseOptionalRange(fromRaw, toRaw string) (time.Time, time.Time) {
 type eventAggregator struct {
 	httpClient    *http.Client
 	polygonKey    string
+	polygonBase   string
+	polygonBearer bool
 	finnhubKey    string
 	newsApiKey    string
 	failClosed    bool
@@ -355,9 +361,25 @@ type eventAggregator struct {
 func newEventAggregator(httpClient *http.Client, pool *pgxpool.Pool) *eventAggregator {
 	storeDir := envStr("CALENDAR_STORE_DIR", "data/calendar")
 	store, _ := calendar.OpenStore(storeDir)
+	polygonKey := strings.TrimSpace(os.Getenv("POLYGON_API_KEY"))
+	massiveKey := strings.TrimSpace(os.Getenv("MASSIVE_API_KEY"))
+	if polygonKey == "" {
+		polygonKey = massiveKey
+	}
+	polygonBase := strings.TrimSpace(os.Getenv("POLYGON_BASE_URL"))
+	if polygonBase == "" {
+		polygonBase = strings.TrimSpace(os.Getenv("MASSIVE_BASE_URL"))
+	}
+	if polygonBase == "" {
+		polygonBase = "https://api.polygon.io"
+	}
+	polygonAuthMode := strings.ToLower(strings.TrimSpace(os.Getenv("POLYGON_AUTH_MODE")))
+	polygonBearer := polygonAuthMode == "bearer" || massiveKey != "" || strings.Contains(polygonBase, "massive.com")
 	return &eventAggregator{
 		httpClient:    httpClient,
-		polygonKey:    strings.TrimSpace(os.Getenv("POLYGON_API_KEY")),
+		polygonKey:    polygonKey,
+		polygonBase:   polygonBase,
+		polygonBearer: polygonBearer,
 		finnhubKey:    strings.TrimSpace(os.Getenv("FINNHUB_API_KEY")),
 		newsApiKey:    strings.TrimSpace(os.Getenv("NEWSAPI_KEY")),
 		failClosed:    strings.EqualFold(os.Getenv("APP_ENV"), "production") || strings.EqualFold(os.Getenv("ENV"), "production"),
@@ -445,14 +467,15 @@ func (e *eventAggregator) getPolygonEarnings(ctx context.Context, symbol string,
 	if e.polygonKey == "" {
 		return nil, errors.New("polygon key missing")
 	}
-	endpoint := "https://api.polygon.io/vX/reference/financials"
-	u, _ := url.Parse(endpoint)
+	u, _ := url.Parse(e.polygonBaseURL("/vX/reference/financials"))
 	q := u.Query()
 	q.Set("ticker", symbol)
 	q.Set("order", "desc")
 	q.Set("sort", "filing_date")
 	q.Set("limit", strconv.Itoa(limit))
-	q.Set("apiKey", e.polygonKey)
+	if !e.polygonBearer {
+		q.Set("apiKey", e.polygonKey)
+	}
 	u.RawQuery = q.Encode()
 
 	var payload struct {
@@ -460,7 +483,7 @@ func (e *eventAggregator) getPolygonEarnings(ctx context.Context, symbol string,
 			FilingDate string `json:"filing_date"`
 		} `json:"results"`
 	}
-	if err := e.fetchJSON(ctx, u.String(), &payload); err != nil {
+	if err := e.fetchJSONWithHeaders(ctx, u.String(), e.polygonHeaders(), &payload); err != nil {
 		return nil, err
 	}
 	out := make([]utcp.EarningsEntry, 0, len(payload.Results))
@@ -512,8 +535,16 @@ func (e *eventAggregator) getPolygonNews(ctx context.Context, symbol string, lim
 	if e.polygonKey == "" {
 		return nil, errors.New("polygon key missing")
 	}
-	u := fmt.Sprintf("https://api.polygon.io/v2/reference/news?ticker=%s&limit=%d&order=desc&sort=published_utc&apiKey=%s",
-		url.QueryEscape(symbol), limit, url.QueryEscape(e.polygonKey))
+	u, _ := url.Parse(e.polygonBaseURL("/v2/reference/news"))
+	q := u.Query()
+	q.Set("ticker", symbol)
+	q.Set("limit", strconv.Itoa(limit))
+	q.Set("order", "desc")
+	q.Set("sort", "published_utc")
+	if !e.polygonBearer {
+		q.Set("apiKey", e.polygonKey)
+	}
+	u.RawQuery = q.Encode()
 	var payload struct {
 		Results []struct {
 			PublishedUTC string `json:"published_utc"`
@@ -525,7 +556,7 @@ func (e *eventAggregator) getPolygonNews(ctx context.Context, symbol string, lim
 			} `json:"publisher"`
 		} `json:"results"`
 	}
-	if err := e.fetchJSON(ctx, u, &payload); err != nil {
+	if err := e.fetchJSONWithHeaders(ctx, u.String(), e.polygonHeaders(), &payload); err != nil {
 		return nil, err
 	}
 	out := make([]utcp.NewsEntry, 0, len(payload.Results))
@@ -684,9 +715,16 @@ func (e *eventAggregator) getCalendarMacro(limit int) []utcp.NewsEntry {
 }
 
 func (e *eventAggregator) fetchJSON(ctx context.Context, endpoint string, out any) error {
+	return e.fetchJSONWithHeaders(ctx, endpoint, nil, out)
+}
+
+func (e *eventAggregator) fetchJSONWithHeaders(ctx context.Context, endpoint string, headers map[string]string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return err
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 	resp, err := e.httpClient.Do(req)
 	if err != nil {
@@ -698,4 +736,18 @@ func (e *eventAggregator) fetchJSON(ctx context.Context, endpoint string, out an
 		return fmt.Errorf("provider HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 	return json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(out)
+}
+
+func (e *eventAggregator) polygonHeaders() map[string]string {
+	if !e.polygonBearer || e.polygonKey == "" {
+		return nil
+	}
+	return map[string]string{
+		"Authorization": "Bearer " + e.polygonKey,
+	}
+}
+
+func (e *eventAggregator) polygonBaseURL(path string) string {
+	base := strings.TrimRight(e.polygonBase, "/")
+	return base + path
 }

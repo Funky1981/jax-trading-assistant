@@ -39,6 +39,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -190,6 +191,9 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 		mux.HandleFunc("/auth/login", auth.LoginHandler(jwtManager))
 		mux.HandleFunc("/auth/refresh", auth.RefreshHandler(jwtManager))
 	}
+
+	// Reports (public, read-only)
+	mux.Handle("/reports/", http.StripPrefix("/reports/", http.FileServer(http.Dir("reports"))))
 
 	// ── Health ────────────────────────────────────────────────────────────────
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -754,6 +758,9 @@ func orchestrateHandler(orchestratorURL string) http.HandlerFunc {
 		}
 		resp, err := proxyPost(r.Context(), orchestratorURL+"/orchestrate", body)
 		if err != nil {
+			if writeProxyError(w, err) {
+				return
+			}
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
@@ -1063,6 +1070,9 @@ func symbolProcessHandler(orchestratorURL string, pool *pgxpool.Pool) http.Handl
 		body, _ := json.Marshal(payload)
 		resp, err := proxyPost(r.Context(), orchestratorURL+"/orchestrate", body)
 		if err != nil {
+			if writeProxyError(w, err) {
+				return
+			}
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
@@ -1156,6 +1166,37 @@ func callOrchestrator(ctx context.Context, orchestratorURL string, payload any) 
 }
 
 // proxyPost posts body to url and returns the response body.
+type proxyError struct {
+	Status int
+	Body   string
+}
+
+func (e proxyError) Error() string {
+	if e.Body == "" {
+		return fmt.Sprintf("upstream %d", e.Status)
+	}
+	return fmt.Sprintf("upstream %d: %s", e.Status, e.Body)
+}
+
+func proxyErrorStatus(err error) (int, string, bool) {
+	var perr proxyError
+	if errors.As(err, &perr) {
+		return perr.Status, perr.Body, true
+	}
+	return 0, "", false
+}
+
+func writeProxyError(w http.ResponseWriter, err error) bool {
+	if status, body, ok := proxyErrorStatus(err); ok {
+		if body == "" {
+			body = http.StatusText(status)
+		}
+		http.Error(w, body, status)
+		return true
+	}
+	return false
+}
+
 func proxyPost(ctx context.Context, url string, body []byte) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
@@ -1175,7 +1216,7 @@ func proxyPost(ctx context.Context, url string, body []byte) ([]byte, error) {
 		return nil, err
 	}
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("upstream %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
+		return nil, proxyError{Status: resp.StatusCode, Body: strings.TrimSpace(string(data))}
 	}
 	return data, nil
 }

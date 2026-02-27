@@ -12,6 +12,7 @@ import { eventsService } from '@/data/events-service';
 import { datasetsService } from '@/data/datasets-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { HelpHint } from '@/components/ui/help-hint';
 
 // Panel IDs for state management
 const PANEL_IDS = ['health', 'metrics', 'memory'] as const;
@@ -99,19 +100,23 @@ export function SystemPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
             SYSTEM OVERVIEW
           </p>
-          <h1 className="text-2xl font-bold md:text-3xl">System</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
+            System
+            <HelpHint text="Inspect health, datasets, and memory state across services." />
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Monitor system health, events, and memory banks.
+            Monitor service health, datasets, and system events.
           </p>
         </div>
 
         {/* Expand/Collapse Controls */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={expandAll}
             disabled={allExpanded}
+            className="w-full sm:w-auto"
           >
             <ChevronDown className="h-4 w-4 mr-1" />
             Expand All
@@ -121,6 +126,7 @@ export function SystemPage() {
             size="sm"
             onClick={collapseAll}
             disabled={allCollapsed}
+            className="w-full sm:w-auto"
           >
             <ChevronUp className="h-4 w-4 mr-1" />
             Collapse All
@@ -160,7 +166,8 @@ export function SystemPage() {
               <CardTitle>Recent Events</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[640px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Time</TableHead>
@@ -179,7 +186,8 @@ export function SystemPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </DashboardPanel>
@@ -190,7 +198,8 @@ export function SystemPage() {
               <CardTitle>Dataset Snapshots</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[480px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
@@ -207,7 +216,8 @@ export function SystemPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </DashboardPanel>

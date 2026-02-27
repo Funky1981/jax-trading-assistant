@@ -3,7 +3,9 @@ package marketdata
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"jax-trading-assistant/libs/resilience"
@@ -22,6 +24,13 @@ type PolygonProvider struct {
 // NewPolygonProvider creates a new Polygon.io provider
 func NewPolygonProvider(config ProviderConfig) (*PolygonProvider, error) {
 	client := polygon.New(config.APIKey)
+	baseURL := strings.TrimSpace(os.Getenv("POLYGON_BASE_URL"))
+	if baseURL == "" {
+		baseURL = strings.TrimSpace(os.Getenv("MASSIVE_BASE_URL"))
+	}
+	if baseURL != "" {
+		client.Client.HTTP.SetBaseURL(strings.TrimRight(baseURL, "/"))
+	}
 
 	// Create circuit breaker for this provider
 	cbConfig := resilience.DefaultConfig("polygon-api")

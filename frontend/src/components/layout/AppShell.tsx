@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { 
+import {
   Menu, 
   X, 
   LayoutDashboard, 
@@ -14,6 +14,7 @@ import {
   FlaskConical,
   BarChart3,
   ShieldCheck,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -24,12 +25,13 @@ const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, end: true },
   { label: 'Trading', path: '/trading', icon: TrendingUp },
   { label: 'System', path: '/system', icon: Server },
-  { label: 'Research', path: '/research', icon: FlaskConical },
+  { label: 'Backtesting', path: '/research', icon: FlaskConical },
   { label: 'Analysis', path: '/analysis', icon: BarChart3 },
   { label: 'Testing', path: '/testing', icon: ShieldCheck },
   { label: 'Portfolio', path: '/portfolio', icon: Briefcase },
   { label: 'Blotter', path: '/blotter', icon: FileText },
   { label: 'Settings', path: '/settings', icon: Settings },
+  { label: 'User Guide', path: '/guide', icon: BookOpen },
 ];
 
 export function AppShell() {
@@ -120,7 +122,7 @@ export function AppShell() {
             )}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Activity className="h-3 w-3 text-success" />
-              <span>System Online</span>
+              <span>Services Online</span>
             </div>
           </div>
         </div>
@@ -153,7 +155,7 @@ export function AppShell() {
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-success" />
               <span className="text-sm text-muted-foreground">
-                Live Session
+                Session Active
               </span>
             </div>
             {authRequired && user && !user.anonymous && (

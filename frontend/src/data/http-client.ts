@@ -108,6 +108,6 @@ export const apiClient = createHttpClient({
 });
 
 export const memoryClient = createHttpClient({
-  baseUrl: import.meta.env.VITE_MEMORY_API_URL || 'http://localhost:8091',
+  baseUrl: import.meta.env.VITE_MEMORY_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:8091'),
   timeoutMs: 15_000,
 });

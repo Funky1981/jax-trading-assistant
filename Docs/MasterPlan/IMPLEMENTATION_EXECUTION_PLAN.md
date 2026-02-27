@@ -140,10 +140,13 @@ Any row moved to `DONE` must include:
 - `b68c049`, `ec86b95` (strategytypes backtests + event sentiment/materiality).
 - `cc5a9c5`, `39d6f08`, `929677f`, `d45df1b`, `7ac6969` (provider wiring/priorities).
 
+**Completed (evidence captured in git history on branch `work`):**
+8. Task 22: execution lifecycle persistence (order intents, fills).
+9. Task 23: idempotency + duplicate suppression + audit logging for guard.
+10. Task 24: restart-safe execution processing tests.
+11. Task 25: flatten-by-close proof artifacts (proof + violations).
+12. Task 26: PnL reconciliation corrections append model.
+
 **Remaining priority work (next up):**
-1. Task 22: execution lifecycle persistence (order intents, fills).
-2. Task 23: idempotency + duplicate suppression.
-3. Task 24: restart-safe execution processing tests.
-4. Task 25-26: flatten-by-close proof + PnL reconciliation model.
-5. Task 27-28: AI decision logging + timeline endpoints.
-6. Task 29-30: UI completion + gate automation.
+1. Task 27-28: AI decision logging + timeline endpoints.
+2. Task 29-30: UI completion + gate automation.

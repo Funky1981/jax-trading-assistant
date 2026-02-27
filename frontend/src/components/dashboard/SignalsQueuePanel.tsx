@@ -94,7 +94,7 @@ function RecommendationCard({
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            {signal.strategy_id} • {formatConfidence(signal.confidence)} confidence
+            {signal.strategy_id} - {formatConfidence(signal.confidence)} confidence
           </p>
         </div>
         <Badge variant="outline" className="text-xs">
@@ -257,7 +257,7 @@ export function SignalsQueuePanel({ isOpen, onToggle }: SignalsQueuePanelProps) 
   const signals = signalsResponse?.signals ?? [];
   const summary = (
     <span>
-      {signals.length} pending â€¢ {recResponse?.recommendations?.length ?? 0} with AI
+      {signals.length} pending - {recResponse?.recommendations?.length ?? 0} with AI
     </span>
   );
 

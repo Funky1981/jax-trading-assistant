@@ -6,20 +6,13 @@ import { SystemPage } from '@/pages/SystemPage';
 import { ResearchPage } from '@/pages/ResearchPage';
 import { AnalysisPage } from '@/pages/AnalysisPage';
 import { TestingPage } from '@/pages/TestingPage';
+import { BlotterPage } from '@/pages/BlotterPage';
+import { PortfolioPage } from '@/pages/PortfolioPage';
+import { SettingsPage } from '@/pages/SettingsPage';
+import { UserGuidePage } from '@/pages/UserGuidePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-
-// Placeholder pages - to be implemented
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold mb-2">{title}</h2>
-        <p className="text-muted-foreground">Coming soon...</p>
-      </div>
-    </div>
-  );
-}
+import { DomainProvider } from '@/domain/store';
 
 // ── Protected route ────────────────────────────────────────────────────────────
 // If auth is required and the user has no valid token, redirect to /login.
@@ -30,10 +23,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
 
   if (isLoading) {
-    // Spinner while /auth/status is resolving — keeps layout stable
+    // Spinner while /auth/status is resolving - keeps layout stable
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground text-sm">Loading…</p>
+        <p className="text-muted-foreground text-sm">Loading...</p>
       </div>
     );
   }
@@ -64,9 +57,10 @@ export const routes = [
       { path: 'research', element: <ResearchPage /> },
       { path: 'analysis', element: <AnalysisPage /> },
       { path: 'testing', element: <TestingPage /> },
-      { path: 'blotter', element: <PlaceholderPage title="Trade Blotter" /> },
-      { path: 'portfolio', element: <PlaceholderPage title="Portfolio" /> },
-      { path: 'settings', element: <PlaceholderPage title="Settings" /> },
+      { path: 'blotter', element: <BlotterPage /> },
+      { path: 'portfolio', element: <PortfolioPage /> },
+      { path: 'settings', element: <SettingsPage /> },
+      { path: 'guide', element: <UserGuidePage /> },
     ],
   },
 ];
@@ -84,7 +78,10 @@ export const router = createBrowserRouter(
 export default function App() {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <DomainProvider>
+        <RouterProvider router={router} />
+      </DomainProvider>
     </AuthProvider>
   );
 }
+

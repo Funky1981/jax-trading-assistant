@@ -90,7 +90,7 @@ services:
         VERSION: "${VERSION:-0.1.0}"
         BUILD_TIME: "${BUILD_TIME:-unknown}"
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://jax:jax@postgres:5432/jax}
+      DATABASE_URL: postgresql://jax:jax@postgres:5432/jax
       IB_BRIDGE_URL: ${IB_BRIDGE_URL:-http://ib-bridge:8092}
       PORT: "8100"
       # ADR-0012 Phase 6: frontend API (replaces jax-api on port 8081)
@@ -116,6 +116,17 @@ services:
       MAX_OPEN_POSITIONS: ${MAX_OPEN_POSITIONS:-10}
       MAX_DAILY_LOSS: ${MAX_DAILY_LOSS:-0}
       ORDER_TYPE: ${ORDER_TYPE:-LMT}
+      # Market data providers
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+      ALPACA_API_SECRET: ${ALPACA_API_SECRET:-}
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+      POLYGON_BASE_URL: ${POLYGON_BASE_URL:-}
+      POLYGON_AUTH_MODE: ${POLYGON_AUTH_MODE:-}
+      MASSIVE_API_KEY: ${MASSIVE_API_KEY:-}
+      MASSIVE_BASE_URL: ${MASSIVE_BASE_URL:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      NEWSAPI_KEY: ${NEWSAPI_KEY:-}
+      FINANCIAL_DATASETS_API_KEY: ${FINANCIAL_DATASETS_API_KEY:-}
     ports:
       - "8100:8100"
       - "8081:8081"
@@ -143,7 +154,7 @@ services:
         VERSION: "${VERSION:-0.1.0}"
         BUILD_TIME: "${BUILD_TIME:-unknown}"
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://jax:jax@postgres:5432/jax}
+      DATABASE_URL: postgresql://jax:jax@postgres:5432/jax
       HINDSIGHT_URL: ${HINDSIGHT_URL:-http://hindsight:8888}
       AGENT0_SERVICE_URL: ${AGENT0_SERVICE_URL:-http://agent0-service:8093}
       DEXTER_SERVICE_URL: ${DEXTER_SERVICE_URL:-}
@@ -151,6 +162,8 @@ services:
       PORT: "8091"
     ports:
       - "8091:8091"
+    volumes:
+      - ./data/datasets:/app/data/datasets
     depends_on:
       - postgres
       - hindsight

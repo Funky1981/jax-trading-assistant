@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Lock, Unlock, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { WidgetGrid, WidgetPanel, type Layouts } from '@/components/layout';
+import { WidgetGrid, WidgetPanel, ROW_HEIGHT, type Layouts } from '@/components/layout';
 import {
   HealthPanel,
   WatchlistPanel,
@@ -10,6 +10,7 @@ import {
   AIAssistantPanel,
   SignalsQueuePanel,
 } from '@/components/dashboard';
+import { HelpHint } from '@/components/ui/help-hint';
 import { cn } from '@/lib/utils';
 
 // Panel IDs for the overview dashboard
@@ -20,40 +21,42 @@ type PanelId = (typeof PANEL_IDS)[number];
 // Storage keys
 const LAYOUTS_STORAGE_KEY = 'jax-dashboard-widget-layouts';
 const PANEL_STATE_STORAGE_KEY = 'jax-dashboard-panel-states';
+const COLLAPSED_WIDGET_ROWS = 2;
+const HEIGHT_BUFFER_PX = 12;
 
 // Default layout for lg breakpoint (12 columns)
 const DEFAULT_LAYOUTS: Layouts = {
   lg: [
-    { x: 0, y: 0, w: 4, h: 4, i: 'health' },
-    { x: 4, y: 0, w: 4, h: 5, i: 'watchlist' },
-    { x: 0, y: 4, w: 8, h: 4, i: 'positions' },
-    { x: 8, y: 0, w: 4, h: 5, i: 'risk' },
-    { x: 0, y: 8, w: 12, h: 6, i: 'signalsQueue' },
-    { x: 0, y: 14, w: 12, h: 6, i: 'aiAssistant' },
+    { x: 0, y: 0, w: 4, h: 5, i: 'health' },
+    { x: 4, y: 0, w: 4, h: 6, i: 'watchlist' },
+    { x: 0, y: 5, w: 8, h: 6, i: 'positions' },
+    { x: 8, y: 0, w: 4, h: 6, i: 'risk' },
+    { x: 0, y: 11, w: 12, h: 8, i: 'signalsQueue' },
+    { x: 0, y: 19, w: 12, h: 8, i: 'aiAssistant' },
   ],
   md: [
-    { x: 0, y: 0, w: 5, h: 4, i: 'health' },
-    { x: 5, y: 0, w: 5, h: 5, i: 'watchlist' },
-    { x: 0, y: 4, w: 6, h: 4, i: 'positions' },
-    { x: 6, y: 4, w: 4, h: 5, i: 'risk' },
-    { x: 0, y: 9, w: 10, h: 6, i: 'signalsQueue' },
-    { x: 0, y: 15, w: 10, h: 6, i: 'aiAssistant' },
+    { x: 0, y: 0, w: 5, h: 5, i: 'health' },
+    { x: 5, y: 0, w: 5, h: 6, i: 'watchlist' },
+    { x: 0, y: 5, w: 6, h: 6, i: 'positions' },
+    { x: 6, y: 6, w: 4, h: 6, i: 'risk' },
+    { x: 0, y: 11, w: 10, h: 8, i: 'signalsQueue' },
+    { x: 0, y: 19, w: 10, h: 8, i: 'aiAssistant' },
   ],
   sm: [
-    { x: 0, y: 0, w: 6, h: 4, i: 'health' },
-    { x: 0, y: 4, w: 6, h: 5, i: 'watchlist' },
-    { x: 0, y: 9, w: 6, h: 4, i: 'positions' },
-    { x: 0, y: 13, w: 6, h: 5, i: 'risk' },
-    { x: 0, y: 18, w: 6, h: 6, i: 'signalsQueue' },
-    { x: 0, y: 24, w: 6, h: 6, i: 'aiAssistant' },
+    { x: 0, y: 0, w: 6, h: 5, i: 'health' },
+    { x: 0, y: 5, w: 6, h: 6, i: 'watchlist' },
+    { x: 0, y: 11, w: 6, h: 6, i: 'positions' },
+    { x: 0, y: 17, w: 6, h: 6, i: 'risk' },
+    { x: 0, y: 23, w: 6, h: 8, i: 'signalsQueue' },
+    { x: 0, y: 31, w: 6, h: 8, i: 'aiAssistant' },
   ],
   xs: [
-    { x: 0, y: 0, w: 4, h: 4, i: 'health' },
-    { x: 0, y: 4, w: 4, h: 5, i: 'watchlist' },
-    { x: 0, y: 9, w: 4, h: 4, i: 'positions' },
-    { x: 0, y: 13, w: 4, h: 5, i: 'risk' },
-    { x: 0, y: 18, w: 4, h: 6, i: 'signalsQueue' },
-    { x: 0, y: 24, w: 4, h: 6, i: 'aiAssistant' },
+    { x: 0, y: 0, w: 4, h: 5, i: 'health' },
+    { x: 0, y: 5, w: 4, h: 6, i: 'watchlist' },
+    { x: 0, y: 11, w: 4, h: 6, i: 'positions' },
+    { x: 0, y: 17, w: 4, h: 6, i: 'risk' },
+    { x: 0, y: 23, w: 4, h: 8, i: 'signalsQueue' },
+    { x: 0, y: 31, w: 4, h: 8, i: 'aiAssistant' },
   ],
 };
 
@@ -130,6 +133,12 @@ export function DashboardPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [layouts, setLayouts] = useState<Layouts>(loadLayouts);
   const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelStates);
+  const [panelHeights, setPanelHeights] = useState<Record<PanelId, number>>(() =>
+    PANEL_IDS.reduce(
+      (acc, id) => ({ ...acc, [id]: 0 }),
+      {} as Record<PanelId, number>
+    )
+  );
 
   // Persist layouts when they change
   useEffect(() => {
@@ -143,6 +152,18 @@ export function DashboardPage() {
 
   const handleLayoutChange = useCallback((newLayouts: Layouts) => {
     setLayouts(newLayouts);
+  }, []);
+
+  const handlePanelHeight = useCallback((panelId: string, height: number) => {
+    if (!PANEL_IDS.includes(panelId as PanelId)) {
+      return;
+    }
+    setPanelHeights((prev) => {
+      if (prev[panelId as PanelId] === height) {
+        return prev;
+      }
+      return { ...prev, [panelId as PanelId]: height };
+    });
   }, []);
 
   const handleResetLayout = useCallback(() => {
@@ -177,6 +198,40 @@ export function DashboardPage() {
   const allExpanded = PANEL_IDS.every((id) => panelStates[id]);
   const allCollapsed = PANEL_IDS.every((id) => !panelStates[id]);
 
+  useEffect(() => {
+    if (isEditing) {
+      return;
+    }
+    if (Object.keys(panelHeights).length === 0) {
+      return;
+    }
+    setLayouts((current) => {
+      const next: Layouts = {};
+      (Object.keys(current) as Array<keyof Layouts>).forEach((breakpoint) => {
+        const items = current[breakpoint] ?? [];
+        next[breakpoint] = items.map((item) => {
+          const panelId = item.i as PanelId;
+          if (!PANEL_IDS.includes(panelId)) {
+            return item;
+          }
+          const isOpen = panelStates[panelId];
+          const measuredHeight = panelHeights[panelId] ?? 0;
+          const targetRows = isOpen
+            ? Math.max(
+                item.h,
+                Math.ceil((measuredHeight + HEIGHT_BUFFER_PX) / ROW_HEIGHT)
+              )
+            : COLLAPSED_WIDGET_ROWS;
+          if (targetRows === item.h) {
+            return item;
+          }
+          return { ...item, h: targetRows };
+        });
+      });
+      return next;
+    });
+  }, [isEditing, panelHeights, panelStates]);
+
   return (
     <div
       className={cn(
@@ -190,19 +245,22 @@ export function DashboardPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
             OVERVIEW
           </p>
-          <h1 className="text-2xl font-bold md:text-3xl">Dashboard</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
+            Dashboard
+            <HelpHint text="Customize this layout to monitor health, risk, signals, and AI context." />
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Quick overview of your trading system. Customize the layout by
-            clicking the unlock button.
+            Start here for a quick overview. Use Edit Layout to move or hide panels.
           </p>
         </div>
 
         {/* Controls */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsEditing(!isEditing)}
+            className="w-full sm:w-auto"
           >
             {isEditing ? (
               <>
@@ -217,7 +275,7 @@ export function DashboardPage() {
             )}
           </Button>
           {isEditing && (
-            <Button variant="outline" size="sm" onClick={handleResetLayout}>
+            <Button variant="outline" size="sm" onClick={handleResetLayout} className="w-full sm:w-auto">
               <RotateCcw className="h-4 w-4 mr-1" />
               Reset Layout
             </Button>
@@ -227,6 +285,7 @@ export function DashboardPage() {
             size="sm"
             onClick={expandAll}
             disabled={allExpanded}
+            className="w-full sm:w-auto"
           >
             <ChevronDown className="h-4 w-4 mr-1" />
             Expand All
@@ -236,6 +295,7 @@ export function DashboardPage() {
             size="sm"
             onClick={collapseAll}
             disabled={allCollapsed}
+            className="w-full sm:w-auto"
           >
             <ChevronUp className="h-4 w-4 mr-1" />
             Collapse All
@@ -250,7 +310,12 @@ export function DashboardPage() {
         isEditable={isEditing}
       >
         <div key="health">
-          <WidgetPanel id="health" title="System Health" isEditable={isEditing}>
+          <WidgetPanel
+            id="health"
+            title="System Health"
+            isEditable={isEditing}
+            onHeightChange={handlePanelHeight}
+          >
             <HealthPanel
               isOpen={panelStates.health}
               onToggle={() => togglePanel('health')}
@@ -259,7 +324,12 @@ export function DashboardPage() {
         </div>
 
         <div key="watchlist">
-          <WidgetPanel id="watchlist" title="Watchlist" isEditable={isEditing}>
+          <WidgetPanel
+            id="watchlist"
+            title="Watchlist"
+            isEditable={isEditing}
+            onHeightChange={handlePanelHeight}
+          >
             <WatchlistPanel
               isOpen={panelStates.watchlist}
               onToggle={() => togglePanel('watchlist')}
@@ -268,7 +338,12 @@ export function DashboardPage() {
         </div>
 
         <div key="positions">
-          <WidgetPanel id="positions" title="Positions" isEditable={isEditing}>
+          <WidgetPanel
+            id="positions"
+            title="Positions"
+            isEditable={isEditing}
+            onHeightChange={handlePanelHeight}
+          >
             <PositionsPanel
               isOpen={panelStates.positions}
               onToggle={() => togglePanel('positions')}
@@ -277,7 +352,12 @@ export function DashboardPage() {
         </div>
 
         <div key="risk">
-          <WidgetPanel id="risk" title="Risk Summary" isEditable={isEditing}>
+          <WidgetPanel
+            id="risk"
+            title="Risk Summary"
+            isEditable={isEditing}
+            onHeightChange={handlePanelHeight}
+          >
             <RiskSummaryPanel
               isOpen={panelStates.risk}
               onToggle={() => togglePanel('risk')}
@@ -286,7 +366,12 @@ export function DashboardPage() {
         </div>
 
         <div key="signalsQueue">
-          <WidgetPanel id="signalsQueue" title="Trading Approvals" isEditable={isEditing}>
+          <WidgetPanel
+            id="signalsQueue"
+            title="Trading Approvals"
+            isEditable={isEditing}
+            onHeightChange={handlePanelHeight}
+          >
             <SignalsQueuePanel
               isOpen={panelStates.signalsQueue}
               onToggle={() => togglePanel('signalsQueue')}
@@ -295,7 +380,12 @@ export function DashboardPage() {
         </div>
 
         <div key="aiAssistant">
-          <WidgetPanel id="aiAssistant" title="AI Trading Assistant" isEditable={isEditing}>
+          <WidgetPanel
+            id="aiAssistant"
+            title="AI Trading Assistant"
+            isEditable={isEditing}
+            onHeightChange={handlePanelHeight}
+          >
             <AIAssistantPanel
               isOpen={panelStates.aiAssistant}
               onToggle={() => togglePanel('aiAssistant')}

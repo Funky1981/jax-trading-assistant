@@ -45,6 +45,20 @@ WORKDIR /app
 
 # Copy binary from builder
 COPY --from=builder /trader /app/trader
+COPY config/ /app/config/
+
+# Include Go toolchain + module cache + source for in-container trust-gate tests.
+COPY --from=builder /usr/local/go /usr/local/go
+COPY --from=builder /go/pkg/mod /go/pkg/mod
+COPY go.mod go.sum go.work* /app/src/
+COPY libs/ /app/src/libs/
+COPY internal/ /app/src/internal/
+COPY tools/ /app/src/tools/
+COPY cmd/ /app/src/cmd/
+COPY tests/ /app/src/tests/
+
+ENV GOPATH=/go
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 # Change ownership
 RUN chown -R jax:jax /app

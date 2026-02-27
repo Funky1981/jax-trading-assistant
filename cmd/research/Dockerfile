@@ -37,8 +37,11 @@ RUN addgroup -S jax && adduser -S jax -G jax
 
 WORKDIR /app
 COPY --from=builder /research /app/research
+COPY config/ /app/config/
 
-RUN chown jax:jax /app/research
+RUN mkdir -p /app/data/datasets
+
+RUN chown -R jax:jax /app
 USER jax
 
 EXPOSE 8091
