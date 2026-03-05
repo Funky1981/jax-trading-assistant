@@ -49,6 +49,7 @@ import (
 	"strings"
 	"time"
 
+	artifactdomain "jax-trading-assistant/internal/domain/artifacts"
 	"jax-trading-assistant/libs/auth"
 	"jax-trading-assistant/libs/middleware"
 	"jax-trading-assistant/libs/observability"
@@ -257,6 +258,10 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 
 	// Codex packs additive API surface (instances, backtests, research, testing, audit)
 	registerCodexAPIRoutes(mux, protect, pool, fCfg.OrchestratorURL, strategyTypeReg)
+
+	// Artifact APIs (approval lifecycle + validation) surfaced on frontend API port.
+	artifactHandlers := NewArtifactHandlers(artifactdomain.NewStore(pool))
+	artifactHandlers.RegisterRoutes(mux)
 
 	handler := middleware.FlowID(middleware.CORS(corsConfig)(rateLimiter.Middleware(mux)))
 

@@ -10,8 +10,13 @@ services:
       HINDSIGHT_API_HOST: 0.0.0.0
       HINDSIGHT_API_PORT: 8888
       HINDSIGHT_API_LOG_LEVEL: info
+      HINDSIGHT_API_LLM_PROVIDER: ${HINDSIGHT_API_LLM_PROVIDER:-ollama}
+      HINDSIGHT_API_LLM_MODEL: ${HINDSIGHT_API_LLM_MODEL:-phi3:3.8b}
+      HINDSIGHT_API_LLM_BASE_URL: ${HINDSIGHT_API_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
     ports:
       - "8888:8888"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # jax-memory removed (ADR-0012 Phase 6) — memory proxy now in cmd/research.
   # agent0-service sends MEMORY_SERVICE_URL → jax-research:8091

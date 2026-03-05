@@ -119,7 +119,7 @@ Invoke-HttpCheck -Name "health/trader-api" -Url "$ApiBase/health"
 Invoke-HttpCheck -Name "health/research" -Url "$ResearchBase/health"
 Invoke-HttpCheck -Name "health/ib-bridge" -Url "$IbBridgeBase/health"
 Invoke-HttpCheck -Name "health/agent0-service" -Url "$Agent0Base/health"
-Invoke-HttpCheck -Name "health/hindsight" -Url "$HindsightBase/"
+Invoke-HttpCheck -Name "health/hindsight" -Url "$HindsightBase/metrics"
 
 # 2) API smoke checks (read-only)
 Invoke-HttpCheck -Name "api/signals" -Url "$ApiBase/api/v1/signals?limit=1"
