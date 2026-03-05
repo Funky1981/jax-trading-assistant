@@ -85,28 +85,36 @@ export function RiskSummaryPanel({ isOpen, onToggle }: RiskSummaryPanelProps) {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Drawdown</span>
-              <span className="font-mono">
-                {formatPercent(-metrics.drawdown.current, 1)} / {formatPercent(-metrics.drawdown.limit, 1)} max
-              </span>
-            </div>
-            <Progress
-              value={metrics.drawdown.utilizationPercent}
-              className="h-2"
-              indicatorClassName={cn(
-                metrics.drawdown.utilizationPercent > 70
-                  ? 'bg-destructive'
-                  : metrics.drawdown.utilizationPercent > 50
-                  ? 'bg-warning'
-                  : 'bg-success'
+              {metrics.drawdown.current !== null && metrics.drawdown.limit !== null ? (
+                <span className="font-mono">
+                  {formatPercent(-metrics.drawdown.current, 1)} / {formatPercent(-metrics.drawdown.limit, 1)} max
+                </span>
+              ) : (
+                <span className="font-mono text-muted-foreground">Unavailable</span>
               )}
-            />
+            </div>
+            {metrics.drawdown.utilizationPercent !== null ? (
+              <Progress
+                value={metrics.drawdown.utilizationPercent}
+                className="h-2"
+                indicatorClassName={cn(
+                  metrics.drawdown.utilizationPercent > 70
+                    ? 'bg-destructive'
+                    : metrics.drawdown.utilizationPercent > 50
+                    ? 'bg-warning'
+                    : 'bg-success'
+                )}
+              />
+            ) : (
+              <div className="h-2 rounded-full bg-muted" />
+            )}
           </div>
 
           {/* Position Count */}
           <div className="flex justify-between text-sm border-t border-border pt-3">
             <span>Positions</span>
             <span className="font-mono">
-              {metrics.positionCount.current} / {metrics.positionCount.limit}
+              {metrics.positionCount.current} / {metrics.positionCount.limit ?? '—'}
             </span>
           </div>
 
@@ -121,14 +129,18 @@ export function RiskSummaryPanel({ isOpen, onToggle }: RiskSummaryPanelProps) {
           {/* Sector Exposure */}
           <div className="border-t border-border pt-3">
             <p className="text-sm font-medium mb-2">Sector Exposure</p>
-            <div className="space-y-1">
-              {metrics.sectorExposure.map((sector) => (
-                <div key={sector.sector} className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">{sector.sector}</span>
-                  <span className="font-mono">{sector.percent.toFixed(1)}%</span>
-                </div>
-              ))}
-            </div>
+            {metrics.sectorExposure && metrics.sectorExposure.length > 0 ? (
+              <div className="space-y-1">
+                {metrics.sectorExposure.map((sector) => (
+                  <div key={sector.sector} className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">{sector.sector}</span>
+                    <span className="font-mono">{sector.percent.toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Unavailable</p>
+            )}
           </div>
         </div>
       )}

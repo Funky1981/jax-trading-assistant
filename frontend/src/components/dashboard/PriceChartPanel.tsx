@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LineChart } from 'lucide-react';
 import { createChart, IChartApi, ISeriesApi, CandlestickData, Time } from 'lightweight-charts';
+import { useQuery } from '@tanstack/react-query';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import {
   Select,
@@ -10,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/utils';
+import { buildUrl } from '@/config/api';
 
 interface PriceChartPanelProps {
   isOpen: boolean;
@@ -17,70 +19,93 @@ interface PriceChartPanelProps {
 }
 
 const symbols = ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'TSLA', 'SPY', 'QQQ'];
-const timeframes = ['1m', '5m', '15m', '1h', '1d'];
+const timeframes = [
+  { label: '1m', value: '1' },
+  { label: '5m', value: '5' },
+  { label: '15m', value: '15' },
+  { label: '1h', value: '60' },
+  { label: '1d', value: '1D' },
+];
 
-// Generate mock candlestick data
-function generateMockData(symbol: string, timeframe: string): CandlestickData[] {
-  const data: CandlestickData[] = [];
-  const basePrice = {
-    AAPL: 185,
-    MSFT: 412,
-    GOOGL: 138,
-    NVDA: 721,
-    TSLA: 231,
-    SPY: 512,
-    QQQ: 438,
-  }[symbol] || 100;
+interface RawCandle {
+  timestamp: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
 
-  const now = Date.now();
-  const intervalMs = {
-    '1m': 60000,
-    '5m': 300000,
-    '15m': 900000,
-    '1h': 3600000,
-    '1d': 86400000,
-  }[timeframe] || 60000;
-
-  let price = basePrice;
-  
-  for (let i = 100; i >= 0; i--) {
-    const time = Math.floor((now - i * intervalMs) / 1000) as Time;
-    const open = price;
-    const volatility = basePrice * 0.02;
-    const change = (Math.random() - 0.5) * volatility;
-    const high = open + Math.random() * volatility * 0.5;
-    const low = open - Math.random() * volatility * 0.5;
-    const close = open + change;
-    
-    data.push({
-      time,
-      open: Number(open.toFixed(2)),
-      high: Number(Math.max(open, close, high).toFixed(2)),
-      low: Number(Math.min(open, close, low).toFixed(2)),
-      close: Number(close.toFixed(2)),
-    });
-    
-    price = close;
+async function fetchCandles(symbol: string, timeframe: string): Promise<CandlestickData[]> {
+  const response = await fetch(
+    buildUrl('IB_BRIDGE', `/candles/${encodeURIComponent(symbol)}?limit=100&timeframe=${encodeURIComponent(timeframe)}`)
+  );
+  if (!response.ok) {
+    throw new Error(`Chart data unavailable (HTTP ${response.status})`);
   }
-  
-  return data;
+
+  const payload = (await response.json()) as { candles?: RawCandle[] };
+  const candles = payload.candles ?? [];
+
+  const mapped = candles
+    .map((candle) => {
+      const ts = Date.parse(candle.timestamp);
+      if (!Number.isFinite(ts)) return null;
+      return {
+        time: Math.floor(ts / 1000) as Time,
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+      } satisfies CandlestickData;
+    })
+    .filter((value): value is CandlestickData => value !== null);
+
+  if (mapped.length === 0) {
+    throw new Error('Chart data unavailable (no valid candles)');
+  }
+
+  return mapped;
 }
 
 export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
   const [symbol, setSymbol] = useState('AAPL');
-  const [timeframe, setTimeframe] = useState('15m');
+  const [timeframe, setTimeframe] = useState('15');
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
 
-  const data = generateMockData(symbol, timeframe);
+  const { data = [], isLoading, isError } = useQuery({
+    queryKey: ['chart-candles', symbol, timeframe],
+    queryFn: () => fetchCandles(symbol, timeframe),
+    refetchInterval: (query) => (query.state.error ? false : 10_000),
+    retry: false,
+  });
+
   const currentPrice = data[data.length - 1]?.close || 0;
   const prevClose = data[data.length - 2]?.close || currentPrice;
   const priceChange = currentPrice - prevClose;
-  const priceChangePercent = (priceChange / prevClose) * 100;
+  const priceChangePercent = prevClose > 0 ? (priceChange / prevClose) * 100 : 0;
+
+  const statusSummary = useMemo(() => {
+    if (isLoading) return <span className="text-xs text-muted-foreground">Loading live candles...</span>;
+    if (isError) return <span className="text-xs text-destructive">Chart feed unavailable</span>;
+    return (
+      <div className="flex items-center gap-2">
+        <span className="font-mono font-semibold">{symbol}</span>
+        <span className="font-mono">{formatCurrency(currentPrice)}</span>
+        <span
+          className={`font-mono text-xs ${
+            priceChange >= 0 ? 'text-success' : 'text-destructive'
+          }`}
+        >
+          {priceChange >= 0 ? '+' : ''}{priceChangePercent.toFixed(2)}%
+        </span>
+      </div>
+    );
+  }, [currentPrice, isError, isLoading, priceChange, priceChangePercent, symbol]);
 
   useEffect(() => {
-    if (!chartContainerRef.current || !isOpen) return;
+    if (!chartContainerRef.current || !isOpen || isError || data.length === 0) return;
 
     // Create chart with actual colors (lightweight-charts doesn't support CSS variables)
     const chart = createChart(chartContainerRef.current, {
@@ -138,37 +163,24 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
       chartRef.current = null;
       seriesRef.current = null;
     };
-  }, [data, isOpen, symbol, timeframe]);
+  }, [data, isError, isOpen]);
 
   // Update data when symbol/timeframe changes
   useEffect(() => {
-    if (seriesRef.current && isOpen) {
+    if (seriesRef.current && isOpen && data.length > 0) {
       seriesRef.current.setData(data);
       chartRef.current?.timeScale().fitContent();
     }
-  }, [data, symbol, timeframe, isOpen]);
-
-  const summary = (
-    <div className="flex items-center gap-2">
-      <span className="font-mono font-semibold">{symbol}</span>
-      <span className="font-mono">{formatCurrency(currentPrice)}</span>
-      <span
-        className={`font-mono text-xs ${
-          priceChange >= 0 ? 'text-success' : 'text-destructive'
-        }`}
-      >
-        {priceChange >= 0 ? '+' : ''}{priceChangePercent.toFixed(2)}%
-      </span>
-    </div>
-  );
+  }, [data, isOpen]);
 
   return (
     <CollapsiblePanel
       title="Price Chart"
       icon={<LineChart className="h-4 w-4" />}
-      summary={summary}
+      summary={statusSummary}
       isOpen={isOpen}
       onToggle={onToggle}
+      isLoading={isLoading}
     >
       <div className="space-y-4">
         {/* Controls */}
@@ -196,27 +208,35 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
               </SelectTrigger>
               <SelectContent>
                 {timeframes.map((tf) => (
-                  <SelectItem key={tf} value={tf}>
-                    {tf}
+                  <SelectItem key={tf.value} value={tf.value}>
+                    {tf.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="ml-auto text-right">
-            <p className="text-2xl font-mono font-bold">{formatCurrency(currentPrice)}</p>
+            <p className="text-2xl font-mono font-bold">
+              {isError ? '—' : formatCurrency(currentPrice)}
+            </p>
             <p
               className={`text-sm font-mono ${
                 priceChange >= 0 ? 'text-success' : 'text-destructive'
               }`}
             >
-              {priceChange >= 0 ? '+' : ''}{formatCurrency(priceChange)} ({priceChangePercent.toFixed(2)}%)
+              {isError ? 'Unavailable' : `${priceChange >= 0 ? '+' : ''}${formatCurrency(priceChange)} (${priceChangePercent.toFixed(2)}%)`}
             </p>
           </div>
         </div>
 
         {/* Chart */}
-        <div ref={chartContainerRef} className="w-full" />
+        {isError ? (
+          <div className="h-[300px] flex items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground">
+            Live chart data is unavailable.
+          </div>
+        ) : (
+          <div ref={chartContainerRef} className="w-full" />
+        )}
       </div>
     </CollapsiblePanel>
   );

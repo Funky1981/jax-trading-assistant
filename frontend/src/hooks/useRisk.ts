@@ -15,13 +15,13 @@ export interface RiskMetrics {
     utilizationPercent: number;
   };
   drawdown: {
-    current: number;
-    limit: number;
-    utilizationPercent: number;
+    current: number | null;
+    limit: number | null;
+    utilizationPercent: number | null;
   };
   positionCount: {
     current: number;
-    limit: number;
+    limit: number | null;
   };
   largestPosition: {
     symbol: string;
@@ -32,7 +32,7 @@ export interface RiskMetrics {
     sector: string;
     value: number;
     percent: number;
-  }>;
+  }> | null;
 }
 
 async function fetchRiskMetrics(): Promise<RiskMetrics> {
@@ -77,13 +77,13 @@ export function useIBRiskMetrics() {
         : 0,
     },
     drawdown: {
-      current: 0, // Requires historical data not available yet
-      limit: 10.0,
-      utilizationPercent: 0,
+      current: null,
+      limit: null,
+      utilizationPercent: null,
     },
     positionCount: {
       current: positionSummary.positionCount,
-      limit: 10, // Hard-coded limit, should come from config
+      limit: null,
     },
     largestPosition: positions && positions.length > 0
       ? (() => {
@@ -101,7 +101,7 @@ export function useIBRiskMetrics() {
           value: 0,
           percentOfPortfolio: 0,
         },
-    sectorExposure: [], // Requires sector mapping not available yet
+    sectorExposure: null,
   } : null;
 
   return {
@@ -128,7 +128,9 @@ export function useRiskSummary() {
         utilizationPercent: metrics.exposure.utilizationPercent,
         dailyPnl: metrics.dailyPnl.current,
         drawdown: metrics.drawdown.current,
-        isAtRisk: metrics.exposure.utilizationPercent > 80 || metrics.drawdown.utilizationPercent > 70,
+        isAtRisk:
+          metrics.exposure.utilizationPercent > 80 ||
+          (metrics.drawdown.utilizationPercent !== null && metrics.drawdown.utilizationPercent > 70),
       }
     : null;
   
