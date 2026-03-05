@@ -13,7 +13,6 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { UserGuidePage } from '@/pages/UserGuidePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { DomainProvider } from '@/domain/store';
 
 // ── Protected route ────────────────────────────────────────────────────────────
 // If auth is required and the user has no valid token, redirect to /login.
@@ -80,14 +79,12 @@ export const router = createBrowserRouter(
 export default function App() {
   return (
     <AuthProvider>
-      <DomainProvider>
-        <RouterProvider
-          router={router}
-          future={{
-            v7_startTransition: true,
-          }}
-        />
-      </DomainProvider>
+      <RouterProvider
+        router={router}
+        future={{
+          v7_startTransition: true,
+        }}
+      />
     </AuthProvider>
   );
 }

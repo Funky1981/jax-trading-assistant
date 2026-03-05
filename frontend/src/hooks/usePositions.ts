@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { buildUrl } from '@/config/api';
 
 export interface Position {
@@ -82,15 +82,9 @@ export function usePositionsSummary() {
 }
 
 export function useClosePosition() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async (positionId: string) => {
-      console.log('Closing position:', positionId);
-      return { success: true };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['positions'] });
+    mutationFn: async () => {
+      throw new Error('Close position is not available via current broker bridge API');
     },
   });
 }
