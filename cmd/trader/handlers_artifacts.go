@@ -19,6 +19,7 @@ type artifactStore interface {
 	ListApprovedArtifacts(ctx context.Context) ([]*artifacts.Artifact, error)
 	ListArtifacts(ctx context.Context, stateFilter string) ([]*artifacts.Artifact, error)
 	GetApproval(ctx context.Context, artifactID uuid.UUID) (*artifacts.Approval, error)
+	GetApprovals(ctx context.Context, artifactIDs []uuid.UUID) (map[uuid.UUID]*artifacts.Approval, error)
 	GetArtifactByID(ctx context.Context, id uuid.UUID) (*artifacts.Artifact, error)
 	CreateArtifact(ctx context.Context, artifact *artifacts.Artifact) error
 	CreateApproval(ctx context.Context, approval *artifacts.Approval) error
@@ -169,12 +170,20 @@ func (h *ArtifactHandlers) handleListArtifacts(w http.ResponseWriter, r *http.Re
 		http.Error(w, fmt.Sprintf("failed to list artifacts: %v", err), http.StatusInternalServerError)
 		return
 	}
+	artifactIDs := make([]uuid.UUID, 0, len(artifactList))
+	for _, artifact := range artifactList {
+		artifactIDs = append(artifactIDs, artifact.ID)
+	}
+	approvalsByArtifact, err := h.store.GetApprovals(ctx, artifactIDs)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load artifact approvals: %v", err), http.StatusInternalServerError)
+		return
+	}
 
 	// Convert to API response format
 	response := make([]ArtifactResponse, 0, len(artifactList))
 	for _, artifact := range artifactList {
-		// Get approval info
-		approval, _ := h.store.GetApproval(ctx, artifact.ID)
+		approval := approvalsByArtifact[artifact.ID]
 
 		resp := ArtifactResponse{
 			ID:           artifact.ID.String(),

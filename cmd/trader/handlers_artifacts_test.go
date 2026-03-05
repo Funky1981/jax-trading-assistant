@@ -63,6 +63,16 @@ func (f *fakeArtifactStore) GetApproval(ctx context.Context, artifactID uuid.UUI
 	return ap, nil
 }
 
+func (f *fakeArtifactStore) GetApprovals(ctx context.Context, artifactIDs []uuid.UUID) (map[uuid.UUID]*artifacts.Approval, error) {
+	out := make(map[uuid.UUID]*artifacts.Approval, len(artifactIDs))
+	for _, artifactID := range artifactIDs {
+		if ap, ok := f.approvals[artifactID]; ok {
+			out[artifactID] = ap
+		}
+	}
+	return out, nil
+}
+
 func (f *fakeArtifactStore) GetArtifactByID(ctx context.Context, id uuid.UUID) (*artifacts.Artifact, error) {
 	for _, art := range f.artifacts {
 		if art.ID == id {

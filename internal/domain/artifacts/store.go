@@ -500,6 +500,98 @@ func (s *Store) GetApproval(ctx context.Context, artifactID uuid.UUID) (*Approva
 	return &approval, nil
 }
 
+// GetApprovals returns approval rows for a set of artifact IDs in a single query.
+func (s *Store) GetApprovals(ctx context.Context, artifactIDs []uuid.UUID) (map[uuid.UUID]*Approval, error) {
+	out := make(map[uuid.UUID]*Approval, len(artifactIDs))
+	if len(artifactIDs) == 0 {
+		return out, nil
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, artifact_id, state, previous_state, approved_by, approved_at,
+		       validation_run_id, validation_passed, validation_report_uri,
+		       review_notes, reviewer, reviewed_at,
+		       state_changed_by, state_changed_at, state_change_reason,
+		       created_at, updated_at
+		FROM artifact_approvals
+		WHERE artifact_id = ANY($1::uuid[])
+	`, artifactIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var approval Approval
+		var previousState, approvedBy, reportURI, reviewNotes, reviewer sql.NullString
+		var stateChangedBy, stateChangeReason sql.NullString
+		var approvedAt, reviewedAt sql.NullTime
+		var validationRunID *uuid.UUID
+
+		if err := rows.Scan(
+			&approval.ID,
+			&approval.ArtifactID,
+			&approval.State,
+			&previousState,
+			&approvedBy,
+			&approvedAt,
+			&validationRunID,
+			&approval.ValidationPassed,
+			&reportURI,
+			&reviewNotes,
+			&reviewer,
+			&reviewedAt,
+			&stateChangedBy,
+			&approval.StateChangedAt,
+			&stateChangeReason,
+			&approval.CreatedAt,
+			&approval.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		if previousState.Valid {
+			state := ApprovalState(previousState.String)
+			approval.PreviousState = &state
+		}
+		if approvedBy.Valid {
+			approval.ApprovedBy = approvedBy.String
+		}
+		if approvedAt.Valid {
+			approval.ApprovedAt = &approvedAt.Time
+		}
+		if validationRunID != nil {
+			approval.ValidationRunID = validationRunID
+		}
+		if reportURI.Valid {
+			approval.ValidationReportURI = reportURI.String
+		}
+		if reviewNotes.Valid {
+			approval.ReviewNotes = reviewNotes.String
+		}
+		if reviewer.Valid {
+			approval.Reviewer = reviewer.String
+		}
+		if reviewedAt.Valid {
+			approval.ReviewedAt = &reviewedAt.Time
+		}
+		if stateChangedBy.Valid {
+			approval.StateChangedBy = stateChangedBy.String
+		}
+		if stateChangeReason.Valid {
+			approval.StateChangeReason = stateChangeReason.String
+		}
+
+		apCopy := approval
+		out[approval.ArtifactID] = &apCopy
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
 // UpdateApprovalState transitions the approval state and records the promotion
 func (s *Store) UpdateApprovalState(ctx context.Context, artifactID uuid.UUID, toState ApprovalState, promotedBy, reason string) error {
 	// Start transaction

@@ -22,8 +22,8 @@ This list is based on the live codebase on branch `work` as of 2026-03-03. It tr
 
 ## Medium Priority
 
-- [ ] Reduce N+1 approval lookups in the artifact API.
-  - `GET /api/v1/artifacts` still fetches approvals row-by-row after listing artifacts.
+- [x] Reduce N+1 approval lookups in the artifact API.
+  - Completed: `GET /api/v1/artifacts` now loads approvals in one batched store query (`GetApprovals`) instead of per-artifact lookups.
 - [ ] Add stronger artifact API coverage.
   - Missing focused tests for filtered state listing, promotion edge cases, and failed persistence paths.
 - [ ] Improve golden diff behavior in [`tests/golden/compare.go`](/c:/Projects/jax-trading%20assistant/tests/golden/compare.go).
