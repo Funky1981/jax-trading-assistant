@@ -12,6 +12,21 @@ Invoke-RestMethod http://localhost:8092/health   # ib-bridge
 Invoke-RestMethod http://localhost:8093/health   # agent0-service
 ```
 
+## Runtime Mode Guard
+
+Always set runtime mode explicitly outside local development:
+
+```powershell
+$env:JAX_RUNTIME_MODE="paper"   # or live/research
+$env:JAX_REQUIRE_EXPLICIT_RUNTIME_MODE="true"
+```
+
+For `live` mode, execution must be intentionally enabled:
+
+```powershell
+$env:ALLOW_LIVE_TRADING="true"
+```
+
 ## Artifact Approval Flow
 
 ```powershell
@@ -67,6 +82,9 @@ docker compose logs -f agent0-service
 docker compose logs -f hindsight
 ```
 
+SLO targets and alert thresholds are defined in `Docs/SLO_ALERTS.md`.
+Incident response flow is defined in `Docs/INCIDENT_RUNBOOK.md`.
+
 ## Audit Trail Query
 
 ```sql
@@ -79,6 +97,14 @@ LIMIT 20;
 ```
 
 For decision-level and gate-level traceability, use `Docs/AUDIT_TRAIL.md`.
+
+## Release Gate
+
+Before production promotion, complete:
+
+1. `.\scripts\test-platform.ps1 -Mode full`
+2. Production checklist in `Docs/PRODUCTION_READINESS.md`
+3. Audit trail verification from `Docs/AUDIT_TRAIL.md`
 
 ## Common Failures
 

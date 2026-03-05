@@ -18,6 +18,9 @@ This directory contains the current operating documentation for the active runti
 - `TODO.md`
 - `TEST_PLAN.md`
 - `AUDIT_TRAIL.md`
+- `PRODUCTION_READINESS.md`
+- `SLO_ALERTS.md`
+- `INCIDENT_RUNBOOK.md`
 - `CONTRIBUTING.md`
 
 ## ADR

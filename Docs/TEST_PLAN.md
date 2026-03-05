@@ -75,3 +75,14 @@ Playwright full runs generate:
 3. Run detail and AI decisions pages load and show timeline data.
 4. Artifact validation endpoint (`/api/v1/artifacts/{id}/validate`) returns trust-gate evidence.
 5. Audit trail queries in `Docs/AUDIT_TRAIL.md` return expected rows.
+
+## Staging Soak (Pre-Production)
+
+Run a continuous paper-mode soak for at least one market session:
+
+1. `JAX_RUNTIME_MODE=paper`
+2. `JAX_REQUIRE_EXPLICIT_RUNTIME_MODE=true`
+3. Run recurring health checks and capture order/error metrics
+4. Verify no provenance integrity regressions during the soak window
+
+Use `Docs/PRODUCTION_READINESS.md` as the promotion checklist after soak completion.

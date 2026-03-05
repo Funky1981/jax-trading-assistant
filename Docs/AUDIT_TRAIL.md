@@ -85,6 +85,24 @@ WHERE d.run_id = '<run_uuid>'::uuid
 ORDER BY d.created_at ASC;
 ```
 
+### 1b) Flow-level trace across decisions and runs
+
+```sql
+SELECT
+  r.id AS run_id,
+  r.flow_id,
+  r.status AS run_status,
+  d.id AS decision_id,
+  d.role,
+  d.provider,
+  d.model,
+  d.created_at AS decision_created_at
+FROM runs r
+LEFT JOIN ai_decisions d ON d.run_id = r.id
+WHERE r.flow_id = '<flow_id>'
+ORDER BY d.created_at ASC;
+```
+
 ### 2) Acceptance/override actions tied to decisions
 
 ```sql
@@ -123,3 +141,4 @@ ORDER BY tr.created_at ASC;
 2. Pull decision records from `/api/v1/ai-decisions` (or SQL).
 3. Join to trades and artifacts for execution provenance.
 4. Confirm test/gate evidence in `test_runs` and `artifact_validation_reports`.
+5. For cross-service incidents, pivot by `flow_id` to trace end-to-end decisions.

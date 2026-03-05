@@ -20,5 +20,5 @@ test('loads dashboard and navigates to order ticket', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Order Ticket' }).click();
-  await expect(page.getByRole('heading', { name: 'Order Ticket', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /Order Ticket/ })).toBeVisible();
 });
