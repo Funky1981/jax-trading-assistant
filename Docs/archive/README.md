@@ -1,9 +1,28 @@
 # Documentation Archive
 
-This directory stores historical reports, phase writeups, and redundant documents that were consolidated into current summaries.
+Archive structure is organized by purpose so historical material is easy to find.
 
-## Docs Snapshot
+## Folders
 
-The `docs-original/` folder contains a full snapshot of the `Docs/` tree (excluding the archive itself) to preserve the original documentation layout before consolidation.
+- `adrs/supporting/`
+  - ADR-0012 supporting analyses, rollout plans, and completion writeups.
+- `runtime-history/`
+  - historical phase implementation docs and phase4 workstream files.
+- `reports/`
+  - milestone/summary reports superseded by current runbooks.
+- `programs/`
+  - legacy planning workstreams:
+    - `masterplan/`
+    - `upgrades/`
+    - `codex/`
+    - `ejlayer/`
+- `evidence/`
+  - historical runtime and UAT artifacts.
+- `diagrams/`
+  - legacy architecture diagram sources.
+- `docs-original/`
+  - preserved snapshot of older docs layout.
 
-Use this archive for full context or audit trails. Current, condensed references live in `Docs/` and are indexed in `Docs/README.md`.
+## Current Canonical Docs
+
+Use `Docs/README.md` for active runbooks and current-system documentation.

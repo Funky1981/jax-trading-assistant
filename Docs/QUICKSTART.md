@@ -69,3 +69,9 @@ Full cleanup (removes volumes):
 ```powershell
 docker compose down -v
 ```
+
+## Validate and Audit
+
+- Automated validation plan: `Docs/TEST_PLAN.md`
+- Run quick automated checks: `.\scripts\test-platform.ps1 -Mode quick`
+- Trade and decision trace queries: `Docs/AUDIT_TRAIL.md`

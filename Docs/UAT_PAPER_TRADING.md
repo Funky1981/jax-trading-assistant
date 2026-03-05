@@ -1,38 +1,45 @@
-# Paper Trading UAT Guide
+# Paper Trading UAT
 
-This guide describes how to run the end-to-end UAT checks for paper trading using the scripted runner.
-
-## Script
-
-Run the UAT script from repo root:
+Run the platform test runner from repo root:
 
 ```powershell
-.\scripts\uat-paper-trading.ps1
+.\scripts\uat-paper-trading.ps1 -Mode quick
 ```
 
-### Options
+For full validation (includes Playwright HTML report generation):
 
 ```powershell
-.\scripts\uat-paper-trading.ps1 `
-  -Symbol AAPL `
-  -ExecuteOrders `
-  -JwtToken "<jwt token>"
+.\scripts\uat-paper-trading.ps1 -Mode full
 ```
 
-Parameters:
-- `-Symbol` selects the symbol used in the orchestration test.
-- `-ExecuteOrders` enables approval and order execution.
-- `-JwtToken` passes an auth token for protected endpoints.
-- `-SkipDb` skips database validation checks.
-- `-OutputPath` sets the report output path.
+To open the Playwright report after full run:
 
-## What It Validates
+```powershell
+.\scripts\uat-paper-trading.ps1 -Mode full -OpenVisualReport
+```
 
-- Service health for core components.
-- Market data freshness and basic ingestion visibility.
-- Orchestration API can trigger a run and return status.
-- Optional approval and execution path.
+## What It Checks
+
+- Service health: trader/research/ib-bridge/agent0/hindsight.
+- API smoke endpoints: signals, artifacts, testing status, runs, AI decisions.
+- Backend verification:
+  - quick mode: targeted package checks + golden utility tests.
+  - full mode: `go-verify` full + golden verify.
+- Frontend verification:
+  - lint + typecheck + unit tests.
+  - full mode adds Playwright e2e (HTML report).
 
 ## Output
 
-The script writes a report to `Docs/uat/` by default, with a timestamped filename.
+- Timestamped run output is written to `Docs/runs/` as:
+  - `test_run_*.md`
+  - `test_run_*.json`
+
+## Parameters
+
+- `-ApiBase` (default `http://localhost:8081`)
+- `-ResearchBase` (default `http://localhost:8091`)
+- `-IbBridgeBase` (default `http://localhost:8092`)
+- `-Agent0Base` (default `http://localhost:8093`)
+- `-HindsightBase` (default `http://localhost:8888`)
+- `-OutputDir` (default `Docs/runs`)

@@ -13,6 +13,7 @@
 - Automated: `go test ./...`
 - Format: `gofmt -w .` (or `gofmt -l .` to see diffs)
 - Lint: `golangci-lint run ./...` (recommended)
+- Workflow wrapper: `.\scripts\go-verify.ps1 -Mode quick|standard|full`
 
 To install `golangci-lint`:
 
@@ -25,3 +26,8 @@ From `dexter/`:
 - Install: `bun install`
 - Tests: `bun test`
 - Typecheck: `bun run typecheck`
+
+### Platform Validation (Backend + Frontend + API smoke)
+
+- Quick gate: `.\scripts\test-platform.ps1 -Mode quick`
+- Full gate with visual e2e output: `.\scripts\test-platform.ps1 -Mode full -OpenVisualReport`

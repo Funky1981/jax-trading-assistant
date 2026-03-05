@@ -1,32 +1,39 @@
 # Documentation Index
 
-This directory contains the canonical documentation for the Jax Trading Assistant.
+This directory contains the current operating documentation for the active runtime (`cmd/trader` + `cmd/research`).
 
-## Start Here
+## Core Docs (Current)
 
-- **Project overview**: `PROJECT_OVERVIEW.md`
-- **Architecture rules**: `ARCHITECTURE.md`
-- **Quick start**: `QUICKSTART.md`
-- **Status snapshot**: `STATUS.md`
-- **Roadmap**: `ROADMAP.md`
-- **Implementation summary**: `IMPLEMENTATION_SUMMARY.md`
-- **IB setup & bridge**: `IB_GUIDE.md`
-- **Phase 3 condensed**: `PHASE_3.md`
-- **Phase 4 workspace**: `phase4/`
+- `PROJECT_OVERVIEW.md`
+- `ARCHITECTURE.md`
+- `ARCHITECTURE_DIAGRAM.md`
+- `QUICKSTART.md`
+- `OPERATIONS.md`
+- `DEBUGGING.md`
+- `db-setup.md`
+- `IB_GUIDE.md`
+- `USER_GUIDE.md`
+- `STATUS.md`
+- `ROADMAP.md`
+- `TODO.md`
+- `TEST_PLAN.md`
+- `AUDIT_TRAIL.md`
+- `CONTRIBUTING.md`
 
-## Development Guides
+## ADR
 
-- **Contributing**: `CONTRIBUTING.md`
-- **Debugging**: `DEBUGGING.md`
-- **Branding & styling**: `BRANDING.md`, `Styling.md`
-- **DB setup**: `db-setup.md`
+- `ADR-0012-two-runtime-modular-monolith.md` (active architecture decision)
 
-## Plan Docs
+Supporting ADR planning and historical rollout notes are archived in:
+- `Docs/archive/adrs/supporting/`
 
-- **Backend plan**: `backend/`
-- **Frontend plan**: `frontend/`
-- **Upgrade notes**: `upgrades/`
+## Archive Layout
 
-## Archive
+- `Docs/archive/runtime-history/` - historical phase implementation notes
+- `Docs/archive/reports/` - completion/status reports kept for traceability
+- `Docs/archive/programs/` - legacy planning workstreams (`masterplan`, `upgrades`, `codex`, `ejlayer`)
+- `Docs/archive/evidence/` - historical run/UAT output
+- `Docs/archive/diagrams/` - non-canonical legacy diagrams
+- `Docs/archive/docs-original/` - preserved snapshot of older documentation set
 
-Historical reports and redundant docs were moved to `Docs/archive/`.
+Use `Docs/archive/README.md` for archive notes.

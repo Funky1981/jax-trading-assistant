@@ -29,10 +29,11 @@ This list is based on the live codebase on branch `work` as of 2026-03-05. It tr
 
 ## Lower Priority
 
-- [ ] Continue stale-doc cleanup in non-operator historical docs that are still outside `Docs/archive/`.
+- [x] Continue stale-doc cleanup in non-operator historical docs that are still outside `Docs/archive/`.
+  - Completed: moved legacy phase/program/report/evidence docs into structured archive folders and refreshed current indexes/runbooks.
 
 ## Execution Order
 
-1. Continue non-archive stale-doc cleanup.
-2. Review and harden operations runbooks still containing superseded service names.
-3. Expand integration coverage for ingestion/reflection operational flows.
+1. Expand integration coverage for ingestion/reflection operational flows.
+2. Add release-grade smoke tests for artifact promotion and decision audit APIs.
+3. Automate scheduled UAT runs with persisted run artifacts.

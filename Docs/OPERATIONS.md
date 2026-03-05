@@ -78,6 +78,8 @@ ORDER BY t.created_at DESC
 LIMIT 20;
 ```
 
+For decision-level and gate-level traceability, use `Docs/AUDIT_TRAIL.md`.
+
 ## Common Failures
 
 ### Trader has no approved artifacts

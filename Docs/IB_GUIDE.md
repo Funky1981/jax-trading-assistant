@@ -1,65 +1,61 @@
-# Interactive Brokers (IB) Guide
+# Interactive Brokers Guide
 
 ## Purpose
 
-This guide consolidates IB Gateway setup, configuration, and the IB bridge integration.
+This guide covers IB Gateway/TWS setup and how `ib-bridge` is wired into the current runtime.
+
+## Current Runtime Wiring
+
+- `ib-bridge` service: `http://localhost:8092/health`
+- `jax-trader` uses `IB_BRIDGE_URL` for market/execution integration
+- `agent0-service` also references `ib-bridge` for planning context
 
 ## Quick Start (Paper Trading)
 
-1. **Install IB Gateway or TWS**
-   - Download: <https://www.interactivebrokers.com/en/trading/ib-api.php>
-2. **Login (Paper Trading)**
-   - Use your IB paper credentials.
-3. **Enable API Access**
-   - Configure → Settings → API → Settings
-   - Enable **ActiveX and Socket Clients**
-   - **IB Gateway (paper)**: `4002` (recommended)
-   - **TWS (paper)**: `7497` (legacy)
-   - Trusted IPs: `127.0.0.1`
-4. **Start the IB Bridge (Python)**
-   - `docker compose up ib-bridge`
-   - Health check: `curl http://localhost:8092/health`
+1. Install IB Gateway or TWS.
+2. Login with paper credentials.
+3. Enable API socket access in settings.
+4. Configure trusted localhost access.
+5. Start bridge:
+
+```powershell
+docker compose up -d ib-bridge
+curl http://localhost:8092/health
+```
 
 ## Connection Settings
 
 | Mode | Host | Port | Notes |
 | --- | --- | --- | --- |
-| Paper (IB Gateway) | 127.0.0.1 | 4002 | Recommended for testing |
-| Paper (TWS) | 127.0.0.1 | 7497 | Legacy paper port |
-| Live | 127.0.0.1 | 7496 | Use with caution |
+| Paper (IB Gateway) | 127.0.0.1 | 4002 | Preferred |
+| Paper (TWS) | 127.0.0.1 | 7497 | Legacy |
+| Live | 127.0.0.1 | 7496 | Use with explicit controls |
 
-## Configuration Example
+## Compose Environment Knobs
 
-```json
-{
-  "ib": {
-    "enabled": true,
-    "host": "host.docker.internal",
-    "port": 4002,
-    "client_id": 1
-  }
-}
+- `IB_GATEWAY_HOST` (default `host.docker.internal`)
+- `IB_GATEWAY_PORT` (default `4002`)
+- `IB_CLIENT_ID` (default `1`)
+- `IB_AUTO_CONNECT` (default `true`)
+- `IB_PAPER_TRADING` (default `true`)
+
+## Validation Checks
+
+```powershell
+docker compose logs -f ib-bridge
+Invoke-RestMethod http://localhost:8092/health
 ```
 
-## Current Implementation Status
-
-- **IB bridge**: production-ready (FastAPI + ib_insync) and exposed on `8092` for trading/account APIs.
-- **Go provider**: `jax-market` connects directly to IB Gateway for market data ingestion.
-- **Ingestion wiring**: validated via `jax-market` → Postgres `quotes`/`candles`.
+If bridge is healthy but market data is stale, verify IB session login and market data subscription state.
 
 ## Troubleshooting
 
 | Symptom | Likely Cause | Fix |
 | --- | --- | --- |
-| Connection refused | Gateway not running | Start IB Gateway/TWS |
-| 502 / no data | Port mismatch | Check paper vs live port |
-| No market data | Missing subscription | Paper accounts can be delayed |
+| Connection refused | IB Gateway/TWS not running | Start Gateway/TWS |
+| Bridge unhealthy | Host/port mismatch | Verify `IB_GATEWAY_HOST` and `IB_GATEWAY_PORT` |
+| No live quotes | Paper account delay/no entitlement | Confirm subscriptions and paper-data behavior |
 
-## Resources
+## Historical References
 
-- IB API docs: <https://interactivebrokers.github.io/tws-api/>
-- IB Gateway download: <https://www.interactivebrokers.com/en/trading/ib-api.php>
-
-## Archive
-
-Historical IB docs and full integration reports live in `Docs/archive/ib/` and `Docs/archive/phase3/`.
+Legacy IB reports are archived under `Docs/archive/ib/` and `Docs/archive/phase3/`.
