@@ -1002,18 +1002,25 @@ func tradingGuardHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		// Return a simple guard status from the signals table.
-		var totalToday, failedToday int
+		// Fail-closed semantics: expose only defensible counters until guard state
+		// is backed by explicit realized-PnL outcomes.
+		var totalToday, filledToday int
 		_ = pool.QueryRow(r.Context(),
-			`SELECT COUNT(*) FILTER (WHERE generated_at >= NOW()-INTERVAL '1 day') as total,
-			        COUNT(*) FILTER (WHERE generated_at >= NOW()-INTERVAL '1 day' AND signal_type='SELL') as failed
-			 FROM strategy_signals`).Scan(&totalToday, &failedToday)
+			`SELECT
+				COUNT(*) FILTER (WHERE generated_at >= NOW()-INTERVAL '1 day') as total_signals_today,
+				COUNT(*) FILTER (WHERE created_at >= NOW()-INTERVAL '1 day' AND COALESCE(order_status,'') = 'Filled') as filled_trades_today
+			 FROM strategy_signals
+			 LEFT JOIN trades ON trades.signal_id::text = strategy_signals.id::text`,
+		).Scan(&totalToday, &filledToday)
 
 		jsonOK(w, map[string]any{
-			"enabled":            true,
-			"consecutive_losses": 0,
-			"total_today":        totalToday,
-			"status":             "active",
+			"enabled":              false,
+			"status":               "unavailable",
+			"reason":               "trading guard state requires realized-PnL outcome tracking; endpoint is fail-closed until wired",
+			"total_signals_today":  totalToday,
+			"filled_trades_today":  filledToday,
+			"consecutive_losses":   nil,
+			"max_consecutive_loss": nil,
 		})
 	}
 }
@@ -1024,8 +1031,7 @@ func tradingGuardOutcomeHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		// Accept but noop — guard state is derived from signals.
-		w.WriteHeader(http.StatusNoContent)
+		http.Error(w, "trading guard outcome ingestion is not implemented", http.StatusNotImplemented)
 	}
 }
 

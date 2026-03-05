@@ -107,20 +107,42 @@ export function useCreateOrder() {
   
   return useMutation({
     mutationFn: async (order: CreateOrderRequest) => {
-      console.log('Creating order:', order);
-      
-      // Simulate order creation
-      const newOrder: Order = {
-        id: `ord-${Date.now()}`,
-        ...order,
-        status: order.type === 'market' ? 'filled' : 'pending',
-        filledQuantity: order.type === 'market' ? order.quantity : 0,
-        avgFillPrice: order.type === 'market' ? order.price || 100 : undefined,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+      const orderTypeMap: Record<OrderType, string> = {
+        market: 'MKT',
+        limit: 'LMT',
+        stop: 'STP',
+        stop_limit: 'STP LMT',
       };
-      
-      return newOrder;
+
+      if (order.type === 'limit' && !order.price) {
+        throw new Error('Limit orders require a price');
+      }
+      if (order.type === 'stop' && !order.stopPrice && !order.price) {
+        throw new Error('Stop orders require stopPrice or price');
+      }
+      if (order.type === 'stop_limit') {
+        throw new Error('Stop-limit is not supported by the current broker bridge');
+      }
+
+      const response = await fetch(buildUrl('IB_BRIDGE', '/orders'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: order.symbol.toUpperCase(),
+          action: order.side.toUpperCase(),
+          quantity: order.quantity,
+          order_type: orderTypeMap[order.type],
+          limit_price: order.type === 'limit' ? order.price : undefined,
+          stop_price: order.type === 'stop' ? (order.stopPrice ?? order.price) : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `Order placement failed (HTTP ${response.status})`);
+      }
+
+      return response.json() as Promise<{ success: boolean; order_id: number; message?: string }>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -130,15 +152,9 @@ export function useCreateOrder() {
 }
 
 export function useCancelOrder() {
-  const queryClient = useQueryClient();
-  
   return useMutation({
-    mutationFn: async (orderId: string) => {
-      console.log('Cancelling order:', orderId);
-      return { success: true, orderId };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    mutationFn: async () => {
+      throw new Error('Cancel order is not available via current broker bridge API');
     },
   });
 }
