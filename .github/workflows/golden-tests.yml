@@ -55,7 +55,6 @@ jobs:
       - name: Start services with Docker Compose
         run: |
           docker compose up -d
-        continue-on-error: true
       
       - name: Wait for services to be ready
         run: |
@@ -87,7 +86,6 @@ jobs:
       - name: Capture current state
         run: |
           go run ./tests/golden/cmd/capture.go
-        continue-on-error: true
       
       - name: Compare against baseline
         run: |
@@ -96,9 +94,9 @@ jobs:
             bash scripts/compare-golden-outputs.sh
           else
             echo "⚠️  Warning: compare-golden-outputs.sh not found"
-            echo "Skipping baseline comparison (PowerShell version exists for Windows)"
+            echo "golden comparison script missing"
+            exit 1
           fi
-        continue-on-error: true
       
       - name: Upload diff artifacts on failure
         if: failure()
