@@ -1,73 +1,49 @@
-﻿# Architecture (Clean Architecture)
+# Architecture
 
-This repo follows a Clean Architecture / Hexagonal style.
+The active platform is an ADR-0012 modular-monolith topology with two Go runtimes and explicit external service boundaries.
 
-In the multi-service layout:
+## Runtime Topology
 
-- Each service lives under `services/<name>/` and keeps its own `internal/` packages.
-- Shared packages live under `libs/` and should be stable and well-tested.
+- `cmd/trader`
+  - Deterministic runtime and execution path.
+  - Frontend-facing API on `8081`.
+  - Runtime server on `8100`.
+- `cmd/research`
+  - Orchestration, research/backtest, memory tool paths.
+  - HTTP port `8091`.
+- External boundaries
+  - `services/ib-bridge` on `8092`
+  - `services/agent0-service` on `8093`
+  - `services/hindsight` on `8888`
 
-## Directory structure
+## Repository Layout (Current)
 
 ```text
-jax-trading assistant/
-  Docs/                         # Plan docs (see `Docs/backend/` and `Docs/frontend/`)
-
-  services/
-    jax-api/                    # HTTP API service (current focus)
-
-    jax-orchestrator/           # Agent0 pipeline service (skeleton)
-
-    jax-memory/                 # Hindsight facade service (skeleton)
-
-    jax-ingest/                 # Dexter ingestion service (skeleton)
-
-    hindsight/                  # Vendored Hindsight upstream (pinned; see UPSTREAM.md)
-
-  libs/
-    utcp/                       # UTCP client + tool implementations (local/http) + Postgres storage adapter
-
-    contracts/                  # Shared DTOs/interfaces (memory schemas etc; WIP)
-
-    observability/              # Shared logging/tracing helpers (WIP)
-
-    testing/                    # Shared fakes/fixtures (WIP)
-
-  cmd/
-    jax-utcp-smoke/             # Smoke entrypoint to exercise UTCP tools end-to-end
-
-  config/
-    providers.json              # UTCP provider definitions (http/local)
-
-  docker-compose.yml            # Main docker compose for services
-
-  db/
-    postgres/
-      schema.sql                # Postgres schema for storage provider
-      docker-compose.yml        # Local Postgres for development
-
-  scripts/
-    test.ps1                    # Local quality gate (gofmt, golangci-lint, go test)
-
-  dexter/                       # Vendored Dexter repo (research agent)
-
-  Agent0/                       # Vendored Agent0 repo (reference / inspiration)
-
-  .github/workflows/            # CI (gofmt, golangci-lint, go test)
-
+cmd/
+  trader/
+  research/
+  artifact-approver/
+  shadow-validator/
+internal/
+  modules/, domain/, integrations/, providers/
+libs/
+  auth/, marketdata/, utcp/, agent0/, dexter/, ...
+services/
+  ib-bridge/, agent0-service/, hindsight/
+frontend/
+db/postgres/migrations/
+scripts/
 ```
 
-## Dependency rules (per service)
+## Guardrails
 
-- `internal/domain` must not import from any other layer.
-- `internal/app` may import `internal/domain`, but must not import `internal/infra`.
-- `internal/infra` may import `internal/domain` + `internal/app`, but keep adapters isolated.
-- Prefer defining interfaces in the consuming layer (usually `internal/app`) and implement them in `internal/infra`.
+- Trader must stay deterministic and avoid research-only imports.
+- Artifact loading/promotion must remain approval-state driven.
+- Trust-gate evidence (Gate2 replay + Gate3 promotion) is required for validation transitions.
+- External Python services remain explicit boundaries unless changed by ADR.
 
-## Testing rules
+## Verification Baseline
 
-- Unit tests live next to the code (`*_test.go`).
-- Infrastructure code should be testable via dependency injection:
-  - HTTP clients injected (so tests can use `httptest`).
-  - File paths provided as parameters.
-  - Avoid global state.
+- Go code changes: `scripts/go-verify.ps1 -Mode quick|standard|full`.
+- Golden/replay-sensitive changes: `scripts/golden-check.ps1 -Mode verify`.
+- Knowledge ingest flow: `scripts/knowledge-cycle.ps1 -Mode all` (dry-run first).
