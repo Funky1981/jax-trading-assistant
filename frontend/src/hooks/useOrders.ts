@@ -32,11 +32,25 @@ export interface CreateOrderRequest {
 function normalizeStatus(raw?: string): OrderStatus {
   switch (raw?.toLowerCase()) {
     case 'filled': return 'filled';
-    case 'pending': return 'pending';
+    case 'pending':
+    case 'submitted':
+    case 'presubmitted':
+    case 'new':
+    case 'open':
+      return 'pending';
     case 'partfilled':
     case 'partial': return 'partial';
-    case 'cancelled': return 'cancelled';
-    default: return 'rejected';
+    case 'cancelled':
+    case 'canceled':
+    case 'apicancelled':
+      return 'cancelled';
+    case 'rejected':
+    case 'inactive':
+    case 'error':
+      return 'rejected';
+    default:
+      // Unknown broker statuses are treated as pending review, not hard reject.
+      return 'pending';
   }
 }
 

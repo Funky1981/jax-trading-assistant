@@ -63,15 +63,19 @@ export function usePositionsSummary() {
   const { data: positions, ...rest } = usePositions();
 
   const summary = positions
-    ? {
-        totalValue: positions.reduce((sum, p) => sum + p.marketValue, 0),
-        totalPnl: positions.reduce((sum, p) => sum + p.pnl, 0),
-        totalPnlPercent:
-          (positions.reduce((sum, p) => sum + p.pnl, 0) /
-            positions.reduce((sum, p) => sum + p.costBasis, 0)) *
-          100,
-        positionCount: positions.length,
-      }
+    ? (() => {
+        const totalValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
+        const totalPnl = positions.reduce((sum, p) => sum + p.pnl, 0);
+        const totalCostBasis = positions.reduce((sum, p) => sum + p.costBasis, 0);
+        const totalPnlPercent = totalCostBasis !== 0 ? (totalPnl / totalCostBasis) * 100 : 0;
+
+        return {
+          totalValue,
+          totalPnl,
+          totalPnlPercent,
+          positionCount: positions.length,
+        };
+      })()
     : null;
 
   return { ...rest, data: summary, positions };

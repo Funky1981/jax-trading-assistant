@@ -80,11 +80,9 @@ func (p *IBBridgeProvider) GetQuote(ctx context.Context, symbol string) (*Quote,
 		return nil, fmt.Errorf("%w: ib-bridge returned zero price for %s", ErrNoData, symbol)
 	}
 
-	ts := time.Now()
-	if q.Timestamp != "" {
-		if parsed, err := time.Parse(time.RFC3339, q.Timestamp); err == nil {
-			ts = parsed
-		}
+	ts, err := parseBridgeTimestamp(q.Timestamp)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid quote timestamp for %s: %v", ErrProviderError, symbol, err)
 	}
 
 	return &Quote{
@@ -116,7 +114,7 @@ func (p *IBBridgeProvider) HealthCheck(ctx context.Context) error {
 
 	var h ibBridgeHealth
 	if err := json.NewDecoder(resp.Body).Decode(&h); err != nil {
-		return nil // non-fatal, bridge is at least reachable
+		return fmt.Errorf("ib-bridge health decode failed: %w", err)
 	}
 	if !h.Connected {
 		return fmt.Errorf("ib-bridge is not connected to IB Gateway")
@@ -165,14 +163,9 @@ func (p *IBBridgeProvider) GetCandles(ctx context.Context, symbol string, timefr
 
 	candles := make([]Candle, 0, len(result.Candles))
 	for _, c := range result.Candles {
-		// IB returns daily bars as "2006-01-02"; intraday as RFC3339
-		var ts time.Time
-		if t, err := time.Parse("2006-01-02", c.Timestamp); err == nil {
-			ts = t
-		} else if t, err := time.Parse(time.RFC3339, c.Timestamp); err == nil {
-			ts = t
-		} else {
-			ts = time.Now()
+		ts, err := parseBridgeTimestamp(c.Timestamp)
+		if err != nil {
+			return nil, fmt.Errorf("%w: invalid candle timestamp for %s: %v", ErrProviderError, symbol, err)
 		}
 		candles = append(candles, Candle{
 			Symbol:    symbol,
@@ -186,6 +179,36 @@ func (p *IBBridgeProvider) GetCandles(ctx context.Context, symbol string, timefr
 		})
 	}
 	return candles, nil
+}
+
+func parseBridgeTimestamp(raw string) (time.Time, error) {
+	if raw == "" {
+		return time.Time{}, fmt.Errorf("empty timestamp")
+	}
+
+	layouts := []struct {
+		layout string
+		utc    bool
+	}{
+		{time.RFC3339Nano, false},
+		{time.RFC3339, false},
+		{"2006-01-02T15:04:05.999999999", true},
+		{"2006-01-02T15:04:05.999999", true},
+		{"2006-01-02T15:04:05", true},
+		{"2006-01-02", true},
+	}
+
+	for _, item := range layouts {
+		ts, err := time.Parse(item.layout, raw)
+		if err == nil {
+			if item.utc {
+				return ts.UTC(), nil
+			}
+			return ts, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("unsupported timestamp format %q", raw)
 }
 
 // GetTrades is not supported by the IB bridge — return ErrNoData.

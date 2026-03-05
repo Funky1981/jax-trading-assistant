@@ -20,13 +20,15 @@ function mapApiMetric(raw: any): MetricEvent {
     failed: 'error',
     running: 'warning',
   };
+  const normalizedStatus = typeof raw.status === 'string' ? raw.status.toLowerCase() : '';
+  const fallbackId = [raw.symbol ?? 'metric', raw.event ?? 'event', startTs].join(':');
   return {
-    id: raw.id ?? crypto.randomUUID(),
+    id: raw.id ?? fallbackId,
     event: raw.event ?? (raw.symbol ? `analysis:${raw.symbol}` : 'metric'),
     source: raw.source ?? raw.symbol ?? 'system',
     duration: raw.duration ?? Math.max(0, endTs - startTs),
     timestamp: raw.timestamp ?? startTs,
-    status: raw.status in statusMap ? statusMap[raw.status] : (raw.status ?? 'success'),
+    status: statusMap[normalizedStatus] ?? 'warning',
     metadata: raw.metadata ?? { confidence: raw.confidence, symbol: raw.symbol },
   };
 }
