@@ -2,7 +2,7 @@ package agent0
 
 import (
 	"context"
-	"errors"
+	"strings"
 )
 
 // MockClient implements a mock Agent0 client for testing
@@ -16,14 +16,28 @@ func (m *MockClient) Plan(ctx context.Context, req PlanRequest) (PlanResponse, e
 	if m.PlanFunc != nil {
 		return m.PlanFunc(ctx, req)
 	}
-	return PlanResponse{}, errors.New("mock plan not implemented")
+	summary := "Mock planner produced a HOLD recommendation."
+	if symbol := strings.TrimSpace(req.Symbol); symbol != "" {
+		summary = "Mock planner produced a HOLD recommendation for " + symbol + "."
+	}
+	return PlanResponse{
+		Summary:        summary,
+		Steps:          []string{"collect_context", "evaluate_constraints", "propose_action"},
+		Action:         "HOLD",
+		Confidence:     0.5,
+		ReasoningNotes: "deterministic mock response",
+	}, nil
 }
 
 func (m *MockClient) Execute(ctx context.Context, req ExecuteRequest) (ExecuteResponse, error) {
 	if m.ExecuteFunc != nil {
 		return m.ExecuteFunc(ctx, req)
 	}
-	return ExecuteResponse{}, errors.New("mock execute not implemented")
+	return ExecuteResponse{
+		ToolCalls: []ToolCall{},
+		Success:   true,
+		Summary:   "No tools executed (mock executor).",
+	}, nil
 }
 
 func (m *MockClient) Health(ctx context.Context) error {

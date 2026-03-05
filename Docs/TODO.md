@@ -28,8 +28,8 @@ This list is based on the live codebase on branch `work` as of 2026-03-03. It tr
   - Missing focused tests for filtered state listing, promotion edge cases, and failed persistence paths.
 - [ ] Improve golden diff behavior in [`tests/golden/compare.go`](/c:/Projects/jax-trading%20assistant/tests/golden/compare.go).
   - Current TODO: ignore expected volatile fields like timestamps and UUIDs more intelligently.
-- [ ] Decide whether Agent0 and Dexter mock adapters stay as test-only shims or need live implementations.
-  - Current stubs: [`libs/agent0/mock.go`](/c:/Projects/jax-trading%20assistant/libs/agent0/mock.go), [`libs/dexter/mock.go`](/c:/Projects/jax-trading%20assistant/libs/dexter/mock.go).
+- [x] Stabilize Agent0 and Dexter mock adapters as deterministic test shims.
+  - Completed: [`libs/agent0/mock.go`](/c:/Projects/jax-trading%20assistant/libs/agent0/mock.go) and [`libs/dexter/mock.go`](/c:/Projects/jax-trading%20assistant/libs/dexter/mock.go) now return deterministic non-error defaults with focused unit tests.
 
 ## Lower Priority
 
@@ -42,4 +42,4 @@ This list is based on the live codebase on branch `work` as of 2026-03-03. It tr
 
 1. Remove API/store inefficiencies and add tests around artifact workflows.
 2. Clean runtime/docs drift so operators and future work use the correct entrypoints.
-3. Tackle remaining subsystem gaps: mock adapters and any non-critical provider enhancements.
+3. Tackle remaining subsystem gaps: non-critical provider enhancements and operational hardening.
