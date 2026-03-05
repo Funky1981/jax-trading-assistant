@@ -42,7 +42,7 @@ func ValidateRuntimeProviderPolicy(mode runtimepolicy.Mode, cfg ProvidersConfig)
 func isTruthPathProvider(p ProviderConfig) bool {
 	id := strings.ToLower(strings.TrimSpace(p.ID))
 	switch id {
-	case "market-data", "memory", "dexter":
+	case "market-data", "memory", "dexter", "broker":
 		return true
 	default:
 		return false

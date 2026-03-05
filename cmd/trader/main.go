@@ -202,7 +202,7 @@ func main() {
 
 	// Execution endpoint (compatible with jax-trade-executor API)
 	if execService != nil {
-		mux.HandleFunc("/api/v1/execute", handleExecute(execService))
+		mux.HandleFunc("/api/v1/execute", handleExecute(execService, cfg.RuntimeMode))
 	}
 
 	// Metrics endpoint
@@ -250,19 +250,12 @@ func loadConfig() (Config, error) {
 		Port:        os.Getenv("PORT"),
 		IBBridgeURL: os.Getenv("IB_BRIDGE_URL"),
 	}
-	modeRaw := strings.TrimSpace(os.Getenv("JAX_RUNTIME_MODE"))
-	if modeRaw == "" {
-		modeRaw = strings.TrimSpace(os.Getenv("APP_RUNTIME_MODE"))
-	}
-	if modeRaw == "" {
-		modeRaw = strings.TrimSpace(os.Getenv("APP_ENV"))
-	}
-	if modeRaw == "" {
-		modeRaw = strings.TrimSpace(os.Getenv("ENV"))
-	}
-	mode, err := runtimepolicy.ParseMode(modeRaw)
+	mode, explicitMode, err := runtimepolicy.ResolveModeFromEnv()
 	if err != nil {
 		return Config{}, err
+	}
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("JAX_REQUIRE_EXPLICIT_RUNTIME_MODE")), "true") && !explicitMode {
+		return Config{}, fmt.Errorf("explicit runtime mode required: set JAX_RUNTIME_MODE (dev|test|research|paper|live)")
 	}
 	cfg.RuntimeMode = mode
 
@@ -447,10 +440,6 @@ func handleGenerateSignals(sigGen *signalgenerator.InProcessSignalGenerator) htt
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if !strings.EqualFold(os.Getenv("ALLOW_LIVE_TRADING"), "true") {
-			http.Error(w, "live execution disabled: set ALLOW_LIVE_TRADING=true to enable /api/v1/execute", http.StatusForbidden)
-			return
-		}
 
 		ctx := r.Context()
 
@@ -555,10 +544,14 @@ func handleMetrics() http.HandlerFunc {
 	}
 }
 
-func handleExecute(execService *execution.Service) http.HandlerFunc {
+func handleExecute(execService *execution.Service, mode runtimepolicy.Mode) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if mode == runtimepolicy.ModeLive && !strings.EqualFold(os.Getenv("ALLOW_LIVE_TRADING"), "true") {
+			http.Error(w, "live execution disabled: set ALLOW_LIVE_TRADING=true to enable /api/v1/execute", http.StatusForbidden)
 			return
 		}
 

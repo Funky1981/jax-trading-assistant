@@ -23,6 +23,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
   const [orderType, setOrderType] = useState<OrderType>('market');
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
+  const [stopPrice, setStopPrice] = useState('');
   
   const createOrder = useCreateOrder();
 
@@ -36,13 +37,15 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
       side,
       type: orderType,
       quantity: parseInt(quantity, 10),
-      price: price ? parseFloat(price) : undefined,
+      price: orderType === 'limit' ? (price ? parseFloat(price) : undefined) : undefined,
+      stopPrice: orderType === 'stop' ? (stopPrice ? parseFloat(stopPrice) : undefined) : undefined,
     });
     
     // Reset form
     setSymbol('');
     setQuantity('');
     setPrice('');
+    setStopPrice('');
   };
 
   const summary = <span>Quick order entry</span>;
@@ -98,7 +101,6 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
               <SelectItem value="market">Market</SelectItem>
               <SelectItem value="limit">Limit</SelectItem>
               <SelectItem value="stop">Stop</SelectItem>
-              <SelectItem value="stop_limit">Stop Limit</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -116,7 +118,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
         </div>
 
         {/* Price (for limit orders) */}
-        {(orderType === 'limit' || orderType === 'stop_limit') && (
+        {orderType === 'limit' && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Limit Price</label>
             <Input
@@ -130,11 +132,25 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
           </div>
         )}
 
+        {orderType === 'stop' && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Stop Price</label>
+            <Input
+              type="number"
+              placeholder="0.00"
+              value={stopPrice}
+              onChange={(e) => setStopPrice(e.target.value)}
+              step="0.01"
+              min="0"
+            />
+          </div>
+        )}
+
         {/* Submit */}
         <Button
           type="submit"
           className="w-full"
-          disabled={!symbol || !quantity || createOrder.isPending}
+          disabled={!symbol || !quantity || (orderType === 'stop' && !stopPrice) || createOrder.isPending}
         >
           {createOrder.isPending ? 'Submitting...' : `Submit ${side.toUpperCase()} Order`}
         </Button>

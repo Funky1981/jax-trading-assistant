@@ -44,3 +44,35 @@ func TestModePolicyFlags(t *testing.T) {
 		t.Fatalf("paper/live/research must not allow synthetic backtests")
 	}
 }
+
+func TestResolveModeFromEnv(t *testing.T) {
+	t.Setenv("JAX_RUNTIME_MODE", "paper")
+	mode, explicit, err := ResolveModeFromEnv()
+	if err != nil {
+		t.Fatalf("ResolveModeFromEnv error: %v", err)
+	}
+	if mode != ModePaper {
+		t.Fatalf("ResolveModeFromEnv mode=%q want=%q", mode, ModePaper)
+	}
+	if !explicit {
+		t.Fatalf("ResolveModeFromEnv explicit=false want=true")
+	}
+}
+
+func TestResolveModeFromEnv_DefaultDev(t *testing.T) {
+	t.Setenv("JAX_RUNTIME_MODE", "")
+	t.Setenv("APP_RUNTIME_MODE", "")
+	t.Setenv("APP_ENV", "")
+	t.Setenv("ENV", "")
+
+	mode, explicit, err := ResolveModeFromEnv()
+	if err != nil {
+		t.Fatalf("ResolveModeFromEnv error: %v", err)
+	}
+	if mode != ModeDev {
+		t.Fatalf("ResolveModeFromEnv mode=%q want=%q", mode, ModeDev)
+	}
+	if explicit {
+		t.Fatalf("ResolveModeFromEnv explicit=true want=false")
+	}
+}

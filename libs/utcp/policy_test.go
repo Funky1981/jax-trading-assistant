@@ -56,3 +56,18 @@ func TestValidateRuntimeProviderPolicy_ResearchAllowsRealTruthPathProvider(t *te
 		t.Fatalf("research mode should allow real truth-path providers: %v", err)
 	}
 }
+
+func TestValidateRuntimeProviderPolicy_PaperRejectsUnknownBrokerProvider(t *testing.T) {
+	cfg := ProvidersConfig{
+		Providers: []ProviderConfig{
+			{ID: "broker", Transport: "http", Endpoint: "http://localhost:8092/tools", DataSourceType: "unknown"},
+		},
+	}
+	err := ValidateRuntimeProviderPolicy(runtimepolicy.ModePaper, cfg)
+	if err == nil {
+		t.Fatalf("expected paper mode to reject unknown broker provider")
+	}
+	if !strings.Contains(err.Error(), "truth-path providers") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

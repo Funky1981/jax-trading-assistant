@@ -446,19 +446,12 @@ func updateParentRunError(ctx context.Context, db *sql.DB, orchestrationRunID uu
 // ── Config ────────────────────────────────────────────────────────────────────
 
 func loadConfig() (Config, error) {
-	modeRaw := strings.TrimSpace(os.Getenv("JAX_RUNTIME_MODE"))
-	if modeRaw == "" {
-		modeRaw = strings.TrimSpace(os.Getenv("APP_RUNTIME_MODE"))
-	}
-	if modeRaw == "" {
-		modeRaw = strings.TrimSpace(os.Getenv("APP_ENV"))
-	}
-	if modeRaw == "" {
-		modeRaw = strings.TrimSpace(os.Getenv("ENV"))
-	}
-	mode, err := runtimepolicy.ParseMode(modeRaw)
+	mode, explicitMode, err := runtimepolicy.ResolveModeFromEnv()
 	if err != nil {
 		return Config{}, err
+	}
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("JAX_REQUIRE_EXPLICIT_RUNTIME_MODE")), "true") && !explicitMode {
+		return Config{}, fmt.Errorf("explicit runtime mode required: set JAX_RUNTIME_MODE (dev|test|research|paper|live)")
 	}
 	return Config{
 		DatabaseURL:      envOrDefault("DATABASE_URL", "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"),

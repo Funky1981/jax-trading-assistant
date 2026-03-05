@@ -35,15 +35,24 @@ func ParseMode(raw string) (Mode, error) {
 }
 
 func CurrentMode() Mode {
+	mode, _, err := ResolveModeFromEnv()
+	if err != nil {
+		return ModeDev
+	}
+	return mode
+}
+
+func ResolveModeFromEnv() (Mode, bool, error) {
 	for _, key := range []string{"JAX_RUNTIME_MODE", "APP_RUNTIME_MODE", "APP_ENV", "ENV"} {
 		if raw := strings.TrimSpace(os.Getenv(key)); raw != "" {
 			mode, err := ParseMode(raw)
-			if err == nil {
-				return mode
+			if err != nil {
+				return "", true, err
 			}
+			return mode, true, nil
 		}
 	}
-	return ModeDev
+	return ModeDev, false, nil
 }
 
 func (m Mode) String() string { return string(m) }
