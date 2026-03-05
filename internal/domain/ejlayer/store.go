@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"math"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -282,12 +280,4 @@ func scanEpisode(row scanner) (*Episode, error) {
 	}
 
 	return &ep, nil
-}
-
-// decayWeight computes the expected decay weight for an episode given a half-life.
-// Exported for use in tests.
-func decayWeight(episodeAt time.Time, halfLifeDays float64) float64 {
-	daysSince := time.Since(episodeAt).Hours() / 24.0
-	lambda := math.Log(2) / halfLifeDays
-	return math.Exp(-lambda * daysSince)
 }

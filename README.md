@@ -20,11 +20,10 @@ Jax uses a **modular monolith** with two runtime entrypoints (ADR-0012):
 | `cmd/research` | 8091 | Orchestration pipeline — Agent0, memory, Dexter integration |
 
 External boundaries kept as separate processes:
-- **jax-api** (8081) — REST API for the frontend dashboard
+- **jax-trader frontend API** (8081) — REST API served from `cmd/trader`
 - **ib-bridge** (8092) — Interactive Brokers Gateway adapter
 - **agent0-service** (8093) — LLM/AI agent
-- **jax-memory** (8090) — Memory layer (Hindsight)
-- **jax-market** (8095) — Market data feed
+- **hindsight** (8888) — memory and recall backend used by `cmd/research`
 
 ## Quick Start
 
@@ -33,6 +32,7 @@ docker compose up -d
 ```
 
 Services start automatically. Trader and research runtimes load approved strategy artifacts from Postgres on startup.
+The compose topology does not start standalone `jax-api`, `jax-memory`, or `jax-market` containers. Those seams now live inside `cmd/trader` and `cmd/research`.
 
 See `Docs/QUICKSTART.md` for full setup including IB Gateway connection.
 
@@ -42,6 +42,11 @@ Use local `.env` files (or shell env vars) for secrets and keep them untracked.
 
 - `dexter/.env` for Dexter API keys
 - `services/hindsight/.env` for Hindsight API keys
+- `JWT_SECRET` to enable authenticated frontend API mode
+- Optional first-user bootstrap for auth-enabled environments:
+  - `AUTH_BOOTSTRAP_USERNAME`
+  - `AUTH_BOOTSTRAP_PASSWORD`
+  - `AUTH_BOOTSTRAP_ROLE` (`admin` or `user`, defaults to `admin`)
 
 ## Testing (Go)
 

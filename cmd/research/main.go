@@ -181,12 +181,14 @@ func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, 
 // handleHealth returns a simple liveness response.
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"service": "jax-research",
 		"status":  "healthy",
 		"uptime":  time.Since(startTime).Round(time.Second).String(),
 		"version": version,
-	})
+	}); err != nil {
+		log.Printf("handleHealth encode: %v", err)
+	}
 }
 
 // OrchestrateRequest is the inbound payload — matches jax-orchestrator's schema.
@@ -258,10 +260,12 @@ func handleOrchestrate(svc *orchestration.Service, db *sql.DB) http.HandlerFunc 
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]string{
+		if err := json.NewEncoder(w).Encode(map[string]string{
 			"run_id": runID.String(),
 			"status": "running",
-		})
+		}); err != nil {
+			log.Printf("handleOrchestrate encode: %v", err)
+		}
 	}
 }
 

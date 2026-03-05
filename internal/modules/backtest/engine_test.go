@@ -41,7 +41,9 @@ func (m *mockDataSource) GetIndicators(ctx context.Context, symbol string, ts ti
 func registryWithRSI() *strategies.Registry {
 	reg := strategies.NewRegistry()
 	s := strategies.NewRSIMomentumStrategy()
-	reg.Register(s, s.GetMetadata())
+	if err := reg.Register(s, s.GetMetadata()); err != nil {
+		panic(err)
+	}
 	return reg
 }
 

@@ -57,7 +57,7 @@ func (s *Server) RegisterAuth() {
 		return
 	}
 
-	s.mux.HandleFunc("/auth/login", auth.LoginHandler(s.jwtManager))
+	s.mux.HandleFunc("/auth/login", auth.LoginHandler(s.jwtManager, nil))
 	s.mux.HandleFunc("/auth/refresh", auth.RefreshHandler(s.jwtManager))
 	log.Println("Registered authentication endpoints: /auth/login, /auth/refresh")
 }

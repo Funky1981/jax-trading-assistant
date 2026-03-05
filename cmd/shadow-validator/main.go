@@ -73,7 +73,9 @@ func main() {
 	// Get time window for comparison
 	windowHours := 24
 	if hours := os.Getenv("COMPARISON_WINDOW_HOURS"); hours != "" {
-		fmt.Sscanf(hours, "%d", &windowHours)
+		if _, err := fmt.Sscanf(hours, "%d", &windowHours); err != nil {
+			log.Printf("invalid COMPARISON_WINDOW_HOURS %q, using default %d: %v", hours, windowHours, err)
+		}
 	}
 
 	log.Printf("Comparing last %d hours of decisions\n\n", windowHours)

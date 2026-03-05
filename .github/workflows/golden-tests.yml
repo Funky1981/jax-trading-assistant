@@ -54,7 +54,7 @@ jobs:
       
       - name: Start services with Docker Compose
         run: |
-          docker-compose up -d
+          docker compose up -d
         continue-on-error: true
       
       - name: Wait for services to be ready
@@ -62,13 +62,21 @@ jobs:
           echo "Waiting for services to start..."
           sleep 30
           
-          # Check if services are responding
+          # Check if the active modular-monolith runtime is responding.
           for i in {1..30}; do
-            if curl -f http://localhost:8080/health 2>/dev/null; then
-              echo "Services are ready!"
+            trader_ready=false
+            research_ready=false
+            if curl -fsS http://localhost:8081/health >/dev/null 2>&1; then
+              trader_ready=true
+            fi
+            if curl -fsS http://localhost:8091/health >/dev/null 2>&1; then
+              research_ready=true
+            fi
+            if [ "$trader_ready" = true ] && [ "$research_ready" = true ]; then
+              echo "Trader and research runtimes are ready."
               break
             fi
-            echo "Waiting for services... ($i/30)"
+            echo "Waiting for services... ($i/30) trader=$trader_ready research=$research_ready"
             sleep 2
           done
       
@@ -105,4 +113,4 @@ jobs:
       - name: Stop services
         if: always()
         run: |
-          docker-compose down
+          docker compose down

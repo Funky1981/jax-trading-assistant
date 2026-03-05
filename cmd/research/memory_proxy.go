@@ -166,7 +166,9 @@ func memoryToolHandler(store contracts.MemoryStore) http.HandlerFunc {
 func memoryBanksHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]string{"default", "strategies", "trades", "reflections"})
+		if err := json.NewEncoder(w).Encode([]string{"default", "strategies", "trades", "reflections"}); err != nil {
+			http.Error(w, "failed to encode banks", http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -176,7 +178,9 @@ func memorySearchHandler(store contracts.MemoryStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if store == nil {
-			json.NewEncoder(w).Encode([]any{})
+			if err := json.NewEncoder(w).Encode([]any{}); err != nil {
+				http.Error(w, "failed to encode empty result", http.StatusInternalServerError)
+			}
 			return
 		}
 		q := r.URL.Query().Get("q")
@@ -185,16 +189,22 @@ func memorySearchHandler(store contracts.MemoryStore) http.HandlerFunc {
 			bank = "default"
 		}
 		if q == "" {
-			json.NewEncoder(w).Encode([]any{})
+			if err := json.NewEncoder(w).Encode([]any{}); err != nil {
+				http.Error(w, "failed to encode empty result", http.StatusInternalServerError)
+			}
 			return
 		}
 		items, err := store.Recall(r.Context(), bank, contracts.MemoryQuery{Q: q, Limit: 20})
 		if err != nil {
 			log.Printf("memory search error: %v", err)
-			json.NewEncoder(w).Encode([]any{})
+			if encodeErr := json.NewEncoder(w).Encode([]any{}); encodeErr != nil {
+				http.Error(w, "failed to encode empty result", http.StatusInternalServerError)
+			}
 			return
 		}
-		json.NewEncoder(w).Encode(items)
+		if err := json.NewEncoder(w).Encode(items); err != nil {
+			http.Error(w, "failed to encode search results", http.StatusInternalServerError)
+		}
 	}
 }
 

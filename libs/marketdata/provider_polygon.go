@@ -3,6 +3,7 @@ package marketdata
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -108,7 +109,7 @@ func (p *PolygonProvider) GetQuote(ctx context.Context, symbol string) (*Quote, 
 // GetCandles fetches historical OHLCV data
 func (p *PolygonProvider) GetCandles(ctx context.Context, symbol string, timeframe Timeframe, limit int) ([]Candle, error) {
 	// Convert timeframe to Polygon format
-	multiplier := 1
+	var multiplier int
 	var timespan models.Timespan
 
 	switch timeframe {
@@ -171,21 +172,154 @@ func (p *PolygonProvider) GetCandles(ctx context.Context, symbol string, timefra
 
 // GetTrades fetches recent trades (not implemented for Polygon free tier)
 func (p *PolygonProvider) GetTrades(ctx context.Context, symbol string, limit int) ([]Trade, error) {
-	return nil, fmt.Errorf("trades not available on %s tier", p.config.Tier)
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 50000 {
+		limit = 50000
+	}
+	result, err := p.circuitBreaker.ExecuteWithContext(ctx, func() (any, error) {
+		params := models.ListTradesParams{
+			Ticker: symbol,
+		}.WithSort(models.Timestamp).WithOrder(models.Desc).WithLimit(limit)
+		iter := p.client.ListTrades(ctx, params)
+
+		trades := make([]Trade, 0, limit)
+		for iter.Next() {
+			raw := iter.Item()
+			trades = append(trades, Trade{
+				Symbol:     symbol,
+				Price:      raw.Price,
+				Size:       int64(math.Round(raw.Size)),
+				Timestamp:  time.Time(raw.SipTimestamp),
+				Exchange:   strconv.Itoa(raw.Exchange),
+				Conditions: intSliceToStringSlice(raw.Conditions),
+			})
+			if len(trades) >= limit {
+				break
+			}
+		}
+		if iter.Err() != nil {
+			return nil, fmt.Errorf("%w: %v", ErrProviderError, iter.Err())
+		}
+		if len(trades) == 0 {
+			return nil, ErrNoData
+		}
+		return trades, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.([]Trade), nil
 }
 
 // GetEarnings fetches earnings data (placeholder - requires financials API)
 func (p *PolygonProvider) GetEarnings(ctx context.Context, symbol string, limit int) ([]Earnings, error) {
-	// Polygon earnings require separate API tier
-	// For now, return stub implementation
-	return nil, fmt.Errorf("earnings not available on %s tier", p.config.Tier)
+	if limit <= 0 {
+		limit = 4
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	result, err := p.circuitBreaker.ExecuteWithContext(ctx, func() (any, error) {
+		params := models.ListStockFinancialsParams{}.
+			WithTicker(symbol).
+			WithOrder(models.Desc).
+			WithLimit(limit)
+		iter := p.client.VX.ListStockFinancials(ctx, params)
+
+		earnings := make([]Earnings, 0, limit)
+		for iter.Next() {
+			item := iter.Item()
+			reportDate, err := time.Parse("2006-01-02", item.FilingDate)
+			if err != nil {
+				reportDate = time.Time{}
+			}
+			eps := extractFinancialValue(item.Financials, "income_statement", "basic_earnings_per_share")
+			epsEstimate := extractFinancialValue(item.Financials, "income_statement", "diluted_earnings_per_share")
+			revenue := extractFinancialValue(item.Financials, "income_statement", "revenues")
+			revenueEstimate := extractFinancialValue(item.Financials, "income_statement", "revenue")
+			year, _ := strconv.Atoi(item.FiscalYear)
+			earnings = append(earnings, Earnings{
+				Symbol:          symbol,
+				FiscalQuarter:   item.FiscalPeriod,
+				FiscalYear:      year,
+				ReportDate:      reportDate,
+				EPS:             eps,
+				EPSEstimate:     epsEstimate,
+				Revenue:         revenue,
+				RevenueEstimate: revenueEstimate,
+			})
+			if len(earnings) >= limit {
+				break
+			}
+		}
+		if iter.Err() != nil {
+			return nil, fmt.Errorf("%w: %v", ErrProviderError, iter.Err())
+		}
+		if len(earnings) == 0 {
+			return nil, ErrNoData
+		}
+		return earnings, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.([]Earnings), nil
 }
 
 // StreamQuotes streams real-time quotes (requires WebSocket - placeholder)
 func (p *PolygonProvider) StreamQuotes(ctx context.Context, symbols []string) (<-chan StreamUpdate, error) {
-	// WebSocket streaming requires additional implementation
-	// For now, return error
-	return nil, fmt.Errorf("streaming not yet implemented for polygon")
+	if len(symbols) == 0 {
+		return nil, fmt.Errorf("%w: at least one symbol required", ErrInvalidSymbol)
+	}
+	updates := make(chan StreamUpdate, 128)
+	last := make(map[string]float64, len(symbols))
+	interval := streamPollIntervalByTier(p.config.Tier)
+
+	go func() {
+		defer close(updates)
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		poll := func() {
+			for _, symbol := range symbols {
+				symbol = strings.ToUpper(strings.TrimSpace(symbol))
+				if symbol == "" {
+					continue
+				}
+				quote, err := p.GetQuote(ctx, symbol)
+				if err != nil {
+					continue
+				}
+				if quote.Price <= 0 || quote.Price == last[symbol] {
+					continue
+				}
+				last[symbol] = quote.Price
+				select {
+				case updates <- StreamUpdate{
+					Type:      "quote",
+					Quote:     quote,
+					Timestamp: quote.Timestamp,
+				}:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+
+		poll()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				poll()
+			}
+		}
+	}()
+
+	return updates, nil
 }
 
 // HealthCheck verifies the provider is accessible
@@ -199,4 +333,37 @@ func (p *PolygonProvider) HealthCheck(ctx context.Context) error {
 func (p *PolygonProvider) Close() error {
 	// Polygon REST client doesn't need explicit cleanup
 	return nil
+}
+
+func streamPollIntervalByTier(tier string) time.Duration {
+	switch strings.ToLower(strings.TrimSpace(tier)) {
+	case "free":
+		return 20 * time.Second
+	case "starter":
+		return 5 * time.Second
+	default:
+		return 2 * time.Second
+	}
+}
+
+func intSliceToStringSlice(values []int32) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		out = append(out, strconv.Itoa(int(v)))
+	}
+	return out
+}
+
+func extractFinancialValue(financials map[string]models.Financial, section, metric string) float64 {
+	sec, ok := financials[section]
+	if !ok {
+		return 0
+	}
+	if value, ok := sec[metric]; ok {
+		return value.Value
+	}
+	return 0
 }

@@ -6,7 +6,7 @@ import { instancesService } from '@/data/instances-service';
 import { backtestService } from '@/data/backtest-service';
 import { researchService } from '@/data/research-service';
 import { datasetsService } from '@/data/datasets-service';
-import type { DatasetSnapshot, ResearchProject, StrategyInstance } from '@/data/types';
+import type { ResearchProject, StrategyInstance } from '@/data/types';
 import { HttpError } from '@/data/http-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

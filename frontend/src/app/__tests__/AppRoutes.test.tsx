@@ -31,6 +31,6 @@ describe('AppRoutes', () => {
       </DomainProvider>
     );
 
-    expect(await screen.findByRole('heading', { name: 'Trade Blotter' })).toBeInTheDocument();
+    expect(await screen.findByText('Review recent orders and their status.')).toBeInTheDocument();
   });
 });

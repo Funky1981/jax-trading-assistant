@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -266,6 +267,99 @@ func (s *Store) ListApprovedArtifacts(ctx context.Context) ([]*Artifact, error) 
 	return artifacts, rows.Err()
 }
 
+// ListArtifacts returns artifacts across all states, or a single exact state when provided.
+func (s *Store) ListArtifacts(ctx context.Context, stateFilter string) ([]*Artifact, error) {
+	query := `
+		SELECT a.id, a.artifact_id, a.schema_version, a.strategy_name, a.strategy_version, a.code_ref,
+		       a.params, a.data_window_from, a.data_window_to, a.symbols, a.validation,
+		       a.risk_profile, a.hash, a.signature, a.created_by, a.created_at
+		FROM strategy_artifacts a
+	`
+
+	args := make([]any, 0, 1)
+	stateFilter = strings.TrimSpace(strings.ToUpper(stateFilter))
+	if stateFilter != "" {
+		query += `
+		JOIN artifact_approvals ap ON a.id = ap.artifact_id
+		WHERE ap.state = $1
+		`
+		args = append(args, stateFilter)
+	}
+
+	query += `
+		ORDER BY a.strategy_name, a.created_at DESC
+	`
+
+	rows, err := s.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var artifacts []*Artifact
+	for rows.Next() {
+		var artifact Artifact
+		var codeRef sql.NullString
+		var dataWindowFrom, dataWindowTo sql.NullTime
+		var symbols []string
+		var paramsJSON, validationJSON, riskProfileJSON []byte
+		var signature sql.NullString
+
+		err := rows.Scan(
+			&artifact.ID,
+			&artifact.ArtifactID,
+			&artifact.SchemaVersion,
+			&artifact.Strategy.Name,
+			&artifact.Strategy.Version,
+			&codeRef,
+			&paramsJSON,
+			&dataWindowFrom,
+			&dataWindowTo,
+			&symbols,
+			&validationJSON,
+			&riskProfileJSON,
+			&artifact.Hash,
+			&signature,
+			&artifact.CreatedBy,
+			&artifact.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		artifact.Strategy.CodeRef = codeRef.String
+		artifact.Signature = signature.String
+
+		if err := json.Unmarshal(paramsJSON, &artifact.Strategy.Params); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal params: %w", err)
+		}
+
+		if err := json.Unmarshal(riskProfileJSON, &artifact.RiskProfile); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal risk_profile: %w", err)
+		}
+
+		if dataWindowFrom.Valid && dataWindowTo.Valid {
+			artifact.DataWindow = &DataWindow{
+				From:    dataWindowFrom.Time,
+				To:      dataWindowTo.Time,
+				Symbols: symbols,
+			}
+		}
+
+		if len(validationJSON) > 0 {
+			var validation ValidationInfo
+			if err := json.Unmarshal(validationJSON, &validation); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal validation: %w", err)
+			}
+			artifact.Validation = &validation
+		}
+
+		artifacts = append(artifacts, &artifact)
+	}
+
+	return artifacts, rows.Err()
+}
+
 // GetLatestApprovedArtifact returns the most recent approved artifact for a strategy
 func (s *Store) GetLatestApprovedArtifact(ctx context.Context, strategyName string) (*Artifact, error) {
 	query := `
@@ -413,7 +507,11 @@ func (s *Store) UpdateApprovalState(ctx context.Context, artifactID uuid.UUID, t
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && rollbackErr.Error() != "tx is closed" {
+			log.Printf("artifact store rollback: %v", rollbackErr)
+		}
+	}()
 
 	// Get current approval
 	var currentState ApprovalState
@@ -519,6 +617,22 @@ func (s *Store) CreateValidationReport(ctx context.Context, report *ValidationRe
 	)
 
 	return err
+}
+
+// RecordValidationOutcome updates the current approval row with validation evidence.
+func (s *Store) RecordValidationOutcome(ctx context.Context, artifactID, runID uuid.UUID, passed bool, reportURI string) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE artifact_approvals
+		SET validation_run_id = $1,
+		    validation_passed = $2,
+		    validation_report_uri = $3,
+		    updated_at = NOW()
+		WHERE artifact_id = $4
+	`, runID, passed, reportURI, artifactID)
+	if err != nil {
+		return fmt.Errorf("failed to record validation outcome: %w", err)
+	}
+	return nil
 }
 
 // GetByStringArtifactID retrieves an artifact by its human-readable artifact_id

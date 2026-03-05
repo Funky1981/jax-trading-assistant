@@ -103,12 +103,14 @@ func TestRetain_Success(t *testing.T) {
 			t.Errorf("Retain: unexpected path %q", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"success":     true,
 			"bank_id":     "default",
 			"items_count": 1,
 			"async":       false,
-		})
+		}); err != nil {
+			t.Fatalf("encode retain response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
@@ -143,7 +145,7 @@ func TestRecall_Success(t *testing.T) {
 			t.Errorf("Recall: unexpected path %q", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"results": []map[string]any{
 				{
 					"id":   "m1",
@@ -151,7 +153,9 @@ func TestRecall_Success(t *testing.T) {
 					"type": nil,
 				},
 			},
-		})
+		}); err != nil {
+			t.Fatalf("encode recall response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
@@ -176,7 +180,9 @@ func TestRecall_EmptyQuery(t *testing.T) {
 func TestRecall_EmptyResults(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"results": []any{}})
+		if err := json.NewEncoder(w).Encode(map[string]any{"results": []any{}}); err != nil {
+			t.Fatalf("encode empty recall response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
@@ -198,10 +204,12 @@ func TestReflect_Success(t *testing.T) {
 			t.Errorf("Reflect: unexpected path %q", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		if err := json.NewEncoder(w).Encode(map[string]any{
 			"text":     "AAPL has shown consistent MACD crossovers during earnings season.",
 			"based_on": nil,
-		})
+		}); err != nil {
+			t.Fatalf("encode reflect response: %v", err)
+		}
 	}))
 	defer srv.Close()
 

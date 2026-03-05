@@ -3,7 +3,6 @@ import type {
   EventClassification,
   EventDetail,
   EventListResponse,
-  EventSummary,
   EventTimelineResponse,
 } from './types';
 

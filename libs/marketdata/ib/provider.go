@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"jax-trading-assistant/libs/marketdata"
@@ -116,16 +117,93 @@ func (p *Provider) GetCandles(ctx context.Context, symbol string, timeframe mark
 
 // GetTrades gets recent trades for a symbol
 func (p *Provider) GetTrades(ctx context.Context, symbol string, from, to time.Time) ([]marketdata.Trade, error) {
-	// IB doesn't provide tick-by-tick trades through the bridge in this implementation
-	// You could extend the Python bridge to support this if needed
-	return nil, fmt.Errorf("GetTrades not implemented for IB provider")
+	if !to.After(from) {
+		return nil, fmt.Errorf("%w: invalid trade window", marketdata.ErrProviderError)
+	}
+	// The bridge does not expose tick-by-tick trade history. Use 1m bars and convert
+	// each bar into an approximate trade event using close/volume.
+	candles, err := p.GetCandles(ctx, symbol, marketdata.Timeframe1Min, from, to)
+	if err != nil {
+		return nil, err
+	}
+	if len(candles) == 0 {
+		return nil, marketdata.ErrNoData
+	}
+	trades := make([]marketdata.Trade, 0, len(candles))
+	for _, c := range candles {
+		if c.Close <= 0 {
+			continue
+		}
+		trades = append(trades, marketdata.Trade{
+			Symbol:    symbol,
+			Price:     c.Close,
+			Size:      c.Volume,
+			Timestamp: c.Timestamp,
+			Exchange:  "SMART",
+			Conditions: []string{
+				"derived_from_bar",
+				"bar_1m",
+			},
+		})
+	}
+	if len(trades) == 0 {
+		return nil, marketdata.ErrNoData
+	}
+	return trades, nil
 }
 
 // SubscribeQuotes subscribes to real-time quotes
 func (p *Provider) SubscribeQuotes(ctx context.Context, symbols []string) (<-chan marketdata.StreamUpdate, error) {
-	// WebSocket streaming would be implemented here
-	// For now, return not implemented
-	return nil, fmt.Errorf("SubscribeQuotes not implemented - use WebSocket client directly")
+	if len(symbols) == 0 {
+		return nil, fmt.Errorf("%w: at least one symbol required", marketdata.ErrInvalidSymbol)
+	}
+	updates := make(chan marketdata.StreamUpdate, 128)
+	last := make(map[string]float64, len(symbols))
+	pollInterval := 500 * time.Millisecond
+
+	go func() {
+		defer close(updates)
+		ticker := time.NewTicker(pollInterval)
+		defer ticker.Stop()
+
+		poll := func() {
+			for _, symbol := range symbols {
+				symbol = strings.ToUpper(strings.TrimSpace(symbol))
+				if symbol == "" {
+					continue
+				}
+				quote, err := p.GetQuote(ctx, symbol)
+				if err != nil {
+					continue
+				}
+				if quote.Price <= 0 || quote.Price == last[symbol] {
+					continue
+				}
+				last[symbol] = quote.Price
+				select {
+				case updates <- marketdata.StreamUpdate{
+					Type:      "quote",
+					Quote:     quote,
+					Timestamp: quote.Timestamp,
+				}:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+
+		poll()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				poll()
+			}
+		}
+	}()
+
+	return updates, nil
 }
 
 // Close closes the provider connection

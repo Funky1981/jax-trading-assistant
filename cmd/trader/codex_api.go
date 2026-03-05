@@ -1468,90 +1468,6 @@ func setResearchProjectStatus(ctx context.Context, pool *pgxpool.Pool, projectID
 	return err
 }
 
-func resolveWalkForwardWindows(project *researchProjectRecord, req backtestRunRequest) (time.Time, time.Time, time.Time, time.Time) {
-	fallbackFrom := parseDateOnly(req.From, time.Now().UTC().AddDate(0, 0, -30))
-	fallbackTo := parseDateOnly(req.To, time.Now().UTC())
-	if !fallbackTo.After(fallbackFrom) {
-		fallbackTo = fallbackFrom.AddDate(0, 0, 5)
-	}
-	trainFrom := fallbackFrom
-	trainTo := fallbackTo
-	testFrom := fallbackFrom
-	testTo := fallbackTo
-	if project.TrainFrom != nil {
-		trainFrom = project.TrainFrom.UTC()
-	}
-	if project.TrainTo != nil {
-		trainTo = project.TrainTo.UTC()
-	}
-	if project.TestFrom != nil {
-		testFrom = project.TestFrom.UTC()
-	}
-	if project.TestTo != nil {
-		testTo = project.TestTo.UTC()
-	}
-	// Fallback split if explicit windows are missing.
-	if project.TrainFrom == nil || project.TrainTo == nil || project.TestFrom == nil || project.TestTo == nil {
-		total := fallbackTo.Sub(fallbackFrom)
-		if total <= 0 {
-			total = 48 * time.Hour
-		}
-		split := fallbackFrom.Add(time.Duration(float64(total) * 0.7))
-		trainFrom = fallbackFrom
-		trainTo = split
-		testFrom = split.Add(24 * time.Hour)
-		testTo = fallbackTo
-		if !testTo.After(testFrom) {
-			testTo = testFrom.AddDate(0, 0, 2)
-		}
-	}
-	if !trainTo.After(trainFrom) {
-		trainTo = trainFrom.AddDate(0, 0, 2)
-	}
-	if !testTo.After(testFrom) {
-		testTo = testFrom.AddDate(0, 0, 2)
-	}
-	return trainFrom, trainTo, testFrom, testTo
-}
-
-func applySweepCombo(base backtestRunRequest, combo map[string]any, seed int64) backtestRunRequest {
-	out := base
-	out.Seed = seed
-	for key, value := range combo {
-		switch key {
-		case "strategyId":
-			if s := toString(value); s != "" {
-				out.StrategyID = s
-			}
-		case "strategyConfigId":
-			if s := toString(value); s != "" {
-				out.StrategyConfigID = s
-			}
-		case "datasetId":
-			if s := toString(value); s != "" {
-				out.DatasetID = s
-			}
-		case "seed":
-			if v, ok := toInt64(value); ok {
-				out.Seed = v
-			}
-		case "initialCapital":
-			if v, ok := toFloat64(value); ok {
-				out.InitialCapital = v
-			}
-		case "riskPerTrade":
-			if v, ok := toFloat64(value); ok {
-				out.RiskPerTrade = v
-			}
-		case "symbols", "symbolsOverride":
-			if ss := toStringSlice(value); len(ss) > 0 {
-				out.SymbolsOverride = ss
-			}
-		}
-	}
-	return out
-}
-
 func normalizeBacktestMetrics(raw any) map[string]float64 {
 	out := map[string]float64{
 		"totalTrades":  0,
@@ -1583,66 +1499,11 @@ func normalizeBacktestMetrics(raw any) map[string]float64 {
 	return out
 }
 
-func computeResearchRankScore(metrics map[string]float64) float64 {
-	maxDD := metrics["maxDrawdown"]
-	avgDaily := metrics["avgDailyPnL"]
-	tailLoss := metrics["tailLoss"]
-	return (avgDaily * 100) - (maxDD * 100) - (tailLoss * 50)
-}
-
 func deterministicSweepSeed(projectID string, idx int, combo map[string]any) int64 {
 	encoded, _ := json.Marshal(combo)
 	sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%d|%s", projectID, idx, string(encoded))))
 	return int64(sum[0])<<56 | int64(sum[1])<<48 | int64(sum[2])<<40 | int64(sum[3])<<32 |
 		int64(sum[4])<<24 | int64(sum[5])<<16 | int64(sum[6])<<8 | int64(sum[7])
-}
-
-func expandParameterGrid(grid map[string]any, maxCombos int) []map[string]any {
-	if len(grid) == 0 {
-		return nil
-	}
-	keys := make([]string, 0, len(grid))
-	for k := range grid {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	valuesByKey := make([][]any, 0, len(keys))
-	for _, key := range keys {
-		raw := grid[key]
-		switch typed := raw.(type) {
-		case []any:
-			if len(typed) == 0 {
-				valuesByKey = append(valuesByKey, []any{nil})
-			} else {
-				valuesByKey = append(valuesByKey, typed)
-			}
-		default:
-			valuesByKey = append(valuesByKey, []any{typed})
-		}
-	}
-	out := make([]map[string]any, 0, 16)
-	var walk func(i int, current map[string]any)
-	walk = func(i int, current map[string]any) {
-		if maxCombos > 0 && len(out) >= maxCombos {
-			return
-		}
-		if i >= len(keys) {
-			cloned := make(map[string]any, len(current))
-			for k, v := range current {
-				cloned[k] = v
-			}
-			out = append(out, cloned)
-			return
-		}
-		key := keys[i]
-		for _, value := range valuesByKey[i] {
-			current[key] = value
-			walk(i+1, current)
-		}
-		delete(current, key)
-	}
-	walk(0, map[string]any{})
-	return out
 }
 
 func runBacktestAndPersist(ctx context.Context, pool *pgxpool.Pool, orchestratorURL string, req backtestRunRequest, source string) (map[string]any, error) {
@@ -2944,61 +2805,6 @@ func toFloat64(v any) (float64, bool) {
 	}
 }
 
-func toInt64(v any) (int64, bool) {
-	switch typed := v.(type) {
-	case int64:
-		return typed, true
-	case int:
-		return int64(typed), true
-	case float64:
-		return int64(typed), true
-	case string:
-		n, err := strconv.ParseInt(strings.TrimSpace(typed), 10, 64)
-		return n, err == nil
-	default:
-		return 0, false
-	}
-}
-
-func toStringSlice(v any) []string {
-	switch typed := v.(type) {
-	case []string:
-		out := make([]string, 0, len(typed))
-		for _, s := range typed {
-			if ss := strings.ToUpper(strings.TrimSpace(s)); ss != "" {
-				out = append(out, ss)
-			}
-		}
-		return out
-	case []any:
-		out := make([]string, 0, len(typed))
-		for _, raw := range typed {
-			if ss := strings.ToUpper(strings.TrimSpace(toString(raw))); ss != "" {
-				out = append(out, ss)
-			}
-		}
-		return out
-	case string:
-		parts := strings.Split(typed, ",")
-		out := make([]string, 0, len(parts))
-		for _, p := range parts {
-			if ss := strings.ToUpper(strings.TrimSpace(p)); ss != "" {
-				out = append(out, ss)
-			}
-		}
-		return out
-	default:
-		return nil
-	}
-}
-
-func errString(err error) string {
-	if err == nil {
-		return ""
-	}
-	return err.Error()
-}
-
 func truncateForArtifact(raw string, maxChars int) string {
 	if len(raw) <= maxChars || maxChars <= 0 {
 		return raw
@@ -3088,12 +2894,6 @@ func strOrEmpty(v *string) string {
 		return ""
 	}
 	return *v
-}
-
-func projectBaseInstanceID(ctx context.Context, pool *pgxpool.Pool, projectID string) string {
-	var instanceID string
-	_ = pool.QueryRow(ctx, `SELECT COALESCE(base_instance_id::text,'') FROM research_projects WHERE id = $1::uuid`, projectID).Scan(&instanceID)
-	return instanceID
 }
 
 func instanceStrategyID(ctx context.Context, pool *pgxpool.Pool, instanceID string) string {

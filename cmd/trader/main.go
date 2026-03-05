@@ -125,6 +125,12 @@ func main() {
 	// ADR-0012 Phase 4: Create artifact management API
 	artifactStore := artifacts.NewStore(dbPool)
 	artifactHandlers := NewArtifactHandlers(artifactStore)
+	artifactHandlers.runReplayGate = func(ctx context.Context) map[string]any {
+		return runGateAndPersist(ctx, dbPool, "Gate2", "deterministic_replay")
+	}
+	artifactHandlers.runPromotionGate = func(ctx context.Context) map[string]any {
+		return runGateAndPersist(ctx, dbPool, "Gate3", "artifact_promotion")
+	}
 
 	// Create in-process signal generator
 	sigGen := signalgenerator.New(dbPool, registry)
@@ -413,21 +419,25 @@ func handleHealth(sigGen *signalgenerator.InProcessSignalGenerator) http.Handler
 		if err := sigGen.Health(ctx); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusServiceUnavailable)
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{
 				"service": "jax-trader",
 				"status":  "unhealthy",
 				"error":   err.Error(),
-			})
+			}); err != nil {
+				log.Printf("handleHealth unhealthy encode: %v", err)
+			}
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"service": "jax-trader",
 			"version": version,
 			"status":  "healthy",
 			"uptime":  time.Since(startTime).String(),
-		})
+		}); err != nil {
+			log.Printf("handleHealth encode: %v", err)
+		}
 	}
 }
 
@@ -473,12 +483,14 @@ func handleGenerateSignals(sigGen *signalgenerator.InProcessSignalGenerator) htt
 
 		// Return response (compatible with jax-signal-generator format)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"success":  true,
 			"signals":  signals,
 			"count":    len(signals),
 			"duration": duration.String(),
-		})
+		}); err != nil {
+			log.Printf("handleGenerateSignals encode: %v", err)
+		}
 	}
 }
 
@@ -519,23 +531,27 @@ func handleGetSignals(sigGen *signalgenerator.InProcessSignalGenerator) http.Han
 
 		// Return response
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"symbol":  symbol,
 			"signals": signals,
 			"count":   len(signals),
-		})
+		}); err != nil {
+			log.Printf("handleGetSignals encode: %v", err)
+		}
 	}
 }
 
 func handleMetrics() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"service":        "jax-trader",
 			"version":        version,
 			"uptime_seconds": time.Since(startTime).Seconds(),
 			"go_routines":    "N/A", // Can add runtime.NumGoroutine() if needed
-		})
+		}); err != nil {
+			log.Printf("handleMetrics encode: %v", err)
+		}
 	}
 }
 
@@ -591,12 +607,14 @@ func handleExecute(execService *execution.Service) http.HandlerFunc {
 
 		// Return response (compatible with jax-trade-executor format)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"success":  true,
 			"trade_id": trade.TradeID.String(),
 			"order_id": trade.OrderID,
 			"trade":    trade,
 			"duration": duration.String(),
-		})
+		}); err != nil {
+			log.Printf("handleExecuteTrade encode: %v", err)
+		}
 	}
 }

@@ -8,6 +8,7 @@ import { AnalysisPage } from '@/pages/AnalysisPage';
 import { TestingPage } from '@/pages/TestingPage';
 import { BlotterPage } from '@/pages/BlotterPage';
 import { PortfolioPage } from '@/pages/PortfolioPage';
+import { OrderTicketPage } from '@/pages/OrderTicketPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { UserGuidePage } from '@/pages/UserGuidePage';
 import { LoginPage } from '@/pages/LoginPage';
@@ -53,6 +54,7 @@ export const routes = [
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'trading', element: <TradingPage /> },
+      { path: 'order-ticket', element: <OrderTicketPage /> },
       { path: 'system', element: <SystemPage /> },
       { path: 'research', element: <ResearchPage /> },
       { path: 'analysis', element: <AnalysisPage /> },

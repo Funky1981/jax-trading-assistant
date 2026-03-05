@@ -79,11 +79,9 @@ func DefaultPhaseDetectorConfig() PhaseDetectorConfig {
 // PhaseDetector classifies the current moment relative to calendar events.
 // It is safe for concurrent use.
 type PhaseDetector struct {
-	store  *calendar.Store
-	cfg    PhaseDetectorConfig
-	mu     sync.Mutex
-	lastAt time.Time
-	cached *PhaseResult
+	store *calendar.Store
+	cfg   PhaseDetectorConfig
+	mu    sync.Mutex
 }
 
 // NewPhaseDetector creates a PhaseDetector backed by the given calendar store.

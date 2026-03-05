@@ -2,16 +2,17 @@
 
 ## Near-Term Priorities
 
-1. **Orchestration API**
-   - Implement HTTP endpoints expected by the frontend.
-   - Add run tracking + retrieval endpoints.
-2. **Strategy Signals**
-   - Background job for signal generation.
-   - Storage + performance tracking endpoints.
+1. **Artifact Validation**
+   - Link artifact approvals to real trust-gate execution evidence.
+   - Extend artifact validation from integrity checks to golden/replay-backed validation where appropriate.
+2. **Runtime/Docs Alignment**
+   - Keep docs aligned to the active `cmd/trader` + `cmd/research` topology.
+   - Remove stale references to superseded `services/jax-*` runtime paths.
 3. **Market Data Ingestion**
    - Wire IB bridge stream into ingestion/storage.
-4. **Agent0 HTTP Service**
-   - Provide `/v1/plan` and `/v1/execute` endpoints.
+   - Close remaining provider-method gaps in the market-data adapters.
+4. **Authentication Hardening**
+   - Replace placeholder login behavior with the intended auth flow.
 5. **Reflection Loop**
    - Schedule and persist `memory.reflect` outputs.
 
@@ -19,6 +20,7 @@
 
 - Observability (metrics, traces, log retention).
 - CI + linting gates + documentation hygiene.
+- Clarify Agent0/Dexter mock-vs-live boundaries and repo-local failure handling.
 
 ## Long-Term
 

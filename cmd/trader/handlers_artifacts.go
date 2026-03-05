@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"strings"
 	"time"
 
@@ -13,14 +15,40 @@ import (
 	"github.com/google/uuid"
 )
 
+type artifactStore interface {
+	ListApprovedArtifacts(ctx context.Context) ([]*artifacts.Artifact, error)
+	ListArtifacts(ctx context.Context, stateFilter string) ([]*artifacts.Artifact, error)
+	GetApproval(ctx context.Context, artifactID uuid.UUID) (*artifacts.Approval, error)
+	GetArtifactByID(ctx context.Context, id uuid.UUID) (*artifacts.Artifact, error)
+	CreateArtifact(ctx context.Context, artifact *artifacts.Artifact) error
+	CreateApproval(ctx context.Context, approval *artifacts.Approval) error
+	UpdateApprovalState(ctx context.Context, artifactID uuid.UUID, toState artifacts.ApprovalState, promotedBy, reason string) error
+	CreateValidationReport(ctx context.Context, report *artifacts.ValidationReport) error
+	RecordValidationOutcome(ctx context.Context, artifactID, runID uuid.UUID, passed bool, reportURI string) error
+}
+
 // ArtifactHandlers provides HTTP handlers for artifact management
 type ArtifactHandlers struct {
-	store *artifacts.Store
+	store             artifactStore
+	now               func() time.Time
+	runReplayGate     func(ctx context.Context) map[string]any
+	runPromotionGate  func(ctx context.Context) map[string]any
+	defaultReplayGate string
+	defaultReplayType string
+	defaultGate       string
+	defaultType       string
 }
 
 // NewArtifactHandlers creates artifact API handlers
-func NewArtifactHandlers(store *artifacts.Store) *ArtifactHandlers {
-	return &ArtifactHandlers{store: store}
+func NewArtifactHandlers(store artifactStore) *ArtifactHandlers {
+	return &ArtifactHandlers{
+		store:             store,
+		now:               time.Now,
+		defaultReplayGate: "Gate2",
+		defaultReplayType: "deterministic_replay",
+		defaultGate:       "Gate3",
+		defaultType:       "artifact_promotion",
+	}
 }
 
 // RegisterRoutes adds artifact endpoints to the HTTP server
@@ -134,9 +162,7 @@ func (h *ArtifactHandlers) handleListArtifacts(w http.ResponseWriter, r *http.Re
 	if stateFilter == "approved" {
 		artifactList, err = h.store.ListApprovedArtifacts(ctx)
 	} else {
-		// For now, just return approved artifacts
-		// TODO: Add store method to list all artifacts with optional filter
-		artifactList, err = h.store.ListApprovedArtifacts(ctx)
+		artifactList, err = h.store.ListArtifacts(ctx, stateFilter)
 	}
 
 	if err != nil {
@@ -167,7 +193,7 @@ func (h *ArtifactHandlers) handleListArtifacts(w http.ResponseWriter, r *http.Re
 			if approval.ApprovedBy != "" {
 				resp.ApprovedBy = &approval.ApprovedBy
 			}
-			if !approval.ApprovedAt.IsZero() {
+			if approval.ApprovedAt != nil && !approval.ApprovedAt.IsZero() {
 				approvedAt := approval.ApprovedAt.Format(time.RFC3339)
 				resp.ApprovedAt = &approvedAt
 			}
@@ -176,8 +202,7 @@ func (h *ArtifactHandlers) handleListArtifacts(w http.ResponseWriter, r *http.Re
 		response = append(response, resp)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	jsonOK(w, response)
 }
 
 // handleGetArtifact returns a single artifact by ID
@@ -215,14 +240,16 @@ func (h *ArtifactHandlers) handleGetArtifact(w http.ResponseWriter, r *http.Requ
 		if approval.ApprovedBy != "" {
 			resp.ApprovedBy = &approval.ApprovedBy
 		}
-		if !approval.ApprovedAt.IsZero() {
+		if approval.ApprovedAt != nil && !approval.ApprovedAt.IsZero() {
 			approvedAt := approval.ApprovedAt.Format(time.RFC3339)
 			resp.ApprovedAt = &approvedAt
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("handleGetArtifact encode: %v", err)
+	}
 }
 
 // handleCreateArtifact creates a new artifact in DRAFT state
@@ -298,7 +325,9 @@ func (h *ArtifactHandlers) handleCreateArtifact(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("handleCreateArtifact encode: %v", err)
+	}
 }
 
 // handlePromoteArtifact transitions an artifact to a new state
@@ -384,13 +413,15 @@ func (h *ArtifactHandlers) handlePromoteArtifact(w http.ResponseWriter, r *http.
 	if approval != nil && approval.ApprovedBy != "" {
 		resp.ApprovedBy = &approval.ApprovedBy
 	}
-	if approval != nil && !approval.ApprovedAt.IsZero() {
+	if approval != nil && approval.ApprovedAt != nil && !approval.ApprovedAt.IsZero() {
 		approvedAt := approval.ApprovedAt.Format(time.RFC3339)
 		resp.ApprovedAt = &approvedAt
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("artifact handler encode: %v", err)
+	}
 }
 
 // handleValidateArtifact runs validation tests on an artifact
@@ -410,47 +441,69 @@ func (h *ArtifactHandlers) handleValidateArtifact(w http.ResponseWriter, r *http
 		return
 	}
 
-	// TODO: Run actual validation tests (golden tests, replay tests, etc.)
-	// For Phase 4, we'll create a placeholder validation report
-
-	now := time.Now().UTC()
-
-	// Create validation report
-	report := &artifacts.ValidationReport{
-		ID:         uuid.New(),
-		ArtifactID: artifactID,
-		RunID:      uuid.New(),
-		TestType:   "placeholder",
-		Passed:     true,
-		Metrics: map[string]interface{}{
-			"sharpe_ratio":  1.5,
-			"max_drawdown":  -0.15,
-			"win_rate":      0.65,
-			"total_signals": 100,
-		},
-		Errors:          []string{},
-		Warnings:        []string{"validation framework not yet implemented"},
-		StartedAt:       now,
-		CompletedAt:     now,
-		DurationSeconds: 0.0,
+	approval, err := h.store.GetApproval(ctx, artifactID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("approval not found: %v", err), http.StatusNotFound)
+		return
 	}
 
-	if err := h.store.CreateValidationReport(ctx, report); err != nil {
-		log.Printf("Warning: failed to store validation report: %v", err)
-	}
-
-	// If validation passed, promote to VALIDATED state
-	if report.Passed {
-		if err := h.store.UpdateApprovalState(ctx, artifactID, artifacts.StateValidated, "system", "validation tests passed"); err != nil {
-			log.Printf("Warning: failed to promote to VALIDATED: %v", err)
+	report := buildArtifactValidationReport(artifact, h.now().UTC())
+	var replayRun map[string]any
+	if h.runReplayGate != nil {
+		replayRun = h.runReplayGate(ctx)
+		report.TestEnvironment["replayGate"] = gateEvidence(h.defaultReplayGate, h.defaultReplayType, replayRun)
+		if !isGateResultPassed(replayRun) {
+			report.Passed = false
+			report.Errors = append(report.Errors, "Gate2 deterministic replay trust gate failed")
 		}
+	} else {
+		report.Passed = false
+		report.Errors = append(report.Errors, "Gate2 deterministic replay gate is unavailable")
+	}
+
+	var gateRun map[string]any
+	if h.runPromotionGate != nil {
+		gateRun = h.runPromotionGate(ctx)
+		report.TestEnvironment["gate"] = gateEvidence(h.defaultGate, h.defaultType, gateRun)
+		if !isGateResultPassed(gateRun) {
+			report.Passed = false
+			report.Errors = append(report.Errors, "Gate3 artifact promotion trust gate failed")
+		}
+	} else {
+		report.Passed = false
+		report.Errors = append(report.Errors, "Gate3 artifact promotion gate is unavailable")
+	}
+
+	if runID := bestGateRunID(gateRun, replayRun); runID != uuid.Nil {
+		report.RunID = runID
+	}
+	reportURI := bestGateArtifactURI(gateRun, replayRun, report.ReportURI)
+	if reportURI != "" {
+		report.ReportURI = reportURI
+	}
+	if err := h.store.CreateValidationReport(ctx, report); err != nil {
+		http.Error(w, fmt.Sprintf("failed to store validation report: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if err := h.store.RecordValidationOutcome(ctx, artifactID, report.RunID, report.Passed, reportURI); err != nil {
+		http.Error(w, fmt.Sprintf("failed to record validation outcome: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	newState := string(approval.State)
+	if report.Passed && approval.State == artifacts.StateDraft {
+		if err := h.store.UpdateApprovalState(ctx, artifactID, artifacts.StateValidated, "system", "artifact validation passed with Gate2/Gate3 evidence"); err != nil {
+			http.Error(w, fmt.Sprintf("failed to promote artifact: %v", err), http.StatusInternalServerError)
+			return
+		}
+		newState = string(artifacts.StateValidated)
 	}
 
 	log.Printf("Validated artifact %s: passed=%v", artifact.ArtifactID, report.Passed)
 
 	// Return validation report
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"artifact_id":       artifact.ArtifactID,
 		"validation_run_id": report.RunID.String(),
 		"passed":            report.Passed,
@@ -458,6 +511,164 @@ func (h *ArtifactHandlers) handleValidateArtifact(w http.ResponseWriter, r *http
 		"errors":            report.Errors,
 		"warnings":          report.Warnings,
 		"tested_at":         report.CompletedAt.Format(time.RFC3339),
-		"new_state":         "VALIDATED",
-	})
+		"new_state":         newState,
+		"replayRun":         replayRun,
+		"gateRun":           gateRun,
+	}); err != nil {
+		log.Printf("handleValidateArtifact encode: %v", err)
+	}
+}
+
+func gateEvidence(gate, testType string, run map[string]any) map[string]any {
+	evidence := map[string]any{
+		"name":     gate,
+		"testType": testType,
+	}
+	if run == nil {
+		evidence["status"] = "missing"
+		return evidence
+	}
+	summary, _ := run["summary"].(map[string]any)
+	evidence["testRunId"] = toString(run["testRunId"])
+	evidence["artifactUri"] = toString(run["artifactUri"])
+	evidence["status"] = toString(run["status"])
+	evidence["summaryState"] = toString(summary["status"])
+	return evidence
+}
+
+func isGateResultPassed(run map[string]any) bool {
+	if run == nil {
+		return false
+	}
+	status := strings.ToLower(strings.TrimSpace(toString(run["status"])))
+	if status != "completed" {
+		return false
+	}
+	summary, ok := run["summary"].(map[string]any)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(toString(summary["status"]), "passed")
+}
+
+func bestGateRunID(primary, secondary map[string]any) uuid.UUID {
+	candidates := []map[string]any{primary, secondary}
+	for _, run := range candidates {
+		if run == nil {
+			continue
+		}
+		raw := strings.TrimSpace(toString(run["testRunId"]))
+		if raw == "" {
+			continue
+		}
+		if parsed, err := uuid.Parse(raw); err == nil {
+			return parsed
+		}
+	}
+	return uuid.Nil
+}
+
+func bestGateArtifactURI(primary, secondary map[string]any, fallback string) string {
+	for _, run := range []map[string]any{primary, secondary} {
+		if run == nil {
+			continue
+		}
+		if uri := strings.TrimSpace(toString(run["artifactUri"])); uri != "" {
+			return uri
+		}
+	}
+	return strings.TrimSpace(fallback)
+}
+
+func buildArtifactValidationReport(artifact *artifacts.Artifact, now time.Time) *artifacts.ValidationReport {
+	startedAt := now.UTC()
+	errors := make([]string, 0, 8)
+	warnings := make([]string, 0, 4)
+	metrics := make(map[string]any)
+	var determinismSeed *int
+	reportURI := ""
+
+	if err := artifact.VerifyHash(); err != nil {
+		errors = append(errors, fmt.Sprintf("artifact hash verification failed: %v", err))
+	}
+	if strings.TrimSpace(artifact.Strategy.Name) == "" || strings.TrimSpace(artifact.Strategy.Version) == "" {
+		errors = append(errors, "artifact strategy metadata is incomplete")
+	}
+	if strings.TrimSpace(artifact.CreatedBy) == "" {
+		errors = append(errors, "artifact created_by is required")
+	}
+	if artifact.DataWindow == nil {
+		errors = append(errors, "artifact validation requires a data window")
+	} else {
+		if artifact.DataWindow.To.Before(artifact.DataWindow.From) {
+			errors = append(errors, "artifact data window is invalid")
+		}
+		if len(artifact.DataWindow.Symbols) == 0 {
+			errors = append(errors, "artifact validation requires at least one symbol")
+		}
+	}
+	if len(artifact.RiskProfile.AllowedOrderTypes) == 0 {
+		errors = append(errors, "artifact risk profile must declare allowed order types")
+	}
+	if artifact.RiskProfile.MaxPositionPct <= 0 {
+		errors = append(errors, "artifact risk profile must declare max_position_pct > 0")
+	}
+	if artifact.Validation == nil {
+		errors = append(errors, "artifact validation payload is missing")
+	} else {
+		if artifact.Validation.BacktestRunID == uuid.Nil {
+			errors = append(errors, "artifact validation is missing backtest_run_id")
+		}
+		if len(artifact.Validation.Metrics) == 0 {
+			errors = append(errors, "artifact validation metrics are missing")
+		}
+		for key, value := range artifact.Validation.Metrics {
+			metrics[key] = value
+		}
+		determinismSeed = &artifact.Validation.DeterminismSeed
+		reportURI = artifact.Validation.ReportURI
+	}
+
+	requiredMetrics := []string{
+		"total_trades",
+		"win_rate",
+		"total_return_pct",
+		"max_drawdown",
+		"sharpe_ratio",
+		"profit_factor",
+	}
+	for _, key := range requiredMetrics {
+		if _, ok := metrics[key]; !ok {
+			warnings = append(warnings, fmt.Sprintf("validation metric %q is missing", key))
+		}
+	}
+	if artifact.Validation != nil && artifact.Validation.DeterminismSeed == 0 {
+		warnings = append(warnings, "determinism seed is zero; confirm this run was intentionally seeded")
+	}
+
+	completedAt := startedAt
+	return &artifacts.ValidationReport{
+		ID:              uuid.New(),
+		ArtifactID:      artifact.ID,
+		RunID:           uuid.New(),
+		TestType:        "artifact_integrity",
+		Passed:          len(errors) == 0,
+		Metrics:         metrics,
+		Errors:          errors,
+		Warnings:        warnings,
+		DeterminismSeed: determinismSeed,
+		TestEnvironment: map[string]any{
+			"validator":        "cmd/trader",
+			"go_version":       runtime.Version(),
+			"schema_version":   artifact.SchemaVersion,
+			"strategy_name":    artifact.Strategy.Name,
+			"strategy_version": artifact.Strategy.Version,
+			"artifact_hash":    artifact.Hash,
+		},
+		ReportURI:       reportURI,
+		StartedAt:       startedAt,
+		CompletedAt:     completedAt,
+		DurationSeconds: completedAt.Sub(startedAt).Seconds(),
+		CreatedAt:       completedAt,
+	}
 }

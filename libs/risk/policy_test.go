@@ -15,6 +15,7 @@ func TestDefaultPolicyIsValid(t *testing.T) {
 	p := risk.DefaultPolicy()
 	if p == nil {
 		t.Fatal("DefaultPolicy returned nil")
+		return
 	}
 	if p.Position.MaxRiskPerTrade <= 0 {
 		t.Errorf("expected MaxRiskPerTrade > 0, got %.4f", p.Position.MaxRiskPerTrade)
@@ -96,8 +97,12 @@ func TestLoadPolicyEmptyPath(t *testing.T) {
 
 func TestLoadPolicyInvalidJSON(t *testing.T) {
 	f, _ := os.CreateTemp(t.TempDir(), "bad-*.json")
-	f.WriteString("{not valid json")
-	f.Close()
+	if _, err := f.WriteString("{not valid json"); err != nil {
+		t.Fatalf("write invalid json fixture: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("close invalid json fixture: %v", err)
+	}
 	_, err := risk.LoadPolicy(f.Name())
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")

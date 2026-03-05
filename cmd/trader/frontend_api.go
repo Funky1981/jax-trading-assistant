@@ -167,6 +167,13 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	if err != nil {
 		log.Printf("frontend API: JWT disabled (%v) — running in unauthenticated mode", err)
 	}
+	var authenticator auth.Authenticator
+	if jwtManager != nil {
+		authenticator = auth.NewPostgresAuthenticator(pool)
+		if err := auth.BootstrapAuthUserFromEnv(ctx, pool); err != nil {
+			log.Printf("frontend API: auth bootstrap skipped (%v)", err)
+		}
+	}
 
 	rateLimiter := middleware.NewRateLimiterFromEnv()
 	corsConfig := middleware.CORSConfigFromEnv()
@@ -184,11 +191,10 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	// /auth/status is always public — frontend uses it to decide whether to show login
 	authEnabled := jwtManager != nil
 	mux.HandleFunc("/auth/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]bool{"enabled": authEnabled})
+		jsonOK(w, map[string]bool{"enabled": authEnabled})
 	})
 	if jwtManager != nil {
-		mux.HandleFunc("/auth/login", auth.LoginHandler(jwtManager))
+		mux.HandleFunc("/auth/login", auth.LoginHandler(jwtManager, authenticator))
 		mux.HandleFunc("/auth/refresh", auth.RefreshHandler(jwtManager))
 	}
 
@@ -197,8 +203,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 
 	// ── Health ────────────────────────────────────────────────────────────────
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		jsonOK(w, map[string]string{
 			"status":  "healthy",
 			"service": "jax-trader-api",
 			"uptime":  time.Since(startTime).Round(time.Second).String(),
@@ -766,7 +771,9 @@ func orchestrateHandler(orchestratorURL string) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		w.Write(resp)
+		if _, err := w.Write(resp); err != nil {
+			log.Printf("orchestrateHandler write response: %v", err)
+		}
 	}
 }
 
@@ -1078,7 +1085,9 @@ func symbolProcessHandler(orchestratorURL string, pool *pgxpool.Pool) http.Handl
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		w.Write(resp)
+		if _, err := w.Write(resp); err != nil {
+			log.Printf("manual symbol trigger write response: %v", err)
+		}
 	}
 }
 

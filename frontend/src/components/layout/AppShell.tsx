@@ -9,6 +9,7 @@ import {
   Settings,
   Activity,
   TrendingUp,
+  ClipboardPenLine,
   Server,
   LogOut,
   FlaskConical,
@@ -24,6 +25,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, end: true },
   { label: 'Trading', path: '/trading', icon: TrendingUp },
+  { label: 'Order Ticket', path: '/order-ticket', icon: ClipboardPenLine },
   { label: 'System', path: '/system', icon: Server },
   { label: 'Backtesting', path: '/research', icon: FlaskConical },
   { label: 'Analysis', path: '/analysis', icon: BarChart3 },

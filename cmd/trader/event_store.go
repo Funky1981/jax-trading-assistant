@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -245,7 +246,11 @@ func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) err
 	if err != nil {
 		return fmt.Errorf("begin event tx: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && rollbackErr.Error() != "tx is closed" {
+			log.Printf("event store rollback: %v", rollbackErr)
+		}
+	}()
 
 	var rawID string
 	err = tx.QueryRow(ctx, `

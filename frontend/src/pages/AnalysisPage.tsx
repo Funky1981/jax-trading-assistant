@@ -5,7 +5,7 @@ import { Download, Sparkles } from 'lucide-react';
 import { backtestService } from '@/data/backtest-service';
 import { datasetsService } from '@/data/datasets-service';
 import { eventsService } from '@/data/events-service';
-import type { BacktestRunBySymbol, BacktestTrade, EventSummary } from '@/data/types';
+import type { BacktestRunBySymbol, BacktestTrade } from '@/data/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

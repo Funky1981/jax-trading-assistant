@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -114,7 +115,7 @@ func TestMemoryToolHandler_Recall_Success(t *testing.T) {
 	store := newTestStore()
 	// Pre-populate a memory so recall has something to return.
 	item := validTestItem()
-	store.Retain(nil, "default", item) //nolint:errcheck
+	store.Retain(context.TODO(), "default", item) //nolint:errcheck
 
 	handler := memoryToolHandler(store)
 
@@ -260,7 +261,7 @@ func TestMemoryBanksHandler_Returns200WithBanks(t *testing.T) {
 func TestMemorySearchHandler_WithQuery(t *testing.T) {
 	store := newTestStore()
 	item := validTestItem()
-	store.Retain(nil, "default", item) //nolint:errcheck
+	store.Retain(context.TODO(), "default", item) //nolint:errcheck
 
 	handler := memorySearchHandler(store)
 
@@ -294,7 +295,7 @@ func TestMemorySearchHandler_EmptyQuery_ReturnsEmptyArray(t *testing.T) {
 func TestMemorySearchHandler_DefaultBankUsed(t *testing.T) {
 	store := newTestStore()
 	item := validTestItem()
-	store.Retain(nil, "default", item) //nolint:errcheck
+	store.Retain(context.TODO(), "default", item) //nolint:errcheck
 
 	handler := memorySearchHandler(store)
 

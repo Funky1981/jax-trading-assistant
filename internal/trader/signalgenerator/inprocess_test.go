@@ -20,6 +20,7 @@ func TestNew(t *testing.T) {
 
 	if gen == nil {
 		t.Fatal("expected non-nil generator")
+		return
 	}
 	if gen.registry != registry {
 		t.Error("registry not set correctly")
@@ -218,7 +219,9 @@ func TestHealthCheck(t *testing.T) {
 
 	// Register a test strategy
 	testStrategy := strategies.NewRSIMomentumStrategy()
-	registry.Register(testStrategy, testStrategy.GetMetadata())
+	if err := registry.Register(testStrategy, testStrategy.GetMetadata()); err != nil {
+		t.Fatalf("register test strategy: %v", err)
+	}
 
 	// Test with nil pool should fail
 	genNilDB := New(nil, registry)
