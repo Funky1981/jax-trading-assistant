@@ -50,11 +50,6 @@ function Run-Lint {
   golangci-lint run @Targets
 }
 
-function Get-ActivePackages {
-  $all = go list ./...
-  return $all | Where-Object { $_ -notmatch "/archive/" }
-}
-
 Assert-GoAvailable
 
 switch ($Mode) {
@@ -66,7 +61,13 @@ switch ($Mode) {
     Invoke-Step -Name "go test (standard)" -Action { Run-GoTest -Targets $Packages }
   }
   "full" {
-    $activePackages = Get-ActivePackages
+    $activePackages = @(
+      "./cmd/..."
+      "./internal/..."
+      "./libs/..."
+      "./tests/..."
+      "./services/ib-bridge/examples"
+    )
     Invoke-Step -Name "gofmt check" -Action { Run-GoFmtCheck }
     Invoke-Step -Name "golangci-lint (full)" -Action { Run-Lint -Targets $activePackages }
     Invoke-Step -Name "go test (full)" -Action { Run-GoTest -Targets $activePackages }

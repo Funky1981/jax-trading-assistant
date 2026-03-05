@@ -16,6 +16,9 @@ describe('AppRoutes', () => {
   it('renders the blotter page for /blotter', async () => {
     const router = createMemoryRouter(routes, {
       initialEntries: ['/blotter'],
+      future: {
+        v7_relativeSplatPath: true,
+      },
     });
     fetchMock.mockResolvedValue({
       ok: true,
@@ -26,7 +29,12 @@ describe('AppRoutes', () => {
     render(
       <DomainProvider>
         <AuthProvider>
-          <RouterProvider router={router} />
+          <RouterProvider
+            router={router}
+            future={{
+              v7_startTransition: true,
+            }}
+          />
         </AuthProvider>
       </DomainProvider>
     );

@@ -20,9 +20,9 @@ type StrategyMetadata struct {
 }
 
 type RequiredInputs struct {
-	Candles      []string `json:"candles"`
-	NeedsEarnings bool    `json:"needsEarnings"`
-	NeedsNews     bool    `json:"needsNews"`
+	Candles       []string `json:"candles"`
+	NeedsEarnings bool     `json:"needsEarnings"`
+	NeedsNews     bool     `json:"needsNews"`
 }
 
 type ParameterDef struct {

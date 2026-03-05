@@ -81,7 +81,12 @@ export default function App() {
   return (
     <AuthProvider>
       <DomainProvider>
-        <RouterProvider router={router} />
+        <RouterProvider
+          router={router}
+          future={{
+            v7_startTransition: true,
+          }}
+        />
       </DomainProvider>
     </AuthProvider>
   );

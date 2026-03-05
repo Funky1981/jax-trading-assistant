@@ -151,8 +151,11 @@ if (Test-Path "frontend/package.json") {
     Push-Location "frontend"
     try {
       npm run lint
+      if ($LASTEXITCODE -ne 0) { throw "npm run lint failed with code $LASTEXITCODE" }
       npm run typecheck
+      if ($LASTEXITCODE -ne 0) { throw "npm run typecheck failed with code $LASTEXITCODE" }
       npm run test
+      if ($LASTEXITCODE -ne 0) { throw "npm run test failed with code $LASTEXITCODE" }
     } finally {
       Pop-Location
     }

@@ -79,11 +79,11 @@ func (s *Service) LogAIAcceptance(ctx context.Context, decisionID string, accept
 
 func ValidatePlanShape(summary, action string, confidence float64, steps []string) (bool, map[string]any) {
 	trace := map[string]any{
-		"summary_present":   summary != "",
-		"action_present":    action != "",
-		"confidence_range":  confidence >= 0 && confidence <= 1,
-		"steps_non_empty":   len(steps) > 0,
-		"validated_at_utc":  time.Now().UTC().Format(time.RFC3339),
+		"summary_present":  summary != "",
+		"action_present":   action != "",
+		"confidence_range": confidence >= 0 && confidence <= 1,
+		"steps_non_empty":  len(steps) > 0,
+		"validated_at_utc": time.Now().UTC().Format(time.RFC3339),
 	}
 	valid := trace["summary_present"].(bool) &&
 		trace["action_present"].(bool) &&

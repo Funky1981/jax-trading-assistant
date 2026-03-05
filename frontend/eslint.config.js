@@ -42,7 +42,21 @@ export default [
       'react/react-in-jsx-scope': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      'react-refresh/only-export-components': 'warn',
+      'react-refresh/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            'routes',
+            'router',
+            'useAuth',
+            'useDomain',
+            'getStoredToken',
+            'buttonVariants',
+            'badgeVariants',
+          ],
+        },
+      ],
     },
   },
   {

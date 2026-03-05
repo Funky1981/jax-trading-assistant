@@ -21,7 +21,13 @@ describe('app shell accessibility', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const { container } = render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter
+        initialEntries={['/']}
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <AuthProvider>
           <Routes>
             <Route element={<AppShell />}>
