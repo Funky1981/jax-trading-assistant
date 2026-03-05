@@ -15,16 +15,17 @@ This list is based on the live codebase on branch `work` as of 2026-03-05. It tr
 
 ## High Priority
 
-- [ ] Add stronger artifact API coverage.
-  - Missing focused tests for filtered state listing, promotion edge cases, and failed persistence paths.
-- [ ] Improve golden diff behavior in [`tests/golden/compare.go`](/c:/Projects/jax-trading%20assistant/tests/golden/compare.go).
-  - Current TODO: ignore expected volatile fields (timestamps/UUIDs) more intelligently.
+- [x] Add stronger artifact API coverage.
+  - Completed: added focused handler tests for filtered listing states, promotion edge cases, and persistence-failure paths in [`cmd/trader/handlers_artifacts_test.go`](/c:/Projects/jax-trading%20assistant/cmd/trader/handlers_artifacts_test.go).
+- [x] Improve golden diff behavior in [`tests/golden/compare.go`](/c:/Projects/jax-trading%20assistant/tests/golden/compare.go).
+  - Completed: comparisons now normalize volatile fields and values (timestamps/UUIDs) and include unit coverage in [`tests/golden/compare_test.go`](/c:/Projects/jax-trading%20assistant/tests/golden/compare_test.go).
 
 ## Medium Priority
 
-- [ ] Consolidate repo verification helpers.
-  - Skill docs mention scripts/helpers that are no longer present at expected repo locations.
-- [ ] Fill remaining strategy-registry/mock-support test placeholders.
+- [x] Consolidate repo verification helpers.
+  - Completed: added missing workflow wrappers (`scripts/go-verify.ps1`, `scripts/golden-check.ps1`, `scripts/knowledge-cycle.ps1`) referenced by skill docs.
+- [x] Fill remaining strategy-registry/mock-support test placeholders.
+  - Completed: strategy registry now guards nil-pool access and includes concrete tests in [`internal/strategyregistry/registry_test.go`](/c:/Projects/jax-trading%20assistant/internal/strategyregistry/registry_test.go).
 
 ## Lower Priority
 
@@ -32,6 +33,6 @@ This list is based on the live codebase on branch `work` as of 2026-03-05. It tr
 
 ## Execution Order
 
-1. Complete artifact API test hardening.
-2. Improve golden comparison resilience for deterministic replay workflows.
-3. Finish remaining verification-helper and placeholder test cleanup.
+1. Continue non-archive stale-doc cleanup.
+2. Review and harden operations runbooks still containing superseded service names.
+3. Expand integration coverage for ingestion/reflection operational flows.

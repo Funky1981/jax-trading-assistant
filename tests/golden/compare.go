@@ -3,8 +3,13 @@ package golden
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"reflect"
+	"strings"
+	"time"
+
+	"os"
+
+	"github.com/google/uuid"
 )
 
 // CompareResult represents the outcome of comparing two snapshots
@@ -75,17 +80,9 @@ func CompareSnapshots(expected, actual *Snapshot) *CompareResult {
 
 // deepEqual performs a deep comparison ignoring timestamps and IDs
 func deepEqual(expected, actual interface{}) bool {
-	// Convert both to JSON for structural comparison
-	expectedJSON, err1 := json.Marshal(expected)
-	actualJSON, err2 := json.Marshal(actual)
-
-	if err1 != nil || err2 != nil {
-		return false
-	}
-
-	// For now, do exact match
-	// TODO: Implement smarter comparison that ignores timestamps, UUIDs
-	return string(expectedJSON) == string(actualJSON)
+	normalizedExpected := normalizeForComparison(expected, "")
+	normalizedActual := normalizeForComparison(actual, "")
+	return reflect.DeepEqual(normalizedExpected, normalizedActual)
 }
 
 // findDifferences recursively finds differences between two values
@@ -102,6 +99,9 @@ func findDifferences(expected, actual interface{}, path string) []string {
 
 		// Check for missing keys
 		for key := range expVal {
+			if isVolatileFieldName(key) {
+				continue
+			}
 			if _, exists := actMap[key]; !exists {
 				differences = append(differences, fmt.Sprintf("%s.%s: key missing in actual", path, key))
 			}
@@ -109,6 +109,9 @@ func findDifferences(expected, actual interface{}, path string) []string {
 
 		// Check for extra keys
 		for key := range actMap {
+			if isVolatileFieldName(key) {
+				continue
+			}
 			if _, exists := expVal[key]; !exists {
 				differences = append(differences, fmt.Sprintf("%s.%s: unexpected key in actual", path, key))
 			}
@@ -116,6 +119,9 @@ func findDifferences(expected, actual interface{}, path string) []string {
 
 		// Recursively compare values
 		for key, expValue := range expVal {
+			if isVolatileFieldName(key) {
+				continue
+			}
 			if actValue, exists := actMap[key]; exists {
 				subDiffs := findDifferences(expValue, actValue, fmt.Sprintf("%s.%s", path, key))
 				differences = append(differences, subDiffs...)
@@ -167,4 +173,63 @@ func ShouldIgnoreField(fieldName string) bool {
 	}
 
 	return ignoredFields[fieldName]
+}
+
+func normalizeForComparison(value interface{}, fieldName string) interface{} {
+	if isVolatileFieldName(fieldName) {
+		return "<ignored>"
+	}
+
+	switch v := value.(type) {
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(v))
+		for key, child := range v {
+			out[key] = normalizeForComparison(child, key)
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(v))
+		for i := range v {
+			out[i] = normalizeForComparison(v[i], fieldName)
+		}
+		return out
+	case string:
+		if looksLikeVolatileValue(v) {
+			return "<ignored>"
+		}
+		return v
+	default:
+		return v
+	}
+}
+
+func isVolatileFieldName(fieldName string) bool {
+	name := strings.ToLower(strings.TrimSpace(fieldName))
+	if name == "" {
+		return false
+	}
+	if ShouldIgnoreField(name) {
+		return true
+	}
+	return strings.HasSuffix(name, "_at") ||
+		strings.HasSuffix(name, "_time") ||
+		strings.HasSuffix(name, "_timestamp") ||
+		strings.HasSuffix(name, "_uuid")
+}
+
+func looksLikeVolatileValue(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return false
+	}
+	if _, err := uuid.Parse(trimmed); err == nil {
+		return true
+	}
+	if _, err := time.Parse(time.RFC3339, trimmed); err == nil {
+		return true
+	}
+	if _, err := time.Parse(time.RFC3339Nano, trimmed); err == nil {
+		return true
+	}
+	return false
 }

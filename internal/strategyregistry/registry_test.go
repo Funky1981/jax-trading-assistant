@@ -64,11 +64,26 @@ func TestRegistry_RequiresPool(t *testing.T) {
 }
 
 func TestRegistry_HealthCheck_NoPool(t *testing.T) {
-	// This tests graceful handling when pool is nil
-	// In real usage, pool would never be nil, but we verify no panic
 	ctx := context.Background()
+	reg := strategyregistry.New(nil)
 
-	// Note: Can't easily test without a real pool
-	// This is a placeholder for when we add mock support
-	_ = ctx
+	err := reg.HealthCheck(ctx)
+	if err == nil {
+		t.Fatal("expected HealthCheck to fail when pool is nil")
+	}
+	if err.Error() != "strategyregistry: pool is not configured" {
+		t.Fatalf("expected nil-pool error, got %v", err)
+	}
+}
+
+func TestRegistry_GetByID_NoPool(t *testing.T) {
+	reg := strategyregistry.New(nil)
+
+	_, err := reg.GetByID(context.Background(), uuid.New())
+	if err == nil {
+		t.Fatal("expected GetByID to fail when pool is nil")
+	}
+	if err.Error() != "strategyregistry: pool is not configured" {
+		t.Fatalf("expected nil-pool error, got %v", err)
+	}
 }

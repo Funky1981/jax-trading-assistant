@@ -1,75 +1,76 @@
 # Operations Runbook
 
-## Starting the Platform
+## Start Platform
 
 ```powershell
-# Ensure IB Gateway is running on host (port 4002 paper / 4001 live)
 docker compose up -d
-
-# Verify health
 docker compose ps
-Invoke-RestMethod http://localhost:8081/health   # jax-api
-Invoke-RestMethod http://localhost:8100/health   # trader
-Invoke-RestMethod http://localhost:8091/health   # research
+Invoke-RestMethod http://localhost:8081/health   # jax-trader frontend API
+Invoke-RestMethod http://localhost:8100/health   # jax-trader runtime
+Invoke-RestMethod http://localhost:8091/health   # jax-research
+Invoke-RestMethod http://localhost:8092/health   # ib-bridge
+Invoke-RestMethod http://localhost:8093/health   # agent0-service
 ```
 
-## Approving a New Strategy Artifact
-
-When the research runtime generates a new backtest artifact it lands in `DRAFT` state. Promote it through the approval gate:
-
-```powershell
-# 1. List draft artifacts
-$env:DATABASE_URL = "postgresql://jax:jax@localhost:5433/jax"
-psql $env:DATABASE_URL -c "SELECT artifact_id, strategy_name, created_at FROM strategy_artifacts WHERE state = 'DRAFT' ORDER BY created_at DESC LIMIT 5;"
-
-# 2. Review and approve
-go run cmd/artifact-approver/main.go `
-    -id "<artifact_id>" `
-    -approver "your.name" `
-    -type TECHNICAL `
-    -notes "Reviewed backtest — Sharpe > 1.2, drawdown < 15%"
-
-# 3. Restart trader to load new artifact
-docker compose restart jax-trader
-```
-
-## Revoking a Strategy (Emergency)
+## Artifact Approval Flow
 
 ```powershell
 $env:DATABASE_URL = "postgresql://jax:jax@localhost:5433/jax"
 
-# Revoke immediately — trader will stop using on next restart
-psql $env:DATABASE_URL -c "UPDATE strategy_artifacts SET state = 'REVOKED' WHERE artifact_id = '<artifact_id>';"
+# List draft artifacts + current approval state
+psql $env:DATABASE_URL -c @"
+SELECT a.artifact_id, a.strategy_name, ap.state, a.created_at
+FROM strategy_artifacts a
+JOIN artifact_approvals ap ON ap.artifact_id = a.id
+WHERE ap.state = 'DRAFT'
+ORDER BY a.created_at DESC
+LIMIT 10;
+"@
 
-docker compose restart jax-trader
+# Promote artifact through API (example: DRAFT -> VALIDATED / APPROVED)
+Invoke-RestMethod -Method Post -Uri "http://localhost:8081/api/v1/artifacts/<uuid>/promote" `
+  -ContentType "application/json" `
+  -Body '{"to_state":"APPROVED","promoted_by":"ops","reason":"manual approval"}'
 ```
 
-## Rolling Back to a Previous Artifact
+## Emergency Revoke / Rollback
 
 ```powershell
 $env:DATABASE_URL = "postgresql://jax:jax@localhost:5433/jax"
 
-# Promote previous artifact back to APPROVED
-psql $env:DATABASE_URL -c "UPDATE strategy_artifacts SET state = 'APPROVED' WHERE artifact_id = '<previous_artifact_id>';"
-
-# Revoke the bad one
-psql $env:DATABASE_URL -c "UPDATE strategy_artifacts SET state = 'REVOKED' WHERE artifact_id = '<current_artifact_id>';"
+# Revoke one artifact
+psql $env:DATABASE_URL -c @"
+UPDATE artifact_approvals ap
+SET state = 'REVOKED',
+    state_changed_by = 'ops',
+    state_change_reason = 'emergency revoke',
+    state_changed_at = NOW()
+FROM strategy_artifacts a
+WHERE ap.artifact_id = a.id
+  AND a.artifact_id = '<artifact_id>';
+"@
 
 docker compose restart jax-trader
 ```
 
 ## Monitoring
 
-- **Grafana**: http://localhost:3001 (admin / password from `.env`)
-- **Prometheus**: http://localhost:9090
-- **Key metrics**: trader executions/min, position sizes, signal latency
+- Grafana: `http://localhost:3001`
+- Prometheus: `http://localhost:9090`
+- Service logs:
 
-## Viewing Audit Trail
+```powershell
+docker compose logs -f jax-trader
+docker compose logs -f jax-research
+docker compose logs -f ib-bridge
+docker compose logs -f agent0-service
+docker compose logs -f hindsight
+```
 
-Every trade is linked to the artifact that authorised it:
+## Audit Trail Query
 
 ```sql
-SELECT t.id, t.symbol, t.action, t.quantity, t.created_at,
+SELECT t.id, t.symbol, t.side, t.quantity, t.created_at,
        a.artifact_id, a.strategy_name, a.hash
 FROM trades t
 JOIN strategy_artifacts a ON t.artifact_id = a.id
@@ -77,35 +78,23 @@ ORDER BY t.created_at DESC
 LIMIT 20;
 ```
 
-## Troubleshooting
+## Common Failures
 
-### Trader won't start — no approved artifacts
+### Trader has no approved artifacts
 
 ```powershell
 $env:DATABASE_URL = "postgresql://jax:jax@localhost:5433/jax"
-psql $env:DATABASE_URL -c "SELECT artifact_id, state FROM strategy_artifacts;"
-# If empty or all DRAFT, approve one (see above)
+psql $env:DATABASE_URL -c @"
+SELECT a.artifact_id, ap.state, ap.validation_passed, ap.validation_report_uri
+FROM strategy_artifacts a
+JOIN artifact_approvals ap ON ap.artifact_id = a.id
+ORDER BY a.created_at DESC
+LIMIT 20;
+"@
 ```
 
-### jax-api migration fails on startup
-
-Migrations are idempotent (IF NOT EXISTS guards). If a dirty state is left:
+### Migration drift / dirty migration state
 
 ```powershell
-# Check dirty state
-docker exec jax-tradingassistant-postgres-1 psql -U jax -d jax -c "SELECT version, dirty FROM schema_migrations ORDER BY version;"
-
-# Clear dirty version (replace N with the dirty version number)
-docker exec jax-tradingassistant-postgres-1 psql -U jax -d jax -c "DELETE FROM schema_migrations WHERE version = N;"
-
-# Rebuild and restart
-docker compose build --no-cache jax-api
-docker compose up -d jax-api
-```
-
-### Determinism test failing
-
-```powershell
-go test -v ./internal/modules/backtest/... -run TestEngine_Deterministic
-# Check for: time.Now() usage, map iteration order, external API calls without mocks
+docker compose exec postgres psql -U jax -d jax -c "SELECT version, dirty FROM schema_migrations ORDER BY version;"
 ```

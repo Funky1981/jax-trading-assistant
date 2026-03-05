@@ -21,7 +21,7 @@ type fakeArtifactStore struct {
 	approvals map[uuid.UUID]*artifacts.Approval
 	reports   []*artifacts.ValidationReport
 
-	listApprovedCalls int
+	listApprovedCalls  int
 	listArtifactsCalls int
 
 	errListApproved            error

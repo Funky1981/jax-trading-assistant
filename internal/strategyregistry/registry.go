@@ -16,6 +16,8 @@ type Registry struct {
 	pool *pgxpool.Pool
 }
 
+var errPoolNotConfigured = errors.New("strategyregistry: pool is not configured")
+
 // New creates a new Registry with the given connection pool.
 func New(pool *pgxpool.Pool) *Registry {
 	return &Registry{pool: pool}
@@ -39,6 +41,9 @@ func (r *Registry) Close() {
 
 // HealthCheck verifies connectivity to the database.
 func (r *Registry) HealthCheck(ctx context.Context) error {
+	if err := r.ensurePool(); err != nil {
+		return err
+	}
 	var n int
 	err := r.pool.QueryRow(ctx, "SELECT 1").Scan(&n)
 	if err != nil {
@@ -86,6 +91,9 @@ func (r *Registry) GetEvaluationDocs(ctx context.Context) ([]Document, error) {
 
 // GetByRelPath returns a single approved document by its relative path.
 func (r *Registry) GetByRelPath(ctx context.Context, relPath string) (Document, error) {
+	if err := r.ensurePool(); err != nil {
+		return Document{}, err
+	}
 	query := baseSelect + `WHERE rel_path = $1 AND status = 'approved'`
 
 	row := r.pool.QueryRow(ctx, query, relPath)
@@ -101,6 +109,9 @@ func (r *Registry) GetByRelPath(ctx context.Context, relPath string) (Document, 
 
 // GetByID returns a single approved document by its UUID.
 func (r *Registry) GetByID(ctx context.Context, id uuid.UUID) (Document, error) {
+	if err := r.ensurePool(); err != nil {
+		return Document{}, err
+	}
 	query := baseSelect + `WHERE doc_id = $1 AND status = 'approved'`
 
 	row := r.pool.QueryRow(ctx, query, id)
@@ -122,6 +133,9 @@ func (r *Registry) GetAll(ctx context.Context) ([]Document, error) {
 
 // CountsByType returns counts of approved documents grouped by doc_type.
 func (r *Registry) CountsByType(ctx context.Context) (map[string]int, error) {
+	if err := r.ensurePool(); err != nil {
+		return nil, err
+	}
 	query := `
 		SELECT doc_type, COUNT(*) 
 		FROM strategy_documents 
@@ -157,6 +171,9 @@ func (r *Registry) queryByType(ctx context.Context, docType string) ([]Document,
 }
 
 func (r *Registry) queryDocs(ctx context.Context, query string) ([]Document, error) {
+	if err := r.ensurePool(); err != nil {
+		return nil, err
+	}
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("strategyregistry: query: %w", err)
@@ -166,6 +183,9 @@ func (r *Registry) queryDocs(ctx context.Context, query string) ([]Document, err
 }
 
 func (r *Registry) queryDocsWithArg(ctx context.Context, query string, arg any) ([]Document, error) {
+	if err := r.ensurePool(); err != nil {
+		return nil, err
+	}
 	rows, err := r.pool.Query(ctx, query, arg)
 	if err != nil {
 		return nil, fmt.Errorf("strategyregistry: query: %w", err)
@@ -256,4 +276,11 @@ func scanRow(rows pgx.Rows) (Document, error) {
 	}
 
 	return doc, nil
+}
+
+func (r *Registry) ensurePool() error {
+	if r == nil || r.pool == nil {
+		return errPoolNotConfigured
+	}
+	return nil
 }
