@@ -2,30 +2,31 @@
 
 ## Near-Term Priorities
 
-1. **Artifact Validation**
-   - Link artifact approvals to real trust-gate execution evidence.
-   - Extend artifact validation from integrity checks to golden/replay-backed validation where appropriate.
+1. **Artifact API Coverage**
+   - Add focused tests for filtered listing states.
+   - Add promotion edge-case coverage.
+   - Add persistence-failure path tests.
 2. **Runtime/Docs Alignment**
-   - Keep docs aligned to the active `cmd/trader` + `cmd/research` topology.
-   - Remove stale references to superseded `services/jax-*` runtime paths.
+   - Keep operator docs aligned to the active `cmd/trader` + `cmd/research` topology.
+   - Remove stale references to superseded `services/jax-*` runtime paths in non-archived docs.
 3. **Market Data Ingestion**
-   - Wire IB bridge stream into ingestion/storage.
-   - Close remaining provider-method gaps in the market-data adapters.
+   - Tighten ingestion/storage validation for IB bridge sourced data.
+   - Close any remaining provider-method gaps in market-data adapters.
 4. **Authentication Hardening**
-   - Replace placeholder login behavior with the intended auth flow.
+   - Continue tightening token/session controls and operational defaults.
 5. **Reflection Loop**
    - Schedule and persist `memory.reflect` outputs.
 
 ## Mid-Term
 
-- Observability (metrics, traces, log retention).
-- CI + linting gates + documentation hygiene.
-- Clarify Agent0/Dexter mock-vs-live boundaries and repo-local failure handling.
+- Observability maturity (metrics, traces, log retention, dashboards).
+- CI/lint/test gate hardening and documentation hygiene.
+- Clearer Agent0/Dexter mock-vs-live boundaries and failure handling.
 
 ## Long-Term
 
-- Full autonomous loop: ingest → orchestrate → reflect → improve strategies.
-- Production hardening and infra automation.
+- Full autonomous loop: ingest -> orchestrate -> reflect -> improve strategies.
+- Broader production hardening and infra automation.
 
 ## Reference (Archived)
 

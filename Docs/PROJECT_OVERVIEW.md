@@ -1,115 +1,75 @@
-﻿# Jax Trading Assistant — Project Overview
+# Jax Trading Assistant — Project Overview
 
 ## Purpose
 
-Jax Trading Assistant is a multi-service system for trading workflows that combines:
+Jax Trading Assistant is a modular monolith with two active Go runtimes:
 
-- **UTCP tools** (local and HTTP) for market, risk, storage, and backtest operations.
-- **Memory** via Hindsight (vendored) with a Jax Memory facade service.
-- **Research/agent ingestion** via Dexter (vendored) and Agent0 references.
+- `cmd/trader`: production-facing runtime for deterministic trading flows and frontend API endpoints.
+- `cmd/research`: research runtime for orchestration, backtests, and memory tools.
 
-Specs and build plan live in `Docs/backend/` with a step-by-step roadmap. Supporting templates/checklists live in `.serena/`.
+The system integrates with external Python services where appropriate:
 
----
+- `services/ib-bridge` (market connectivity)
+- `services/agent0-service` (planning/execution assistant)
+- `services/hindsight` (memory backend)
 
-## High-level architecture
+## Active Runtime Topology
 
-This repo follows **Clean Architecture / Hexagonal** principles:
+- `jax-trader`
+  - API health and frontend API: `http://localhost:8081/health`
+  - Trader runtime port: `8100`
+  - Source: `cmd/trader`
+- `jax-research`
+  - Health: `http://localhost:8091/health`
+  - Source: `cmd/research`
+- `ib-bridge`
+  - Health: `http://localhost:8092/health`
+  - Source: `services/ib-bridge`
+- `agent0-service`
+  - Health: `http://localhost:8093/health`
+  - Source: `services/agent0-service`
+- `hindsight`
+  - API: `http://localhost:8888`
+  - Source: `services/hindsight`
+- Frontend
+  - Dev server: `http://localhost:5173`
+  - Source: `frontend`
 
-- **Service boundaries**: each service lives under `services/<name>/` and has its own `internal/` packages.
-- **Shared libraries**: stable code is placed in `libs/` and should be well-tested.
-- **Layering rules** (per service):
-  - `internal/domain` has no dependencies on other layers.
-  - `internal/app` can depend on `internal/domain` only.
-  - `internal/infra` implements adapters and can depend on `internal/app` and `internal/domain`.
+## Repository Map (Current)
 
----
+- `cmd/`
+  - `trader/`: production runtime + frontend-facing API handlers
+  - `research/`: orchestration/research runtime + memory proxy/tools
+  - `artifact-approver/`, `shadow-validator/`, `jax-utcp-smoke/`: support tooling
+- `internal/`
+  - Shared runtime modules (artifacts, orchestration, persistence, providers)
+- `libs/`
+  - Reusable clients/adapters (auth, market data, agent integrations, UTCP)
+- `services/`
+  - External service boundaries intentionally retained (`ib-bridge`, `agent0-service`, `hindsight`)
+- `frontend/`
+  - React dashboard consuming trader/research APIs
+- `db/postgres/migrations/`
+  - Runtime schema and migrations
+- `Docs/`
+  - ADRs, status, roadmap, runbooks, and archived reports
 
-## Repository map (key areas)
+## Architecture Guardrails
 
-- **services/**
-  - `jax-api/`: HTTP API service (current focus). Entrypoint: `go run ./services/jax-api/cmd/jax-api`
-    - Endpoints: `GET /health`, `POST /risk/calc`, `GET /strategies`, `POST /symbols/{symbol}/process`, `GET /trades`, `GET /trades/{id}`
-  - `jax-memory/`: UTCP memory facade service. Entrypoint: `go run ./services/jax-memory/cmd/jax-memory`
-    - UTCP endpoint: `POST /tools` supporting `memory.retain`, `memory.recall`, `memory.reflect`
-    - Uses `HINDSIGHT_URL` if set; otherwise in-memory store.
-  - `jax-orchestrator/`: pipeline service (skeleton)
-  - `jax-ingest/`: ingestion service (skeleton)
-  - `hindsight/`: vendored upstream memory backend (pinned; see UPSTREAM.md)
+- Trader must stay deterministic and must not import research-only dependencies.
+- Research runtime may integrate Agent0/Dexter/Hindsight paths.
+- Artifact promotion requires trust-gate evidence (Gate2 deterministic replay + Gate3 promotion checks).
+- External Python services remain explicit boundaries; do not collapse them without ADR-level change.
 
-- **libs/**
-  - `utcp/`: UTCP client, local tools, Postgres storage adapter
-  - `contracts/`: shared DTOs/interfaces (WIP)
-  - `observability/`: logging/tracing helpers (WIP)
-  - `testing/`: shared fakes/fixtures (WIP)
+## Validation Baseline
 
-- **config/**
-  - `providers.json`: UTCP provider definitions (http/local)
+- Go changes: `gofmt` + targeted `go test` for touched packages.
+- Frontend changes: targeted `vitest`/`e2e` around affected API-facing flows.
+- Behavior-sensitive runtime changes: golden/replay verification before and after edits.
 
-- **docker-compose.yml**
-  - Main compose file for core services
+## Primary Docs
 
-- **db/postgres/**
-  - `schema.sql`: Postgres schema for storage provider
-  - `docker-compose.yml`: local Postgres for development
-
-- **cmd/**
-  - `jax-utcp-smoke/`: UTCP smoke test entrypoint
-
-- **vendored/**
-  - `dexter/`: Dexter repo (research agent)
-  - `Agent0/`: Agent0 repo (reference/inspiration)
-
-- **Docs/**
-  - `backend/`: numbered build plan steps (01-12)
-  - `frontend/`: UI documentation
-- **.serena/**
-  - `checklists/`: done criteria for each step
-  - `templates/`: copy/paste snippets
-
----
-
-## Data & tool flows (summary)
-
-1. **UTCP providers** are defined in `config/providers.json` and used by `libs/utcp`.
-2. **Jax API** serves trading-related endpoints and uses shared libs.
-3. **Jax Memory** exposes UTCP memory tools, backed by Hindsight or an in-memory store.
-4. **Dexter/Agent0** integration is planned for ingestion and agent workflows (see Docs/backend steps 06-08).
-
----
-
-## Testing & quality
-
-- **Primary**: `go test ./...` or `make test`
-- **Lint**: `golangci-lint run ./...`
-- **Scripted**: `scripts/test.ps1` (gofmt + lint + tests)
-
-Dexter tests:
-
-- `cd dexter; bun install; bun test`
-
----
-
-## Local Postgres (optional)
-
-- `docker compose -f db/postgres/docker-compose.yml up -d`
-- Apply schema: `db/postgres/schema.sql`
-- Example env:
-  - `JAX_POSTGRES_DSN=postgres://jax:jax@localhost:5432/jax?sslmode=disable`
-
----
-
-## Key docs to read next
-
-- `Docs/backend/02_Repository_Scaffold_and_Service_Skeletons.md`
-- `Docs/backend/03_Add_Hindsight_and_Memory_Service.md`
-- `Docs/backend/05_go_UTCP_Memory_Tools.md`
-- `Docs/backend/06_Agent0_Wiring_With_Memory.md`
-- `Docs/backend/07_Dexter_Ingestion_to_Memory.md`
-
----
-
-## Notes
-
-- The repo is actively scaffolding with WIP modules; consult `Docs/backend/` for the authoritative implementation plan.
-- Vendored upstreams are pinned; see each `UPSTREAM.md` for commit references.
+- `Docs/QUICKSTART.md` for local startup.
+- `Docs/STATUS.md` for current snapshot.
+- `Docs/ROADMAP.md` for active priorities.
+- `Docs/TODO.md` for tracked remaining work.
