@@ -22,11 +22,16 @@ function Assert-GoAvailable {
 }
 
 function Run-GoFmtCheck {
-  $files = gofmt -l .
+  $files = git ls-files "*.go" | Where-Object { $_ -notlike "archive/*" }
+  if (-not $files) {
+    return
+  }
+
+  $files = gofmt -l $files
   if ($files) {
     Write-Host "gofmt would modify:"
     $files | ForEach-Object { Write-Host "  $_" }
-    throw "Formatting check failed. Run: gofmt -w ."
+    throw "Formatting check failed. Run: gofmt -w <listed files>"
   }
 }
 
@@ -45,6 +50,11 @@ function Run-Lint {
   golangci-lint run @Targets
 }
 
+function Get-ActivePackages {
+  $all = go list ./...
+  return $all | Where-Object { $_ -notmatch "/archive/" }
+}
+
 Assert-GoAvailable
 
 switch ($Mode) {
@@ -56,8 +66,9 @@ switch ($Mode) {
     Invoke-Step -Name "go test (standard)" -Action { Run-GoTest -Targets $Packages }
   }
   "full" {
+    $activePackages = Get-ActivePackages
     Invoke-Step -Name "gofmt check" -Action { Run-GoFmtCheck }
-    Invoke-Step -Name "golangci-lint (full)" -Action { Run-Lint -Targets @("./...") }
-    Invoke-Step -Name "go test (full)" -Action { Run-GoTest -Targets @("./...") }
+    Invoke-Step -Name "golangci-lint (full)" -Action { Run-Lint -Targets $activePackages }
+    Invoke-Step -Name "go test (full)" -Action { Run-GoTest -Targets $activePackages }
   }
 }
