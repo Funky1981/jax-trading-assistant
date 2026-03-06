@@ -11,8 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { OrderSide, OrderType, useCreateOrder } from '@/hooks/useOrders';
 import { useMarketDataStatus } from '@/hooks/useMarketDataStatus';
+import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
+import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
 
 interface OrderTicketPanelProps {
   isOpen: boolean;
@@ -35,9 +45,21 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
   const [entryStopPrice, setEntryStopPrice] = useState('');
   const [stopLossPrice, setStopLossPrice] = useState('');
   const [takeProfitPrice, setTakeProfitPrice] = useState('');
+  const [pendingOrder, setPendingOrder] = useState<{
+    symbol: string;
+    side: OrderSide;
+    type: OrderType;
+    quantity: number;
+    price?: number;
+    stopPrice?: number;
+    stopLossPrice?: number;
+    takeProfitPrice?: number;
+  } | null>(null);
+  const [brokerConfirmed, setBrokerConfirmed] = useState(false);
 
   const createOrder = useCreateOrder();
   const { data: marketDataStatus, isError: marketStatusError } = useMarketDataStatus();
+  const { data: pilotStatus } = useTradingPilotStatus();
 
   const hasProtection = Boolean(stopLossPrice || takeProfitPrice);
 
@@ -53,23 +75,30 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!symbol || !quantity) return;
+    if (!symbol || !quantity || pilotStatus?.readOnly) return;
 
-    createOrder.mutate(
-      {
-        symbol: symbol.toUpperCase(),
-        side,
-        type: orderType,
-        quantity: parseInt(quantity, 10),
-        price: orderType === 'limit' ? (price ? parseFloat(price) : undefined) : undefined,
-        stopPrice: orderType === 'stop' ? (entryStopPrice ? parseFloat(entryStopPrice) : undefined) : undefined,
-        stopLossPrice: stopLossPrice ? parseFloat(stopLossPrice) : undefined,
-        takeProfitPrice: takeProfitPrice ? parseFloat(takeProfitPrice) : undefined,
+    setBrokerConfirmed(false);
+    setPendingOrder({
+      symbol: symbol.toUpperCase(),
+      side,
+      type: orderType,
+      quantity: parseInt(quantity, 10),
+      price: orderType === 'limit' ? (price ? parseFloat(price) : undefined) : undefined,
+      stopPrice: orderType === 'stop' ? (entryStopPrice ? parseFloat(entryStopPrice) : undefined) : undefined,
+      stopLossPrice: stopLossPrice ? parseFloat(stopLossPrice) : undefined,
+      takeProfitPrice: takeProfitPrice ? parseFloat(takeProfitPrice) : undefined,
+    });
+  };
+
+  const submitConfirmedOrder = () => {
+    if (!pendingOrder) return;
+    createOrder.mutate(pendingOrder, {
+      onSuccess: () => {
+        resetForm();
+        setPendingOrder(null);
+        setBrokerConfirmed(false);
       },
-      {
-        onSuccess: () => resetForm(),
-      }
-    );
+    });
   };
 
   const summary = (
@@ -92,6 +121,19 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
       onToggle={onToggle}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {pilotStatus ? (
+          <PilotStatusBanner
+            title={
+              pilotStatus.readOnly
+                ? 'Order entry is disabled while the pilot is in read-only mode.'
+                : 'Pilot order entry requires IB/TWS confirmation before submit.'
+            }
+            readOnly={pilotStatus.readOnly}
+            reasons={pilotStatus.reasons}
+            compact
+          />
+        ) : null}
+
         {marketDataStatus ? (
           <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
             Orders are submitted with {marketDataStatus.paperTrading ? 'paper trading' : 'live trading'} enabled while quotes are currently in {marketDataStatus.marketDataMode} mode.
@@ -254,6 +296,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
           disabled={
             !symbol ||
             !quantity ||
+            pilotStatus?.readOnly === true ||
             (orderType === 'limit' && !price) ||
             (orderType === 'stop' && !entryStopPrice) ||
             createOrder.isPending
@@ -266,6 +309,55 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
               : `Submit ${side.toUpperCase()} Order`}
         </Button>
       </form>
+
+      <Dialog open={Boolean(pendingOrder)} onOpenChange={(open) => {
+        if (!open) {
+          setPendingOrder(null);
+          setBrokerConfirmed(false);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Broker Order</DialogTitle>
+            <DialogDescription>
+              Cross-check this order in IB/TWS before submitting it from the pilot UI.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <div className="rounded-md border border-border bg-muted/20 px-3 py-3">
+              <p className="font-mono text-foreground">
+                {pendingOrder?.side.toUpperCase()} {pendingOrder?.quantity} {pendingOrder?.symbol}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {pendingOrder?.type.toUpperCase()} entry
+                {pendingOrder?.price ? ` @ ${pendingOrder.price.toFixed(2)}` : ''}
+                {pendingOrder?.stopLossPrice ? ` • Stop ${pendingOrder.stopLossPrice.toFixed(2)}` : ''}
+                {pendingOrder?.takeProfitPrice ? ` • Target ${pendingOrder.takeProfitPrice.toFixed(2)}` : ''}
+              </p>
+            </div>
+
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={brokerConfirmed}
+                onChange={(event) => setBrokerConfirmed(event.target.checked)}
+              />
+              <span>I confirmed the symbol, size, and market context in IB/TWS and understand this pilot UI uses non-authoritative chart and quote data.</span>
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPendingOrder(null)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={!brokerConfirmed || createOrder.isPending} onClick={submitConfirmedOrder}>
+              {createOrder.isPending ? 'Submitting...' : 'Submit Broker Order'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CollapsiblePanel>
   );
 }

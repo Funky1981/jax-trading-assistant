@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { buildUrl } from '@/config/api';
+import { HttpError, apiClient } from '@/data/http-client';
 
 export type OrderSide = 'buy' | 'sell';
 export type OrderType = 'market' | 'limit' | 'stop' | 'stop_limit';
@@ -53,6 +53,25 @@ interface RawBrokerOrder {
   can_cancel?: boolean;
   parent_id?: number;
   order_ref?: string;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof HttpError) {
+    const body = error.body;
+    if (typeof body === 'string' && body.trim()) {
+      return body;
+    }
+    if (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string') {
+      return body.error;
+    }
+    if (body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string') {
+      return body.detail;
+    }
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
 }
 
 function normalizeStatus(raw?: string): OrderStatus {
@@ -167,23 +186,13 @@ function mapBrokerOrder(raw: RawBrokerOrder): Order {
 }
 
 async function fetchStrategyOrders(): Promise<Order[]> {
-  const response = await fetch(buildUrl('JAX_API', '/api/v1/trades'));
-  if (!response.ok) {
-    throw new Error(`Strategy orders unavailable (HTTP ${response.status})`);
-  }
-
-  const data = await response.json();
+  const data = await apiClient.get<{ trades?: unknown[] } | unknown[]>('/api/v1/trades');
   const raw = Array.isArray(data) ? data : (data.trades ?? []);
   return raw.map(mapApiTrade);
 }
 
 async function fetchBrokerOrders(): Promise<Order[]> {
-  const response = await fetch(buildUrl('IB_BRIDGE', '/orders'));
-  if (!response.ok) {
-    throw new Error(`Broker orders unavailable (HTTP ${response.status})`);
-  }
-
-  const data = await response.json();
+  const data = await apiClient.get<{ orders?: RawBrokerOrder[] } | RawBrokerOrder[]>('/api/v1/broker/orders');
   const raw = Array.isArray(data) ? data : (data.orders ?? []);
   return raw.map(mapBrokerOrder);
 }
@@ -264,10 +273,13 @@ export function useCreateOrder() {
           throw new Error('Attached protection is available only for market or limit entries');
         }
 
-        const response = await fetch(buildUrl('IB_BRIDGE', '/orders/bracket'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        try {
+          return await apiClient.post<{
+            success: boolean;
+            parent_order_id: number;
+            child_order_ids: number[];
+            message?: string;
+          }>('/api/v1/broker/orders/bracket', {
             symbol: order.symbol.toUpperCase(),
             action: order.side.toUpperCase(),
             quantity: order.quantity,
@@ -275,41 +287,24 @@ export function useCreateOrder() {
             entry_limit_price: order.type === 'limit' ? order.price : undefined,
             stop_loss: order.stopLossPrice,
             take_profit: order.takeProfitPrice,
-          }),
-        });
-
-        if (!response.ok) {
-          const message = await response.text();
-          throw new Error(message || `Bracket order failed (HTTP ${response.status})`);
+          });
+        } catch (error) {
+          throw new Error(getErrorMessage(error, 'Bracket order failed'));
         }
-
-        return response.json() as Promise<{
-          success: boolean;
-          parent_order_id: number;
-          child_order_ids: number[];
-          message?: string;
-        }>;
       }
 
-      const response = await fetch(buildUrl('IB_BRIDGE', '/orders'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      try {
+        return await apiClient.post<{ success: boolean; order_id: number; message?: string }>('/api/v1/broker/orders', {
           symbol: order.symbol.toUpperCase(),
           action: order.side.toUpperCase(),
           quantity: order.quantity,
           order_type: orderTypeMap[order.type],
           limit_price: order.type === 'limit' ? order.price : undefined,
           stop_price: order.type === 'stop' ? (order.stopPrice ?? order.price) : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Order placement failed (HTTP ${response.status})`);
+        });
+      } catch (error) {
+        throw new Error(getErrorMessage(error, 'Order placement failed'));
       }
-
-      return response.json() as Promise<{ success: boolean; order_id: number; message?: string }>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -327,16 +322,13 @@ export function useCancelOrder() {
         throw new Error('Only broker-managed orders can be cancelled from this blotter');
       }
 
-      const response = await fetch(buildUrl('IB_BRIDGE', `/orders/${order.brokerOrderId}`), {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Order cancel failed (HTTP ${response.status})`);
+      try {
+        return await apiClient.delete<{ success: boolean; order_id: number; status: string; message?: string }>(
+          `/api/v1/broker/orders/${order.brokerOrderId}`
+        );
+      } catch (error) {
+        throw new Error(getErrorMessage(error, 'Order cancel failed'));
       }
-
-      return response.json() as Promise<{ success: boolean; order_id: number; status: string; message?: string }>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });

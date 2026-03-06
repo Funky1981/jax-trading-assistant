@@ -166,15 +166,20 @@ class IBClient:
     
     async def _reconnect(self) -> None:
         """Attempt to reconnect to IB Gateway"""
-        logger.info("Attempting to reconnect to IB Gateway...")
+        logger.warning("IB bridge reconnect scheduled")
         retry_count = 0
         max_retries = 5
         
         while retry_count < max_retries:
             try:
+                logger.warning(
+                    "IB bridge reconnect attempt %s/%s",
+                    retry_count + 1,
+                    max_retries,
+                )
                 await asyncio.sleep(5 * (retry_count + 1))  # Exponential backoff
                 await self.connect()
-                logger.info("Reconnected successfully")
+                logger.warning("IB bridge reconnect succeeded")
                 return
             except Exception as e:
                 retry_count += 1

@@ -20,6 +20,28 @@ export interface MarketDataStatus {
   checkedAt: string;
 }
 
+export interface TradingPilotStatus {
+  pilotMode: boolean;
+  authRequired: boolean;
+  operatorRole: string;
+  allowedRoles: string[];
+  operatorAccess: boolean;
+  brokerConnected: boolean;
+  marketDataMode: string;
+  paperTrading: boolean;
+  readOnly: boolean;
+  canTrade: boolean;
+  quoteAuthority: boolean;
+  intradayAuthority: boolean;
+  executionFromChartBlocked: boolean;
+  requiresManualBrokerConfirmation: boolean;
+  reviewAgainstBroker: boolean;
+  rollbackToReadOnly: boolean;
+  reasons: string[];
+  checklist: string[];
+  checkedAt: string;
+}
+
 // Backend API Types for Observability & Intelligence
 
 export interface MetricEvent {

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
+
+	"jax-trading-assistant/libs/observability"
 )
 
 // Provider defines the interface for market data providers
@@ -114,6 +117,7 @@ func (c *Client) GetQuote(ctx context.Context, symbol string) (*Quote, error) {
 		}
 		lastErr = err
 		log.Printf("%s provider failed for %s: %v", provider.Name(), symbol, err)
+		logProviderFailure(ctx, provider.Name(), "quote", symbol, "", err)
 	}
 
 	if lastErr != nil {
@@ -144,6 +148,7 @@ func (c *Client) GetCandles(ctx context.Context, symbol string, timeframe Timefr
 		}
 		lastErr = err
 		log.Printf("%s provider failed for %s candles: %v", provider.Name(), symbol, err)
+		logProviderFailure(ctx, provider.Name(), "candles", symbol, string(timeframe), err)
 	}
 
 	if lastErr != nil {
@@ -217,4 +222,26 @@ func getPriority(name string, config *Config) int {
 		}
 	}
 	return 999
+}
+
+func logProviderFailure(ctx context.Context, providerName string, operation string, symbol string, timeframe string, err error) {
+	if err == nil {
+		return
+	}
+	errorText := err.Error()
+	fields := map[string]any{
+		"provider":  providerName,
+		"operation": operation,
+		"symbol":    symbol,
+		"error":     errorText,
+	}
+	if timeframe != "" {
+		fields["timeframe"] = timeframe
+	}
+	observability.LogEvent(ctx, "warn", "market_data.provider_failed", fields)
+
+	lowerError := strings.ToLower(errorText)
+	if strings.Contains(lowerError, "timeout") || strings.Contains(lowerError, "deadline exceeded") {
+		observability.LogEvent(ctx, "warn", "market_data.provider_timeout", fields)
+	}
 }

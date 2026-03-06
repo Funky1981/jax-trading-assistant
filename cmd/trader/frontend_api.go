@@ -50,6 +50,7 @@ import (
 	"time"
 
 	artifactdomain "jax-trading-assistant/internal/domain/artifacts"
+	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/libs/auth"
 	"jax-trading-assistant/libs/middleware"
 	"jax-trading-assistant/libs/observability"
@@ -210,6 +211,15 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 			log.Printf("frontend API: auth bootstrap skipped (%v)", err)
 		}
 	}
+	var auditSvc *audit.Service
+	if dbURL := strings.TrimSpace(os.Getenv("DATABASE_URL")); dbURL != "" {
+		sqlDB, err := sql.Open("pgx", dbURL)
+		if err != nil {
+			log.Printf("frontend API: audit unavailable (%v)", err)
+		} else {
+			auditSvc = audit.New(sqlDB)
+		}
+	}
 
 	rateLimiter := middleware.NewRateLimiterFromEnv()
 	corsConfig := middleware.CORSConfigFromEnv()
@@ -249,7 +259,13 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	mux.HandleFunc("/api/v1/system/runtime", protect(systemRuntimeHandler()))
 	mux.HandleFunc("/api/v1/system/providers", protect(systemProvidersHandler()))
 	mux.HandleFunc("/api/v1/system/market-data-status", protect(systemMarketDataStatusHandler(marketAPI)))
+	mux.HandleFunc("/api/v1/trading/pilot-status", protect(tradingPilotStatusHandler(jwtManager != nil, marketAPI)))
 	mux.HandleFunc("/api/v1/market/candles", protect(marketCandlesHandler(marketAPI)))
+	mux.HandleFunc("/api/v1/broker/orders", protect(brokerOrdersHandler(jwtManager != nil, marketAPI, auditSvc)))
+	mux.HandleFunc("/api/v1/broker/orders/", protect(brokerOrderDetailHandler(jwtManager != nil, marketAPI, auditSvc)))
+	mux.HandleFunc("/api/v1/broker/positions", protect(brokerPositionsHandler(marketAPI)))
+	mux.HandleFunc("/api/v1/broker/positions/", protect(brokerPositionDetailHandler(jwtManager != nil, marketAPI, auditSvc)))
+	mux.HandleFunc("/api/v1/broker/account", protect(brokerAccountHandler(marketAPI)))
 
 	// ── Signals ───────────────────────────────────────────────────────────────
 	mux.HandleFunc("/api/v1/signals", protect(signalsListHandler(pool)))

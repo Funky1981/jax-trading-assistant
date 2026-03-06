@@ -15,6 +15,8 @@ import {
   SignalsQueuePanel,
 } from '@/components/dashboard';
 import { HelpHint } from '@/components/ui/help-hint';
+import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
+import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
 
 // Panel IDs for state management
 const PANEL_IDS = [
@@ -57,6 +59,7 @@ function savePanelState(state: Record<PanelId, boolean>) {
 
 export function TradingPage() {
   const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelState);
+  const { data: pilotStatus } = useTradingPilotStatus();
 
   // Persist panel state
   useEffect(() => {
@@ -146,6 +149,19 @@ export function TradingPage() {
           </div>
         </CardContent>
       </Card>
+
+      {pilotStatus ? (
+        <PilotStatusBanner
+          title={
+            pilotStatus.readOnly
+              ? `Trading is in read-only pilot mode for role ${pilotStatus.operatorRole}.`
+              : `Pilot trading is enabled for role ${pilotStatus.operatorRole}. Confirm every action in IB/TWS before submitting.`
+          }
+          readOnly={pilotStatus.readOnly}
+          reasons={pilotStatus.reasons}
+          checklist={pilotStatus.checklist}
+        />
+      ) : null}
 
       {/* Dashboard Grid */}
       <DashboardGrid>

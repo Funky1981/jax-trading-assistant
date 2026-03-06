@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { buildUrl } from '@/config/api';
+import { HttpError, apiClient } from '@/data/http-client';
 
 export interface Position {
   id: string;
@@ -27,6 +27,25 @@ interface PositionsResponse {
   positions: RawPosition[];
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof HttpError) {
+    const body = error.body;
+    if (typeof body === 'string' && body.trim()) {
+      return body;
+    }
+    if (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string') {
+      return body.error;
+    }
+    if (body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string') {
+      return body.detail;
+    }
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
+}
+
 export interface ClosePositionRequest {
   symbol: string;
   quantity: number;
@@ -43,12 +62,7 @@ export interface ProtectPositionRequest {
 }
 
 async function fetchPositions(): Promise<Position[]> {
-  const response = await fetch(buildUrl('IB_BRIDGE', '/positions'));
-  if (!response.ok) {
-    throw new Error(`IB Bridge positions unavailable (HTTP ${response.status})`);
-  }
-
-  const data = (await response.json()) as PositionsResponse;
+  const data = await apiClient.get<PositionsResponse>('/api/v1/broker/positions');
 
   return data.positions.map((pos) => ({
     id: `${pos.contract_id || pos.symbol}`,
@@ -107,21 +121,14 @@ export function useClosePosition() {
         limit_price: request.orderType === 'LMT' ? request.limitPrice : undefined,
       };
 
-      const response = await fetch(
-        buildUrl('IB_BRIDGE', `/positions/${encodeURIComponent(request.symbol)}/close`),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Position close failed (HTTP ${response.status})`);
+      try {
+        return await apiClient.post<{ success: boolean; order_id: number; message: string }>(
+          `/api/v1/broker/positions/${encodeURIComponent(request.symbol)}/close`,
+          payload
+        );
+      } catch (error) {
+        throw new Error(getErrorMessage(error, 'Position close failed'));
       }
-
-      return response.json() as Promise<{ success: boolean; order_id: number; message: string }>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positions'] });
@@ -135,31 +142,21 @@ export function useProtectPosition() {
 
   return useMutation({
     mutationFn: async (request: ProtectPositionRequest) => {
-      const response = await fetch(
-        buildUrl('IB_BRIDGE', `/positions/${encodeURIComponent(request.symbol)}/protect`),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            quantity: request.quantity,
-            stop_loss: request.stopLoss,
-            take_profit: request.takeProfit,
-            replace_existing: request.replaceExisting ?? true,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Position protection failed (HTTP ${response.status})`);
+      try {
+        return await apiClient.post<{
+          success: boolean;
+          order_ids: number[];
+          cancelled_order_ids?: number[];
+          message: string;
+        }>(`/api/v1/broker/positions/${encodeURIComponent(request.symbol)}/protect`, {
+          quantity: request.quantity,
+          stop_loss: request.stopLoss,
+          take_profit: request.takeProfit,
+          replace_existing: request.replaceExisting ?? true,
+        });
+      } catch (error) {
+        throw new Error(getErrorMessage(error, 'Position protection failed'));
       }
-
-      return response.json() as Promise<{
-        success: boolean;
-        order_ids: number[];
-        cancelled_order_ids?: number[];
-        message: string;
-      }>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['positions'] });

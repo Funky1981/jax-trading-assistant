@@ -23,6 +23,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useMarketDataStatus } from '@/hooks/useMarketDataStatus';
+import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
+import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
 import { cn, formatCurrency, formatPercent } from '@/lib/utils';
 
 interface WatchlistPanelProps {
@@ -35,6 +37,7 @@ const columnHelper = createColumnHelper<WatchlistItem>();
 export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
   const { data: summary, watchlist, isLoading, isError } = useWatchlistSummary();
   const { data: marketDataStatus } = useMarketDataStatus();
+  const { data: pilotStatus } = useTradingPilotStatus();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [newSymbol, setNewSymbol] = useState('');
   const tableData = useMemo(() => watchlist ?? [], [watchlist]);
@@ -160,6 +163,15 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
       isLoading={isLoading}
     >
       <div className="space-y-4">
+        {pilotStatus && (!pilotStatus.quoteAuthority || !pilotStatus.brokerConnected) ? (
+          <PilotStatusBanner
+            title="Watchlist prices are non-authoritative during the pilot."
+            readOnly={pilotStatus.readOnly}
+            reasons={pilotStatus.reasons}
+            compact
+          />
+        ) : null}
+
         {/* Add Symbol */}
         <div className="flex gap-2">
           <Input

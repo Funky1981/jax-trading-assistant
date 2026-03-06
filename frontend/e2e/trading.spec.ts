@@ -63,6 +63,40 @@ async function installTradingStubs(page: Page) {
     });
   });
 
+  await page.route('**/api/v1/trading/pilot-status', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        pilotMode: true,
+        authRequired: true,
+        operatorRole: 'admin',
+        allowedRoles: ['admin'],
+        operatorAccess: true,
+        brokerConnected: true,
+        marketDataMode: 'delayed',
+        paperTrading: true,
+        readOnly: false,
+        canTrade: true,
+        quoteAuthority: false,
+        intradayAuthority: false,
+        executionFromChartBlocked: true,
+        requiresManualBrokerConfirmation: true,
+        reviewAgainstBroker: true,
+        rollbackToReadOnly: true,
+        reasons: [
+          'Quotes on this screen are non-authoritative during the pilot; confirm in IB/TWS.',
+          'Intraday candles are non-authoritative during the pilot; use IB/TWS as the execution source of truth.',
+        ],
+        checklist: [
+          'Verify IB/TWS is connected and paper trading remains enabled.',
+          'Confirm symbol, quantity, and exits in IB/TWS before every broker mutation.',
+        ],
+        checkedAt: '2026-03-06T13:15:00Z',
+      }),
+    });
+  });
+
   await page.route('**/quotes/*', async (route) => {
     const symbol = route.request().url().split('/').pop() ?? 'AAPL';
     const quoteMap: Record<string, number> = {
@@ -426,20 +460,27 @@ test('submits protected entries and manages orders and positions', async ({ page
   await page.locator('#order-ticket-stop-loss').fill('195');
   await page.locator('#order-ticket-take-profit').fill('270');
   await page.getByRole('button', { name: 'Submit BUY Bracket' }).click();
+  await page.getByRole('checkbox', { name: /I confirmed the symbol, size, and market context in IB\/TWS/i }).check();
+  await page.getByRole('button', { name: 'Submit Broker Order' }).click();
 
   await expect(page.getByText('Bracket order submitted for AAPL')).toBeVisible();
   await expect.poll(() => state.bracketRequests).toBe(1);
 
   await page.getByRole('button', { name: 'Cancel' }).first().click();
+  await page.getByRole('checkbox', { name: /I confirmed in IB\/TWS that this working order should be cancelled/i }).check();
+  await page.getByRole('button', { name: 'Submit Cancel' }).click();
   await expect.poll(() => state.cancelRequests).toBe(1);
 
   await page.getByRole('button', { name: 'Protect' }).first().click();
   const protectDialog = page.getByRole('dialog');
   await protectDialog.getByLabel('Stop Loss').fill('650');
+  await protectDialog.getByRole('checkbox', { name: /I confirmed these protective levels in IB\/TWS/i }).check();
   await protectDialog.getByRole('button', { name: 'Submit Protection' }).click();
   await expect.poll(() => state.protectRequests).toBe(1);
 
   await page.getByRole('button', { name: 'Close' }).first().click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Submit Close' }).click();
+  const closeDialog = page.getByRole('dialog');
+  await closeDialog.getByRole('checkbox', { name: /I confirmed this exit in IB\/TWS/i }).check();
+  await closeDialog.getByRole('button', { name: 'Submit Close' }).click();
   await expect.poll(() => state.closeRequests).toBe(1);
 });

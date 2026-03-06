@@ -66,6 +66,15 @@ vi.mock('@/hooks/useOrders', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useTradingPilotStatus', () => ({
+  useTradingPilotStatus: () => ({
+    data: {
+      readOnly: false,
+      reasons: ['Confirm every working order change in IB/TWS before submitting.'],
+    },
+  }),
+}));
+
 describe('TradeBlotterPanel', () => {
   it('shows cancel only for broker-managed working orders', () => {
     render(<TradeBlotterPanel isOpen onToggle={() => undefined} />);

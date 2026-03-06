@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { buildUrl } from '@/config/api';
+import { apiClient } from '@/data/http-client';
 
 export interface IBAccount {
   account_id: string;
@@ -11,11 +11,7 @@ export interface IBAccount {
 }
 
 async function fetchIBAccount(): Promise<IBAccount> {
-  const response = await fetch(buildUrl('IB_BRIDGE', '/account'));
-  if (!response.ok) {
-    throw new Error('IB Bridge unavailable');
-  }
-  return response.json();
+  return apiClient.get<IBAccount>('/api/v1/broker/account');
 }
 
 export function useIBAccount() {

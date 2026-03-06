@@ -14,6 +14,8 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import { buildUrl } from '@/config/api';
 import { getMarketDataLabel, getMarketDataTone } from '@/lib/market-data';
+import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
+import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
 
 interface PriceChartPanelProps {
   isOpen: boolean;
@@ -120,6 +122,7 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
     retry: false,
   });
   const { data: watchlist = [] } = useWatchlist();
+  const { data: pilotStatus } = useTradingPilotStatus();
   const fallbackQuote = watchlist.find((item) => item.symbol === symbol);
   const candles = data?.candles ?? emptyCandles;
   const chartTimeframe = data?.timeframe ?? timeframe;
@@ -248,6 +251,15 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
       isLoading={isLoading}
     >
       <div className="space-y-4">
+        {pilotStatus && (!pilotStatus.intradayAuthority || pilotStatus.executionFromChartBlocked) ? (
+          <PilotStatusBanner
+            title="Intraday chart data is non-authoritative during the pilot. Use IB/TWS as the execution source of truth."
+            readOnly={pilotStatus.readOnly}
+            reasons={pilotStatus.reasons}
+            compact
+          />
+        ) : null}
+
         <div className="flex gap-4">
           <div className="space-y-1">
             <label htmlFor="price-chart-symbol" className="text-xs text-muted-foreground">Symbol</label>

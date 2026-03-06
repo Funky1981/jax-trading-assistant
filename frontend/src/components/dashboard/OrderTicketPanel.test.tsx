@@ -24,6 +24,15 @@ vi.mock('@/hooks/useMarketDataStatus', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useTradingPilotStatus', () => ({
+  useTradingPilotStatus: () => ({
+    data: {
+      readOnly: false,
+      reasons: ['Quotes on this screen are non-authoritative during the pilot; confirm in IB/TWS.'],
+    },
+  }),
+}));
+
 describe('OrderTicketPanel', () => {
   it('submits a bracket order when stop loss protection is provided', async () => {
     const user = userEvent.setup();
@@ -37,6 +46,8 @@ describe('OrderTicketPanel', () => {
     expect(screen.getByRole('button', { name: 'Submit BUY Bracket' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Submit BUY Bracket' }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Submit Broker Order' }));
 
     expect(mutate).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -1,8 +1,12 @@
 import { BookOpen, CheckCircle2, ListChecks, Wrench } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { HelpHint } from '@/components/ui/help-hint';
+import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
+import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
 
 export function UserGuidePage() {
+  const { data: pilotStatus } = useTradingPilotStatus();
+
   return (
     <div className="space-y-6">
       <div>
@@ -16,6 +20,15 @@ export function UserGuidePage() {
         </p>
       </div>
 
+      {pilotStatus ? (
+        <PilotStatusBanner
+          title="Pilot trading policy"
+          readOnly={pilotStatus.readOnly}
+          reasons={pilotStatus.reasons}
+          checklist={pilotStatus.checklist}
+        />
+      ) : null}
+
       <Card>
         <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
           <BookOpen className="h-5 w-5" />
@@ -27,8 +40,10 @@ export function UserGuidePage() {
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <ol className="list-decimal pl-5 space-y-1 text-foreground">
             <li>Open `Trading` and pick a symbol from Watchlist or the chart.</li>
+            <li>Confirm the market context in IB/TWS before using any price shown in the pilot UI.</li>
             <li>Use `Order Ticket` for a market or limit entry.</li>
             <li>Add `Stop Loss` and optional `Take Profit` before submitting if you want bracket protection.</li>
+            <li>Complete the manual confirmation step before every submit, cancel, close, or protect action.</li>
             <li>Use `Trade Blotter` to cancel any working broker order that has not filled.</li>
             <li>Use `Portfolio` or `Positions` to close or re-protect an open position.</li>
           </ol>
@@ -152,9 +167,10 @@ export function UserGuidePage() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <ol className="list-decimal pl-5 space-y-1 text-foreground">
-            <li>Check `System` health and datasets.</li>
+            <li>Check `System` health, the pilot banner, and broker connectivity before opening Trading.</li>
             <li>Run backtests for new ideas in `Research`.</li>
             <li>Inspect results in `Analysis` and document observations.</li>
+            <li>Review `Events`, `Runs`, and audit outputs after each pilot session.</li>
             <li>Run `Testing` gates and archive artifacts.</li>
           </ol>
         </CardContent>

@@ -10,9 +10,19 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { Order, OrderStatus, useCancelOrder, useOrdersSummary } from '@/hooks/useOrders';
+import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -60,9 +70,12 @@ function getWorkflowLabel(order: Order) {
 
 export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) {
   const { data: summary, orders, isLoading } = useOrdersSummary();
+  const { data: pilotStatus } = useTradingPilotStatus();
   const cancelOrder = useCancelOrder();
   const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [pendingCancelOrder, setPendingCancelOrder] = useState<Order | null>(null);
+  const [cancelConfirmed, setCancelConfirmed] = useState(false);
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
@@ -178,8 +191,11 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
               type="button"
               variant="outline"
               size="sm"
-              disabled={cancelOrder.isPending}
-              onClick={() => cancelOrder.mutate(row.original)}
+              disabled={cancelOrder.isPending || pilotStatus?.readOnly === true}
+              onClick={() => {
+                setCancelConfirmed(false);
+                setPendingCancelOrder(row.original);
+              }}
             >
               Cancel
             </Button>
@@ -189,7 +205,7 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
         ),
       }),
     ],
-    [cancelOrder]
+    [cancelOrder, pilotStatus?.readOnly]
   );
 
   const table = useReactTable({
@@ -219,6 +235,19 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
       isLoading={isLoading}
     >
       <div className="space-y-4">
+        {pilotStatus ? (
+          <PilotStatusBanner
+            title={
+              pilotStatus.readOnly
+                ? 'Order cancellation is disabled while the pilot is in read-only mode.'
+                : 'Working broker orders require IB/TWS confirmation before cancellation.'
+            }
+            readOnly={pilotStatus.readOnly}
+            reasons={pilotStatus.reasons}
+            compact
+          />
+        ) : null}
+
         <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
           Broker orders created from this UI can be cancelled here while they are still working. Strategy-sourced history stays visible for context but is read only.
         </div>
@@ -292,6 +321,64 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
           </Table>
         </div>
       </div>
+
+      <Dialog open={Boolean(pendingCancelOrder)} onOpenChange={(open) => {
+        if (!open) {
+          setPendingCancelOrder(null);
+          setCancelConfirmed(false);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Cancel</DialogTitle>
+            <DialogDescription>
+              Confirm the working order in IB/TWS before sending a cancel request from the pilot UI.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <div className="rounded-md border border-border bg-muted/20 px-3 py-3">
+              <p className="font-mono text-foreground">
+                {pendingCancelOrder?.symbol} {pendingCancelOrder?.quantity} {pendingCancelOrder?.side.toUpperCase()}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Order #{pendingCancelOrder?.brokerOrderId} • {pendingCancelOrder?.type.toUpperCase()} • {pendingCancelOrder?.status.toUpperCase()}
+              </p>
+            </div>
+
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={cancelConfirmed}
+                onChange={(event) => setCancelConfirmed(event.target.checked)}
+              />
+              <span>I confirmed in IB/TWS that this working order should be cancelled.</span>
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPendingCancelOrder(null)}>
+              Keep Order
+            </Button>
+            <Button
+              type="button"
+              disabled={!cancelConfirmed || cancelOrder.isPending || !pendingCancelOrder}
+              onClick={() => {
+                if (!pendingCancelOrder) return;
+                cancelOrder.mutate(pendingCancelOrder, {
+                  onSuccess: () => {
+                    setPendingCancelOrder(null);
+                    setCancelConfirmed(false);
+                  },
+                });
+              }}
+            >
+              {cancelOrder.isPending ? 'Cancelling...' : 'Submit Cancel'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CollapsiblePanel>
   );
 }

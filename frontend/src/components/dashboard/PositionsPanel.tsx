@@ -17,9 +17,11 @@ import {
   useProtectPosition,
 } from '@/hooks/usePositions';
 import { useMarketDataStatus } from '@/hooks/useMarketDataStatus';
+import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Button } from '@/components/ui/button';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
+import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
 import {
   Dialog,
   DialogContent,
@@ -71,6 +73,7 @@ function getDefaultTarget(position: Position) {
 export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
   const { data: summary, positions, isLoading, isError } = usePositionsSummary();
   const { data: marketDataStatus } = useMarketDataStatus();
+  const { data: pilotStatus } = useTradingPilotStatus();
   const closePosition = useClosePosition();
   const protectPosition = useProtectPosition();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -84,6 +87,8 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
   const [protectQuantity, setProtectQuantity] = useState('');
   const [stopLoss, setStopLoss] = useState('');
   const [takeProfit, setTakeProfit] = useState('');
+  const [closeConfirmed, setCloseConfirmed] = useState(false);
+  const [protectConfirmed, setProtectConfirmed] = useState(false);
 
   const handleCloseSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -97,7 +102,10 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
     };
 
     closePosition.mutate(request, {
-      onSuccess: () => setCloseTarget(null),
+      onSuccess: () => {
+        setCloseTarget(null);
+        setCloseConfirmed(false);
+      },
     });
   };
 
@@ -114,7 +122,10 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
     };
 
     protectPosition.mutate(request, {
-      onSuccess: () => setProtectTarget(null),
+      onSuccess: () => {
+        setProtectTarget(null);
+        setProtectConfirmed(false);
+      },
     });
   };
 
@@ -215,7 +226,9 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
                 setProtectQuantity(String(Math.abs(row.original.quantity)));
                 setStopLoss(getDefaultStop(row.original));
                 setTakeProfit(getDefaultTarget(row.original));
+                setProtectConfirmed(false);
               }}
+              disabled={pilotStatus?.readOnly === true}
             >
               <Shield className="h-3.5 w-3.5" />
               Protect
@@ -232,7 +245,9 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
                 setCloseLimitPrice(
                   row.original.marketPrice ? row.original.marketPrice.toFixed(2) : ''
                 );
+                setCloseConfirmed(false);
               }}
+              disabled={pilotStatus?.readOnly === true}
             >
               <XCircle className="h-3.5 w-3.5" />
               Close
@@ -241,7 +256,7 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
         ),
       }),
     ],
-    [closePosition, protectPosition]
+    [closePosition, pilotStatus?.readOnly, protectPosition]
   );
 
   const table = useReactTable({
@@ -289,6 +304,21 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
         onToggle={onToggle}
         isLoading={isLoading}
       >
+        {pilotStatus ? (
+          <div className="mb-4">
+            <PilotStatusBanner
+              title={
+                pilotStatus.readOnly
+                  ? 'Position actions are disabled while the pilot is in read-only mode.'
+                  : 'Position changes require IB/TWS confirmation before submit.'
+              }
+              readOnly={pilotStatus.readOnly}
+              reasons={pilotStatus.reasons}
+              compact
+            />
+          </div>
+        ) : null}
+
         <div className="mb-4 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
           Use <span className="font-semibold text-foreground">Protect</span> to replace the current stop / target set by this UI, or <span className="font-semibold text-foreground">Close</span> to flatten all or part of a position with a market or limit exit.
         </div>
@@ -369,7 +399,12 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
         )}
       </CollapsiblePanel>
 
-      <Dialog open={Boolean(closeTarget)} onOpenChange={(open) => !open && setCloseTarget(null)}>
+      <Dialog open={Boolean(closeTarget)} onOpenChange={(open) => {
+        if (!open) {
+          setCloseTarget(null);
+          setCloseConfirmed(false);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Close Position</DialogTitle>
@@ -423,6 +458,16 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
               <p className="text-sm text-destructive">{closePosition.error.message}</p>
             ) : null}
 
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={closeConfirmed}
+                onChange={(event) => setCloseConfirmed(event.target.checked)}
+              />
+              <span>I confirmed this exit in IB/TWS and understand the pilot UI does not provide authoritative intraday execution data.</span>
+            </label>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCloseTarget(null)}>
                 Cancel
@@ -432,6 +477,7 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
                 variant="destructive"
                 disabled={
                   closePosition.isPending ||
+                  !closeConfirmed ||
                   !closeQuantity ||
                   (closeOrderType === 'LMT' && !closeLimitPrice)
                 }
@@ -443,7 +489,12 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(protectTarget)} onOpenChange={(open) => !open && setProtectTarget(null)}>
+      <Dialog open={Boolean(protectTarget)} onOpenChange={(open) => {
+        if (!open) {
+          setProtectTarget(null);
+          setProtectConfirmed(false);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Protect Position</DialogTitle>
@@ -498,6 +549,16 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
               <p className="text-sm text-destructive">{protectPosition.error.message}</p>
             ) : null}
 
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={protectConfirmed}
+                onChange={(event) => setProtectConfirmed(event.target.checked)}
+              />
+              <span>I confirmed these protective levels in IB/TWS and want to replace the current UI-managed protection.</span>
+            </label>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setProtectTarget(null)}>
                 Cancel
@@ -505,7 +566,7 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
               <Button
                 type="submit"
                 variant="success"
-                disabled={protectPosition.isPending || !protectQuantity || !stopLoss}
+                disabled={protectPosition.isPending || !protectConfirmed || !protectQuantity || !stopLoss}
               >
                 {protectPosition.isPending ? 'Submitting...' : 'Submit Protection'}
               </Button>
