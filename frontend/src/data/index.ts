@@ -6,4 +6,5 @@ export { researchService } from './research-service';
 export { testingService } from './testing-service';
 export { eventsService } from './events-service';
 export { datasetsService } from './datasets-service';
+export { systemService } from './system-service';
 export * from './types';

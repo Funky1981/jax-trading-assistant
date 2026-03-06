@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
-import { FileText, ArrowUpDown, Filter } from 'lucide-react';
+import { ArrowUpDown, FileText, Filter } from 'lucide-react';
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  flexRender,
   createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
   SortingState,
+  useReactTable,
 } from '@tanstack/react-table';
-import { useOrdersSummary, Order, OrderStatus } from '@/hooks/useOrders';
+import { Order, OrderStatus, useCancelOrder, useOrdersSummary } from '@/hooks/useOrders';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,15 +45,29 @@ const statusVariantMap: Record<OrderStatus, 'default' | 'secondary' | 'success' 
   rejected: 'destructive',
 };
 
+function getWorkflowLabel(order: Order) {
+  switch (order.workflow) {
+    case 'close':
+      return 'Close';
+    case 'protect':
+      return 'Protect';
+    case 'entry':
+      return 'Entry';
+    default:
+      return order.source === 'broker' ? 'Broker' : 'Strategy';
+  }
+}
+
 export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) {
   const { data: summary, orders, isLoading } = useOrdersSummary();
+  const cancelOrder = useCancelOrder();
   const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     if (statusFilter === 'all') return orders;
-    return orders.filter((o) => o.status === statusFilter);
+    return orders.filter((order) => order.status === statusFilter);
   }, [orders, statusFilter]);
 
   const columns = useMemo(
@@ -130,6 +144,20 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
           );
         },
       }),
+      columnHelper.accessor('source', {
+        header: 'Source',
+        cell: (info) => {
+          const order = info.row.original;
+          return (
+            <div className="flex flex-col gap-1">
+              <Badge variant={order.source === 'broker' ? 'secondary' : 'outline'} className="w-fit text-xs">
+                {order.source === 'broker' ? 'Broker' : 'Strategy'}
+              </Badge>
+              <span className="text-[11px] text-muted-foreground">{getWorkflowLabel(order)}</span>
+            </div>
+          );
+        },
+      }),
       columnHelper.accessor('status', {
         header: 'Status',
         cell: (info) => {
@@ -141,8 +169,27 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
           );
         },
       }),
+      columnHelper.display({
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          row.original.canCancel ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={cancelOrder.isPending}
+              onClick={() => cancelOrder.mutate(row.original)}
+            >
+              Cancel
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground">Read only</span>
+          )
+        ),
+      }),
     ],
-    []
+    [cancelOrder]
   );
 
   const table = useReactTable({
@@ -158,7 +205,7 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
   const summaryText = summary ? (
     <span>
       {summary.total} orders • {summary.pending} pending
-      {summary.lastFill && ` • Last: ${summary.lastFill.symbol}`}
+      {summary.lastFill ? ` • Last fill: ${summary.lastFill.symbol}` : ''}
     </span>
   ) : null;
 
@@ -172,11 +219,14 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
       isLoading={isLoading}
     >
       <div className="space-y-4">
-        {/* Filter */}
+        <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          Broker orders created from this UI can be cancelled here while they are still working. Strategy-sourced history stays visible for context but is read only.
+        </div>
+
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32 h-8" aria-label="Filter orders by status">
+            <SelectTrigger className="h-8 w-32" aria-label="Filter orders by status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -192,9 +242,12 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
           </span>
         </div>
 
-        {/* Table */}
-        <div className="rounded-md border border-border overflow-x-auto">
-          <Table className="min-w-[820px]">
+        {cancelOrder.error ? (
+          <p className="text-sm text-destructive">{cancelOrder.error.message}</p>
+        ) : null}
+
+        <div className="overflow-x-auto rounded-md border border-border">
+          <Table className="min-w-[980px]">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>

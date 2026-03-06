@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { buildUrl } from '@/config/api';
 
 export interface Position {
@@ -25,6 +25,21 @@ interface RawPosition {
 
 interface PositionsResponse {
   positions: RawPosition[];
+}
+
+export interface ClosePositionRequest {
+  symbol: string;
+  quantity: number;
+  orderType: 'MKT' | 'LMT';
+  limitPrice?: number;
+}
+
+export interface ProtectPositionRequest {
+  symbol: string;
+  quantity: number;
+  stopLoss: number;
+  takeProfit?: number;
+  replaceExisting?: boolean;
 }
 
 async function fetchPositions(): Promise<Position[]> {
@@ -82,9 +97,73 @@ export function usePositionsSummary() {
 }
 
 export function useClosePosition() {
+  const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: async () => {
-      throw new Error('Close position is not available via current broker bridge API');
+    mutationFn: async (request: ClosePositionRequest) => {
+      const payload = {
+        quantity: request.quantity,
+        order_type: request.orderType,
+        limit_price: request.orderType === 'LMT' ? request.limitPrice : undefined,
+      };
+
+      const response = await fetch(
+        buildUrl('IB_BRIDGE', `/positions/${encodeURIComponent(request.symbol)}/close`),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `Position close failed (HTTP ${response.status})`);
+      }
+
+      return response.json() as Promise<{ success: boolean; order_id: number; message: string }>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['positions'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
+export function useProtectPosition() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (request: ProtectPositionRequest) => {
+      const response = await fetch(
+        buildUrl('IB_BRIDGE', `/positions/${encodeURIComponent(request.symbol)}/protect`),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            quantity: request.quantity,
+            stop_loss: request.stopLoss,
+            take_profit: request.takeProfit,
+            replace_existing: request.replaceExisting ?? true,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `Position protection failed (HTTP ${response.status})`);
+      }
+
+      return response.json() as Promise<{
+        success: boolean;
+        order_ids: number[];
+        cancelled_order_ids?: number[];
+        message: string;
+      }>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['positions'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
   });
 }

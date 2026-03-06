@@ -6,10 +6,10 @@ export function PortfolioPage() {
     <div className="space-y-4">
       <h1 className="flex items-center gap-2 text-3xl font-semibold">
         Portfolio & Risk
-        <HelpHint text="Review exposure, unrealized P/L, and risk thresholds." />
+        <HelpHint text="Review exposure, unrealized P/L, risk thresholds, and manage open positions." />
       </h1>
       <p className="text-sm text-muted-foreground">
-        Snapshot of positions, exposure, and risk limits.
+        Snapshot of positions, exposure, and risk limits. Use the Positions panel actions to close or protect existing holdings.
       </p>
       <div className="space-y-4">
         <RiskSummaryPanel isOpen onToggle={() => undefined} />

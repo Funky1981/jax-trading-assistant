@@ -9,12 +9,49 @@ export function UserGuidePage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">GETTING STARTED</p>
         <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
           User Guide
-          <HelpHint text="Step-by-step instructions for backtesting, analysis, and testing workflows." />
+          <HelpHint text="Step-by-step instructions for trading, backtesting, analysis, and testing workflows." />
         </h1>
         <p className="text-muted-foreground mt-1">
-          Practical steps for running real-data backtests, reviewing results, and validating trust gates.
+          Practical steps for placing and managing paper trades, running real-data backtests, reviewing results, and validating trust gates.
         </p>
       </div>
+
+      <Card>
+        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
+          <BookOpen className="h-5 w-5" />
+          <div>
+            <CardTitle>Place and Manage a Trade</CardTitle>
+            <CardDescription>Use the trading UI as an operator workflow, not just a dashboard.</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <ol className="list-decimal pl-5 space-y-1 text-foreground">
+            <li>Open `Trading` and pick a symbol from Watchlist or the chart.</li>
+            <li>Use `Order Ticket` for a market or limit entry.</li>
+            <li>Add `Stop Loss` and optional `Take Profit` before submitting if you want bracket protection.</li>
+            <li>Use `Trade Blotter` to cancel any working broker order that has not filled.</li>
+            <li>Use `Portfolio` or `Positions` to close or re-protect an open position.</li>
+          </ol>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
+          <CheckCircle2 className="h-5 w-5" />
+          <div>
+            <CardTitle>Close or Protect Open Exposure</CardTitle>
+            <CardDescription>Position management happens from the Positions panel.</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <ul className="list-disc pl-5 space-y-1 text-foreground">
+            <li>`Close` submits a market or limit exit for all or part of a position.</li>
+            <li>`Protect` submits a stop loss and optional take profit on the broker for the chosen quantity.</li>
+            <li>When you submit new protection, existing UI-created protection for that symbol is replaced.</li>
+            <li>Use `Trade Blotter` to cancel working orders; filled history remains visible but read only.</li>
+          </ul>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">

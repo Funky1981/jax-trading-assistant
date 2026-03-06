@@ -6,21 +6,30 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from typing import List, Optional, AsyncGenerator
-from decimal import Decimal
+from typing import AsyncGenerator, List, Optional
 
 from ib_insync import IB, Stock, Order, MarketOrder, LimitOrder, StopOrder
-from ib_insync import util
 
 from models import (
+    BrokerOrder,
     QuoteResponse,
     Candle,
     Position,
     AccountResponse,
-    OrderStatusResponse
+    OrderStatusResponse,
+    CancelOrderResponse,
+    ProtectPositionResponse,
+    BracketOrderResponse,
 )
 
 logger = logging.getLogger(__name__)
+OPEN_ORDER_STATUSES = {
+    "ApiPending",
+    "PendingSubmit",
+    "PreSubmitted",
+    "Submitted",
+    "PendingCancel",
+}
 
 
 class IBClient:
@@ -128,19 +137,123 @@ class IBClient:
     def _on_error(self, reqId, errorCode, errorString, contract):
         """Handle error events"""
         logger.error(f"IB Error - ReqId: {reqId}, Code: {errorCode}, Msg: {errorString}")
+
+    async def _qualify_stock_contract(self, symbol: str):
+        contract = Stock(symbol.upper(), 'SMART', 'USD')
+        contracts = await self.ib.qualifyContractsAsync(contract)
+        if not contracts:
+            raise ValueError(f"Could not find contract for symbol {symbol}")
+        return contracts[0]
+
+    def _build_order(
+        self,
+        action: str,
+        quantity: int,
+        order_type: str = "MKT",
+        limit_price: Optional[float] = None,
+        stop_price: Optional[float] = None,
+    ) -> Order:
+        normalized_action = action.upper().strip()
+        normalized_type = order_type.upper().strip()
+
+        if normalized_type == "MKT":
+            return MarketOrder(normalized_action, quantity)
+        if normalized_type == "LMT":
+            if limit_price is None:
+                raise ValueError("Limit price required for limit orders")
+            return LimitOrder(normalized_action, quantity, limit_price)
+        if normalized_type == "STP":
+            if stop_price is None:
+                raise ValueError("Stop price required for stop orders")
+            return StopOrder(normalized_action, quantity, stop_price)
+        raise ValueError(f"Unsupported order type: {order_type}")
+
+    def _format_timestamp(self, value) -> str:
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if hasattr(value, "isoformat"):
+            return value.isoformat()
+        return datetime.utcnow().isoformat()
+
+    def _optional_price(self, value) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return None
+        return numeric if numeric > 0 else None
+
+    def _is_open_status(self, status: Optional[str]) -> bool:
+        return (status or "").strip() in OPEN_ORDER_STATUSES
+
+    def _opposite_action(self, action: str) -> str:
+        return "SELL" if action.upper() == "BUY" else "BUY"
+
+    def _trade_timestamps(self, trade) -> tuple[str, str]:
+        log_entries = getattr(trade, "log", None) or []
+        if log_entries:
+            created_at = self._format_timestamp(getattr(log_entries[0], "time", None))
+            updated_at = self._format_timestamp(getattr(log_entries[-1], "time", None))
+            return created_at, updated_at
+        now = datetime.utcnow().isoformat()
+        return now, now
+
+    def _find_trade(self, order_id: int):
+        for trade in self.ib.trades():
+            order = getattr(trade, "order", None)
+            if order and getattr(order, "orderId", None) == order_id:
+                return trade
+        return None
+
+    def _serialize_trade(self, trade) -> BrokerOrder:
+        order = getattr(trade, "order", None)
+        order_status = getattr(trade, "orderStatus", None)
+        contract = getattr(trade, "contract", None)
+        quantity = int(float(getattr(order, "totalQuantity", 0) or 0))
+        filled_qty = int(float(getattr(order_status, "filled", 0) or 0))
+        remaining_qty = int(float(getattr(order_status, "remaining", max(quantity - filled_qty, 0)) or 0))
+        created_at, updated_at = self._trade_timestamps(trade)
+        status = getattr(order_status, "status", "Unknown")
+        order_type = getattr(order, "orderType", "MKT")
+
+        return BrokerOrder(
+            order_id=getattr(order, "orderId", 0),
+            symbol=getattr(contract, "symbol", ""),
+            action=getattr(order, "action", ""),
+            order_type=order_type,
+            quantity=quantity,
+            limit_price=self._optional_price(getattr(order, "lmtPrice", None)),
+            stop_price=self._optional_price(getattr(order, "auxPrice", None)),
+            status=status,
+            filled_qty=filled_qty,
+            remaining_qty=remaining_qty,
+            avg_fill_price=float(getattr(order_status, "avgFillPrice", 0.0) or 0.0),
+            can_cancel=self._is_open_status(status),
+            parent_id=getattr(order, "parentId", 0) or None,
+            order_ref=getattr(order, "orderRef", None),
+            created_at=created_at,
+            updated_at=updated_at,
+        )
+
+    def _find_position(self, symbol: str):
+        normalized_symbol = symbol.upper()
+        for item in self.ib.portfolio():
+            if getattr(item.contract, "symbol", "").upper() == normalized_symbol and int(item.position) != 0:
+                return item
+        raise ValueError(f"No open position found for {symbol}")
+
+    async def _cancel_trade(self, trade) -> int:
+        order = getattr(trade, "order", None)
+        order_id = getattr(order, "orderId", 0)
+        self.ib.cancelOrder(order)
+        await asyncio.sleep(0.25)
+        return order_id
     
     async def get_quote(self, symbol: str) -> QuoteResponse:
         """Get real-time quote for a symbol"""
         try:
-            # Create contract
-            contract = Stock(symbol, 'SMART', 'USD')
-            
-            # Qualify the contract
-            contracts = await self.ib.qualifyContractsAsync(contract)
-            if not contracts:
-                raise ValueError(f"Could not find contract for symbol {symbol}")
-            
-            contract = contracts[0]
+            contract = await self._qualify_stock_contract(symbol)
             
             # Request market data
             ticker = self.ib.reqMktData(contract, '', False, False)
@@ -180,15 +293,7 @@ class IBClient:
     ) -> List[Candle]:
         """Get historical candles for a symbol"""
         try:
-            # Create contract
-            contract = Stock(symbol, 'SMART', 'USD')
-            
-            # Qualify the contract
-            contracts = await self.ib.qualifyContractsAsync(contract)
-            if not contracts:
-                raise ValueError(f"Could not find contract for symbol {symbol}")
-            
-            contract = contracts[0]
+            contract = await self._qualify_stock_contract(symbol)
 
             intraday_request = "min" in bar_size.lower() or "hour" in bar_size.lower()
             timeout_seconds = 8 if intraday_request else 20
@@ -250,36 +355,17 @@ class IBClient:
     ) -> int:
         """Place an order"""
         try:
-            # Create contract
-            contract = Stock(symbol, 'SMART', 'USD')
-            
-            # Qualify the contract
-            contracts = await self.ib.qualifyContractsAsync(contract)
-            if not contracts:
-                raise ValueError(f"Could not find contract for symbol {symbol}")
-            
-            contract = contracts[0]
-            
-            # Create order based on type
-            if order_type == "MKT":
-                order = MarketOrder(action, quantity)
-            elif order_type == "LMT":
-                if limit_price is None:
-                    raise ValueError("Limit price required for limit orders")
-                order = LimitOrder(action, quantity, limit_price)
-            elif order_type == "STP":
-                if stop_price is None:
-                    raise ValueError("Stop price required for stop orders")
-                order = StopOrder(action, quantity, stop_price)
-            else:
-                raise ValueError(f"Unsupported order type: {order_type}")
-            
-            # Place the order
+            contract = await self._qualify_stock_contract(symbol)
+            order = self._build_order(
+                action=action,
+                quantity=quantity,
+                order_type=order_type,
+                limit_price=limit_price,
+                stop_price=stop_price,
+            )
+            order.orderRef = "manual-entry"
             trade = self.ib.placeOrder(contract, order)
-            
-            # Wait a moment for order to be submitted
             await asyncio.sleep(0.5)
-            
             return trade.order.orderId
             
         except Exception as e:
@@ -317,6 +403,213 @@ class IBClient:
             )
         except Exception as e:
             logger.error(f"Error getting order status for {order_id}: {e}")
+            raise
+
+    async def list_orders(self) -> List[BrokerOrder]:
+        """List broker orders known to the current bridge session."""
+        try:
+            orders = [self._serialize_trade(trade) for trade in self.ib.trades()]
+            orders.sort(key=lambda order: order.updated_at, reverse=True)
+            return orders
+        except Exception as e:
+            logger.error(f"Error listing orders: {e}")
+            raise
+
+    async def cancel_order(self, order_id: int) -> CancelOrderResponse:
+        """Cancel a working broker order."""
+        try:
+            trade = self._find_trade(order_id)
+            if trade is None:
+                raise ValueError(f"Order {order_id} not found")
+
+            current_status = getattr(getattr(trade, "orderStatus", None), "status", "Unknown")
+            if not self._is_open_status(current_status):
+                raise ValueError(f"Order {order_id} is not cancellable from status {current_status}")
+
+            await self._cancel_trade(trade)
+            updated_status = getattr(getattr(trade, "orderStatus", None), "status", "Cancelled")
+
+            return CancelOrderResponse(
+                success=True,
+                order_id=order_id,
+                status=updated_status,
+                message=f"Cancel requested for order {order_id}",
+            )
+        except Exception as e:
+            logger.error(f"Error cancelling order {order_id}: {e}")
+            raise
+
+    async def close_position(
+        self,
+        symbol: str,
+        quantity: Optional[int] = None,
+        order_type: str = "MKT",
+        limit_price: Optional[float] = None,
+    ) -> int:
+        """Close or reduce an open position."""
+        try:
+            position = self._find_position(symbol)
+            absolute_quantity = abs(int(position.position))
+            close_quantity = quantity or absolute_quantity
+            if close_quantity <= 0 or close_quantity > absolute_quantity:
+                raise ValueError(f"Close quantity must be between 1 and {absolute_quantity}")
+
+            action = "SELL" if int(position.position) > 0 else "BUY"
+            contract = await self._qualify_stock_contract(symbol)
+            order = self._build_order(
+                action=action,
+                quantity=close_quantity,
+                order_type=order_type,
+                limit_price=limit_price,
+            )
+            order.orderRef = "manual-close"
+            trade = self.ib.placeOrder(contract, order)
+            await asyncio.sleep(0.5)
+            return trade.order.orderId
+        except Exception as e:
+            logger.error(f"Error closing position for {symbol}: {e}")
+            raise
+
+    async def protect_position(
+        self,
+        symbol: str,
+        stop_loss: float,
+        take_profit: Optional[float] = None,
+        quantity: Optional[int] = None,
+        replace_existing: bool = True,
+    ) -> ProtectPositionResponse:
+        """Place or replace protective exit orders for an existing position."""
+        try:
+            position = self._find_position(symbol)
+            absolute_quantity = abs(int(position.position))
+            protect_quantity = quantity or absolute_quantity
+            if protect_quantity <= 0 or protect_quantity > absolute_quantity:
+                raise ValueError(f"Protection quantity must be between 1 and {absolute_quantity}")
+
+            exit_action = "SELL" if int(position.position) > 0 else "BUY"
+            contract = await self._qualify_stock_contract(symbol)
+            cancelled_order_ids: List[int] = []
+
+            if replace_existing:
+                for trade in self.ib.trades():
+                    trade_contract = getattr(trade, "contract", None)
+                    order = getattr(trade, "order", None)
+                    status = getattr(getattr(trade, "orderStatus", None), "status", None)
+                    if getattr(trade_contract, "symbol", "").upper() != symbol.upper():
+                        continue
+                    if getattr(order, "action", "").upper() != exit_action:
+                        continue
+                    if getattr(order, "orderType", "").upper() not in {"LMT", "STP"}:
+                        continue
+                    if not self._is_open_status(status):
+                        continue
+
+                    order_ref = getattr(order, "orderRef", "") or ""
+                    if order_ref in {"manual-protect", "manual-bracket-child"} or getattr(order, "parentId", 0):
+                        cancelled_order_ids.append(await self._cancel_trade(trade))
+
+            oca_group = f"protect-{symbol.upper()}-{int(datetime.utcnow().timestamp())}"
+            order_ids: List[int] = []
+
+            stop_order = self._build_order(
+                action=exit_action,
+                quantity=protect_quantity,
+                order_type="STP",
+                stop_price=stop_loss,
+            )
+            stop_order.orderRef = "manual-protect"
+            stop_order.ocaGroup = oca_group
+            stop_order.ocaType = 1
+            stop_order.transmit = take_profit is None
+            stop_trade = self.ib.placeOrder(contract, stop_order)
+            order_ids.append(stop_trade.order.orderId)
+
+            if take_profit is not None:
+                take_profit_order = self._build_order(
+                    action=exit_action,
+                    quantity=protect_quantity,
+                    order_type="LMT",
+                    limit_price=take_profit,
+                )
+                take_profit_order.orderRef = "manual-protect"
+                take_profit_order.ocaGroup = oca_group
+                take_profit_order.ocaType = 1
+                take_profit_order.transmit = True
+                take_profit_trade = self.ib.placeOrder(contract, take_profit_order)
+                order_ids.append(take_profit_trade.order.orderId)
+
+            await asyncio.sleep(0.5)
+
+            return ProtectPositionResponse(
+                success=True,
+                order_ids=order_ids,
+                cancelled_order_ids=cancelled_order_ids,
+                message=f"Submitted protection for {symbol.upper()}",
+            )
+        except Exception as e:
+            logger.error(f"Error protecting position for {symbol}: {e}")
+            raise
+
+    async def place_bracket_order(
+        self,
+        symbol: str,
+        action: str,
+        quantity: int,
+        entry_order_type: str = "MKT",
+        entry_limit_price: Optional[float] = None,
+        stop_loss: Optional[float] = None,
+        take_profit: Optional[float] = None,
+    ) -> BracketOrderResponse:
+        """Place an entry order with attached stop-loss and optional take-profit."""
+        try:
+            if stop_loss is None and take_profit is None:
+                raise ValueError("Bracket orders require at least a stop loss or take profit")
+
+            contract = await self._qualify_stock_contract(symbol)
+            parent_order = self._build_order(
+                action=action,
+                quantity=quantity,
+                order_type=entry_order_type,
+                limit_price=entry_limit_price,
+            )
+            parent_order.orderRef = "manual-entry"
+            parent_order.transmit = False
+            parent_trade = self.ib.placeOrder(contract, parent_order)
+            await asyncio.sleep(0.2)
+
+            parent_id = parent_trade.order.orderId
+            child_order_ids: List[int] = []
+            exit_action = self._opposite_action(action)
+            child_specs = []
+            if take_profit is not None:
+                child_specs.append(("LMT", take_profit))
+            if stop_loss is not None:
+                child_specs.append(("STP", stop_loss))
+
+            for index, (child_type, price) in enumerate(child_specs):
+                child_order = self._build_order(
+                    action=exit_action,
+                    quantity=quantity,
+                    order_type=child_type,
+                    limit_price=price if child_type == "LMT" else None,
+                    stop_price=price if child_type == "STP" else None,
+                )
+                child_order.parentId = parent_id
+                child_order.orderRef = "manual-bracket-child"
+                child_order.transmit = index == len(child_specs) - 1
+                child_trade = self.ib.placeOrder(contract, child_order)
+                child_order_ids.append(child_trade.order.orderId)
+
+            await asyncio.sleep(0.5)
+
+            return BracketOrderResponse(
+                success=True,
+                parent_order_id=parent_id,
+                child_order_ids=child_order_ids,
+                message=f"Bracket order submitted for {symbol.upper()}",
+            )
+        except Exception as e:
+            logger.error(f"Error placing bracket order for {symbol}: {e}")
             raise
     
     async def get_positions(self) -> List[Position]:

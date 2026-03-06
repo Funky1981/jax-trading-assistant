@@ -13,6 +13,13 @@ export interface QuoteSnapshot {
   timestamp: number;
 }
 
+export interface MarketDataStatus {
+  connected: boolean;
+  marketDataMode: string;
+  paperTrading: boolean;
+  checkedAt: string;
+}
+
 // Backend API Types for Observability & Intelligence
 
 export interface MetricEvent {

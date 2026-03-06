@@ -1,5 +1,6 @@
 import { Shield } from 'lucide-react';
 import { useRiskSummary } from '@/hooks/useRisk';
+import { useMarketDataStatus } from '@/hooks/useMarketDataStatus';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Progress } from '@/components/ui/progress';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
@@ -13,12 +14,15 @@ interface RiskSummaryPanelProps {
 
 export function RiskSummaryPanel({ isOpen, onToggle }: RiskSummaryPanelProps) {
   const { data: summary, metrics, isLoading, isError } = useRiskSummary();
-
-  const isDataLive = !isError && metrics !== null;
+  const { data: marketDataStatus } = useMarketDataStatus();
 
   const summaryText = summary ? (
     <div className="flex items-center gap-3 text-xs">
-      <DataSourceBadge isLive={isDataLive} isError={isError} />
+      <DataSourceBadge
+        marketDataMode={marketDataStatus?.marketDataMode}
+        paperTrading={marketDataStatus?.paperTrading}
+        isError={isError}
+      />
       <span className="font-mono">{formatCurrency(summary.exposure)}</span>
       <Separator orientation="vertical" className="h-4" />
       <span className="text-muted-foreground">

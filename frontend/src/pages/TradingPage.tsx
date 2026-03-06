@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DashboardGrid, DashboardPanel } from '@/components/layout';
 import {
   WatchlistPanel,
@@ -90,10 +91,10 @@ export function TradingPage() {
           </p>
           <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
             Trading
-            <HelpHint text="Use the panels below to monitor markets, submit orders, and review signals." />
+            <HelpHint text="Use the panels below to monitor markets, submit and manage broker orders, and review signals." />
           </h1>
           <p className="text-muted-foreground mt-1">
-            Monitor markets, place paper orders, and review signals in one place.
+            Monitor markets, place protected paper orders, manage working exits, and review signals in one place.
           </p>
         </div>
 
@@ -121,6 +122,30 @@ export function TradingPage() {
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>How to Use This Screen</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-4">
+          <div>
+            <p className="font-semibold text-foreground">1. Build the entry</p>
+            <p>Use Watchlist and Price Chart to pick a symbol, then submit a market or limit entry in Order Ticket.</p>
+          </div>
+          <div>
+            <p className="font-semibold text-foreground">2. Attach risk</p>
+            <p>Add a stop loss and optional take profit in the ticket to send a bracket order from the start.</p>
+          </div>
+          <div>
+            <p className="font-semibold text-foreground">3. Manage working orders</p>
+            <p>Use Trade Blotter to cancel pending broker orders before they fill.</p>
+          </div>
+          <div>
+            <p className="font-semibold text-foreground">4. Manage live exposure</p>
+            <p>Use Positions to close or re-protect any open position after entry.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Dashboard Grid */}
       <DashboardGrid>

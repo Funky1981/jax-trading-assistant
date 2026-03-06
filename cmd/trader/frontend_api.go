@@ -160,6 +160,40 @@ func systemProvidersHandler() http.HandlerFunc {
 	}
 }
 
+func systemMarketDataStatusHandler(mt *marketTools) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if mt == nil {
+			http.Error(w, "market tools unavailable", http.StatusServiceUnavailable)
+			return
+		}
+
+		reqCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		bridgeHealth, err := mt.getIBBridgeHealth(reqCtx)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("market data status unavailable: %v", err), http.StatusServiceUnavailable)
+			return
+		}
+
+		mode := "unknown"
+		if strings.TrimSpace(bridgeHealth.MarketDataMode) != "" {
+			mode = strings.TrimSpace(bridgeHealth.MarketDataMode)
+		}
+
+		jsonOK(w, map[string]any{
+			"connected":      bridgeHealth.Connected,
+			"marketDataMode": mode,
+			"paperTrading":   bridgeHealth.PaperTrading,
+			"checkedAt":      time.Now().UTC(),
+		})
+	}
+}
+
 // startFrontendAPIServer launches the jax-api-compatible HTTP server.
 // It runs until ctx is cancelled.
 func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strategies.Registry, strategyTypeReg *strategytypes.Registry) {
@@ -214,6 +248,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	})
 	mux.HandleFunc("/api/v1/system/runtime", protect(systemRuntimeHandler()))
 	mux.HandleFunc("/api/v1/system/providers", protect(systemProvidersHandler()))
+	mux.HandleFunc("/api/v1/system/market-data-status", protect(systemMarketDataStatusHandler(marketAPI)))
 	mux.HandleFunc("/api/v1/market/candles", protect(marketCandlesHandler(marketAPI)))
 
 	// ── Signals ───────────────────────────────────────────────────────────────

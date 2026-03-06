@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/utils';
 import { buildUrl } from '@/config/api';
+import { getMarketDataLabel, getMarketDataTone } from '@/lib/market-data';
 
 interface PriceChartPanelProps {
   isOpen: boolean;
@@ -127,8 +128,8 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
   const degradedMessage = data?.message ?? '';
   const marketDataMode = data?.marketDataMode ?? 'unknown';
   const paperTrading = data?.paperTrading !== false;
-  const marketDataLabel = marketDataMode === 'live' ? 'Live' : marketDataMode === 'delayed' ? 'Delayed' : marketDataMode === 'frozen' ? 'Frozen' : marketDataMode === 'delayed-frozen' ? 'Delayed Frozen' : 'Unknown';
-  const marketDataTone = marketDataMode === 'live' ? 'text-success border-success/40 bg-success/10' : marketDataMode === 'delayed' || marketDataMode === 'delayed-frozen' ? 'text-warning border-warning/40 bg-warning/10' : 'text-muted-foreground border-border bg-muted/20';
+  const marketDataLabel = getMarketDataLabel(marketDataMode);
+  const marketDataTone = getMarketDataTone(marketDataMode);
 
   const currentPrice = candles[candles.length - 1]?.close || fallbackQuote?.price || 0;
   const prevClose = candles[candles.length - 2]?.close || currentPrice;
@@ -280,7 +281,7 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
           </div>
           <div className="ml-auto text-right">
             <div className="mb-1 flex justify-end gap-2">
-              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${marketDataTone}`}>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${marketDataTone}`}>
                 {marketDataLabel}
               </span>
               <span className="rounded-full border border-border bg-muted/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">

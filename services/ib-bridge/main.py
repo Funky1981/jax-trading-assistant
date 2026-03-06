@@ -21,8 +21,15 @@ from models import (
     CandlesResponse,
     OrderRequest,
     OrderResponse,
+    OrdersResponse,
     OrderStatusResponse,
+    CancelOrderResponse,
     PositionsResponse,
+    ClosePositionRequest,
+    ProtectPositionRequest,
+    ProtectPositionResponse,
+    BracketOrderRequest,
+    BracketOrderResponse,
     AccountResponse,
     HealthResponse,
 )
@@ -256,8 +263,51 @@ async def place_order(request: OrderRequest):
             order_id=order_id,
             message=f"Order placed successfully"
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to place order: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/orders/bracket", response_model=BracketOrderResponse)
+async def place_bracket_order(request: BracketOrderRequest):
+    """Place an entry order with attached protection."""
+    try:
+        if not ib_client.is_connected():
+            raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
+
+        return await ib_client.place_bracket_order(
+            symbol=request.symbol,
+            action=request.action,
+            quantity=request.quantity,
+            entry_order_type=request.entry_order_type,
+            entry_limit_price=request.entry_limit_price,
+            stop_loss=request.stop_loss,
+            take_profit=request.take_profit,
+        )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to place bracket order: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/orders", response_model=OrdersResponse)
+async def list_orders():
+    """List current broker orders seen by this bridge session."""
+    try:
+        if not ib_client.is_connected():
+            raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
+
+        orders = await ib_client.list_orders()
+        return OrdersResponse(orders=orders, count=len(orders))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to list orders: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -269,8 +319,27 @@ async def get_order_status(order_id: int):
             raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
 
         return await ib_client.get_order_status(order_id)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get order status for {order_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/orders/{order_id}", response_model=CancelOrderResponse)
+async def cancel_order(order_id: int):
+    """Cancel a working order."""
+    try:
+        if not ib_client.is_connected():
+            raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
+
+        return await ib_client.cancel_order(order_id)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to cancel order {order_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -286,8 +355,60 @@ async def get_positions():
             positions=positions,
             count=len(positions)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get positions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/positions/{symbol}/close", response_model=OrderResponse)
+async def close_position(symbol: str, request: ClosePositionRequest):
+    """Flatten or reduce an existing position."""
+    try:
+        if not ib_client.is_connected():
+            raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
+
+        order_id = await ib_client.close_position(
+            symbol=symbol,
+            quantity=request.quantity,
+            order_type=request.order_type,
+            limit_price=request.limit_price,
+        )
+        return OrderResponse(
+            success=True,
+            order_id=order_id,
+            message=f"Close order submitted for {symbol.upper()}",
+        )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to close position for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/positions/{symbol}/protect", response_model=ProtectPositionResponse)
+async def protect_position(symbol: str, request: ProtectPositionRequest):
+    """Attach or replace protective stop / take-profit orders."""
+    try:
+        if not ib_client.is_connected():
+            raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
+
+        return await ib_client.protect_position(
+            symbol=symbol,
+            stop_loss=request.stop_loss,
+            take_profit=request.take_profit,
+            quantity=request.quantity,
+            replace_existing=request.replace_existing,
+        )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to protect position for {symbol}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -300,6 +421,8 @@ async def get_account():
         
         account_info = await ib_client.get_account_info()
         return account_info
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get account info: {e}")
         raise HTTPException(status_code=500, detail=str(e))

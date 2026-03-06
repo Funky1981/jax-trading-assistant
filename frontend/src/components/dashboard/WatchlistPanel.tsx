@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useMarketDataStatus } from '@/hooks/useMarketDataStatus';
 import { cn, formatCurrency, formatPercent } from '@/lib/utils';
 
 interface WatchlistPanelProps {
@@ -33,10 +34,9 @@ const columnHelper = createColumnHelper<WatchlistItem>();
 
 export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
   const { data: summary, watchlist, isLoading, isError } = useWatchlistSummary();
+  const { data: marketDataStatus } = useMarketDataStatus();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [newSymbol, setNewSymbol] = useState('');
-
-  const isDataLive = !isError && (watchlist?.length ?? 0) > 0;
   const tableData = useMemo(() => watchlist ?? [], [watchlist]);
 
   const columns = useMemo(
@@ -135,7 +135,11 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
 
   const summaryText = summary ? (
     <div className="flex items-center gap-3 text-xs">
-      <DataSourceBadge isLive={isDataLive} isError={isError} />
+      <DataSourceBadge
+        marketDataMode={marketDataStatus?.marketDataMode}
+        paperTrading={marketDataStatus?.paperTrading}
+        isError={isError}
+      />
       <span className="font-mono">{summary.count} symbols</span>
       <Separator orientation="vertical" className="h-4" />
       <span>

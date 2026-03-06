@@ -1,7 +1,8 @@
 """
 Pydantic models for API request/response validation
 """
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -82,6 +83,41 @@ class OrderStatusResponse(BaseModel):
     last_update: str
 
 
+class BrokerOrder(BaseModel):
+    """Normalized broker order view for the trading frontend."""
+    order_id: int
+    symbol: str
+    action: str
+    order_type: str
+    quantity: int
+    limit_price: Optional[float] = None
+    stop_price: Optional[float] = None
+    status: str
+    filled_qty: int
+    remaining_qty: int
+    avg_fill_price: float
+    source: str = "broker"
+    can_cancel: bool = False
+    parent_id: Optional[int] = None
+    order_ref: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+
+class OrdersResponse(BaseModel):
+    """Response containing current broker orders."""
+    orders: List[BrokerOrder]
+    count: int
+
+
+class CancelOrderResponse(BaseModel):
+    """Response after cancelling an existing order."""
+    success: bool
+    order_id: int
+    status: str
+    message: str
+
+
 class Position(BaseModel):
     """Position information with real IB market pricing"""
     symbol: str
@@ -99,6 +135,48 @@ class PositionsResponse(BaseModel):
     """Response with all positions"""
     positions: List[Position]
     count: int
+
+
+class ClosePositionRequest(BaseModel):
+    """Request to flatten or reduce an existing position."""
+    quantity: Optional[int] = Field(default=None, gt=0)
+    order_type: str = Field(default="MKT", description="MKT or LMT")
+    limit_price: Optional[float] = Field(default=None, gt=0)
+
+
+class ProtectPositionRequest(BaseModel):
+    """Request to attach or replace position protection."""
+    quantity: Optional[int] = Field(default=None, gt=0)
+    stop_loss: float = Field(..., gt=0)
+    take_profit: Optional[float] = Field(default=None, gt=0)
+    replace_existing: bool = True
+
+
+class ProtectPositionResponse(BaseModel):
+    """Response after submitting protective orders."""
+    success: bool
+    order_ids: List[int]
+    cancelled_order_ids: List[int] = Field(default_factory=list)
+    message: str
+
+
+class BracketOrderRequest(BaseModel):
+    """Request to submit an entry order with attached protection."""
+    symbol: str
+    action: str = Field(..., description="BUY or SELL")
+    quantity: int = Field(..., gt=0)
+    entry_order_type: str = Field(default="MKT", description="MKT or LMT")
+    entry_limit_price: Optional[float] = Field(default=None, gt=0)
+    stop_loss: Optional[float] = Field(default=None, gt=0)
+    take_profit: Optional[float] = Field(default=None, gt=0)
+
+
+class BracketOrderResponse(BaseModel):
+    """Response after submitting a bracket order."""
+    success: bool
+    parent_order_id: int
+    child_order_ids: List[int]
+    message: str
 
 
 class AccountResponse(BaseModel):
