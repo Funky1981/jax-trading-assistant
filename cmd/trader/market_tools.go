@@ -23,10 +23,10 @@ import (
 )
 
 type marketTools struct {
-	pool       *pgxpool.Pool
-	mdClient   *marketdata.Client
-	events     *eventAggregator
-	httpClient *http.Client
+	pool        *pgxpool.Pool
+	mdClient    *marketdata.Client
+	events      *eventAggregator
+	httpClient  *http.Client
 	ibBridgeURL string
 }
 
@@ -46,14 +46,24 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 		ibBridgeURL: strings.TrimSpace(ibBridgeURL),
 	}
 
-	providers := make([]marketdata.ProviderConfig, 0, 3)
+	providers := make([]marketdata.ProviderConfig, 0, 4)
+	if strings.TrimSpace(ibBridgeURL) != "" {
+		// The operator-facing trader UI should prefer the broker's market-data mode
+		// first so delayed/live truthfulness matches the connected bridge.
+		providers = append(providers, marketdata.ProviderConfig{
+			Name:        marketdata.ProviderIBBridge,
+			IBBridgeURL: ibBridgeURL,
+			Priority:    1,
+			Enabled:     true,
+		})
+	}
 	if alpacaKey := strings.TrimSpace(os.Getenv("ALPACA_API_KEY")); alpacaKey != "" {
 		alpacaSecret := strings.TrimSpace(os.Getenv("ALPACA_API_SECRET"))
 		providers = append(providers, marketdata.ProviderConfig{
 			Name:      marketdata.ProviderAlpaca,
 			APIKey:    alpacaKey,
 			APISecret: alpacaSecret,
-			Priority:  1,
+			Priority:  5,
 			Enabled:   true,
 		})
 	}
@@ -67,7 +77,7 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 			Name:     marketdata.ProviderPolygon,
 			APIKey:   polygonKey,
 			Tier:     envStr("POLYGON_TIER", "starter"),
-			Priority: 2,
+			Priority: 6,
 			Enabled:  true,
 		})
 	}
@@ -75,16 +85,8 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 		providers = append(providers, marketdata.ProviderConfig{
 			Name:     marketdata.ProviderFinancialDatasets,
 			APIKey:   fdKey,
-			Priority: 3,
+			Priority: 7,
 			Enabled:  true,
-		})
-	}
-	if strings.TrimSpace(ibBridgeURL) != "" {
-		providers = append(providers, marketdata.ProviderConfig{
-			Name:        marketdata.ProviderIBBridge,
-			IBBridgeURL: ibBridgeURL,
-			Priority:    10,
-			Enabled:     true,
 		})
 	}
 	if len(providers) > 0 {

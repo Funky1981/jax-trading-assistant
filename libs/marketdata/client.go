@@ -198,6 +198,18 @@ func (c *Client) Close() error {
 	return nil
 }
 
+// ProviderNames returns configured providers in the order they will be tried.
+func (c *Client) ProviderNames() []string {
+	if c == nil {
+		return nil
+	}
+	names := make([]string, 0, len(c.providers))
+	for _, provider := range c.providers {
+		names = append(names, provider.Name())
+	}
+	return names
+}
+
 func getPriority(name string, config *Config) int {
 	for _, pc := range config.Providers {
 		if string(pc.Name) == name {

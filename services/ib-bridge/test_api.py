@@ -2,6 +2,7 @@ import asyncio
 import unittest
 
 import main
+from fastapi import HTTPException
 from models import (
     BrokerOrder,
     BracketOrderRequest,
@@ -134,6 +135,14 @@ class IBBridgeApiTests(unittest.TestCase):
 
         self.assertEqual(response["parent_order_id"], 4001)
         self.assertEqual(response["child_order_ids"], [4002, 4003])
+
+    def test_quote_returns_503_when_bridge_unavailable(self):
+        main.ib_client.connected = False
+
+        with self.assertRaises(HTTPException) as ctx:
+            asyncio.run(main.get_quote("AAPL"))
+
+        self.assertEqual(ctx.exception.status_code, 503)
 
 
 if __name__ == "__main__":

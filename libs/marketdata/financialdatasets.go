@@ -95,6 +95,9 @@ func (p *FinancialDatasetsProvider) GetCandles(ctx context.Context, symbol strin
 	q.Set("interval", interval)
 	q.Set("interval_multiplier", strconv.Itoa(multiplier))
 	q.Set("limit", strconv.Itoa(limit))
+	startDate, endDate := financialDatasetsDateRange(timeframe, limit, time.Now().UTC())
+	q.Set("start_date", startDate)
+	q.Set("end_date", endDate)
 	u.RawQuery = q.Encode()
 
 	var payload struct {
@@ -128,6 +131,32 @@ func (p *FinancialDatasetsProvider) GetCandles(ctx context.Context, symbol strin
 		})
 	}
 	return out, nil
+}
+
+func financialDatasetsDateRange(timeframe Timeframe, limit int, now time.Time) (string, string) {
+	if limit <= 0 {
+		limit = 200
+	}
+	now = now.UTC()
+	tradingDays := limit
+	switch timeframe {
+	case Timeframe1Min:
+		tradingDays = max(2, (limit+389)/390)
+	case Timeframe5Min:
+		tradingDays = max(2, (limit+77)/78)
+	case Timeframe15Min:
+		tradingDays = max(2, (limit+25)/26)
+	case Timeframe1Hour:
+		tradingDays = max(3, (limit+6)/7)
+	case Timeframe1Day:
+		tradingDays = max(7, limit)
+	case Timeframe1Week:
+		tradingDays = max(30, limit*7)
+	}
+
+	calendarDays := tradingDays + max(3, tradingDays/2)
+	start := now.AddDate(0, 0, -calendarDays)
+	return start.Format("2006-01-02"), now.Format("2006-01-02")
 }
 
 func (p *FinancialDatasetsProvider) GetTrades(ctx context.Context, symbol string, limit int) ([]Trade, error) {

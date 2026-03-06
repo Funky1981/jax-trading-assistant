@@ -156,6 +156,8 @@ async def get_quote(symbol: str):
         
         quote = await ib_client.get_quote(symbol)
         return quote
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get quote for {symbol}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -180,6 +182,8 @@ async def get_candles(symbol: str, request: CandlesRequest):
             candles=candles,
             count=len(candles)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get candles for {symbol}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -236,7 +240,8 @@ async def get_candles_simple(
             candles = candles[-limit:]
 
         return CandlesResponse(symbol=symbol, candles=candles, count=len(candles))
-
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get candles for {symbol}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

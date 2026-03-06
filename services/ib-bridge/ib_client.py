@@ -44,6 +44,7 @@ class IBClient:
         self._reconnect_task: Optional[asyncio.Task] = None
         self._quote_subscriptions = {}
         self._market_data_mode = "unknown"
+        self._seen_warning_keys: set[tuple[int, str]] = set()
         
         # Set up event handlers
         self.ib.disconnectedEvent += self._on_disconnected
@@ -52,12 +53,7 @@ class IBClient:
     async def connect(self) -> None:
         """Connect to IB Gateway"""
         try:
-            await self.ib.connectAsync(
-                host=self.host,
-                port=self.port,
-                clientId=self.client_id,
-                timeout=20
-            )
+            await self._connect_with_tolerant_sync(timeout=20)
             self._connected = True
             logger.info(f"Connected to IB Gateway at {self.host}:{self.port} (client_id={self.client_id})")
             
@@ -65,6 +61,7 @@ class IBClient:
             mode_value, mode_label = self._resolve_market_data_type()
             self.ib.reqMarketDataType(mode_value)
             self._market_data_mode = mode_label
+            self._seen_warning_keys.clear()
             # Wait for the Gateway to acknowledge the data-type switch before
             # any quote requests fire (reqMarketDataType is async on the IB side).
             await asyncio.sleep(1.5)
@@ -73,6 +70,66 @@ class IBClient:
             self._connected = False
             logger.error(f"Failed to connect to IB Gateway: {e}")
             raise
+
+    async def _await_sync_request(self, name: str, awaitable, timeout: Optional[float]) -> None:
+        """Run an initial IB sync request without dropping the whole session on timeout."""
+        try:
+            if timeout:
+                await asyncio.wait_for(awaitable, timeout)
+            else:
+                await awaitable
+        except asyncio.TimeoutError:
+            logger.warning(
+                "IB startup sync timed out for %s; continuing with partial readiness",
+                name,
+            )
+        except Exception as exc:
+            logger.warning(
+                "IB startup sync failed for %s; continuing with partial readiness: %s",
+                name,
+                exc,
+            )
+
+    async def _connect_with_tolerant_sync(
+        self,
+        timeout: Optional[float] = 20,
+        readonly: bool = False,
+        account: str = "",
+    ) -> None:
+        """Connect and tolerate slow IB sync requests that should not invalidate the session."""
+        client_id = int(self.client_id)
+        self.ib.wrapper.clientId = client_id
+        timeout = timeout or None
+
+        await self.ib.client.connectAsync(self.host, self.port, client_id, timeout)
+
+        if client_id == 0:
+            self.ib.reqAutoOpenOrders(True)
+
+        accounts = self.ib.client.getAccounts()
+        if not account and len(accounts) == 1:
+            account = accounts[0]
+
+        requests = {"positions": self.ib.reqPositionsAsync()}
+        if not readonly:
+            requests["open orders"] = self.ib.reqOpenOrdersAsync()
+        if not readonly and self.ib.client.serverVersion() >= 150:
+            requests["completed orders"] = self.ib.reqCompletedOrdersAsync(False)
+        if account:
+            requests["account updates"] = self.ib.reqAccountUpdatesAsync(account)
+        if len(accounts) <= self.ib.MaxSyncedSubAccounts:
+            for subaccount in accounts:
+                requests[f"account updates for {subaccount}"] = self.ib.reqAccountUpdatesMultiAsync(subaccount)
+
+        await asyncio.gather(
+            *(self._await_sync_request(name, request, timeout) for name, request in requests.items())
+        )
+        await self._await_sync_request("executions", self.ib.reqExecutionsAsync(), timeout)
+
+        if not self.ib.client.isReady():
+            raise ConnectionError("Socket connection broken while connecting")
+
+        self.ib.connectedEvent.emit()
     
     async def disconnect(self) -> None:
         """Disconnect from IB Gateway"""
@@ -136,11 +193,38 @@ class IBClient:
     
     def _on_error(self, reqId, errorCode, errorString, contract):
         """Handle error events"""
+        warning_key = (errorCode, errorString)
+        if errorCode == 10167:
+            self._market_data_mode = "delayed"
+            if warning_key not in self._seen_warning_keys:
+                self._seen_warning_keys.add(warning_key)
+                logger.info(
+                    "IB market data subscription unavailable; bridge is using delayed data "
+                    "(reqId=%s, code=%s)",
+                    reqId,
+                    errorCode,
+                )
+            return
+        if errorCode in {2103, 2104, 2105, 2106, 2110, 2151, 2157, 2158}:
+            if warning_key not in self._seen_warning_keys:
+                self._seen_warning_keys.add(warning_key)
+                logger.info(f"IB notice - ReqId: {reqId}, Code: {errorCode}, Msg: {errorString}")
+            return
         logger.error(f"IB Error - ReqId: {reqId}, Code: {errorCode}, Msg: {errorString}")
 
     async def _qualify_stock_contract(self, symbol: str):
         contract = Stock(symbol.upper(), 'SMART', 'USD')
-        contracts = await self.ib.qualifyContractsAsync(contract)
+        try:
+            contracts = await asyncio.wait_for(
+                self.ib.qualifyContractsAsync(contract),
+                timeout=5,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "IB contract qualification timed out for %s; using SMART/USD fallback contract",
+                symbol.upper(),
+            )
+            return contract
         if not contracts:
             raise ValueError(f"Could not find contract for symbol {symbol}")
         return contracts[0]
