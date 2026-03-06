@@ -62,7 +62,7 @@ function mapApiTrade(raw: any): Order {
     side: (raw.direction ?? raw.side ?? 'buy').toLowerCase() as OrderSide,
     type: (raw.type ?? 'market') as OrderType,
     quantity: raw.quantity ?? raw.filled_qty ?? 0,
-    price: raw.price ?? raw.entry,
+    price: raw.limit_price ?? raw.price,
     stopPrice: raw.stop_price ?? raw.stop,
     status: normalizeStatus(raw.order_status ?? raw.status),
     filledQuantity: raw.filled_qty ?? raw.filledQuantity ?? 0,

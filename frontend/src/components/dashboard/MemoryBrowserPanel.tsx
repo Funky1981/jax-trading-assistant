@@ -49,7 +49,7 @@ export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps
             value={selectedBank || ''}
             onValueChange={(v) => setSelectedBank(v || null)}
           >
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="flex-1" aria-label="Select memory bank">
               <SelectValue placeholder="Select memory bank..." />
             </SelectTrigger>
             <SelectContent>
@@ -71,6 +71,9 @@ export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            id="memory-browser-search"
+            name="memorySearch"
+            aria-label="Search memories"
             placeholder="Search memories..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

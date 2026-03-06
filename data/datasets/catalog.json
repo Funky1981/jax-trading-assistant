@@ -1,0 +1,28 @@
+[
+    {
+        "source":  "alpaca",
+        "symbol":  "AAPL",
+        "id":  "0705b2cd-80b4-431c-8270-701239707398",
+        "schema_ver":  "ohlcv_v1",
+        "file_path":  "data/datasets/AAPL_2024-01.csv",
+        "created_at":  "2026-02-27T13:37:13.8474212Z",
+        "name":  "AAPL_2024-01",
+        "start_date":  "2024-01-02T00:00:00Z",
+        "end_date":  "2024-02-01T00:00:00Z",
+        "record_count":  22,
+        "hash":  "764ff6f29ea5e0d4166cd4a4e687f3b4cf627ad7420a777a2902ae6cc7077aed"
+    },
+    {
+        "source":  "alpaca",
+        "symbol":  "AAPL",
+        "id":  "7b6c4f6f-2f8d-41c5-9ab9-1fdd4e13d3b1",
+        "schema_ver":  "ohlcv_v1",
+        "file_path":  "data/datasets/AAPL_2024-01-02_2024-01-05_1m.csv",
+        "created_at":  "2026-02-27T13:37:13.9099094Z",
+        "name":  "AAPL_2024-01-02_2024-01-05_1m",
+        "start_date":  "2024-01-02T14:30:00Z",
+        "end_date":  "2024-01-05T21:00:00Z",
+        "record_count":  2729,
+        "hash":  "241f3c2b0a72b34feae3f8db46aa99a948ce15d5f61f5d82df438337b5ec97e0"
+    }
+]

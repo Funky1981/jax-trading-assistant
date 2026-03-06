@@ -61,8 +61,10 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Symbol */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Symbol</label>
+          <label htmlFor="order-ticket-symbol" className="text-sm font-medium">Symbol</label>
           <Input
+            id="order-ticket-symbol"
+            name="symbol"
             placeholder="AAPL"
             value={symbol}
             onChange={(e) => setSymbol(e.target.value.toUpperCase())}
@@ -92,9 +94,9 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
 
         {/* Order Type */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Order Type</label>
-          <Select value={orderType} onValueChange={(v) => setOrderType(v as OrderType)}>
-            <SelectTrigger>
+          <label htmlFor="order-ticket-type" className="text-sm font-medium">Order Type</label>
+          <Select name="orderType" value={orderType} onValueChange={(v) => setOrderType(v as OrderType)}>
+            <SelectTrigger id="order-ticket-type" aria-label="Order type">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -107,8 +109,10 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
 
         {/* Quantity */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Quantity</label>
+          <label htmlFor="order-ticket-quantity" className="text-sm font-medium">Quantity</label>
           <Input
+            id="order-ticket-quantity"
+            name="quantity"
             type="number"
             placeholder="100"
             value={quantity}
@@ -120,8 +124,10 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
         {/* Price (for limit orders) */}
         {orderType === 'limit' && (
           <div className="space-y-2">
-            <label className="text-sm font-medium">Limit Price</label>
+            <label htmlFor="order-ticket-limit-price" className="text-sm font-medium">Limit Price</label>
             <Input
+              id="order-ticket-limit-price"
+              name="limitPrice"
               type="number"
               placeholder="0.00"
               value={price}
@@ -134,8 +140,10 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
 
         {orderType === 'stop' && (
           <div className="space-y-2">
-            <label className="text-sm font-medium">Stop Price</label>
+            <label htmlFor="order-ticket-stop-price" className="text-sm font-medium">Stop Price</label>
             <Input
+              id="order-ticket-stop-price"
+              name="stopPrice"
               type="number"
               placeholder="0.00"
               value={stopPrice}

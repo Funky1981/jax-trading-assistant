@@ -172,7 +172,7 @@ export function MetricsPanel({ isOpen, onToggle }: MetricsPanelProps) {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="w-36 h-8">
+            <SelectTrigger className="w-36 h-8" aria-label="Filter metrics by source">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

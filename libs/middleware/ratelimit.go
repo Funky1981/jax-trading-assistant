@@ -3,26 +3,30 @@ package middleware
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
 
 // RateLimitConfig holds rate limiting configuration
 type RateLimitConfig struct {
-	RequestsPerMinute int
-	RequestsPerHour   int
-	Enabled           bool
+	RequestsPerMinute    int
+	RequestsPerHour      int
+	Enabled              bool
+	TrustPrivateNetworks bool
 }
 
 // DefaultRateLimitConfig returns default rate limit configuration
 func DefaultRateLimitConfig() RateLimitConfig {
 	return RateLimitConfig{
-		RequestsPerMinute: 100,
-		RequestsPerHour:   1000,
-		Enabled:           true,
+		RequestsPerMinute:    100,
+		RequestsPerHour:      1000,
+		Enabled:              true,
+		TrustPrivateNetworks: false,
 	}
 }
 
@@ -44,6 +48,10 @@ func RateLimitConfigFromEnv() RateLimitConfig {
 
 	if enabled := os.Getenv("RATE_LIMIT_ENABLED"); enabled != "" {
 		config.Enabled = enabled != "false" && enabled != "0"
+	}
+
+	if trustPrivate := os.Getenv("RATE_LIMIT_TRUST_PRIVATE_NETWORKS"); trustPrivate != "" {
+		config.TrustPrivateNetworks = trustPrivate == "true" || trustPrivate == "1"
 	}
 
 	return config
@@ -167,6 +175,10 @@ func (rl *RateLimiter) cleanup() {
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		clientIP := getClientIP(r)
+		if rl.shouldBypass(r, clientIP) {
+			next.ServeHTTP(w, r)
+			return
+		}
 
 		allowed, message := rl.Allow(clientIP)
 		if !allowed {
@@ -185,6 +197,10 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 func (rl *RateLimiter) MiddlewareFunc(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		clientIP := getClientIP(r)
+		if rl.shouldBypass(r, clientIP) {
+			next(w, r)
+			return
+		}
 
 		allowed, message := rl.Allow(clientIP)
 		if !allowed {
@@ -197,6 +213,33 @@ func (rl *RateLimiter) MiddlewareFunc(next http.HandlerFunc) http.HandlerFunc {
 
 		next(w, r)
 	}
+}
+
+func (rl *RateLimiter) shouldBypass(r *http.Request, clientIP string) bool {
+	if !rl.config.Enabled {
+		return true
+	}
+	if isRateLimitExemptPath(r.URL.Path) {
+		return true
+	}
+	return rl.config.TrustPrivateNetworks && isPrivateOrLoopbackIP(clientIP)
+}
+
+func isRateLimitExemptPath(path string) bool {
+	switch strings.TrimSpace(path) {
+	case "/health", "/auth/status", "/metrics/prometheus":
+		return true
+	default:
+		return false
+	}
+}
+
+func isPrivateOrLoopbackIP(raw string) bool {
+	ip := net.ParseIP(strings.TrimSpace(raw))
+	if ip == nil {
+		return false
+	}
+	return ip.IsLoopback() || ip.IsPrivate()
 }
 
 // getClientIP extracts the client IP address from the request

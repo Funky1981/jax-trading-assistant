@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Lock, Unlock, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { WidgetGrid, WidgetPanel, ROW_HEIGHT, type Layouts } from '@/components/layout';
+import { DashboardGrid, DashboardPanel } from '@/components/layout';
 import {
   HealthPanel,
   WatchlistPanel,
@@ -11,164 +11,38 @@ import {
   SignalsQueuePanel,
 } from '@/components/dashboard';
 import { HelpHint } from '@/components/ui/help-hint';
-import { cn } from '@/lib/utils';
 
-// Panel IDs for the overview dashboard
 const PANEL_IDS = ['health', 'watchlist', 'positions', 'risk', 'signalsQueue', 'aiAssistant'] as const;
-
 type PanelId = (typeof PANEL_IDS)[number];
 
-// Storage keys
-const LAYOUTS_STORAGE_KEY = 'jax-dashboard-widget-layouts';
-const PANEL_STATE_STORAGE_KEY = 'jax-dashboard-panel-states';
-const COLLAPSED_WIDGET_ROWS = 2;
-const HEIGHT_BUFFER_PX = 12;
+const STORAGE_KEY = 'jax-dashboard-panels';
 
-// Default layout for lg breakpoint (12 columns)
-const DEFAULT_LAYOUTS: Layouts = {
-  lg: [
-    { x: 0, y: 0, w: 4, h: 5, i: 'health' },
-    { x: 4, y: 0, w: 4, h: 6, i: 'watchlist' },
-    { x: 0, y: 5, w: 8, h: 6, i: 'positions' },
-    { x: 8, y: 0, w: 4, h: 6, i: 'risk' },
-    { x: 0, y: 11, w: 12, h: 8, i: 'signalsQueue' },
-    { x: 0, y: 19, w: 12, h: 8, i: 'aiAssistant' },
-  ],
-  md: [
-    { x: 0, y: 0, w: 5, h: 5, i: 'health' },
-    { x: 5, y: 0, w: 5, h: 6, i: 'watchlist' },
-    { x: 0, y: 5, w: 6, h: 6, i: 'positions' },
-    { x: 6, y: 6, w: 4, h: 6, i: 'risk' },
-    { x: 0, y: 11, w: 10, h: 8, i: 'signalsQueue' },
-    { x: 0, y: 19, w: 10, h: 8, i: 'aiAssistant' },
-  ],
-  sm: [
-    { x: 0, y: 0, w: 6, h: 5, i: 'health' },
-    { x: 0, y: 5, w: 6, h: 6, i: 'watchlist' },
-    { x: 0, y: 11, w: 6, h: 6, i: 'positions' },
-    { x: 0, y: 17, w: 6, h: 6, i: 'risk' },
-    { x: 0, y: 23, w: 6, h: 8, i: 'signalsQueue' },
-    { x: 0, y: 31, w: 6, h: 8, i: 'aiAssistant' },
-  ],
-  xs: [
-    { x: 0, y: 0, w: 4, h: 5, i: 'health' },
-    { x: 0, y: 5, w: 4, h: 6, i: 'watchlist' },
-    { x: 0, y: 11, w: 4, h: 6, i: 'positions' },
-    { x: 0, y: 17, w: 4, h: 6, i: 'risk' },
-    { x: 0, y: 23, w: 4, h: 8, i: 'signalsQueue' },
-    { x: 0, y: 31, w: 4, h: 8, i: 'aiAssistant' },
-  ],
-};
-
-function loadLayouts(): Layouts {
+function loadPanelState(): Record<PanelId, boolean> {
   try {
-    const stored = localStorage.getItem(LAYOUTS_STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored) as Layouts;
-      return mergeLayouts(parsed, DEFAULT_LAYOUTS);
+      return JSON.parse(stored);
     }
   } catch {
     // Ignore storage errors
   }
-  return DEFAULT_LAYOUTS;
+  return PANEL_IDS.reduce((acc, id) => ({ ...acc, [id]: true }), {} as Record<PanelId, boolean>);
 }
 
-function saveLayouts(layouts: Layouts) {
+function savePanelState(state: Record<PanelId, boolean>) {
   try {
-    localStorage.setItem(LAYOUTS_STORAGE_KEY, JSON.stringify(layouts));
-  } catch {
-    // Ignore storage errors
-  }
-}
-
-function loadPanelStates(): Record<PanelId, boolean> {
-  try {
-    const stored = localStorage.getItem(PANEL_STATE_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored) as Record<PanelId, boolean>;
-      return {
-        ...PANEL_IDS.reduce(
-          (acc, id) => ({ ...acc, [id]: true }),
-          {} as Record<PanelId, boolean>
-        ),
-        ...parsed,
-      };
-    }
-  } catch {
-    // Ignore storage errors
-  }
-  // Default: all panels expanded
-  return PANEL_IDS.reduce(
-    (acc, id) => ({ ...acc, [id]: true }),
-    {} as Record<PanelId, boolean>
-  );
-}
-
-function mergeLayouts(current: Layouts, defaults: Layouts): Layouts {
-  const result: Layouts = { ...current };
-  (Object.keys(defaults) as Array<keyof Layouts>).forEach((breakpoint) => {
-    const currentItems = current[breakpoint] ?? [];
-    const defaultItems = defaults[breakpoint] ?? [];
-    const currentIds = new Set(currentItems.map((item) => item.i));
-    const merged = [...currentItems];
-    defaultItems.forEach((item) => {
-      if (!currentIds.has(item.i)) {
-        merged.push(item);
-      }
-    });
-    result[breakpoint] = merged;
-  });
-  return result;
-}
-
-function savePanelStates(state: Record<PanelId, boolean>) {
-  try {
-    localStorage.setItem(PANEL_STATE_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Ignore storage errors
   }
 }
 
 export function DashboardPage() {
-  const [isEditing, setIsEditing] = useState(false);
-  const [layouts, setLayouts] = useState<Layouts>(loadLayouts);
-  const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelStates);
-  const [panelHeights, setPanelHeights] = useState<Record<PanelId, number>>(() =>
-    PANEL_IDS.reduce(
-      (acc, id) => ({ ...acc, [id]: 0 }),
-      {} as Record<PanelId, number>
-    )
-  );
+  const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelState);
 
-  // Persist layouts when they change
   useEffect(() => {
-    saveLayouts(layouts);
-  }, [layouts]);
-
-  // Persist panel states when they change
-  useEffect(() => {
-    savePanelStates(panelStates);
+    savePanelState(panelStates);
   }, [panelStates]);
-
-  const handleLayoutChange = useCallback((newLayouts: Layouts) => {
-    setLayouts(newLayouts);
-  }, []);
-
-  const handlePanelHeight = useCallback((panelId: string, height: number) => {
-    if (!PANEL_IDS.includes(panelId as PanelId)) {
-      return;
-    }
-    setPanelHeights((prev) => {
-      if (prev[panelId as PanelId] === height) {
-        return prev;
-      }
-      return { ...prev, [panelId as PanelId]: height };
-    });
-  }, []);
-
-  const handleResetLayout = useCallback(() => {
-    setLayouts(DEFAULT_LAYOUTS);
-  }, []);
 
   const togglePanel = useCallback((panelId: PanelId) => {
     setPanelStates((prev) => ({
@@ -178,68 +52,18 @@ export function DashboardPage() {
   }, []);
 
   const expandAll = useCallback(() => {
-    setPanelStates(
-      PANEL_IDS.reduce(
-        (acc, id) => ({ ...acc, [id]: true }),
-        {} as Record<PanelId, boolean>
-      )
-    );
+    setPanelStates(PANEL_IDS.reduce((acc, id) => ({ ...acc, [id]: true }), {} as Record<PanelId, boolean>));
   }, []);
 
   const collapseAll = useCallback(() => {
-    setPanelStates(
-      PANEL_IDS.reduce(
-        (acc, id) => ({ ...acc, [id]: false }),
-        {} as Record<PanelId, boolean>
-      )
-    );
+    setPanelStates(PANEL_IDS.reduce((acc, id) => ({ ...acc, [id]: false }), {} as Record<PanelId, boolean>));
   }, []);
 
   const allExpanded = PANEL_IDS.every((id) => panelStates[id]);
   const allCollapsed = PANEL_IDS.every((id) => !panelStates[id]);
 
-  useEffect(() => {
-    if (isEditing) {
-      return;
-    }
-    if (Object.keys(panelHeights).length === 0) {
-      return;
-    }
-    setLayouts((current) => {
-      const next: Layouts = {};
-      (Object.keys(current) as Array<keyof Layouts>).forEach((breakpoint) => {
-        const items = current[breakpoint] ?? [];
-        next[breakpoint] = items.map((item) => {
-          const panelId = item.i as PanelId;
-          if (!PANEL_IDS.includes(panelId)) {
-            return item;
-          }
-          const isOpen = panelStates[panelId];
-          const measuredHeight = panelHeights[panelId] ?? 0;
-          const targetRows = isOpen
-            ? Math.max(
-                item.h,
-                Math.ceil((measuredHeight + HEIGHT_BUFFER_PX) / ROW_HEIGHT)
-              )
-            : COLLAPSED_WIDGET_ROWS;
-          if (targetRows === item.h) {
-            return item;
-          }
-          return { ...item, h: targetRows };
-        });
-      });
-      return next;
-    });
-  }, [isEditing, panelHeights, panelStates]);
-
   return (
-    <div
-      className={cn(
-        'space-y-6',
-        isEditing && 'ring-2 ring-primary/20 rounded-lg p-4'
-      )}
-    >
-      {/* Page Header */}
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
@@ -250,36 +74,11 @@ export function DashboardPage() {
             <HelpHint text="Customize this layout to monitor health, risk, signals, and AI context." />
           </h1>
           <p className="text-muted-foreground mt-1">
-            Start here for a quick overview. Use Edit Layout to move or hide panels.
+            Start here for a quick overview. Use the panel toggles for compact or expanded views.
           </p>
         </div>
 
-        {/* Controls */}
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditing(!isEditing)}
-            className="w-full sm:w-auto"
-          >
-            {isEditing ? (
-              <>
-                <Lock className="h-4 w-4 mr-1" />
-                Lock Layout
-              </>
-            ) : (
-              <>
-                <Unlock className="h-4 w-4 mr-1" />
-                Edit Layout
-              </>
-            )}
-          </Button>
-          {isEditing && (
-            <Button variant="outline" size="sm" onClick={handleResetLayout} className="w-full sm:w-auto">
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Reset Layout
-            </Button>
-          )}
           <Button
             variant="outline"
             size="sm"
@@ -303,96 +102,49 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Widget Grid */}
-      <WidgetGrid
-        layouts={layouts}
-        onLayoutChange={handleLayoutChange}
-        isEditable={isEditing}
-      >
-        <div key="health">
-          <WidgetPanel
-            id="health"
-            title="System Health"
-            isEditable={isEditing}
-            onHeightChange={handlePanelHeight}
-          >
-            <HealthPanel
-              isOpen={panelStates.health}
-              onToggle={() => togglePanel('health')}
-            />
-          </WidgetPanel>
-        </div>
+      <DashboardGrid>
+        <DashboardPanel>
+          <HealthPanel
+            isOpen={panelStates.health}
+            onToggle={() => togglePanel('health')}
+          />
+        </DashboardPanel>
 
-        <div key="watchlist">
-          <WidgetPanel
-            id="watchlist"
-            title="Watchlist"
-            isEditable={isEditing}
-            onHeightChange={handlePanelHeight}
-          >
-            <WatchlistPanel
-              isOpen={panelStates.watchlist}
-              onToggle={() => togglePanel('watchlist')}
-            />
-          </WidgetPanel>
-        </div>
+        <DashboardPanel>
+          <WatchlistPanel
+            isOpen={panelStates.watchlist}
+            onToggle={() => togglePanel('watchlist')}
+          />
+        </DashboardPanel>
 
-        <div key="positions">
-          <WidgetPanel
-            id="positions"
-            title="Positions"
-            isEditable={isEditing}
-            onHeightChange={handlePanelHeight}
-          >
-            <PositionsPanel
-              isOpen={panelStates.positions}
-              onToggle={() => togglePanel('positions')}
-            />
-          </WidgetPanel>
-        </div>
+        <DashboardPanel>
+          <RiskSummaryPanel
+            isOpen={panelStates.risk}
+            onToggle={() => togglePanel('risk')}
+          />
+        </DashboardPanel>
 
-        <div key="risk">
-          <WidgetPanel
-            id="risk"
-            title="Risk Summary"
-            isEditable={isEditing}
-            onHeightChange={handlePanelHeight}
-          >
-            <RiskSummaryPanel
-              isOpen={panelStates.risk}
-              onToggle={() => togglePanel('risk')}
-            />
-          </WidgetPanel>
-        </div>
+        <DashboardPanel colSpan={3}>
+          <PositionsPanel
+            isOpen={panelStates.positions}
+            onToggle={() => togglePanel('positions')}
+          />
+        </DashboardPanel>
 
-        <div key="signalsQueue">
-          <WidgetPanel
-            id="signalsQueue"
-            title="Trading Approvals"
-            isEditable={isEditing}
-            onHeightChange={handlePanelHeight}
-          >
-            <SignalsQueuePanel
-              isOpen={panelStates.signalsQueue}
-              onToggle={() => togglePanel('signalsQueue')}
-            />
-          </WidgetPanel>
-        </div>
+        <DashboardPanel colSpan={3}>
+          <SignalsQueuePanel
+            isOpen={panelStates.signalsQueue}
+            onToggle={() => togglePanel('signalsQueue')}
+          />
+        </DashboardPanel>
 
-        <div key="aiAssistant">
-          <WidgetPanel
-            id="aiAssistant"
-            title="AI Trading Assistant"
-            isEditable={isEditing}
-            onHeightChange={handlePanelHeight}
-          >
-            <AIAssistantPanel
-              isOpen={panelStates.aiAssistant}
-              onToggle={() => togglePanel('aiAssistant')}
-            />
-          </WidgetPanel>
-        </div>
-      </WidgetGrid>
+        <DashboardPanel colSpan={3}>
+          <AIAssistantPanel
+            isOpen={panelStates.aiAssistant}
+            onToggle={() => togglePanel('aiAssistant')}
+          />
+        </DashboardPanel>
+      </DashboardGrid>
     </div>
   );
 }

@@ -4,6 +4,7 @@ Handles connection and operations with IB Gateway using ib_insync
 """
 import asyncio
 import logging
+import os
 from datetime import datetime
 from typing import List, Optional, AsyncGenerator
 from decimal import Decimal
@@ -33,6 +34,7 @@ class IBClient:
         self._connected = False
         self._reconnect_task: Optional[asyncio.Task] = None
         self._quote_subscriptions = {}
+        self._market_data_mode = "unknown"
         
         # Set up event handlers
         self.ib.disconnectedEvent += self._on_disconnected
@@ -51,7 +53,9 @@ class IBClient:
             logger.info(f"Connected to IB Gateway at {self.host}:{self.port} (client_id={self.client_id})")
             
             # Request market data type (1=live, 2=frozen, 3=delayed, 4=delayed-frozen)
-            self.ib.reqMarketDataType(3)  # Use delayed data by default for safety
+            mode_value, mode_label = self._resolve_market_data_type()
+            self.ib.reqMarketDataType(mode_value)
+            self._market_data_mode = mode_label
             # Wait for the Gateway to acknowledge the data-type switch before
             # any quote requests fire (reqMarketDataType is async on the IB side).
             await asyncio.sleep(1.5)
@@ -78,6 +82,21 @@ class IBClient:
     def is_connected(self) -> bool:
         """Check if connected to IB Gateway"""
         return self._connected and self.ib.isConnected()
+
+    def market_data_mode(self) -> str:
+        """Configured IB market data mode for this bridge instance."""
+        return self._market_data_mode
+
+    def _resolve_market_data_type(self) -> tuple[int, str]:
+        raw = os.getenv("IB_MARKET_DATA_TYPE", "delayed").strip().lower()
+        mapping = {
+            "live": (1, "live"),
+            "frozen": (2, "frozen"),
+            "delayed": (3, "delayed"),
+            "delayed-frozen": (4, "delayed-frozen"),
+            "delayed_frozen": (4, "delayed-frozen"),
+        }
+        return mapping.get(raw, (3, "delayed"))
     
     async def _reconnect(self) -> None:
         """Attempt to reconnect to IB Gateway"""
@@ -170,17 +189,35 @@ class IBClient:
                 raise ValueError(f"Could not find contract for symbol {symbol}")
             
             contract = contracts[0]
-            
-            # Request historical data
-            bars = await self.ib.reqHistoricalDataAsync(
-                contract,
-                endDateTime='',
-                durationStr=duration,
-                barSizeSetting=bar_size,
-                whatToShow=what_to_show,
-                useRTH=True,
-                formatDate=1
-            )
+
+            intraday_request = "min" in bar_size.lower() or "hour" in bar_size.lower()
+            timeout_seconds = 8 if intraday_request else 20
+
+            # Historical intraday bars can hang indefinitely when the IB account
+            # lacks market-data entitlements. Fail fast with an explicit error.
+            try:
+                bars = await asyncio.wait_for(
+                    self.ib.reqHistoricalDataAsync(
+                        contract,
+                        endDateTime='',
+                        durationStr=duration,
+                        barSizeSetting=bar_size,
+                        whatToShow=what_to_show,
+                        useRTH=True,
+                        formatDate=1
+                    ),
+                    timeout=timeout_seconds,
+                )
+            except asyncio.TimeoutError as exc:
+                if intraday_request:
+                    raise RuntimeError(
+                        "IB intraday historical data timed out. "
+                        "This usually means the account lacks Level 1 market-data "
+                        "subscriptions required for API historical intraday bars."
+                    ) from exc
+                raise RuntimeError(
+                    f"IB historical data timed out for {symbol} ({bar_size}, {duration})."
+                ) from exc
             
             # Convert to Candle objects
             candles = []

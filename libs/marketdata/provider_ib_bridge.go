@@ -124,7 +124,7 @@ func (p *IBBridgeProvider) HealthCheck(ctx context.Context) error {
 
 // GetCandles fetches historical OHLCV bars from the IB bridge GET /candles/{symbol} endpoint.
 func (p *IBBridgeProvider) GetCandles(ctx context.Context, symbol string, timeframe Timeframe, limit int) ([]Candle, error) {
-	reqURL := fmt.Sprintf("%s/candles/%s?limit=%d&timeframe=%s", p.baseURL, symbol, limit, string(timeframe))
+	reqURL := fmt.Sprintf("%s/candles/%s?limit=%d&timeframe=%s", p.baseURL, symbol, limit, ibBridgeTimeframe(timeframe))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to build candles request: %v", ErrProviderError, err)
@@ -179,6 +179,25 @@ func (p *IBBridgeProvider) GetCandles(ctx context.Context, symbol string, timefr
 		})
 	}
 	return candles, nil
+}
+
+func ibBridgeTimeframe(timeframe Timeframe) string {
+	switch timeframe {
+	case Timeframe1Min:
+		return "1m"
+	case Timeframe5Min:
+		return "5m"
+	case Timeframe15Min:
+		return "15m"
+	case Timeframe1Hour:
+		return "1h"
+	case Timeframe1Day:
+		return "1d"
+	case Timeframe1Week:
+		return "1w"
+	default:
+		return string(timeframe)
+	}
 }
 
 func parseBridgeTimestamp(raw string) (time.Time, error) {

@@ -3,6 +3,7 @@ import { LineChart } from 'lucide-react';
 import { createChart, IChartApi, ISeriesApi, CandlestickData, Time } from 'lightweight-charts';
 import { useQuery } from '@tanstack/react-query';
 import { CollapsiblePanel } from './CollapsiblePanel';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import {
   Select,
   SelectContent,
@@ -20,12 +21,13 @@ interface PriceChartPanelProps {
 
 const symbols = ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'TSLA', 'SPY', 'QQQ'];
 const timeframes = [
-  { label: '1m', value: '1' },
-  { label: '5m', value: '5' },
-  { label: '15m', value: '15' },
-  { label: '1h', value: '60' },
-  { label: '1d', value: '1D' },
+  { label: '1m', value: '1m' },
+  { label: '5m', value: '5m' },
+  { label: '15m', value: '15m' },
+  { label: '1h', value: '1h' },
+  { label: '1d', value: '1d' },
 ];
+const emptyCandles: CandlestickData[] = [];
 
 interface RawCandle {
   timestamp: string;
@@ -35,15 +37,43 @@ interface RawCandle {
   close: number;
 }
 
-async function fetchCandles(symbol: string, timeframe: string): Promise<CandlestickData[]> {
+interface ChartCandlesResponse {
+  symbol?: string;
+  timeframe?: string;
+  requestedTimeframe?: string;
+  degraded?: boolean;
+  message?: string;
+  marketDataMode?: string;
+  paperTrading?: boolean;
+  candles?: RawCandle[];
+}
+
+interface ChartCandlesResult {
+  candles: CandlestickData[];
+  timeframe: string;
+  requestedTimeframe: string;
+  degraded: boolean;
+  message: string;
+  marketDataMode: string;
+  paperTrading: boolean;
+}
+
+async function fetchCandles(symbol: string, timeframe: string): Promise<ChartCandlesResult> {
   const response = await fetch(
-    buildUrl('IB_BRIDGE', `/candles/${encodeURIComponent(symbol)}?limit=100&timeframe=${encodeURIComponent(timeframe)}`)
+    buildUrl(
+      'JAX_API',
+      `/api/v1/market/candles?symbol=${encodeURIComponent(symbol)}&limit=100&timeframe=${encodeURIComponent(timeframe)}`
+    )
   );
   if (!response.ok) {
     throw new Error(`Chart data unavailable (HTTP ${response.status})`);
   }
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('Chart data unavailable (non-JSON response)');
+  }
 
-  const payload = (await response.json()) as { candles?: RawCandle[] };
+  const payload = (await response.json()) as ChartCandlesResponse;
   const candles = payload.candles ?? [];
 
   const mapped = candles
@@ -64,31 +94,58 @@ async function fetchCandles(symbol: string, timeframe: string): Promise<Candlest
     throw new Error('Chart data unavailable (no valid candles)');
   }
 
-  return mapped;
+  return {
+    candles: mapped,
+    timeframe: payload.timeframe ?? timeframe,
+    requestedTimeframe: payload.requestedTimeframe ?? timeframe,
+    degraded: payload.degraded === true,
+    message: payload.message ?? '',
+    marketDataMode: payload.marketDataMode ?? 'unknown',
+    paperTrading: payload.paperTrading !== false,
+  };
 }
 
 export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
   const [symbol, setSymbol] = useState('AAPL');
-  const [timeframe, setTimeframe] = useState('15');
+  const [timeframe, setTimeframe] = useState('15m');
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
 
-  const { data = [], isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['chart-candles', symbol, timeframe],
     queryFn: () => fetchCandles(symbol, timeframe),
     refetchInterval: (query) => (query.state.error ? false : 10_000),
     retry: false,
   });
+  const { data: watchlist = [] } = useWatchlist();
+  const fallbackQuote = watchlist.find((item) => item.symbol === symbol);
+  const candles = data?.candles ?? emptyCandles;
+  const chartTimeframe = data?.timeframe ?? timeframe;
+  const requestedTimeframe = data?.requestedTimeframe ?? timeframe;
+  const isDegraded = data?.degraded === true;
+  const degradedMessage = data?.message ?? '';
+  const marketDataMode = data?.marketDataMode ?? 'unknown';
+  const paperTrading = data?.paperTrading !== false;
+  const marketDataLabel = marketDataMode === 'live' ? 'Live' : marketDataMode === 'delayed' ? 'Delayed' : marketDataMode === 'frozen' ? 'Frozen' : marketDataMode === 'delayed-frozen' ? 'Delayed Frozen' : 'Unknown';
+  const marketDataTone = marketDataMode === 'live' ? 'text-success border-success/40 bg-success/10' : marketDataMode === 'delayed' || marketDataMode === 'delayed-frozen' ? 'text-warning border-warning/40 bg-warning/10' : 'text-muted-foreground border-border bg-muted/20';
 
-  const currentPrice = data[data.length - 1]?.close || 0;
-  const prevClose = data[data.length - 2]?.close || currentPrice;
+  const currentPrice = candles[candles.length - 1]?.close || fallbackQuote?.price || 0;
+  const prevClose = candles[candles.length - 2]?.close || currentPrice;
   const priceChange = currentPrice - prevClose;
   const priceChangePercent = prevClose > 0 ? (priceChange / prevClose) * 100 : 0;
 
   const statusSummary = useMemo(() => {
     if (isLoading) return <span className="text-xs text-muted-foreground">Loading live candles...</span>;
+    if (isError && fallbackQuote) return <span className="text-xs text-warning">Live candles unavailable - delayed quote</span>;
     if (isError) return <span className="text-xs text-destructive">Chart feed unavailable</span>;
+    if (isDegraded) {
+      return (
+        <span className="text-xs text-warning">
+          {requestedTimeframe} unavailable - showing {chartTimeframe}
+        </span>
+      );
+    }
     return (
       <div className="flex items-center gap-2">
         <span className="font-mono font-semibold">{symbol}</span>
@@ -102,19 +159,29 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
         </span>
       </div>
     );
-  }, [currentPrice, isError, isLoading, priceChange, priceChangePercent, symbol]);
+  }, [
+    chartTimeframe,
+    currentPrice,
+    fallbackQuote,
+    isDegraded,
+    isError,
+    isLoading,
+    priceChange,
+    priceChangePercent,
+    requestedTimeframe,
+    symbol,
+  ]);
 
   useEffect(() => {
-    if (!chartContainerRef.current || !isOpen || isError || data.length === 0) return;
+    if (!chartContainerRef.current || !isOpen || isError || candles.length === 0) return;
 
-    // Create chart with actual colors (lightweight-charts doesn't support CSS variables)
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { color: 'transparent' },
-        textColor: '#94a3b8', // slate-400
+        textColor: '#94a3b8',
       },
       grid: {
-        vertLines: { color: '#1e293b' }, // slate-800
+        vertLines: { color: '#1e293b' },
         horzLines: { color: '#1e293b' },
       },
       crosshair: {
@@ -134,10 +201,9 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
 
     chartRef.current = chart;
 
-    // Add candlestick series
     const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#22c55e', // green-500
-      downColor: '#ef4444', // red-500
+      upColor: '#22c55e',
+      downColor: '#ef4444',
       borderDownColor: '#ef4444',
       borderUpColor: '#22c55e',
       wickDownColor: '#ef4444',
@@ -145,10 +211,9 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
     });
 
     seriesRef.current = candlestickSeries;
-    candlestickSeries.setData(data);
+    candlestickSeries.setData(candles);
     chart.timeScale().fitContent();
 
-    // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current) {
         chart.applyOptions({ width: chartContainerRef.current.clientWidth });
@@ -163,15 +228,14 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
       chartRef.current = null;
       seriesRef.current = null;
     };
-  }, [data, isError, isOpen]);
+  }, [candles, isError, isOpen]);
 
-  // Update data when symbol/timeframe changes
   useEffect(() => {
-    if (seriesRef.current && isOpen && data.length > 0) {
-      seriesRef.current.setData(data);
+    if (seriesRef.current && isOpen && candles.length > 0) {
+      seriesRef.current.setData(candles);
       chartRef.current?.timeScale().fitContent();
     }
-  }, [data, isOpen]);
+  }, [candles, isOpen]);
 
   return (
     <CollapsiblePanel
@@ -183,12 +247,11 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
       isLoading={isLoading}
     >
       <div className="space-y-4">
-        {/* Controls */}
         <div className="flex gap-4">
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Symbol</label>
+            <label htmlFor="price-chart-symbol" className="text-xs text-muted-foreground">Symbol</label>
             <Select value={symbol} onValueChange={setSymbol}>
-              <SelectTrigger className="w-28 h-8">
+              <SelectTrigger id="price-chart-symbol" className="w-28 h-8" aria-label="Chart symbol">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -201,9 +264,9 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
             </Select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Timeframe</label>
+            <label htmlFor="price-chart-timeframe" className="text-xs text-muted-foreground">Timeframe</label>
             <Select value={timeframe} onValueChange={setTimeframe}>
-              <SelectTrigger className="w-20 h-8">
+              <SelectTrigger id="price-chart-timeframe" className="w-20 h-8" aria-label="Chart timeframe">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -216,23 +279,46 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
             </Select>
           </div>
           <div className="ml-auto text-right">
+            <div className="mb-1 flex justify-end gap-2">
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${marketDataTone}`}>
+                {marketDataLabel}
+              </span>
+              <span className="rounded-full border border-border bg-muted/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {paperTrading ? 'Paper' : 'Live Trading'}
+              </span>
+            </div>
             <p className="text-2xl font-mono font-bold">
-              {isError ? '—' : formatCurrency(currentPrice)}
+              {currentPrice > 0 ? formatCurrency(currentPrice) : '--'}
             </p>
             <p
               className={`text-sm font-mono ${
                 priceChange >= 0 ? 'text-success' : 'text-destructive'
               }`}
             >
-              {isError ? 'Unavailable' : `${priceChange >= 0 ? '+' : ''}${formatCurrency(priceChange)} (${priceChangePercent.toFixed(2)}%)`}
+              {isError && !fallbackQuote
+                ? 'Unavailable'
+                : `${priceChange >= 0 ? '+' : ''}${formatCurrency(priceChange)} (${priceChangePercent.toFixed(2)}%)`}
             </p>
           </div>
         </div>
 
-        {/* Chart */}
+        {isDegraded ? (
+          <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+            {degradedMessage || `${requestedTimeframe} candles are unavailable. Showing ${chartTimeframe} instead.`}
+          </div>
+        ) : null}
+
         {isError ? (
-          <div className="h-[300px] flex items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground">
-            Live chart data is unavailable.
+          <div className="h-[300px] flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border text-sm text-muted-foreground">
+            {fallbackQuote ? (
+              <>
+                <div className="text-xs uppercase tracking-wide text-warning">Delayed Quote</div>
+                <div className="font-mono text-lg text-foreground">{formatCurrency(fallbackQuote.price)}</div>
+                <div>Live candles are currently unavailable.</div>
+              </>
+            ) : (
+              <div>Live chart data is unavailable.</div>
+            )}
           </div>
         ) : (
           <div ref={chartContainerRef} className="w-full" />

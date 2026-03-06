@@ -116,3 +116,5 @@ class HealthResponse(BaseModel):
     status: str
     connected: bool
     version: str
+    market_data_mode: str = "unknown"
+    paper_trading: bool = True

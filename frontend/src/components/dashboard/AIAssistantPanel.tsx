@@ -224,12 +224,18 @@ export function AIAssistantPanel({ isOpen, onToggle }: AIAssistantPanelProps) {
         <div className="space-y-2">
           <div className="flex gap-2">
             <Input
+              id="ai-symbol"
+              name="symbol"
+              aria-label="Trading symbol"
               placeholder="Symbol (e.g., AAPL)"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               className="w-32"
             />
             <Input
+              id="ai-context"
+              name="context"
+              aria-label="Additional trading context"
               placeholder="Additional context (optional)"
               value={context}
               onChange={(e) => setContext(e.target.value)}

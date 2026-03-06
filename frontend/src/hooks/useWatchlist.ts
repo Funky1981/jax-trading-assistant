@@ -4,8 +4,8 @@ import { buildUrl } from '@/config/api';
 export interface WatchlistItem {
   symbol: string;
   price: number;
-  change: number;
-  changePercent: number;
+  change: number | null;
+  changePercent: number | null;
   volume: number;
   high: number;
   low: number;
@@ -24,8 +24,8 @@ async function fetchWatchlist(): Promise<WatchlistItem[]> {
       return {
         symbol: data.symbol ?? symbol,
         price: data.price ?? data.last ?? 0,
-        change: data.change ?? 0,
-        changePercent: data.change_percent ?? 0,
+        change: data.change ?? null,
+        changePercent: data.change_percent ?? null,
         volume: data.volume ?? 0,
         high: data.high ?? 0,
         low: data.low ?? 0,
@@ -58,15 +58,20 @@ export function useWatchlist() {
 
 export function useWatchlistSummary() {
   const { data: watchlist, ...rest } = useWatchlist();
+  const validMovers = (watchlist ?? []).filter(
+    (item): item is WatchlistItem & { changePercent: number } => item.changePercent !== null
+  );
   
   const summary = watchlist && watchlist.length > 0
     ? {
         count: watchlist.length,
-        topMover: watchlist.reduce((best, item) => 
+        topMover: validMovers.length > 0
+          ? validMovers.reduce((best, item) => 
           Math.abs(item.changePercent) > Math.abs(best.changePercent) ? item : best
-        ),
-        gainers: watchlist.filter((item) => item.changePercent > 0).length,
-        losers: watchlist.filter((item) => item.changePercent < 0).length,
+        )
+          : null,
+        gainers: validMovers.filter((item) => item.changePercent > 0).length,
+        losers: validMovers.filter((item) => item.changePercent < 0).length,
       }
     : null;
   

@@ -278,6 +278,9 @@ export function SignalsQueuePanel({ isOpen, onToggle }: SignalsQueuePanelProps) 
           </div>
           <div className="flex items-center gap-2">
             <Input
+              id="signals-approver"
+              name="approvedBy"
+              aria-label="Approved by"
               value={approver}
               onChange={(e) => setApprover(e.target.value)}
               placeholder="Approved by"

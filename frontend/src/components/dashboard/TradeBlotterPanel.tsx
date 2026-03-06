@@ -176,7 +176,7 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32 h-8">
+            <SelectTrigger className="w-32 h-8" aria-label="Filter orders by status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -193,13 +193,13 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
         </div>
 
         {/* Table */}
-        <div className="rounded-md border border-border">
-          <Table>
+        <div className="rounded-md border border-border overflow-x-auto">
+          <Table className="min-w-[820px]">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className="whitespace-nowrap">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -216,7 +216,7 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell key={cell.id} className="whitespace-nowrap">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()

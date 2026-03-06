@@ -149,3 +149,51 @@ func TestRateLimiter_Middleware_SetsRateLimitHeaders(t *testing.T) {
 	}
 	t.Error("expected a 429 before test exhausted the request loop")
 }
+
+func TestRateLimiter_Middleware_BypassesHealth(t *testing.T) {
+	cfg := RateLimitConfig{
+		RequestsPerMinute:    1,
+		RequestsPerHour:      1,
+		Enabled:              true,
+		TrustPrivateNetworks: false,
+	}
+	rl := NewRateLimiter(cfg)
+
+	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	for range 3 {
+		req := httptest.NewRequest(http.MethodGet, "/health", nil)
+		req.RemoteAddr = "203.0.113.10:1234"
+		rw := httptest.NewRecorder()
+		handler.ServeHTTP(rw, req)
+		if rw.Code != http.StatusOK {
+			t.Fatalf("health request status = %d; want 200", rw.Code)
+		}
+	}
+}
+
+func TestRateLimiter_Middleware_TrustsPrivateNetworks(t *testing.T) {
+	cfg := RateLimitConfig{
+		RequestsPerMinute:    1,
+		RequestsPerHour:      1,
+		Enabled:              true,
+		TrustPrivateNetworks: true,
+	}
+	rl := NewRateLimiter(cfg)
+
+	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	for range 3 {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/strategies", nil)
+		req.RemoteAddr = "172.18.0.1:1234"
+		rw := httptest.NewRecorder()
+		handler.ServeHTTP(rw, req)
+		if rw.Code != http.StatusOK {
+			t.Fatalf("private network request status = %d; want 200", rw.Code)
+		}
+	}
+}

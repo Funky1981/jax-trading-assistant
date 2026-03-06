@@ -91,7 +91,9 @@ async def health_check():
     return HealthResponse(
         status="healthy" if is_connected else "degraded",
         connected=is_connected,
-        version="1.0.0"
+        version="1.0.0",
+        market_data_mode=ib_client.market_data_mode() if ib_client else "unknown",
+        paper_trading=settings.PAPER_TRADING,
     )
 
 
@@ -180,7 +182,7 @@ async def get_candles(symbol: str, request: CandlesRequest):
 async def get_candles_simple(
     symbol: str,
     limit: int = Query(default=250, ge=1, le=1000, description="Number of bars to return"),
-    timeframe: str = Query(default="1D", description="Timeframe: 1 (1-min), 5, 15, 60 (1-hour), 1D, 1W"),
+    timeframe: str = Query(default="1D", description="Timeframe: 1/1m, 5/5m, 15/15m, 60/1h, 1D/1d, 1W/1w"),
 ):
     """Get historical candles via GET — used by jax-market ib-bridge provider.
 
@@ -190,6 +192,17 @@ async def get_candles_simple(
     try:
         if not ib_client.is_connected():
             raise HTTPException(status_code=503, detail="Not connected to IB Gateway")
+
+        normalized_timeframe = timeframe.strip()
+        alias_map = {
+            "1m": "1",
+            "5m": "5",
+            "15m": "15",
+            "1h": "60",
+            "1d": "1D",
+            "1w": "1W",
+        }
+        normalized_timeframe = alias_map.get(normalized_timeframe, normalized_timeframe)
 
         # Map Go timeframe constants to IB duration / bar_size.
         # Daily: IB allows up to "1 Y" (~252 bars); scale up for larger limits.
@@ -202,7 +215,7 @@ async def get_candles_simple(
             "1D": (f"{years} Y",    "1 day"),
             "1W": (f"{years} Y",    "1 week"),
         }
-        duration, bar_size = bar_configs.get(timeframe, (f"{years} Y", "1 day"))
+        duration, bar_size = bar_configs.get(normalized_timeframe, (f"{years} Y", "1 day"))
 
         candles = await ib_client.get_candles(
             symbol=symbol,

@@ -59,6 +59,7 @@ import (
 	"jax-trading-assistant/libs/utcp"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -187,6 +188,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	}
 
 	mux := http.NewServeMux()
+	marketAPI := newMarketTools(pool, envStr("IB_BRIDGE_URL", "http://localhost:8092"))
 
 	// ── Auth ──────────────────────────────────────────────────────────────────
 	// /auth/status is always public — frontend uses it to decide whether to show login
@@ -212,6 +214,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	})
 	mux.HandleFunc("/api/v1/system/runtime", protect(systemRuntimeHandler()))
 	mux.HandleFunc("/api/v1/system/providers", protect(systemProvidersHandler()))
+	mux.HandleFunc("/api/v1/market/candles", protect(marketCandlesHandler(marketAPI)))
 
 	// ── Signals ───────────────────────────────────────────────────────────────
 	mux.HandleFunc("/api/v1/signals", protect(signalsListHandler(pool)))
@@ -345,7 +348,51 @@ func scanSignal(row interface {
 const signalSelectCols = `
 	id::text, symbol, strategy_id, instance_id::text, signal_type, confidence,
 	entry_price, stop_loss, take_profit, reasoning, status,
-	generated_at, expires_at, orchestration_run_id::text, created_at`
+	generated_at, COALESCE(expires_at, generated_at + INTERVAL '24 hours'), orchestration_run_id::text, created_at`
+
+func reconcilePendingSignalExpirations(ctx context.Context, pool *pgxpool.Pool, signalID string) error {
+	filter := ""
+	args := []any{}
+	if signalID != "" {
+		filter = " AND id=$1"
+		args = append(args, signalID)
+	}
+
+	_, err := pool.Exec(ctx, `
+		UPDATE strategy_signals
+		SET expires_at = generated_at + INTERVAL '24 hours'
+		WHERE status='pending' AND expires_at IS NULL`+filter, args...)
+	if err != nil {
+		return fmt.Errorf("normalize pending signal expiry: %w", err)
+	}
+
+	_, err = pool.Exec(ctx, `
+		UPDATE strategy_signals
+		SET status='expired',
+		    expires_at = COALESCE(expires_at, generated_at + INTERVAL '24 hours')
+		WHERE status='pending' AND COALESCE(expires_at, generated_at + INTERVAL '24 hours') <= NOW()`+filter, args...)
+	if err != nil {
+		return fmt.Errorf("expire stale pending signals: %w", err)
+	}
+
+	return nil
+}
+
+func loadSignalStatus(ctx context.Context, pool *pgxpool.Pool, id string) (string, error) {
+	var status string
+	if err := pool.QueryRow(ctx, `SELECT status FROM strategy_signals WHERE id=$1`, id).Scan(&status); err != nil {
+		return "", err
+	}
+	return status, nil
+}
+
+func writeSignalStateConflict(w http.ResponseWriter, status, action string) {
+	if status == "expired" {
+		http.Error(w, fmt.Sprintf("signal cannot be %s because its approval window has expired", action), http.StatusConflict)
+		return
+	}
+	http.Error(w, fmt.Sprintf("signal cannot be %s from status %s", action, status), http.StatusConflict)
+}
 
 // ── Signals handlers ─────────────────────────────────────────────────────────
 
@@ -361,6 +408,12 @@ func signalsListHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		strategy := q.Get("strategy")
 		limit := parseIntParam(q.Get("limit"), 100)
 		offset := parseIntParam(q.Get("offset"), 0)
+		if status == "" || status == "pending" {
+			if err := reconcilePendingSignalExpirations(r.Context(), pool, ""); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
 
 		query := `SELECT` + signalSelectCols + ` FROM strategy_signals WHERE 1=1`
 		args := []any{}
@@ -439,11 +492,15 @@ func signalDetailHandler(pool *pgxpool.Pool, orchestratorURL string) http.Handle
 }
 
 func signalGetOne(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, id string) {
+	if err := reconcilePendingSignalExpirations(r.Context(), pool, id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	row := pool.QueryRow(r.Context(),
 		`SELECT`+signalSelectCols+` FROM strategy_signals WHERE id=$1`, id)
 	s, err := scanSignal(row)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows") {
+		if errors.Is(err, pgx.ErrNoRows) || strings.Contains(err.Error(), "no rows") {
 			http.NotFound(w, r)
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -462,10 +519,29 @@ func signalApprove(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, i
 		http.Error(w, "approved_by is required", http.StatusBadRequest)
 		return
 	}
-	_, err := pool.Exec(r.Context(),
-		`UPDATE strategy_signals SET status='approved' WHERE id=$1`, id)
+	if err := reconcilePendingSignalExpirations(r.Context(), pool, id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tag, err := pool.Exec(r.Context(),
+		`UPDATE strategy_signals
+		 SET status='approved'
+		 WHERE id=$1 AND status='pending' AND expires_at > NOW()`, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		status, statusErr := loadSignalStatus(r.Context(), pool, id)
+		if statusErr != nil {
+			if errors.Is(statusErr, pgx.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+			http.Error(w, statusErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeSignalStateConflict(w, status, "approved")
 		return
 	}
 	observability.LogEvent(r.Context(), "info", "signal.approved", map[string]any{
@@ -484,10 +560,29 @@ func signalReject(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, id
 		http.Error(w, "approved_by is required", http.StatusBadRequest)
 		return
 	}
-	_, err := pool.Exec(r.Context(),
-		`UPDATE strategy_signals SET status='rejected' WHERE id=$1`, id)
+	if err := reconcilePendingSignalExpirations(r.Context(), pool, id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tag, err := pool.Exec(r.Context(),
+		`UPDATE strategy_signals
+		 SET status='rejected'
+		 WHERE id=$1 AND status='pending' AND expires_at > NOW()`, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		status, statusErr := loadSignalStatus(r.Context(), pool, id)
+		if statusErr != nil {
+			if errors.Is(statusErr, pgx.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+			http.Error(w, statusErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeSignalStateConflict(w, status, "rejected")
 		return
 	}
 	observability.LogEvent(r.Context(), "info", "signal.rejected_user", map[string]any{
@@ -504,15 +599,34 @@ func signalAnalyze(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, i
 	}
 	var body req
 	_ = json.NewDecoder(r.Body).Decode(&body)
+	if err := reconcilePendingSignalExpirations(r.Context(), pool, id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Build context from signal row.
 	row := pool.QueryRow(r.Context(),
-		`SELECT symbol, strategy_id, signal_type, confidence, reasoning FROM strategy_signals WHERE id=$1`, id)
+		`SELECT symbol, strategy_id, signal_type, confidence, reasoning
+		 FROM strategy_signals
+		 WHERE id=$1 AND status='pending' AND expires_at > NOW()`, id)
 	var sym, stratID, sigType string
 	var reasoning sql.NullString
 	var conf float64
 	if err := row.Scan(&sym, &stratID, &sigType, &conf, &reasoning); err != nil {
-		http.Error(w, "signal not found: "+err.Error(), http.StatusNotFound)
+		if errors.Is(err, pgx.ErrNoRows) {
+			status, statusErr := loadSignalStatus(r.Context(), pool, id)
+			if statusErr != nil {
+				if errors.Is(statusErr, pgx.ErrNoRows) {
+					http.NotFound(w, r)
+					return
+				}
+				http.Error(w, statusErr.Error(), http.StatusInternalServerError)
+				return
+			}
+			writeSignalStateConflict(w, status, "analyzed")
+			return
+		}
+		http.Error(w, "signal lookup failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -567,6 +681,10 @@ func recommendationsListHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 		limit := parseIntParam(r.URL.Query().Get("limit"), 50)
 		offset := parseIntParam(r.URL.Query().Get("offset"), 0)
+		if err := reconcilePendingSignalExpirations(r.Context(), pool, ""); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		// Join signals with their latest orchestration run (if any).
 		// Order: signals with AI first, then by most recent.
@@ -1069,6 +1187,103 @@ func riskCalcHandler() http.HandlerFunc {
 }
 
 // ── Symbol process ────────────────────────────────────────────────────────────
+
+func marketCandlesHandler(mt *marketTools) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if mt == nil {
+			http.Error(w, "market tools unavailable", http.StatusServiceUnavailable)
+			return
+		}
+
+		symbol := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("symbol")))
+		if symbol == "" {
+			http.Error(w, "symbol is required", http.StatusBadRequest)
+			return
+		}
+		timeframe := strings.TrimSpace(r.URL.Query().Get("timeframe"))
+		if timeframe == "" {
+			timeframe = "15m"
+		}
+		limit := parseIntParam(r.URL.Query().Get("limit"), 100)
+
+		reqCtx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+		defer cancel()
+
+		bridgeHealth, _ := mt.getIBBridgeHealth(reqCtx)
+
+		out, err := mt.getCandles(reqCtx, utcp.GetCandlesInput{
+			Symbol:    symbol,
+			Timeframe: timeframe,
+			Limit:     limit,
+			From:      strings.TrimSpace(r.URL.Query().Get("from")),
+			To:        strings.TrimSpace(r.URL.Query().Get("to")),
+		})
+		if err != nil {
+			if timeframe != "1d" {
+				fallbackOut, fallbackErr := mt.getCandles(r.Context(), utcp.GetCandlesInput{
+					Symbol:    symbol,
+					Timeframe: "1d",
+					Limit:     min(limit, 90),
+				})
+				if fallbackErr == nil && len(fallbackOut.Candles) > 0 {
+					writeCandlesResponse(w, symbol, timeframe, fallbackOut, true, "intraday candles unavailable; showing daily fallback", bridgeHealth)
+					return
+				}
+			}
+			http.Error(w, fmt.Sprintf("market candles unavailable: %v", err), http.StatusServiceUnavailable)
+			return
+		}
+
+		writeCandlesResponse(w, symbol, timeframe, out, false, "", bridgeHealth)
+	}
+}
+
+func writeCandlesResponse(w http.ResponseWriter, symbol, requestedTimeframe string, out utcp.GetCandlesOutput, degraded bool, message string, bridgeHealth *ibBridgeHealthResponse) {
+	type candlePoint struct {
+		Timestamp string  `json:"timestamp"`
+		Open      float64 `json:"open"`
+		High      float64 `json:"high"`
+		Low       float64 `json:"low"`
+		Close     float64 `json:"close"`
+		Volume    int64   `json:"volume"`
+	}
+
+	candles := make([]candlePoint, 0, len(out.Candles))
+	for _, c := range out.Candles {
+		candles = append(candles, candlePoint{
+			Timestamp: c.TS.UTC().Format(time.RFC3339),
+			Open:      c.Open,
+			High:      c.High,
+			Low:       c.Low,
+			Close:     c.Close,
+			Volume:    c.Volume,
+		})
+	}
+
+	marketDataMode := "unknown"
+	paperTrading := true
+	if bridgeHealth != nil {
+		if strings.TrimSpace(bridgeHealth.MarketDataMode) != "" {
+			marketDataMode = strings.TrimSpace(bridgeHealth.MarketDataMode)
+		}
+		paperTrading = bridgeHealth.PaperTrading
+	}
+
+	jsonOK(w, map[string]any{
+		"symbol":             out.Symbol,
+		"timeframe":          out.Timeframe,
+		"requestedTimeframe": requestedTimeframe,
+		"degraded":           degraded,
+		"message":            message,
+		"marketDataMode":     marketDataMode,
+		"paperTrading":       paperTrading,
+		"candles":            candles,
+	})
+}
 
 func symbolProcessHandler(orchestratorURL string, pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

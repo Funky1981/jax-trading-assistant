@@ -32,12 +32,12 @@ interface WatchlistPanelProps {
 const columnHelper = createColumnHelper<WatchlistItem>();
 
 export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
-  const { data: summary, isError } = useWatchlistSummary();
-  const { watchlist, isLoading } = useWatchlistSummary();
+  const { data: summary, watchlist, isLoading, isError } = useWatchlistSummary();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [newSymbol, setNewSymbol] = useState('');
 
   const isDataLive = !isError && (watchlist?.length ?? 0) > 0;
+  const tableData = useMemo(() => watchlist ?? [], [watchlist]);
 
   const columns = useMemo(
     () => [
@@ -67,6 +67,9 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
         header: 'Change',
         cell: (info) => {
           const value = info.getValue();
+          if (value === null) {
+            return <span className="text-muted-foreground">--</span>;
+          }
           return (
             <span
               className={cn(
@@ -93,6 +96,9 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
         ),
         cell: (info) => {
           const value = info.getValue();
+          if (value === null) {
+            return <span className="text-muted-foreground">--</span>;
+          }
           return (
             <span
               className={cn(
@@ -118,12 +124,13 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
   );
 
   const table = useReactTable({
-    data: watchlist || [],
+    data: tableData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
     state: { sorting },
+    autoResetPageIndex: false,
   });
 
   const summaryText = summary ? (
@@ -132,7 +139,9 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
       <span className="font-mono">{summary.count} symbols</span>
       <Separator orientation="vertical" className="h-4" />
       <span>
-        Top: {summary.topMover.symbol} ({formatPercent(summary.topMover.changePercent)})
+        {summary.topMover
+          ? `Top: ${summary.topMover.symbol} (${formatPercent(summary.topMover.changePercent)})`
+          : 'Change unavailable'}
       </span>
     </div>
   ) : null;
@@ -150,6 +159,9 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
         {/* Add Symbol */}
         <div className="flex gap-2">
           <Input
+            id="watchlist-add-symbol"
+            name="watchlistSymbol"
+            aria-label="Add symbol to watchlist"
             placeholder="Add symbol..."
             value={newSymbol}
             onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
