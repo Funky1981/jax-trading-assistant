@@ -36,7 +36,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-grid-layout": "^2.2.2",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.26.2",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {

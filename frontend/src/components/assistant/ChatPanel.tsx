@@ -16,7 +16,15 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
   const qc = useQueryClient();
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId);
   const [draft, setDraft] = useState('');
+  // Holds the user's message while the server is processing — gives instant feedback.
+  const [optimisticContent, setOptimisticContent] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Sync sessionId when the parent changes it (e.g. user picks a different session).
+  useEffect(() => {
+    setSessionId(initialSessionId);
+    setOptimisticContent(null);
+  }, [initialSessionId]);
 
   // Load history when session is selected.
   const { data: history = [], isLoading } = useQuery({
@@ -26,15 +34,16 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
     refetchInterval: false,
   });
 
-  // Scroll to bottom on new messages.
+  // Scroll to bottom on new messages or while pending.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history.length]);
+  }, [history.length, optimisticContent]);
 
   const sendMutation = useMutation({
     mutationFn: (content: string) =>
       chatService.sendMessage({ sessionId, content }),
     onSuccess: (resp) => {
+      setOptimisticContent(null);
       if (!sessionId) {
         setSessionId(resp.sessionId);
         onSessionCreated?.(resp.sessionId);
@@ -42,12 +51,16 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
       qc.invalidateQueries({ queryKey: ['chat-history', resp.sessionId] });
       qc.invalidateQueries({ queryKey: ['chat-sessions'] });
     },
+    onError: () => {
+      setOptimisticContent(null);
+    },
   });
 
   const handleSend = () => {
     const content = draft.trim();
     if (!content || sendMutation.isPending) return;
     setDraft('');
+    setOptimisticContent(content);
     sendMutation.mutate(content);
   };
 
@@ -83,11 +96,23 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
               <ChatMessageBubble key={msg.id} message={msg} />
             )
           )}
-          {/* Show optimistic user message while sending */}
-          {sendMutation.isPending && draft === '' && (
+
+          {/* Optimistic user bubble — shows immediately on send */}
+          {optimisticContent && (
             <div className="flex justify-end">
-              <div className="max-w-[80%] rounded-lg bg-primary/50 px-3 py-2 text-sm text-primary-foreground animate-pulse">
-                Thinking…
+              <div className="max-w-[80%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
+                <p className="whitespace-pre-wrap break-words">{optimisticContent}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Assistant "Thinking…" indicator while awaiting response */}
+          {sendMutation.isPending && (
+            <div className="flex justify-start">
+              <div className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground flex gap-1 items-center">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0ms]" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:150ms]" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:300ms]" />
               </div>
             </div>
           )}
