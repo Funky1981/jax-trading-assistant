@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { buildUrl } from '@/config/api';
+import { apiClient } from '@/data/http-client';
 
 export interface MetricEvent {
   id: string;
@@ -34,11 +34,7 @@ function mapApiMetric(raw: any): MetricEvent {
 }
 
 async function fetchMetrics(): Promise<MetricEvent[]> {
-  const response = await fetch(buildUrl('JAX_API', '/api/v1/metrics'));
-  if (!response.ok) {
-    throw new Error('Metrics service unavailable');
-  }
-  const data = await response.json();
+  const data = await apiClient.get<{ metrics?: unknown[] } | unknown[]>('/api/v1/metrics');
   // API returns { metrics: [...] } envelope with snake_case / different field names
   const raw = Array.isArray(data) ? data : (data.metrics ?? []);
   return raw.map(mapApiMetric);

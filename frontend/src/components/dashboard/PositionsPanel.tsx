@@ -74,9 +74,14 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
   const { data: summary, positions, isLoading, isError } = usePositionsSummary();
   const { data: marketDataStatus } = useMarketDataStatus();
   const { data: pilotStatus } = useTradingPilotStatus();
+  const pilotActionReasons =
+    pilotStatus && (pilotStatus.readOnly || !pilotStatus.brokerConnected)
+      ? pilotStatus.reasons
+      : [];
   const closePosition = useClosePosition();
   const protectPosition = useProtectPosition();
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const [closeTarget, setCloseTarget] = useState<Position | null>(null);
   const [closeQuantity, setCloseQuantity] = useState('');
@@ -102,7 +107,10 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
     };
 
     closePosition.mutate(request, {
-      onSuccess: () => {
+      onSuccess: (result) => {
+        setActionNotice(
+          `${result.message} The position stays open until IB fills the exit order. Check Trade Blotter for broker status.`
+        );
         setCloseTarget(null);
         setCloseConfirmed(false);
       },
@@ -122,7 +130,10 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
     };
 
     protectPosition.mutate(request, {
-      onSuccess: () => {
+      onSuccess: (result) => {
+        setActionNotice(
+          `${result.message} Check Trade Blotter for the working stop / target orders.`
+        );
         setProtectTarget(null);
         setProtectConfirmed(false);
       },
@@ -222,6 +233,7 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
               size="sm"
               onClick={() => {
                 protectPosition.reset();
+                setActionNotice(null);
                 setProtectTarget(row.original);
                 setProtectQuantity(String(Math.abs(row.original.quantity)));
                 setStopLoss(getDefaultStop(row.original));
@@ -239,6 +251,7 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
               size="sm"
               onClick={() => {
                 closePosition.reset();
+                setActionNotice(null);
                 setCloseTarget(row.original);
                 setCloseQuantity(String(Math.abs(row.original.quantity)));
                 setCloseOrderType('MKT');
@@ -313,9 +326,15 @@ export function PositionsPanel({ isOpen, onToggle }: PositionsPanelProps) {
                   : 'Position changes require IB/TWS confirmation before submit.'
               }
               readOnly={pilotStatus.readOnly}
-              reasons={pilotStatus.reasons}
+              reasons={pilotActionReasons}
               compact
             />
+          </div>
+        ) : null}
+
+        {actionNotice ? (
+          <div className="mb-4 rounded-md border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">
+            {actionNotice}
           </div>
         ) : null}
 

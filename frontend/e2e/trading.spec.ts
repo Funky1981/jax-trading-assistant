@@ -84,10 +84,7 @@ async function installTradingStubs(page: Page) {
         requiresManualBrokerConfirmation: true,
         reviewAgainstBroker: true,
         rollbackToReadOnly: true,
-        reasons: [
-          'Quotes on this screen are non-authoritative during the pilot; confirm in IB/TWS.',
-          'Intraday candles are non-authoritative during the pilot; use IB/TWS as the execution source of truth.',
-        ],
+        reasons: [],
         checklist: [
           'Verify IB/TWS is connected and paper trading remains enabled.',
           'Confirm symbol, quantity, and exits in IB/TWS before every broker mutation.',
@@ -432,8 +429,58 @@ async function installTradingStubs(page: Page) {
     });
   });
 
+  await page.route('**/api/v1/events**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        events: [
+          {
+            id: 'event-1',
+            kind: 'market_news',
+            primarySymbol: 'AAPL',
+            title: 'Stubbed event',
+            eventTime: '2026-03-06T13:10:00Z',
+          },
+        ],
+        total: 1,
+      }),
+    });
+  });
+
+  await page.route('**/api/v1/datasets**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        datasets: [
+          {
+            datasetId: 'dataset-1',
+            name: 'AAPL 15m sample',
+            symbol: 'AAPL',
+            datasetHash: '241f3c2bcdef',
+          },
+        ],
+        total: 1,
+      }),
+    });
+  });
+
   return state;
 }
+
+test('shows pilot trade gate on the system page', async ({ page }) => {
+  await installTradingStubs(page);
+
+  await page.goto('/system', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByRole('heading', { level: 1, name: /System/ })).toBeVisible();
+  await expect(page.getByText('Pilot Trading Status')).toBeVisible();
+  await expect(page.getByText('Trade Enabled')).toBeVisible();
+  await expect(page.getByText('Connected')).toBeVisible();
+  await expect(page.getByText('Required')).toBeVisible();
+  await expect(page.getByText('admin')).toBeVisible();
+});
 
 test('loads trading page with operator workflow and management controls', async ({ page }) => {
   await installTradingStubs(page);
@@ -444,6 +491,8 @@ test('loads trading page with operator workflow and management controls', async 
   await expect(page.getByText('How to Use This Screen')).toBeVisible();
   await expect(page.getByText('Delayed', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Paper', { exact: true })).toBeVisible();
+  await expect(page.getByText('Watchlist prices are non-authoritative during the pilot.')).toHaveCount(0);
+  await expect(page.getByText('Intraday chart data is non-authoritative during the pilot. Use IB/TWS as the execution source of truth.')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Protect' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Close' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();

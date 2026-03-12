@@ -9,6 +9,7 @@ export type OrderSource = 'broker' | 'strategy';
 export interface Order {
   id: string;
   brokerOrderId?: number;
+  brokerStatus?: string;
   symbol: string;
   side: OrderSide;
   type: OrderType;
@@ -167,6 +168,7 @@ function mapBrokerOrder(raw: RawBrokerOrder): Order {
   return {
     id: `broker-${raw.order_id ?? fallbackId('broker')}`,
     brokerOrderId: raw.order_id,
+    brokerStatus: raw.status,
     symbol: raw.symbol ?? '',
     side: ((raw.action ?? 'BUY').toLowerCase() === 'sell' ? 'sell' : 'buy') as OrderSide,
     type: normalizeOrderType(raw.order_type),

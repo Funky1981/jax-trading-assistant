@@ -142,8 +142,8 @@ export function useAnalyzeSignal() {
       queryClient.invalidateQueries({ queryKey: ['signals'] });
       queryClient.invalidateQueries({ queryKey: ['recommendations'] });
     },
-    onError: (error) => {
-      console.error('[useAnalyzeSignal] Analysis failed:', error);
+    onError: () => {
+      // analysis error is surfaced via mutation.isError in the UI
     },
   });
 }

@@ -64,8 +64,7 @@ export function useCreateMemoryEntry() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (entry: { bankId: string; content: string; metadata?: Record<string, unknown> }) => {
-      console.log('Creating memory entry:', entry);
+    mutationFn: async (_entry: { bankId: string; content: string; metadata?: Record<string, unknown> }) => {
       return { success: true };
     },
     onSuccess: (_, variables) => {

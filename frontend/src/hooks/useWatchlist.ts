@@ -11,9 +11,30 @@ export interface WatchlistItem {
   low: number;
 }
 
+const WATCHLIST_STORAGE_KEY = 'jax_watchlist_symbols';
+const DEFAULT_SYMBOLS = ['SPY', 'QQQ', 'AAPL', 'TSLA', 'NVDA', 'AMD', 'META', 'AMZN'];
+
+function loadWatchlistSymbols(): string[] {
+  try {
+    const raw = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+    if (!raw) return DEFAULT_SYMBOLS;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_SYMBOLS;
+    const symbols = parsed
+      .map((value) => String(value).trim().toUpperCase())
+      .filter((value) => /^[A-Z.-]{1,10}$/.test(value));
+    return symbols.length > 0 ? Array.from(new Set(symbols)) : DEFAULT_SYMBOLS;
+  } catch {
+    return DEFAULT_SYMBOLS;
+  }
+}
+
+function saveWatchlistSymbols(symbols: string[]) {
+  localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(symbols));
+}
+
 async function fetchWatchlist(): Promise<WatchlistItem[]> {
-  // Default symbols to watch
-  const symbols = ['SPY', 'QQQ', 'AAPL', 'TSLA', 'NVDA', 'AMD', 'META', 'AMZN'];
+  const symbols = loadWatchlistSymbols();
 
   // Fetch quotes from IB Bridge for each symbol in parallel
   const results = await Promise.allSettled(
@@ -83,8 +104,19 @@ export function useAddToWatchlist() {
   
   return useMutation({
     mutationFn: async (symbol: string) => {
-      console.log('Adding to watchlist:', symbol);
-      return { success: true, symbol };
+      const normalized = symbol.trim().toUpperCase();
+      if (!normalized) {
+        throw new Error('Enter a symbol to add.');
+      }
+      if (!/^[A-Z.-]{1,10}$/.test(normalized)) {
+        throw new Error('Enter a valid ticker symbol.');
+      }
+      const symbols = loadWatchlistSymbols();
+      if (symbols.includes(normalized)) {
+        throw new Error(`${normalized} is already in the watchlist.`);
+      }
+      saveWatchlistSymbols([...symbols, normalized]);
+      return { success: true, symbol: normalized };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['watchlist'] });
@@ -97,8 +129,10 @@ export function useRemoveFromWatchlist() {
   
   return useMutation({
     mutationFn: async (symbol: string) => {
-      console.log('Removing from watchlist:', symbol);
-      return { success: true, symbol };
+      const normalized = symbol.trim().toUpperCase();
+      const symbols = loadWatchlistSymbols();
+      saveWatchlistSymbols(symbols.filter((item) => item !== normalized));
+      return { success: true, symbol: normalized };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['watchlist'] });

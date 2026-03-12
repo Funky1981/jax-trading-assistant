@@ -8,7 +8,12 @@ import {
   createColumnHelper,
   SortingState,
 } from '@tanstack/react-table';
-import { useWatchlistSummary, WatchlistItem } from '@/hooks/useWatchlist';
+import {
+  useAddToWatchlist,
+  useRemoveFromWatchlist,
+  useWatchlistSummary,
+  WatchlistItem,
+} from '@/hooks/useWatchlist';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +43,8 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
   const { data: summary, watchlist, isLoading, isError } = useWatchlistSummary();
   const { data: marketDataStatus } = useMarketDataStatus();
   const { data: pilotStatus } = useTradingPilotStatus();
+  const addToWatchlist = useAddToWatchlist();
+  const removeFromWatchlist = useRemoveFromWatchlist();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [newSymbol, setNewSymbol] = useState('');
   const tableData = useMemo(() => watchlist ?? [], [watchlist]);
@@ -116,14 +123,20 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
       }),
       columnHelper.display({
         id: 'actions',
-        cell: () => (
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            disabled={removeFromWatchlist.isPending}
+            onClick={() => removeFromWatchlist.mutate(row.original.symbol)}
+          >
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </Button>
         ),
       }),
     ],
-    []
+    [removeFromWatchlist]
   );
 
   const table = useReactTable({
@@ -135,6 +148,15 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
     state: { sorting },
     autoResetPageIndex: false,
   });
+
+  const pilotQuoteWarning = pilotStatus && !pilotStatus.brokerConnected ? (
+    <PilotStatusBanner
+      title="Watchlist prices are non-authoritative during the pilot."
+      readOnly={pilotStatus.readOnly}
+      reasons={pilotStatus.reasons}
+      compact
+    />
+  ) : null;
 
   const summaryText = summary ? (
     <div className="flex items-center gap-3 text-xs">
@@ -153,6 +175,16 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
     </div>
   ) : null;
 
+  const handleAddSymbol = () => {
+    const symbol = newSymbol.trim().toUpperCase();
+    if (!symbol) return;
+    addToWatchlist.mutate(symbol, {
+      onSuccess: () => {
+        setNewSymbol('');
+      },
+    });
+  };
+
   return (
     <CollapsiblePanel
       title="Watchlist"
@@ -163,14 +195,7 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
       isLoading={isLoading}
     >
       <div className="space-y-4">
-        {pilotStatus && (!pilotStatus.quoteAuthority || !pilotStatus.brokerConnected) ? (
-          <PilotStatusBanner
-            title="Watchlist prices are non-authoritative during the pilot."
-            readOnly={pilotStatus.readOnly}
-            reasons={pilotStatus.reasons}
-            compact
-          />
-        ) : null}
+        {pilotQuoteWarning}
 
         {/* Add Symbol */}
         <div className="flex gap-2">
@@ -182,12 +207,31 @@ export function WatchlistPanel({ isOpen, onToggle }: WatchlistPanelProps) {
             value={newSymbol}
             onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
             className="h-9"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleAddSymbol();
+              }
+            }}
           />
-          <Button size="sm" className="h-9">
+          <Button
+            size="sm"
+            className="h-9"
+            onClick={handleAddSymbol}
+            disabled={addToWatchlist.isPending || !newSymbol.trim()}
+          >
             <Plus className="h-4 w-4 mr-1" />
-            Add
+            {addToWatchlist.isPending ? 'Adding...' : 'Add'}
           </Button>
         </div>
+
+        {addToWatchlist.error ? (
+          <p className="text-sm text-destructive">{addToWatchlist.error.message}</p>
+        ) : null}
+
+        {removeFromWatchlist.error ? (
+          <p className="text-sm text-destructive">{removeFromWatchlist.error.message}</p>
+        ) : null}
 
         {/* Table */}
         <div className="rounded-md border border-border">

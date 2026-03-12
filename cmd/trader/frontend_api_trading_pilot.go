@@ -71,6 +71,7 @@ func buildTradingPilotStatus(ctx context.Context, authEnabled bool, mt *marketTo
 		RequiresManualBrokerConfirmation: true,
 		ReviewAgainstBroker:              true,
 		RollbackToReadOnly:               true,
+		Reasons:                          []string{},
 		Checklist: []string{
 			"Verify IB/TWS is connected and paper trading remains enabled.",
 			"Verify the market-data badge before using prices on this screen.",
@@ -107,10 +108,10 @@ func buildTradingPilotStatus(ctx context.Context, authEnabled bool, mt *marketTo
 	if !status.PaperTrading {
 		status.Reasons = append(status.Reasons, "Paper trading is not enabled; pilot mode blocks live order submission.")
 	}
-	if !status.QuoteAuthority {
+	if !status.BrokerConnected && !status.QuoteAuthority {
 		status.Reasons = append(status.Reasons, "Quotes on this screen are non-authoritative during the pilot; confirm in IB/TWS.")
 	}
-	if !status.IntradayAuthority {
+	if !status.BrokerConnected && !status.IntradayAuthority {
 		status.Reasons = append(status.Reasons, "Intraday candles are non-authoritative during the pilot; use IB/TWS as the execution source of truth.")
 	}
 

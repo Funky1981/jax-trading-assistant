@@ -51,6 +51,11 @@ func TestTradingPilotStatusHandlerDefaultsToReadOnlyWithoutAuth(t *testing.T) {
 	if !payload.BrokerConnected || !payload.PaperTrading {
 		t.Fatal("expected broker connection and paper trading to reflect bridge health")
 	}
+	for _, reason := range payload.Reasons {
+		if strings.Contains(reason, "non-authoritative") {
+			t.Fatalf("did not expect degradation warning when broker is connected, got %q", reason)
+		}
+	}
 }
 
 func TestBrokerOrdersPostBlockedWhenPilotIsReadOnly(t *testing.T) {
@@ -73,5 +78,29 @@ func TestBrokerOrdersPostBlockedWhenPilotIsReadOnly(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "read-only") {
 		t.Fatalf("expected read-only response, got %s", rec.Body.String())
+	}
+}
+
+func TestTradingPilotStatusIncludesDataWarningsWhenBrokerDisconnected(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/trading/pilot-status", nil)
+	rec := httptest.NewRecorder()
+
+	tradingPilotStatusHandler(true, nil).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	var payload tradingPilotStatusResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "Quotes on this screen are non-authoritative during the pilot; confirm in IB/TWS.") {
+		t.Fatalf("expected quote degradation warning, got %s", body)
+	}
+	if !strings.Contains(body, "Intraday candles are non-authoritative during the pilot; use IB/TWS as the execution source of truth.") {
+		t.Fatalf("expected intraday degradation warning, got %s", body)
 	}
 }

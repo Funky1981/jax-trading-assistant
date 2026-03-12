@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { buildUrl } from '@/config/api';
+import { apiClient } from '@/data/http-client';
 import { useIBAccount } from './useIBAccount';
 import { usePositionsSummary } from './usePositions';
 
@@ -36,12 +36,7 @@ export interface RiskMetrics {
 }
 
 async function fetchRiskMetrics(): Promise<RiskMetrics> {
-  // JAX API not currently available - will throw error
-  const response = await fetch(buildUrl('JAX_API', '/api/risk/metrics'));
-  if (!response.ok) {
-    throw new Error('Risk metrics service unavailable');
-  }
-  return response.json();
+  return apiClient.get<RiskMetrics>('/api/risk/metrics');
 }
 
 export function useRiskMetrics() {

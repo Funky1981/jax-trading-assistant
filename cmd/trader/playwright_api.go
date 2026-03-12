@@ -28,18 +28,18 @@ import (
 // ── In-memory result store ─────────────────────────────────────────────────
 
 type playwrightRunResult struct {
-	StartedAt   string       `json:"startedAt"`
-	CompletedAt string       `json:"completedAt"`
-	DurationMs  int64        `json:"durationMs"`
-	ExitCode    int          `json:"exitCode"`
-	Status      string       `json:"status"` // "passed" | "failed" | "running"
-	Spec        string       `json:"spec"`   // "" means full suite
-	Output      string       `json:"output"`
+	StartedAt   string `json:"startedAt"`
+	CompletedAt string `json:"completedAt"`
+	DurationMs  int64  `json:"durationMs"`
+	ExitCode    int    `json:"exitCode"`
+	Status      string `json:"status"` // "passed" | "failed" | "running"
+	Spec        string `json:"spec"`   // "" means full suite
+	Output      string `json:"output"`
 }
 
 var (
-	pwMu     sync.RWMutex
-	pwResult *playwrightRunResult // nil = no run yet
+	pwMu      sync.RWMutex
+	pwResult  *playwrightRunResult // nil = no run yet
 	pwRunning bool
 )
 

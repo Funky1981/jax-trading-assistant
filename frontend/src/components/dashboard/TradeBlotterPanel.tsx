@@ -71,11 +71,16 @@ function getWorkflowLabel(order: Order) {
 export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) {
   const { data: summary, orders, isLoading } = useOrdersSummary();
   const { data: pilotStatus } = useTradingPilotStatus();
+  const pilotActionReasons =
+    pilotStatus && (pilotStatus.readOnly || !pilotStatus.brokerConnected)
+      ? pilotStatus.reasons
+      : [];
   const cancelOrder = useCancelOrder();
   const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [pendingCancelOrder, setPendingCancelOrder] = useState<Order | null>(null);
   const [cancelConfirmed, setCancelConfirmed] = useState(false);
+  const cancelStatusLabel = (pendingCancelOrder?.brokerStatus ?? pendingCancelOrder?.status ?? '').toUpperCase();
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
@@ -175,10 +180,18 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
         header: 'Status',
         cell: (info) => {
           const status = info.getValue();
+          const order = info.row.original;
           return (
-            <Badge variant={statusVariantMap[status]} className="text-xs">
-              {status}
-            </Badge>
+            <div className="flex flex-col gap-1">
+              <Badge variant={statusVariantMap[status]} className="w-fit text-xs">
+                {status}
+              </Badge>
+              {order.brokerStatus ? (
+                <span className="text-[11px] text-muted-foreground">
+                  Broker: {order.brokerStatus}
+                </span>
+              ) : null}
+            </div>
           );
         },
       }),
@@ -243,7 +256,7 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
                 : 'Working broker orders require IB/TWS confirmation before cancellation.'
             }
             readOnly={pilotStatus.readOnly}
-            reasons={pilotStatus.reasons}
+            reasons={pilotActionReasons}
             compact
           />
         ) : null}
@@ -342,7 +355,7 @@ export function TradeBlotterPanel({ isOpen, onToggle }: TradeBlotterPanelProps) 
                 {pendingCancelOrder?.symbol} {pendingCancelOrder?.quantity} {pendingCancelOrder?.side.toUpperCase()}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Order #{pendingCancelOrder?.brokerOrderId} • {pendingCancelOrder?.type.toUpperCase()} • {pendingCancelOrder?.status.toUpperCase()}
+                Order #{pendingCancelOrder?.brokerOrderId} • {pendingCancelOrder?.type?.toUpperCase() ?? '-'} • {cancelStatusLabel || '-'}
               </p>
             </div>
 

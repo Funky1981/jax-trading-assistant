@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/utils';
-import { buildUrl } from '@/config/api';
+import { apiClient } from '@/data/http-client';
 import { getMarketDataLabel, getMarketDataTone } from '@/lib/market-data';
 import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
 import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
@@ -62,21 +62,9 @@ interface ChartCandlesResult {
 }
 
 async function fetchCandles(symbol: string, timeframe: string): Promise<ChartCandlesResult> {
-  const response = await fetch(
-    buildUrl(
-      'JAX_API',
-      `/api/v1/market/candles?symbol=${encodeURIComponent(symbol)}&limit=100&timeframe=${encodeURIComponent(timeframe)}`
-    )
+  const payload = await apiClient.get<ChartCandlesResponse>(
+    `/api/v1/market/candles?symbol=${encodeURIComponent(symbol)}&limit=100&timeframe=${encodeURIComponent(timeframe)}`
   );
-  if (!response.ok) {
-    throw new Error(`Chart data unavailable (HTTP ${response.status})`);
-  }
-  const contentType = response.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
-    throw new Error('Chart data unavailable (non-JSON response)');
-  }
-
-  const payload = (await response.json()) as ChartCandlesResponse;
   const candles = payload.candles ?? [];
 
   const mapped = candles
@@ -133,6 +121,14 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
   const paperTrading = data?.paperTrading !== false;
   const marketDataLabel = getMarketDataLabel(marketDataMode);
   const marketDataTone = getMarketDataTone(marketDataMode);
+  const pilotChartWarning = pilotStatus && !pilotStatus.brokerConnected ? (
+    <PilotStatusBanner
+      title="Intraday chart data is non-authoritative during the pilot. Use IB/TWS as the execution source of truth."
+      readOnly={pilotStatus.readOnly}
+      reasons={pilotStatus.reasons}
+      compact
+    />
+  ) : null;
 
   const currentPrice = candles[candles.length - 1]?.close || fallbackQuote?.price || 0;
   const prevClose = candles[candles.length - 2]?.close || currentPrice;
@@ -251,14 +247,7 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
       isLoading={isLoading}
     >
       <div className="space-y-4">
-        {pilotStatus && (!pilotStatus.intradayAuthority || pilotStatus.executionFromChartBlocked) ? (
-          <PilotStatusBanner
-            title="Intraday chart data is non-authoritative during the pilot. Use IB/TWS as the execution source of truth."
-            readOnly={pilotStatus.readOnly}
-            reasons={pilotStatus.reasons}
-            compact
-          />
-        ) : null}
+        {pilotChartWarning}
 
         <div className="flex gap-4">
           <div className="space-y-1">

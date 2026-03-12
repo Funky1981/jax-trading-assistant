@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 interface PilotStatusBannerProps {
   title: string;
   readOnly?: boolean;
-  reasons?: string[];
-  checklist?: string[];
+  reasons?: string[] | null;
+  checklist?: string[] | null;
   className?: string;
   compact?: boolean;
 }
@@ -18,6 +18,8 @@ export function PilotStatusBanner({
   className,
   compact = false,
 }: PilotStatusBannerProps) {
+  const reasonList = reasons ?? [];
+  const checklistItems = checklist ?? [];
   const Icon = readOnly ? ShieldAlert : AlertTriangle;
   return (
     <div
@@ -33,18 +35,18 @@ export function PilotStatusBanner({
         <Icon className="mt-0.5 h-4 w-4 shrink-0" />
         <div className="space-y-2">
           <p className="font-semibold">{title}</p>
-          {reasons.length > 0 ? (
+          {reasonList.length > 0 ? (
             <div className="space-y-1">
-              {reasons.map((reason) => (
+              {reasonList.map((reason) => (
                 <p key={reason} className="text-xs leading-relaxed">
                   {reason}
                 </p>
               ))}
             </div>
           ) : null}
-          {!compact && checklist.length > 0 ? (
+          {!compact && checklistItems.length > 0 ? (
             <div className="space-y-1 border-t border-current/15 pt-2">
-              {checklist.map((item) => (
+              {checklistItems.map((item) => (
                 <p key={item} className="text-xs leading-relaxed text-foreground/90">
                   {item}
                 </p>

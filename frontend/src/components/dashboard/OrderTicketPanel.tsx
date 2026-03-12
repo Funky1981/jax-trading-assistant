@@ -60,6 +60,10 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
   const createOrder = useCreateOrder();
   const { data: marketDataStatus, isError: marketStatusError } = useMarketDataStatus();
   const { data: pilotStatus } = useTradingPilotStatus();
+  const pilotActionReasons =
+    pilotStatus && (pilotStatus.readOnly || !pilotStatus.brokerConnected)
+      ? pilotStatus.reasons
+      : [];
 
   const hasProtection = Boolean(stopLossPrice || takeProfitPrice);
 
@@ -129,7 +133,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
                 : 'Pilot order entry requires IB/TWS confirmation before submit.'
             }
             readOnly={pilotStatus.readOnly}
-            reasons={pilotStatus.reasons}
+            reasons={pilotActionReasons}
             compact
           />
         ) : null}

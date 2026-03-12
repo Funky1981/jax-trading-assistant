@@ -102,8 +102,8 @@ async function fetchAIHealth(): Promise<{ status: string; provider: string }> {
 export function useAISuggestion() {
   return useMutation({
     mutationFn: fetchAISuggestion,
-    onError: (error) => {
-      console.error('AI suggestion error:', error);
+    onError: () => {
+      // error surfaced via mutation.isError in the UI
     },
   });
 }

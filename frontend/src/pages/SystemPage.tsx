@@ -10,9 +10,12 @@ import {
 } from '@/components/dashboard';
 import { eventsService } from '@/data/events-service';
 import { datasetsService } from '@/data/datasets-service';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { HelpHint } from '@/components/ui/help-hint';
+import { Badge } from '@/components/ui/badge';
+import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
+import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
 
 // Panel IDs for state management
 const PANEL_IDS = ['health', 'metrics', 'memory'] as const;
@@ -49,6 +52,7 @@ function savePanelState(state: Record<PanelId, boolean>) {
 export function SystemPage() {
   const [panelStates, setPanelStates] =
     useState<Record<PanelId, boolean>>(loadPanelState);
+  const { data: pilotStatus } = useTradingPilotStatus();
 
   const eventsQuery = useQuery({
     queryKey: ['system-events'],
@@ -133,6 +137,51 @@ export function SystemPage() {
           </Button>
         </div>
       </div>
+
+      {pilotStatus ? (
+        <Card>
+          <CardHeader className="gap-2">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle>Pilot Trading Status</CardTitle>
+                <CardDescription>
+                  Confirm whether broker actions are currently allowed from the UI before starting a session.
+                </CardDescription>
+              </div>
+              <Badge variant={pilotStatus.readOnly ? 'destructive' : 'success'}>
+                {pilotStatus.readOnly ? 'Read Only' : 'Trade Enabled'}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-3 text-sm md:grid-cols-4">
+            <div className="rounded-md border border-border bg-card/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Broker</p>
+              <p className="mt-1 font-semibold text-foreground">
+                {pilotStatus.brokerConnected ? 'Connected' : 'Disconnected'}
+              </p>
+            </div>
+            <div className="rounded-md border border-border bg-card/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Auth</p>
+              <p className="mt-1 font-semibold text-foreground">
+                {pilotStatus.authRequired ? 'Required' : 'Disabled'}
+              </p>
+            </div>
+            <div className="rounded-md border border-border bg-card/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Operator Role</p>
+              <p className="mt-1 font-semibold text-foreground">{pilotStatus.operatorRole}</p>
+            </div>
+            <div className="rounded-md border border-border bg-card/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Market Data</p>
+              <div className="mt-1">
+                <DataSourceBadge
+                  marketDataMode={pilotStatus.marketDataMode}
+                  paperTrading={pilotStatus.paperTrading}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Dashboard Grid */}
       <DashboardGrid>
