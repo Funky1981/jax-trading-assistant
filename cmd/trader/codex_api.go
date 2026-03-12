@@ -82,6 +82,9 @@ func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 	mux.HandleFunc("/api/v1/gates", protect(gatesHandler(pool)))
 	mux.HandleFunc("/api/v1/gates/history", protect(testRunsHandler(pool)))
 	mux.HandleFunc("/api/v1/test-runs", protect(testRunsHandler(pool)))
+
+	mux.HandleFunc("/api/v1/e2e/run", protect(playwrightRunHandler()))
+	mux.HandleFunc("/api/v1/e2e/results", protect(playwrightResultsHandler()))
 }
 
 func instancesHandler(pool *pgxpool.Pool, strategyTypeReg *strategytypes.Registry) http.HandlerFunc {

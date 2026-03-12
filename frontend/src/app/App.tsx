@@ -6,6 +6,7 @@ import { SystemPage } from '@/pages/SystemPage';
 import { ResearchPage } from '@/pages/ResearchPage';
 import { AnalysisPage } from '@/pages/AnalysisPage';
 import { TestingPage } from '@/pages/TestingPage';
+import { E2ETestingPage } from '@/pages/E2ETestingPage';
 import { BlotterPage } from '@/pages/BlotterPage';
 import { PortfolioPage } from '@/pages/PortfolioPage';
 import { OrderTicketPage } from '@/pages/OrderTicketPage';
@@ -61,6 +62,7 @@ export const routes = [
       { path: 'blotter', element: <BlotterPage /> },
       { path: 'portfolio', element: <PortfolioPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'e2e-tests', element: <E2ETestingPage /> },
       { path: 'guide', element: <UserGuidePage /> },
     ],
   },

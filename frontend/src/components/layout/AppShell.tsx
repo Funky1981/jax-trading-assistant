@@ -15,6 +15,7 @@ import {
   FlaskConical,
   BarChart3,
   ShieldCheck,
+  MonitorCheck,
   BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,7 @@ const navItems = [
   { label: 'Backtesting', path: '/research', icon: FlaskConical },
   { label: 'Analysis', path: '/analysis', icon: BarChart3 },
   { label: 'Testing', path: '/testing', icon: ShieldCheck },
+  { label: 'E2E Tests', path: '/e2e-tests', icon: MonitorCheck },
   { label: 'Portfolio', path: '/portfolio', icon: Briefcase },
   { label: 'Blotter', path: '/blotter', icon: FileText },
   { label: 'Settings', path: '/settings', icon: Settings },
