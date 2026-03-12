@@ -17,7 +17,9 @@ export class HttpError extends Error {
 }
 
 export function buildUrl(baseUrl: string, path: string, params?: Record<string, string>) {
-  const url = new URL(path, baseUrl);
+  // If baseUrl is empty (dev Vite proxy mode), resolve against the page origin
+  const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081');
+  const url = new URL(path, base);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
@@ -102,8 +104,10 @@ export function createHttpClient(options: HttpClientOptions = {}) {
 }
 
 // Backend service clients
+// In dev mode, use empty string so requests resolve against the Vite dev server
+// and get proxied to localhost:8081 — avoids CORS from absolute URL.
 export const apiClient = createHttpClient({
-  baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8081',
+  baseUrl: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:8081'),
   timeoutMs: 30_000,
 });
 

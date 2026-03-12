@@ -114,7 +114,8 @@ func (s *Store) ListQueue(ctx context.Context, limit int) ([]map[string]any, err
 	var out []map[string]any
 	for rows.Next() {
 		var (
-			id, symbol, signalType, instanceName         string
+			id, symbol, signalType                       string
+			instanceName                                 *string
 			confidence, entryPrice, stopLoss, takeProfit *float64
 			reasoning, blockReason                       *string
 			detectedAt                                   time.Time
