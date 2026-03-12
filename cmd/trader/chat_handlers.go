@@ -15,7 +15,7 @@ import (
 // registerChatRoutes wires the assistant chat endpoints.
 // The assistant is advisory only and cannot execute or approve trades.
 func registerChatRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool) {
-	svc := chatmod.NewService(pool)
+	svc := chatmod.NewService(pool, chatmod.NewOpenAIChatClientFromEnv())
 
 	// Session management
 	mux.HandleFunc("/api/v1/chat/sessions", protect(chatSessionsHandler(svc)))

@@ -14,13 +14,16 @@ import (
 type Service struct {
 	store  *SessionStore
 	router *ToolRouter
+	llm    LLMClient // nil → fall back to static placeholder replies
 }
 
 // NewService creates a chat Service.
-func NewService(pool *pgxpool.Pool) *Service {
+// llm may be nil; when nil, the assistant falls back to static advisory replies.
+func NewService(pool *pgxpool.Pool, llm LLMClient) *Service {
 	return &Service{
 		store:  NewSessionStore(pool),
 		router: NewToolRouter(pool),
+		llm:    llm,
 	}
 }
 
@@ -54,13 +57,14 @@ func (s *Service) GetHistory(ctx context.Context, sessionID uuid.UUID) ([]*Messa
 	return s.store.GetHistory(ctx, sessionID)
 }
 
-// SendMessage records a user message and generates a deterministic assistant reply.
-// For a real deployment, replace the reply generation with an LLM call.
-// Tool calls embedded in the user message are executed read-only through ToolRouter.
+// SendMessage records a user message and generates an assistant reply.
+// When an LLMClient is wired, the full session history is forwarded for context.
+// Tool calls are executed read-only through ToolRouter before the LLM is called.
 func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userContent string, toolCall *ToolCall) ([]*Message, error) {
-	// Verify session exists.
-	if _, err := s.store.GetSession(ctx, sessionID); err != nil {
-		return nil, fmt.Errorf("chat.Service.SendMessage: session not found: %w", err)
+	// Load history before the new message so we can give the LLM full context.
+	history, err := s.store.GetHistory(ctx, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("chat.Service.SendMessage: load history: %w", err)
 	}
 
 	var saved []*Message
@@ -92,12 +96,12 @@ func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userCont
 		saved = append(saved, toolMsg)
 	}
 
-	// Persist a minimal assistant echo reply.
-	// Replace this with an actual LLM/RAG call when the research runtime is wired.
+	// Generate the assistant reply — via LLM when available, otherwise static.
+	replyText := s.buildReply(ctx, userContent, toolCall, history)
 	assistantReply, err := s.store.AppendMessage(ctx, &Message{
 		SessionID: sessionID,
 		Role:      RoleAssistant,
-		Content:   s.buildReply(userContent, toolCall),
+		Content:   replyText,
 	})
 	if err != nil {
 		return nil, err
@@ -124,8 +128,25 @@ func (s *Service) persistToolResult(ctx context.Context, sessionID uuid.UUID, ca
 	})
 }
 
-// buildReply produces a placeholder reply. In production this calls the LLM.
-func (s *Service) buildReply(userContent string, call *ToolCall) string {
+// buildReply generates the assistant's reply text.
+// When s.llm is set, the full session history is forwarded for context.
+// Falls back to static advisory replies if the LLM is unavailable or returns an error.
+func (s *Service) buildReply(ctx context.Context, userContent string, call *ToolCall, history []*Message) string {
+	if s.llm != nil {
+		msgs := make([]LLMMessage, 0, len(history)+1)
+		for _, m := range history {
+			// Skip internal tool result messages — they add noise without benefit.
+			if m.Role == RoleTool {
+				continue
+			}
+			msgs = append(msgs, LLMMessage{Role: string(m.Role), Content: m.Content})
+		}
+		msgs = append(msgs, LLMMessage{Role: "user", Content: userContent})
+		if reply, err := s.llm.Complete(ctx, msgs); err == nil {
+			return reply
+		}
+		// Fall through to static reply on LLM error.
+	}
 	if call != nil {
 		return fmt.Sprintf("I looked up %q for you. Check the tool result above for the details.", call.Name)
 	}

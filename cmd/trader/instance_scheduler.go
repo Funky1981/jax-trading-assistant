@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -11,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
+	signalgenerator "jax-trading-assistant/internal/trader/signalgenerator"
 )
 
 // instanceRecord is a minimal view of a strategy_instance row needed by the watcher.
@@ -21,12 +24,14 @@ type instanceRecord struct {
 	Enabled            bool
 	SessionTimezone    string
 	FlattenByCloseTime string
+	Symbols            []string // extracted from config JSONB
 }
 
 // loadEnabledInstances reads all enabled strategy instances from the DB.
 func loadEnabledInstances(ctx context.Context, pool *pgxpool.Pool) ([]instanceRecord, error) {
 	rows, err := pool.Query(ctx, `
-		SELECT id, name, strategy_type_id, enabled, session_timezone, flatten_by_close_time
+		SELECT id, name, strategy_type_id, enabled, session_timezone, flatten_by_close_time,
+		       COALESCE(config->>'symbols', '[]') AS symbols_json
 		FROM strategy_instances
 		WHERE enabled = TRUE
 	`)
@@ -37,9 +42,11 @@ func loadEnabledInstances(ctx context.Context, pool *pgxpool.Pool) ([]instanceRe
 	var out []instanceRecord
 	for rows.Next() {
 		var r instanceRecord
-		if err := rows.Scan(&r.ID, &r.Name, &r.StrategyTypeID, &r.Enabled, &r.SessionTimezone, &r.FlattenByCloseTime); err != nil {
+		var symbolsJSON string
+		if err := rows.Scan(&r.ID, &r.Name, &r.StrategyTypeID, &r.Enabled, &r.SessionTimezone, &r.FlattenByCloseTime, &symbolsJSON); err != nil {
 			return nil, err
 		}
+		_ = json.Unmarshal([]byte(symbolsJSON), &r.Symbols)
 		out = append(out, r)
 	}
 	return out, rows.Err()
@@ -59,15 +66,89 @@ func checkKillSwitch(ctx context.Context, pool *pgxpool.Pool) bool {
 	return strings.EqualFold(strings.TrimSpace(val), "true")
 }
 
-// scanInstance evaluates a single strategy instance and proposes a candidate trade
-// if the conditions are met.  In production this would call the signal generator;
-// here we define the contract so the watcher can plug real logic in.
-func scanInstance(ctx context.Context, svc *candidatesmod.Service, inst instanceRecord) {
-	// TODO: integrate real signal-generation logic per strategy type.
-	// For now this stub logs the scan attempt and returns without creating candidates.
-	// Replace with: outcome := sigGen.EvaluateInstance(ctx, inst.ID)
-	log.Printf("watcher: scanning instance %q (%s)", inst.Name, inst.StrategyTypeID)
-	_ = svc // svc.Propose(ctx, req) once real signal output is available
+// scanInstance evaluates a single strategy instance and proposes candidate trades
+// for any signals the signal generator produces with sufficient confidence.
+// Duplicate candidates are silently skipped (ErrDuplicateCandidate).
+func scanInstance(ctx context.Context, svc *candidatesmod.Service, sigGen *signalgenerator.InProcessSignalGenerator, inst instanceRecord) {
+	if len(inst.Symbols) == 0 {
+		log.Printf("watcher: instance %q has no symbols configured, skipping", inst.Name)
+		return
+	}
+
+	// Generate signals for this instance's symbols using the in-process signal generator.
+	signals, err := sigGen.GenerateSignals(ctx, inst.Symbols)
+	if err != nil {
+		log.Printf("watcher: GenerateSignals error for instance %q: %v", inst.Name, err)
+		return
+	}
+
+	proposeCount := 0
+	for _, sig := range signals {
+		// Only include signals from the strategy type that matches this instance.
+		if !strings.EqualFold(sig.StrategyID, inst.StrategyTypeID) {
+			continue
+		}
+		// Require a minimum confidence threshold.
+		if sig.Confidence < 0.60 {
+			continue
+		}
+		// Convert signal type ("buy"/"sell") to uppercase convention.
+		signalType := strings.ToUpper(sig.Type)
+		if signalType == "HOLD" || signalType == "" {
+			continue
+		}
+
+		var entryPrice, stopLoss *float64
+		if sig.EntryPrice > 0 {
+			v := sig.EntryPrice
+			entryPrice = &v
+		}
+		if sig.StopLoss > 0 {
+			v := sig.StopLoss
+			stopLoss = &v
+		}
+		var takeProfit *float64
+		if len(sig.TakeProfit) > 0 && sig.TakeProfit[0] > 0 {
+			v := sig.TakeProfit[0]
+			takeProfit = &v
+		}
+		conf := sig.Confidence
+		reasoning := sig.Reason
+
+		req := candidatesmod.ProposalRequest{
+			StrategyInstanceID: inst.ID,
+			Symbol:             sig.Symbol,
+			SignalType:         signalType,
+			EntryPrice:         entryPrice,
+			StopLoss:           stopLoss,
+			TakeProfit:         takeProfit,
+			Confidence:         &conf,
+			Reasoning:          &reasoning,
+			DataProvenance:     "signal-generator",
+			TTL:                4 * time.Hour,
+		}
+		candidate, err := svc.Propose(ctx, req)
+		if err != nil {
+			if errors.Is(err, candidatesmod.ErrDuplicateCandidate) {
+				log.Printf("watcher: duplicate candidate skipped for %s/%s", inst.Name, sig.Symbol)
+				continue
+			}
+			log.Printf("watcher: propose error for %s/%s: %v", inst.Name, sig.Symbol, err)
+			continue
+		}
+
+		// Qualify immediately — moves to awaiting_approval.
+		if err := svc.Qualify(ctx, candidate.ID); err != nil {
+			log.Printf("watcher: qualify error for candidate %s: %v", candidate.ID, err)
+			continue
+		}
+		proposeCount++
+		log.Printf("watcher: proposed candidate %s for %s/%s (conf=%.2f)",
+			candidate.ID, inst.Name, sig.Symbol, sig.Confidence)
+	}
+	if proposeCount > 0 {
+		log.Printf("watcher: instance %q proposed %d candidate(s)", inst.Name, proposeCount)
+	}
 }
 
 // instanceScheduler tracks per-instance scan state and throttles calls.

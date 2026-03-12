@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
+	signalgenerator "jax-trading-assistant/internal/trader/signalgenerator"
 )
 
 // tradeWatcherConfig holds tunables for the always-on watcher.
@@ -28,7 +29,7 @@ func defaultWatcherConfig() tradeWatcherConfig {
 // startTradeWatcher launches the background goroutine that continuously
 // evaluates enabled strategy instances and generates candidate trades.
 // It runs until ctx is cancelled.
-func startTradeWatcher(ctx context.Context, pool *pgxpool.Pool) {
+func startTradeWatcher(ctx context.Context, pool *pgxpool.Pool, sigGen *signalgenerator.InProcessSignalGenerator) {
 	cfg := defaultWatcherConfig()
 	store := candidatesmod.NewStore(pool)
 	svc := candidatesmod.NewService(store)
@@ -68,7 +69,7 @@ func startTradeWatcher(ctx context.Context, pool *pgxpool.Pool) {
 				if !scheduler.due(inst.ID) {
 					continue
 				}
-				scanInstance(ctx, svc, inst)
+				scanInstance(ctx, svc, sigGen, inst)
 				scheduler.mark(inst.ID)
 				publishEvent("watcher.scan", map[string]any{
 					"instanceId":   inst.ID,

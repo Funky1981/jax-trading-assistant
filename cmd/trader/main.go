@@ -189,7 +189,7 @@ func main() {
 
 	// Always-on trade watcher: continuously evaluates enabled strategy instances
 	// and creates candidate trades independent of browser presence.
-	go startTradeWatcher(ctx, dbPool)
+	go startTradeWatcher(ctx, dbPool, sigGen)
 
 	// Health check endpoint
 	mux.HandleFunc("/health", handleHealth(sigGen))
