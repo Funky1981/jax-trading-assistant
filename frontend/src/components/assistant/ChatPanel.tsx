@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Send, Plus, AlertCircle } from 'lucide-react';
-import { chatService, type ChatMessage, type ChatSession } from '@/data/chat-service';
+import { Send, Plus, AlertCircle, Wrench, X } from 'lucide-react';
+import { chatService, type AssistantTool, type ChatMessage, type ChatSession } from '@/data/chat-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChatMessageBubble } from './ChatMessage';
@@ -18,6 +18,10 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
   const [draft, setDraft] = useState('');
   // Holds the user's message while the server is processing — gives instant feedback.
   const [optimisticContent, setOptimisticContent] = useState<string | null>(null);
+  // Tool picker state.
+  const [showTools, setShowTools] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<AssistantTool | null>(null);
+  const [toolArgValue, setToolArgValue] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Sync sessionId when the parent changes it (e.g. user picks a different session).
@@ -34,14 +38,22 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
     refetchInterval: false,
   });
 
+  // Load tool catalogue once.
+  const { data: toolsData } = useQuery({
+    queryKey: ['chat-tools'],
+    queryFn: () => chatService.getTools(),
+    staleTime: Infinity,
+  });
+  const tools = toolsData?.tools ?? [];
+
   // Scroll to bottom on new messages or while pending.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [history.length, optimisticContent]);
 
   const sendMutation = useMutation({
-    mutationFn: (content: string) =>
-      chatService.sendMessage({ sessionId, content }),
+    mutationFn: ({ content, toolCall }: { content: string; toolCall?: { name: string; args: Record<string, string> } }) =>
+      chatService.sendMessage({ sessionId, content, toolCall }),
     onSuccess: (resp) => {
       setOptimisticContent(null);
       if (!sessionId) {
@@ -61,7 +73,18 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
     if (!content || sendMutation.isPending) return;
     setDraft('');
     setOptimisticContent(content);
-    sendMutation.mutate(content);
+
+    // Build tool call payload if a tool is selected.
+    let toolCall: { name: string; args: Record<string, string> } | undefined;
+    if (selectedTool) {
+      toolCall = { name: selectedTool.name, args: { [selectedTool.argKey]: toolArgValue.trim() } };
+      // Reset tool picker after send.
+      setSelectedTool(null);
+      setToolArgValue('');
+      setShowTools(false);
+    }
+
+    sendMutation.mutate({ content, toolCall });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -120,7 +143,60 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* Tool picker */}
+      {tools.length > 0 && (
+        <div className="border-t border-border pt-2">
+          {!showTools ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setShowTools(true)}
+              disabled={sendMutation.isPending}
+            >
+              <Wrench className="h-3 w-3 mr-1" /> Use a tool
+            </Button>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <select
+                  className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={selectedTool?.name ?? ''}
+                  onChange={(e) => {
+                    const t = tools.find((x) => x.name === e.target.value) ?? null;
+                    setSelectedTool(t);
+                    setToolArgValue('');
+                  }}
+                >
+                  <option value="">Select tool…</option>
+                  {tools.map((t) => (
+                    <option key={t.name} value={t.name}>{t.description}</option>
+                  ))}
+                </select>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 text-muted-foreground"
+                  onClick={() => { setShowTools(false); setSelectedTool(null); setToolArgValue(''); }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+              {selectedTool && (
+                <Input
+                  className="h-8 text-xs"
+                  placeholder={selectedTool.argLabel}
+                  value={toolArgValue}
+                  onChange={(e) => setToolArgValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Message input */}
       <div className="flex gap-2 pt-2 border-t border-border">
         <Input
           value={draft}

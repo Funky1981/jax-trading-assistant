@@ -59,16 +59,17 @@ func (r *ToolRouter) Dispatch(ctx context.Context, call ToolCall) (*ToolResult, 
 }
 
 // AvailableTools returns human-readable descriptions for the frontend.
+// argKey is the primary argument name; argLabel is the placeholder text for the UI input.
 func AvailableTools() []map[string]string {
 	return []map[string]string{
-		{"name": "get_candidate_trade", "description": "Retrieve a candidate trade by ID"},
-		{"name": "get_signal", "description": "Retrieve a strategy signal by ID"},
-		{"name": "get_trade", "description": "Retrieve an executed trade by ID"},
-		{"name": "get_strategy", "description": "Retrieve strategy definition by ID"},
-		{"name": "get_strategy_instance", "description": "Retrieve strategy instance by ID"},
-		{"name": "get_orchestration_run", "description": "Retrieve an orchestration run by ID"},
-		{"name": "search_research_runs", "description": "Search recent orchestration/research runs"},
-		{"name": "explain_trade_blockers", "description": "Explain why a candidate was blocked"},
+		{"name": "get_candidate_trade", "description": "Retrieve a candidate trade by ID", "argKey": "candidateId", "argLabel": "Candidate ID"},
+		{"name": "get_signal", "description": "Retrieve a strategy signal by ID", "argKey": "signalId", "argLabel": "Signal ID"},
+		{"name": "get_trade", "description": "Retrieve an executed trade by ID", "argKey": "tradeId", "argLabel": "Trade ID"},
+		{"name": "get_strategy", "description": "Retrieve strategy definition by ID", "argKey": "strategyId", "argLabel": "Strategy ID"},
+		{"name": "get_strategy_instance", "description": "Retrieve strategy instance by ID", "argKey": "instanceId", "argLabel": "Instance ID"},
+		{"name": "get_orchestration_run", "description": "Retrieve an orchestration run by ID", "argKey": "runId", "argLabel": "Run ID"},
+		{"name": "search_research_runs", "description": "Search recent orchestration/research runs", "argKey": "symbol", "argLabel": "Symbol (optional)"},
+		{"name": "explain_trade_blockers", "description": "Explain why a candidate was blocked", "argKey": "candidateId", "argLabel": "Candidate ID"},
 	}
 }
 

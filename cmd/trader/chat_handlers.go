@@ -78,8 +78,12 @@ func chatHandler(svc *chatmod.Service) http.HandlerFunc {
 				}
 				sessionID = sid
 			} else {
-				// Auto-create a session for convenience.
-				sess, err := svc.StartSession(r.Context(), actorFromRequest(r), "")
+				// Auto-create a session, using the first message as the title.
+				title := body.Content
+				if len([]rune(title)) > 50 {
+					title = string([]rune(title)[:50]) + "…"
+				}
+				sess, err := svc.StartSession(r.Context(), actorFromRequest(r), title)
 				if err != nil {
 					http.Error(w, fmt.Sprintf("create session: %v", err), http.StatusInternalServerError)
 					return

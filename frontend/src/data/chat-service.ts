@@ -8,6 +8,13 @@ export interface ChatSession {
   updatedAt: string;
 }
 
+export interface AssistantTool {
+  name: string;
+  description: string;
+  argKey: string;
+  argLabel: string;
+}
+
 export interface ChatMessage {
   id: string;
   sessionId: string;
@@ -57,6 +64,6 @@ export const chatService = {
   },
 
   getTools() {
-    return apiClient.get<{ tools: { name: string; description: string }[]; notice: string }>('/api/v1/chat/tools');
+    return apiClient.get<{ tools: AssistantTool[]; notice: string }>('/api/v1/chat/tools');
   },
 };
