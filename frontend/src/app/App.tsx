@@ -12,6 +12,8 @@ import { PortfolioPage } from '@/pages/PortfolioPage';
 import { OrderTicketPage } from '@/pages/OrderTicketPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { UserGuidePage } from '@/pages/UserGuidePage';
+import { ApprovalsPage } from '@/pages/ApprovalsPage';
+import { AssistantPage } from '@/pages/AssistantPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
@@ -64,6 +66,8 @@ export const routes = [
       { path: 'settings', element: <SettingsPage /> },
       { path: 'e2e-tests', element: <E2ETestingPage /> },
       { path: 'guide', element: <UserGuidePage /> },
+      { path: 'approvals', element: <ApprovalsPage /> },
+      { path: 'assistant', element: <AssistantPage /> },
     ],
   },
 ];

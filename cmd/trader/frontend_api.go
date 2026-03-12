@@ -317,6 +317,19 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	artifactHandlers := NewArtifactHandlers(artifactdomain.NewStore(pool))
 	artifactHandlers.RegisterRoutes(mux)
 
+	// ── Candidate trades (always-on watcher) ──────────────────────────────────
+	mux.HandleFunc("/api/v1/candidates", protect(candidatesListHandler(pool)))
+	mux.HandleFunc("/api/v1/candidates/", protect(candidatesDetailHandler(pool)))
+
+	// ── SSE live event stream ─────────────────────────────────────────────────
+	mux.HandleFunc("/api/v1/events/stream", protect(sseHandler()))
+
+	// ── Human approval flow ───────────────────────────────────────────────────
+	registerApprovalRoutes(mux, protect, pool)
+
+	// ── Chat assistant ────────────────────────────────────────────────────────
+	registerChatRoutes(mux, protect, pool)
+
 	handler := middleware.FlowID(middleware.CORS(corsConfig)(rateLimiter.Middleware(mux)))
 
 	srv := &http.Server{

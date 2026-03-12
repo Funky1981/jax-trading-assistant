@@ -17,6 +17,8 @@ import {
   ShieldCheck,
   MonitorCheck,
   BookOpen,
+  CheckSquare,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,6 +37,8 @@ const navItems = [
   { label: 'Portfolio', path: '/portfolio', icon: Briefcase },
   { label: 'Blotter', path: '/blotter', icon: FileText },
   { label: 'Settings', path: '/settings', icon: Settings },
+  { label: 'Approvals', path: '/approvals', icon: CheckSquare },
+  { label: 'Assistant', path: '/assistant', icon: Bot },
   { label: 'User Guide', path: '/guide', icon: BookOpen },
 ];
 

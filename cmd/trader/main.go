@@ -187,6 +187,10 @@ func main() {
 	go startMarketIngester(ctx, dbPool)
 	go startFrontendAPIServer(ctx, dbPool, registry, strategyTypeRegistry)
 
+	// Always-on trade watcher: continuously evaluates enabled strategy instances
+	// and creates candidate trades independent of browser presence.
+	go startTradeWatcher(ctx, dbPool)
+
 	// Health check endpoint
 	mux.HandleFunc("/health", handleHealth(sigGen))
 	mux.HandleFunc("/tools", marketTools.handler())
