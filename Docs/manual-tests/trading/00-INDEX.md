@@ -25,6 +25,9 @@ Run these after every release or whenever trading-path code changes.
 | 18 | [18-blotter-filter-by-status.md](18-blotter-filter-by-status.md) | Filter blotter by order status |
 | 19 | [19-order-ticket-standalone.md](19-order-ticket-standalone.md) | Place order from standalone Order Ticket page |
 | 20 | [20-portfolio-risk-review.md](20-portfolio-risk-review.md) | Review portfolio exposure and risk metrics |
+| 21 | [21-trade-watcher-candidates.md](21-trade-watcher-candidates.md) | Always-on trade watcher: candidate detection, dedup, kill switch |
+| 22 | [22-approval-queue-lifecycle.md](22-approval-queue-lifecycle.md) | Human approval flow: approve, reject, snooze, re-analyse, expiry guard |
+| 23 | [23-assistant-advisory-chat.md](23-assistant-advisory-chat.md) | Jax Assistant: tool calls, session history, safety boundary enforcement |
 
 ## Prerequisites (apply to all tests)
 
