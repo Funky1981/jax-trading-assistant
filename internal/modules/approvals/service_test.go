@@ -8,10 +8,10 @@ import (
 // TestDecisionConstants verifies the decision value strings match the DB enum.
 func TestDecisionConstants(t *testing.T) {
 	cases := map[string]string{
-		"approved":              DecisionApproved,
-		"rejected":              DecisionRejected,
-		"snoozed":               DecisionSnoozed,
-		"reanalysis_requested":  DecisionReanalysisRequested,
+		"approved":             DecisionApproved,
+		"rejected":             DecisionRejected,
+		"snoozed":              DecisionSnoozed,
+		"reanalysis_requested": DecisionReanalysisRequested,
 	}
 	for want, got := range cases {
 		if got != want {

@@ -19,7 +19,7 @@ type LLMClient interface {
 
 // LLMMessage carries a single turn for the LLM context window.
 type LLMMessage struct {
-	Role    string `json:"role"`    // "system" | "user" | "assistant" | "tool"
+	Role    string `json:"role"` // "system" | "user" | "assistant" | "tool"
 	Content string `json:"content"`
 }
 

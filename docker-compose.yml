@@ -137,6 +137,10 @@ services:
       FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
       NEWSAPI_KEY: ${NEWSAPI_KEY:-}
       FINANCIAL_DATASETS_API_KEY: ${FINANCIAL_DATASETS_API_KEY:-}
+      # Jax Assistant LLM (optional — falls back to advisory replies if not set)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
     ports:
       - "8100:8100"
       - "8081:8081"
@@ -186,6 +190,28 @@ services:
       retries: 3
 
   # jax-api removed (ADR-0012 Phase 6) — frontend API now in cmd/trader on port 8081.
+
+  # ── Frontend (React SPA served via nginx) ───────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Baked in at build time so the SPA knows where to reach the API
+        # in development. In Docker the nginx proxy handles /api/ internally.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8081}
+    ports:
+      - "3000:80"
+    depends_on:
+      jax-trader:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/health-frontend || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
   postgres:
     image: postgres:16
