@@ -21,12 +21,9 @@ export const observabilityService = {
   },
 
   /**
-   * Get recent metrics (if exposed via API)
-   * Note: In production, metrics would likely go to a time-series DB
-   * This is a placeholder for potential metrics endpoint
+   * Get recent metrics via the metrics API endpoint
    */
   async getRecentMetrics(limit = 100): Promise<MetricEvent[]> {
-    // Placeholder - would need actual metrics endpoint
     return apiClient.get<MetricEvent[]>(`/api/v1/metrics?limit=${limit}`);
   },
 

@@ -82,7 +82,4 @@ export function buildUrl(service: keyof typeof API_CONFIG, endpoint: string): st
  */
 export const isDevelopment = import.meta.env.DEV;
 
-/**
- * Helper to check if we should use mock data (when API is unavailable)
- */
-export const useMockData = import.meta.env.VITE_USE_MOCK_DATA === 'true';
+
