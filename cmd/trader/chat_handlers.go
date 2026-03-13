@@ -15,7 +15,15 @@ import (
 // registerChatRoutes wires the assistant chat endpoints.
 // The assistant is advisory only and cannot execute or approve trades.
 func registerChatRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool) {
-	svc := chatmod.NewService(pool, chatmod.NewOpenAIChatClientFromEnv())
+	// NewOpenAIChatClientFromEnv returns a typed nil (*OpenAIChatClient) when no
+	// API key is configured. Assigning a typed nil directly to an interface gives
+	// a non-nil interface value, which causes a nil-pointer panic inside Complete.
+	// Explicitly convert to the interface type so the nil check in Service works.
+	var llm chatmod.LLMClient
+	if c := chatmod.NewOpenAIChatClientFromEnv(); c != nil {
+		llm = c
+	}
+	svc := chatmod.NewService(pool, llm)
 
 	// Session management
 	mux.HandleFunc("/api/v1/chat/sessions", protect(chatSessionsHandler(svc)))
