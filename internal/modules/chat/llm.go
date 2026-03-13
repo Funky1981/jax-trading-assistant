@@ -82,6 +82,9 @@ func NewOpenAIChatClientFromEnv() *OpenAIChatClient {
 
 // Complete sends msgs to the chat completions endpoint and returns the reply text.
 func (c *OpenAIChatClient) Complete(ctx context.Context, msgs []LLMMessage) (string, error) {
+	if c == nil {
+		return "", fmt.Errorf("llm client not configured")
+	}
 	type chatMsg struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
