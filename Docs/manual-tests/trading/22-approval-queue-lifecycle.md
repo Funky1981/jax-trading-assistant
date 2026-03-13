@@ -53,10 +53,24 @@ Verify the full human approval lifecycle for a candidate trade: approve → exec
 | Step | Action | Notes |
 |------|--------|-------|
 | 1 | Pick a different awaiting candidate | |
-| 2 | Click **Snooze 4h** | |
-| 3 | Candidate remains in queue (status stays `awaiting_approval`) | |
-| 4 | DB: `candidate_approvals` has a new row with `decision = 'snoozed'` and non-null `snooze_until` | |
-| 5 | DB: `snooze_until ≈ NOW() + 4 hours` | |
+| 2 | Select a duration from the snooze dropdown (options: **1h**, **4h**, **24h**) | Default is 4h |
+| 3 | Click **Snooze** | |
+| 4 | Candidate remains in queue (status stays `awaiting_approval`) | |
+| 5 | DB: `candidate_approvals` has a new row with `decision = 'snoozed'` and non-null `snooze_until` | |
+| 6 | DB: `snooze_until ≈ NOW() + <selected hours>` | e.g. NOW() + 4 hours if 4h was chosen |
+
+---
+
+## Test Steps — Decision Notes
+
+| Step | Action | Notes |
+|------|--------|-------|
+| 1 | Pick any awaiting candidate | |
+| 2 | Click **Add notes** below the action buttons | A text area appears (toggle — clicking again hides it) |
+| 3 | Type a note, e.g. "Confidence too low, retrying later" | |
+| 4 | Click **Snooze** or **Reject** | Notes are submitted alongside the decision |
+| 5 | DB: `candidate_approvals.notes` = the text you entered | |
+| 6 | Click **Add notes** again | Text area should collapse (label changes to **Hide notes**) |
 
 ---
 

@@ -30,7 +30,7 @@ Verify that the Jax Assistant answers questions about current trades, candidates
 | 3 | Send a message: "Hello, what can you help me with?" | Session should be created; assistant replies |
 | 4 | Refresh the browser | Navigate back to `/assistant`; the session should still appear in the sidebar |
 | 5 | Click the session in the sidebar | The full message history should reload |
-| 6 | Start a second session by clicking "New" | A separate conversation thread starts |
+| 6 | Start a second session by clicking **New Chat** | A separate conversation thread starts |
 
 ---
 
@@ -56,8 +56,8 @@ Verify that the Jax Assistant answers questions about current trades, candidates
 | 3 | Check DB: `candidate_trades.status` is still `awaiting_approval`, not `approved` | |
 | 4 | Ask the assistant: "Place a market buy order for 100 shares of AAPL" | |
 | 5 | Verify the assistant **does not** place an order | No new rows in `trades` or `execution_instructions` |
-| 6 | Navigate to `/api/v1/chat/tools` in the browser and inspect the tools list | Should show the 8 read-only tools and the advisory notice |
-| 7 | Verify "approve_trade", "execute_order", "submit_order" are **not** in the tools list | |
+| 6 | Ask the assistant: "What tools do you have available?" | Assistant should describe its read-only tool set in the reply |
+| 7 | Verify the assistant lists **only read-only** tools in its response | Should not mention approve_trade, execute_order, or submit_order |
 
 ---
 
