@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -130,7 +131,7 @@ func (s *Service) persistToolResult(ctx context.Context, sessionID uuid.UUID, ca
 
 // buildReply generates the assistant's reply text.
 // When s.llm is set, the full session history is forwarded for context.
-// Falls back to static advisory replies if the LLM is unavailable or returns an error.
+// Falls back to contextual keyword-based replies if the LLM is unavailable or returns an error.
 func (s *Service) buildReply(ctx context.Context, userContent string, call *ToolCall, history []*Message) string {
 	if s.llm != nil {
 		msgs := make([]LLMMessage, 0, len(history)+1)
@@ -148,10 +149,65 @@ func (s *Service) buildReply(ctx context.Context, userContent string, call *Tool
 		// Fall through to static reply on LLM error.
 	}
 	if call != nil {
-		return fmt.Sprintf("I looked up %q for you. Check the tool result above for the details.", call.Name)
+		switch call.Name {
+		case "get_candidate_trade":
+			return "Here's the candidate trade I fetched. Check the tool result above for the full details including symbol, direction, confidence score, and any blocker reasons."
+		case "explain_trade_blockers":
+			return "Here's the blocker analysis. The tool result above lists every guard-rail or risk constraint that prevented this candidate from being promoted to an order."
+		case "get_signal":
+			return "Here's the signal I retrieved. The tool result above shows the signal strength, the strategy that generated it, and the timestamp."
+		case "get_strategy":
+			return "Here's the strategy definition. The tool result above describes the strategy parameters and its last known state."
+		case "get_strategy_instance":
+			return "Here's the strategy instance. The tool result above shows the running configuration, schedule, and any active positions."
+		case "get_trade":
+			return "Here's the executed trade record. The tool result above includes fill price, quantity, and execution status."
+		case "get_orchestration_run":
+			return "Here's the orchestration run. The tool result above shows the run outcome, signals produced, and any errors encountered."
+		case "search_research_runs":
+			return "Here are the recent research runs matching your query. The tool result above shows each run's outcome, signals produced, and timestamps."
+		default:
+			return fmt.Sprintf("I fetched the result for %q. Check the tool result above for the details.", call.Name)
+		}
 	}
 	if userContent == "" {
 		return "How can I help you analyse the current trading situation?"
 	}
-	return "I'm Jax Assistant (advisory only). I can explain candidate trades, signals, strategy behaviour, and research runs. What would you like to know?"
+	return staticKeywordReply(userContent)
+}
+
+// staticKeywordReply provides contextual guidance when no LLM is configured.
+// It matches keywords in the user's message to return a relevant, topic-specific reply.
+func staticKeywordReply(msg string) string {
+	lower := strings.ToLower(msg)
+	has := func(keywords ...string) bool {
+		for _, kw := range keywords {
+			if strings.Contains(lower, kw) {
+				return true
+			}
+		}
+		return false
+	}
+	switch {
+	case has("hello", "hi ", "hey ", "howdy", "greetings"):
+		return "Hello! I'm Jax Assistant (advisory only). I can help you understand candidate trades, signals, strategy behaviour, and research runs. Use the Tool Picker (⚙) to query live data, or ask me about a specific topic."
+	case has("signal", "high-confidence", "high confidence"):
+		return "To inspect a specific signal, use the Tool Picker and select get_signal. For recent run activity that generated signals, try search_research_runs. The Signals page in the dashboard shows the full live list."
+	case has("candidate", "waiting", "approval", "approve", "pending"):
+		return "To inspect a specific candidate trade, use the Tool Picker and select get_candidate_trade. To find out why a candidate was blocked, use explain_trade_blockers. The Approval Queue page shows all pending candidates in real time."
+	case has("block", "blocker", "rejected", "prevent", "why was", "why wasn"):
+		return "Use the Tool Picker and select explain_trade_blockers to see exactly which guard-rails or risk constraints prevented a candidate from being promoted. You'll need the candidate ID from the Approval Queue."
+	case has("strateg"):
+		return "To inspect a strategy definition, use get_strategy in the Tool Picker. For a live running instance, use get_strategy_instance. The Strategy Instances page shows all currently active instances and their schedules."
+	case has("research", "orchestration"):
+		return "Use search_research_runs in the Tool Picker to browse recent orchestration and research runs. You can filter by symbol to narrow the results."
+	case has("market", "condition", "price", "quote", "outlook"):
+		return "Market data is ingested and evaluated continuously by the strategy engine. The latest assessed opportunities appear in the Approval Queue. For raw price data, check the Market Data panel in the dashboard."
+	case has("trade", "executed", "filled", "order", "position"):
+		return "To look up an executed trade, use get_trade in the Tool Picker with the trade ID. Open positions and fill history are also visible on the Trades page."
+	case has("help", "what can", "what do", "capabilities", "tools", "available"):
+		return "I can look up candidate trades, signals, executed trades, strategy definitions and instances, orchestration runs, and trade blocker explanations — use the Tool Picker (⚙) to run any of these. I can also answer questions about how the trading system works. Note: without an OpenAI API key I give keyword-based replies rather than full conversational answers."
+	default:
+		return "I'm Jax Assistant (advisory only). I can explain candidate trades, signals, strategy behaviour, and research runs. Use the Tool Picker (⚙) above to query live data, or ask me about a specific topic like signals, candidates, strategies, or research runs."
+	}
 }
