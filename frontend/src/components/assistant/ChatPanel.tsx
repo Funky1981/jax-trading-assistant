@@ -2,10 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Send, Plus, AlertCircle, Wrench, X } from 'lucide-react';
 import { chatService, type AssistantTool, type ChatMessage, type ChatSession } from '@/data/chat-service';
+import { candidatesService } from '@/data/approvals-service';
+import { signalsService } from '@/data/signals-service';
+import { instancesService } from '@/data/instances-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChatMessageBubble } from './ChatMessage';
 import { ToolResultCard } from './ToolResultCard';
+
+const SUGGESTED_PROMPTS = [
+  'What candidate trades are currently waiting for my approval?',
+  'Which candidates were recently blocked, and why?',
+  'What strategies are currently active?',
+  'Summarise the most recent research run',
+  'Are there any high-confidence signals I should be aware of?',
+];
 
 interface ChatPanelProps {
   sessionId?: string;
@@ -45,6 +56,43 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
     staleTime: Infinity,
   });
   const tools = toolsData?.tools ?? [];
+
+  // Entity lists for tool picker smart dropdowns.
+  const isCandidateTool = !!selectedTool && ['get_candidate_trade', 'explain_trade_blockers'].includes(selectedTool.name);
+  const isSignalTool = !!selectedTool && selectedTool.name === 'get_signal';
+  const isInstanceTool = !!selectedTool && selectedTool.name === 'get_strategy_instance';
+
+  const { data: candidateOptions = [] } = useQuery({
+    queryKey: ['assistant-entity-candidates'],
+    queryFn: async () => {
+      const items = await candidatesService.list({ limit: 30 });
+      return items.map((c) => ({ id: c.id, label: `${c.symbol} ${c.signalType} — ${c.status}` }));
+    },
+    staleTime: 30_000,
+    enabled: isCandidateTool,
+  });
+
+  const { data: signalOptions = [] } = useQuery({
+    queryKey: ['assistant-entity-signals'],
+    queryFn: async () => {
+      const resp = await signalsService.list({ limit: 30 });
+      return resp.signals.map((s) => ({ id: s.id, label: `${s.symbol} ${s.signal_type} — ${s.status}` }));
+    },
+    staleTime: 30_000,
+    enabled: isSignalTool,
+  });
+
+  const { data: instanceOptions = [] } = useQuery({
+    queryKey: ['assistant-entity-instances'],
+    queryFn: async () => {
+      const items = await instancesService.list();
+      return items.map((i) => ({ id: i.id, label: i.name }));
+    },
+    staleTime: 60_000,
+    enabled: isInstanceTool,
+  });
+
+  const entityOptions = isCandidateTool ? candidateOptions : isSignalTool ? signalOptions : isInstanceTool ? instanceOptions : [];
 
   // Scroll to bottom on new messages or while pending.
   useEffect(() => {
@@ -105,9 +153,22 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
       {/* Messages */}
       <div className="flex-1 overflow-y-auto pr-1">
         {!sessionId && !isLoading && (
-          <p className="text-center text-sm text-muted-foreground py-8">
-            Start a conversation to analyse candidate trades, signals, and strategy behaviour.
-          </p>
+          <div className="flex flex-col items-center gap-4 py-6">
+            <p className="text-sm text-muted-foreground text-center">
+              Start a conversation, or pick a suggestion:
+            </p>
+            <div className="flex flex-col gap-2 w-full max-w-md">
+              {SUGGESTED_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => { setDraft(prompt); }}
+                  className="text-left rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         {isLoading && <p className="text-center text-sm text-muted-foreground py-4">Loading history…</p>}
 
@@ -161,6 +222,7 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
               <div className="flex items-center gap-2">
                 <select
                   className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  title="Select tool"
                   value={selectedTool?.name ?? ''}
                   onChange={(e) => {
                     const t = tools.find((x) => x.name === e.target.value) ?? null;
@@ -183,13 +245,27 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
                 </Button>
               </div>
               {selectedTool && (
-                <Input
-                  className="h-8 text-xs"
-                  placeholder={selectedTool.argLabel}
-                  value={toolArgValue}
-                  onChange={(e) => setToolArgValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                />
+                entityOptions.length > 0 ? (
+                  <select
+                    className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    title={`Select ${selectedTool.argLabel}`}
+                    value={toolArgValue}
+                    onChange={(e) => setToolArgValue(e.target.value)}
+                  >
+                    <option value="">Select {selectedTool.argLabel}…</option>
+                    {entityOptions.map((opt) => (
+                      <option key={opt.id} value={opt.id}>{opt.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder={selectedTool.argLabel}
+                    value={toolArgValue}
+                    onChange={(e) => setToolArgValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                  />
+                )
               )}
             </div>
           )}
