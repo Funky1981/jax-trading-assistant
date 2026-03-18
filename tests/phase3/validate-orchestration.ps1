@@ -25,7 +25,7 @@ Start-Sleep -Seconds 1
 Write-Host "✅ Cleanup complete" -ForegroundColor Green
 
 Write-Host "`nStep 4: Building cmd/trader..." -ForegroundColor Yellow
-$traderPath = "c:\Projects\jax-trading assistant\cmd\trader"
+$traderPath = "c:\Projects\jax-trading-assistant\cmd\trader"
 Push-Location $traderPath
 go build -o trader.exe .
 if ($LASTEXITCODE -ne 0) {

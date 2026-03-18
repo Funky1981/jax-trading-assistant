@@ -46,7 +46,7 @@ $files = @(
 
 $allFilesExist = $true
 foreach ($file in $files) {
-    $path = Join-Path "c:\Projects\jax-trading assistant" $file
+    $path = Join-Path "c:\Projects\jax-trading-assistant" $file
     if (Test-Path $path) {
         Write-Host "  [OK] $file" -ForegroundColor Green
     } else {
@@ -63,7 +63,7 @@ Write-Host ""
 
 # Test 2: Build cmd/trader
 Write-Host "Test 2: Build cmd/trader with execution" -ForegroundColor Yellow
-Push-Location "c:\Projects\jax-trading assistant"
+Push-Location "c:\Projects\jax-trading-assistant"
 try {
     $output = go build -o cmd/trader/trader-test.exe ./cmd/trader 2>&1
     if ($LASTEXITCODE -eq 0) {
@@ -82,7 +82,7 @@ Write-Host ""
 
 # Test 3: Run execution module unit tests
 Write-Host "Test 3: Run execution module unit tests" -ForegroundColor Yellow
-Push-Location "c:\Projects\jax-trading assistant\internal\modules\execution"
+Push-Location "c:\Projects\jax-trading-assistant\internal\modules\execution"
 try {
     $testOutput = go test -v . 2>&1
     if ($LASTEXITCODE -eq 0) {
@@ -101,7 +101,7 @@ Write-Host ""
 
 # Test 4: Verify cmd/trader exposes execution endpoint
 Write-Host "Test 4: Verify handleExecute function exists" -ForegroundColor Yellow
-$mainGo = Get-Content "c:\Projects\jax-trading assistant\cmd\trader\main.go" -Raw
+$mainGo = Get-Content "c:\Projects\jax-trading-assistant\cmd\trader\main.go" -Raw
 if ($mainGo -match "handleExecute") {
     Write-Host "  [OK] handleExecute function found" -ForegroundColor Green
 } else {
@@ -145,7 +145,7 @@ Write-Host ""
 
 # Test 6: Verify backward compatibility (old jax-trade-executor service still exists)
 Write-Host "Test 6: Verify backward compatibility" -ForegroundColor Yellow
-if (Test-Path "c:\Projects\jax-trading assistant\services\jax-trade-executor\cmd\jax-trade-executor\main.go") {
+if (Test-Path "c:\Projects\jax-trading-assistant\services\jax-trade-executor\cmd\jax-trade-executor\main.go") {
     Write-Host "  [OK] jax-trade-executor service preserved" -ForegroundColor Green
 } else {
     Write-Host "  [WARN] jax-trade-executor service not found (acceptable if intentionally removed)" -ForegroundColor Yellow

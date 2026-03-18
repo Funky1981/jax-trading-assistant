@@ -10,7 +10,7 @@ $filesFixed = 0
 $errorsFixed = 0
 
 # Get all markdown files
-$mdFiles = Get-ChildItem -Path "c:\Projects\jax-trading assistant" -Recurse -Filter "*.md" | Where-Object {
+$mdFiles = Get-ChildItem -Path "c:\Projects\jax-trading-assistant" -Recurse -Filter "*.md" | Where-Object {
     $_.FullName -notmatch 'node_modules' -and
     $_.FullName -notmatch '\\dist\\' -and
     $_.FullName -notmatch '\\.git\\'

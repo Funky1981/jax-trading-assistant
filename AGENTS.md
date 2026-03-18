@@ -1,4 +1,4 @@
-# AGENTS.md instructions for c:\Projects\jax-trading assistant
+# AGENTS.md instructions for c:\Projects\jax-trading-assistant
 
 ## Skills
 

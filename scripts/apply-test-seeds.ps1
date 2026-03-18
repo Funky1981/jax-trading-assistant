@@ -12,7 +12,7 @@ if (-not (Test-Path $seedFile)) {
 
 Write-Host "Seed file: $seedFile" -ForegroundColor Gray
 
-$postgresContainer = "jax-tradingassistant-postgres-1"
+$postgresContainer = "jax-trading-assistant-postgres-1"
 $containerSeedPath = "/tmp/001_test_artifacts.sql"
 
 try {
