@@ -168,6 +168,27 @@ if (-not (Wait-ForHttp "http://localhost:5173/" 30 1)) {
     exit 1
 }
 
+# Start the Playwright test agent (host-side HTTP runner for E2E tests in the container)
+$AgentPidFile = Join-Path $RuntimeDir "playwright-agent.pid"
+$AgentLogFile = "logs/playwright-agent.log"
+
+# Kill stale agent if running
+if (Test-Path $AgentPidFile) {
+    try {
+        $stalePid = [int](Get-Content $AgentPidFile -ErrorAction Stop | Select-Object -First 1)
+        $staleProc = Get-Process -Id $stalePid -ErrorAction SilentlyContinue
+        if ($staleProc) { Stop-Process -Id $stalePid -Force -ErrorAction SilentlyContinue }
+    } catch { }
+    Remove-Item $AgentPidFile -ErrorAction SilentlyContinue
+}
+
+Write-Host "  Launching Playwright test agent on port 9092..." -ForegroundColor Gray
+$agentProcess = Start-Process node `
+    -ArgumentList "$PWD\scripts\playwright-agent.js" `
+    -PassThru `
+    -WindowStyle Hidden
+Write-Host "  Playwright agent PID: $($agentProcess.Id)" -ForegroundColor Gray
+
 Write-Host "`nOpening dashboard at http://localhost:5173" -ForegroundColor Green
 Start-Process "http://localhost:5173" | Out-Null
 Write-Host "Frontend dev server PID: $($frontendProcess.Id)" -ForegroundColor Gray

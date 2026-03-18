@@ -15,8 +15,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -109,6 +112,12 @@ func playwrightResultsHandler() http.HandlerFunc {
 func execPlaywright(spec string) *playwrightRunResult {
 	started := time.Now().UTC()
 
+	// When PLAYWRIGHT_RUNNER_URL is set the binary is running inside Docker
+	// and cannot exec npx directly.  Delegate to the host-side agent instead.
+	if runnerURL := strings.TrimSpace(os.Getenv("PLAYWRIGHT_RUNNER_URL")); runnerURL != "" {
+		return callPlaywrightAgent(runnerURL, spec, started)
+	}
+
 	// Resolve the frontend/ directory relative to the repo root.
 	frontendDir := filepath.Join(repoRoot(), "frontend")
 
@@ -155,4 +164,45 @@ func execPlaywright(spec string) *playwrightRunResult {
 		Spec:        spec,
 		Output:      truncateForArtifact(outBuf.String(), 24_000),
 	}
+}
+
+// callPlaywrightAgent delegates test execution to the host-side playwright
+// agent (scripts/playwright-agent.ps1) via HTTP.  The POST blocks until the
+// agent returns the full result (tests can take minutes; timeout is 10 min).
+func callPlaywrightAgent(runnerURL, spec string, started time.Time) *playwrightRunResult {
+	target := strings.TrimRight(runnerURL, "/") + "/run"
+	if spec != "" {
+		target += "?spec=" + url.QueryEscape(spec)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Minute}
+	resp, err := client.Post(target, "application/json", nil) //nolint:noctx
+	if err != nil {
+		return &playwrightRunResult{
+			StartedAt:   started.Format(time.RFC3339),
+			CompletedAt: time.Now().UTC().Format(time.RFC3339),
+			DurationMs:  time.Since(started).Milliseconds(),
+			ExitCode:    -1,
+			Status:      "failed",
+			Spec:        spec,
+			Output:      "playwright-agent unreachable: " + err.Error() + "\n\nEnsure scripts/playwright-agent.ps1 is running (start.ps1 starts it automatically).",
+		}
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 512*1024))
+
+	var result playwrightRunResult
+	if err := json.Unmarshal(body, &result); err != nil {
+		return &playwrightRunResult{
+			StartedAt:   started.Format(time.RFC3339),
+			CompletedAt: time.Now().UTC().Format(time.RFC3339),
+			DurationMs:  time.Since(started).Milliseconds(),
+			ExitCode:    -1,
+			Status:      "failed",
+			Spec:        spec,
+			Output:      "playwright-agent returned unexpected response: " + string(body),
+		}
+	}
+	return &result
 }

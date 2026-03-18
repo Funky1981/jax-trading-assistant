@@ -3,6 +3,7 @@
 
 $RuntimeDir = ".runtime"
 $FrontendPidFile = Join-Path $RuntimeDir "frontend-dev.pid"
+$AgentPidFile = Join-Path $RuntimeDir "playwright-agent.pid"
 
 Write-Host "Stopping JAX Trading Assistant..." -ForegroundColor Yellow
 
@@ -17,6 +18,18 @@ if (Test-Path $FrontendPidFile) {
     } catch { }
 
     Remove-Item $FrontendPidFile -ErrorAction SilentlyContinue
+}
+
+if (Test-Path $AgentPidFile) {
+    try {
+        $agentPid = [int](Get-Content $AgentPidFile -ErrorAction Stop | Select-Object -First 1)
+        $agentProc = Get-Process -Id $agentPid -ErrorAction SilentlyContinue
+        if ($agentProc) {
+            Write-Host "`nStopping Playwright test agent (PID $agentPid)..." -ForegroundColor Cyan
+            Stop-Process -Id $agentPid -Force -ErrorAction SilentlyContinue
+        }
+    } catch { }
+    Remove-Item $AgentPidFile -ErrorAction SilentlyContinue
 }
 
 Write-Host "`nStopping backend services..." -ForegroundColor Cyan

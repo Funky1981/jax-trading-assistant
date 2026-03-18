@@ -141,6 +141,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      # E2E test runner: delegate to host-side playwright agent (scripts/playwright-agent.ps1)
+      PLAYWRIGHT_RUNNER_URL: ${PLAYWRIGHT_RUNNER_URL:-http://host.docker.internal:9092}
     ports:
       - "8100:8100"
       - "8081:8081"
