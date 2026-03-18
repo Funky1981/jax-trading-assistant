@@ -183,10 +183,14 @@ if (Test-Path $AgentPidFile) {
 }
 
 Write-Host "  Launching Playwright test agent on port 9092..." -ForegroundColor Gray
+$AgentScript = Join-Path $PWD "scripts\playwright-agent.js"
 $agentProcess = Start-Process node `
-    -ArgumentList "$PWD\scripts\playwright-agent.js" `
+    -ArgumentList "`"$AgentScript`"" `
+    -RedirectStandardOutput (Join-Path $PWD $AgentLogFile) `
+    -RedirectStandardError  (Join-Path $PWD "logs\playwright-agent-err.log") `
     -PassThru `
     -WindowStyle Hidden
+$agentProcess.Id | Set-Content $AgentPidFile
 Write-Host "  Playwright agent PID: $($agentProcess.Id)" -ForegroundColor Gray
 
 Write-Host "`nOpening dashboard at http://localhost:5173" -ForegroundColor Green

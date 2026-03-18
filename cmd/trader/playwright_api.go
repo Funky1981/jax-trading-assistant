@@ -185,7 +185,7 @@ func callPlaywrightAgent(runnerURL, spec string, started time.Time) *playwrightR
 			ExitCode:    -1,
 			Status:      "failed",
 			Spec:        spec,
-			Output:      "playwright-agent unreachable: " + err.Error() + "\n\nEnsure scripts/playwright-agent.ps1 is running (start.ps1 starts it automatically).",
+			Output:      "playwright-agent unreachable: " + err.Error() + "\n\nEnsure scripts/playwright-agent.js is running (start.ps1 starts it automatically).",
 		}
 	}
 	defer resp.Body.Close()
