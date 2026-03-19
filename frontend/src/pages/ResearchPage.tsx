@@ -36,7 +36,7 @@ const defaultEditorState: InstanceEditorState = {
   sessionTimezone: 'America/New_York',
   flattenByCloseTime: '15:55',
   artifactId: '',
-  configText: '{\n  "universe": ["SPY"]\n}',
+  configText: '{\n  "symbols": ["SPY"]\n}',
 };
 
 function toEditorState(instance: StrategyInstance): InstanceEditorState {
@@ -457,15 +457,15 @@ export function ResearchPage() {
                         <TableHead className="w-[220px] whitespace-nowrap">Instance</TableHead>
                         <TableHead className="w-[240px] whitespace-nowrap">Strategy</TableHead>
                         <TableHead className="w-[90px] whitespace-nowrap">Enabled</TableHead>
-                        <TableHead className="hidden w-[90px] whitespace-nowrap lg:table-cell">Universe</TableHead>
+                        <TableHead className="hidden w-[90px] whitespace-nowrap lg:table-cell">Symbols</TableHead>
                         <TableHead className="hidden w-[160px] whitespace-nowrap lg:table-cell">Updated</TableHead>
                         <TableHead className="w-[180px] text-right whitespace-nowrap">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(instancesQuery.data ?? []).map((instance, idx) => {
-                        const universe = Array.isArray((instance.configJson as { universe?: unknown }).universe)
-                          ? ((instance.configJson as { universe?: unknown[] }).universe?.length ?? 0)
+                        const symbols = Array.isArray((instance.configJson as { symbols?: unknown }).symbols)
+                          ? ((instance.configJson as { symbols?: unknown[] }).symbols?.length ?? 0)
                           : 0;
                         return (
                           <TableRow
@@ -485,7 +485,7 @@ export function ResearchPage() {
                               {instance.strategyId || instance.strategyTypeId}
                             </TableCell>
                             <TableCell>{instance.enabled ? 'Yes' : 'No'}</TableCell>
-                            <TableCell className="hidden lg:table-cell">{universe}</TableCell>
+                            <TableCell className="hidden lg:table-cell">{symbols}</TableCell>
                             <TableCell className="hidden lg:table-cell">{fmtDate(instance.updatedAt)}</TableCell>
                             <TableCell className="text-right align-top w-[180px]">
                               <div className="flex flex-col items-end gap-2">

@@ -4,6 +4,7 @@ package approvals
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,6 +38,7 @@ type ExecutionInstruction struct {
 	ID            uuid.UUID  `json:"id"`
 	ApprovalID    uuid.UUID  `json:"approvalId"`
 	CandidateID   uuid.UUID  `json:"candidateId"`
+	TradeID       *string    `json:"tradeId,omitempty"`
 	Symbol        string     `json:"symbol"`
 	SignalType    string     `json:"signalType"`
 	EntryPrice    *float64   `json:"entryPrice,omitempty"`
@@ -50,6 +52,13 @@ type ExecutionInstruction struct {
 	SubmittedAt   *time.Time `json:"submittedAt,omitempty"`
 	FilledAt      *time.Time `json:"filledAt,omitempty"`
 	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+}
+
+type ApprovalDetail struct {
+	CandidateID    uuid.UUID             `json:"candidateId"`
+	LatestApproval *Approval             `json:"latestApproval,omitempty"`
+	Execution      *ExecutionInstruction `json:"execution,omitempty"`
 }
 
 // Store handles DB persistence for approvals and execution instructions.
@@ -152,18 +161,53 @@ func (s *Store) CreateExecutionInstruction(ctx context.Context, inst *ExecutionI
 		inst.ID = uuid.New()
 	}
 	inst.CreatedAt = time.Now().UTC()
+	inst.UpdatedAt = inst.CreatedAt
+	inst.Status = "pending"
 	_, err := s.pool.Exec(ctx, `
 		INSERT INTO execution_instructions
 			(id, approval_id, candidate_id, symbol, signal_type,
-			 entry_price, stop_loss, take_profit, status, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$9)`,
+			 entry_price, stop_loss, take_profit, trade_id, status, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,$10)`,
 		inst.ID, inst.ApprovalID, inst.CandidateID, inst.Symbol, inst.SignalType,
-		inst.EntryPrice, inst.StopLoss, inst.TakeProfit, inst.CreatedAt,
+		inst.EntryPrice, inst.StopLoss, inst.TakeProfit, inst.TradeID, inst.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("approvals.Store.CreateExecutionInstruction: %w", err)
 	}
 	return inst, nil
+}
+
+func (s *Store) GetLatestExecutionByCandidateID(ctx context.Context, candidateID uuid.UUID) (*ExecutionInstruction, error) {
+	row := s.pool.QueryRow(ctx, `
+		SELECT id, approval_id, candidate_id, trade_id, symbol, signal_type,
+		       entry_price, stop_loss, take_profit, status, broker_order_id,
+		       fill_price, fill_qty, error_message, submitted_at, filled_at, created_at, updated_at
+		FROM execution_instructions
+		WHERE candidate_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, candidateID)
+	return scanExecutionInstruction(row)
+}
+
+func (s *Store) GetDetailByCandidateID(ctx context.Context, candidateID uuid.UUID) (*ApprovalDetail, error) {
+	detail := &ApprovalDetail{CandidateID: candidateID}
+	approval, err := s.GetByCandidateID(ctx, candidateID)
+	if err == nil {
+		detail.LatestApproval = approval
+	} else if !isNoRows(err) {
+		return nil, err
+	}
+	execution, err := s.GetLatestExecutionByCandidateID(ctx, candidateID)
+	if err == nil {
+		detail.Execution = execution
+	} else if !isNoRows(err) {
+		return nil, err
+	}
+	if detail.LatestApproval == nil && detail.Execution == nil {
+		return nil, fmt.Errorf("approval detail not found")
+	}
+	return detail, nil
 }
 
 func scanApproval(row interface{ Scan(...any) error }) (*Approval, error) {
@@ -176,4 +220,21 @@ func scanApproval(row interface{ Scan(...any) error }) (*Approval, error) {
 		return nil, fmt.Errorf("scanApproval: %w", err)
 	}
 	return &a, nil
+}
+
+func scanExecutionInstruction(row interface{ Scan(...any) error }) (*ExecutionInstruction, error) {
+	var inst ExecutionInstruction
+	err := row.Scan(
+		&inst.ID, &inst.ApprovalID, &inst.CandidateID, &inst.TradeID, &inst.Symbol, &inst.SignalType,
+		&inst.EntryPrice, &inst.StopLoss, &inst.TakeProfit, &inst.Status, &inst.BrokerOrderID,
+		&inst.FillPrice, &inst.FillQty, &inst.ErrorMessage, &inst.SubmittedAt, &inst.FilledAt, &inst.CreatedAt, &inst.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("scanExecutionInstruction: %w", err)
+	}
+	return &inst, nil
+}
+
+func isNoRows(err error) bool {
+	return err != nil && strings.Contains(strings.ToLower(err.Error()), "no rows")
 }

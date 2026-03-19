@@ -136,6 +136,12 @@ func instancesHandler(pool *pgxpool.Pool, strategyTypeReg *strategytypes.Registr
 			if req.ConfigJSON == nil {
 				req.ConfigJSON = json.RawMessage(`{}`)
 			}
+			normalizedConfig, err := normalizeInstanceConfig(req.ConfigJSON)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			req.ConfigJSON = normalizedConfig
 			if err := validateStrategyInstance(strategyTypeReg, req.StrategyTypeID, req.ConfigJSON); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -171,6 +177,12 @@ func instancesHandler(pool *pgxpool.Pool, strategyTypeReg *strategytypes.Registr
 			if req.ConfigJSON == nil {
 				req.ConfigJSON = json.RawMessage(`{}`)
 			}
+			normalizedConfig, err := normalizeInstanceConfig(req.ConfigJSON)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			req.ConfigJSON = normalizedConfig
 			if req.StrategyTypeID != "" {
 				if err := validateStrategyInstance(strategyTypeReg, req.StrategyTypeID, req.ConfigJSON); err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
@@ -178,7 +190,7 @@ func instancesHandler(pool *pgxpool.Pool, strategyTypeReg *strategytypes.Registr
 				}
 			}
 			hash := hashConfig(req.ConfigJSON)
-			_, err := pool.Exec(r.Context(), `
+			_, err = pool.Exec(r.Context(), `
 				UPDATE strategy_instances
 				SET name = COALESCE(NULLIF($2,''), name),
 				    strategy_type_id = COALESCE(NULLIF($3,''), strategy_type_id),
@@ -232,6 +244,12 @@ func instancesDetailHandler(pool *pgxpool.Pool, strategyTypeReg *strategytypes.R
 				if len(req.ConfigJSON) == 0 {
 					req.ConfigJSON = json.RawMessage(`{}`)
 				}
+				normalizedConfig, err := normalizeInstanceConfig(req.ConfigJSON)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				req.ConfigJSON = normalizedConfig
 				configRaw = string(req.ConfigJSON)
 				hash = hashConfig(req.ConfigJSON)
 				strategyTypeID := instanceStrategyTypeID(r.Context(), pool, id)
@@ -1282,6 +1300,9 @@ func aiDecisionsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		rows, err := pool.Query(r.Context(), `
 			SELECT d.id::text, COALESCE(d.run_id::text,''), COALESCE(d.flow_id,''), d.role, COALESCE(d.provider,''), COALESCE(d.model,''),
 			       d.schema_valid, COALESCE(d.decision,''), COALESCE(d.reasoning,''), d.prompt::text, d.response::text, d.rule_trace::text,
+			       COALESCE(d.rule_trace->>'candidateId',''), COALESCE(d.rule_trace->>'tradeId',''),
+			       COALESCE(d.rule_trace->>'signalId',''), COALESCE(d.rule_trace->>'instanceId',''),
+			       COALESCE(d.rule_trace->>'toolName',''),
 			       d.created_at
 			FROM ai_decisions d
 			ORDER BY d.created_at DESC
@@ -1295,10 +1316,11 @@ func aiDecisionsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		out := make([]map[string]any, 0, limit)
 		for rows.Next() {
 			var id, runID, flowID, role, provider, model, decision, reasoning, prompt, response, trace string
+			var candidateID, tradeID, signalID, instanceID, toolName string
 			var schemaValid bool
 			var created time.Time
 			if err := rows.Scan(&id, &runID, &flowID, &role, &provider, &model, &schemaValid, &decision, &reasoning,
-				&prompt, &response, &trace, &created); err == nil {
+				&prompt, &response, &trace, &candidateID, &tradeID, &signalID, &instanceID, &toolName, &created); err == nil {
 				out = append(out, map[string]any{
 					"id":          id,
 					"runId":       runID,
@@ -1312,6 +1334,11 @@ func aiDecisionsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 					"prompt":      json.RawMessage(prompt),
 					"response":    json.RawMessage(response),
 					"ruleTrace":   json.RawMessage(trace),
+					"candidateId": candidateID,
+					"tradeId":     tradeID,
+					"signalId":    signalID,
+					"instanceId":  instanceID,
+					"toolName":    toolName,
 					"createdAt":   created,
 				})
 			}
@@ -1333,15 +1360,20 @@ func aiDecisionDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 		var (
 			decisionID, runID, flowID, role, provider, model, decision, reasoning, prompt, response, trace string
+			candidateID, tradeID, signalID, instanceID, toolName                                           string
 			schemaValid                                                                                    bool
 			created                                                                                        time.Time
 		)
 		err := pool.QueryRow(r.Context(), `
 			SELECT id::text, COALESCE(run_id::text,''), COALESCE(flow_id,''), role, COALESCE(provider,''), COALESCE(model,''),
-			       schema_valid, COALESCE(decision,''), COALESCE(reasoning,''), prompt::text, response::text, rule_trace::text, created_at
+			       schema_valid, COALESCE(decision,''), COALESCE(reasoning,''), prompt::text, response::text, rule_trace::text,
+			       COALESCE(rule_trace->>'candidateId',''), COALESCE(rule_trace->>'tradeId',''),
+			       COALESCE(rule_trace->>'signalId',''), COALESCE(rule_trace->>'instanceId',''),
+			       COALESCE(rule_trace->>'toolName',''), created_at
 			FROM ai_decisions
 			WHERE id = $1::uuid
-		`, id).Scan(&decisionID, &runID, &flowID, &role, &provider, &model, &schemaValid, &decision, &reasoning, &prompt, &response, &trace, &created)
+		`, id).Scan(&decisionID, &runID, &flowID, &role, &provider, &model, &schemaValid, &decision, &reasoning, &prompt, &response, &trace,
+			&candidateID, &tradeID, &signalID, &instanceID, &toolName, &created)
 		if err != nil {
 			http.NotFound(w, r)
 			return
@@ -1376,6 +1408,11 @@ func aiDecisionDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			"prompt":      json.RawMessage(prompt),
 			"response":    json.RawMessage(response),
 			"ruleTrace":   json.RawMessage(trace),
+			"candidateId": candidateID,
+			"tradeId":     tradeID,
+			"signalId":    signalID,
+			"instanceId":  instanceID,
+			"toolName":    toolName,
 			"acceptance":  acceptance,
 			"createdAt":   created,
 		})
@@ -1895,32 +1932,43 @@ func artifactPromotionSummary(ctx context.Context, pool *pgxpool.Pool) map[strin
 
 func executionPathSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
 	result := map[string]any{
-		"status":            "passed",
-		"checkedTrades":     0,
-		"missingFills":      0,
-		"missingIntentLink": 0,
-		"windowDays":        30,
+		"status":                 "passed",
+		"checkedCandidates":      0,
+		"missingApprovalLink":    0,
+		"missingInstructionLink": 0,
+		"missingTradeLink":       0,
+		"missingFillLink":        0,
+		"windowDays":             30,
 	}
 	if pool == nil {
 		result["status"] = "failed"
 		result["error"] = "database pool unavailable"
 		return result
 	}
-	var intentCount int
-	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM order_intents WHERE created_at >= NOW() - INTERVAL '30 days'`).Scan(&intentCount); err == nil {
-		if intentCount == 0 {
-			result["status"] = "skipped"
-			result["reason"] = "no order intents in window"
-			return result
-		}
-	}
 	rows, err := pool.Query(ctx, `
-		SELECT t.id::text, COALESCE(f.id::text,''), COALESCE(i.id::text,'')
-		FROM trades t
-		LEFT JOIN fills f ON f.trade_id = t.id
-		LEFT JOIN order_intents i ON i.signal_id = t.signal_id
-		WHERE t.created_at >= NOW() - INTERVAL '30 days'
-		  AND t.signal_id IS NOT NULL
+		SELECT ct.id::text,
+		       COALESCE(ca.id::text,''),
+		       COALESCE(ei.id::text,''),
+		       COALESCE(ei.trade_id,''),
+		       COALESCE(f.id::text,'')
+		FROM candidate_trades ct
+		LEFT JOIN LATERAL (
+			SELECT id
+			FROM candidate_approvals
+			WHERE candidate_id = ct.id
+			ORDER BY decided_at DESC
+			LIMIT 1
+		) ca ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT id, trade_id
+			FROM execution_instructions
+			WHERE candidate_id = ct.id
+			ORDER BY created_at DESC
+			LIMIT 1
+		) ei ON TRUE
+		LEFT JOIN fills f ON f.trade_id = ei.trade_id
+		WHERE ct.updated_at >= NOW() - INTERVAL '30 days'
+		  AND ct.status IN ('approved','submitted','filled')
 	`)
 	if err != nil {
 		result["status"] = "failed"
@@ -1929,30 +1977,40 @@ func executionPathSummary(ctx context.Context, pool *pgxpool.Pool) map[string]an
 	}
 	defer rows.Close()
 	checked := 0
+	missingApprovals := 0
+	missingInstructions := 0
+	missingTrades := 0
 	missingFills := 0
-	missingIntents := 0
 	for rows.Next() {
 		checked++
-		var tradeID, fillID, intentID string
-		if err := rows.Scan(&tradeID, &fillID, &intentID); err != nil {
+		var candidateID, approvalID, instructionID, tradeID, fillID string
+		if err := rows.Scan(&candidateID, &approvalID, &instructionID, &tradeID, &fillID); err != nil {
 			continue
+		}
+		if strings.TrimSpace(approvalID) == "" {
+			missingApprovals++
+		}
+		if strings.TrimSpace(instructionID) == "" {
+			missingInstructions++
+		}
+		if strings.TrimSpace(tradeID) == "" {
+			missingTrades++
 		}
 		if strings.TrimSpace(fillID) == "" {
 			missingFills++
 		}
-		if strings.TrimSpace(intentID) == "" {
-			missingIntents++
-		}
 	}
-	result["checkedTrades"] = checked
-	result["missingFills"] = missingFills
-	result["missingIntentLink"] = missingIntents
+	result["checkedCandidates"] = checked
+	result["missingApprovalLink"] = missingApprovals
+	result["missingInstructionLink"] = missingInstructions
+	result["missingTradeLink"] = missingTrades
+	result["missingFillLink"] = missingFills
 	if checked == 0 {
 		result["status"] = "skipped"
-		result["reason"] = "no signal-linked trades in window"
+		result["reason"] = "no approved/submitted/filled candidates in window"
 		return result
 	}
-	if missingFills > 0 || missingIntents > 0 {
+	if missingApprovals > 0 || missingInstructions > 0 || missingTrades > 0 || missingFills > 0 {
 		result["status"] = "failed"
 	}
 	return result
@@ -1960,11 +2018,13 @@ func executionPathSummary(ctx context.Context, pool *pgxpool.Pool) map[string]an
 
 func aiAuditSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
 	result := map[string]any{
-		"status":            "passed",
-		"decisions":         0,
-		"invalidSchema":     0,
-		"missingAcceptance": 0,
-		"windowDays":        30,
+		"status":                   "passed",
+		"decisions":                0,
+		"assistantDecisions":       0,
+		"invalidSchema":            0,
+		"missingAcceptance":        0,
+		"missingAssistantCoverage": 0,
+		"windowDays":               30,
 	}
 	if pool == nil {
 		result["status"] = "failed"
@@ -1972,7 +2032,7 @@ func aiAuditSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
 		return result
 	}
 	rows, err := pool.Query(ctx, `
-		SELECT d.id::text, d.schema_valid, COALESCE(a.id::text,'')
+		SELECT d.id::text, d.schema_valid, COALESCE(a.id::text,''), COALESCE(d.role,'')
 		FROM ai_decisions d
 		LEFT JOIN ai_decision_acceptance a ON a.decision_id = d.id
 		WHERE d.created_at >= NOW() - INTERVAL '30 days'
@@ -1984,13 +2044,15 @@ func aiAuditSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
 	}
 	defer rows.Close()
 	decisions := 0
+	assistantDecisions := 0
 	invalid := 0
 	missingAccept := 0
+	missingAssistantCoverage := 0
 	for rows.Next() {
 		decisions++
-		var id, acceptanceID string
+		var id, acceptanceID, role string
 		var schemaValid bool
-		if err := rows.Scan(&id, &schemaValid, &acceptanceID); err != nil {
+		if err := rows.Scan(&id, &schemaValid, &acceptanceID, &role); err != nil {
 			continue
 		}
 		if !schemaValid {
@@ -1999,15 +2061,23 @@ func aiAuditSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
 		if strings.TrimSpace(acceptanceID) == "" {
 			missingAccept++
 		}
+		if strings.EqualFold(role, "assistant") {
+			assistantDecisions++
+			if strings.TrimSpace(acceptanceID) == "" {
+				missingAssistantCoverage++
+			}
+		}
 	}
 	result["decisions"] = decisions
+	result["assistantDecisions"] = assistantDecisions
 	result["invalidSchema"] = invalid
 	result["missingAcceptance"] = missingAccept
+	result["missingAssistantCoverage"] = missingAssistantCoverage
 	if decisions == 0 {
 		result["status"] = "skipped"
 		return result
 	}
-	if invalid > 0 || missingAccept > 0 {
+	if invalid > 0 || missingAccept > 0 || missingAssistantCoverage > 0 {
 		result["status"] = "failed"
 	}
 	return result
@@ -2015,12 +2085,15 @@ func aiAuditSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
 
 func provenanceIntegritySummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
 	result := map[string]any{
-		"status":            "passed",
-		"checkedRows":       0,
-		"missingSource":     0,
-		"missingVerifiedAt": 0,
-		"syntheticRows":     0,
-		"windowDays":        30,
+		"status":                   "passed",
+		"checkedRuns":              0,
+		"missingRunSource":         0,
+		"missingRunVerifiedAt":     0,
+		"syntheticRunRows":         0,
+		"checkedCandidates":        0,
+		"missingCandidateSignal":   0,
+		"missingCandidateArtifact": 0,
+		"windowDays":               30,
 	}
 	if pool == nil {
 		result["status"] = "failed"
@@ -2060,15 +2133,48 @@ func provenanceIntegritySummary(ctx context.Context, pool *pgxpool.Pool) map[str
 			synthetic++
 		}
 	}
-	result["checkedRows"] = checked
-	result["missingSource"] = missingSource
-	result["missingVerifiedAt"] = missingVerified
-	result["syntheticRows"] = synthetic
-	if checked == 0 {
+	result["checkedRuns"] = checked
+	result["missingRunSource"] = missingSource
+	result["missingRunVerifiedAt"] = missingVerified
+	result["syntheticRunRows"] = synthetic
+
+	candidateRows, err := pool.Query(ctx, `
+		SELECT COALESCE(signal_id::text,''), COALESCE(artifact_id::text,'')
+		FROM candidate_trades
+		WHERE created_at >= NOW() - INTERVAL '30 days'
+		  AND status IN ('blocked','awaiting_approval','approved','submitted','filled')
+	`)
+	if err != nil {
+		result["status"] = "failed"
+		result["error"] = err.Error()
+		return result
+	}
+	defer candidateRows.Close()
+	candidateChecked := 0
+	missingCandidateSignal := 0
+	missingCandidateArtifact := 0
+	for candidateRows.Next() {
+		candidateChecked++
+		var signalID, artifactID string
+		if err := candidateRows.Scan(&signalID, &artifactID); err != nil {
+			continue
+		}
+		if strings.TrimSpace(signalID) == "" {
+			missingCandidateSignal++
+		}
+		if strings.TrimSpace(artifactID) == "" {
+			missingCandidateArtifact++
+		}
+	}
+	result["checkedCandidates"] = candidateChecked
+	result["missingCandidateSignal"] = missingCandidateSignal
+	result["missingCandidateArtifact"] = missingCandidateArtifact
+
+	if checked == 0 && candidateChecked == 0 {
 		result["status"] = "skipped"
 		return result
 	}
-	if missingSource > 0 || missingVerified > 0 || synthetic > 0 {
+	if missingSource > 0 || missingVerified > 0 || synthetic > 0 || missingCandidateSignal > 0 || missingCandidateArtifact > 0 {
 		result["status"] = "failed"
 	}
 	return result
@@ -2835,6 +2941,18 @@ func hashConfig(raw json.RawMessage) string {
 }
 
 func validateStrategyInstance(reg *strategytypes.Registry, strategyTypeID string, config json.RawMessage) error {
+	normalizedConfig, err := normalizeInstanceConfig(config)
+	if err != nil {
+		return err
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(normalizedConfig, &raw); err != nil {
+		return fmt.Errorf("invalid configJson: %w", err)
+	}
+	symbols := normalizedSymbolList(raw)
+	if len(symbols) == 0 {
+		return fmt.Errorf("configJson.symbols must contain at least one symbol")
+	}
 	if reg == nil {
 		return nil
 	}
@@ -2846,7 +2964,7 @@ func validateStrategyInstance(reg *strategytypes.Registry, strategyTypeID string
 	if !ok {
 		return fmt.Errorf("unknown strategyTypeId: %s", strategyTypeID)
 	}
-	params, err := parseStrategyParams(config)
+	params, err := parseStrategyParams(normalizedConfig)
 	if err != nil {
 		return err
 	}

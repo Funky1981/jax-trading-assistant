@@ -11,11 +11,12 @@ import (
 )
 
 // Service orchestrates chat sessions, message persistence, and tool calls.
-// The assistant is ADVISORY ONLY. It must never directly execute or approve trades.
+// The assistant is advisory only and must never directly execute or approve trades.
 type Service struct {
 	store  *SessionStore
 	router *ToolRouter
-	llm    LLMClient // nil → fall back to static placeholder replies
+	llm    LLMClient
+	pool   *pgxpool.Pool
 }
 
 // NewService creates a chat Service.
@@ -25,6 +26,7 @@ func NewService(pool *pgxpool.Pool, llm LLMClient) *Service {
 		store:  NewSessionStore(pool),
 		router: NewToolRouter(pool),
 		llm:    llm,
+		pool:   pool,
 	}
 }
 
@@ -62,7 +64,6 @@ func (s *Service) GetHistory(ctx context.Context, sessionID uuid.UUID) ([]*Messa
 // When an LLMClient is wired, the full session history is forwarded for context.
 // Tool calls are executed read-only through ToolRouter before the LLM is called.
 func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userContent string, toolCall *ToolCall) ([]*Message, error) {
-	// Load history before the new message so we can give the LLM full context.
 	history, err := s.store.GetHistory(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("chat.Service.SendMessage: load history: %w", err)
@@ -70,7 +71,6 @@ func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userCont
 
 	var saved []*Message
 
-	// Persist user message.
 	userMsg, err := s.store.AppendMessage(ctx, &Message{
 		SessionID: sessionID,
 		Role:      RoleUser,
@@ -81,7 +81,6 @@ func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userCont
 	}
 	saved = append(saved, userMsg)
 
-	// If a tool call was supplied, execute it and persist the result.
 	if toolCall != nil {
 		result, err := s.router.Dispatch(ctx, *toolCall)
 		if err != nil && err != ErrUnknownTool {
@@ -97,7 +96,6 @@ func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userCont
 		saved = append(saved, toolMsg)
 	}
 
-	// Generate the assistant reply — via LLM when available, otherwise static.
 	replyText := s.buildReply(ctx, userContent, toolCall, history)
 	assistantReply, err := s.store.AppendMessage(ctx, &Message{
 		SessionID: sessionID,
@@ -108,6 +106,7 @@ func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userCont
 		return nil, err
 	}
 	saved = append(saved, assistantReply)
+	s.logAssistantDecision(ctx, sessionID, userContent, toolCall, replyText)
 
 	return saved, nil
 }
@@ -136,7 +135,6 @@ func (s *Service) buildReply(ctx context.Context, userContent string, call *Tool
 	if s.llm != nil {
 		msgs := make([]LLMMessage, 0, len(history)+1)
 		for _, m := range history {
-			// Skip internal tool result messages — they add noise without benefit.
 			if m.Role == RoleTool {
 				continue
 			}
@@ -146,26 +144,33 @@ func (s *Service) buildReply(ctx context.Context, userContent string, call *Tool
 		if reply, err := s.llm.Complete(ctx, msgs); err == nil {
 			return reply
 		}
-		// Fall through to static reply on LLM error.
 	}
 	if call != nil {
 		switch call.Name {
 		case "get_candidate_trade":
-			return "Here's the candidate trade I fetched. Check the tool result above for the full details including symbol, direction, confidence score, and any blocker reasons."
+			return "Here's the candidate trade I fetched. Check the tool result above for the full details including symbol, direction, confidence score, provenance, and execution linkage."
 		case "explain_trade_blockers":
-			return "Here's the blocker analysis. The tool result above lists every guard-rail or risk constraint that prevented this candidate from being promoted to an order."
+			return "Here's the blocker analysis. The tool result above lists the guardrails or policy reasons that prevented this candidate from being promoted."
 		case "get_signal":
 			return "Here's the signal I retrieved. The tool result above shows the signal strength, the strategy that generated it, and the timestamp."
 		case "get_strategy":
 			return "Here's the strategy definition. The tool result above describes the strategy parameters and its last known state."
 		case "get_strategy_instance":
-			return "Here's the strategy instance. The tool result above shows the running configuration, schedule, and any active positions."
+			return "Here's the strategy instance. The tool result above shows the running configuration, schedule, and active trading window."
 		case "get_trade":
-			return "Here's the executed trade record. The tool result above includes fill price, quantity, and execution status."
+			return "Here's the executed trade record. The tool result above includes the trade status, quantity, and fill linkage."
 		case "get_orchestration_run":
 			return "Here's the orchestration run. The tool result above shows the run outcome, signals produced, and any errors encountered."
 		case "search_research_runs":
-			return "Here are the recent research runs matching your query. The tool result above shows each run's outcome, signals produced, and timestamps."
+			return "Here are the recent research runs matching your query. The tool result above shows each run's outcome and timestamps."
+		case "list_pending_approvals":
+			return "Here is the current approval queue. The tool result above shows the candidates still waiting for a human decision."
+		case "list_recent_blocked_candidates":
+			return "Here are the most recent blocked candidates. The tool result above shows the blocker codes and human-readable reasons."
+		case "search_candidates":
+			return "Here are the matching candidates. The tool result above shows recent candidates filtered by symbol or status."
+		case "query_knowledge":
+			return "Here are the matching knowledge snippets. The tool result above shows local markdown excerpts related to your query."
 		default:
 			return fmt.Sprintf("I fetched the result for %q. Check the tool result above for the details.", call.Name)
 		}
@@ -177,7 +182,6 @@ func (s *Service) buildReply(ctx context.Context, userContent string, call *Tool
 }
 
 // staticKeywordReply provides contextual guidance when no LLM is configured.
-// It matches keywords in the user's message to return a relevant, topic-specific reply.
 func staticKeywordReply(msg string) string {
 	lower := strings.ToLower(msg)
 	has := func(keywords ...string) bool {
@@ -190,24 +194,71 @@ func staticKeywordReply(msg string) string {
 	}
 	switch {
 	case has("hello", "hi ", "hey ", "howdy", "greetings"):
-		return "Hello! I'm Jax Assistant (advisory only). I can help you understand candidate trades, signals, strategy behaviour, and research runs. Use the Tool Picker (⚙) to query live data, or ask me about a specific topic."
+		return "Hello. I'm Jax Assistant, advisory only. I can explain candidate trades, signals, strategy behaviour, research runs, and blocked-candidate reasons."
 	case has("signal", "high-confidence", "high confidence"):
-		return "To inspect a specific signal, use the Tool Picker and select get_signal. For recent run activity that generated signals, try search_research_runs. The Signals page in the dashboard shows the full live list."
+		return "To inspect a specific signal, use get_signal. For recent run activity that generated signals, try search_research_runs."
 	case has("candidate", "waiting", "approval", "approve", "pending"):
-		return "To inspect a specific candidate trade, use the Tool Picker and select get_candidate_trade. To find out why a candidate was blocked, use explain_trade_blockers. The Approval Queue page shows all pending candidates in real time."
+		return "Use list_pending_approvals to see the live approval queue, or get_candidate_trade to inspect one candidate in detail. To find out why a candidate was blocked, use explain_trade_blockers or list_recent_blocked_candidates."
 	case has("block", "blocker", "rejected", "prevent", "why was", "why wasn"):
-		return "Use the Tool Picker and select explain_trade_blockers to see exactly which guard-rails or risk constraints prevented a candidate from being promoted. You'll need the candidate ID from the Approval Queue."
+		return "Use explain_trade_blockers for one candidate, or list_recent_blocked_candidates to review the latest blocked setups and their reason codes."
 	case has("strateg"):
-		return "To inspect a strategy definition, use get_strategy in the Tool Picker. For a live running instance, use get_strategy_instance. The Strategy Instances page shows all currently active instances and their schedules."
+		return "To inspect a strategy definition, use get_strategy. For a live running instance, use get_strategy_instance."
 	case has("research", "orchestration"):
-		return "Use search_research_runs in the Tool Picker to browse recent orchestration and research runs. You can filter by symbol to narrow the results."
-	case has("market", "condition", "price", "quote", "outlook"):
-		return "Market data is ingested and evaluated continuously by the strategy engine. The latest assessed opportunities appear in the Approval Queue. For raw price data, check the Market Data panel in the dashboard."
+		return "Use search_research_runs to browse recent orchestration and research runs. You can filter by symbol to narrow the results."
+	case has("knowledge", "docs", "documentation", "playbook", "runbook"):
+		return "Use query_knowledge to search the local markdown knowledge base when it is configured."
 	case has("trade", "executed", "filled", "order", "position"):
-		return "To look up an executed trade, use get_trade in the Tool Picker with the trade ID. Open positions and fill history are also visible on the Trades page."
+		return "To look up an executed trade, use get_trade with the trade ID. Approvals still have to be made through the Approvals page."
 	case has("help", "what can", "what do", "capabilities", "tools", "available"):
-		return "I can look up candidate trades, signals, executed trades, strategy definitions and instances, orchestration runs, and trade blocker explanations — use the Tool Picker (⚙) to run any of these. I can also answer questions about how the trading system works. Note: without an OpenAI API key I give keyword-based replies rather than full conversational answers."
+		return "I can look up candidates, signals, executed trades, strategy definitions and instances, orchestration runs, blocked candidates, pending approvals, and local knowledge snippets. Approvals still have to be made through the Approvals page."
 	default:
-		return "I'm Jax Assistant (advisory only). I can explain candidate trades, signals, strategy behaviour, and research runs. Use the Tool Picker (⚙) above to query live data, or ask me about a specific topic like signals, candidates, strategies, or research runs."
+		return "I'm Jax Assistant, advisory only. Use the Tool Picker to query candidates, signals, trades, runs, approval queues, blocked candidates, or local knowledge."
 	}
+}
+
+func (s *Service) logAssistantDecision(ctx context.Context, sessionID uuid.UUID, userContent string, toolCall *ToolCall, replyText string) {
+	if s.pool == nil {
+		return
+	}
+	provider := "tool-only"
+	model := "static-fallback"
+	if s.llm != nil {
+		provider = "openai-compatible"
+		model = "configured"
+	}
+	ruleTrace := map[string]any{
+		"sessionId": sessionID.String(),
+	}
+	if toolCall != nil {
+		ruleTrace["toolName"] = toolCall.Name
+		ruleTrace["toolArgs"] = json.RawMessage(toolCall.Args)
+		var args map[string]any
+		if err := json.Unmarshal(toolCall.Args, &args); err == nil {
+			for _, key := range []string{"candidateId", "tradeId", "runId", "signalId", "instanceId"} {
+				if value, ok := args[key]; ok {
+					ruleTrace[key] = value
+				}
+			}
+		}
+	}
+	promptJSON, _ := json.Marshal(map[string]any{"userMessage": userContent})
+	responseJSON, _ := json.Marshal(map[string]any{"assistantReply": replyText})
+	ruleTraceJSON, _ := json.Marshal(ruleTrace)
+
+	decisionID := uuid.New()
+	if _, err := s.pool.Exec(ctx, `
+		INSERT INTO ai_decisions (
+			id, run_id, flow_id, role, provider, model, prompt, response,
+			schema_valid, decision, reasoning, rule_trace, created_at
+		) VALUES (
+			$1, NULL, $2, 'assistant', $3, $4, $5::jsonb, $6::jsonb,
+			TRUE, $7, $8, $9::jsonb, NOW()
+		)
+	`, decisionID, sessionID.String(), provider, model, string(promptJSON), string(responseJSON), replyText, "assistant advisory reply", string(ruleTraceJSON)); err != nil {
+		return
+	}
+	_, _ = s.pool.Exec(ctx, `
+		INSERT INTO ai_decision_acceptance (id, decision_id, accepted, accepted_by, reason, rule_trace, created_at)
+		VALUES ($1, $2, TRUE, 'assistant_service', 'assistant reply emitted', $3::jsonb, NOW())
+	`, uuid.New(), decisionID, string(ruleTraceJSON))
 }

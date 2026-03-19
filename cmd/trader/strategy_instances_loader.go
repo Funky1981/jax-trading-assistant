@@ -51,6 +51,11 @@ func loadStrategyInstancesFromDir(ctx context.Context, pool *pgxpool.Pool, dir s
 		if len(cfg.ConfigJSON) == 0 {
 			cfg.ConfigJSON = json.RawMessage(`{}`)
 		}
+		normalizedConfig, err := normalizeInstanceConfig(cfg.ConfigJSON)
+		if err != nil {
+			return fmt.Errorf("%s invalid config: %w", path, err)
+		}
+		cfg.ConfigJSON = normalizedConfig
 		sum := sha256.Sum256(cfg.ConfigJSON)
 		hash := hex.EncodeToString(sum[:])
 		if cfg.SessionTimezone == "" {

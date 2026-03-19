@@ -3,14 +3,14 @@
 This pack reorganizes the finish plan into phase folders for Codex desktop execution.
 
 ## Execute in order
-1. phase-00-foundation-and-baseline
+1. rebaseline the pack against the current `work` branch
 2. phase-01-truth-path-hardening
 3. phase-02-data-and-strategy-model
 4. phase-03-always-on-watcher-and-candidates
 5. phase-04-approval-queue-and-paper-execution
-6. phase-05-operator-pages
-7. phase-06-assistant-and-ai-audit
-8. phase-07-trust-gates-and-signoff
+6. phase-06-assistant-and-ai-audit
+7. phase-07-trust-gates-and-signoff
+8. treat phase-05-operator-pages as mostly landed and only patch contract drift where needed
 
 ## Cross-cutting controls
 Use these in every phase:
@@ -26,3 +26,13 @@ Use these in every phase:
 - AI is advisory only
 - no approval bypass
 - no gate pass, no paper-trading sign-off
+
+## Current branch reality
+Already present on `work`:
+- strategy-instance CRUD
+- `/research`, `/analysis`, `/testing`, `/approvals`, `/assistant`
+- candidate / approval / chat schemas
+- AI decision tables
+- trust-gate endpoints
+
+Remaining work is hardening, linkage, and proof generation.

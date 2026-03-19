@@ -190,6 +190,9 @@ func main() {
 	// Always-on trade watcher: continuously evaluates enabled strategy instances
 	// and creates candidate trades independent of browser presence.
 	go startTradeWatcher(ctx, dbPool, sigGen)
+	if execService != nil && cfg.RuntimeMode == runtimepolicy.ModePaper {
+		go startExecutionInstructionWorker(ctx, dbPool, execService)
+	}
 
 	// Health check endpoint
 	mux.HandleFunc("/health", handleHealth(sigGen))
@@ -552,6 +555,10 @@ func handleExecute(execService *execution.Service, mode runtimepolicy.Mode) http
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if mode == runtimepolicy.ModePaper && !strings.EqualFold(r.Header.Get("X-JAX-INTERNAL-EXECUTE"), "true") {
+			http.Error(w, "direct paper execution is disabled; approve a candidate instead", http.StatusForbidden)
 			return
 		}
 		if mode == runtimepolicy.ModeLive && !strings.EqualFold(os.Getenv("ALLOW_LIVE_TRADING"), "true") {

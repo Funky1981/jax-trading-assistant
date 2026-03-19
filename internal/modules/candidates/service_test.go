@@ -46,6 +46,9 @@ func TestProposalRequest_Fields(t *testing.T) {
 	reasoning := "test"
 	_ = ProposalRequest{
 		StrategyInstanceID: [16]byte{},
+		SignalID:           "00000000-0000-0000-0000-000000000001",
+		StrategyID:         "rsi_momentum_v1",
+		ArtifactID:         "00000000-0000-0000-0000-000000000002",
 		Symbol:             "AAPL",
 		SignalType:         "BUY",
 		Confidence:         &conf,

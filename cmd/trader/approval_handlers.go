@@ -99,7 +99,7 @@ func approvalDetailRouter(svc *approvalsmod.Service) http.HandlerFunc {
 func handleApprovalGet(w http.ResponseWriter, r *http.Request, svc *approvalsmod.Service, candidateID uuid.UUID) {
 	a, err := svc.GetByCandidate(r.Context(), candidateID)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows") {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") || strings.Contains(strings.ToLower(err.Error()), "no rows") {
 			http.Error(w, "no approval found for candidate", http.StatusNotFound)
 			return
 		}
@@ -150,7 +150,12 @@ func handleApprovalDecision(w http.ResponseWriter, r *http.Request, svc *approva
 		"approvedBy":  actor,
 		"decidedAt":   approval.DecidedAt,
 	})
-	jsonOK(w, approval)
+	detail, err := svc.GetByCandidate(r.Context(), candidateID)
+	if err != nil {
+		jsonOK(w, approval)
+		return
+	}
+	jsonOK(w, detail)
 }
 
 type snoozeBody struct {
@@ -184,7 +189,12 @@ func handleApprovalSnooze(w http.ResponseWriter, r *http.Request, svc *approvals
 		"approvalId":  approval.ID,
 		"snoozeUntil": approval.SnoozeUntil,
 	})
-	jsonOK(w, approval)
+	detail, err := svc.GetByCandidate(r.Context(), candidateID)
+	if err != nil {
+		jsonOK(w, approval)
+		return
+	}
+	jsonOK(w, detail)
 }
 
 // actorFromRequest extracts the actor identity from JWT claims or falls back to

@@ -37,21 +37,37 @@ Strong base exists:
 - strategy instance loading
 - orchestration and research runtime
 - auth-enabled frontend shell
+- strategy-instance CRUD is already present
+- Research / Analysis / Testing / Approvals / Assistant pages already exist
+- candidate / approval / chat tables already exist
+- AI decision and acceptance tables already exist
+- trust-gate endpoints and reports already exist
 
 Still missing or incomplete:
-- no-fake-data hard enforcement
-- event data foundation completion
-- strategy type / instance management UX
-- always-on watcher and candidate trades
-- approval queue and instruction model
-- Research / Analysis / Testing pages
-- chat assistant
-- AI audit + replay model
-- trust gates automation
-- paper-trading readiness proof
+- strategy-instance config drift between legacy `universe` and canonical `symbols`
+- candidate provenance linkage and blocked-reason persistence
+- approval-driven paper execution worker that consumes `execution_instructions`
+- paper-mode bypass closure for direct `/api/v1/execute`
+- assistant queue/search/knowledge tools and assistant audit coverage
+- trust-gate hardening for approval -> instruction -> trade -> fill linkage
+- stronger flatten-proof, provenance, and paper-readiness evidence
 
 ## Non-negotiables
 - no fake/synthetic data in research truth path or paper-trading decisions
 - AI is advisory only
 - no order submission without explicit approval
 - no gate pass, no paper-trading sign-off
+
+## Rebaseline
+Treat this pack as a rebaseline-and-hardening program, not a greenfield implementation checklist.
+
+Execution now starts with:
+- truth-path contract hardening
+- approval-driven paper execution
+- watcher lifecycle completion
+- assistant and AI-audit completion
+- trust-gate proof hardening
+
+Keep ADR-0012 runtime boundaries intact:
+- `cmd/trader` remains deterministic execution and paper runtime
+- `cmd/research` remains orchestration and research runtime

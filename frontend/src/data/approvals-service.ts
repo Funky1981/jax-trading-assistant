@@ -3,6 +3,9 @@ import { apiClient } from './http-client';
 export interface CandidateTrade {
   id: string;
   strategyInstanceId: string;
+  signalId?: string;
+  strategyId?: string;
+  artifactId?: string;
   symbol: string;
   signalType: 'BUY' | 'SELL';
   status: string;
@@ -12,11 +15,23 @@ export interface CandidateTrade {
   confidence?: number;
   reasoning?: string;
   blockReason?: string;
+  blockedReasonCode?: string;
   sessionDate: string;
   expiresAt?: string;
   detectedAt: string;
   qualifiedAt?: string;
+  blockedAt?: string;
+  submittedAt?: string;
+  filledAt?: string;
   dataProvenance: string;
+  latestApproval?: {
+    id: string;
+    decision: string;
+    approvedBy: string;
+    decidedAt: string;
+  };
+  executionInstructionId?: string;
+  tradeId?: string;
 }
 
 export interface CandidateApproval {
@@ -29,6 +44,33 @@ export interface CandidateApproval {
   snoozeUntil?: string;
   reanalysisRequested: boolean;
   decidedAt: string;
+}
+
+export interface ExecutionSummary {
+  id: string;
+  approvalId: string;
+  candidateId: string;
+  tradeId?: string;
+  symbol: string;
+  signalType: string;
+  entryPrice?: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  status: string;
+  brokerOrderId?: string;
+  fillPrice?: number;
+  fillQty?: number;
+  errorMessage?: string;
+  submittedAt?: string;
+  filledAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CandidateApprovalDetail {
+  candidateId: string;
+  latestApproval?: CandidateApproval;
+  execution?: ExecutionSummary;
 }
 
 export interface ApprovalQueueItem {
@@ -72,7 +114,7 @@ export const approvalsService = {
   },
 
   getByCandidate(candidateId: string) {
-    return apiClient.get<CandidateApproval>(`/api/v1/approvals/${candidateId}`);
+    return apiClient.get<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}`);
   },
 
   approve(candidateId: string, notes?: string) {

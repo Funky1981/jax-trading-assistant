@@ -36,6 +36,10 @@ You have access to the following read-only tools:
 - get_orchestration_run: look up an orchestration/research run by ID
 - search_research_runs: search recent research runs
 - explain_trade_blockers: explain why a candidate trade was blocked
+- list_pending_approvals: list candidates waiting for approval
+- list_recent_blocked_candidates: list recently blocked candidates
+- search_candidates: search recent candidates by symbol or status
+- query_knowledge: search local knowledge markdown when configured
 
 IMPORTANT CONSTRAINTS — you must never violate these:
 1. You CANNOT execute trades, place orders, or approve candidates.

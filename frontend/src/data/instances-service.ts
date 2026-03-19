@@ -28,6 +28,21 @@ interface SaveInstanceInput {
   artifactId?: string;
 }
 
+function normalizeConfigJson(configJson?: Record<string, unknown>): Record<string, unknown> {
+  const normalized: Record<string, unknown> = { ...(configJson ?? {}) };
+  const rawSymbols = Array.isArray(normalized.symbols)
+    ? normalized.symbols
+    : Array.isArray(normalized.universe)
+      ? normalized.universe
+      : [];
+  const symbols = rawSymbols
+    .map((value) => (typeof value === 'string' ? value.trim().toUpperCase() : ''))
+    .filter(Boolean);
+  normalized.symbols = symbols;
+  delete normalized.universe;
+  return normalized;
+}
+
 function toInstance(dto: InstanceApiDTO): StrategyInstance {
   return {
     id: dto.id,
@@ -37,7 +52,7 @@ function toInstance(dto: InstanceApiDTO): StrategyInstance {
     enabled: dto.enabled,
     sessionTimezone: dto.sessionTimezone,
     flattenByCloseTime: dto.flattenByCloseTime,
-    configJson: dto.configJson ?? {},
+    configJson: normalizeConfigJson(dto.configJson),
     configHash: dto.configHash,
     artifactId: dto.artifactId,
     createdAt: dto.createdAt,
@@ -52,12 +67,19 @@ export const instancesService = {
   },
 
   async create(input: SaveInstanceInput): Promise<StrategyInstance> {
-    const dto = await apiClient.post<InstanceApiDTO>('/api/v1/instances', input);
+    const dto = await apiClient.post<InstanceApiDTO>('/api/v1/instances', {
+      ...input,
+      configJson: normalizeConfigJson(input.configJson),
+    });
     return toInstance(dto);
   },
 
   async update(id: string, input: Partial<SaveInstanceInput>): Promise<{ ok: boolean; instance?: StrategyInstance }> {
-    const payload = { ...input, id };
+    const payload = {
+      ...input,
+      id,
+      configJson: input.configJson ? normalizeConfigJson(input.configJson) : undefined,
+    };
     const out = await apiClient.put<{ ok: boolean; instance?: InstanceApiDTO }>(`/api/v1/instances/${id}`, payload);
     return {
       ok: out.ok,
@@ -78,4 +100,3 @@ export const instancesService = {
     return rows;
   },
 };
-

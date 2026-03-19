@@ -7,17 +7,24 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 )
 
 // Service applies approval business rules.
 type Service struct {
-	store *Store
-	pool  *pgxpool.Pool
+	store          *Store
+	pool           *pgxpool.Pool
+	candidateStore *candidatesmod.Store
 }
 
 // NewService creates an approval Service.
 func NewService(pool *pgxpool.Pool) *Service {
-	return &Service{store: NewStore(pool), pool: pool}
+	return &Service{
+		store:          NewStore(pool),
+		pool:           pool,
+		candidateStore: candidatesmod.NewStore(pool),
+	}
 }
 
 // ApprovalRequest carries input for any approval action.
@@ -37,9 +44,10 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 	// Verify candidate is awaiting_approval and not expired.
 	var status string
 	var expiresAt *time.Time
+	var signalID *uuid.UUID
 	err := s.pool.QueryRow(ctx,
-		`SELECT status, expires_at FROM candidate_trades WHERE id = $1`, req.CandidateID,
-	).Scan(&status, &expiresAt)
+		`SELECT status, expires_at, signal_id FROM candidate_trades WHERE id = $1`, req.CandidateID,
+	).Scan(&status, &expiresAt, &signalID)
 	if err != nil {
 		return nil, fmt.Errorf("approvals.Service.Decide: candidate lookup: %w", err)
 	}
@@ -48,6 +56,9 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 	}
 	if status != "awaiting_approval" {
 		return nil, fmt.Errorf("%w: status=%s", ErrNotAwaitingApproval, status)
+	}
+	if req.Decision == DecisionApproved && signalID == nil {
+		return nil, ErrCandidateMissingSignal
 	}
 
 	a := &Approval{
@@ -76,12 +87,22 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 		DecisionReanalysisRequested: "awaiting_approval", // stays in queue
 	}[req.Decision]
 
-	_, err = s.pool.Exec(ctx,
-		`UPDATE candidate_trades SET status = $2, updated_at = NOW() WHERE id = $1`,
-		req.CandidateID, newCandidateStatus,
-	)
+	if req.Decision == DecisionSnoozed || req.Decision == DecisionReanalysisRequested {
+		_, err = s.pool.Exec(ctx,
+			`UPDATE candidate_trades SET updated_at = NOW() WHERE id = $1`,
+			req.CandidateID,
+		)
+	} else {
+		err = s.candidateStore.UpdateStatus(ctx, req.CandidateID, newCandidateStatus, nil)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("approvals.Service.Decide: update candidate status: %w", err)
+	}
+
+	if signalID != nil {
+		if err := s.syncSignalDecision(ctx, *signalID, req); err != nil {
+			return nil, fmt.Errorf("approvals.Service.Decide: sync signal decision: %w", err)
+		}
 	}
 
 	// If approved, build an execution instruction.
@@ -97,15 +118,21 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 // buildInstruction creates an execution_instruction row from an approved candidate.
 func (s *Service) buildInstruction(ctx context.Context, approval *Approval) error {
 	var (
-		symbol, signalType        string
-		entryPrice, stopLoss, tpx *float64
+		symbol, signalType string
+		signalID           *uuid.UUID
+		entryPrice         *float64
+		stopLoss           *float64
+		tpx                *float64
 	)
 	err := s.pool.QueryRow(ctx,
-		`SELECT symbol, signal_type, entry_price, stop_loss, take_profit
+		`SELECT signal_id, symbol, signal_type, entry_price, stop_loss, take_profit
 		   FROM candidate_trades WHERE id = $1`, approval.CandidateID,
-	).Scan(&symbol, &signalType, &entryPrice, &stopLoss, &tpx)
+	).Scan(&signalID, &symbol, &signalType, &entryPrice, &stopLoss, &tpx)
 	if err != nil {
 		return fmt.Errorf("buildInstruction lookup candidate: %w", err)
+	}
+	if signalID == nil {
+		return ErrCandidateMissingSignal
 	}
 	inst := &ExecutionInstruction{
 		ApprovalID:  approval.ID,
@@ -128,14 +155,54 @@ func (s *Service) GetQueue(ctx context.Context, limit int) ([]map[string]any, er
 	return s.store.ListQueue(ctx, limit)
 }
 
-// GetByCandidate returns the latest approval for a candidate.
-func (s *Service) GetByCandidate(ctx context.Context, candidateID uuid.UUID) (*Approval, error) {
-	return s.store.GetByCandidateID(ctx, candidateID)
+// GetByCandidate returns approval detail for a candidate including execution status.
+func (s *Service) GetByCandidate(ctx context.Context, candidateID uuid.UUID) (*ApprovalDetail, error) {
+	return s.store.GetDetailByCandidateID(ctx, candidateID)
 }
 
 // ── Sentinel errors ───────────────────────────────────────────────────────────
 
 var (
-	ErrCandidateExpired    = fmt.Errorf("candidate has expired and cannot be approved")
-	ErrNotAwaitingApproval = fmt.Errorf("candidate is not in awaiting_approval state")
+	ErrCandidateExpired       = fmt.Errorf("candidate has expired and cannot be approved")
+	ErrNotAwaitingApproval    = fmt.Errorf("candidate is not in awaiting_approval state")
+	ErrCandidateMissingSignal = fmt.Errorf("candidate is missing signal linkage required for paper execution")
 )
+
+func (s *Service) syncSignalDecision(ctx context.Context, signalID uuid.UUID, req ApprovalRequest) error {
+	switch req.Decision {
+	case DecisionApproved:
+		if _, err := s.pool.Exec(ctx, `
+			UPDATE strategy_signals
+			SET status = 'approved'
+			WHERE id = $1
+			  AND status IN ('pending','approved')
+		`, signalID); err != nil {
+			return err
+		}
+		_, err := s.pool.Exec(ctx, `
+			INSERT INTO trade_approvals (signal_id, orchestration_run_id, approved, approved_at, approved_by, modification_notes)
+			SELECT id, orchestration_run_id, TRUE, NOW(), $2, $3
+			FROM strategy_signals
+			WHERE id = $1
+		`, signalID, req.ApprovedBy, req.Notes)
+		return err
+	case DecisionRejected:
+		if _, err := s.pool.Exec(ctx, `
+			UPDATE strategy_signals
+			SET status = 'rejected'
+			WHERE id = $1
+			  AND status IN ('pending','approved','rejected')
+		`, signalID); err != nil {
+			return err
+		}
+		_, err := s.pool.Exec(ctx, `
+			INSERT INTO trade_approvals (signal_id, orchestration_run_id, approved, approved_at, approved_by, modification_notes)
+			SELECT id, orchestration_run_id, FALSE, NOW(), $2, $3
+			FROM strategy_signals
+			WHERE id = $1
+		`, signalID, req.ApprovedBy, req.Notes)
+		return err
+	default:
+		return nil
+	}
+}

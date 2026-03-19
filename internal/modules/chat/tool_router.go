@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -53,6 +57,14 @@ func (r *ToolRouter) Dispatch(ctx context.Context, call ToolCall) (*ToolResult, 
 		return r.searchResearchRuns(ctx, call.Args)
 	case "explain_trade_blockers":
 		return r.explainTradeBlockers(ctx, call.Args)
+	case "list_pending_approvals":
+		return r.listPendingApprovals(ctx, call.Args)
+	case "list_recent_blocked_candidates":
+		return r.listRecentBlockedCandidates(ctx, call.Args)
+	case "search_candidates":
+		return r.searchCandidates(ctx, call.Args)
+	case "query_knowledge":
+		return r.queryKnowledge(call.Args)
 	default:
 		return nil, ErrUnknownTool
 	}
@@ -70,6 +82,10 @@ func AvailableTools() []map[string]string {
 		{"name": "get_orchestration_run", "description": "Retrieve an orchestration run by ID", "argKey": "runId", "argLabel": "Run ID"},
 		{"name": "search_research_runs", "description": "Search recent orchestration/research runs", "argKey": "symbol", "argLabel": "Symbol (optional)"},
 		{"name": "explain_trade_blockers", "description": "Explain why a candidate was blocked", "argKey": "candidateId", "argLabel": "Candidate ID"},
+		{"name": "list_pending_approvals", "description": "List candidates currently awaiting approval", "argKey": "limit", "argLabel": "Limit (optional)"},
+		{"name": "list_recent_blocked_candidates", "description": "List recently blocked candidates", "argKey": "limit", "argLabel": "Limit (optional)"},
+		{"name": "search_candidates", "description": "Search recent candidates by symbol or status", "argKey": "query", "argLabel": "Symbol or status"},
+		{"name": "query_knowledge", "description": "Search local knowledge markdown when configured", "argKey": "query", "argLabel": "Knowledge query"},
 	}
 }
 
@@ -86,20 +102,20 @@ func (r *ToolRouter) getCandidateTrade(ctx context.Context, args json.RawMessage
 	if err != nil {
 		return errResult("invalid candidateId"), nil
 	}
-	var row map[string]any
-	r.pool.QueryRow(ctx, `
-		SELECT id::text, symbol, signal_type, status, confidence, entry_price,
-		       stop_loss, take_profit, reasoning, block_reason, detected_at
-		FROM candidate_trades WHERE id = $1`, id,
-	).Scan(
-		&row,
-	)
-	// Use a typed scan instead:
 	return rowQueryResult(ctx, r.pool,
 		`SELECT row_to_json(t) FROM (
-			SELECT id::text, symbol, signal_type, status, confidence, entry_price,
-			       stop_loss, take_profit, reasoning, block_reason, detected_at
-			FROM candidate_trades WHERE id = $1) t`, id)
+			SELECT ct.id::text, ct.signal_id::text, ct.strategy_id, ct.artifact_id::text, ct.symbol, ct.signal_type, ct.status, ct.confidence, ct.entry_price,
+			       ct.stop_loss, ct.take_profit, ct.reasoning, ct.block_reason, ct.blocked_reason_code, ct.detected_at,
+			       ei.id::text AS execution_instruction_id, ei.trade_id
+			FROM candidate_trades ct
+			LEFT JOIN LATERAL (
+				SELECT id, trade_id
+				FROM execution_instructions
+				WHERE candidate_id = ct.id
+				ORDER BY created_at DESC
+				LIMIT 1
+			) ei ON TRUE
+			WHERE ct.id = $1) t`, id)
 }
 
 func (r *ToolRouter) getSignal(ctx context.Context, args json.RawMessage) (*ToolResult, error) {
@@ -202,8 +218,188 @@ func (r *ToolRouter) explainTradeBlockers(ctx context.Context, args json.RawMess
 	}
 	return rowQueryResult(ctx, r.pool,
 		`SELECT row_to_json(t) FROM (
-			SELECT id::text, status, block_reason, reasoning, detected_at
+			SELECT id::text, status, block_reason, blocked_reason_code, reasoning, detected_at
 			FROM candidate_trades WHERE id = $1::uuid) t`, p.CandidateID)
+}
+
+func (r *ToolRouter) listPendingApprovals(ctx context.Context, args json.RawMessage) (*ToolResult, error) {
+	var p struct {
+		Limit int `json:"limit"`
+	}
+	_ = json.Unmarshal(args, &p)
+	if p.Limit <= 0 || p.Limit > 25 {
+		p.Limit = 10
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT id::text, symbol, signal_type, status, confidence, detected_at, expires_at,
+		       COALESCE(strategy_id,''), COALESCE(signal_id::text,''), COALESCE(artifact_id::text,'')
+		FROM candidate_trades
+		WHERE status = 'awaiting_approval'
+		ORDER BY detected_at ASC
+		LIMIT $1
+	`, p.Limit)
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	defer rows.Close()
+	items := make([]map[string]any, 0, p.Limit)
+	for rows.Next() {
+		var id, symbol, signalType, status, strategyID, signalID, artifactID string
+		var confidence *float64
+		var detectedAt time.Time
+		var expiresAt *time.Time
+		if err := rows.Scan(&id, &symbol, &signalType, &status, &confidence, &detectedAt, &expiresAt, &strategyID, &signalID, &artifactID); err != nil {
+			continue
+		}
+		items = append(items, map[string]any{
+			"id":         id,
+			"symbol":     symbol,
+			"signalType": signalType,
+			"status":     status,
+			"confidence": confidence,
+			"detectedAt": detectedAt,
+			"expiresAt":  expiresAt,
+			"strategyId": strategyID,
+			"signalId":   signalID,
+			"artifactId": artifactID,
+		})
+	}
+	return okResult(items)
+}
+
+func (r *ToolRouter) listRecentBlockedCandidates(ctx context.Context, args json.RawMessage) (*ToolResult, error) {
+	var p struct {
+		Limit int `json:"limit"`
+	}
+	_ = json.Unmarshal(args, &p)
+	if p.Limit <= 0 || p.Limit > 25 {
+		p.Limit = 10
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT id::text, symbol, signal_type, blocked_reason_code, block_reason, confidence, blocked_at, detected_at
+		FROM candidate_trades
+		WHERE status = 'blocked'
+		ORDER BY COALESCE(blocked_at, detected_at) DESC
+		LIMIT $1
+	`, p.Limit)
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	defer rows.Close()
+	items := make([]map[string]any, 0, p.Limit)
+	for rows.Next() {
+		var id, symbol, signalType string
+		var reasonCode, reason *string
+		var confidence *float64
+		var blockedAt, detectedAt time.Time
+		if err := rows.Scan(&id, &symbol, &signalType, &reasonCode, &reason, &confidence, &blockedAt, &detectedAt); err != nil {
+			continue
+		}
+		items = append(items, map[string]any{
+			"id":                id,
+			"symbol":            symbol,
+			"signalType":        signalType,
+			"blockedReasonCode": reasonCode,
+			"blockReason":       reason,
+			"confidence":        confidence,
+			"blockedAt":         blockedAt,
+			"detectedAt":        detectedAt,
+		})
+	}
+	return okResult(items)
+}
+
+func (r *ToolRouter) searchCandidates(ctx context.Context, args json.RawMessage) (*ToolResult, error) {
+	var p struct {
+		Query string `json:"query"`
+		Limit int    `json:"limit"`
+	}
+	_ = json.Unmarshal(args, &p)
+	if p.Limit <= 0 || p.Limit > 25 {
+		p.Limit = 10
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT id::text, symbol, signal_type, status, blocked_reason_code, detected_at
+		FROM candidate_trades
+		WHERE ($1 = '' OR symbol ILIKE '%' || $1 || '%' OR status ILIKE '%' || $1 || '%')
+		ORDER BY detected_at DESC
+		LIMIT $2
+	`, strings.TrimSpace(p.Query), p.Limit)
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	defer rows.Close()
+	items := make([]map[string]any, 0, p.Limit)
+	for rows.Next() {
+		var id, symbol, signalType, status string
+		var reasonCode *string
+		var detectedAt time.Time
+		if err := rows.Scan(&id, &symbol, &signalType, &status, &reasonCode, &detectedAt); err != nil {
+			continue
+		}
+		items = append(items, map[string]any{
+			"id":                id,
+			"symbol":            symbol,
+			"signalType":        signalType,
+			"status":            status,
+			"blockedReasonCode": reasonCode,
+			"detectedAt":        detectedAt,
+		})
+	}
+	return okResult(items)
+}
+
+func (r *ToolRouter) queryKnowledge(args json.RawMessage) (*ToolResult, error) {
+	var p struct {
+		Query string `json:"query"`
+		Limit int    `json:"limit"`
+	}
+	if err := json.Unmarshal(args, &p); err != nil || strings.TrimSpace(p.Query) == "" {
+		return errResult("query required"), nil
+	}
+	if p.Limit <= 0 || p.Limit > 10 {
+		p.Limit = 5
+	}
+	root := os.Getenv("JAX_KNOWLEDGE_ROOT")
+	if strings.TrimSpace(root) == "" {
+		root = filepath.Join("knowledge", "md")
+	}
+	if _, err := os.Stat(root); err != nil {
+		return errResult("knowledge root not configured"), nil
+	}
+	query := strings.ToLower(strings.TrimSpace(p.Query))
+	matches := make([]map[string]any, 0, p.Limit)
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d == nil || d.IsDir() || len(matches) >= p.Limit {
+			return nil
+		}
+		if !strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
+			return nil
+		}
+		raw, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return nil
+		}
+		text := string(raw)
+		idx := strings.Index(strings.ToLower(text), query)
+		if idx < 0 {
+			return nil
+		}
+		start := idx - 120
+		if start < 0 {
+			start = 0
+		}
+		end := idx + len(query) + 160
+		if end > len(text) {
+			end = len(text)
+		}
+		matches = append(matches, map[string]any{
+			"path":    path,
+			"excerpt": strings.TrimSpace(text[start:end]),
+		})
+		return nil
+	})
+	return okResult(matches)
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

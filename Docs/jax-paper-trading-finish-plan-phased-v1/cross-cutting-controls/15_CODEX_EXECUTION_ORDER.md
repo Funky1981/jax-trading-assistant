@@ -1,43 +1,44 @@
 # Codex Execution Order
 
-Use this exact order.
+Use this rebaselined order.
 
-## Block 1 — Truth path
-1. implement mode policy
-2. implement provenance fields
-3. block fake providers in research/paper
-4. add deterministic replay contract
+## Block 0 - Rebaseline
+1. mark already-landed capabilities as complete or partial
+2. keep ADR-0012 runtime boundaries intact
+3. start with contract hardening and approval-driven execution, not page creation
 
-## Block 2 — Strategy and data model
-5. complete strategy instances API
-6. complete strategy type metadata
-7. ensure runs link to instances and provenance
+## Block 1 - Truth path and strategy-instance contract hardening
+4. canonicalize `strategy_instances.configJson.symbols`
+5. preserve backward-compatible reads for legacy `universe`
+6. tighten enabled-instance validation
+7. extend candidate provenance to signal / strategy / artifact
 
-## Block 3 — Candidate discovery
-8. add watcher loop in trader runtime
-9. add candidate trade schema/store/service
-10. add candidate endpoints
-11. add SSE stream
+## Block 2 - Watcher and candidate lifecycle
+8. persist blocked candidates with structured reason codes
+9. preserve duplicate suppression while recording blocked reasons
+10. emit consistent lifecycle SSE events
+11. expose candidate approval / execution linkage in DTOs
 
-## Block 4 — Approval and paper execution
-12. add approval tables and service
-13. add execution instruction layer
-14. wire paper execution flow
-15. add flatten proof and reconciliation
+## Block 3 - Approval-driven paper execution
+12. make `execution_instructions` the only paper execution path
+13. run a trader-runtime worker that consumes pending instructions
+14. write back instruction status, trade linkage, and fills
+15. reject operator-originated direct `/api/v1/execute` in paper mode
 
-## Block 5 — Frontend operator pages
-16. wire Research page
-17. wire Analysis page
-18. wire Testing page
-19. wire Approvals page
+## Block 4 - Assistant and AI audit
+16. expand assistant tools for queue, blocked candidates, and knowledge search
+17. keep assistant useful without `OPENAI_API_KEY`
+18. record assistant decisions and tool use in `ai_decisions` / `ai_decision_acceptance`
+19. expose linkage fields in AI decision APIs
 
-## Block 6 — Assistant
-20. add chat backend
-21. add assistant page
-22. add tool router
-23. add AI audit tables and logs
+## Block 5 - Trust gates and sign-off
+20. harden Gate4 for candidate -> approval -> instruction -> trade -> fill linkage
+21. harden Gate7 for post-flatten proof artifacts
+22. harden Gate8 for orchestration + assistant AI audit coverage
+23. harden Gate9 for run + candidate + artifact provenance
+24. publish paper-readiness evidence under `reports/` and `Docs/runs/`
 
-## Block 7 — Gates and sign-off
-24. implement gates
-25. add gate dashboard
-26. run paper readiness cycle
+## Final sign-off
+25. require Gate0-Gate9 passing
+26. require Gate10 in staging when shadow DB is configured
+27. require 20+ paper sessions with no unresolved P0 issues

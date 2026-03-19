@@ -43,6 +43,15 @@ func (s *Service) Propose(ctx context.Context, req ProposalRequest) (*Candidate,
 		SessionDate:        today,
 		DataProvenance:     req.DataProvenance,
 	}
+	if parsed := parseOptionalUUID(req.SignalID); parsed != nil {
+		c.SignalID = parsed
+	}
+	if req.StrategyID != "" {
+		c.StrategyID = &req.StrategyID
+	}
+	if parsed := parseOptionalUUID(req.ArtifactID); parsed != nil {
+		c.ArtifactID = parsed
+	}
 	if req.TTL > 0 {
 		exp := time.Now().UTC().Add(req.TTL)
 		c.ExpiresAt = &exp
@@ -92,6 +101,9 @@ func (s *Service) List(ctx context.Context, status, symbol string, limit int) ([
 // ProposalRequest carries the input for creating a candidate.
 type ProposalRequest struct {
 	StrategyInstanceID uuid.UUID
+	SignalID           string
+	StrategyID         string
+	ArtifactID         string
 	Symbol             string
 	SignalType         string
 	EntryPrice         *float64
@@ -103,5 +115,69 @@ type ProposalRequest struct {
 	TTL                time.Duration
 }
 
+type BlockRequest struct {
+	StrategyInstanceID uuid.UUID
+	SignalID           string
+	StrategyID         string
+	ArtifactID         string
+	Symbol             string
+	SignalType         string
+	EntryPrice         *float64
+	StopLoss           *float64
+	TakeProfit         *float64
+	Confidence         *float64
+	Reasoning          *string
+	DataProvenance     string
+	ReasonCode         string
+	Reason             string
+	TTL                time.Duration
+}
+
+func (s *Service) CreateBlocked(ctx context.Context, req BlockRequest) (*Candidate, error) {
+	candidate := &Candidate{
+		StrategyInstanceID: req.StrategyInstanceID,
+		Symbol:             req.Symbol,
+		SignalType:         req.SignalType,
+		EntryPrice:         req.EntryPrice,
+		StopLoss:           req.StopLoss,
+		TakeProfit:         req.TakeProfit,
+		Confidence:         req.Confidence,
+		Reasoning:          req.Reasoning,
+		SessionDate:        time.Now().UTC().Format("2006-01-02"),
+		DataProvenance:     req.DataProvenance,
+	}
+	if req.SignalID != "" {
+		candidate.SignalID = parseOptionalUUID(req.SignalID)
+	}
+	if req.StrategyID != "" {
+		candidate.StrategyID = &req.StrategyID
+	}
+	if req.ArtifactID != "" {
+		candidate.ArtifactID = parseOptionalUUID(req.ArtifactID)
+	}
+	if req.Reason != "" {
+		candidate.BlockReason = &req.Reason
+	}
+	if req.ReasonCode != "" {
+		candidate.BlockedReasonCode = &req.ReasonCode
+	}
+	if req.TTL > 0 {
+		exp := time.Now().UTC().Add(req.TTL)
+		candidate.ExpiresAt = &exp
+	}
+	return s.store.CreateBlocked(ctx, candidate)
+}
+
 // ErrDuplicateCandidate is returned when an open candidate already exists.
 var ErrDuplicateCandidate = fmt.Errorf("open candidate already exists for this instance/symbol/session")
+
+func parseOptionalUUID(raw string) *uuid.UUID {
+	if raw == "" {
+		return nil
+	}
+	parsed, err := uuid.Parse(raw)
+	if err != nil {
+		return nil
+	}
+	return &parsed
+}
