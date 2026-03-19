@@ -67,31 +67,63 @@ if (-not $env:DATABASE_URL) {
     $env:DATABASE_URL = "postgresql://jax:jax@postgres:5432/jax"
 }
 
-# Build latest service images unless explicitly skipped.
-if ($env:JAX_SKIP_BUILD -ne "true") {
-    Write-Host "  Building jax-trader and jax-research..." -ForegroundColor Gray
-    docker compose build jax-trader jax-research 2>$null
+# Build service images: auto when any required image is missing, or when JAX_BUILD=true.
+$requiredImages = @(
+    "jax-trading-assistant-jax-trader",
+    "jax-trading-assistant-jax-research",
+    "jax-trading-assistant-hindsight",
+    "jax-trading-assistant-ib-bridge",
+    "jax-trading-assistant-agent0-service"
+)
+$needsBuild = $env:JAX_BUILD -eq "true"
+if (-not $needsBuild) {
+    $missing = $requiredImages | Where-Object {
+        -not (docker image inspect "${_}:latest" --format "{{.Id}}" 2>$null)
+    }
+    if ($missing) {
+        Write-Host "  Missing images: $($missing -join ', ') - building..." -ForegroundColor Yellow
+        $needsBuild = $true
+    } else {
+        Write-Host "  All images cached. Skipping build (set JAX_BUILD=true to force rebuild)." -ForegroundColor Gray
+    }
+}
+if ($needsBuild) {
+    Write-Host "  Building service images..." -ForegroundColor Gray
+    docker compose build 2>$null
 }
 
 # Start postgres first
 Write-Host "  Starting postgres..." -ForegroundColor Gray
-docker compose up -d postgres 2>$null
+docker compose up -d --no-build postgres 2>$null
 Start-Sleep -Seconds 3
 
 # Wait for postgres to be healthy
 for ($i = 1; $i -le 10; $i++) {
-    $pgStatus = docker compose ps postgres --format json 2>$null | ConvertFrom-Json
-    if ($pgStatus.Health -eq "healthy") {
-        Write-Host "  Postgres is ready" -ForegroundColor Green
-        break
-    }
+    $pgJson = docker compose ps postgres --format json 2>$null
+    try {
+        $pgStatus = $pgJson | ConvertFrom-Json
+        # Docker Compose may return an array or a single object
+        $health = if ($pgStatus -is [array]) { $pgStatus[0].Health } else { $pgStatus.Health }
+        if ($health -eq "healthy") {
+            Write-Host "  Postgres is ready" -ForegroundColor Green
+            break
+        }
+    } catch { }
     Write-Host "  Waiting for postgres... ($i/10)" -ForegroundColor Gray
     Start-Sleep -Seconds 2
 }
 
+# Run any pending migrations (idempotent — safe to run every start).
+Write-Host "  Applying database migrations..." -ForegroundColor Gray
+$migrationFiles = Get-ChildItem "db\postgres\migrations\*.up.sql" | Sort-Object Name
+foreach ($f in $migrationFiles) {
+    Get-Content $f.FullName | docker exec -i jax-trading-assistant-postgres-1 psql -U jax -d jax -q 2>$null
+}
+Write-Host "  Migrations applied." -ForegroundColor Green
+
 # Start other services
 Write-Host "  Starting core services..." -ForegroundColor Gray
-docker compose up -d --force-recreate jax-trader jax-research ib-bridge agent0-service hindsight prometheus grafana 2>$null
+docker compose up -d --no-build jax-trader jax-research ib-bridge agent0-service hindsight prometheus grafana 2>$null
 
 # Wait for services to be ready
 Write-Host "`nWaiting for services to be ready..." -ForegroundColor Yellow
@@ -152,6 +184,18 @@ if (-not (Test-Path "node_modules")) {
 Pop-Location
 
 Stop-StaleFrontendProcess
+
+# Kill any orphaned process still holding port 5173 (e.g. from a previous crashed run).
+$netout = netstat -ano 2>$null | Select-String ":5173\s.*LISTENING"
+if ($netout) {
+    $stalePid = ($netout.ToString().Trim() -split '\s+')[-1]
+    if ($stalePid -match '^\d+$') {
+        Write-Host "  Killing stale process on port 5173 (PID $stalePid)..." -ForegroundColor Gray
+        Stop-Process -Id ([int]$stalePid) -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
+    }
+}
+
 Write-Host "  Launching frontend dev server..." -ForegroundColor Gray
 $frontendProcess = Start-Process powershell `
     -ArgumentList '-NoProfile', '-Command', "Set-Location '$PWD\frontend'; npm run dev *> '$PWD\$FrontendLogFile'" `
@@ -159,7 +203,7 @@ $frontendProcess = Start-Process powershell `
     -WindowStyle Hidden
 $frontendProcess.Id | Set-Content $FrontendPidFile
 
-if (-not (Wait-ForHttp "http://localhost:5173/" 30 1)) {
+if (-not (Wait-ForHttp "http://localhost:5173/" 60 2)) {
     Write-Host "Frontend failed to become ready on http://localhost:5173" -ForegroundColor Red
     Write-Host "Last frontend log lines:" -ForegroundColor Yellow
     if (Test-Path $FrontendLogFile) {
