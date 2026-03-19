@@ -1,5 +1,5 @@
 import { apiClient } from './http-client';
-import type { TestRunSummary, TestingGateStatus, TriggerTestResponse } from './types';
+import type { PaperReadinessSummary, TestRunSummary, TestingGateStatus, TriggerTestResponse } from './types';
 
 function normalizeArtifactUri(uri?: string): string | undefined {
   if (!uri) return undefined;
@@ -22,6 +22,14 @@ export const testingService = {
   async getStatus(): Promise<TestingGateStatus[]> {
     const data = await apiClient.get<TestingGateStatus[]>('/api/v1/testing/status');
     return data.map((gate) => ({ ...gate, details: normalizeDetails(gate.details) }));
+  },
+
+  async getReadiness(): Promise<PaperReadinessSummary> {
+    const data = await apiClient.get<PaperReadinessSummary>('/api/v1/testing/readiness');
+    return {
+      ...data,
+      gateStatuses: (data.gateStatuses ?? []).map((gate) => ({ ...gate, details: normalizeDetails(gate.details) })),
+    };
   },
 
   async getGates(): Promise<TestingGateStatus[]> {

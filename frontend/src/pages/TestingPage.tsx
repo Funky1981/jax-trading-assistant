@@ -28,6 +28,10 @@ export function TestingPage() {
     queryKey: ['testing-status'],
     queryFn: () => testingService.getStatus(),
   });
+  const readinessQuery = useQuery({
+    queryKey: ['testing-readiness'],
+    queryFn: () => testingService.getReadiness(),
+  });
   const testRunsQuery = useQuery({
     queryKey: ['testing-runs'],
     queryFn: () => testingService.getTestRuns(50),
@@ -67,6 +71,7 @@ export function TestingPage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['testing-status'] }),
         queryClient.invalidateQueries({ queryKey: ['testing-runs'] }),
+        queryClient.invalidateQueries({ queryKey: ['testing-readiness'] }),
       ]);
     },
   });
@@ -83,6 +88,31 @@ export function TestingPage() {
           Run the safety checks that prove data integrity and paper-trading readiness.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            Paper Readiness
+            <HelpHint text="Rolls gate status into a single paper-trading readiness summary and publishes a report under /reports." />
+          </CardTitle>
+          <CardDescription>Current readiness rollup from trust gates and observed paper sessions.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <MetricCard title="Status" value={readinessQuery.data?.status ?? '-'} />
+          <MetricCard title="Required Gates Passed" value={`${readinessQuery.data?.passedGateCount ?? 0}/10`} />
+          <MetricCard title="Failed Gates" value={String(readinessQuery.data?.failedGateCount ?? 0)} />
+          <MetricCard title="Not Started" value={String(readinessQuery.data?.notStartedGateCount ?? 0)} />
+          <MetricCard title="Paper Sessions" value={String(readinessQuery.data?.paperSessionsObserved ?? 0)} />
+          <MetricCard title="Shadow Parity" value={readinessQuery.data?.shadowParitySatisfied ? 'Satisfied' : readinessQuery.data?.shadowParityRequired ? 'Required' : 'Optional'} />
+          {readinessQuery.data?.reportUri && (
+            <div className="sm:col-span-2 lg:col-span-6">
+              <a href={readinessQuery.data.reportUri} className="text-primary underline" target="_blank" rel="noreferrer">
+                Open paper-readiness report
+              </a>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -291,4 +321,13 @@ function statusBadge(status: string) {
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+function MetricCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-md border border-border p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+      <p className="mt-1 text-lg font-semibold">{value}</p>
+    </div>
+  );
 }

@@ -59,6 +59,7 @@ func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 	mux.HandleFunc("/api/v1/research/projects/", protect(researchProjectsDetailHandler(pool, orchestratorURL)))
 
 	mux.HandleFunc("/api/v1/testing/status", protect(testingStatusHandler(pool)))
+	mux.HandleFunc("/api/v1/testing/readiness", protect(testingReadinessHandler(pool)))
 	mux.HandleFunc("/api/v1/testing/config-integrity", protect(testingTriggerHandler(pool, "Gate0", "config_integrity")))
 	mux.HandleFunc("/api/v1/testing/recon/data", protect(testingTriggerHandler(pool, "Gate1", "data_recon")))
 	mux.HandleFunc("/api/v1/testing/replay", protect(testingTriggerHandler(pool, "Gate2", "deterministic_replay")))
@@ -954,6 +955,16 @@ func testingStatusHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
+func testingReadinessHandler(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		jsonOK(w, paperReadinessSummary(r.Context(), pool))
+	}
+}
+
 func testingTriggerHandler(pool *pgxpool.Pool, gate, testType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -1046,6 +1057,154 @@ func runGateAndPersist(ctx context.Context, pool *pgxpool.Pool, gate, testType s
 		"artifactUri": artifactPath,
 		"summary":     summary,
 	}
+}
+
+func paperReadinessSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
+	summary := map[string]any{
+		"status":                "not_ready",
+		"checkedAt":             time.Now().UTC(),
+		"requiredGateCount":     10,
+		"passedGateCount":       0,
+		"failedGateCount":       0,
+		"skippedGateCount":      0,
+		"notStartedGateCount":   0,
+		"paperSessionsObserved": 0,
+		"shadowParityRequired":  false,
+		"shadowParitySatisfied": false,
+		"gateStatuses":          []map[string]any{},
+		"reportUri":             "/reports/paper-readiness/latest.md",
+		"jsonReportUri":         "/reports/paper-readiness/latest.json",
+	}
+	if pool == nil {
+		summary["error"] = "database pool unavailable"
+		writePaperReadinessReport(summary)
+		return summary
+	}
+
+	expected := []string{"Gate0", "Gate1", "Gate2", "Gate3", "Gate4", "Gate5", "Gate6", "Gate7", "Gate8", "Gate9", "Gate10"}
+	statusByGate := map[string]map[string]any{}
+	rows, err := pool.Query(ctx, `
+		SELECT gate_name, status, COALESCE(last_run_id::text,''), details::text, last_run_at, updated_at
+		FROM gate_status
+	`)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var gateName, gateStatus, runID, details string
+			var lastRunAt, updatedAt *time.Time
+			if err := rows.Scan(&gateName, &gateStatus, &runID, &details, &lastRunAt, &updatedAt); err != nil {
+				continue
+			}
+			statusByGate[gateName] = map[string]any{
+				"gate":      gateName,
+				"status":    gateStatus,
+				"lastRunId": runID,
+				"details":   json.RawMessage(details),
+				"lastRunAt": lastRunAt,
+				"updatedAt": updatedAt,
+			}
+		}
+	}
+
+	gateStatuses := make([]map[string]any, 0, len(expected))
+	passedRequired := 0
+	failedCount := 0
+	skippedCount := 0
+	notStartedCount := 0
+	shadowRequired := false
+	shadowSatisfied := false
+	for _, gate := range expected {
+		entry, ok := statusByGate[gate]
+		if !ok {
+			entry = map[string]any{
+				"gate":      gate,
+				"status":    "not_started",
+				"lastRunId": "",
+				"details":   json.RawMessage(`{}`),
+				"lastRunAt": nil,
+				"updatedAt": nil,
+			}
+		}
+		status := strings.ToLower(toString(entry["status"]))
+		gateStatuses = append(gateStatuses, entry)
+		switch status {
+		case "passed":
+			if gate != "Gate10" {
+				passedRequired++
+			} else {
+				shadowSatisfied = true
+			}
+		case "failed":
+			failedCount++
+		case "skipped":
+			skippedCount++
+		default:
+			notStartedCount++
+		}
+	}
+
+	var shadowEligibleCount int
+	if err := pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM gate_status
+		WHERE gate_name = 'Gate10'
+		  AND status IN ('passed','failed','skipped')
+	`).Scan(&shadowEligibleCount); err == nil && shadowEligibleCount > 0 {
+		shadowRequired = true
+	}
+
+	var paperSessionsObserved int
+	_ = pool.QueryRow(ctx, `
+		SELECT COUNT(DISTINCT session_date)
+		FROM candidate_trades
+		WHERE status IN ('submitted','filled')
+		  AND detected_at >= NOW() - INTERVAL '30 days'
+	`).Scan(&paperSessionsObserved)
+
+	summary["gateStatuses"] = gateStatuses
+	summary["passedGateCount"] = passedRequired
+	summary["failedGateCount"] = failedCount
+	summary["skippedGateCount"] = skippedCount
+	summary["notStartedGateCount"] = notStartedCount
+	summary["paperSessionsObserved"] = paperSessionsObserved
+	summary["shadowParityRequired"] = shadowRequired
+	summary["shadowParitySatisfied"] = !shadowRequired || shadowSatisfied
+	summary["ready"] = failedCount == 0 && notStartedCount == 0 && passedRequired == 10 && (!shadowRequired || shadowSatisfied)
+	if ready, _ := summary["ready"].(bool); ready {
+		summary["status"] = "ready"
+	}
+	writePaperReadinessReport(summary)
+	return summary
+}
+
+func writePaperReadinessReport(summary map[string]any) {
+	reportDir := filepath.Join("reports", "paper-readiness")
+	if err := os.MkdirAll(reportDir, 0o755); err != nil {
+		return
+	}
+	jsonBytes, err := json.MarshalIndent(summary, "", "  ")
+	if err == nil {
+		_ = os.WriteFile(filepath.Join(reportDir, "latest.json"), jsonBytes, 0o644)
+	}
+	var md strings.Builder
+	md.WriteString("# Paper Readiness\n\n")
+	md.WriteString(fmt.Sprintf("- generated: %s\n", time.Now().UTC().Format(time.RFC3339)))
+	md.WriteString(fmt.Sprintf("- status: %s\n", toString(summary["status"])))
+	md.WriteString(fmt.Sprintf("- ready: %v\n", summary["ready"]))
+	md.WriteString(fmt.Sprintf("- passed_required_gates: %v/10\n", summary["passedGateCount"]))
+	md.WriteString(fmt.Sprintf("- failed_gates: %v\n", summary["failedGateCount"]))
+	md.WriteString(fmt.Sprintf("- skipped_gates: %v\n", summary["skippedGateCount"]))
+	md.WriteString(fmt.Sprintf("- not_started_gates: %v\n", summary["notStartedGateCount"]))
+	md.WriteString(fmt.Sprintf("- paper_sessions_observed: %v\n", summary["paperSessionsObserved"]))
+	md.WriteString(fmt.Sprintf("- shadow_parity_required: %v\n", summary["shadowParityRequired"]))
+	md.WriteString(fmt.Sprintf("- shadow_parity_satisfied: %v\n", summary["shadowParitySatisfied"]))
+	md.WriteString("\n## Gates\n")
+	if gates, ok := summary["gateStatuses"].([]map[string]any); ok {
+		for _, gate := range gates {
+			md.WriteString(fmt.Sprintf("- %s: %s\n", toString(gate["gate"]), toString(gate["status"])))
+		}
+	}
+	_ = os.WriteFile(filepath.Join(reportDir, "latest.md"), []byte(md.String()), 0o644)
 }
 
 func runsListHandler(pool *pgxpool.Pool) http.HandlerFunc {

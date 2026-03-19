@@ -344,6 +344,23 @@ export interface TriggerTestResponse {
   summary?: Record<string, unknown>;
 }
 
+export interface PaperReadinessSummary {
+  status: string;
+  ready?: boolean;
+  checkedAt: string;
+  requiredGateCount: number;
+  passedGateCount: number;
+  failedGateCount: number;
+  skippedGateCount: number;
+  notStartedGateCount: number;
+  paperSessionsObserved: number;
+  shadowParityRequired: boolean;
+  shadowParitySatisfied: boolean;
+  gateStatuses: TestingGateStatus[];
+  reportUri?: string;
+  jsonReportUri?: string;
+}
+
 export interface RunSummary {
   id: string;
   runType: string;

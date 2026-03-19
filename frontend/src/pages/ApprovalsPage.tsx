@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
-import { approvalsService, type ApprovalQueueItem } from '@/data/approvals-service';
+import { approvalsService, type ApprovalQueueItem, type CandidateApprovalDetail } from '@/data/approvals-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -217,10 +217,11 @@ export function ApprovalsPage() {
       }
     },
     onMutate: ({ id }) => setPendingId(id),
-    onSuccess: (_data, { action }) => {
+    onSuccess: (data, { action }) => {
       qc.invalidateQueries({ queryKey: ['approvals-queue'] });
       setPendingId(null);
-      setNotification(`Decision recorded: ${action}`);
+      const executionStatus = (data as CandidateApprovalDetail | undefined)?.execution?.status;
+      setNotification(executionStatus ? `Decision recorded: ${action}. Execution: ${executionStatus}` : `Decision recorded: ${action}`);
       setTimeout(() => setNotification(null), 3000);
     },
     onError: (err: Error) => {
