@@ -32,10 +32,12 @@ Thumbs.db
 **/.env
 .playwright-mcp/
 *.png
+config/providers.local.json
 
 # Runtime / build artefacts
 .runtime/
 logs/
+reports/
 *.log
 build.log
 console-errors.log

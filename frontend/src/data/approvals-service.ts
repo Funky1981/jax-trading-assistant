@@ -118,18 +118,18 @@ export const approvalsService = {
   },
 
   approve(candidateId: string, notes?: string) {
-    return apiClient.post<CandidateApproval>(`/api/v1/approvals/${candidateId}/approve`, { notes });
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/approve`, { notes });
   },
 
   reject(candidateId: string, notes?: string) {
-    return apiClient.post<CandidateApproval>(`/api/v1/approvals/${candidateId}/reject`, { notes });
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/reject`, { notes });
   },
 
   snooze(candidateId: string, snoozeHours = 4, notes?: string) {
-    return apiClient.post<CandidateApproval>(`/api/v1/approvals/${candidateId}/snooze`, { snoozeHours, notes });
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/snooze`, { snoozeHours, notes });
   },
 
   reanalyze(candidateId: string, notes?: string) {
-    return apiClient.post<CandidateApproval>(`/api/v1/approvals/${candidateId}/reanalyze`, { notes });
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/reanalyze`, { notes });
   },
 };
