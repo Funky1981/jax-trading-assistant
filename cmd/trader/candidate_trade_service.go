@@ -1,18 +1,14 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 )
 
 // candidateTradeService wraps the candidates module for HTTP handler use.
@@ -23,8 +19,6 @@ type candidateTradeService struct {
 func newCandidateTradeService(pool *pgxpool.Pool) *candidateTradeService {
 	return &candidateTradeService{svc: candidatesmod.NewService(candidatesmod.NewStore(pool))}
 }
-
-// ── Handlers ──────────────────────────────────────────────────────────────────
 
 // GET /api/v1/candidates
 func candidatesListHandler(pool *pgxpool.Pool) http.HandlerFunc {
@@ -66,13 +60,11 @@ func candidatesDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		if len(parts) == 2 {
 			action = parts[1]
 		}
-
 		id, err := uuid.Parse(rawID)
 		if err != nil {
 			http.Error(w, "invalid candidate id", http.StatusBadRequest)
 			return
 		}
-
 		switch {
 		case r.Method == http.MethodGet && action == "":
 			c, err := cts.svc.GetByID(r.Context(), id)
@@ -85,24 +77,21 @@ func candidatesDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 				return
 			}
 			jsonOK(w, c)
-
 		case r.Method == http.MethodPost && action == "refresh":
 			handleCandidateRefresh(w, r, cts, id)
-
 		default:
 			http.Error(w, "not found", http.StatusNotFound)
 		}
 	}
 }
 
-// POST /api/v1/candidates/{id}/refresh — re-qualify a detected/blocked candidate.
+// POST /api/v1/candidates/{id}/refresh re-qualifies a detected or blocked candidate.
 func handleCandidateRefresh(w http.ResponseWriter, r *http.Request, cts *candidateTradeService, id uuid.UUID) {
 	c, err := cts.svc.GetByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, "candidate not found", http.StatusNotFound)
 		return
 	}
-	// Only detected or blocked candidates can be refreshed.
 	if c.Status != candidatesmod.StatusDetected && c.Status != candidatesmod.StatusBlocked {
 		http.Error(w, fmt.Sprintf("cannot refresh candidate in status %q", c.Status), http.StatusConflict)
 		return
@@ -118,17 +107,4 @@ func handleCandidateRefresh(w http.ResponseWriter, r *http.Request, cts *candida
 		"refreshedAt": time.Now().UTC(),
 	})
 	jsonOK(w, updated)
-}
-
-// ── Internal propose helper (called by watcher integration) ──────────────────
-
-func proposeCandidate(ctx context.Context, pool *pgxpool.Pool, req candidatesmod.ProposalRequest) (*candidatesmod.Candidate, error) {
-	cts := newCandidateTradeService(pool)
-	c, err := cts.svc.Propose(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	b, _ := json.Marshal(c)
-	publishEvent("candidate.detected", json.RawMessage(b))
-	return c, nil
 }

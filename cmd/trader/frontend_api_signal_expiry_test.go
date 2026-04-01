@@ -129,6 +129,7 @@ func TestSignalsListHandlerExpiresLegacyPendingSignals(t *testing.T) {
 	}
 	if expiresAt == nil {
 		t.Fatal("expected expires_at to be backfilled for legacy pending signal")
+		return
 	}
 	expected := generatedAt.Add(24 * time.Hour)
 	requireTimeClose(t, *expiresAt, expected, time.Second)
@@ -166,6 +167,7 @@ func TestRecommendationsListHandlerExcludesExpiredPendingSignals(t *testing.T) {
 	}
 	if expiresAt == nil {
 		t.Fatal("expected expires_at to remain populated for expired signal")
+		return
 	}
 	requireTimeClose(t, *expiresAt, expiredAt, time.Second)
 }
@@ -197,5 +199,6 @@ func TestSignalApproveRejectsExpiredPendingSignal(t *testing.T) {
 	}
 	if expiresAt == nil {
 		t.Fatal("expected expires_at to be backfilled before approve conflict")
+		return
 	}
 }

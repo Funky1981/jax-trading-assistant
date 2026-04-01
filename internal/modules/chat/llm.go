@@ -115,7 +115,7 @@ func (c *OpenAIChatClient) Complete(ctx context.Context, msgs []LLMMessage) (str
 	chatMsgs := make([]chatMsg, 0, len(msgs)+1)
 	chatMsgs = append(chatMsgs, chatMsg{Role: "system", Content: systemPrompt})
 	for _, m := range msgs {
-		chatMsgs = append(chatMsgs, chatMsg{Role: m.Role, Content: m.Content})
+		chatMsgs = append(chatMsgs, chatMsg(m))
 	}
 
 	body, err := json.Marshal(request{
