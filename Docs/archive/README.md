@@ -18,6 +18,7 @@ Archive structure is organized by purpose so historical material is easy to find
     - `ejlayer/`
 - `evidence/`
   - historical runtime and UAT artifacts.
+  - `manual-tests/` contains archived manual paper-trading test scripts that are no longer top-level runbooks.
 - `diagrams/`
   - legacy architecture diagram sources.
 - `docs-original/`

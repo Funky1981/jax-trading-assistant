@@ -106,5 +106,5 @@ go test ./libs/contracts/adapters/...
 ## Related Documentation
 
 - [ADR-0012: Modular Monolith](../../Docs/ADR-0012-two-runtime-modular-monolith.md)
-- [Implementation Plan](../../Docs/ADR-0012-IMPLEMENTATION-PLAN.md)
-- [Phase 0 Complete](../../Docs/PHASE_0_COMPLETE.md)
+- [Implementation Plan](../../Docs/archive/adrs/supporting/ADR-0012-IMPLEMENTATION-PLAN.md)
+- [Phase 0 Complete](../../Docs/archive/runtime-history/phases/PHASE_0_COMPLETE.md)

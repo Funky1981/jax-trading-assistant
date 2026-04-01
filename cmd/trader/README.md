@@ -300,6 +300,6 @@ LIMIT 10;
 ## References
 
 - [ADR-0012: Modular Monolith Architecture](../../Docs/ADR-0012-two-runtime-modular-monolith.md)
-- [Phase 1 Complete](../../Docs/PHASE_1_COMPLETE.md)
+- [Phase 1 Complete](../../Docs/archive/runtime-history/phases/PHASE_1_COMPLETE.md)
 - [Service Contracts](../../libs/contracts/README.md)
 - [Strategy Library](../../libs/strategies/README.md)

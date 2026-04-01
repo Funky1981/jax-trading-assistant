@@ -1,9 +1,13 @@
-# Codex Packs Index (v2)
+# Codex Packs Index
 
-This bundle contains all Codex/Copilot implementation packs generated in this chat:
+This folder contains archived Codex/Copilot planning packs and implementation bundles.
 
-- `strategy-lab-v1/` — end-to-end strategy lab architecture (market tools, real backtest, instances, 5 strategies, research process)
-- `trust-gates-v1/` — verification gates + runbook to trust the system before trading
-- `ui-research-testing-v1/` — UI pages spec for Research/Analysis/Testing + API contracts
-- `strategy-types-v1/` — code-level strategy type catalog (5 same-day strategy types) + metadata endpoint contract
-- `ai-audit-research-v1/` — audit-first AI decision logging + research/test orchestration + storage + UI inspection model
+## Active Archived Packs
+
+- `strategy-lab-v1/` - strategy lab architecture and workflow pack
+- `trust-gates-v1/` - trust-gate verification and runbook pack
+- `ui-research-testing-v1/` - operator-page and API contract pack
+- `strategy-types-v1/` - strategy type catalog and metadata contract pack
+- `ai-audit-research-v1/` - AI audit and research orchestration pack
+- `jax-assistant-approval-continuation-v1/` - archived continuation pack for watcher, approval, and assistant rollout
+- `jax-paper-trading-finish-plan-phased-v1/` - archived phased finish-plan pack after implementation and rebaseline

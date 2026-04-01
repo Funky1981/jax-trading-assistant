@@ -170,5 +170,5 @@ For Phase 2, passing golden tests means signal generation is **provably identica
 ## References
 
 - [ADR-0012: Modular Monolith](../../Docs/ADR-0012-two-runtime-modular-monolith.md)
-- [Phase 2 Documentation](../../Docs/PHASE_2_COMPLETE.md)
+- [Phase 2 Documentation](../../Docs/archive/runtime-history/phases/PHASE_2_COMPLETE.md)
 - [cmd/trader README](../../cmd/trader/README.md)

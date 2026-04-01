@@ -18,10 +18,16 @@ This directory contains the current operating documentation for the active runti
 - `TODO.md`
 - `TEST_PLAN.md`
 - `AUDIT_TRAIL.md`
+- `UAT_PAPER_TRADING.md`
 - `PRODUCTION_READINESS.md`
 - `SLO_ALERTS.md`
 - `INCIDENT_RUNBOOK.md`
 - `CONTRIBUTING.md`
+
+## Active Folders
+
+- `jax-harness-full-package/` - next active harness package kept at the top level
+- `runs/` - generated run evidence and readiness notes
 
 ## ADR
 
@@ -38,5 +44,10 @@ Supporting ADR planning and historical rollout notes are archived in:
 - `Docs/archive/evidence/` - historical run/UAT output
 - `Docs/archive/diagrams/` - non-canonical legacy diagrams
 - `Docs/archive/docs-original/` - preserved snapshot of older documentation set
+
+Recently archived from the top level:
+- `Docs/archive/programs/codex/jax-assistant-approval-continuation-v1/`
+- `Docs/archive/programs/codex/jax-paper-trading-finish-plan-phased-v1/`
+- `Docs/archive/evidence/manual-tests/`
 
 Use `Docs/archive/README.md` for archive notes.
