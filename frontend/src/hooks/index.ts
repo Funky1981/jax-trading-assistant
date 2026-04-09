@@ -3,7 +3,7 @@ export * from './usePositions';
 export * from './useWatchlist';
 export * from './useOrders';
 export * from './useMetrics';
-export * from './useMemoryHook';
+export * from './useMemory';
 export * from './useStrategies';
 export * from './useRisk';
 export * from './useIBAccount';

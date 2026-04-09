@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Database, Search } from 'lucide-react';
-import { useMemoryBanks, useMemoryEntries, useMemorySearch } from '@/hooks/useMemoryHook';
+import { useMemoryBanks, useMemoryRecall, useMemorySearch } from '@/hooks/useMemory';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { formatTime, formatDate } from '@/lib/utils';
+import { formatTime } from '@/lib/utils';
 
 interface MemoryBrowserPanelProps {
   isOpen: boolean;
@@ -22,11 +22,14 @@ export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps
   const { data: banks, isLoading: banksLoading } = useMemoryBanks();
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  const { data: entries, isLoading: entriesLoading } = useMemoryEntries(selectedBank);
-  const { data: searchResults, isLoading: searchLoading } = useMemorySearch(searchQuery);
 
-  const displayEntries = searchQuery.length >= 2 ? searchResults : entries;
+  const { data: recallData, isLoading: entriesLoading } = useMemoryRecall(
+    selectedBank ?? '',
+    {},
+  );
+  const { data: searchItems, isLoading: searchLoading } = useMemorySearch(searchQuery, selectedBank ?? undefined);
+
+  const displayItems = searchQuery.length >= 2 ? searchItems : recallData?.items;
   const isLoadingEntries = searchQuery.length >= 2 ? searchLoading : entriesLoading;
 
   const summary = banks ? (
@@ -54,13 +57,8 @@ export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps
             </SelectTrigger>
             <SelectContent>
               {banks?.map((bank) => (
-                // React.Fragment with key: Radix clones SelectItem children
-                // without preserving the key prop, causing React warnings.
-                <SelectItem key={bank.id} value={bank.id}>
-                  <span>{bank.name}</span>
-                  <Badge variant="secondary" className="ml-2 text-xs">
-                    {bank.entryCount}
-                  </Badge>
+                <SelectItem key={bank} value={bank}>
+                  <span>{bank}</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -81,49 +79,39 @@ export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps
           />
         </div>
 
-        {/* Bank Info */}
-        {selectedBank && banks && (
-          <div className="rounded-md border border-border bg-muted/30 p-3">
-            {(() => {
-              const bank = banks.find((b) => b.id === selectedBank);
-              if (!bank) return null;
-              return (
-                <>
-                  <p className="font-semibold">{bank.name}</p>
-                  <p className="text-xs text-muted-foreground">{bank.description}</p>
-                  <div className="flex gap-4 mt-2 text-xs">
-                    <span>{bank.entryCount} entries</span>
-                    <span>Updated {formatDate(bank.lastUpdated)}</span>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        )}
-
         {/* Entries */}
         <div className="space-y-2">
           {isLoadingEntries ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               Loading...
             </p>
-          ) : displayEntries && displayEntries.length > 0 ? (
-            displayEntries.map((entry) => (
+          ) : displayItems && displayItems.length > 0 ? (
+            displayItems.map((item, idx) => (
               <div
-                key={entry.id}
+                key={item.id ?? idx}
                 className="rounded-md border border-border p-3 text-sm"
               >
-                <p>{entry.content}</p>
+                <p>{item.summary}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <div className="flex gap-2">
-                    {Object.entries(entry.metadata).slice(0, 3).map(([key, value]) => (
-                      <Badge key={key} variant="outline" className="text-xs">
-                        {key}: {String(value)}
+                  <div className="flex gap-2 flex-wrap">
+                    {item.type && (
+                      <Badge variant="outline" className="text-xs">
+                        {item.type}
+                      </Badge>
+                    )}
+                    {item.symbol && (
+                      <Badge variant="secondary" className="text-xs">
+                        {item.symbol}
+                      </Badge>
+                    )}
+                    {item.tags?.slice(0, 3).map((tag) => (
+                      <Badge key={tag} variant="outline" className="text-xs">
+                        {tag}
                       </Badge>
                     ))}
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {formatTime(entry.createdAt)}
+                    {formatTime(new Date(item.ts).getTime())}
                   </span>
                 </div>
               </div>
