@@ -45,6 +45,12 @@ cmd/trader (in-process) → Postgres
 |----------|---------|-------------|
 | `DATABASE_URL` | `postgresql://jax:jax@localhost:5432/jax` | PostgreSQL connection string |
 | `PORT` | `8100` | HTTP server port |
+| `JAX_RUNTIME_MODE` | `dev` | Runtime safety mode: `research`, `paper`, or `live` in deployed environments |
+| `JAX_REQUIRE_EXPLICIT_RUNTIME_MODE` | `false` | Require explicit runtime mode selection |
+| `HARNESS_ENABLED` | `true` | Enable the assistant evidence harness |
+| `HARNESS_SHADOW_MODE` | `false` | Keep legacy chat response path while running harness log-only in background |
+| `HARNESS_SESSION_RATE_LIMIT_PER_MINUTE` | `20` | Per-session assistant message throttle |
+| `ALLOW_LIVE_TRADING` | `false` | Required to enable direct live execution endpoints |
 
 ### Running Locally
 
@@ -142,6 +148,24 @@ Retrieve signal history for a symbol.
 ### GET /metrics
 
 Retrieve service metrics.
+
+### Assistant Chat Endpoints
+
+`cmd/trader` also serves the advisory-only assistant APIs through the frontend API layer:
+
+- `POST /api/v1/chat`
+- `GET /api/v1/chat?session=<id>`
+- `GET /api/v1/chat/sessions`
+- `GET /api/v1/chat/sessions/<id>`
+- `GET /api/v1/chat/tools`
+- `GET /api/v1/chat/traces/<traceId>`
+
+Notes:
+
+- The assistant is read-only and advisory-only.
+- Tool availability changes by runtime mode.
+- `GET /api/v1/chat/tools` includes tool metadata, current mode, harness state, and per-tool policy availability.
+- Assistant replies can persist `traceId` and `evidenceBundle` for auditability.
 
 ## Implementation Details
 

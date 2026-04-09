@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -31,9 +32,36 @@ func registerChatRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.
 
 	// Message endpoint (send + history)
 	mux.HandleFunc("/api/v1/chat", protect(chatHandler(svc)))
+	mux.HandleFunc("/api/v1/chat/traces/", protect(chatTraceDetailHandler(svc)))
 
 	// Tool catalogue
-	mux.HandleFunc("/api/v1/chat/tools", protect(chatToolsHandler()))
+	mux.HandleFunc("/api/v1/chat/tools", protect(chatToolsHandler(svc)))
+}
+
+// GET /api/v1/chat/traces/{traceId} — returns a persisted harness trace.
+func chatTraceDetailHandler(svc *chatmod.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		traceID := strings.TrimPrefix(r.URL.Path, "/api/v1/chat/traces/")
+		traceID = strings.TrimSpace(traceID)
+		if traceID == "" {
+			http.Error(w, "trace id required", http.StatusBadRequest)
+			return
+		}
+		trace, err := svc.GetTrace(r.Context(), traceID)
+		if err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "no rows") {
+				http.Error(w, "trace not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		jsonOK(w, trace)
+	}
 }
 
 // POST /api/v1/chat — send a message in a session (or create one).
@@ -101,6 +129,10 @@ func chatHandler(svc *chatmod.Service) http.HandlerFunc {
 
 			msgs, err := svc.SendMessage(r.Context(), sessionID, body.Content, body.ToolCall)
 			if err != nil {
+				if errors.Is(err, chatmod.ErrSessionRateLimited) {
+					http.Error(w, err.Error(), http.StatusTooManyRequests)
+					return
+				}
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -188,15 +220,20 @@ func chatSessionDetailHandler(svc *chatmod.Service) http.HandlerFunc {
 }
 
 // GET /api/v1/chat/tools — returns the list of available assistant tools.
-func chatToolsHandler() http.HandlerFunc {
+func chatToolsHandler(svc *chatmod.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		runtime := svc.RuntimeInfo()
 		jsonOK(w, map[string]any{
-			"tools":  chatmod.AvailableTools(),
-			"notice": "Assistant is advisory only. It cannot execute trades or approve decisions on behalf of the user.",
+			"tools":                     svc.AvailableTools(),
+			"notice":                    "Assistant is advisory only. It cannot execute trades or approve decisions on behalf of the user.",
+			"mode":                      runtime.Mode,
+			"harnessEnabled":            runtime.HarnessEnabled,
+			"shadowMode":                runtime.ShadowMode,
+			"sessionRateLimitPerMinute": runtime.SessionRateLimitPerMinute,
 		})
 	}
 }
