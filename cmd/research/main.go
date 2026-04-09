@@ -49,7 +49,6 @@ type Config struct {
 	MemoryServiceURL string
 	Agent0ServiceURL string
 	DexterServiceURL string
-	HindsightURL     string // used by the in-process memory proxy
 	// DatasetDir is the directory for the L03 dataset catalog (catalog.json).
 	DatasetDir  string
 	RuntimeMode runtimepolicy.Mode
@@ -134,7 +133,9 @@ func main() {
 
 	// ADR-0012 Phase 6: memory proxy (replaces jax-memory service).
 	// agent0-service can now point MEMORY_SERVICE_URL at jax-research:8091.
-	memStore := buildMemoryStore()
+	// Backed by Postgres + pgvector; fails fast if db is unavailable (already
+	// validated above).
+	memStore := buildMemoryStore(db)
 	registerMemoryRoutes(mux, memStore)
 
 	srv := &http.Server{
@@ -459,7 +460,6 @@ func loadConfig() (Config, error) {
 		MemoryServiceURL: envOrDefault("MEMORY_SERVICE_URL", "http://localhost:8091/tools"),
 		Agent0ServiceURL: envOrDefault("AGENT0_SERVICE_URL", "http://agent0-service:8093"),
 		DexterServiceURL: envOrDefault("DEXTER_SERVICE_URL", ""),
-		HindsightURL:     envOrDefault("HINDSIGHT_URL", ""),
 		DatasetDir:       envOrDefault("DATASET_DIR", "data/datasets"),
 		RuntimeMode:      mode,
 	}, nil

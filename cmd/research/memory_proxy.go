@@ -1,17 +1,21 @@
 // memory_proxy.go — Part of cmd/research (package main).
 // Registers the jax-memory-compatible HTTP endpoints on the research runtime's
-// mux so that agent0-service can point MEMORY_SERVICE_URL at jax-research:8091
-// and jax-memory can be removed from docker-compose (ADR-0012 Phase 6).
+// mux (ADR-0012 Phase 6). Backing store is Postgres + pgvector; no Hindsight
+// dependency and no in-memory fallback.
 //
 // Endpoints exposed:
 //
-//	POST /tools                 – UTCP tool dispatcher (memory.retain/recall/reflect)
-//	GET  /v1/memory/banks       – list available banks
-//	GET  /v1/memory/search      – search memories (delegated to recall)
+//	POST /tools                                  UTCP dispatcher (retain/recall/reflect)
+//	GET  /v1/memory/banks                        list banks → string[]
+//	GET  /v1/memory/search                       search → { items }
+//	GET  /v1/memory/banks/{bank}/items           list items in bank
+//	POST /v1/memory/banks/{bank}/items           create item in bank
+//	GET  /v1/memory/banks/{bank}/items/{id}      get item by id
 package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -20,31 +24,25 @@ import (
 	"time"
 
 	"jax-trading-assistant/libs/contracts"
-	"jax-trading-assistant/libs/hindsight"
-	"jax-trading-assistant/libs/testing"
+	"jax-trading-assistant/libs/pgmemory"
 )
 
-// buildMemoryStore creates a contracts.MemoryStore backed by Hindsight if the
-// HINDSIGHT_URL env var is set, otherwise falls back to an in-memory store.
-func buildMemoryStore() contracts.MemoryStore {
-	url := os.Getenv("HINDSIGHT_URL")
-	if url == "" {
-		log.Println("memory store: HINDSIGHT_URL not set, using in-memory store")
-		return testing.NewInMemoryMemoryStore()
-	}
-	client, err := hindsight.New(url)
-	if err != nil {
-		log.Printf("memory store: invalid HINDSIGHT_URL (%v), using in-memory fallback", err)
-		return testing.NewInMemoryMemoryStore()
-	}
-	ctx, cancel := newTimeoutCtx(5)
-	defer cancel()
-	if err := client.Ping(ctx); err != nil {
-		log.Printf("memory store: hindsight ping failed (%v), using in-memory fallback", err)
-		return testing.NewInMemoryMemoryStore()
-	}
-	log.Printf("memory store → hindsight %s", url)
-	return client
+// buildMemoryStore constructs a Postgres/pgvector-backed MemoryStore.
+// The DB connection is required; the service fails to start if it is nil.
+// Embedding configuration is read from the environment:
+//
+//	OPENAI_API_KEY   – required for embedding generation
+//	OPENAI_BASE_URL  – optional custom API root (Azure OpenAI, local proxy)
+//	EMBEDDING_MODEL  – optional embedding model (default: text-embedding-3-small)
+func buildMemoryStore(db *sql.DB) *pgmemory.Store {
+	embedder := pgmemory.NewOpenAIEmbedder(pgmemory.OpenAIEmbedderConfig{
+		APIKey:  os.Getenv("OPENAI_API_KEY"),
+		BaseURL: os.Getenv("OPENAI_BASE_URL"),
+		Model:   os.Getenv("EMBEDDING_MODEL"),
+	})
+	store := pgmemory.New(db, embedder)
+	log.Println("memory store → postgres (pgvector)")
+	return store
 }
 
 // registerMemoryRoutes adds jax-memory-compatible endpoints to mux.
@@ -52,7 +50,9 @@ func registerMemoryRoutes(mux *http.ServeMux, store contracts.MemoryStore) {
 	mux.HandleFunc("/tools", memoryToolHandler(store))
 	mux.HandleFunc("/v1/memory/banks", memoryBanksHandler())
 	mux.HandleFunc("/v1/memory/search", memorySearchHandler(store))
-	log.Println("memory proxy routes registered: /tools, /v1/memory/banks, /v1/memory/search")
+	// Item CRUD — prefix-matched, method dispatch inside the router.
+	mux.HandleFunc("/v1/memory/banks/", memoryBankRouter(store))
+	log.Println("memory proxy routes registered: /tools /v1/memory/banks /v1/memory/search /v1/memory/banks/{bank}/items")
 }
 
 // ── /tools ────────────────────────────────────────────────────────────────────
@@ -166,7 +166,7 @@ func memoryToolHandler(store contracts.MemoryStore) http.HandlerFunc {
 func memoryBanksHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode([]string{"default", "strategies", "trades", "reflections"}); err != nil {
+		if err := json.NewEncoder(w).Encode(pgmemory.Banks()); err != nil {
 			http.Error(w, "failed to encode banks", http.StatusInternalServerError)
 		}
 	}
@@ -177,33 +177,144 @@ func memoryBanksHandler() http.HandlerFunc {
 func memorySearchHandler(store contracts.MemoryStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if store == nil {
-			if err := json.NewEncoder(w).Encode([]any{}); err != nil {
-				http.Error(w, "failed to encode empty result", http.StatusInternalServerError)
-			}
-			return
-		}
 		q := r.URL.Query().Get("q")
 		bank := r.URL.Query().Get("bank")
 		if bank == "" {
-			bank = "default"
+			bank = "research"
 		}
-		if q == "" {
-			if err := json.NewEncoder(w).Encode([]any{}); err != nil {
-				http.Error(w, "failed to encode empty result", http.StatusInternalServerError)
+
+		var items []contracts.MemoryItem
+		if q != "" && store != nil {
+			limit := 20
+			var err error
+			items, err = store.Recall(r.Context(), bank, contracts.MemoryQuery{Q: q, Limit: limit})
+			if err != nil {
+				log.Printf("memory search error: %v", err)
+				items = nil
 			}
-			return
 		}
-		items, err := store.Recall(r.Context(), bank, contracts.MemoryQuery{Q: q, Limit: 20})
-		if err != nil {
-			log.Printf("memory search error: %v", err)
-			if encodeErr := json.NewEncoder(w).Encode([]any{}); encodeErr != nil {
-				http.Error(w, "failed to encode empty result", http.StatusInternalServerError)
-			}
-			return
+		if items == nil {
+			items = []contracts.MemoryItem{}
 		}
-		if err := json.NewEncoder(w).Encode(items); err != nil {
+
+		if err := json.NewEncoder(w).Encode(contracts.MemoryRecallResponse{Items: items}); err != nil {
 			http.Error(w, "failed to encode search results", http.StatusInternalServerError)
+		}
+	}
+}
+
+// ── /v1/memory/banks/{bank}/items[/{id}] ────────────────────────────────────
+
+// memoryBankRouter dispatches item CRUD requests for a named bank.
+// Path pattern: /v1/memory/banks/{bank}/items[/{id}]
+func memoryBankRouter(store contracts.MemoryStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Strip the /v1/memory/banks/ prefix.
+		rest := strings.TrimPrefix(r.URL.Path, "/v1/memory/banks/")
+		// rest = "{bank}/items" or "{bank}/items/{id}"
+		parts := strings.SplitN(rest, "/", 3)
+		if len(parts) < 2 || parts[1] != "items" {
+			http.NotFound(w, r)
+			return
+		}
+		bank := parts[0]
+		if bank == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		if len(parts) == 2 {
+			// /v1/memory/banks/{bank}/items
+			switch r.Method {
+			case http.MethodGet:
+				memoryItemListHandler(store, bank)(w, r)
+			case http.MethodPost:
+				memoryItemCreateHandler(store, bank)(w, r)
+			default:
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			}
+			return
+		}
+
+		// /v1/memory/banks/{bank}/items/{id}
+		id := parts[2]
+		if id == "" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		memoryItemGetHandler(store, bank, id)(w, r)
+	}
+}
+
+func memoryItemListHandler(store contracts.MemoryStore, bank string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		items, err := store.Recall(r.Context(), bank, contracts.MemoryQuery{Limit: 20})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if items == nil {
+			items = []contracts.MemoryItem{}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(contracts.MemoryRecallResponse{Items: items}); err != nil {
+			log.Printf("memoryItemListHandler encode: %v", err)
+		}
+	}
+}
+
+func memoryItemCreateHandler(store contracts.MemoryStore, bank string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var item contracts.MemoryItem
+		if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
+			http.Error(w, "invalid JSON", http.StatusBadRequest)
+			return
+		}
+		item.Tags = contracts.NormalizeMemoryTags(item.Tags)
+		if item.TS.IsZero() {
+			item.TS = time.Now().UTC()
+		}
+		id, err := store.Retain(r.Context(), bank, item)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(contracts.MemoryRetainResponse{ID: id}); err != nil {
+			log.Printf("memoryItemCreateHandler encode: %v", err)
+		}
+	}
+}
+
+// getByIDer is a subset of *pgmemory.Store used by the get-by-id handler.
+type getByIDer interface {
+	GetByID(ctx context.Context, bank, id string) (contracts.MemoryItem, error)
+}
+
+func memoryItemGetHandler(store contracts.MemoryStore, bank, id string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		gs, ok := store.(getByIDer)
+		if !ok {
+			http.Error(w, "not implemented", http.StatusNotImplemented)
+			return
+		}
+		item, err := gs.GetByID(r.Context(), bank, id)
+		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(item); err != nil {
+			log.Printf("memoryItemGetHandler encode: %v", err)
 		}
 	}
 }

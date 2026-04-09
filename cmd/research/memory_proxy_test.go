@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -52,7 +51,7 @@ func TestMemoryToolHandler_Retain_Valid(t *testing.T) {
 	handler := memoryToolHandler(store)
 
 	retainInput := contracts.MemoryRetainRequest{
-		Bank: "default",
+		Bank: "research",
 		Item: validTestItem(),
 	}
 	inputJSON, _ := json.Marshal(retainInput)
@@ -98,7 +97,7 @@ func TestMemoryToolHandler_Retain_InvalidItem(t *testing.T) {
 
 	bad := validTestItem()
 	bad.Summary = "" // fails validation
-	retainInput := contracts.MemoryRetainRequest{Bank: "default", Item: bad}
+	retainInput := contracts.MemoryRetainRequest{Bank: "research", Item: bad}
 	inputJSON, _ := json.Marshal(retainInput)
 
 	rw := postTool(t, handler, toolRequest{
@@ -115,12 +114,12 @@ func TestMemoryToolHandler_Recall_Success(t *testing.T) {
 	store := newTestStore()
 	// Pre-populate a memory so recall has something to return.
 	item := validTestItem()
-	store.Retain(context.TODO(), "default", item) //nolint:errcheck
+	store.Retain(context.TODO(), "research", item) //nolint:errcheck
 
 	handler := memoryToolHandler(store)
 
 	recallInput := contracts.MemoryRecallRequest{
-		Bank:  "default",
+		Bank:  "research",
 		Query: contracts.MemoryQuery{Q: "AAPL signal"},
 	}
 	inputJSON, _ := json.Marshal(recallInput)
@@ -160,7 +159,7 @@ func TestMemoryToolHandler_Reflect_Success(t *testing.T) {
 	handler := memoryToolHandler(store)
 
 	reflectInput := contracts.MemoryReflectRequest{
-		Bank:   "default",
+		Bank:   "research",
 		Params: contracts.ReflectionParams{Query: "What patterns does AAPL show?"},
 	}
 	inputJSON, _ := json.Marshal(reflectInput)
@@ -246,13 +245,13 @@ func TestMemoryBanksHandler_Returns200WithBanks(t *testing.T) {
 
 	found := false
 	for _, b := range banks {
-		if b == "default" {
+		if b == "research" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("expected 'default' bank in list, got %v", banks)
+		t.Errorf("expected 'research' bank in list, got %v", banks)
 	}
 }
 
@@ -261,20 +260,25 @@ func TestMemoryBanksHandler_Returns200WithBanks(t *testing.T) {
 func TestMemorySearchHandler_WithQuery(t *testing.T) {
 	store := newTestStore()
 	item := validTestItem()
-	store.Retain(context.TODO(), "default", item) //nolint:errcheck
+	store.Retain(context.TODO(), "research", item) //nolint:errcheck
 
 	handler := memorySearchHandler(store)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/memory/search?q=AAPL&bank=default", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/memory/search?q=AAPL&bank=research", nil)
 	rw := httptest.NewRecorder()
 	handler.ServeHTTP(rw, req)
 
 	if rw.Code != http.StatusOK {
 		t.Errorf("search status = %d; want 200", rw.Code)
 	}
+
+	var resp contracts.MemoryRecallResponse
+	if err := json.NewDecoder(rw.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode search response: %v", err)
+	}
 }
 
-func TestMemorySearchHandler_EmptyQuery_ReturnsEmptyArray(t *testing.T) {
+func TestMemorySearchHandler_EmptyQuery_ReturnsItemsEnvelope(t *testing.T) {
 	store := newTestStore()
 	handler := memorySearchHandler(store)
 
@@ -286,20 +290,20 @@ func TestMemorySearchHandler_EmptyQuery_ReturnsEmptyArray(t *testing.T) {
 		t.Errorf("empty q status = %d; want 200", rw.Code)
 	}
 
-	body := strings.TrimSpace(rw.Body.String())
-	if body == "" || body == "null" {
-		t.Error("expected JSON response for empty query, got empty/null")
+	var resp contracts.MemoryRecallResponse
+	if err := json.NewDecoder(rw.Body).Decode(&resp); err != nil {
+		t.Errorf("expected { items } envelope, decode error: %v", err)
 	}
 }
 
 func TestMemorySearchHandler_DefaultBankUsed(t *testing.T) {
 	store := newTestStore()
 	item := validTestItem()
-	store.Retain(context.TODO(), "default", item) //nolint:errcheck
+	store.Retain(context.TODO(), "research", item) //nolint:errcheck
 
 	handler := memorySearchHandler(store)
 
-	// No bank param — should default to "default".
+	// No bank param — should default to "research".
 	req := httptest.NewRequest(http.MethodGet, "/v1/memory/search?q=AAPL", nil)
 	rw := httptest.NewRecorder()
 	handler.ServeHTTP(rw, req)
