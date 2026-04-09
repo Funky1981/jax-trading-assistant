@@ -13,6 +13,19 @@ export interface AssistantTool {
   description: string;
   argKey: string;
   argLabel: string;
+  evidenceLevel?: string;
+  freshness?: string;
+  allowed?: boolean;
+  policyReason?: string;
+}
+
+export interface ChatToolsResponse {
+  tools: AssistantTool[];
+  notice: string;
+  mode?: string;
+  harnessEnabled?: boolean;
+  shadowMode?: boolean;
+  sessionRateLimitPerMinute?: number;
 }
 
 export interface ChatMessage {
@@ -20,9 +33,41 @@ export interface ChatMessage {
   sessionId: string;
   role: 'user' | 'assistant' | 'tool';
   content: string;
+  traceId?: string;
   toolName?: string;
   toolArgs?: unknown;
   toolResult?: unknown;
+  evidenceBundle?: unknown;
+  createdAt: string;
+}
+
+export interface ChatTraceToolCall {
+  name: string;
+  args: unknown;
+}
+
+export interface ChatTraceToolRun {
+  call: ChatTraceToolCall;
+  result?: unknown;
+  error?: string;
+}
+
+export interface ChatTraceValidationAttempt {
+  attempt: number;
+  answer: string;
+  accepted: boolean;
+  reasons?: string[];
+}
+
+export interface ChatTrace {
+  traceId: string;
+  sessionId: string;
+  question: string;
+  toolNames: string[];
+  toolRuns?: ChatTraceToolRun[];
+  validatorNotes: string[];
+  validationAttempts?: ChatTraceValidationAttempt[];
+  finalAnswer?: string;
   createdAt: string;
 }
 
@@ -64,6 +109,10 @@ export const chatService = {
   },
 
   getTools() {
-    return apiClient.get<{ tools: AssistantTool[]; notice: string }>('/api/v1/chat/tools');
+    return apiClient.get<ChatToolsResponse>('/api/v1/chat/tools');
+  },
+
+  getTrace(traceId: string) {
+    return apiClient.get<ChatTrace>(`/api/v1/chat/traces/${traceId}`);
   },
 };

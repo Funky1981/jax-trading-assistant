@@ -5,6 +5,7 @@ import { chatService, type AssistantTool, type ChatMessage, type ChatSession } f
 import { candidatesService } from '@/data/approvals-service';
 import { instancesService } from '@/data/instances-service';
 import { signalsService } from '@/data/signals-service';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChatMessageBubble } from './ChatMessage';
@@ -94,6 +95,10 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
     staleTime: Infinity,
   });
   const tools = toolsData?.tools ?? [];
+  const runtimeMode = toolsData?.mode ?? 'research';
+  const harnessEnabled = toolsData?.harnessEnabled ?? false;
+  const shadowMode = toolsData?.shadowMode ?? false;
+  const sessionRateLimit = toolsData?.sessionRateLimitPerMinute;
 
   const isCandidateTool = !!selectedTool && ['get_candidate_trade', 'explain_trade_blockers'].includes(selectedTool.name);
   const isSignalTool = !!selectedTool && selectedTool.name === 'get_signal';
@@ -191,6 +196,14 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
           Jax Assistant is <strong>advisory only</strong>. It cannot place orders or approve trades on your behalf.
         </span>
       </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+        <Badge variant={runtimeMode === 'live' ? 'destructive' : runtimeMode === 'paper' ? 'warning' : 'secondary'}>
+          {runtimeMode} mode
+        </Badge>
+        <Badge variant={harnessEnabled ? 'success' : 'outline'}>{harnessEnabled ? 'Harness on' : 'Harness off'}</Badge>
+        {shadowMode && <Badge variant="outline">Shadow validation</Badge>}
+        {typeof sessionRateLimit === 'number' && <span className="text-muted-foreground">Session limit: {sessionRateLimit}/min</span>}
+      </div>
 
       <div className="flex-1 overflow-y-auto pr-1">
         {!sessionId && !isLoading && (
@@ -266,7 +279,7 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
                 >
                   <option value="">Select tool...</option>
                   {tools.map((tool) => (
-                    <option key={tool.name} value={tool.name}>
+                    <option key={tool.name} value={tool.name} disabled={tool.allowed === false}>
                       {tool.description}
                     </option>
                   ))}
@@ -288,6 +301,9 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
               {selectedTool && (
                 <>
                   <p className="text-xs text-muted-foreground">{helperText}</p>
+                  {selectedTool.allowed === false && (
+                    <p className="text-xs text-destructive">{selectedTool.policyReason ?? 'This tool is blocked in the current mode.'}</p>
+                  )}
                   {entityOptions.length > 0 ? (
                     <select
                       className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
@@ -347,10 +363,10 @@ export function ChatPanel({ sessionId: initialSessionId, onSessionCreated }: Cha
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={selectedToolPlaceholder}
-          disabled={sendMutation.isPending}
+          disabled={sendMutation.isPending || selectedTool?.allowed === false}
           className="flex-1"
         />
-        <Button size="icon" onClick={handleSend} disabled={!draft.trim() || sendMutation.isPending}>
+        <Button size="icon" onClick={handleSend} disabled={!draft.trim() || sendMutation.isPending || selectedTool?.allowed === false}>
           <Send className="h-4 w-4" />
         </Button>
       </div>

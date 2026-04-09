@@ -181,6 +181,25 @@ export function ToolResultCard({ message }: ToolResultCardProps) {
       </div>
       {result.ok && result.data !== undefined && renderStructuredData(asString(message.toolName), result.data)}
       {!result.ok && result.error && <p className="text-destructive">{result.error}</p>}
+      <details className="mt-3 rounded border border-border/70 bg-background/50 p-2">
+        <summary className="cursor-pointer text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Tool payload
+        </summary>
+        <div className="mt-2 grid gap-2 md:grid-cols-2">
+          <div>
+            <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Args</p>
+            <pre className="overflow-x-auto whitespace-pre-wrap break-all text-foreground/80">
+              {JSON.stringify(message.toolArgs ?? {}, null, 2)}
+            </pre>
+          </div>
+          <div>
+            <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Raw result</p>
+            <pre className="overflow-x-auto whitespace-pre-wrap break-all text-foreground/80">
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
