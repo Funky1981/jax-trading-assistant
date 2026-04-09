@@ -44,6 +44,27 @@
 - Use `Testing` to trigger paper-mode diagnostics.
 - Each gate produces an artifact report under `/reports/<gate>/<date>/...`.
 
+## Assistant Chat
+
+The `Assistant` page is advisory-only research support. It cannot approve candidates, place trades, or execute orders.
+
+- Use the chat input for broad questions about candidates, signals, strategies, and runs.
+- Use the tool picker when you want a specific lookup or summary.
+- Assistant answers can show an evidence badge:
+  - `High evidence`: backed by hard internal data.
+  - `Mixed evidence`: backed by derived internal summaries.
+  - `Weak evidence`: limited support; language should remain more uncertain.
+- Assistant answers can also show a trace link. Open it to inspect:
+  - tool calls
+  - tool arguments/results
+  - validation attempts
+  - the final audited answer
+
+Mode notes:
+
+- In `research` mode, the broadest set of read-only assistant tools is available.
+- In `paper` and `live` modes, some tools may be disabled to enforce stricter evidence policy.
+
 ## Troubleshooting
 
 - **Backtest returns 400 or fails**:

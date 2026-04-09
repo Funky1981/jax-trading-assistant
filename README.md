@@ -9,6 +9,8 @@
 - Roadmap: `Docs/ROADMAP.md`
 - Quick start: `Docs/QUICKSTART.md`
 - IB setup & bridge: `Docs/IB_GUIDE.md`
+- Operations runbook: `Docs/OPERATIONS.md`
+- User guide: `Docs/USER_GUIDE.md`
 
 ## Architecture
 
@@ -43,6 +45,11 @@ Use local `.env` files (or shell env vars) for secrets and keep them untracked.
 - `dexter/.env` for Dexter API keys
 - `services/hindsight/.env` for Hindsight API keys
 - `JWT_SECRET` to enable authenticated frontend API mode
+- Assistant harness controls:
+  - `JAX_RUNTIME_MODE`
+  - `HARNESS_ENABLED`
+  - `HARNESS_SHADOW_MODE`
+  - `HARNESS_SESSION_RATE_LIMIT_PER_MINUTE`
 - Optional first-user bootstrap for auth-enabled environments:
   - `AUTH_BOOTSTRAP_USERNAME`
   - `AUTH_BOOTSTRAP_PASSWORD`

@@ -27,6 +27,60 @@ For `live` mode, execution must be intentionally enabled:
 $env:ALLOW_LIVE_TRADING="true"
 ```
 
+## Assistant Harness Runtime
+
+The assistant chat API now runs through the read-only research harness by default.
+Configure it explicitly in each environment:
+
+```powershell
+$env:HARNESS_ENABLED="true"
+$env:HARNESS_SHADOW_MODE="false"
+$env:HARNESS_SESSION_RATE_LIMIT_PER_MINUTE="20"
+```
+
+Behavior by mode:
+
+- `research`: widest advisory surface; all registered read-only tools are available.
+- `paper`: weak-inference tools are blocked; advisory answers stay stricter.
+- `live`: only hard internal evidence tools with acceptable freshness remain available.
+
+Shadow mode keeps the existing chat response path and runs the harness in the background for trace and validator logging only:
+
+```powershell
+$env:HARNESS_SHADOW_MODE="true"
+```
+
+## Assistant Traceability
+
+Run the assistant migrations before enabling traces in a new environment:
+
+```powershell
+$env:DATABASE_URL = "postgresql://jax:jax@localhost:5433/jax"
+go run ./tools/cmd/migrate
+```
+
+Assistant endpoints:
+
+- `POST /api/v1/chat`
+- `GET /api/v1/chat?session=<id>`
+- `GET /api/v1/chat/tools`
+- `GET /api/v1/chat/traces/<traceId>`
+
+Operational checks:
+
+```powershell
+Invoke-RestMethod http://localhost:8081/api/v1/chat/tools
+Invoke-RestMethod http://localhost:8081/api/v1/chat/traces/<traceId>
+```
+
+`/api/v1/chat/tools` now returns:
+
+- mode
+- harness enabled state
+- shadow mode state
+- session rate limit
+- per-tool evidence level, freshness, and policy availability
+
 ## Artifact Approval Flow
 
 ```powershell

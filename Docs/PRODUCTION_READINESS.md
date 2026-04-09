@@ -7,6 +7,9 @@ This checklist is the release gate for moving from paper validation to productio
 - `JAX_RUNTIME_MODE` is explicitly set in every deployment target (`research`, `paper`, or `live`).
 - `JAX_REQUIRE_EXPLICIT_RUNTIME_MODE=true` is set for all non-local environments.
 - `config/providers.json` passes strict policy for the target mode.
+- `HARNESS_ENABLED=true` is explicitly set for environments where assistant chat is expected to use the evidence harness.
+- `HARNESS_SHADOW_MODE` is explicitly set to the intended rollout mode (`false` for primary path, `true` for log-only shadow mode).
+- `HARNESS_SESSION_RATE_LIMIT_PER_MINUTE` is set to the approved session throttle for the environment.
 - For `live` mode only: `ALLOW_LIVE_TRADING=true` is explicitly set and approved.
 
 Validation command:
@@ -36,6 +39,9 @@ Validation command:
 - `/api/v1/testing/status` shows provenance gate pass.
 - Audit queries in `Docs/AUDIT_TRAIL.md` return complete trade-to-decision lineage.
 - `flow_id` and `run_id` are present for operational traces.
+- Assistant responses persist `trace_id` and `evidence_bundle`.
+- `harness_traces` is populated for advisory answers and trace payloads are queryable.
+- Trace redaction has been reviewed for secrets/tokens in the target deployment.
 
 ## 4) Operations Readiness
 
@@ -43,6 +49,7 @@ Validation command:
 - On-call incident playbook is active from `Docs/INCIDENT_RUNBOOK.md`.
 - Kill-switch procedure has been executed in staging at least once.
 - Backup/restore run has been tested for the production database.
+- Assistant operators can retrieve `/api/v1/chat/tools` and `/api/v1/chat/traces/{traceId}` from the deployed frontend API.
 
 ## 5) Security and Secrets
 
@@ -57,4 +64,3 @@ Validation command:
 - Risk/compliance sign-off
 
 Release is blocked until all sections pass.
-
