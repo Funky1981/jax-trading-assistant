@@ -173,10 +173,12 @@ services:
         BUILD_TIME: "${BUILD_TIME:-unknown}"
     environment:
       DATABASE_URL: postgresql://jax:jax@postgres:5432/jax
-      HINDSIGHT_URL: ${HINDSIGHT_URL:-http://hindsight:8888}
       AGENT0_SERVICE_URL: ${AGENT0_SERVICE_URL:-http://agent0-service:8093}
       DEXTER_SERVICE_URL: ${DEXTER_SERVICE_URL:-}
       MEMORY_SERVICE_URL: http://jax-research:8091/tools
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
       PORT: "8091"
     ports:
       - "8091:8091"
@@ -184,7 +186,6 @@ services:
       - ./data/datasets:/app/data/datasets
     depends_on:
       - postgres
-      - hindsight
       - agent0-service
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8091/health || exit 1"]
@@ -218,7 +219,7 @@ services:
       retries: 3
 
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-jax}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jax}
