@@ -6,7 +6,7 @@ $RuntimeDir = ".runtime"
 $FrontendPidFile = Join-Path $RuntimeDir "frontend-dev.pid"
 $FrontendLogFile = "logs/frontend-dev.log"
 
-function Ensure-Directory([string]$Path) {
+function Initialize-Directory([string]$Path) {
     if (-not (Test-Path $Path)) {
         New-Item -ItemType Directory -Path $Path | Out-Null
     }
@@ -18,11 +18,11 @@ function Stop-StaleFrontendProcess {
     }
 
     try {
-        $pid = [int](Get-Content $FrontendPidFile -ErrorAction Stop | Select-Object -First 1)
-        $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+        $procID = [int](Get-Content $FrontendPidFile -ErrorAction Stop | Select-Object -First 1)
+        $proc = Get-Process -Id $procID -ErrorAction SilentlyContinue
         if ($proc) {
-            Write-Host "  Stopping previous frontend dev server (PID $pid)..." -ForegroundColor Gray
-            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+            Write-Host "  Stopping previous frontend dev server (PID $procID)..." -ForegroundColor Gray
+            Stop-Process -Id $procID -Force -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 1
         }
     } catch { }
@@ -50,8 +50,8 @@ function Wait-ForHttp([string]$Url, [int]$Attempts = 20, [int]$DelaySeconds = 2)
 Write-Host "Starting JAX Trading Assistant..." -ForegroundColor Green
 Write-Host "See Docs/DEBUGGING.md for troubleshooting" -ForegroundColor Gray
 
-Ensure-Directory $RuntimeDir
-Ensure-Directory "logs"
+Initialize-Directory $RuntimeDir
+Initialize-Directory "logs"
 
 # Check if .env exists
 if (-not (Test-Path ".env")) {
