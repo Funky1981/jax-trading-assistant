@@ -13,7 +13,7 @@ func SignalToDomain(strategyID string, sig strategies.Signal) domain.Signal {
 		ID:         "", // Will be set by caller (e.g., UUID)
 		Symbol:     sig.Symbol,
 		Timestamp:  sig.Timestamp,
-		Type:       strings.ToUpper(string(sig.Type)), // Database expects uppercase
+		Type:       strings.ToLower(string(sig.Type)),
 		Confidence: sig.Confidence,
 		EntryPrice: sig.EntryPrice,
 		StopLoss:   sig.StopLoss,
