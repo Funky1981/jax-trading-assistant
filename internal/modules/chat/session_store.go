@@ -29,14 +29,16 @@ type Session struct {
 
 // Message is one turn within a session.
 type Message struct {
-	ID         uuid.UUID        `json:"id"`
-	SessionID  uuid.UUID        `json:"sessionId"`
-	Role       string           `json:"role"`
-	Content    string           `json:"content"`
-	ToolName   *string          `json:"toolName,omitempty"`
-	ToolArgs   *json.RawMessage `json:"toolArgs,omitempty"`
-	ToolResult *json.RawMessage `json:"toolResult,omitempty"`
-	CreatedAt  time.Time        `json:"createdAt"`
+	ID             uuid.UUID        `json:"id"`
+	SessionID      uuid.UUID        `json:"sessionId"`
+	Role           string           `json:"role"`
+	Content        string           `json:"content"`
+	TraceID        *string          `json:"traceId,omitempty"`
+	ToolName       *string          `json:"toolName,omitempty"`
+	ToolArgs       *json.RawMessage `json:"toolArgs,omitempty"`
+	ToolResult     *json.RawMessage `json:"toolResult,omitempty"`
+	EvidenceBundle *json.RawMessage `json:"evidenceBundle,omitempty"`
+	CreatedAt      time.Time        `json:"createdAt"`
 }
 
 // SessionStore handles persistence for chat sessions and messages.
@@ -120,10 +122,10 @@ func (s *SessionStore) AppendMessage(ctx context.Context, msg *Message) (*Messag
 	}
 	msg.CreatedAt = time.Now().UTC()
 	_, err := s.pool.Exec(ctx,
-		`INSERT INTO chat_messages (id, session_id, role, content, tool_name, tool_args, tool_result, created_at)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+		`INSERT INTO chat_messages (id, session_id, role, content, trace_id, tool_name, tool_args, tool_result, evidence_bundle, created_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
 		msg.ID, msg.SessionID, msg.Role, msg.Content,
-		msg.ToolName, msg.ToolArgs, msg.ToolResult, msg.CreatedAt,
+		msg.TraceID, msg.ToolName, msg.ToolArgs, msg.ToolResult, msg.EvidenceBundle, msg.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("chat.SessionStore.AppendMessage: %w", err)
@@ -136,7 +138,7 @@ func (s *SessionStore) AppendMessage(ctx context.Context, msg *Message) (*Messag
 // GetHistory returns all messages for a session in chronological order.
 func (s *SessionStore) GetHistory(ctx context.Context, sessionID uuid.UUID) ([]*Message, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT id, session_id, role, content, tool_name, tool_args, tool_result, created_at
+		`SELECT id, session_id, role, content, trace_id, tool_name, tool_args, tool_result, evidence_bundle, created_at
 		   FROM chat_messages WHERE session_id = $1 ORDER BY created_at ASC`, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("chat.SessionStore.GetHistory: %w", err)
@@ -147,7 +149,7 @@ func (s *SessionStore) GetHistory(ctx context.Context, sessionID uuid.UUID) ([]*
 		var m Message
 		if err := rows.Scan(
 			&m.ID, &m.SessionID, &m.Role, &m.Content,
-			&m.ToolName, &m.ToolArgs, &m.ToolResult, &m.CreatedAt,
+			&m.TraceID, &m.ToolName, &m.ToolArgs, &m.ToolResult, &m.EvidenceBundle, &m.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

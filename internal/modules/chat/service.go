@@ -5,28 +5,60 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"jax-trading-assistant/internal/modules/harness"
 )
 
 // Service orchestrates chat sessions, message persistence, and tool calls.
 // The assistant is advisory only and must never directly execute or approve trades.
 type Service struct {
-	store  *SessionStore
-	router *ToolRouter
-	llm    LLMClient
-	pool   *pgxpool.Pool
+	store   *SessionStore
+	router  *ToolRouter
+	llm     LLMClient
+	pool    *pgxpool.Pool
+	reg     *harness.Registry
+	policy  harness.Policy
+	prompts *harness.PromptBuilder
+	harness *harness.Service
+	traces  *harness.PostgresTraceSink
+	runtime runtimeConfig
+	limiter *sessionRateLimiter
 }
 
 // NewService creates a chat Service.
 // llm may be nil; when nil, the assistant falls back to static advisory replies.
 func NewService(pool *pgxpool.Pool, llm LLMClient) *Service {
+	runtimeCfg := loadRuntimeConfig()
+	reg := harness.NewRegistry()
+	if err := harness.RegisterDefaultTools(reg, pool); err != nil {
+		panic(fmt.Sprintf("chat.NewService: register default tools: %v", err))
+	}
+
+	policy := harness.DefaultPolicy(runtimeCfg.Mode)
+	prompts := harness.NewPromptBuilder()
+	traceSink := harness.NewPostgresTraceSink(pool)
+
+	var harnessSvc *harness.Service
+	if runtimeCfg.HarnessEnabled {
+		harnessSvc = harness.NewService(policy, reg, prompts, harness.NewValidator(), traceSink, newHarnessModelAdapter(llm))
+	}
+
 	return &Service{
-		store:  NewSessionStore(pool),
-		router: NewToolRouter(pool),
-		llm:    llm,
-		pool:   pool,
+		store:   NewSessionStore(pool),
+		router:  NewToolRouter(pool),
+		llm:     llm,
+		pool:    pool,
+		reg:     reg,
+		policy:  policy,
+		prompts: prompts,
+		harness: harnessSvc,
+		traces:  traceSink,
+		runtime: runtimeCfg,
+		limiter: newSessionRateLimiter(runtimeCfg.SessionRateLimitPerMinute),
 	}
 }
 
@@ -60,10 +92,28 @@ func (s *Service) GetHistory(ctx context.Context, sessionID uuid.UUID) ([]*Messa
 	return s.store.GetHistory(ctx, sessionID)
 }
 
+func (s *Service) GetTrace(ctx context.Context, traceID string) (*harness.Trace, error) {
+	if s.traces == nil {
+		return nil, fmt.Errorf("trace storage unavailable")
+	}
+	return s.traces.GetTrace(ctx, traceID)
+}
+
+func (s *Service) RuntimeInfo() RuntimeInfo {
+	return s.runtime.info()
+}
+
+func (s *Service) AvailableTools() []ToolDescriptor {
+	return AvailableTools(s.policy)
+}
+
 // SendMessage records a user message and generates an assistant reply.
-// When an LLMClient is wired, the full session history is forwarded for context.
-// Tool calls are executed read-only through ToolRouter before the LLM is called.
+// When an LLMClient is wired, the harness loop is used first. If harness execution fails,
+// the service falls back to the previous direct tool-plus-reply flow.
 func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userContent string, toolCall *ToolCall) ([]*Message, error) {
+	if err := s.allowSession(sessionID); err != nil {
+		return nil, err
+	}
 	history, err := s.store.GetHistory(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("chat.Service.SendMessage: load history: %w", err)
@@ -81,22 +131,28 @@ func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userCont
 	}
 	saved = append(saved, userMsg)
 
-	if toolCall != nil {
-		result, err := s.router.Dispatch(ctx, *toolCall)
-		if err != nil && err != ErrUnknownTool {
-			return nil, fmt.Errorf("chat.Service.SendMessage: tool dispatch: %w", err)
+	if s.runtime.ShadowMode && s.harness != nil && (s.llm != nil || toolCall != nil) {
+		s.runHarnessShadow(sessionID, userContent, toolCall, history)
+	}
+
+	if !s.runtime.ShadowMode && s.harness != nil && (s.llm != nil || toolCall != nil) {
+		if assistantMsg, toolMsgs, err := s.sendWithHarness(ctx, sessionID, userContent, toolCall, history); err == nil {
+			saved = append(saved, toolMsgs...)
+			saved = append(saved, assistantMsg)
+			s.logAssistantDecision(ctx, sessionID, userContent, toolCall, assistantMsg.Content)
+			return saved, nil
 		}
-		if err == ErrUnknownTool {
-			result = errResult("tool not available: " + toolCall.Name)
-		}
-		toolMsg, err := s.persistToolResult(ctx, sessionID, toolCall, result)
-		if err != nil {
-			return nil, err
-		}
+	}
+
+	toolMsg, fallbackToolCall, err := s.persistFallbackTool(ctx, sessionID, toolCall)
+	if err != nil {
+		return nil, err
+	}
+	if toolMsg != nil {
 		saved = append(saved, toolMsg)
 	}
 
-	replyText := s.buildReply(ctx, userContent, toolCall, history)
+	replyText := s.buildFallbackReply(ctx, userContent, fallbackToolCall, history)
 	assistantReply, err := s.store.AppendMessage(ctx, &Message{
 		SessionID: sessionID,
 		Role:      RoleAssistant,
@@ -106,9 +162,91 @@ func (s *Service) SendMessage(ctx context.Context, sessionID uuid.UUID, userCont
 		return nil, err
 	}
 	saved = append(saved, assistantReply)
-	s.logAssistantDecision(ctx, sessionID, userContent, toolCall, replyText)
+	s.logAssistantDecision(ctx, sessionID, userContent, fallbackToolCall, replyText)
 
 	return saved, nil
+}
+
+func (s *Service) sendWithHarness(ctx context.Context, sessionID uuid.UUID, userContent string, toolCall *ToolCall, history []*Message) (*Message, []*Message, error) {
+	answer, bundle, trace, err := s.harness.AnswerWithEvidence(ctx, sessionID.String(), userContent, s.toHarnessHistory(history), toHarnessToolCall(toolCall))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	toolMsgs := make([]*Message, 0, len(trace.ToolRuns))
+	for _, run := range trace.ToolRuns {
+		msg, err := s.persistHarnessToolRun(ctx, sessionID, run)
+		if err != nil {
+			return nil, nil, err
+		}
+		toolMsgs = append(toolMsgs, msg)
+	}
+
+	var bundleRaw *json.RawMessage
+	if b, err := json.Marshal(bundle); err == nil {
+		raw := json.RawMessage(b)
+		bundleRaw = &raw
+	}
+	assistantMsg, err := s.store.AppendMessage(ctx, &Message{
+		SessionID:      sessionID,
+		Role:           RoleAssistant,
+		Content:        answer,
+		TraceID:        &trace.TraceID,
+		EvidenceBundle: bundleRaw,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return assistantMsg, toolMsgs, nil
+}
+
+func (s *Service) persistHarnessToolRun(ctx context.Context, sessionID uuid.UUID, run harness.ToolRun) (*Message, error) {
+	name := run.Call.Name
+	callArgs := run.Call.Args
+	result := &ToolResult{Ok: run.Error == "", Data: run.Result, Error: run.Error}
+	var resultRaw *json.RawMessage
+	if b, err := json.Marshal(result); err == nil {
+		raw := json.RawMessage(b)
+		resultRaw = &raw
+	}
+	return s.store.AppendMessage(ctx, &Message{
+		SessionID:  sessionID,
+		Role:       RoleTool,
+		Content:    fmt.Sprintf("tool: %s", name),
+		ToolName:   &name,
+		ToolArgs:   &callArgs,
+		ToolResult: resultRaw,
+	})
+}
+
+func (s *Service) persistFallbackTool(ctx context.Context, sessionID uuid.UUID, toolCall *ToolCall) (*Message, *ToolCall, error) {
+	if toolCall == nil {
+		return nil, nil, nil
+	}
+
+	result := (*ToolResult)(nil)
+	def, ok := s.reg.Get(toolCall.Name)
+	if !ok {
+		result = errResult("tool not available: " + toolCall.Name)
+	} else if err := s.policy.CheckToolAllowed(def); err != nil {
+		result = errResult(err.Error())
+	} else {
+		var err error
+		result, err = s.router.Dispatch(ctx, *toolCall)
+		if err != nil && err != ErrUnknownTool {
+			return nil, nil, fmt.Errorf("chat.Service.SendMessage: tool dispatch: %w", err)
+		}
+		if err == ErrUnknownTool {
+			result = errResult("tool not available: " + toolCall.Name)
+		}
+	}
+
+	toolMsg, err := s.persistToolResult(ctx, sessionID, toolCall, result)
+	if err != nil {
+		return nil, nil, err
+	}
+	return toolMsg, toolCall, nil
 }
 
 func (s *Service) persistToolResult(ctx context.Context, sessionID uuid.UUID, call *ToolCall, result *ToolResult) (*Message, error) {
@@ -128,12 +266,16 @@ func (s *Service) persistToolResult(ctx context.Context, sessionID uuid.UUID, ca
 	})
 }
 
-// buildReply generates the assistant's reply text.
+// buildFallbackReply generates the assistant's reply text.
 // When s.llm is set, the full session history is forwarded for context.
 // Falls back to contextual keyword-based replies if the LLM is unavailable or returns an error.
-func (s *Service) buildReply(ctx context.Context, userContent string, call *ToolCall, history []*Message) string {
+func (s *Service) buildFallbackReply(ctx context.Context, userContent string, call *ToolCall, history []*Message) string {
 	if s.llm != nil {
-		msgs := make([]LLMMessage, 0, len(history)+1)
+		msgs := make([]LLMMessage, 0, len(history)+2)
+		msgs = append(msgs, LLMMessage{
+			Role:    "system",
+			Content: s.prompts.SystemPrompt(s.policy, s.toolNames()),
+		})
 		for _, m := range history {
 			if m.Role == RoleTool {
 				continue
@@ -141,8 +283,10 @@ func (s *Service) buildReply(ctx context.Context, userContent string, call *Tool
 			msgs = append(msgs, LLMMessage{Role: string(m.Role), Content: m.Content})
 		}
 		msgs = append(msgs, LLMMessage{Role: "user", Content: userContent})
-		if reply, err := s.llm.Complete(ctx, msgs); err == nil {
+		if reply, _, err := s.llm.Complete(ctx, msgs); err == nil && strings.TrimSpace(reply) != "" {
 			return reply
+		} else if err != nil {
+			return s.safeModelFallbackReply(userContent, call)
 		}
 	}
 	if call != nil {
@@ -171,6 +315,18 @@ func (s *Service) buildReply(ctx context.Context, userContent string, call *Tool
 			return "Here are the matching candidates. The tool result above shows recent candidates filtered by symbol or status."
 		case "query_knowledge":
 			return "Here are the matching knowledge snippets. The tool result above shows local markdown excerpts related to your query."
+		case "compare_runs":
+			return "Here is the run comparison. The tool result above lines up the selected runs so you can compare type, status, timing, and summary payloads."
+		case "strategy_instance_summary":
+			return "Here is the strategy instance summary. The tool result above shows the instance configuration alongside recent signal, trade, and run activity."
+		case "blocked_candidate_analysis":
+			return "Here is the blocked candidate analysis. The tool result above aggregates recent blocked setups by symbol and blocker code."
+		case "recent_research_narrative":
+			return "Here is the recent research narrative. The tool result above summarises the latest research and orchestration activity."
+		case "confidence_drift_summary":
+			return "Here is the confidence drift summary. The tool result above shows recent confidence ranges and averages across signals and candidates."
+		case "signal_clustering_overview":
+			return "Here is the signal clustering overview. The tool result above groups recent signals by symbol, strategy, and direction."
 		default:
 			return fmt.Sprintf("I fetched the result for %q. Check the tool result above for the details.", call.Name)
 		}
@@ -179,6 +335,90 @@ func (s *Service) buildReply(ctx context.Context, userContent string, call *Tool
 		return "How can I help you analyse the current trading situation?"
 	}
 	return staticKeywordReply(userContent)
+}
+
+func (s *Service) toHarnessHistory(history []*Message) []harness.Message {
+	out := make([]harness.Message, 0, len(history))
+	for _, msg := range history {
+		switch msg.Role {
+		case RoleTool:
+			if msg.ToolName != nil && msg.ToolResult != nil {
+				out = append(out, harness.Message{
+					Role:    "tool",
+					Content: fmt.Sprintf("tool %s result: %s", *msg.ToolName, string(*msg.ToolResult)),
+				})
+			}
+		case RoleUser, RoleAssistant:
+			out = append(out, harness.Message{
+				Role:    msg.Role,
+				Content: msg.Content,
+			})
+		}
+	}
+	return out
+}
+
+func (s *Service) allowSession(sessionID uuid.UUID) error {
+	if s.limiter == nil {
+		return nil
+	}
+	return s.limiter.Allow(sessionID.String())
+}
+
+func (s *Service) runHarnessShadow(sessionID uuid.UUID, userContent string, toolCall *ToolCall, history []*Message) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, _, _, _ = s.harness.AnswerWithEvidence(ctx, sessionID.String(), userContent, s.toHarnessHistory(history), toHarnessToolCall(toolCall))
+	}()
+}
+
+func toHarnessToolCall(call *ToolCall) *harness.ToolCall {
+	if call == nil {
+		return nil
+	}
+	return &harness.ToolCall{
+		Name: call.Name,
+		Args: call.Args,
+	}
+}
+
+type harnessModelAdapter struct {
+	llm LLMClient
+}
+
+func newHarnessModelAdapter(llm LLMClient) harness.Model {
+	if llm == nil {
+		return nil
+	}
+	return harnessModelAdapter{llm: llm}
+}
+
+func (a harnessModelAdapter) Complete(ctx context.Context, msgs []harness.Message) (string, []harness.ToolCall, error) {
+	chatMsgs := make([]LLMMessage, 0, len(msgs))
+	for _, msg := range msgs {
+		chatMsgs = append(chatMsgs, LLMMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
+	}
+	return a.llm.Complete(ctx, chatMsgs)
+}
+
+func (s *Service) toolNames() []string {
+	tools := s.reg.AllTools()
+	names := make([]string, 0, len(tools))
+	for _, tool := range tools {
+		names = append(names, tool.Name)
+	}
+	return names
+}
+
+func (s *Service) safeModelFallbackReply(_ string, call *ToolCall) string {
+	if call != nil {
+		return fmt.Sprintf("I couldn't complete a model-backed explanation for %q. Check the tool result above and treat it as advisory-only context.", call.Name)
+	}
+	return "I couldn't complete a model-backed answer. I'm advisory only, so please rely on the recorded tool evidence or ask a narrower question."
 }
 
 // staticKeywordReply provides contextual guidance when no LLM is configured.
@@ -204,13 +444,17 @@ func staticKeywordReply(msg string) string {
 	case has("strateg"):
 		return "To inspect a strategy definition, use get_strategy. For a live running instance, use get_strategy_instance."
 	case has("research", "orchestration"):
-		return "Use search_research_runs to browse recent orchestration and research runs. You can filter by symbol to narrow the results."
+		return "Use search_research_runs to browse recent orchestration and research runs, compare_runs to line up specific runs, or recent_research_narrative for a broader summary."
 	case has("knowledge", "docs", "documentation", "playbook", "runbook"):
 		return "Use query_knowledge to search the local markdown knowledge base when it is configured."
+	case has("cluster", "grouped signals", "signal cluster"):
+		return "Use signal_clustering_overview to group recent signals by symbol, strategy, and direction."
+	case has("confidence drift", "confidence trend", "confidence summary"):
+		return "Use confidence_drift_summary to summarise recent confidence ranges across signals and candidates."
 	case has("trade", "executed", "filled", "order", "position"):
 		return "To look up an executed trade, use get_trade with the trade ID. Approvals still have to be made through the Approvals page."
 	case has("help", "what can", "what do", "capabilities", "tools", "available"):
-		return "I can look up candidates, signals, executed trades, strategy definitions and instances, orchestration runs, blocked candidates, pending approvals, and local knowledge snippets. Approvals still have to be made through the Approvals page."
+		return "I can look up candidates, signals, executed trades, strategy definitions and instances, orchestration runs, blocked candidates, run comparisons, strategy instance summaries, research narratives, confidence drift, signal clusters, and local knowledge snippets. Approvals still have to be made through the Approvals page."
 	default:
 		return "I'm Jax Assistant, advisory only. Use the Tool Picker to query candidates, signals, trades, runs, approval queues, blocked candidates, or local knowledge."
 	}

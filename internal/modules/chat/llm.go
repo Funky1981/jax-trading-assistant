@@ -8,13 +8,17 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
+
+	"jax-trading-assistant/internal/modules/harness"
+	"jax-trading-assistant/libs/chattools"
 )
 
-// LLMClient sends a message history and returns the assistant's reply.
+// LLMClient sends a message history and returns the assistant's reply plus any tool calls.
 // The implementation is advisory only and must never execute or approve trades.
 type LLMClient interface {
-	Complete(ctx context.Context, msgs []LLMMessage) (string, error)
+	Complete(ctx context.Context, msgs []LLMMessage) (string, []harness.ToolCall, error)
 }
 
 // LLMMessage carries a single turn for the LLM context window.
@@ -23,33 +27,33 @@ type LLMMessage struct {
 	Content string `json:"content"`
 }
 
-// systemPrompt is sent as the first message to every LLM context.
-// It enforces the advisory-only boundary.
-const systemPrompt = `You are Jax Assistant — a read-only trading research assistant embedded in the Jax Trading platform.
+type openAIToolDefinition struct {
+	Type     string             `json:"type"`
+	Function openAIFunctionSpec `json:"function"`
+}
 
-You have access to the following read-only tools:
-- get_candidate_trade: look up a candidate trade by ID
-- get_signal: look up a strategy signal by ID
-- get_trade: look up an executed trade by ID
-- get_strategy: look up a strategy definition by ID
-- get_strategy_instance: look up a strategy instance by ID  
-- get_orchestration_run: look up an orchestration/research run by ID
-- search_research_runs: search recent research runs
-- explain_trade_blockers: explain why a candidate trade was blocked
-- list_pending_approvals: list candidates waiting for approval
-- list_recent_blocked_candidates: list recently blocked candidates
-- search_candidates: search recent candidates by symbol or status
-- query_knowledge: search local knowledge markdown when configured
+type openAIFunctionSpec struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  openAIFunctionArgument `json:"parameters"`
+}
 
-IMPORTANT CONSTRAINTS — you must never violate these:
-1. You CANNOT execute trades, place orders, or approve candidates.
-2. You CANNOT call any tool not listed above.
-3. You CANNOT reference real-time external market data or make specific price predictions.
-4. All your responses are ADVISORY ONLY. The human trader makes all final decisions.
-5. Always remind the user that approvals must be done via the Approvals page.
+type openAIFunctionArgument struct {
+	Type       string                     `json:"type"`
+	Properties map[string]openAIFieldSpec `json:"properties"`
+	Required   []string                   `json:"required,omitempty"`
+}
 
-Your role is to explain, analyse, and answer questions about the data in the Jax system.
-Be concise and accurate. If you don't know something, say so rather than guessing.`
+type openAIFieldSpec struct {
+	Type string `json:"type"`
+}
+
+type openAIToolCallResponse struct {
+	Function struct {
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+	} `json:"function"`
+}
 
 // OpenAIChatClient calls any OpenAI-compatible chat completions endpoint.
 // Set OPENAI_API_KEY and optionally OPENAI_BASE_URL (default: api.openai.com).
@@ -84,24 +88,28 @@ func NewOpenAIChatClientFromEnv() *OpenAIChatClient {
 	}
 }
 
-// Complete sends msgs to the chat completions endpoint and returns the reply text.
-func (c *OpenAIChatClient) Complete(ctx context.Context, msgs []LLMMessage) (string, error) {
+// Complete sends msgs to the chat completions endpoint and returns reply text plus any requested tool calls.
+func (c *OpenAIChatClient) Complete(ctx context.Context, msgs []LLMMessage) (string, []harness.ToolCall, error) {
 	if c == nil {
-		return "", fmt.Errorf("llm client not configured")
+		return "", nil, fmt.Errorf("llm client not configured")
 	}
+
 	type chatMsg struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
 	}
 	type request struct {
-		Model       string    `json:"model"`
-		Messages    []chatMsg `json:"messages"`
-		MaxTokens   int       `json:"max_tokens"`
-		Temperature float64   `json:"temperature"`
+		Model       string                 `json:"model"`
+		Messages    []chatMsg              `json:"messages"`
+		Tools       []openAIToolDefinition `json:"tools,omitempty"`
+		ToolChoice  string                 `json:"tool_choice,omitempty"`
+		MaxTokens   int                    `json:"max_tokens"`
+		Temperature float64                `json:"temperature"`
 	}
 	type choice struct {
 		Message struct {
-			Content string `json:"content"`
+			Content   json.RawMessage          `json:"content"`
+			ToolCalls []openAIToolCallResponse `json:"tool_calls"`
 		} `json:"message"`
 	}
 	type response struct {
@@ -111,9 +119,7 @@ func (c *OpenAIChatClient) Complete(ctx context.Context, msgs []LLMMessage) (str
 		} `json:"error,omitempty"`
 	}
 
-	// Build the messages list with system prompt prepended.
-	chatMsgs := make([]chatMsg, 0, len(msgs)+1)
-	chatMsgs = append(chatMsgs, chatMsg{Role: "system", Content: systemPrompt})
+	chatMsgs := make([]chatMsg, 0, len(msgs))
 	for _, m := range msgs {
 		chatMsgs = append(chatMsgs, chatMsg(m))
 	}
@@ -121,41 +127,124 @@ func (c *OpenAIChatClient) Complete(ctx context.Context, msgs []LLMMessage) (str
 	body, err := json.Marshal(request{
 		Model:       c.model,
 		Messages:    chatMsgs,
+		Tools:       openAIToolDefs(),
+		ToolChoice:  "auto",
 		MaxTokens:   800,
 		Temperature: 0.3,
 	})
 	if err != nil {
-		return "", fmt.Errorf("OpenAIChatClient.Complete: marshal: %w", err)
+		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: marshal: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		c.baseURL+"/v1/chat/completions", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {
-		return "", fmt.Errorf("OpenAIChatClient.Complete: new request: %w", err)
+		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: new request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("OpenAIChatClient.Complete: HTTP: %w", err)
+		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: HTTP: %w", err)
 	}
 	defer resp.Body.Close()
 
-	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1 MB limit
+	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return "", fmt.Errorf("OpenAIChatClient.Complete: read body: %w", err)
+		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: read body: %w", err)
 	}
 
 	var result response
 	if err := json.Unmarshal(respBytes, &result); err != nil {
-		return "", fmt.Errorf("OpenAIChatClient.Complete: decode: %w", err)
+		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: decode: %w", err)
 	}
 	if result.Error != nil {
-		return "", fmt.Errorf("OpenAIChatClient.Complete: API error: %s", result.Error.Message)
+		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: API error: %s", result.Error.Message)
 	}
 	if len(result.Choices) == 0 {
-		return "", fmt.Errorf("OpenAIChatClient.Complete: empty choices")
+		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: empty choices")
 	}
-	return result.Choices[0].Message.Content, nil
+
+	content, err := decodeAssistantContent(result.Choices[0].Message.Content)
+	if err != nil {
+		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: decode content: %w", err)
+	}
+	toolCalls, err := decodeToolCalls(result.Choices[0].Message.ToolCalls)
+	if err != nil {
+		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: decode tool calls: %w", err)
+	}
+	return content, toolCalls, nil
+}
+
+func openAIToolDefs() []openAIToolDefinition {
+	tools := chattools.DefaultTools()
+	out := make([]openAIToolDefinition, 0, len(tools))
+	for _, tool := range tools {
+		def := openAIToolDefinition{
+			Type: "function",
+			Function: openAIFunctionSpec{
+				Name:        tool.Name,
+				Description: tool.Description,
+				Parameters: openAIFunctionArgument{
+					Type: "object",
+					Properties: map[string]openAIFieldSpec{
+						tool.ArgKey: {Type: openAIArgType(tool.ArgKey)},
+					},
+				},
+			},
+		}
+		if !strings.Contains(strings.ToLower(tool.ArgLabel), "optional") {
+			def.Function.Parameters.Required = []string{tool.ArgKey}
+		}
+		out = append(out, def)
+	}
+	return out
+}
+
+func openAIArgType(argKey string) string {
+	if argKey == "limit" {
+		return "integer"
+	}
+	return "string"
+}
+
+func decodeAssistantContent(raw json.RawMessage) (string, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return "", nil
+	}
+
+	var text string
+	if err := json.Unmarshal(raw, &text); err == nil {
+		return text, nil
+	}
+
+	var parts []map[string]any
+	if err := json.Unmarshal(raw, &parts); err != nil {
+		return "", err
+	}
+	var sb strings.Builder
+	for _, part := range parts {
+		if textPart, ok := part["text"].(string); ok {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+			sb.WriteString(textPart)
+		}
+	}
+	return sb.String(), nil
+}
+
+func decodeToolCalls(rawCalls []openAIToolCallResponse) ([]harness.ToolCall, error) {
+	toolCalls := make([]harness.ToolCall, 0, len(rawCalls))
+	for _, call := range rawCalls {
+		args := json.RawMessage(`{}`)
+		if strings.TrimSpace(call.Function.Arguments) != "" {
+			args = json.RawMessage(call.Function.Arguments)
+		}
+		toolCalls = append(toolCalls, harness.ToolCall{
+			Name: call.Function.Name,
+			Args: args,
+		})
+	}
+	return toolCalls, nil
 }

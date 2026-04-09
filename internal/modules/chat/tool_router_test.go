@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+
+	"jax-trading-assistant/internal/modules/harness"
 )
 
 // TestToolRouter_UnknownTool verifies that an unregistered tool name returns
@@ -32,7 +34,7 @@ func TestToolRouter_UnknownTool(t *testing.T) {
 // contains only read-only inspection tools and never exposes any names that
 // could mutate trading or approval state.
 func TestToolRouter_AvailableTools_OnlyReadOnly(t *testing.T) {
-	tools := AvailableTools()
+	tools := AvailableTools(harness.DefaultPolicy(harness.ModeResearch))
 	if len(tools) == 0 {
 		t.Fatal("AvailableTools returned empty list")
 	}
@@ -49,7 +51,7 @@ func TestToolRouter_AvailableTools_OnlyReadOnly(t *testing.T) {
 	}
 	registered := make(map[string]struct{}, len(tools))
 	for _, m := range tools {
-		registered[m["name"]] = struct{}{}
+		registered[m.Name] = struct{}{}
 	}
 	for _, bad := range forbidden {
 		if _, found := registered[bad]; found {
@@ -58,8 +60,8 @@ func TestToolRouter_AvailableTools_OnlyReadOnly(t *testing.T) {
 	}
 }
 
-// TestToolRouter_AvailableTools_ContainsExpected checks that the eight
-// documented read-only tools are all present.
+// TestToolRouter_AvailableTools_ContainsExpected checks that the documented
+// read-only tools are all present.
 func TestToolRouter_AvailableTools_ContainsExpected(t *testing.T) {
 	expected := []string{
 		"get_candidate_trade",
@@ -70,11 +72,21 @@ func TestToolRouter_AvailableTools_ContainsExpected(t *testing.T) {
 		"get_orchestration_run",
 		"search_research_runs",
 		"explain_trade_blockers",
+		"list_pending_approvals",
+		"list_recent_blocked_candidates",
+		"search_candidates",
+		"query_knowledge",
+		"compare_runs",
+		"strategy_instance_summary",
+		"blocked_candidate_analysis",
+		"recent_research_narrative",
+		"confidence_drift_summary",
+		"signal_clustering_overview",
 	}
-	tools := AvailableTools()
+	tools := AvailableTools(harness.DefaultPolicy(harness.ModeResearch))
 	registered := make(map[string]struct{}, len(tools))
 	for _, m := range tools {
-		registered[m["name"]] = struct{}{}
+		registered[m.Name] = struct{}{}
 	}
 	for _, want := range expected {
 		if _, found := registered[want]; !found {
@@ -86,10 +98,37 @@ func TestToolRouter_AvailableTools_ContainsExpected(t *testing.T) {
 // TestToolRouter_AvailableTools_HaveDescriptions ensures every entry has
 // a non-empty description so the frontend can display it.
 func TestToolRouter_AvailableTools_HaveDescriptions(t *testing.T) {
-	for _, m := range AvailableTools() {
-		if m["description"] == "" {
-			t.Errorf("tool %q has empty description", m["name"])
+	for _, m := range AvailableTools(harness.DefaultPolicy(harness.ModeResearch)) {
+		if m.Description == "" {
+			t.Errorf("tool %q has empty description", m.Name)
 		}
+	}
+}
+
+func TestToolRouter_AvailableTools_ExposeMetadata(t *testing.T) {
+	for _, m := range AvailableTools(harness.DefaultPolicy(harness.ModeResearch)) {
+		if m.EvidenceLevel == "" {
+			t.Errorf("tool %q missing evidenceLevel", m.Name)
+		}
+		if m.Freshness == "" {
+			t.Errorf("tool %q missing freshness", m.Name)
+		}
+	}
+}
+
+func TestToolRouter_AvailableTools_ExposePolicyAvailability(t *testing.T) {
+	tools := AvailableTools(harness.DefaultPolicy(harness.ModeLive))
+	var foundBlocked bool
+	for _, tool := range tools {
+		if !tool.Allowed {
+			foundBlocked = true
+			if tool.PolicyReason == "" {
+				t.Fatalf("tool %q missing policy reason", tool.Name)
+			}
+		}
+	}
+	if !foundBlocked {
+		t.Fatal("expected at least one tool to be blocked in live mode")
 	}
 }
 
