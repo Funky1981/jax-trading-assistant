@@ -12,6 +12,7 @@ export const memoryService = {
   async recall(bank: string, query: MemoryQuery): Promise<MemoryRecallResponse> {
     const params = new URLSearchParams();
     
+    if (query.q) params.append('q', query.q);
     if (query.symbol) params.append('symbol', query.symbol);
     if (query.type) params.append('type', query.type);
     if (query.limit) params.append('limit', query.limit.toString());
@@ -46,14 +47,18 @@ export const memoryService = {
   },
 
   /**
-   * Search memories across all banks or in a specific bank
+   * Search memories within a required bank
    */
-  async search(queryText: string, bank?: string, limit = 20): Promise<MemoryItem[]> {
+  async search(bank: string, queryText: string, limit = 20): Promise<MemoryItem[]> {
+    if (!bank) {
+      throw new Error('bank is required');
+    }
+
     const params = new URLSearchParams({
+      bank,
       q: queryText,
       limit: limit.toString(),
     });
-    if (bank) params.append('bank', bank);
     
     const response = await memoryClient.get<MemoryRecallResponse>(`/v1/memory/search?${params}`);
     return response.items;

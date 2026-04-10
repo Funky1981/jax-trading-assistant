@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -18,6 +19,8 @@ import (
 type EmbeddingProvider interface {
 	Embed(ctx context.Context, text string) ([]float32, error)
 }
+
+const EmbeddingDimensions = 1536
 
 // OpenAIEmbedderConfig holds configuration for an OpenAI-compatible embedder.
 type OpenAIEmbedderConfig struct {
@@ -52,6 +55,23 @@ func NewOpenAIEmbedder(cfg OpenAIEmbedderConfig) EmbeddingProvider {
 		model:      cfg.Model,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
+}
+
+// ValidateOpenAIEmbedderConfig ensures runtime embedding configuration is present
+// before the service starts accepting traffic.
+func ValidateOpenAIEmbedderConfig(cfg OpenAIEmbedderConfig) error {
+	if strings.TrimSpace(cfg.APIKey) == "" {
+		return fmt.Errorf("OPENAI_API_KEY is required for memory embeddings")
+	}
+	baseURL := strings.TrimSpace(cfg.BaseURL)
+	if baseURL == "" {
+		baseURL = "https://api.openai.com"
+	}
+	parsed, err := url.Parse(baseURL)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return fmt.Errorf("OPENAI_BASE_URL must be a valid absolute URL")
+	}
+	return nil
 }
 
 type embeddingRequestBody struct {
@@ -98,6 +118,9 @@ func (e *openAIEmbedder) Embed(ctx context.Context, text string) ([]float32, err
 	}
 	if len(out.Data) == 0 || len(out.Data[0].Embedding) == 0 {
 		return nil, fmt.Errorf("pgmemory embed: empty embedding in response")
+	}
+	if len(out.Data[0].Embedding) != EmbeddingDimensions {
+		return nil, fmt.Errorf("pgmemory embed: unexpected embedding dimension %d", len(out.Data[0].Embedding))
 	}
 	return out.Data[0].Embedding, nil
 }

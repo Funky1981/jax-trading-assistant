@@ -14,7 +14,6 @@ The active platform is an ADR-0012 modular-monolith topology with two Go runtime
 - External boundaries
   - `services/ib-bridge` on `8092`
   - `services/agent0-service` on `8093`
-  - `services/hindsight` on `8888`
 
 ## Repository Layout (Current)
 
@@ -29,7 +28,7 @@ internal/
 libs/
   auth/, marketdata/, utcp/, agent0/, dexter/, ...
 services/
-  ib-bridge/, agent0-service/, hindsight/
+  ib-bridge/, agent0-service/
 frontend/
 db/postgres/migrations/
 scripts/

@@ -259,9 +259,6 @@ func TestMemoryBanksHandler_Returns200WithBanks(t *testing.T) {
 
 func TestMemorySearchHandler_WithQuery(t *testing.T) {
 	store := newTestStore()
-	item := validTestItem()
-	store.Retain(context.TODO(), "research", item) //nolint:errcheck
-
 	handler := memorySearchHandler(store)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/memory/search?q=AAPL&bank=research", nil)
@@ -282,7 +279,7 @@ func TestMemorySearchHandler_EmptyQuery_ReturnsItemsEnvelope(t *testing.T) {
 	store := newTestStore()
 	handler := memorySearchHandler(store)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/memory/search", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/memory/search?bank=research", nil)
 	rw := httptest.NewRecorder()
 	handler.ServeHTTP(rw, req)
 
@@ -296,7 +293,7 @@ func TestMemorySearchHandler_EmptyQuery_ReturnsItemsEnvelope(t *testing.T) {
 	}
 }
 
-func TestMemorySearchHandler_DefaultBankUsed(t *testing.T) {
+func TestMemorySearchHandler_RequiresBank(t *testing.T) {
 	store := newTestStore()
 	item := validTestItem()
 	store.Retain(context.TODO(), "research", item) //nolint:errcheck
@@ -308,7 +305,7 @@ func TestMemorySearchHandler_DefaultBankUsed(t *testing.T) {
 	rw := httptest.NewRecorder()
 	handler.ServeHTTP(rw, req)
 
-	if rw.Code != http.StatusOK {
-		t.Errorf("default bank search status = %d; want 200", rw.Code)
+	if rw.Code != http.StatusBadRequest {
+		t.Errorf("missing bank status = %d; want 400", rw.Code)
 	}
 }

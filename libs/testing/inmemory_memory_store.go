@@ -28,14 +28,13 @@ func (s *InMemoryMemoryStore) Retain(_ context.Context, bank string, item contra
 	if bank == "" {
 		return "", errors.New("retain: bank is required")
 	}
-	if strings.TrimSpace(item.Type) == "" {
-		return "", errors.New("retain: item.type is required")
-	}
-	if strings.TrimSpace(item.Summary) == "" {
-		return "", errors.New("retain: item.summary is required")
-	}
+	item.Tags = contracts.NormalizeMemoryTags(item.Tags)
 	if item.TS.IsZero() {
 		item.TS = time.Now().UTC()
+	}
+	item.Summary = strings.TrimSpace(item.Summary)
+	if err := contracts.ValidateMemoryItem(item); err != nil {
+		return "", err
 	}
 	if item.ID == "" {
 		item.ID = "mem_" + item.TS.UTC().Format("20060102T150405Z")
@@ -104,7 +103,7 @@ func (s *InMemoryMemoryStore) Reflect(ctx context.Context, bank string, params c
 	return []contracts.MemoryItem{
 		{
 			TS:      time.Now().UTC(),
-			Type:    "belief",
+			Type:    "reflection",
 			Summary: summary,
 			Data: map[string]any{
 				"query": params.Query,

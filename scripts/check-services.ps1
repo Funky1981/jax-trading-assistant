@@ -5,7 +5,7 @@ Write-Host ""
 # Test PostgreSQL
 Write-Host "PostgreSQL: " -NoNewline
 try {
-    $connection = Test-NetConnection -ComputerName localhost -Port 5432 -WarningAction SilentlyContinue
+    $connection = Test-NetConnection -ComputerName localhost -Port 5433 -WarningAction SilentlyContinue
     if ($connection.TcpTestSucceeded) {
         Write-Host "ONLINE" -ForegroundColor Green
     } else {
@@ -15,19 +15,10 @@ try {
     Write-Host "OFFLINE" -ForegroundColor Red
 }
 
-# Test Hindsight
-Write-Host "Hindsight API: " -NoNewline
+# Test Research Memory
+Write-Host "Research Memory: " -NoNewline
 try {
-    $response = Invoke-RestMethod -Uri "http://localhost:8888/health" -TimeoutSec 2
-    Write-Host "ONLINE" -ForegroundColor Green  
-} catch {
-    Write-Host "OFFLINE - $($_.Exception.Message)" -ForegroundColor Red
-}
-
-# Test Memory Service
-Write-Host "JAX Memory: " -NoNewline
-try {
-    $response = Invoke-RestMethod -Uri "http://localhost:8090/health" -TimeoutSec 2
+    $response = Invoke-RestMethod -Uri "http://localhost:8091/health" -TimeoutSec 2
     Write-Host "ONLINE" -ForegroundColor Green
 } catch {
     Write-Host "OFFLINE - $($_.Exception.Message)" -ForegroundColor Red

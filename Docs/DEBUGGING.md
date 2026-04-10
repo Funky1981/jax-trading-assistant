@@ -17,7 +17,6 @@ curl http://localhost:8100/health
 curl http://localhost:8091/health
 curl http://localhost:8092/health
 curl http://localhost:8093/health
-curl http://localhost:8888/
 ```
 
 ## Common Issues
@@ -27,7 +26,7 @@ curl http://localhost:8888/
 ```powershell
 docker compose build --no-cache
 docker compose up -d postgres
-docker compose up -d hindsight ib-bridge agent0-service
+docker compose up -d ib-bridge agent0-service
 docker compose up -d jax-research jax-trader
 docker compose ps
 ```
@@ -67,6 +66,7 @@ Recommended local env:
 - `JAX_ORCHESTRATOR_URL=http://localhost:8091`
 - `IB_BRIDGE_URL=http://localhost:8092`
 - `AGENT0_SERVICE_URL=http://localhost:8093`
+- `OPENAI_API_KEY=...` (required for memory embeddings)
 
 ## Full Reset
 

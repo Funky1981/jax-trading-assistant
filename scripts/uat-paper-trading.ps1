@@ -5,7 +5,6 @@ param(
   [string]$ResearchBase = "http://localhost:8091",
   [string]$IbBridgeBase = "http://localhost:8092",
   [string]$Agent0Base = "http://localhost:8093",
-  [string]$HindsightBase = "http://localhost:8888",
   [string]$OutputDir = "Docs/runs",
   [switch]$OpenVisualReport
 )
@@ -18,6 +17,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "scripts/test-platform.ps1" 
   -ResearchBase $ResearchBase `
   -IbBridgeBase $IbBridgeBase `
   -Agent0Base $Agent0Base `
-  -HindsightBase $HindsightBase `
   -OutputDir $OutputDir `
   -OpenVisualReport:$OpenVisualReport.IsPresent

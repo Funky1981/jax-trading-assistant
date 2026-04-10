@@ -5,7 +5,6 @@ param(
   [string]$ResearchBase = "http://localhost:8091",
   [string]$IbBridgeBase = "http://localhost:8092",
   [string]$Agent0Base = "http://localhost:8093",
-  [string]$HindsightBase = "http://localhost:8888",
   [string]$OutputDir = "Docs/runs",
   [switch]$OpenVisualReport
 )
@@ -101,7 +100,6 @@ function Write-RunReport {
   $lines += "- Research: $ResearchBase"
   $lines += "- IB Bridge: $IbBridgeBase"
   $lines += "- Agent0 Service: $Agent0Base"
-  $lines += "- Hindsight: $HindsightBase"
   $lines | Set-Content -Path $mdPath
 
   Write-Host ""
@@ -119,7 +117,6 @@ Invoke-HttpCheck -Name "health/trader-api" -Url "$ApiBase/health"
 Invoke-HttpCheck -Name "health/research" -Url "$ResearchBase/health"
 Invoke-HttpCheck -Name "health/ib-bridge" -Url "$IbBridgeBase/health"
 Invoke-HttpCheck -Name "health/agent0-service" -Url "$Agent0Base/health"
-Invoke-HttpCheck -Name "health/hindsight" -Url "$HindsightBase/metrics"
 
 # 2) API smoke checks (read-only)
 Invoke-HttpCheck -Name "api/signals" -Url "$ApiBase/api/v1/signals?limit=1"

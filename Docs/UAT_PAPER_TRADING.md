@@ -20,7 +20,7 @@ To open the Playwright report after full run:
 
 ## What It Checks
 
-- Service health: trader/research/ib-bridge/agent0/hindsight.
+- Service health: trader/research/ib-bridge/agent0.
 - API smoke endpoints: signals, artifacts, testing status, runs, AI decisions.
 - Backend verification:
   - quick mode: targeted package checks + golden utility tests.
@@ -41,5 +41,5 @@ To open the Playwright report after full run:
 - `-ResearchBase` (default `http://localhost:8091`)
 - `-IbBridgeBase` (default `http://localhost:8092`)
 - `-Agent0Base` (default `http://localhost:8093`)
-- `-HindsightBase` (default `http://localhost:8888`)
+- `-ResearchBase` (default `http://localhost:8091`)
 - `-OutputDir` (default `Docs/runs`)

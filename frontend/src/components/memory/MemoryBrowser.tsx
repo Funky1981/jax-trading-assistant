@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, HardDrive } from 'lucide-react';
 import { useMemorySearch, useMemoryBanks } from '../../hooks/useMemory';
 import type { MemoryItem } from '../../data/types';
@@ -15,13 +15,19 @@ import {
 
 export function MemoryBrowser() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBank, setSelectedBank] = useState<string>('all');
+  const [selectedBank, setSelectedBank] = useState<string>('');
   const { data: banks, isLoading: banksLoading } = useMemoryBanks();
   const { data: results, isLoading: searchLoading, error: searchError } = useMemorySearch(
     searchQuery,
-    selectedBank === 'all' ? undefined : selectedBank,
+    selectedBank,
     20,
   );
+
+  useEffect(() => {
+    if (!selectedBank && banks && banks.length > 0) {
+      setSelectedBank(banks[0]);
+    }
+  }, [banks, selectedBank]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +54,6 @@ export function MemoryBrowser() {
                 <SelectValue placeholder="Memory Bank" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Banks</SelectItem>
                 {banks?.map((bank: string) => (
                   <SelectItem key={bank} value={bank}>
                     {bank}
@@ -94,12 +99,12 @@ export function MemoryBrowser() {
                   key={idx}
                   className="border-2 border-border rounded-md p-4 bg-muted transition-all hover:bg-accent hover:border-primary"
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <HardDrive className="h-4 w-4 text-primary" />
-                      <h3 className="text-sm font-medium">{item.key}</h3>
-                      <Badge>{item.bank}</Badge>
-                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <HardDrive className="h-4 w-4 text-primary" />
+                        <h3 className="text-sm font-medium">{item.id || item.type}</h3>
+                        {selectedBank && <Badge>{selectedBank}</Badge>}
+                      </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
                         {item.summary || 'No summary'}
@@ -114,7 +119,7 @@ export function MemoryBrowser() {
                         </div>
                       )}
                       <p className="text-xs text-muted-foreground mt-2">
-                        {new Date(item.timestamp).toLocaleString()}
+                        {new Date(item.ts).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -130,7 +135,7 @@ export function MemoryBrowser() {
                 No memories found
               </h3>
               <p className="text-sm text-muted-foreground/70">
-                Try adjusting your search query
+                {selectedBank ? 'Try adjusting your search query' : 'Select a memory bank to search'}
               </p>
             </div>
           )}

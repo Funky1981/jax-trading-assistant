@@ -30,8 +30,8 @@ func TestMemoryTools_HTTPRecallIntegration(t *testing.T) {
 		if err := json.Unmarshal(req.Input, &in); err != nil {
 			t.Fatalf("decode input: %v", err)
 		}
-		if in.Bank != "trade_decisions" {
-			t.Fatalf("expected bank trade_decisions, got %q", in.Bank)
+		if in.Bank != "trades" {
+			t.Fatalf("expected bank trades, got %q", in.Bank)
 		}
 
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -57,7 +57,7 @@ func TestMemoryTools_HTTPRecallIntegration(t *testing.T) {
 
 	svc := NewMemoryService(client)
 	out, err := svc.Recall(context.Background(), contracts.MemoryRecallRequest{
-		Bank: "trade_decisions",
+		Bank: "trades",
 		Query: contracts.MemoryQuery{
 			Q: "gap",
 		},

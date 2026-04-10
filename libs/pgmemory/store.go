@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"jax-trading-assistant/libs/contracts"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // validBanks is the fixed set of memory banks for phase 1.
@@ -65,16 +67,17 @@ func (s *Store) Retain(ctx context.Context, bank string, item contracts.MemoryIt
 	if !validBanks[bank] {
 		return "", fmt.Errorf("retain: unknown bank %q", bank)
 	}
-	if strings.TrimSpace(item.Type) == "" {
-		return "", fmt.Errorf("retain: item.type is required")
+	item.Tags = contracts.NormalizeMemoryTags(item.Tags)
+	if item.TS.IsZero() {
+		item.TS = time.Now().UTC()
 	}
-	summary := strings.TrimSpace(item.Summary)
-	if summary == "" {
-		return "", fmt.Errorf("retain: item.summary is required")
+	item.Summary = strings.TrimSpace(item.Summary)
+	if err := contracts.ValidateMemoryItem(item); err != nil {
+		return "", fmt.Errorf("retain: %w", err)
 	}
 
 	// Embedding is generated synchronously; any failure aborts the write.
-	vec, err := s.embedder.Embed(ctx, summary)
+	vec, err := s.embedder.Embed(ctx, item.Summary)
 	if err != nil {
 		return "", fmt.Errorf("retain: embedding failed: %w", err)
 	}
@@ -84,16 +87,7 @@ func (s *Store) Retain(ctx context.Context, bank string, item contracts.MemoryIt
 		id = uuid.New().String()
 	}
 
-	ts := item.TS
-	if ts.IsZero() {
-		ts = time.Now().UTC()
-	}
-
-	tags := item.Tags
-	if tags == nil {
-		tags = []string{}
-	}
-	tagsJSON, err := json.Marshal(tags)
+	tagsJSON, err := json.Marshal(item.Tags)
 	if err != nil {
 		return "", fmt.Errorf("retain: marshal tags: %w", err)
 	}
@@ -121,10 +115,10 @@ func (s *Store) Retain(ctx context.Context, bank string, item contracts.MemoryIt
 	_, err = s.db.ExecContext(ctx, insertSQL,
 		id,
 		bank,
-		ts.UTC(),
+		item.TS.UTC(),
 		item.Type,
 		sql.NullString{String: item.Symbol, Valid: item.Symbol != ""},
-		summary,
+		item.Summary,
 		tagsJSON,
 		dataJSON,
 		sourceSystem,
@@ -132,6 +126,9 @@ func (s *Store) Retain(ctx context.Context, bank string, item contracts.MemoryIt
 		formatVector(vec),
 	)
 	if err != nil {
+		if isDuplicateMemorySource(err) {
+			return "", fmt.Errorf("retain: duplicate source reference for bank %q", bank)
+		}
 		return "", fmt.Errorf("retain: insert: %w", err)
 	}
 
@@ -213,34 +210,66 @@ func (s *Store) Reflect(ctx context.Context, bank string, params contracts.Refle
 	if bank == "" {
 		return nil, fmt.Errorf("reflect: bank is required")
 	}
+	if !validBanks[bank] {
+		return nil, fmt.Errorf("reflect: unknown bank %q", bank)
+	}
 	if strings.TrimSpace(params.Query) == "" {
 		return nil, fmt.Errorf("reflect: params.query is required")
 	}
 
-	recalled, err := s.Recall(ctx, bank, contracts.MemoryQuery{
+	query := contracts.MemoryQuery{
 		Q:     params.Query,
 		Limit: 10,
-	})
+	}
+	if params.WindowDays > 0 {
+		from := time.Now().UTC().AddDate(0, 0, -params.WindowDays)
+		query.From = &from
+	}
+
+	recalled, err := s.Recall(ctx, bank, query)
 	if err != nil {
 		return nil, fmt.Errorf("reflect: recall: %w", err)
 	}
 
-	summary := "No prior memories matched."
-	if len(recalled) > 0 {
-		types := uniqueTypes(recalled)
-		summary = fmt.Sprintf("Found %d prior %s memories (types: %s).",
-			len(recalled), bank, strings.Join(types, ", "))
+	typeCounts := countBy(recalled, func(item contracts.MemoryItem) string { return item.Type })
+	symbolCounts := countBy(recalled, func(item contracts.MemoryItem) string { return item.Symbol })
+	tagCounts := countTags(recalled)
+
+	summaryParts := []string{
+		fmt.Sprintf("Reflection over %d %s memories for %q.", len(recalled), bank, strings.TrimSpace(params.Query)),
+	}
+	if params.WindowDays > 0 {
+		summaryParts = append(summaryParts, fmt.Sprintf("Window: last %d days.", params.WindowDays))
+	}
+	if repeated := formatCounts("Repeated types", typeCounts); repeated != "" {
+		summaryParts = append(summaryParts, repeated)
+	}
+	if repeated := formatCounts("Repeated symbols", symbolCounts); repeated != "" {
+		summaryParts = append(summaryParts, repeated)
+	}
+	if repeated := formatCounts("Repeated tags", tagCounts); repeated != "" {
+		summaryParts = append(summaryParts, repeated)
+	}
+	if hint := strings.TrimSpace(params.PromptHint); hint != "" {
+		summaryParts = append(summaryParts, fmt.Sprintf("Prompt hint: %s.", hint))
+	}
+	if len(recalled) == 0 {
+		summaryParts = append(summaryParts, "No prior memories matched.")
 	}
 
 	return []contracts.MemoryItem{
 		{
 			TS:      time.Now().UTC(),
 			Type:    "reflection",
-			Summary: summary,
+			Summary: strings.Join(summaryParts, " "),
 			Data: map[string]any{
-				"query":         params.Query,
-				"matched_count": len(recalled),
-				"source_bank":   bank,
+				"query":            strings.TrimSpace(params.Query),
+				"matched_count":    len(recalled),
+				"source_bank":      bank,
+				"window_days":      params.WindowDays,
+				"repeated_types":   typeCounts,
+				"repeated_symbols": symbolCounts,
+				"repeated_tags":    tagCounts,
 			},
 			Source: &contracts.MemorySource{System: "pgmemory"},
 		},
@@ -398,4 +427,52 @@ func uniqueTypes(items []contracts.MemoryItem) []string {
 		}
 	}
 	return out
+}
+
+func isDuplicateMemorySource(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	return pgErr.Code == "23505"
+}
+
+func countBy(items []contracts.MemoryItem, keyFn func(contracts.MemoryItem) string) map[string]int {
+	out := make(map[string]int)
+	for _, item := range items {
+		key := strings.TrimSpace(keyFn(item))
+		if key == "" {
+			continue
+		}
+		out[key]++
+	}
+	return out
+}
+
+func countTags(items []contracts.MemoryItem) map[string]int {
+	out := make(map[string]int)
+	for _, item := range items {
+		for _, tag := range item.Tags {
+			tag = strings.TrimSpace(tag)
+			if tag == "" {
+				continue
+			}
+			out[tag]++
+		}
+	}
+	return out
+}
+
+func formatCounts(label string, counts map[string]int) string {
+	var repeated []string
+	for key, count := range counts {
+		if count < 2 {
+			continue
+		}
+		repeated = append(repeated, fmt.Sprintf("%s (%d)", key, count))
+	}
+	if len(repeated) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s: %s.", label, strings.Join(repeated, ", "))
 }

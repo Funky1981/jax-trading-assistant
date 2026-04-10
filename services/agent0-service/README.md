@@ -68,7 +68,8 @@ curl -X POST http://localhost:8093/suggest \
 | AGENT0_OPENAI_API_KEY | - | OpenAI API key (required if using openai) |
 | AGENT0_OPENAI_MODEL | gpt-4o-mini | OpenAI model |
 | AGENT0_ANTHROPIC_API_KEY | - | Anthropic API key (required if using anthropic) |
-| AGENT0_MEMORY_SERVICE_URL | http://jax-memory:8090 | Memory service URL |
+| AGENT0_MEMORY_SERVICE_URL | http://jax-research:8091 | Research runtime base URL for memory tools |
+| AGENT0_MEMORY_BANK | trades | Bank used for memory recall |
 | AGENT0_IB_BRIDGE_URL | http://ib-bridge:8092 | IB Bridge URL |
 
 ## Cost Comparison

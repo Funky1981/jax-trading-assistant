@@ -14,7 +14,7 @@ Validate the current production path end-to-end for:
 
 - `docker compose up -d` completed successfully
 - `jax-trader` and `jax-research` are healthy
-- Postgres migrations are applied (including `000020_memory_items`)
+- Postgres migrations are applied (including `000020_memory_items` and `000021_memory_items_constraints`)
 - Postgres image is `pgvector/pgvector:pg16` (required for `memory_items`)
 - frontend dependencies are installed (`frontend/node_modules`)
 

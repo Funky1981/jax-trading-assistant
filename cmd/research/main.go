@@ -127,15 +127,19 @@ func main() {
 	defer researchRunner.Stop()
 	log.Printf("research runner workers: %d", runnerWorkers)
 
+	memStore, err := buildMemoryStore(db)
+	if err != nil {
+		log.Fatalf("failed to build memory store: %v", err)
+	}
+
 	// Build HTTP server
 	mux := http.NewServeMux()
 	registerRoutes(mux, orchSvc, db, btDeps, researchRunner)
 
-	// ADR-0012 Phase 6: memory proxy (replaces jax-memory service).
+	// ADR-0012 Phase 6: in-process memory proxy.
 	// agent0-service can now point MEMORY_SERVICE_URL at jax-research:8091.
 	// Backed by Postgres + pgvector; fails fast if db is unavailable (already
 	// validated above).
-	memStore := buildMemoryStore(db)
 	registerMemoryRoutes(mux, memStore)
 
 	srv := &http.Server{
@@ -170,7 +174,7 @@ func main() {
 // registerRoutes wires up all HTTP routes.
 // Routes match the jax-orchestrator API surface exactly for backwards compatibility.
 func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, btDeps *backtestDeps, runner *researchRunnerManager) {
-	mux.HandleFunc("/health", handleHealth)
+	mux.HandleFunc("/health", handleHealth(db))
 	mux.HandleFunc("/orchestrate", handleOrchestrate(svc, db))
 	mux.HandleFunc("/metrics/prometheus", handlePrometheus(db))
 	// L04: backtest endpoint
@@ -179,16 +183,26 @@ func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, 
 	mux.HandleFunc("/research/projects/runs/", handleResearchProjectRunStatus(runner))
 }
 
-// handleHealth returns a simple liveness response.
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{
-		"service": "jax-research",
-		"status":  "healthy",
-		"uptime":  time.Since(startTime).Round(time.Second).String(),
-		"version": version,
-	}); err != nil {
-		log.Printf("handleHealth encode: %v", err)
+// handleHealth returns liveness plus database readiness.
+func handleHealth(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		status := "healthy"
+		code := http.StatusOK
+		if err := db.PingContext(r.Context()); err != nil {
+			status = "degraded"
+			code = http.StatusServiceUnavailable
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(code)
+		if err := json.NewEncoder(w).Encode(map[string]string{
+			"service": "jax-research",
+			"status":  status,
+			"uptime":  time.Since(startTime).Round(time.Second).String(),
+			"version": version,
+		}); err != nil {
+			log.Printf("handleHealth encode: %v", err)
+		}
 	}
 }
 
@@ -287,7 +301,7 @@ func runOrchestration(svc *orchestration.Service, db *sql.DB, runID uuid.UUID, f
 
 	result, err := svc.Orchestrate(ctx, orchestration.OrchestrationRequest{
 		Symbol:      symbol,
-		Bank:        "trade_decisions",
+		Bank:        "trades",
 		UserContext: contextStr,
 	})
 	if err != nil {

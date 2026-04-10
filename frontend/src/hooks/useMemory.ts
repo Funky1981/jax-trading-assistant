@@ -26,11 +26,11 @@ export function useMemoryRetain(bank: string) {
   });
 }
 
-export function useMemorySearch(queryText: string, bank?: string, limit = 20) {
+export function useMemorySearch(queryText: string, bank: string, limit = 20) {
   return useQuery({
     queryKey: ['memory', 'search', queryText, bank, limit],
-    queryFn: () => memoryService.search(queryText, bank, limit),
-    enabled: queryText.length > 2, // Only search if query is meaningful
+    queryFn: () => memoryService.search(bank, queryText, limit),
+    enabled: !!bank && queryText.length > 2,
   });
 }
 

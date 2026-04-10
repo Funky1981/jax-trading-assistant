@@ -1,5 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
-import { chatService, type ChatMessage as ChatMessageType } from '@/data/chat-service';
+import { type ChatMessage as ChatMessageType } from '@/data/chat-service';
 import { Badge } from '@/components/ui/badge';
 
 interface ToolResultCardProps {
@@ -202,12 +201,4 @@ export function ToolResultCard({ message }: ToolResultCardProps) {
       </details>
     </div>
   );
-}
-
-export function useToolCatalogue() {
-  return useQuery({
-    queryKey: ['chat-tools'],
-    queryFn: () => chatService.getTools(),
-    staleTime: 60_000,
-  });
 }

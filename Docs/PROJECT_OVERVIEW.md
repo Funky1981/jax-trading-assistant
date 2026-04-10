@@ -11,7 +11,6 @@ The system integrates with external Python services where appropriate:
 
 - `services/ib-bridge` (market connectivity)
 - `services/agent0-service` (planning/execution assistant)
-- `services/hindsight` (memory backend)
 
 ## Active Runtime Topology
 
@@ -28,9 +27,6 @@ The system integrates with external Python services where appropriate:
 - `agent0-service`
   - Health: `http://localhost:8093/health`
   - Source: `services/agent0-service`
-- `hindsight`
-  - API: `http://localhost:8888`
-  - Source: `services/hindsight`
 - Frontend
   - Dev server: `http://localhost:5173`
   - Source: `frontend`
@@ -46,7 +42,7 @@ The system integrates with external Python services where appropriate:
 - `libs/`
   - Reusable clients/adapters (auth, market data, agent integrations, UTCP)
 - `services/`
-  - External service boundaries intentionally retained (`ib-bridge`, `agent0-service`, `hindsight`)
+  - External service boundaries intentionally retained (`ib-bridge`, `agent0-service`)
 - `frontend/`
   - React dashboard consuming trader/research APIs
 - `db/postgres/migrations/`
@@ -57,7 +53,7 @@ The system integrates with external Python services where appropriate:
 ## Architecture Guardrails
 
 - Trader must stay deterministic and must not import research-only dependencies.
-- Research runtime may integrate Agent0/Dexter/Hindsight paths.
+- Research runtime integrates Agent0, Dexter, and the in-process Postgres memory system.
 - Artifact promotion requires trust-gate evidence (Gate2 deterministic replay + Gate3 promotion checks).
 - External Python services remain explicit boundaries; do not collapse them without ADR-level change.
 

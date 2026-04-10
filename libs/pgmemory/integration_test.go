@@ -78,6 +78,15 @@ func cleanupByPrefix(t *testing.T, db *sql.DB, prefix string) {
 	}
 }
 
+func hasDBObject(t *testing.T, db *sql.DB, name string) bool {
+	t.Helper()
+	var objectName sql.NullString
+	if err := db.QueryRowContext(context.Background(), "SELECT to_regclass($1)", name).Scan(&objectName); err != nil {
+		t.Fatalf("check object %s: %v", name, err)
+	}
+	return objectName.Valid
+}
+
 func testItem(suffix string) contracts.MemoryItem {
 	return contracts.MemoryItem{
 		ID:      fmt.Sprintf("pgmem-integ-%s", suffix),
@@ -278,6 +287,12 @@ func TestIntegration_Reflect(t *testing.T) {
 	defer db.Close()
 	defer cleanupByPrefix(t, db, "pgmem-integ-refl-")
 
+	var beforeCount int
+	if err := db.QueryRowContext(context.Background(),
+		"SELECT count(*) FROM memory_items WHERE id LIKE 'pgmem-integ-refl-%'").Scan(&beforeCount); err != nil {
+		t.Fatalf("count before reflect: %v", err)
+	}
+
 	for i := 0; i < 2; i++ {
 		item := testItem(fmt.Sprintf("refl-%03d", i))
 		if _, err := store.Retain(context.Background(), "reflections", item); err != nil {
@@ -297,7 +312,39 @@ func TestIntegration_Reflect(t *testing.T) {
 	if out[0].Type != "reflection" {
 		t.Errorf("Reflect item type = %q, want reflection", out[0].Type)
 	}
+
+	var afterCount int
+	if err := db.QueryRowContext(context.Background(),
+		"SELECT count(*) FROM memory_items WHERE id LIKE 'pgmem-integ-refl-%'").Scan(&afterCount); err != nil {
+		t.Fatalf("count after reflect: %v", err)
+	}
+	if afterCount != beforeCount+2 {
+		t.Errorf("Reflect persisted output unexpectedly: before=%d after=%d", beforeCount, afterCount)
+	}
 	t.Logf("reflect summary: %s", out[0].Summary)
+}
+
+func TestIntegration_Retain_DuplicateSourceRejected(t *testing.T) {
+	store, db := newTestStore(t)
+	defer db.Close()
+	defer cleanupByPrefix(t, db, "pgmem-integ-dupe-")
+
+	if !hasDBObject(t, db, "uq_memory_items_bank_source_ref") {
+		t.Skip("000021_memory_items_constraints not applied")
+	}
+
+	item := testItem("dupe-001")
+	item.Source = &contracts.MemorySource{System: "integration-test", Ref: "shared-ref"}
+	if _, err := store.Retain(context.Background(), "research", item); err != nil {
+		t.Fatalf("first retain: %v", err)
+	}
+
+	duplicate := testItem("dupe-002")
+	duplicate.Source = &contracts.MemorySource{System: "integration-test", Ref: "shared-ref"}
+	_, err := store.Retain(context.Background(), "research", duplicate)
+	if err == nil || !strings.Contains(err.Error(), "duplicate source reference") {
+		t.Fatalf("expected duplicate source reference error, got %v", err)
+	}
 }
 
 func TestIntegration_DateFilter(t *testing.T) {

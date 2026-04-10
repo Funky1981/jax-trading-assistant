@@ -54,7 +54,7 @@ func TestMemoryTools_RetainRecallReflect(t *testing.T) {
 
 	svc := NewMemoryService(client)
 	retainOut, err := svc.Retain(context.Background(), contracts.MemoryRetainRequest{
-		Bank: "trade_decisions",
+		Bank: "trades",
 		Item: contracts.MemoryItem{
 			TS:      time.Now().UTC(),
 			Type:    "decision",
@@ -78,7 +78,7 @@ func TestMemoryTools_RetainRecallReflect(t *testing.T) {
 	}
 
 	recallOut, err := svc.Recall(context.Background(), contracts.MemoryRecallRequest{
-		Bank: "trade_decisions",
+		Bank: "trades",
 		Query: contracts.MemoryQuery{
 			Q:     "gap",
 			Tags:  []string{"Gap"},
@@ -96,7 +96,7 @@ func TestMemoryTools_RetainRecallReflect(t *testing.T) {
 	}
 
 	reflectOut, err := svc.Reflect(context.Background(), contracts.MemoryReflectRequest{
-		Bank: "trade_decisions",
+		Bank: "trades",
 		Params: contracts.ReflectionParams{
 			Query:      "what worked",
 			WindowDays: 7,
@@ -167,7 +167,7 @@ func TestMemoryTools_StoreErrorPropagates(t *testing.T) {
 
 	svc := NewMemoryService(client)
 	_, err = svc.Retain(context.Background(), contracts.MemoryRetainRequest{
-		Bank: "trade_decisions",
+		Bank: "trades",
 		Item: contracts.MemoryItem{
 			TS:      time.Now().UTC(),
 			Type:    "decision",

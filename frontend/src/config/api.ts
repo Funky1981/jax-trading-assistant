@@ -11,8 +11,8 @@ export const API_CONFIG = {
   // Research Service (jax-research, port 8091)
   RESEARCH_SERVICE: import.meta.env.VITE_RESEARCH_SERVICE_URL || 'http://localhost:8091',
   
-  // Memory Service (Hindsight wrapper)
-  MEMORY_SERVICE: import.meta.env.VITE_MEMORY_SERVICE_URL || 'http://localhost:8090',
+  // Memory Service (jax-research memory proxy)
+  MEMORY_SERVICE: import.meta.env.VITE_MEMORY_API_URL || 'http://localhost:8091',
   
   // IB Bridge (Interactive Brokers connectivity)
   IB_BRIDGE: import.meta.env.VITE_IB_BRIDGE_URL || (import.meta.env.DEV ? '' : 'http://localhost:8092'),
@@ -20,8 +20,6 @@ export const API_CONFIG = {
   // Agent0 AI Service (trading suggestions)
   AGENT0_SERVICE: import.meta.env.VITE_AGENT0_SERVICE_URL || 'http://localhost:8093',
   
-  // Hindsight API (direct access if needed)
-  HINDSIGHT: import.meta.env.VITE_HINDSIGHT_URL || 'http://localhost:8888',
 } as const;
 
 /**

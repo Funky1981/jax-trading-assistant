@@ -81,7 +81,7 @@ func TestService_BasicOrchestration(t *testing.T) {
 	service := NewService(memory, agent, tools, registry)
 
 	result, err := service.Orchestrate(context.Background(), OrchestrationRequest{
-		Bank:        "trade_decisions",
+		Bank:        "trades",
 		Symbol:      "AAPL",
 		UserContext: "Analyzing AAPL for potential entry",
 		Tags:        []string{"analysis"},
@@ -96,8 +96,8 @@ func TestService_BasicOrchestration(t *testing.T) {
 	if !memory.recallInvoked {
 		t.Error("expected memory recall to be invoked")
 	}
-	if memory.lastRecallBank != "trade_decisions" {
-		t.Errorf("expected recall bank 'trade_decisions', got '%s'", memory.lastRecallBank)
+	if memory.lastRecallBank != "trades" {
+		t.Errorf("expected recall bank 'trades', got '%s'", memory.lastRecallBank)
 	}
 
 	// Verify agent plan was invoked
@@ -135,7 +135,7 @@ func TestService_RequiresMemoryClient(t *testing.T) {
 	service := NewService(nil, agent, tools, registry)
 
 	_, err := service.Orchestrate(context.Background(), OrchestrationRequest{
-		Bank:   "trade_decisions",
+		Bank:   "trades",
 		Symbol: "AAPL",
 	})
 
@@ -155,7 +155,7 @@ func TestService_RequiresAgentClient(t *testing.T) {
 	service := NewService(memory, nil, tools, registry)
 
 	_, err := service.Orchestrate(context.Background(), OrchestrationRequest{
-		Bank:   "trade_decisions",
+		Bank:   "trades",
 		Symbol: "AAPL",
 	})
 
@@ -175,7 +175,7 @@ func TestService_RequiresToolRunner(t *testing.T) {
 	service := NewService(memory, agent, nil, registry)
 
 	_, err := service.Orchestrate(context.Background(), OrchestrationRequest{
-		Bank:   "trade_decisions",
+		Bank:   "trades",
 		Symbol: "AAPL",
 	})
 
@@ -217,7 +217,7 @@ func TestService_RequiresSymbol(t *testing.T) {
 	service := NewService(memory, agent, tools, registry)
 
 	_, err := service.Orchestrate(context.Background(), OrchestrationRequest{
-		Bank:   "trade_decisions",
+		Bank:   "trades",
 		Symbol: "",
 	})
 

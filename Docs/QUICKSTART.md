@@ -15,7 +15,6 @@ docker compose up -d
 Core runtime services:
 - `jax-trader` (`http://localhost:8081/health`, runtime port `8100`)
 - `jax-research` (`http://localhost:8091/health`)
-- `hindsight` (`http://localhost:8888`)
 - `ib-bridge` (`http://localhost:8092/health`)
 - `agent0-service` (`http://localhost:8093/health`)
 
@@ -36,7 +35,6 @@ curl http://localhost:8081/health
 curl http://localhost:8091/health
 curl http://localhost:8092/health
 curl http://localhost:8093/health
-curl http://localhost:8888/
 ```
 
 ## Authentication (Optional)
@@ -55,7 +53,6 @@ docker compose logs -f jax-trader
 docker compose logs -f jax-research
 docker compose logs -f ib-bridge
 docker compose logs -f agent0-service
-docker compose logs -f hindsight
 ```
 
 ## Stop Stack

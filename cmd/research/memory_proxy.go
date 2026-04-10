@@ -1,7 +1,7 @@
 // memory_proxy.go — Part of cmd/research (package main).
-// Registers the jax-memory-compatible HTTP endpoints on the research runtime's
-// mux (ADR-0012 Phase 6). Backing store is Postgres + pgvector; no Hindsight
-// dependency and no in-memory fallback.
+// Registers the memory HTTP endpoints on the research runtime's mux
+// (ADR-0012 Phase 6). Backing store is Postgres + pgvector with no
+// in-memory fallback.
 //
 // Endpoints exposed:
 //
@@ -17,9 +17,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,18 +36,22 @@ import (
 //	OPENAI_API_KEY   – required for embedding generation
 //	OPENAI_BASE_URL  – optional custom API root (Azure OpenAI, local proxy)
 //	EMBEDDING_MODEL  – optional embedding model (default: text-embedding-3-small)
-func buildMemoryStore(db *sql.DB) *pgmemory.Store {
-	embedder := pgmemory.NewOpenAIEmbedder(pgmemory.OpenAIEmbedderConfig{
+func buildMemoryStore(db *sql.DB) (*pgmemory.Store, error) {
+	cfg := pgmemory.OpenAIEmbedderConfig{
 		APIKey:  os.Getenv("OPENAI_API_KEY"),
 		BaseURL: os.Getenv("OPENAI_BASE_URL"),
 		Model:   os.Getenv("EMBEDDING_MODEL"),
-	})
+	}
+	if err := pgmemory.ValidateOpenAIEmbedderConfig(cfg); err != nil {
+		return nil, err
+	}
+	embedder := pgmemory.NewOpenAIEmbedder(cfg)
 	store := pgmemory.New(db, embedder)
 	log.Println("memory store → postgres (pgvector)")
-	return store
+	return store, nil
 }
 
-// registerMemoryRoutes adds jax-memory-compatible endpoints to mux.
+// registerMemoryRoutes adds memory endpoints to mux.
 func registerMemoryRoutes(mux *http.ServeMux, store contracts.MemoryStore) {
 	mux.HandleFunc("/tools", memoryToolHandler(store))
 	mux.HandleFunc("/v1/memory/banks", memoryBanksHandler())
@@ -176,23 +182,29 @@ func memoryBanksHandler() http.HandlerFunc {
 
 func memorySearchHandler(store contracts.MemoryStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		q := r.URL.Query().Get("q")
-		bank := r.URL.Query().Get("bank")
+		if store == nil {
+			http.Error(w, "memory store not configured", http.StatusServiceUnavailable)
+			return
+		}
+		bank := strings.TrimSpace(r.URL.Query().Get("bank"))
 		if bank == "" {
-			bank = "research"
+			http.Error(w, "bank is required", http.StatusBadRequest)
+			return
 		}
-
-		var items []contracts.MemoryItem
-		if q != "" && store != nil {
-			limit := 20
-			var err error
-			items, err = store.Recall(r.Context(), bank, contracts.MemoryQuery{Q: q, Limit: limit})
-			if err != nil {
-				log.Printf("memory search error: %v", err)
-				items = nil
-			}
+		query, err := memoryQueryFromRequest(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
+		items, err := store.Recall(r.Context(), bank, query)
+		if err != nil {
+			writeMemoryStoreError(w, err)
+			return
+		}
+		if items == nil {
+			items = []contracts.MemoryItem{}
+		}
+		w.Header().Set("Content-Type", "application/json")
 		if items == nil {
 			items = []contracts.MemoryItem{}
 		}
@@ -252,9 +264,14 @@ func memoryBankRouter(store contracts.MemoryStore) http.HandlerFunc {
 
 func memoryItemListHandler(store contracts.MemoryStore, bank string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		items, err := store.Recall(r.Context(), bank, contracts.MemoryQuery{Limit: 20})
+		query, err := memoryQueryFromRequest(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		items, err := store.Recall(r.Context(), bank, query)
+		if err != nil {
+			writeMemoryStoreError(w, err)
 			return
 		}
 		if items == nil {
@@ -278,9 +295,13 @@ func memoryItemCreateHandler(store contracts.MemoryStore, bank string) http.Hand
 		if item.TS.IsZero() {
 			item.TS = time.Now().UTC()
 		}
+		if err := contracts.ValidateMemoryItem(item); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		id, err := store.Retain(r.Context(), bank, item)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeMemoryStoreError(w, err)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -322,4 +343,88 @@ func memoryItemGetHandler(store contracts.MemoryStore, bank, id string) http.Han
 // buildMemoryStore helper — context with timeout
 func newTimeoutCtx(secs int) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Duration(secs)*time.Second)
+}
+
+func memoryQueryFromRequest(r *http.Request) (contracts.MemoryQuery, error) {
+	query := contracts.MemoryQuery{
+		Q:      strings.TrimSpace(firstNonEmpty(r.URL.Query().Get("q"), r.URL.Query().Get("query"))),
+		Symbol: strings.TrimSpace(r.URL.Query().Get("symbol")),
+		Types:  splitQueryValues(r, "types", "type"),
+		Tags:   contracts.NormalizeMemoryTags(splitQueryValues(r, "tags", "tag")),
+		Limit:  20,
+	}
+
+	if rawLimit := strings.TrimSpace(r.URL.Query().Get("limit")); rawLimit != "" {
+		limit, err := strconv.Atoi(rawLimit)
+		if err != nil {
+			return contracts.MemoryQuery{}, fmt.Errorf("limit must be an integer")
+		}
+		query.Limit = limit
+	}
+
+	if from, err := parseOptionalTime(firstNonEmpty(r.URL.Query().Get("from"), r.URL.Query().Get("since"))); err != nil {
+		return contracts.MemoryQuery{}, fmt.Errorf("invalid from/since timestamp")
+	} else if from != nil {
+		query.From = from
+	}
+	if to, err := parseOptionalTime(firstNonEmpty(r.URL.Query().Get("to"), r.URL.Query().Get("until"))); err != nil {
+		return contracts.MemoryQuery{}, fmt.Errorf("invalid to/until timestamp")
+	} else if to != nil {
+		query.To = to
+	}
+
+	return query, nil
+}
+
+func splitQueryValues(r *http.Request, keys ...string) []string {
+	var values []string
+	for _, key := range keys {
+		for _, raw := range r.URL.Query()[key] {
+			for _, part := range strings.Split(raw, ",") {
+				part = strings.TrimSpace(part)
+				if part != "" {
+					values = append(values, part)
+				}
+			}
+		}
+	}
+	return values
+}
+
+func parseOptionalTime(raw string) (*time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	parsed, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return nil, err
+	}
+	parsed = parsed.UTC()
+	return &parsed, nil
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func writeMemoryStoreError(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "bank is required"),
+		strings.Contains(msg, "unknown bank"),
+		strings.Contains(msg, "params.query is required"),
+		strings.Contains(msg, "memory item"):
+		status = http.StatusBadRequest
+	case strings.Contains(msg, "duplicate source reference"):
+		status = http.StatusConflict
+	}
+	http.Error(w, msg, status)
 }

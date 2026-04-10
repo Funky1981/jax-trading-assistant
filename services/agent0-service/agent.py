@@ -172,25 +172,37 @@ class Agent0:
         return None
     
     async def _fetch_memories(self, symbol: str, limit: int = 5) -> List[MemoryContext]:
-        """Fetch relevant memories from Hindsight."""
+        """Fetch relevant memories from the research runtime memory tools."""
         memories = []
         try:
-            response = await self.http_client.get(
-                f"{settings.memory_service_url}/v1/memory/search",
-                params={"query": symbol, "limit": limit},
+            response = await self.http_client.post(
+                f"{settings.memory_service_url}/tools",
+                json={
+                    "tool": "memory.recall",
+                    "input": {
+                        "bank": settings.memory_bank,
+                        "query": {
+                            "symbol": symbol,
+                            "limit": limit,
+                        },
+                    },
+                },
                 timeout=settings.api_timeout,
             )
-            if response.status_code == 200:
-                data = response.json()
-                memories_data = data.get("memories", []) if isinstance(data, dict) else data
-                for mem in memories_data or []:
-                    memories.append(MemoryContext(
-                        memory_id=mem.get("id", ""),
-                        content=mem.get("content", ""),
-                        relevance_score=mem.get("score", 0.5),
-                        source=mem.get("source", "unknown"),
-                        created_at=datetime.fromisoformat(mem.get("created_at", datetime.utcnow().isoformat())),
-                    ))
+            response.raise_for_status()
+
+            data = response.json()
+            memories_data = data.get("output", {}).get("items", []) if isinstance(data, dict) else []
+            for mem in memories_data or []:
+                created_at = mem.get("ts", datetime.utcnow().isoformat())
+                source = mem.get("source", {})
+                memories.append(MemoryContext(
+                    memory_id=mem.get("id", ""),
+                    content=mem.get("summary", ""),
+                    relevance_score=mem.get("score", 1.0),
+                    source=source.get("system", "unknown") if isinstance(source, dict) else "unknown",
+                    created_at=datetime.fromisoformat(created_at.replace("Z", "+00:00")),
+                ))
         except Exception as e:
             logger.warning(f"Failed to fetch memories for {symbol}: {e}")
         return memories

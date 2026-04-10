@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     
     # Memory service for context (ADR-0012 Phase 6: memory proxy in jax-research)
     memory_service_url: str = "http://jax-research:8091"
+    memory_bank: str = "trades"
     
     # IB Bridge for market data
     ib_bridge_url: str = "http://ib-bridge:8092"

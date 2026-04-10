@@ -149,7 +149,7 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 		runErr = err
 		return OrchestrationResult{}, err
 	}
-	observability.RecordRecall(ctx, "hindsight", "recall", err)
+	observability.RecordRecall(ctx, "memory", "recall", err)
 
 	// 2. Get strategy signals (if strategies enabled)
 	var signals []strategies.Signal

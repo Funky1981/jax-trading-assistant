@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Database, Search } from 'lucide-react';
 import { useMemoryBanks, useMemoryRecall, useMemorySearch } from '@/hooks/useMemory';
 import { CollapsiblePanel } from './CollapsiblePanel';
@@ -27,7 +27,13 @@ export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps
     selectedBank ?? '',
     {},
   );
-  const { data: searchItems, isLoading: searchLoading } = useMemorySearch(searchQuery, selectedBank ?? undefined);
+  const { data: searchItems, isLoading: searchLoading } = useMemorySearch(searchQuery, selectedBank ?? '');
+
+  useEffect(() => {
+    if (!selectedBank && banks && banks.length > 0) {
+      setSelectedBank(banks[0]);
+    }
+  }, [banks, selectedBank]);
 
   const displayItems = searchQuery.length >= 2 ? searchItems : recallData?.items;
   const isLoadingEntries = searchQuery.length >= 2 ? searchLoading : entriesLoading;

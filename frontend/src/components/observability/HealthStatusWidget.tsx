@@ -8,6 +8,16 @@ export function HealthStatusWidget() {
   const { data: apiHealth, isLoading: apiLoading } = useAPIHealth();
   const { data: memoryHealth, isLoading: memoryLoading } = useMemoryHealth();
 
+  const isHealthy = (status?: string, healthy?: boolean) => {
+    if (typeof healthy === 'boolean') {
+      return healthy;
+    }
+    if (!status) {
+      return undefined;
+    }
+    return status === 'healthy';
+  };
+
   const renderServiceStatus = (
     name: string,
     isLoading: boolean,
@@ -72,11 +82,11 @@ export function HealthStatusWidget() {
           </h2>
         </div>
         <div className="space-y-3">
-          {renderServiceStatus('JAX API', apiLoading, apiHealth?.healthy)}
+          {renderServiceStatus('JAX API', apiLoading, isHealthy(apiHealth?.status, apiHealth?.healthy))}
           {renderServiceStatus(
-            'Memory Service',
+            'Research Memory',
             memoryLoading,
-            memoryHealth?.healthy,
+            isHealthy(memoryHealth?.status, memoryHealth?.healthy),
           )}
         </div>
         {(apiHealth?.timestamp || memoryHealth?.timestamp) && (

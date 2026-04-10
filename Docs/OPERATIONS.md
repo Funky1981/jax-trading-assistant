@@ -133,7 +133,6 @@ docker compose logs -f jax-trader
 docker compose logs -f jax-research
 docker compose logs -f ib-bridge
 docker compose logs -f agent0-service
-docker compose logs -f hindsight
 ```
 
 SLO targets and alert thresholds are defined in `Docs/SLO_ALERTS.md`.

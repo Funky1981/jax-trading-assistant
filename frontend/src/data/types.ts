@@ -68,31 +68,30 @@ export interface MetricEvent {
 }
 
 export interface HealthStatus {
-  status: 'healthy' | 'unhealthy';
-  healthy: boolean;
-  timestamp: string;
+  service?: string;
+  status: 'healthy' | 'degraded' | 'unhealthy' | string;
+  healthy?: boolean;
+  timestamp?: string;
   version?: string;
-  uptime?: number;
+  uptime?: string;
 }
 
 export interface MemoryItem {
   id?: string;
-  key: string;
-  bank: string;
   ts: string;
-  timestamp: string;
   type: string;
-  symbol: string;
+  symbol?: string;
   summary: string;
-  tags: string[];
-  data: Record<string, unknown>;
+  tags?: string[];
+  data?: Record<string, unknown>;
   source?: {
     system: string;
-    agent?: string;
+    ref?: string;
   };
 }
 
 export interface MemoryQuery {
+  q?: string;
   symbol?: string;
   tags?: string[];
   type?: string;
@@ -102,7 +101,7 @@ export interface MemoryQuery {
 
 export interface MemoryRecallResponse {
   items: MemoryItem[];
-  total: number;
+  total?: number;
 }
 
 export interface StrategySignal {
