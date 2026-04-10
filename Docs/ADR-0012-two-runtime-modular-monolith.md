@@ -7,7 +7,9 @@
 
 ## Context
 
-The current repository is already a single monorepo, but runtime behavior is effectively distributed over multiple HTTP services in `docker-compose.yml` (`jax-api`, `jax-orchestrator`, `jax-signal-generator`, `jax-market`, `jax-trade-executor`, `jax-memory`, `agent0-service`, `ib-bridge`, `hindsight`).
+Historical note (2026-04-10): this ADR captured the migration proposal and baseline inventory before the runtime consolidation was completed. The current repo now has `cmd/trader` and `cmd/research`, and the standalone Hindsight vendored tree is no longer part of the active workspace. References below describe the original migration context unless explicitly updated.
+
+At approval time, runtime behavior was effectively distributed over multiple HTTP services in `docker-compose.yml` (`jax-api`, `jax-orchestrator`, `jax-signal-generator`, `jax-market`, `jax-trade-executor`, `jax-memory`, `agent0-service`, `ib-bridge`).
 
 ## Current State Assessment (Feb 2026)
 
@@ -33,16 +35,15 @@ Evidence of service-level boundaries and network calls:
 - `jax-orchestrator` creates HTTP clients to Memory, Agent0, and Dexter in `services/jax-orchestrator/cmd/jax-orchestrator-http/clients.go`.
 - UTCP provider config mixes local and HTTP transports in `config/providers.json`.
 
-The repo also vendors external systems:
+The repo also vendored external systems during the baseline review:
 
-- `services/hindsight/` is vendored at a pinned upstream commit (see `services/hindsight/UPSTREAM.md`).
 - `dexter/` is a full standalone repo with its own runtime/dependencies.
 - `Agent0/` is present as a vendored reference, while integration happens via `services/agent0-service` and `libs/agent0` HTTP client.
 
 We want to keep a single codebase but split into two deployables:
 
 1. Trader runtime (deterministic, risk-controlled, audit-first, minimal dependencies).
-2. Research runtime (experimental, backtests, Hindsight, Dexter/Agent0 loops).
+2. Research runtime (experimental, backtests, memory analysis, Dexter/Agent0 loops).
 
 Promotion boundary is artifact-based, not code-based.
 
@@ -101,7 +102,6 @@ internal/
     polygon/
     alpaca/
     postgres/
-    hindsight/
     dexter/
     agent0/
 
@@ -119,7 +119,6 @@ internal/
    - `internal/app/research`
    - `internal/integrations/dexter`
    - `internal/integrations/agent0`
-   - `internal/integrations/hindsight`
 3. `cmd/research` can import both deterministic modules and research integrations.
 4. Enforce rules with:
    - package placement (`internal/research/...` unreachable by trader wiring), and
@@ -297,9 +296,7 @@ Keep separate:
 
 1. **IB Gateway / IB Bridge**
    - External broker protocol/session constraints; failure isolation and lifecycle concerns differ from core trading engine.
-2. **Hindsight** (at least initially)
-   - Vendored but operationally independent memory system with different stack and release cadence.
-3. **Postgres / observability stack**
+2. **Postgres / observability stack**
    - Infrastructure components, not app modules.
 
 Can be collapsed in-process:
@@ -352,7 +349,7 @@ flowchart LR
   subgraph Research_Runtime[Research Runtime /cmd/research]
     R1[Backtest + Discovery]
     R2[Dexter/Agent0 Loops]
-    R3[Hindsight Analysis]
+    R3[Memory Analysis]
     R4[Artifact Builder]
   end
 

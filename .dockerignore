@@ -1,7 +1,6 @@
 # Third-party / vendored repos not needed for Go builds
 Agent0/
 dexter/
-services/hindsight/
 
 # Frontend build artefacts
 frontend/node_modules/

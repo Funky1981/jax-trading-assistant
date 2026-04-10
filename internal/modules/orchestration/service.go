@@ -303,7 +303,7 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 		Summary: strings.TrimSpace(plan.Summary),
 		Tags:    contracts.NormalizeMemoryTags(append(req.Tags, req.Strategy)),
 		Data:    retainedData,
-		Source:  &contracts.MemorySource{System: "jax-orchestrator"},
+		Source:  &contracts.MemorySource{System: "jax-research"},
 	}
 	if redacted, ok := observability.RedactValue(retained.Data).(map[string]any); ok {
 		retained.Data = redacted

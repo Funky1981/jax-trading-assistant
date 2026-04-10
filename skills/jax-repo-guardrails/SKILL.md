@@ -21,7 +21,7 @@ Map a request to the correct area of this monorepo and avoid cross-boundary mist
 
 ## Hard Boundaries
 
-- Treat `services/hindsight/`, `Agent0/`, and `dexter/` as vendored/external unless explicitly requested.
+- Treat `Agent0/` and `dexter/` as vendored/external unless explicitly requested.
 - Avoid editing generated/build artifacts such as `*.exe`, lockfiles, and archived docs unless task-specific.
 - Preserve architecture intent documented in `Docs/ARCHITECTURE.md` and ADRs in `Docs/`.
 

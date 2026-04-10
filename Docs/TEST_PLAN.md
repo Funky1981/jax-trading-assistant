@@ -73,12 +73,12 @@ Expected: 16 tests pass (12 integration + 4 unit).
 Requires Docker and `jax-research` running. Full Retain/Recall/Reflect cycle requires `OPENAI_API_KEY`.
 
 ```powershell
-# Without OpenAI key (migration + banks + list-items checks only):
-.\scripts\smoke-memory-migration.ps1 -SkipEmbed
+# Without OpenAI key (schema + banks + list-items checks only):
+.\scripts\smoke-memory.ps1 -SkipEmbed
 
 # With OpenAI key (full retain/recall/reflect/search cycle):
 $env:OPENAI_API_KEY = "<key>"
-.\scripts\smoke-memory-migration.ps1
+.\scripts\smoke-memory.ps1
 ```
 
 ## Coverage Matrix

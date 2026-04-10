@@ -6,18 +6,18 @@ Use this set in order, stopping when root cause is found.
 
 - `docker compose ps -a`
 - `docker compose logs --tail=100`
-- `docker compose logs -f jax-api`
-- `docker compose logs -f jax-memory`
+- `docker compose logs -f jax-trader`
+- `docker compose logs -f jax-research`
 
 ## Health Checks
 
 - `curl http://localhost:8081/health`
-- `curl http://localhost:8090/health`
-- `curl http://localhost:8888/`
+- `curl http://localhost:8091/health`
+- `curl http://localhost:8092/health`
 
 ## Port Checks (Windows)
 
-- `netstat -an | Select-String "8081|8090|8888|5173|5432"`
+- `netstat -an | Select-String "8081|8091|8092|5173|5433"`
 
 ## Local Script Entry
 

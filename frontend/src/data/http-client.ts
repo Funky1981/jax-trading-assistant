@@ -107,7 +107,7 @@ export function createHttpClient(options: HttpClientOptions = {}) {
 // In dev mode, use empty string so requests resolve against the Vite dev server
 // and get proxied to localhost:8081 — avoids CORS from absolute URL.
 export const apiClient = createHttpClient({
-  baseUrl: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:8081'),
+  baseUrl: import.meta.env.VITE_JAX_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:8081'),
   timeoutMs: 30_000,
 });
 

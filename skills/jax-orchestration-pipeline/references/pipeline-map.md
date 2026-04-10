@@ -4,19 +4,19 @@ Use this map to trace calls and configs.
 
 ## Primary Entry Points
 
-- `services/jax-api/internal/infra/http/handlers_orchestration_v1.go`
-- `services/jax-signal-generator/internal/orchestrator/client.go`
+- `cmd/trader/frontend_api.go`
+- `cmd/research/main.go`
 
 ## Orchestrator Wiring
 
-- `services/jax-orchestrator/cmd/jax-orchestrator-http/clients.go`
-- `services/jax-orchestrator/internal/...` application logic
+- `internal/modules/orchestration/service.go`
+- `internal/modules/orchestration/adapters.go`
+- `libs/utcp/`
 
 ## Related Config
 
 - `config/providers.json`
 - `config/jax-core.json`
-- `config/jax-signal-generator.json`
 
 ## Common Failure Modes
 
@@ -26,6 +26,6 @@ Use this map to trace calls and configs.
 
 ## Fast Diagnostic Commands
 
-- `docker compose logs -f jax-api`
-- `docker compose logs -f jax-orchestrator`
-- `docker compose logs -f jax-signal-generator`
+- `docker compose logs -f jax-trader`
+- `docker compose logs -f jax-research`
+- `go test ./internal/modules/orchestration/...`

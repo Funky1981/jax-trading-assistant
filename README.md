@@ -25,7 +25,6 @@ External boundaries kept as separate processes:
 - **jax-trader frontend API** (8081) — REST API served from `cmd/trader`
 - **ib-bridge** (8092) — Interactive Brokers Gateway adapter
 - **agent0-service** (8093) — LLM/AI agent
-- **hindsight** (8888) — memory and recall backend used by `cmd/research`
 
 ## Quick Start
 
@@ -34,7 +33,7 @@ docker compose up -d
 ```
 
 Services start automatically. Trader and research runtimes load approved strategy artifacts from Postgres on startup.
-The compose topology does not start standalone `jax-api`, `jax-memory`, or `jax-market` containers. Those seams now live inside `cmd/trader` and `cmd/research`.
+The compose topology does not start standalone orchestration or legacy market-data containers. Those seams now live inside `cmd/trader` and `cmd/research`.
 
 See `Docs/QUICKSTART.md` for full setup including IB Gateway connection.
 
@@ -43,7 +42,6 @@ See `Docs/QUICKSTART.md` for full setup including IB Gateway connection.
 Use local `.env` files (or shell env vars) for secrets and keep them untracked.
 
 - `dexter/.env` for Dexter API keys
-- `services/hindsight/.env` for Hindsight API keys
 - `JWT_SECRET` to enable authenticated frontend API mode
 - Assistant harness controls:
   - `JAX_RUNTIME_MODE`

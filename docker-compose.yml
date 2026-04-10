@@ -1,7 +1,7 @@
 name: jax-trading-assistant
 
 services:
-  # jax-memory removed (ADR-0012 Phase 6) — memory proxy now in cmd/research.
+  # Memory now lives behind the research runtime on port 8091.
   # agent0-service sends MEMORY_SERVICE_URL → jax-research:8091
 
   ib-bridge:
@@ -144,8 +144,8 @@ services:
       retries: 3
 
   # ── ADR-0012 Phase 5: Jax Research Runtime (cmd/research) ───────────────────
-  # Orchestration pipeline: Agent0 + memory + Dexter. Same API as jax-orchestrator.
-  # Replaces: jax-orchestrator (8091)
+  # Research runtime: orchestration pipeline plus memory and Dexter integration.
+  # Preserves the prior orchestration API on port 8091.
   jax-research:
     build:
       context: .
@@ -186,7 +186,7 @@ services:
       args:
         # Baked in at build time so the SPA knows where to reach the API
         # in development. In Docker the nginx proxy handles /api/ internally.
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8081}
+        VITE_JAX_API_URL: ${VITE_JAX_API_URL:-http://localhost:8081}
     ports:
       - "3000:80"
     depends_on:

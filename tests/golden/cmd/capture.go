@@ -163,7 +163,7 @@ func captureOrchestration(baseURL, outputDir string) error {
 		log.Println("⚠️  Orchestration endpoint not available, creating empty snapshot")
 		snapshot := Snapshot{
 			Captured: time.Now(),
-			Service:  "jax-orchestrator",
+			Service:  "jax-research",
 			Endpoint: "/api/v1/orchestration/runs",
 			Method:   "GET",
 			Response: []interface{}{},
@@ -187,7 +187,7 @@ func captureOrchestration(baseURL, outputDir string) error {
 
 	snapshot := Snapshot{
 		Captured: time.Now(),
-		Service:  "jax-orchestrator",
+		Service:  "jax-research",
 		Endpoint: "/api/v1/orchestration/runs",
 		Method:   "GET",
 		Response: runs,

@@ -12,7 +12,7 @@
 // Environment variables:
 //
 //	TEST_TRADER_URL    – override trader API base URL (default: http://localhost:8081)
-//	TEST_DATABASE_URL  – override PG DSN (default: postgresql://jax:jax@localhost:5432/jax)
+//	TEST_DATABASE_URL  – override PG DSN (default: postgresql://jax:jax@localhost:5433/jax)
 //	SKIP_INTEGRATION   – set to "1" to skip all integration tests
 package integration
 
@@ -31,7 +31,7 @@ import (
 
 const (
 	defaultTraderURL = "http://localhost:8081"
-	defaultDBURL     = "postgresql://jax:jax@localhost:5432/jax"
+	defaultDBURL     = "postgresql://jax:jax@localhost:5433/jax"
 )
 
 func traderURL() string {

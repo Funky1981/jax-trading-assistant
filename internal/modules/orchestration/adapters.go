@@ -18,7 +18,7 @@ type MemoryClientAdapter struct {
 
 // NewMemoryClient creates a new memory client adapter
 func NewMemoryClient(memoryServiceURL string) (*MemoryClientAdapter, error) {
-	// Create UTCP client configured for HTTP transport to jax-memory service
+	// Create a UTCP client configured for the research runtime memory surface.
 	cfg := utcp.ProvidersConfig{
 		Providers: []utcp.ProviderConfig{
 			{

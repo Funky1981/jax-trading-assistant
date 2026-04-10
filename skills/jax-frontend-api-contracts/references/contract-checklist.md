@@ -10,8 +10,8 @@ Run this checklist whenever API-facing behavior changes.
 
 ## Validation Commands
 
-- `cd frontend && npm run test -- --runInBand`
-- `cd frontend && npm run test -- src/tests/integration/...`
+- `cd frontend && npm run test`
+- `cd frontend && npm run test -- src/data/...`
 - `cd frontend && npm run e2e` for route-level behavior changes
 
 ## Breakage Signals

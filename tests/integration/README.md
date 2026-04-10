@@ -2,7 +2,7 @@
 
 ## Overview
 
-Integration tests verify end-to-end functionality with real services running in Docker Compose.
+Integration tests verify end-to-end functionality with the active trader/research runtime stack running in Docker Compose.
 
 ## Running Integration Tests
 
@@ -35,33 +35,16 @@ SKIP_INTEGRATION=1 go test ./tests/integration/...
 ```
 
 ### Services Under Test
-- **Hindsight** (`localhost:8888`): Memory backend
-- **jax-memory** (`localhost:8090`): Memory facade API
-- **jax-api** (`localhost:8081`): Trading API
+- **jax-trader** (`localhost:8081`): Trading/frontend API
+- **jax-research** (`localhost:8091`): Orchestration and memory tools
+- **Postgres** (`localhost:5433`): Persistence
 
 ## Test Coverage
 
-### TestMemoryIntegration
-- Verifies memory service is accessible
-- Checks health endpoint responds
-
-### TestMemoryRetainRecall
-- Tests end-to-end memory storage and retrieval
-- Validates bank/item structure
-
-### TestOrchestrationPipeline
-- Validates full 7-stage orchestration flow:
-  1. Recall memories
-  2. Strategy signals
-  3. Dexter research
-  4. Agent0 planning
-  5. Tool execution
-  6. Memory retention
-  7. Result returned
-
-### TestDockerComposeStack
-- Checks all services are running and healthy
-- Validates connectivity between services
+### TestSignalLifecycle
+- Inserts a signal directly into Postgres
+- Verifies list/detail approval flow through `jax-trader`
+- Confirms final status in the database
 
 ## CI/CD Integration
 
@@ -90,8 +73,8 @@ SKIP_INTEGRATION=1 go test ./tests/integration/...
 
 # Check logs
 
-docker compose logs hindsight
-docker compose logs jax-memory
+docker compose logs jax-trader
+docker compose logs jax-research
 
 # Restart services
 
@@ -117,15 +100,13 @@ sleep 15
 
 # Check what's using ports
 
-netstat -an | findstr "8888 8090 8081"
+netstat -an | findstr "8081 8091 5433"
 
 # Stop conflicting services or change ports in docker-compose.yml
 
 ```
 
 ## Future Enhancements
+- [ ] Runtime smoke coverage for memory and orchestration tools
 - [ ] Database migration tests
-- [ ] Performance/load testing
 - [ ] Failure scenario testing
-- [ ] Multi-service transaction tests
-- [ ] Kafka/event stream tests

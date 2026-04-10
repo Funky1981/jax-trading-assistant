@@ -1,6 +1,6 @@
 {
   "captured": "2026-02-13T00:00:00Z",
-  "service": "jax-orchestrator",
+  "service": "jax-research",
   "endpoint": "/api/v1/orchestration/runs",
   "method": "GET",
   "response": {

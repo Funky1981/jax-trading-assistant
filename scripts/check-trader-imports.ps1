@@ -21,7 +21,6 @@ Write-Host "Scanning: cmd/trader" -ForegroundColor Gray
 $denied = @(
     "jax-trading-assistant/libs/dexter",
     "jax-trading-assistant/libs/agent0",
-    "jax-trading-assistant/services/hindsight",
     "jax-trading-assistant/internal/modules/orchestration"  # orchestration is research-domain
 )
 

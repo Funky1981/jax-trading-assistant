@@ -52,10 +52,6 @@ export const ENDPOINTS = {
   RISK_METRICS: '/api/risk/metrics',
   METRICS_EVENTS: '/api/metrics/events',
   
-  // Memory endpoints
-  MEMORY_BANKS: '/api/memory/banks',
-  MEMORY_SEARCH: '/api/memory/search',
-  
   // Agent0 endpoints
   AI_SUGGEST: '/suggest',
   AI_CONFIG: '/config',

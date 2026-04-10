@@ -9,8 +9,8 @@ RUN npm ci --prefer-offline
 
 # Copy source and build
 COPY . .
-ARG VITE_API_URL=http://localhost:8081
-ENV VITE_API_URL=${VITE_API_URL}
+ARG VITE_JAX_API_URL=http://localhost:8081
+ENV VITE_JAX_API_URL=${VITE_JAX_API_URL}
 RUN npm run build
 
 # Runtime stage — nginx to serve static assets

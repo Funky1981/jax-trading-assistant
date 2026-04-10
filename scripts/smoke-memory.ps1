@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
-# scripts/smoke-memory-migration.ps1
+# scripts/smoke-memory.ps1
 #
-# Smoke test for the memory_items migration and end-to-end retain/recall cycle.
+# Smoke test for the memory API and end-to-end retain/recall cycle.
 #
 # Prerequisites:
 #   - Postgres with pgvector running (docker compose up postgres, or external)
@@ -9,15 +9,14 @@
 #   - OPENAI_API_KEY set (or SKIP_EMBED=1 to bypass embedding)
 #
 # Usage:
-#   .\scripts\smoke-memory-migration.ps1
-#   .\scripts\smoke-memory-migration.ps1 -DatabaseURL "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"
-#   .\scripts\smoke-memory-migration.ps1 -SkipEmbed
+#   .\scripts\smoke-memory.ps1
+#   .\scripts\smoke-memory.ps1 -DatabaseURL "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"
+#   .\scripts\smoke-memory.ps1 -SkipEmbed
 
 param(
     [string]$DatabaseURL = "",
     [string]$ResearchURL = "",
-    [switch]$SkipEmbed,
-    [switch]$MigrateOnly
+    [switch]$SkipEmbed
 )
 
 if (-not $DatabaseURL) { $DatabaseURL = if ($env:TEST_DATABASE_URL) { $env:TEST_DATABASE_URL } else { "postgresql://jax:jax@localhost:5433/jax?sslmode=disable" } }
@@ -59,8 +58,6 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
     Write-Host "${Yellow}  docker not found -- skipping automatic migration.${Reset}"
     Write-Host "  Run manually: docker run --rm --network host -v `"\${PWD}/db/postgres/migrations:/migrations`" migrate/migrate -path=/migrations -database '$DatabaseURL' up"
 }
-
-if ($MigrateOnly) { Write-OK "Migration-only mode complete."; exit 0 }
 
 # 2. Verify memory_items table exists ---------------------------------------
 Write-Step "Checking memory_items table exists"

@@ -1,9 +1,8 @@
 // cmd/research is the Research Runtime for jax-trading-assistant.
-// It replaces the jax-orchestrator microservice, hosting the orchestration
-// pipeline (Agent0, memory, Dexter) in-process.
+// It hosts the orchestration pipeline (Agent0, memory, Dexter) in-process.
 //
-// Exposes the same HTTP API surface as jax-orchestrator so that jax-api
-// requires no changes — only the compose service name and URL env var change.
+// It preserves the prior orchestration HTTP surface so the frontend API layer
+// does not need a contract change.
 //
 // ADR-0012 Phase 5: one of the two authoritative runtimes.
 // import rule: cmd/research MAY import libs/agent0, libs/dexter, libs/utcp.
@@ -172,7 +171,7 @@ func main() {
 }
 
 // registerRoutes wires up all HTTP routes.
-// Routes match the jax-orchestrator API surface exactly for backwards compatibility.
+// Routes preserve the prior orchestration API surface for compatibility.
 func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, btDeps *backtestDeps, runner *researchRunnerManager) {
 	mux.HandleFunc("/health", handleHealth(db))
 	mux.HandleFunc("/orchestrate", handleOrchestrate(svc, db))
@@ -206,7 +205,7 @@ func handleHealth(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// OrchestrateRequest is the inbound payload — matches jax-orchestrator's schema.
+// OrchestrateRequest is the inbound payload for the orchestration endpoint.
 type OrchestrateRequest struct {
 	SignalID    string `json:"signal_id"`
 	Symbol      string `json:"symbol"`

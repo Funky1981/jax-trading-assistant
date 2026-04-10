@@ -1,6 +1,6 @@
 ---
 name: jax-orchestration-pipeline
-description: End-to-end orchestration guidance for flows spanning `jax-api`, `jax-orchestrator`, `jax-signal-generator`, memory/UTCP provider wiring, and service-to-service contracts. Use when debugging orchestration issues, modifying orchestration behavior, or tracing request/response paths across services.
+description: End-to-end orchestration guidance for flows spanning `cmd/trader`, `cmd/research`, shared orchestration modules, memory/UTCP provider wiring, and service contracts. Use when debugging orchestration issues, modifying orchestration behavior, or tracing request/response paths across runtime boundaries.
 ---
 
 # Jax Orchestration Pipeline

@@ -71,7 +71,6 @@ if (-not $env:DATABASE_URL) {
 $requiredImages = @(
     "jax-trading-assistant-jax-trader",
     "jax-trading-assistant-jax-research",
-    "jax-trading-assistant-hindsight",
     "jax-trading-assistant-ib-bridge",
     "jax-trading-assistant-agent0-service"
 )
@@ -123,7 +122,7 @@ Write-Host "  Migrations applied." -ForegroundColor Green
 
 # Start other services
 Write-Host "  Starting core services..." -ForegroundColor Gray
-docker compose up -d --no-build jax-trader jax-research ib-bridge agent0-service hindsight prometheus grafana 2>$null
+docker compose up -d --no-build jax-trader jax-research ib-bridge agent0-service prometheus grafana 2>$null
 
 # Wait for services to be ready
 Write-Host "`nWaiting for services to be ready..." -ForegroundColor Yellow
