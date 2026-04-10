@@ -45,6 +45,11 @@ Supporting ADR planning and historical rollout notes are archived in:
 - `Docs/archive/diagrams/` - non-canonical legacy diagrams
 - `Docs/archive/docs-original/` - preserved snapshot of older documentation set
 
+Archive guidance:
+- Archived docs are preserved for traceability, not as operating runbooks.
+- Expect historical references to removed services such as `hindsight`, `jax-memory`, older bank names like `trade_decisions`, and pre-consolidation paths.
+- When archive content conflicts with current runtime behavior, follow the active docs in this directory.
+
 Recently archived from the top level:
 - `Docs/archive/programs/codex/jax-assistant-approval-continuation-v1/`
 - `Docs/archive/programs/codex/jax-paper-trading-finish-plan-phased-v1/`

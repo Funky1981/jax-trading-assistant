@@ -1,5 +1,7 @@
 # 🚀 Jax Trading Assistant - Current Status
 
+> Historical snapshot: this file reflects a pre-consolidation service layout and is archived for traceability only. Service names such as `jax-memory`, `hindsight`, and `jax-orchestrator` do not describe the current production path.
+
 **Last Updated:** February 6, 2026, 9:20 AM  
 **Overall Progress:** Phases 1-2 Complete ✅ | Phase 3 Ready 🚀  
 **Critical Fixes Applied:** All Phase 2 errors resolved ✅

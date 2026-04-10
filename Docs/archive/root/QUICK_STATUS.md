@@ -1,5 +1,7 @@
 # Jax Trading Assistant - Quick Reference: What Works vs What's Missing
 
+> Historical snapshot: this file documents an older runtime topology and archived gap analysis. References to `jax-memory`, `hindsight`, `jax-orchestrator`, and legacy API expectations are not current operating guidance.
+
 ## System Status at a Glance
 
 ```

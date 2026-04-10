@@ -1,5 +1,7 @@
 ﻿# Quick Start Guide
 
+> Historical snapshot: this quick start predates the Trader/Research runtime consolidation. Commands for `hindsight`, `jax-memory`, and `jax-orchestrator` are preserved for reference only and should not be used as the current setup path.
+
 ## Prerequisites
 
 - **Docker Desktop** (for backend services)

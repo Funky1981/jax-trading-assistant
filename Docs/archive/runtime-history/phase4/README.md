@@ -2,6 +2,10 @@
 
 This folder groups the Phase 4 references so they are easy to find during the current work cycle.
 
+Historical note:
+- These notes describe the pre-consolidation service layout and may mention `jax-orchestrator`, `jax-memory`, and Hindsight-era memory behavior.
+- Treat them as implementation history, not current operating guidance.
+
 ## Primary Reference
 
 - **Roadmap (Phase 4 section)**: `Docs/archive/root/AUTONOMOUS_TRADING_ROADMAP.md`

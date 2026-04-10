@@ -23,6 +23,7 @@ Map a request to the correct area of this monorepo and avoid cross-boundary mist
 
 - Treat `Agent0/` and `dexter/` as vendored/external unless explicitly requested.
 - Avoid editing generated/build artifacts such as `*.exe`, lockfiles, and archived docs unless task-specific.
+- When archive-doc edits are requested, preserve the historical content and prefer adding clear "historical/non-canonical" context notes over rewriting the archived record.
 - Preserve architecture intent documented in `Docs/ARCHITECTURE.md` and ADRs in `Docs/`.
 
 ## Validation Selection

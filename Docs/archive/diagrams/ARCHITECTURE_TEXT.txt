@@ -225,3 +225,6 @@ services/hindsight/
   Generated: February 12, 2026
   Repository: jax-trading-assistant
 ═══════════════════════════════════════════════════════════════════════════════
+HISTORICAL NOTE:
+This diagram text snapshot reflects an older multi-service topology.
+References to jax-memory, hindsight, and jax-orchestrator are archival and not the current runtime layout.

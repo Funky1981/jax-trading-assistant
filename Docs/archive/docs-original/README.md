@@ -1,5 +1,10 @@
 # Documentation Index
 
+Historical note:
+- This folder is a preserved snapshot of the older docs layout.
+- References here to `hindsight`, `jax-memory`, `services/jax-orchestrator/`, or older frontend/backend setup steps are historical and are not the current runtime model.
+- Use `Docs/README.md` for the live documentation set.
+
 This directory contains the canonical documentation for the Jax Trading Assistant.
 
 ## Start Here

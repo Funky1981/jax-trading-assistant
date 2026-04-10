@@ -2,6 +2,11 @@
 
 Archive structure is organized by purpose so historical material is easy to find.
 
+Historical note:
+- Files in this archive are preserved snapshots of previous plans, status reports, UAT evidence, and legacy runtime documentation.
+- Many archived files intentionally reference retired services and paths such as `hindsight`, `jax-memory`, `services/hindsight/`, `services/jax-orchestrator/`, and legacy memory banks like `trade_decisions`.
+- Do not use archive files as current operational runbooks unless an active doc explicitly points you here for background.
+
 ## Folders
 
 - `adrs/supporting/`
