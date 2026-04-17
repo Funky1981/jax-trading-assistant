@@ -65,7 +65,7 @@ func (s *Store) Ping(ctx context.Context) error {
 func (s *Store) Retain(ctx context.Context, bank string, item contracts.MemoryItem) (contracts.MemoryID, error) {
 	bank = strings.TrimSpace(bank)
 	if !validBanks[bank] {
-		return "", fmt.Errorf("retain: unknown bank %q", bank)
+		return "", fmt.Errorf("retain: %w: %q", ErrUnknownBank, bank)
 	}
 	item.Tags = contracts.NormalizeMemoryTags(item.Tags)
 	if item.TS.IsZero() {
@@ -73,7 +73,7 @@ func (s *Store) Retain(ctx context.Context, bank string, item contracts.MemoryIt
 	}
 	item.Summary = strings.TrimSpace(item.Summary)
 	if err := contracts.ValidateMemoryItem(item); err != nil {
-		return "", fmt.Errorf("retain: %w", err)
+		return "", fmt.Errorf("retain: %w: %v", ErrInvalidMemoryItem, err)
 	}
 
 	// Embedding is generated synchronously; any failure aborts the write.
@@ -127,7 +127,7 @@ func (s *Store) Retain(ctx context.Context, bank string, item contracts.MemoryIt
 	)
 	if err != nil {
 		if isDuplicateMemorySource(err) {
-			return "", fmt.Errorf("retain: duplicate source reference for bank %q", bank)
+			return "", fmt.Errorf("retain: %w for bank %q", ErrDuplicateSourceReference, bank)
 		}
 		return "", fmt.Errorf("retain: insert: %w", err)
 	}
@@ -142,10 +142,10 @@ func (s *Store) Retain(ctx context.Context, bank string, item contracts.MemoryIt
 func (s *Store) Recall(ctx context.Context, bank string, query contracts.MemoryQuery) ([]contracts.MemoryItem, error) {
 	bank = strings.TrimSpace(bank)
 	if bank == "" {
-		return nil, fmt.Errorf("recall: bank is required")
+		return nil, fmt.Errorf("recall: %w", ErrBankRequired)
 	}
 	if !validBanks[bank] {
-		return nil, fmt.Errorf("recall: unknown bank %q", bank)
+		return nil, fmt.Errorf("recall: %w: %q", ErrUnknownBank, bank)
 	}
 
 	limit := clampLimit(query.Limit)
@@ -208,13 +208,13 @@ func (s *Store) vectorRecall(ctx context.Context, bank string, query contracts.M
 func (s *Store) Reflect(ctx context.Context, bank string, params contracts.ReflectionParams) ([]contracts.MemoryItem, error) {
 	bank = strings.TrimSpace(bank)
 	if bank == "" {
-		return nil, fmt.Errorf("reflect: bank is required")
+		return nil, fmt.Errorf("reflect: %w", ErrBankRequired)
 	}
 	if !validBanks[bank] {
-		return nil, fmt.Errorf("reflect: unknown bank %q", bank)
+		return nil, fmt.Errorf("reflect: %w: %q", ErrUnknownBank, bank)
 	}
 	if strings.TrimSpace(params.Query) == "" {
-		return nil, fmt.Errorf("reflect: params.query is required")
+		return nil, fmt.Errorf("reflect: %w", ErrReflectQueryRequired)
 	}
 
 	query := contracts.MemoryQuery{
@@ -281,11 +281,14 @@ func (s *Store) Reflect(ctx context.Context, bank string, params contracts.Refle
 func (s *Store) GetByID(ctx context.Context, bank, id string) (contracts.MemoryItem, error) {
 	bank = strings.TrimSpace(bank)
 	id = strings.TrimSpace(id)
-	if bank == "" || id == "" {
-		return contracts.MemoryItem{}, fmt.Errorf("GetByID: bank and id are required")
+	if bank == "" {
+		return contracts.MemoryItem{}, fmt.Errorf("GetByID: %w", ErrBankRequired)
+	}
+	if id == "" {
+		return contracts.MemoryItem{}, fmt.Errorf("GetByID: %w", ErrMemoryItemIDRequired)
 	}
 	if !validBanks[bank] {
-		return contracts.MemoryItem{}, fmt.Errorf("GetByID: unknown bank %q", bank)
+		return contracts.MemoryItem{}, fmt.Errorf("GetByID: %w: %q", ErrUnknownBank, bank)
 	}
 
 	const q = `
@@ -299,7 +302,7 @@ func (s *Store) GetByID(ctx context.Context, bank, id string) (contracts.MemoryI
 		return contracts.MemoryItem{}, err
 	}
 	if len(items) == 0 {
-		return contracts.MemoryItem{}, fmt.Errorf("GetByID: not found: %s/%s", bank, id)
+		return contracts.MemoryItem{}, fmt.Errorf("GetByID: %w: %s/%s", ErrMemoryItemNotFound, bank, id)
 	}
 	return items[0], nil
 }

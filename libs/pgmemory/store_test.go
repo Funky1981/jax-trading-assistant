@@ -2,6 +2,8 @@ package pgmemory
 
 import (
 	"testing"
+
+	"jax-trading-assistant/libs/contracts"
 )
 
 // ── pure-function unit tests ──────────────────────────────────────────────────
@@ -65,6 +67,23 @@ func TestBanks(t *testing.T) {
 }
 
 func TestUniqueTypes(t *testing.T) {
-	// uniqueTypes is exercised indirectly by Reflect; integration tests cover it.
-	_ = uniqueTypes
+	items := []contracts.MemoryItem{
+		{Type: "signal"},
+		{Type: "signal"},
+		{Type: "reflection"},
+		{Type: "note"},
+		{Type: "reflection"},
+	}
+
+	got := uniqueTypes(items)
+	want := []string{"signal", "reflection", "note"}
+
+	if len(got) != len(want) {
+		t.Fatalf("uniqueTypes len = %d, want %d (%v)", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("uniqueTypes[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
 }

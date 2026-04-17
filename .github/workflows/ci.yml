@@ -32,8 +32,21 @@ jobs:
           test -z "$(gofmt -l .)"
       - name: runtime policy tests
         run: go test ./libs/runtimepolicy ./libs/utcp
+      - name: go test (memory stack)
+        run: go test ./cmd/db-migrate/... ./cmd/research/... ./libs/pgmemory/...
       - name: go test
         run: go test ./...
+
+  agent0:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: verify agent0
+        shell: pwsh
+        run: ./scripts/bootstrap-agent0.ps1 -Python python
 
   frontend:
     runs-on: ubuntu-latest

@@ -7,7 +7,6 @@ Supports multiple LLM providers:
 - Anthropic (paid, cloud)
 """
 
-import os
 from enum import Enum
 from pydantic_settings import BaseSettings
 from typing import Optional
@@ -44,7 +43,7 @@ class Settings(BaseSettings):
     
     # Memory service for context (ADR-0012 Phase 6: memory proxy in jax-research)
     memory_service_url: str = "http://jax-research:8091"
-    memory_bank: str = "trades"
+    memory_bank: Optional[str] = None
     
     # IB Bridge for market data
     ib_bridge_url: str = "http://ib-bridge:8092"

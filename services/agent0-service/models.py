@@ -2,7 +2,7 @@
 Pydantic models for Agent0 service API.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
@@ -72,7 +72,7 @@ class MarketContext(BaseModel):
     volume: Optional[int] = None
     high: Optional[float] = None
     low: Optional[float] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class MemoryContext(BaseModel):
@@ -120,10 +120,11 @@ class SuggestionResponse(BaseModel):
     # Metadata
     model_used: str
     provider: str
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     request_id: str
     
     class Config:
+        protected_namespaces = ()
         json_schema_extra = {
             "example": {
                 "symbol": "AAPL",
@@ -159,19 +160,25 @@ class ChatResponse(BaseModel):
     message: str
     conversation_id: str
     suggestions: List[SuggestionResponse] = Field(default_factory=list)
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str
+    ready: bool
+    readiness: str
     service: str
     version: str
     llm_provider: str
     llm_model: str
     llm_cost: str
     memory_connected: bool
+    memory_status: str
+    memory_error: Optional[str] = None
     ib_connected: bool
+    ib_status: str
+    ib_error: Optional[str] = None
     uptime_seconds: float
 
 

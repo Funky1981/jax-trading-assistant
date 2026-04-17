@@ -23,12 +23,14 @@ replace jax-trading-assistant/libs/strategies => ./libs/strategies
 replace jax-trading-assistant/libs/ingest => ./libs/ingest
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	golang.org/x/crypto v0.45.0
 	jax-trading-assistant/libs/backtest v0.0.0
 	jax-trading-assistant/libs/contracts v0.0.0
+	jax-trading-assistant/libs/database v0.0.0
 	jax-trading-assistant/libs/marketdata v0.0.0
 	jax-trading-assistant/libs/observability v0.0.0
 	jax-trading-assistant/libs/strategies v0.0.0

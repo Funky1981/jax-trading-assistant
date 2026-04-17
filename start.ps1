@@ -66,9 +66,13 @@ Write-Host "`nStarting backend services (Docker)..." -ForegroundColor Cyan
 if (-not $env:DATABASE_URL) {
     $env:DATABASE_URL = "postgresql://jax:jax@postgres:5432/jax"
 }
+if (-not $env:EMBEDDING_PROVIDER) {
+    $env:EMBEDDING_PROVIDER = "local"
+}
 
 # Build service images: auto when any required image is missing, or when JAX_BUILD=true.
 $requiredImages = @(
+    "jax-trading-assistant-db-migrate",
     "jax-trading-assistant-jax-trader",
     "jax-trading-assistant-jax-research",
     "jax-trading-assistant-ib-bridge",
@@ -112,11 +116,13 @@ for ($i = 1; $i -le 10; $i++) {
     Start-Sleep -Seconds 2
 }
 
-# Run any pending migrations (idempotent — safe to run every start).
+# Run any pending migrations via the db-migrate service so schema_migrations stays correct.
 Write-Host "  Applying database migrations..." -ForegroundColor Gray
-$migrationFiles = Get-ChildItem "db\postgres\migrations\*.up.sql" | Sort-Object Name
-foreach ($f in $migrationFiles) {
-    Get-Content $f.FullName | docker exec -i jax-trading-assistant-postgres-1 psql -U jax -d jax -q 2>$null
+docker compose rm -f db-migrate 2>$null | Out-Null
+docker compose up --no-build db-migrate 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  Migration step failed." -ForegroundColor Red
+    exit $LASTEXITCODE
 }
 Write-Host "  Migrations applied." -ForegroundColor Green
 
@@ -141,17 +147,17 @@ for ($i = 1; $i -le 6; $i++) {
     } catch { }
 
     try {
-        $researchResponse = Invoke-WebRequest -Uri "http://localhost:8091/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
+        $researchResponse = Invoke-WebRequest -Uri "http://localhost:8091/ready" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
         if ($researchResponse.StatusCode -eq 200) { $researchHealthy = $true }
     } catch { }
 
     try {
-        $bridgeResponse = Invoke-WebRequest -Uri "http://localhost:8092/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
+        $bridgeResponse = Invoke-WebRequest -Uri "http://localhost:8092/ready" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
         if ($bridgeResponse.StatusCode -eq 200) { $bridgeHealthy = $true }
     } catch { }
 
     try {
-        $agentResponse = Invoke-WebRequest -Uri "http://localhost:8093/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
+        $agentResponse = Invoke-WebRequest -Uri "http://localhost:8093/ready" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
         if ($agentResponse.StatusCode -eq 200) { $agentHealthy = $true }
     } catch { }
 

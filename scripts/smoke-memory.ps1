@@ -6,7 +6,8 @@
 # Prerequisites:
 #   - Postgres with pgvector running (docker compose up postgres, or external)
 #   - golang-migrate CLI installed (https://github.com/golang-migrate/migrate)
-#   - OPENAI_API_KEY set (or SKIP_EMBED=1 to bypass embedding)
+#   - EMBEDDING_PROVIDER=local (default) for zero-cost local embeddings
+#   - or EMBEDDING_PROVIDER=openai with OPENAI_API_KEY set
 #
 # Usage:
 #   .\scripts\smoke-memory.ps1
@@ -16,14 +17,23 @@
 param(
     [string]$DatabaseURL = "",
     [string]$ResearchURL = "",
+    [ValidateSet("local", "openai")]
+    [string]$EmbeddingProvider = "",
     [switch]$SkipEmbed
 )
 
 if (-not $DatabaseURL) { $DatabaseURL = if ($env:TEST_DATABASE_URL) { $env:TEST_DATABASE_URL } else { "postgresql://jax:jax@localhost:5433/jax?sslmode=disable" } }
 if (-not $ResearchURL)  { $ResearchURL  = if ($env:RESEARCH_URL)       { $env:RESEARCH_URL }       else { "http://localhost:8091" } }
+if (-not $EmbeddingProvider) {
+    $EmbeddingProvider = if ($env:EMBEDDING_PROVIDER) { $env:EMBEDDING_PROVIDER.ToLowerInvariant() } else { "local" }
+}
+$RequiredSchemaVersion = if ($env:MEMORY_REQUIRED_SCHEMA_VERSION) { [int]$env:MEMORY_REQUIRED_SCHEMA_VERSION } else { 21 }
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+if ($PSVersionTable.PSVersion.Major -ge 7) {
+    $PSNativeCommandUseErrorActionPreference = $true
+}
 
 $Green  = "`e[32m"
 $Red    = "`e[31m"
@@ -59,10 +69,16 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
     Write-Host "  Run manually: docker run --rm --network host -v `"\${PWD}/db/postgres/migrations:/migrations`" migrate/migrate -path=/migrations -database '$DatabaseURL' up"
 }
 
-# 2. Verify memory_items table exists ---------------------------------------
-Write-Step "Checking memory_items table exists"
+# 2. Verify migration state and memory schema --------------------------------
+Write-Step "Checking migration state and memory schema"
 
 if (Get-Command psql -ErrorAction SilentlyContinue) {
+    $migrationVersion = psql $DatabaseURL -t -c "SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1;" 2>&1
+    if ($migrationVersion -notmatch "\b$RequiredSchemaVersion\b") {
+        Write-Fail "expected schema_migrations version $RequiredSchemaVersion, got: $migrationVersion"
+    }
+    Write-OK "schema_migrations version = $RequiredSchemaVersion"
+
     $tableCheck = psql $DatabaseURL -t -c "SELECT to_regclass('public.memory_items');" 2>&1
     if ($tableCheck -notmatch "memory_items") {
         Write-Fail "memory_items table not found -- run migration first"
@@ -80,18 +96,28 @@ if (Get-Command psql -ErrorAction SilentlyContinue) {
 }
 
 # 3. Health check against jax-research -------------------------------------
-Write-Step "Checking jax-research health at $ResearchURL"
+Write-Step "Checking jax-research readiness at $ResearchURL"
 
 try {
-    $health = Invoke-RestMethod "$ResearchURL/health" -TimeoutSec 5
+    $health = Invoke-RestMethod "$ResearchURL/ready" -TimeoutSec 5
     if ($health.status -ne "healthy") {
         Write-Fail "jax-research health = $($health.status)"
     }
-    Write-OK "jax-research healthy (v$($health.version))"
+    if (-not $health.memory_ready) {
+        Write-Fail "jax-research memory_ready = false ($($health.memory_error))"
+    }
+    if ($health.embedding_provider -and $health.embedding_provider -ne $EmbeddingProvider) {
+        Write-Fail "jax-research embedding_provider = $($health.embedding_provider), expected $EmbeddingProvider"
+    }
+    Write-OK "jax-research ready (v$($health.version))"
 } catch {
     Write-Host "${Yellow}  jax-research not reachable -- skipping HTTP smoke tests.${Reset}"
     Write-Host "  Start with: docker compose up jax-research"
     exit 0
+}
+
+if ($EmbeddingProvider -eq "openai" -and -not $env:OPENAI_API_KEY) {
+    Write-Fail "openai smoke requested but OPENAI_API_KEY is not set"
 }
 
 # 4. List banks -------------------------------------------------------------
@@ -129,8 +155,11 @@ try {
     if (-not $retainedID) { Write-Fail "retain response missing id: $($retainResp | ConvertTo-Json)" }
     Write-OK "retained id=$retainedID"
 } catch {
+    if ($EmbeddingProvider -eq "openai" -and -not $env:OPENAI_API_KEY) {
+        Write-Fail "retain failed in openai mode because OPENAI_API_KEY is not set"
+    }
     if ($SkipEmbed) {
-        Write-Host "${Yellow}  retain failed (embedding may require OPENAI_API_KEY) -- skipped.${Reset}"
+        Write-Host "${Yellow}  retain failed -- skipped because -SkipEmbed was passed.${Reset}"
         exit 0
     }
     Write-Fail "retain failed: $_"

@@ -11,7 +11,7 @@ import json
 import uuid
 import httpx
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 
 from config import settings, LLMProvider, get_llm_info
@@ -19,13 +19,8 @@ from models import (
     SuggestionRequest, SuggestionResponse, 
     Action, SignalStrength, TimeHorizon,
     MarketContext, MemoryContext, RiskAssessment,
-    ChatRequest, ChatResponse
 )
-from prompts import SYSTEM_PROMPT, SUGGESTION_PROMPT, NO_DATA_RESPONSE
-from data_providers import (
-    fetch_historical_bars, compute_technicals, format_technicals,
-    fetch_news, format_news,
-)
+from prompts import SYSTEM_PROMPT, SUGGESTION_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +30,141 @@ class Agent0:
     
     def __init__(self):
         self.http_client = httpx.AsyncClient(timeout=settings.llm_timeout)
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(timezone.utc)
         
     async def close(self):
         """Cleanup resources."""
         await self.http_client.aclose()
+
+    def _load_data_providers(self) -> Dict[str, Any]:
+        """Import heavy market-data helpers lazily so memory-only paths stay runnable."""
+        from data_providers import (
+            fetch_historical_bars,
+            compute_technicals,
+            format_technicals,
+            fetch_news,
+            format_news,
+        )
+
+        return {
+            "fetch_historical_bars": fetch_historical_bars,
+            "compute_technicals": compute_technicals,
+            "format_technicals": format_technicals,
+            "fetch_news": fetch_news,
+            "format_news": format_news,
+        }
+
+    def _memory_service_base_url(self) -> str:
+        """Normalize the configured memory service URL to the runtime base URL."""
+        base_url = (settings.memory_service_url or "").strip().rstrip("/")
+        if not base_url:
+            raise ValueError("AGENT0_MEMORY_SERVICE_URL must be set for memory recall")
+        if base_url.endswith("/tools"):
+            return base_url[: -len("/tools")]
+        return base_url
+
+    def _parse_memory_timestamp(self, raw_value: Any) -> datetime:
+        """Parse memory timestamps defensively and normalize to UTC."""
+        fallback = datetime.now(timezone.utc)
+        if isinstance(raw_value, datetime):
+            if raw_value.tzinfo is None:
+                return raw_value.replace(tzinfo=timezone.utc)
+            return raw_value.astimezone(timezone.utc)
+        if not raw_value:
+            return fallback
+        if not isinstance(raw_value, str):
+            logger.warning("Unexpected memory timestamp type: %s", type(raw_value).__name__)
+            return fallback
+        try:
+            parsed = datetime.fromisoformat(raw_value.replace("Z", "+00:00"))
+        except ValueError:
+            logger.warning("Invalid memory timestamp %r", raw_value)
+            return fallback
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    async def _probe_memory_service(self) -> Dict[str, Any]:
+        """Check whether the configured memory runtime is reachable and ready."""
+        bank = (settings.memory_bank or "").strip()
+        if not bank:
+            return {
+                "connected": False,
+                "status": "misconfigured",
+                "error": "AGENT0_MEMORY_BANK not configured",
+            }
+        try:
+            base_url = self._memory_service_base_url()
+            resp = await self.http_client.get(f"{base_url}/ready", timeout=5)
+            if resp.status_code == 200:
+                try:
+                    payload = resp.json()
+                except ValueError:
+                    payload = {}
+                if isinstance(payload, dict):
+                    reported_status = str(payload.get("status", "")).strip().lower()
+                    if payload.get("memory_ready") is False:
+                        return {
+                            "connected": False,
+                            "status": "not_ready",
+                            "error": f"memory runtime reported memory_ready={payload.get('memory_ready')}",
+                        }
+                    if reported_status and reported_status not in {"healthy", "ready", "ok"}:
+                        return {
+                            "connected": False,
+                            "status": "not_ready",
+                            "error": f"memory runtime reported status={payload.get('status')}",
+                        }
+                return {"connected": True, "status": "ready", "error": None}
+            detail = resp.text.strip() or f"HTTP {resp.status_code}"
+            return {
+                "connected": False,
+                "status": "not_ready",
+                "error": f"memory runtime returned {resp.status_code}: {detail[:200]}",
+            }
+        except Exception as exc:
+            return {
+                "connected": False,
+                "status": "unreachable",
+                "error": str(exc),
+            }
+
+    async def _probe_ib_bridge(self) -> Dict[str, Any]:
+        """Check whether IB Bridge is reachable."""
+        try:
+            resp = await self.http_client.get(f"{settings.ib_bridge_url}/health", timeout=5)
+            if resp.status_code == 200:
+                try:
+                    payload = resp.json()
+                except ValueError:
+                    payload = {}
+                if isinstance(payload, dict):
+                    reported_status = str(payload.get("status", "")).strip().lower()
+                    if payload.get("connected") is False:
+                        return {
+                            "connected": False,
+                            "status": "not_ready",
+                            "error": "ib-bridge reported connected=false",
+                        }
+                    if reported_status and reported_status not in {"healthy", "ready", "ok"}:
+                        return {
+                            "connected": False,
+                            "status": "not_ready",
+                            "error": f"ib-bridge reported status={payload.get('status')}",
+                        }
+                return {"connected": True, "status": "ready", "error": None}
+            detail = resp.text.strip() or f"HTTP {resp.status_code}"
+            return {
+                "connected": False,
+                "status": "not_ready",
+                "error": f"ib-bridge returned {resp.status_code}: {detail[:200]}",
+            }
+        except Exception as exc:
+            return {
+                "connected": False,
+                "status": "unreachable",
+                "error": str(exc),
+            }
     
     # ==================== LLM Providers ====================
     
@@ -173,14 +298,19 @@ class Agent0:
     
     async def _fetch_memories(self, symbol: str, limit: int = 5) -> List[MemoryContext]:
         """Fetch relevant memories from the research runtime memory tools."""
+        bank = (settings.memory_bank or "").strip()
+        if not bank:
+            raise ValueError("AGENT0_MEMORY_BANK must be set for memory recall")
+
         memories = []
         try:
+            base_url = self._memory_service_base_url()
             response = await self.http_client.post(
-                f"{settings.memory_service_url}/tools",
+                f"{base_url}/tools",
                 json={
                     "tool": "memory.recall",
                     "input": {
-                        "bank": settings.memory_bank,
+                        "bank": bank,
                         "query": {
                             "symbol": symbol,
                             "limit": limit,
@@ -194,17 +324,18 @@ class Agent0:
             data = response.json()
             memories_data = data.get("output", {}).get("items", []) if isinstance(data, dict) else []
             for mem in memories_data or []:
-                created_at = mem.get("ts", datetime.utcnow().isoformat())
+                created_at = self._parse_memory_timestamp(mem.get("ts"))
                 source = mem.get("source", {})
                 memories.append(MemoryContext(
                     memory_id=mem.get("id", ""),
                     content=mem.get("summary", ""),
                     relevance_score=mem.get("score", 1.0),
                     source=source.get("system", "unknown") if isinstance(source, dict) else "unknown",
-                    created_at=datetime.fromisoformat(created_at.replace("Z", "+00:00")),
+                    created_at=created_at,
                 ))
         except Exception as e:
-            logger.warning(f"Failed to fetch memories for {symbol}: {e}")
+            logger.error(f"Failed to fetch memories for {symbol}: {e}")
+            raise RuntimeError(f"memory fetch failed for {symbol}: {e}") from e
         return memories
     
     # ==================== Core Methods ====================
@@ -213,6 +344,7 @@ class Agent0:
         """Generate a trading suggestion for a symbol."""
         request_id = str(uuid.uuid4())[:8]
         symbol = request.symbol.upper()
+        data_providers = self._load_data_providers()
         
         # Fetch context (all run concurrently)
         import asyncio
@@ -223,8 +355,8 @@ class Agent0:
 
         market_task = self._fetch_market_data(symbol) if request.include_market_data else asyncio.sleep(0, result=None)
         memory_task = self._fetch_memories(symbol) if request.include_memory else asyncio.sleep(0, result=[])
-        bars_task = fetch_historical_bars(settings.ib_bridge_url, symbol, limit=60, timeframe="1D")
-        news_task = fetch_news(symbol, limit=5)
+        bars_task = data_providers["fetch_historical_bars"](settings.ib_bridge_url, symbol, limit=60, timeframe="1D")
+        news_task = data_providers["fetch_news"](symbol, limit=5)
 
         market_data, memories, bars, news_items = await asyncio.gather(
             market_task, memory_task, bars_task, news_task,
@@ -235,8 +367,8 @@ class Agent0:
             logger.warning(f"Market data fetch failed: {market_data}")
             market_data = None
         if isinstance(memories, Exception):
-            logger.warning(f"Memory fetch failed: {memories}")
-            memories = []
+            logger.error(f"Memory fetch failed: {memories}")
+            raise RuntimeError(f"memory fetch failed: {memories}") from memories
         if isinstance(bars, Exception):
             logger.warning(f"Historical bars fetch failed: {bars}")
             bars = []
@@ -245,11 +377,11 @@ class Agent0:
             news_items = []
 
         if bars:
-            tech = compute_technicals(bars)
+            tech = data_providers["compute_technicals"](bars)
             current_price = market_data.price if market_data else None
-            technicals_str = format_technicals(tech, current_price)
+            technicals_str = data_providers["format_technicals"](tech, current_price)
         if news_items:
-            news_str = format_news(news_items)
+            news_str = data_providers["format_news"](news_items)
 
         # Build prompt
         market_data_str = "No market data available"
@@ -361,40 +493,27 @@ Low: {fmt_float(market_data.low, '$')}
     
     async def check_health(self) -> Dict[str, Any]:
         """Check service health and connectivity."""
-        # Check memory service
-        memory_ok = False
-        try:
-            resp = await self.http_client.get(
-                f"{settings.memory_service_url}/health",
-                timeout=5,
-            )
-            memory_ok = resp.status_code == 200
-        except:
-            pass
-        
-        # Check IB Bridge
-        ib_ok = False
-        try:
-            resp = await self.http_client.get(
-                f"{settings.ib_bridge_url}/health",
-                timeout=5,
-            )
-            ib_ok = resp.status_code == 200
-        except:
-            pass
-        
+        memory_probe = await self._probe_memory_service()
+        ib_probe = await self._probe_ib_bridge()
         llm_info = get_llm_info()
-        uptime = (datetime.utcnow() - self.start_time).total_seconds()
+        uptime = (datetime.now(timezone.utc) - self.start_time).total_seconds()
+        ready = memory_probe["connected"] and ib_probe["connected"]
         
         return {
-            "status": "healthy",
+            "status": "healthy" if ready else "degraded",
+            "ready": ready,
+            "readiness": "ready" if ready else "not_ready",
             "service": settings.service_name,
             "version": "1.0.0",
             "llm_provider": llm_info["provider"],
             "llm_model": llm_info["model"],
             "llm_cost": llm_info["cost"],
-            "memory_connected": memory_ok,
-            "ib_connected": ib_ok,
+            "memory_connected": memory_probe["connected"],
+            "memory_status": memory_probe["status"],
+            "memory_error": memory_probe["error"],
+            "ib_connected": ib_probe["connected"],
+            "ib_status": ib_probe["status"],
+            "ib_error": ib_probe["error"],
             "uptime_seconds": uptime,
         }
 
