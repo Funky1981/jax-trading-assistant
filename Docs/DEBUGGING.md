@@ -26,6 +26,7 @@ curl http://localhost:8093/health
 ```powershell
 docker compose build --no-cache
 docker compose up -d postgres
+docker compose up db-migrate
 docker compose up -d ib-bridge agent0-service
 docker compose up -d jax-research jax-trader
 docker compose ps
@@ -66,7 +67,12 @@ Recommended local env:
 - `JAX_ORCHESTRATOR_URL=http://localhost:8091`
 - `IB_BRIDGE_URL=http://localhost:8092`
 - `AGENT0_SERVICE_URL=http://localhost:8093`
-- `OPENAI_API_KEY=...` (required for memory embeddings)
+- `EMBEDDING_PROVIDER=local` (required in `JAX_RUNTIME_MODE=dev|test`; default local dev/test memory embeddings)
+- `OPENAI_API_KEY=...` (required only when `EMBEDDING_PROVIDER=openai`)
+
+Research runtime readiness:
+- `GET http://localhost:8091/health` reports service status plus memory readiness fields.
+- `GET http://localhost:8091/ready` is the compose/runtime readiness probe for the memory path.
 
 ## Full Reset
 

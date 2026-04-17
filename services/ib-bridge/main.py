@@ -7,8 +7,9 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import uvicorn
 
 from ib_client import IBClient
@@ -102,6 +103,15 @@ async def health_check():
         market_data_mode=ib_client.market_data_mode() if ib_client else "unknown",
         paper_trading=settings.PAPER_TRADING,
     )
+
+
+@app.get("/ready", response_model=HealthResponse)
+async def readiness_check():
+    """Readiness probe for connectivity-dependent workflows."""
+    health = await health_check()
+    if health.connected:
+        return health
+    return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=health.model_dump())
 
 
 @app.post("/connect", response_model=ConnectResponse)

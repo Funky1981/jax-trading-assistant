@@ -6,10 +6,13 @@ AI-powered trading suggestions with multi-provider LLM support.
 
 ### Option 1: Use Ollama (FREE, Local)
 
-1. Install Ollama from https://ollama.ai
-2. Start Ollama: `ollama serve`
-3. Pull a model: `ollama pull llama3.2`
-4. Run the service: `python main.py`
+Use Python `3.11` locally to match the shipped container image.
+
+1. Run the bootstrap script from repo root: `pwsh ./scripts/bootstrap-agent0.ps1`
+2. Install Ollama from https://ollama.ai
+3. Start Ollama: `ollama serve`
+4. Pull a model: `ollama pull llama3.2`
+5. Run the service from `services/agent0-service`: `.venv\Scripts\python main.py`
 
 ### Option 2: Use OpenAI (Paid)
 
@@ -30,6 +33,9 @@ docker run -p 8093:8093 -e AGENT0_OLLAMA_HOST=http://host.docker.internal:11434 
 
 ### GET /health
 Check service health and LLM configuration.
+
+### GET /ready
+Check whether the dependencies required for live suggestions are ready.
 
 ### POST /suggest
 Get a trading suggestion.
@@ -69,7 +75,7 @@ curl -X POST http://localhost:8093/suggest \
 | AGENT0_OPENAI_MODEL | gpt-4o-mini | OpenAI model |
 | AGENT0_ANTHROPIC_API_KEY | - | Anthropic API key (required if using anthropic) |
 | AGENT0_MEMORY_SERVICE_URL | http://jax-research:8091 | Research runtime base URL for memory tools |
-| AGENT0_MEMORY_BANK | trades | Bank used for memory recall |
+| AGENT0_MEMORY_BANK | - | Bank used for memory recall (required; no implicit default) |
 | AGENT0_IB_BRIDGE_URL | http://ib-bridge:8092 | IB Bridge URL |
 
 ## Cost Comparison

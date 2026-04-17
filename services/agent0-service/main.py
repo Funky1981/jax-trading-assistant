@@ -8,7 +8,7 @@ Optional: OpenAI, Anthropic (paid)
 
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -16,7 +16,7 @@ from config import settings, get_llm_info
 from models import (
     SuggestionRequest, SuggestionResponse,
     ChatRequest, ChatResponse,
-    HealthResponse, ErrorResponse,
+    HealthResponse,
     PlanRequest, PlanResponse,
 )
 from agent import agent0
@@ -95,6 +95,15 @@ async def health_check():
     return await agent0.check_health()
 
 
+@app.get("/ready", response_model=HealthResponse, tags=["Health"])
+async def readiness_check():
+    """Readiness probe for dependencies required by live suggestion requests."""
+    health = await agent0.check_health()
+    if health["ready"]:
+        return health
+    return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=health)
+
+
 @app.get("/", tags=["Health"])
 async def root():
     """Service info and quick start guide."""
@@ -107,6 +116,7 @@ async def root():
             "suggest": "POST /suggest - Get trading suggestion",
             "chat": "POST /chat - Conversational AI",
             "health": "GET /health - Service health",
+            "ready": "GET /ready - Dependency readiness",
         },
         "quick_start": {
             "1": "POST /suggest with {'symbol': 'AAPL'}",

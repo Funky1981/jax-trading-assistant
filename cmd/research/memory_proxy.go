@@ -1,4 +1,4 @@
-// memory_proxy.go — Part of cmd/research (package main).
+// memory_proxy.go is part of cmd/research (package main).
 // Registers the memory HTTP endpoints on the research runtime's mux
 // (ADR-0012 Phase 6). Backing store is Postgres + pgvector with no
 // in-memory fallback.
@@ -6,8 +6,8 @@
 // Endpoints exposed:
 //
 //	POST /tools                                  UTCP dispatcher (retain/recall/reflect)
-//	GET  /v1/memory/banks                        list banks → string[]
-//	GET  /v1/memory/search                       search → { items }
+//	GET  /v1/memory/banks                        list banks -> string[]
+//	GET  /v1/memory/search                       search -> { items }
 //	GET  /v1/memory/banks/{bank}/items           list items in bank
 //	POST /v1/memory/banks/{bank}/items           create item in bank
 //	GET  /v1/memory/banks/{bank}/items/{id}      get item by id
@@ -17,6 +17,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -33,22 +34,25 @@ import (
 // The DB connection is required; the service fails to start if it is nil.
 // Embedding configuration is read from the environment:
 //
-//	OPENAI_API_KEY   – required for embedding generation
-//	OPENAI_BASE_URL  – optional custom API root (Azure OpenAI, local proxy)
-//	EMBEDDING_MODEL  – optional embedding model (default: text-embedding-3-small)
-func buildMemoryStore(db *sql.DB) (*pgmemory.Store, error) {
-	cfg := pgmemory.OpenAIEmbedderConfig{
-		APIKey:  os.Getenv("OPENAI_API_KEY"),
-		BaseURL: os.Getenv("OPENAI_BASE_URL"),
-		Model:   os.Getenv("EMBEDDING_MODEL"),
+//	EMBEDDING_PROVIDER - required mode selector: local or openai
+//	OPENAI_API_KEY     - required only for openai mode
+//	OPENAI_BASE_URL    - optional custom API root (Azure OpenAI, local proxy)
+//	EMBEDDING_MODEL    - optional embedding model (default: text-embedding-3-small)
+func buildMemoryStore(db *sql.DB) (*pgmemory.Store, pgmemory.EmbeddingProviderName, error) {
+	cfg := pgmemory.EmbedderConfig{
+		Provider: pgmemory.NormalizeProvider(os.Getenv("EMBEDDING_PROVIDER")),
+		APIKey:   os.Getenv("OPENAI_API_KEY"),
+		BaseURL:  os.Getenv("OPENAI_BASE_URL"),
+		Model:    os.Getenv("EMBEDDING_MODEL"),
 	}
-	if err := pgmemory.ValidateOpenAIEmbedderConfig(cfg); err != nil {
-		return nil, err
+	embedder, err := pgmemory.NewEmbedder(cfg)
+	if err != nil {
+		return nil, "", err
 	}
-	embedder := pgmemory.NewOpenAIEmbedder(cfg)
+
 	store := pgmemory.New(db, embedder)
-	log.Println("memory store → postgres (pgvector)")
-	return store, nil
+	log.Printf("memory store -> postgres (pgvector), embedding provider=%s", cfg.Provider)
+	return store, cfg.Provider, nil
 }
 
 // registerMemoryRoutes adds memory endpoints to mux.
@@ -56,7 +60,7 @@ func registerMemoryRoutes(mux *http.ServeMux, store contracts.MemoryStore) {
 	mux.HandleFunc("/tools", memoryToolHandler(store))
 	mux.HandleFunc("/v1/memory/banks", memoryBanksHandler())
 	mux.HandleFunc("/v1/memory/search", memorySearchHandler(store))
-	// Item CRUD — prefix-matched, method dispatch inside the router.
+	// Item CRUD - prefix-matched, method dispatch inside the router.
 	mux.HandleFunc("/v1/memory/banks/", memoryBankRouter(store))
 	log.Println("memory proxy routes registered: /tools /v1/memory/banks /v1/memory/search /v1/memory/banks/{bank}/items")
 }
@@ -109,7 +113,7 @@ func memoryToolHandler(store contracts.MemoryStore) http.HandlerFunc {
 			log.Printf("memory.retain bank=%s type=%s", in.Bank, in.Item.Type)
 			id, err := store.Retain(r.Context(), in.Bank, in.Item)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				writeMemoryStoreError(w, err)
 				return
 			}
 			out = contracts.MemoryRetainResponse{ID: id}
@@ -128,10 +132,10 @@ func memoryToolHandler(store contracts.MemoryStore) http.HandlerFunc {
 			log.Printf("memory.recall bank=%s q=%s", in.Bank, in.Query.Q)
 			items, err := store.Recall(r.Context(), in.Bank, in.Query)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				writeMemoryStoreError(w, err)
 				return
 			}
-			out = contracts.MemoryRecallResponse{Items: items}
+			out = contracts.MemoryRecallResponse{Items: normalizeMemoryItems(items)}
 
 		case "memory.reflect":
 			var in contracts.MemoryReflectRequest
@@ -150,10 +154,10 @@ func memoryToolHandler(store contracts.MemoryStore) http.HandlerFunc {
 			log.Printf("memory.reflect bank=%s window_days=%d", in.Bank, in.Params.WindowDays)
 			items, err := store.Reflect(r.Context(), in.Bank, in.Params)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				writeMemoryStoreError(w, err)
 				return
 			}
-			out = contracts.MemoryReflectResponse{Items: items}
+			out = contracts.MemoryReflectResponse{Items: normalizeMemoryItems(items)}
 
 		default:
 			http.Error(w, "unknown tool", http.StatusBadRequest)
@@ -201,15 +205,8 @@ func memorySearchHandler(store contracts.MemoryStore) http.HandlerFunc {
 			writeMemoryStoreError(w, err)
 			return
 		}
-		if items == nil {
-			items = []contracts.MemoryItem{}
-		}
 		w.Header().Set("Content-Type", "application/json")
-		if items == nil {
-			items = []contracts.MemoryItem{}
-		}
-
-		if err := json.NewEncoder(w).Encode(contracts.MemoryRecallResponse{Items: items}); err != nil {
+		if err := json.NewEncoder(w).Encode(contracts.MemoryRecallResponse{Items: normalizeMemoryItems(items)}); err != nil {
 			http.Error(w, "failed to encode search results", http.StatusInternalServerError)
 		}
 	}
@@ -264,6 +261,10 @@ func memoryBankRouter(store contracts.MemoryStore) http.HandlerFunc {
 
 func memoryItemListHandler(store contracts.MemoryStore, bank string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if store == nil {
+			http.Error(w, "memory store not configured", http.StatusServiceUnavailable)
+			return
+		}
 		query, err := memoryQueryFromRequest(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -274,11 +275,8 @@ func memoryItemListHandler(store contracts.MemoryStore, bank string) http.Handle
 			writeMemoryStoreError(w, err)
 			return
 		}
-		if items == nil {
-			items = []contracts.MemoryItem{}
-		}
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(contracts.MemoryRecallResponse{Items: items}); err != nil {
+		if err := json.NewEncoder(w).Encode(contracts.MemoryRecallResponse{Items: normalizeMemoryItems(items)}); err != nil {
 			log.Printf("memoryItemListHandler encode: %v", err)
 		}
 	}
@@ -286,6 +284,10 @@ func memoryItemListHandler(store contracts.MemoryStore, bank string) http.Handle
 
 func memoryItemCreateHandler(store contracts.MemoryStore, bank string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if store == nil {
+			http.Error(w, "memory store not configured", http.StatusServiceUnavailable)
+			return
+		}
 		var item contracts.MemoryItem
 		if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
@@ -319,6 +321,10 @@ type getByIDer interface {
 
 func memoryItemGetHandler(store contracts.MemoryStore, bank, id string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if store == nil {
+			http.Error(w, "memory store not configured", http.StatusServiceUnavailable)
+			return
+		}
 		gs, ok := store.(getByIDer)
 		if !ok {
 			http.Error(w, "not implemented", http.StatusNotImplemented)
@@ -326,11 +332,11 @@ func memoryItemGetHandler(store contracts.MemoryStore, bank, id string) http.Han
 		}
 		item, err := gs.GetByID(r.Context(), bank, id)
 		if err != nil {
-			if strings.Contains(err.Error(), "not found") {
+			if errors.Is(err, pgmemory.ErrMemoryItemNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeMemoryStoreError(w, err)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -340,9 +346,12 @@ func memoryItemGetHandler(store contracts.MemoryStore, bank, id string) http.Han
 	}
 }
 
-// buildMemoryStore helper — context with timeout
-func newTimeoutCtx(secs int) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), time.Duration(secs)*time.Second)
+// normalizeMemoryItems keeps JSON responses stable by emitting [] instead of null.
+func normalizeMemoryItems(items []contracts.MemoryItem) []contracts.MemoryItem {
+	if items == nil {
+		return []contracts.MemoryItem{}
+	}
+	return items
 }
 
 func memoryQueryFromRequest(r *http.Request) (contracts.MemoryQuery, error) {
@@ -416,15 +425,17 @@ func firstNonEmpty(values ...string) string {
 
 func writeMemoryStoreError(w http.ResponseWriter, err error) {
 	status := http.StatusInternalServerError
-	msg := err.Error()
 	switch {
-	case strings.Contains(msg, "bank is required"),
-		strings.Contains(msg, "unknown bank"),
-		strings.Contains(msg, "params.query is required"),
-		strings.Contains(msg, "memory item"):
+	case errors.Is(err, pgmemory.ErrBankRequired),
+		errors.Is(err, pgmemory.ErrUnknownBank),
+		errors.Is(err, pgmemory.ErrInvalidMemoryItem),
+		errors.Is(err, pgmemory.ErrReflectQueryRequired),
+		errors.Is(err, pgmemory.ErrMemoryItemIDRequired):
 		status = http.StatusBadRequest
-	case strings.Contains(msg, "duplicate source reference"):
+	case errors.Is(err, pgmemory.ErrDuplicateSourceReference):
 		status = http.StatusConflict
+	case errors.Is(err, pgmemory.ErrMemoryItemNotFound):
+		status = http.StatusNotFound
 	}
-	http.Error(w, msg, status)
+	http.Error(w, err.Error(), status)
 }

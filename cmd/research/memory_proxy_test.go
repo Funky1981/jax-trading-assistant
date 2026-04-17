@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"jax-trading-assistant/libs/contracts"
+	"jax-trading-assistant/libs/pgmemory"
 	jaxtest "jax-trading-assistant/libs/testing"
 )
 
@@ -42,6 +45,35 @@ func postTool(t *testing.T, handler http.Handler, body any) *httptest.ResponseRe
 	rw := httptest.NewRecorder()
 	handler.ServeHTTP(rw, req)
 	return rw
+}
+
+type stubMemoryStore struct {
+	retainFn  func(ctx context.Context, bank string, item contracts.MemoryItem) (contracts.MemoryID, error)
+	recallFn  func(ctx context.Context, bank string, query contracts.MemoryQuery) ([]contracts.MemoryItem, error)
+	reflectFn func(ctx context.Context, bank string, params contracts.ReflectionParams) ([]contracts.MemoryItem, error)
+}
+
+func (s stubMemoryStore) Ping(context.Context) error { return nil }
+
+func (s stubMemoryStore) Retain(ctx context.Context, bank string, item contracts.MemoryItem) (contracts.MemoryID, error) {
+	if s.retainFn == nil {
+		return "", nil
+	}
+	return s.retainFn(ctx, bank, item)
+}
+
+func (s stubMemoryStore) Recall(ctx context.Context, bank string, query contracts.MemoryQuery) ([]contracts.MemoryItem, error) {
+	if s.recallFn == nil {
+		return nil, nil
+	}
+	return s.recallFn(ctx, bank, query)
+}
+
+func (s stubMemoryStore) Reflect(ctx context.Context, bank string, params contracts.ReflectionParams) ([]contracts.MemoryItem, error) {
+	if s.reflectFn == nil {
+		return nil, nil
+	}
+	return s.reflectFn(ctx, bank, params)
 }
 
 // ── memoryToolHandler tests ───────────────────────────────────────────────────
@@ -110,6 +142,29 @@ func TestMemoryToolHandler_Retain_InvalidItem(t *testing.T) {
 	}
 }
 
+func TestMemoryToolHandler_Retain_DuplicateSourceReferenceReturnsConflict(t *testing.T) {
+	handler := memoryToolHandler(stubMemoryStore{
+		retainFn: func(context.Context, string, contracts.MemoryItem) (contracts.MemoryID, error) {
+			return "", fmt.Errorf("retain: %w", pgmemory.ErrDuplicateSourceReference)
+		},
+	})
+
+	retainInput := contracts.MemoryRetainRequest{
+		Bank: "research",
+		Item: validTestItem(),
+	}
+	inputJSON, _ := json.Marshal(retainInput)
+
+	rw := postTool(t, handler, toolRequest{
+		Tool:  "memory.retain",
+		Input: inputJSON,
+	})
+
+	if rw.Code != http.StatusConflict {
+		t.Errorf("duplicate source: status = %d; want 409; body: %s", rw.Code, rw.Body.String())
+	}
+}
+
 func TestMemoryToolHandler_Recall_Success(t *testing.T) {
 	store := newTestStore()
 	// Pre-populate a memory so recall has something to return.
@@ -131,6 +186,78 @@ func TestMemoryToolHandler_Recall_Success(t *testing.T) {
 
 	if rw.Code != http.StatusOK {
 		t.Errorf("recall status = %d; want 200; body: %s", rw.Code, rw.Body.String())
+	}
+}
+
+func TestMemoryToolHandler_Recall_InternalErrorReturnsServerError(t *testing.T) {
+	handler := memoryToolHandler(stubMemoryStore{
+		recallFn: func(context.Context, string, contracts.MemoryQuery) ([]contracts.MemoryItem, error) {
+			return nil, errors.New("database unavailable")
+		},
+	})
+
+	recallInput := contracts.MemoryRecallRequest{
+		Bank:  "research",
+		Query: contracts.MemoryQuery{Q: "AAPL signal"},
+	}
+	inputJSON, _ := json.Marshal(recallInput)
+
+	rw := postTool(t, handler, toolRequest{
+		Tool:  "memory.recall",
+		Input: inputJSON,
+	})
+
+	if rw.Code != http.StatusInternalServerError {
+		t.Errorf("recall internal error: status = %d; want 500; body: %s", rw.Code, rw.Body.String())
+	}
+}
+
+func TestMemoryToolHandler_Recall_TypedUserErrorReturnsBadRequest(t *testing.T) {
+	handler := memoryToolHandler(stubMemoryStore{
+		recallFn: func(context.Context, string, contracts.MemoryQuery) ([]contracts.MemoryItem, error) {
+			return nil, fmt.Errorf("recall: %w", pgmemory.ErrUnknownBank)
+		},
+	})
+
+	recallInput := contracts.MemoryRecallRequest{
+		Bank:  "research",
+		Query: contracts.MemoryQuery{Q: "AAPL signal"},
+	}
+	inputJSON, _ := json.Marshal(recallInput)
+
+	rw := postTool(t, handler, toolRequest{
+		Tool:  "memory.recall",
+		Input: inputJSON,
+	})
+
+	if rw.Code != http.StatusBadRequest {
+		t.Errorf("recall typed user error: status = %d; want 400; body: %s", rw.Code, rw.Body.String())
+	}
+}
+
+func TestMemoryToolHandler_Recall_NormalizesNilItemsToEmptyArray(t *testing.T) {
+	handler := memoryToolHandler(stubMemoryStore{
+		recallFn: func(context.Context, string, contracts.MemoryQuery) ([]contracts.MemoryItem, error) {
+			return nil, nil
+		},
+	})
+
+	recallInput := contracts.MemoryRecallRequest{
+		Bank:  "research",
+		Query: contracts.MemoryQuery{Q: "AAPL signal"},
+	}
+	inputJSON, _ := json.Marshal(recallInput)
+
+	rw := postTool(t, handler, toolRequest{
+		Tool:  "memory.recall",
+		Input: inputJSON,
+	})
+
+	if rw.Code != http.StatusOK {
+		t.Fatalf("recall nil items status = %d; want 200; body: %s", rw.Code, rw.Body.String())
+	}
+	if !bytes.Contains(rw.Body.Bytes(), []byte(`"items":[]`)) {
+		t.Fatalf("expected empty items array, got body: %s", rw.Body.String())
 	}
 }
 
@@ -172,6 +299,29 @@ func TestMemoryToolHandler_Reflect_Success(t *testing.T) {
 	// In-memory store returns an empty slice for reflect; 200 is still expected.
 	if rw.Code != http.StatusOK {
 		t.Errorf("reflect status = %d; want 200; body: %s", rw.Code, rw.Body.String())
+	}
+}
+
+func TestMemoryToolHandler_Reflect_InternalErrorReturnsServerError(t *testing.T) {
+	handler := memoryToolHandler(stubMemoryStore{
+		reflectFn: func(context.Context, string, contracts.ReflectionParams) ([]contracts.MemoryItem, error) {
+			return nil, errors.New("database unavailable")
+		},
+	})
+
+	reflectInput := contracts.MemoryReflectRequest{
+		Bank:   "research",
+		Params: contracts.ReflectionParams{Query: "What patterns does AAPL show?"},
+	}
+	inputJSON, _ := json.Marshal(reflectInput)
+
+	rw := postTool(t, handler, toolRequest{
+		Tool:  "memory.reflect",
+		Input: inputJSON,
+	})
+
+	if rw.Code != http.StatusInternalServerError {
+		t.Errorf("reflect internal error: status = %d; want 500; body: %s", rw.Code, rw.Body.String())
 	}
 }
 

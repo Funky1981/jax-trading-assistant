@@ -1,5 +1,4 @@
-// Package pgmemory provides an EmbeddingProvider interface and an
-// OpenAI-compatible implementation used by the pgmemory Store.
+// Package pgmemory provides embedding providers used by the pgmemory Store.
 package pgmemory
 
 import (
@@ -7,7 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -22,6 +23,21 @@ type EmbeddingProvider interface {
 
 const EmbeddingDimensions = 1536
 
+type EmbeddingProviderName string
+
+const (
+	EmbeddingProviderLocal  EmbeddingProviderName = "local"
+	EmbeddingProviderOpenAI EmbeddingProviderName = "openai"
+)
+
+// EmbedderConfig selects and configures the runtime embedding provider.
+type EmbedderConfig struct {
+	Provider EmbeddingProviderName
+	BaseURL  string
+	APIKey   string
+	Model    string
+}
+
 // OpenAIEmbedderConfig holds configuration for an OpenAI-compatible embedder.
 type OpenAIEmbedderConfig struct {
 	// BaseURL is the API root, e.g. "https://api.openai.com" or an Azure endpoint.
@@ -34,11 +50,67 @@ type OpenAIEmbedderConfig struct {
 	Model string
 }
 
+type localEmbedder struct{}
+
 type openAIEmbedder struct {
 	baseURL    string
 	apiKey     string
 	model      string
 	httpClient *http.Client
+}
+
+// NormalizeProvider resolves the configured embedding provider, defaulting to local.
+func NormalizeProvider(raw string) EmbeddingProviderName {
+	switch EmbeddingProviderName(strings.ToLower(strings.TrimSpace(raw))) {
+	case "", EmbeddingProviderLocal:
+		return EmbeddingProviderLocal
+	case EmbeddingProviderOpenAI:
+		return EmbeddingProviderOpenAI
+	default:
+		return EmbeddingProviderName(strings.ToLower(strings.TrimSpace(raw)))
+	}
+}
+
+// ValidateEmbedderConfig ensures runtime embedding configuration is valid for
+// the selected provider before the service starts accepting traffic.
+func ValidateEmbedderConfig(cfg EmbedderConfig) error {
+	switch provider := NormalizeProvider(string(cfg.Provider)); provider {
+	case EmbeddingProviderLocal:
+		return nil
+	case EmbeddingProviderOpenAI:
+		return ValidateOpenAIEmbedderConfig(OpenAIEmbedderConfig{
+			BaseURL: cfg.BaseURL,
+			APIKey:  cfg.APIKey,
+			Model:   cfg.Model,
+		})
+	default:
+		return fmt.Errorf("EMBEDDING_PROVIDER must be one of: local, openai")
+	}
+}
+
+// NewEmbedder returns an EmbeddingProvider for the selected runtime mode.
+func NewEmbedder(cfg EmbedderConfig) (EmbeddingProvider, error) {
+	if err := ValidateEmbedderConfig(cfg); err != nil {
+		return nil, err
+	}
+
+	switch NormalizeProvider(string(cfg.Provider)) {
+	case EmbeddingProviderLocal:
+		return NewLocalEmbedder(), nil
+	case EmbeddingProviderOpenAI:
+		return NewOpenAIEmbedder(OpenAIEmbedderConfig{
+			BaseURL: cfg.BaseURL,
+			APIKey:  cfg.APIKey,
+			Model:   cfg.Model,
+		}), nil
+	default:
+		return nil, fmt.Errorf("EMBEDDING_PROVIDER must be one of: local, openai")
+	}
+}
+
+// NewLocalEmbedder returns an in-process deterministic embedder for local dev/test.
+func NewLocalEmbedder() EmbeddingProvider {
+	return &localEmbedder{}
 }
 
 // NewOpenAIEmbedder returns an EmbeddingProvider backed by an OpenAI-compatible API.
@@ -57,6 +129,34 @@ func NewOpenAIEmbedder(cfg OpenAIEmbedderConfig) EmbeddingProvider {
 	}
 }
 
+func (e *localEmbedder) Embed(_ context.Context, text string) ([]float32, error) {
+	vec := make([]float32, EmbeddingDimensions)
+	tokens := tokenize(text)
+	if len(tokens) == 0 {
+		return vec, nil
+	}
+
+	for _, token := range tokens {
+		addLocalFeature(vec, token, 1.0)
+	}
+	for i := 0; i < len(tokens)-1; i++ {
+		addLocalFeature(vec, tokens[i]+"_"+tokens[i+1], 0.5)
+	}
+
+	var norm float64
+	for _, value := range vec {
+		norm += float64(value * value)
+	}
+	if norm == 0 {
+		return vec, nil
+	}
+	scale := float32(1.0 / math.Sqrt(norm))
+	for i := range vec {
+		vec[i] *= scale
+	}
+	return vec, nil
+}
+
 // ValidateOpenAIEmbedderConfig ensures runtime embedding configuration is present
 // before the service starts accepting traffic.
 func ValidateOpenAIEmbedderConfig(cfg OpenAIEmbedderConfig) error {
@@ -72,6 +172,40 @@ func ValidateOpenAIEmbedderConfig(cfg OpenAIEmbedderConfig) error {
 		return fmt.Errorf("OPENAI_BASE_URL must be a valid absolute URL")
 	}
 	return nil
+}
+
+func tokenize(text string) []string {
+	cleaned := strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z':
+			return r
+		case r >= 'A' && r <= 'Z':
+			return r + ('a' - 'A')
+		case r >= '0' && r <= '9':
+			return r
+		default:
+			return ' '
+		}
+	}, text)
+	return strings.Fields(cleaned)
+}
+
+func addLocalFeature(vec []float32, feature string, weight float32) {
+	hasher := fnv.New64a()
+	_, _ = hasher.Write([]byte(feature))
+	sum := hasher.Sum64()
+
+	primary := int(sum % uint64(EmbeddingDimensions))
+	secondary := int((sum >> 21) % uint64(EmbeddingDimensions))
+	sign := float32(1.0)
+	if sum&1 == 1 {
+		sign = -1.0
+	}
+
+	vec[primary] += sign * weight
+	if secondary != primary {
+		vec[secondary] += sign * (weight * 0.5)
+	}
 }
 
 type embeddingRequestBody struct {

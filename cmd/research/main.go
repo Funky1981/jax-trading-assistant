@@ -27,6 +27,7 @@ import (
 	"jax-trading-assistant/internal/modules/orchestration"
 	"jax-trading-assistant/libs/middleware"
 	"jax-trading-assistant/libs/observability"
+	"jax-trading-assistant/libs/pgmemory"
 	"jax-trading-assistant/libs/runtimepolicy"
 	"jax-trading-assistant/libs/strategies"
 	"jax-trading-assistant/libs/utcp"
@@ -53,6 +54,19 @@ type Config struct {
 	RuntimeMode runtimepolicy.Mode
 }
 
+type memoryRuntimeInfo struct {
+	EmbeddingProvider pgmemory.EmbeddingProviderName
+}
+
+type memoryReadiness struct {
+	Ready         bool
+	SchemaVersion int
+	SchemaDirty   bool
+	SchemaOK      bool
+	Status        string
+	Error         string
+}
+
 func main() {
 	cfg, err := loadConfig()
 	if err != nil {
@@ -64,6 +78,9 @@ func main() {
 	log.Printf("runtime mode: %s", cfg.RuntimeMode)
 	if err := validateStartupProviderPolicy(cfg.RuntimeMode); err != nil {
 		log.Fatalf("startup provider policy failed: %v", err)
+	}
+	if err := validateEmbeddingModePolicy(cfg.RuntimeMode, os.Getenv("EMBEDDING_PROVIDER")); err != nil {
+		log.Fatalf("embedding mode policy failed: %v", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -87,21 +104,21 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create memory client: %v", err)
 	}
-	log.Printf("memory client → %s", cfg.MemoryServiceURL)
+	log.Printf("memory client -> %s", cfg.MemoryServiceURL)
 
 	agentClient, err := orchestration.NewAgent0Client(cfg.Agent0ServiceURL)
 	if err != nil {
 		log.Fatalf("failed to create Agent0 client: %v", err)
 	}
-	log.Printf("agent0 client → %s", cfg.Agent0ServiceURL)
+	log.Printf("agent0 client -> %s", cfg.Agent0ServiceURL)
 
 	var dexterAdapter *orchestration.DexterClientAdapter
 	if cfg.DexterServiceURL != "" {
 		dexterAdapter, err = orchestration.NewDexterClient(cfg.DexterServiceURL)
 		if err != nil {
-			log.Printf("warning: Dexter unavailable (%v) — continuing without research tools", err)
+			log.Printf("warning: Dexter unavailable (%v) - continuing without research tools", err)
 		} else {
-			log.Printf("dexter client → %s", cfg.DexterServiceURL)
+			log.Printf("dexter client -> %s", cfg.DexterServiceURL)
 		}
 	}
 
@@ -119,21 +136,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialise backtest deps: %v", err)
 	}
-	log.Printf("backtest dataset catalog → %s", cfg.DatasetDir)
+	log.Printf("backtest dataset catalog -> %s", cfg.DatasetDir)
 
 	runnerWorkers := envIntOrDefault("RESEARCH_RUNNER_WORKERS", 2)
 	researchRunner := newResearchRunnerManager(btDeps, runnerWorkers)
 	defer researchRunner.Stop()
 	log.Printf("research runner workers: %d", runnerWorkers)
 
-	memStore, err := buildMemoryStore(db)
+	memStore, embeddingProvider, err := buildMemoryStore(db)
 	if err != nil {
 		log.Fatalf("failed to build memory store: %v", err)
 	}
+	memInfo := memoryRuntimeInfo{EmbeddingProvider: embeddingProvider}
 
 	// Build HTTP server
 	mux := http.NewServeMux()
-	registerRoutes(mux, orchSvc, db, btDeps, researchRunner)
+	registerRoutes(mux, orchSvc, db, btDeps, researchRunner, memInfo)
 
 	// ADR-0012 Phase 6: in-process memory proxy.
 	// agent0-service can now point MEMORY_SERVICE_URL at jax-research:8091.
@@ -172,8 +190,9 @@ func main() {
 
 // registerRoutes wires up all HTTP routes.
 // Routes preserve the prior orchestration API surface for compatibility.
-func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, btDeps *backtestDeps, runner *researchRunnerManager) {
-	mux.HandleFunc("/health", handleHealth(db))
+func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, btDeps *backtestDeps, runner *researchRunnerManager, memInfo memoryRuntimeInfo) {
+	mux.HandleFunc("/health", handleHealth(db, memInfo))
+	mux.HandleFunc("/ready", handleHealth(db, memInfo))
 	mux.HandleFunc("/orchestrate", handleOrchestrate(svc, db))
 	mux.HandleFunc("/metrics/prometheus", handlePrometheus(db))
 	// L04: backtest endpoint
@@ -182,23 +201,112 @@ func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, 
 	mux.HandleFunc("/research/projects/runs/", handleResearchProjectRunStatus(runner))
 }
 
-// handleHealth returns liveness plus database readiness.
-func handleHealth(db *sql.DB) http.HandlerFunc {
+func loadMemoryReadiness(ctx context.Context, db *sql.DB) memoryReadiness {
+	readiness := memoryReadiness{
+		Status: "ready",
+	}
+
+	var version int
+	var dirty bool
+	if err := db.QueryRowContext(ctx, `SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1`).Scan(&version, &dirty); err != nil {
+		readiness.Status = "not_ready"
+		readiness.Error = fmt.Sprintf("schema_migrations query failed: %v", err)
+		return readiness
+	}
+	readiness.SchemaVersion = version
+	readiness.SchemaDirty = dirty
+
+	var (
+		memoryItems       bool
+		uniqueIndex       bool
+		hnswIndex         bool
+		bankConstraint    bool
+		summaryConstraint bool
+		tagsConstraint    bool
+		dataConstraint    bool
+	)
+	if err := db.QueryRowContext(ctx, `
+		SELECT
+			to_regclass('public.memory_items') IS NOT NULL,
+			to_regclass('public.uq_memory_items_bank_source_ref') IS NOT NULL,
+			to_regclass('public.idx_memory_items_embedding_hnsw') IS NOT NULL,
+			EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'memory_items'::regclass AND conname = 'chk_memory_items_bank'),
+			EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'memory_items'::regclass AND conname = 'chk_memory_items_summary_not_blank'),
+			EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'memory_items'::regclass AND conname = 'chk_memory_items_tags_array'),
+			EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'memory_items'::regclass AND conname = 'chk_memory_items_data_object')
+	`).Scan(
+		&memoryItems,
+		&uniqueIndex,
+		&hnswIndex,
+		&bankConstraint,
+		&summaryConstraint,
+		&tagsConstraint,
+		&dataConstraint,
+	); err != nil {
+		readiness.Status = "not_ready"
+		readiness.Error = fmt.Sprintf("memory schema query failed: %v", err)
+		return readiness
+	}
+
+	readiness.SchemaOK = memoryItems &&
+		uniqueIndex &&
+		hnswIndex &&
+		bankConstraint &&
+		summaryConstraint &&
+		tagsConstraint &&
+		dataConstraint
+	readiness.Ready = readiness.SchemaVersion >= pgmemory.RequiredSchemaVersion &&
+		!readiness.SchemaDirty &&
+		readiness.SchemaOK
+	if !readiness.Ready {
+		readiness.Status = "not_ready"
+		if readiness.Error == "" {
+			readiness.Error = fmt.Sprintf(
+				"memory schema not ready: version=%d dirty=%t schema_ok=%t",
+				readiness.SchemaVersion,
+				readiness.SchemaDirty,
+				readiness.SchemaOK,
+			)
+		}
+	}
+
+	return readiness
+}
+
+// handleHealth returns liveness plus memory readiness.
+func handleHealth(db *sql.DB, memInfo memoryRuntimeInfo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		status := "healthy"
 		code := http.StatusOK
+		readiness := memoryReadiness{
+			Status: "not_ready",
+		}
 		if err := db.PingContext(r.Context()); err != nil {
 			status = "degraded"
 			code = http.StatusServiceUnavailable
+			readiness.Error = fmt.Sprintf("database ping failed: %v", err)
+		} else {
+			readiness = loadMemoryReadiness(r.Context(), db)
+			if !readiness.Ready {
+				status = "degraded"
+				code = http.StatusServiceUnavailable
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(code)
-		if err := json.NewEncoder(w).Encode(map[string]string{
-			"service": "jax-research",
-			"status":  status,
-			"uptime":  time.Since(startTime).Round(time.Second).String(),
-			"version": version,
+		if err := json.NewEncoder(w).Encode(map[string]any{
+			"service":               "jax-research",
+			"status":                status,
+			"uptime":                time.Since(startTime).Round(time.Second).String(),
+			"version":               version,
+			"embedding_provider":    string(memInfo.EmbeddingProvider),
+			"memory_ready":          readiness.Ready,
+			"memory_status":         readiness.Status,
+			"memory_schema_ok":      readiness.SchemaOK,
+			"memory_schema_version": readiness.SchemaVersion,
+			"memory_schema_dirty":   readiness.SchemaDirty,
+			"memory_error":          readiness.Error,
 		}); err != nil {
 			log.Printf("handleHealth encode: %v", err)
 		}
@@ -492,6 +600,21 @@ func validateStartupProviderPolicy(mode runtimepolicy.Mode) error {
 		return nil
 	}
 	return utcp.ValidateRuntimeProviderPolicy(mode, cfg)
+}
+
+func validateEmbeddingModePolicy(mode runtimepolicy.Mode, rawProvider string) error {
+	provider := pgmemory.NormalizeProvider(rawProvider)
+	switch provider {
+	case pgmemory.EmbeddingProviderLocal:
+		return nil
+	case pgmemory.EmbeddingProviderOpenAI:
+		if mode == runtimepolicy.ModeDev || mode == runtimepolicy.ModeTest {
+			return fmt.Errorf("EMBEDDING_PROVIDER=%s is not allowed in %s mode; use local", provider, mode)
+		}
+		return nil
+	default:
+		return fmt.Errorf("EMBEDDING_PROVIDER must be one of: local, openai")
+	}
 }
 
 func envOrDefault(key, def string) string {
