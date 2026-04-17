@@ -10,7 +10,7 @@ import (
 
 func TestTradingPilotStatusHandlerDefaultsToReadOnlyWithoutAuth(t *testing.T) {
 	bridge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/health" {
+		if r.URL.Path != "/ready" {
 			http.NotFound(w, r)
 			return
 		}

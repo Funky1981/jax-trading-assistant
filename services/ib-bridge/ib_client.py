@@ -5,7 +5,7 @@ Handles connection and operations with IB Gateway using ib_insync
 import asyncio
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator, List, Optional
 
 from ib_insync import IB, Stock, Order, MarketOrder, LimitOrder, StopOrder
@@ -262,7 +262,7 @@ class IBClient:
             return value.isoformat()
         if hasattr(value, "isoformat"):
             return value.isoformat()
-        return datetime.utcnow().isoformat()
+        return datetime.now(timezone.utc).isoformat()
 
     def _optional_price(self, value) -> Optional[float]:
         if value is None:
@@ -272,6 +272,58 @@ class IBClient:
         except (TypeError, ValueError):
             return None
         return numeric if numeric > 0 else None
+
+    def _first_positive_price(self, *values) -> Optional[float]:
+        for value in values:
+            price = self._optional_price(value)
+            if price is not None:
+                return price
+        return None
+
+    def _build_quote_response(self, symbol: str, ticker, contract) -> QuoteResponse:
+        bid = self._first_positive_price(
+            getattr(ticker, "bid", None),
+            getattr(ticker, "delayedBid", None),
+        ) or 0.0
+        ask = self._first_positive_price(
+            getattr(ticker, "ask", None),
+            getattr(ticker, "delayedAsk", None),
+        ) or 0.0
+
+        market_price = None
+        market_price_fn = getattr(ticker, "marketPrice", None)
+        if callable(market_price_fn):
+            try:
+                market_price = market_price_fn()
+            except Exception:
+                market_price = None
+
+        midpoint = None
+        if bid > 0 and ask > 0:
+            midpoint = (bid + ask) / 2
+
+        price = self._first_positive_price(
+            getattr(ticker, "last", None),
+            getattr(ticker, "delayedLast", None),
+            market_price,
+            getattr(ticker, "close", None),
+            midpoint,
+        ) or 0.0
+
+        return QuoteResponse(
+            symbol=symbol.upper(),
+            price=price,
+            bid=bid,
+            ask=ask,
+            bid_size=int(getattr(ticker, "bidSize", 0) or 0),
+            ask_size=int(getattr(ticker, "askSize", 0) or 0),
+            volume=int(getattr(ticker, "volume", 0) or 0),
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            exchange=contract.exchange if hasattr(contract, 'exchange') else 'SMART',
+        )
+
+    def _quote_is_usable(self, quote: QuoteResponse) -> bool:
+        return quote.price > 0 or quote.bid > 0 or quote.ask > 0
 
     def _is_open_status(self, status: Optional[str]) -> bool:
         return (status or "").strip() in OPEN_ORDER_STATUSES
@@ -285,7 +337,7 @@ class IBClient:
             created_at = self._format_timestamp(getattr(log_entries[0], "time", None))
             updated_at = self._format_timestamp(getattr(log_entries[-1], "time", None))
             return created_at, updated_at
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         return now, now
 
     def _find_trade(self, order_id: int):
@@ -339,36 +391,27 @@ class IBClient:
         await asyncio.sleep(0.25)
         return order_id
     
-    async def get_quote(self, symbol: str) -> QuoteResponse:
+    async def get_quote(self, symbol: str, wait_timeout: float = 6.0, poll_interval: float = 0.25) -> QuoteResponse:
         """Get real-time quote for a symbol"""
         try:
             contract = await self._qualify_stock_contract(symbol)
-            
-            # Request market data
+
             ticker = self.ib.reqMktData(contract, '', False, False)
-            
-            # Wait for data to populate
-            # Delayed data (type 3) takes longer than live — use 2s
-            await asyncio.sleep(2.0)
-            
-            # Extract quote data
-            quote = QuoteResponse(
-                symbol=symbol,
-                price=float(ticker.last) if ticker.last and ticker.last == ticker.last else 0.0,  # Check for NaN
-                bid=float(ticker.bid) if ticker.bid and ticker.bid == ticker.bid else 0.0,
-                ask=float(ticker.ask) if ticker.ask and ticker.ask == ticker.ask else 0.0,
-                bid_size=int(ticker.bidSize) if ticker.bidSize and ticker.bidSize == ticker.bidSize else 0,
-                ask_size=int(ticker.askSize) if ticker.askSize and ticker.askSize == ticker.askSize else 0,
-                volume=int(ticker.volume) if ticker.volume and ticker.volume == ticker.volume else 0,
-                timestamp=datetime.utcnow().isoformat(),
-                exchange=contract.exchange if hasattr(contract, 'exchange') else 'SMART'
-            )
-            
-            # Cancel market data subscription
-            self.ib.cancelMktData(contract)
-            
-            return quote
-            
+            deadline = asyncio.get_running_loop().time() + max(wait_timeout, poll_interval)
+
+            try:
+                while True:
+                    quote = self._build_quote_response(symbol, ticker, contract)
+                    if self._quote_is_usable(quote):
+                        return quote
+                    if asyncio.get_running_loop().time() >= deadline:
+                        raise RuntimeError(
+                            f"IB quote for {symbol.upper()} remained unusable "
+                            f"(price={quote.price}, bid={quote.bid}, ask={quote.ask})"
+                        )
+                    await asyncio.sleep(poll_interval)
+            finally:
+                self.ib.cancelMktData(contract)
         except Exception as e:
             logger.error(f"Error getting quote for {symbol}: {e}")
             raise
@@ -476,7 +519,7 @@ class IBClient:
                     status="Unknown",
                     filled_qty=0,
                     avg_fill_price=0.0,
-                    last_update=datetime.utcnow().isoformat()
+                    last_update=datetime.now(timezone.utc).isoformat()
                 )
 
             status = trade.orderStatus.status if trade.orderStatus else "Unknown"
@@ -488,7 +531,7 @@ class IBClient:
                 status=status,
                 filled_qty=filled,
                 avg_fill_price=avg_fill,
-                last_update=datetime.utcnow().isoformat()
+                last_update=datetime.now(timezone.utc).isoformat()
             )
         except Exception as e:
             logger.error(f"Error getting order status for {order_id}: {e}")
@@ -597,7 +640,7 @@ class IBClient:
                     if order_ref in {"manual-protect", "manual-bracket-child"} or getattr(order, "parentId", 0):
                         cancelled_order_ids.append(await self._cancel_trade(trade))
 
-            oca_group = f"protect-{symbol.upper()}-{int(datetime.utcnow().timestamp())}"
+            oca_group = f"protect-{symbol.upper()}-{int(datetime.now(timezone.utc).timestamp())}"
             order_ids: List[int] = []
 
             stop_order = self._build_order(
@@ -796,7 +839,7 @@ class IBClient:
                     bid_size=int(ticker.bidSize) if ticker.bidSize and ticker.bidSize == ticker.bidSize else 0,
                     ask_size=int(ticker.askSize) if ticker.askSize and ticker.askSize == ticker.askSize else 0,
                     volume=int(ticker.volume) if ticker.volume and ticker.volume == ticker.volume else 0,
-                    timestamp=datetime.utcnow().isoformat(),
+                    timestamp=datetime.now(timezone.utc).isoformat(),
                     exchange=contract.exchange if hasattr(contract, 'exchange') else 'SMART'
                 )
                 

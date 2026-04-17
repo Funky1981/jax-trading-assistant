@@ -120,7 +120,11 @@ func main() {
 		log.Fatalf("failed to load approved strategy artifacts: %v", err)
 	}
 
-	log.Printf("registered %d strategies: %v", len(registry.List()), registry.List())
+	loadedStrategies := registry.List()
+	if err := requireApprovedStrategies(cfg.RuntimeMode, len(loadedStrategies)); err != nil {
+		log.Fatalf("approved strategy startup gate failed: %v", err)
+	}
+	log.Printf("registered %d strategies: %v", len(loadedStrategies), loadedStrategies)
 
 	// ADR-0012 Phase 4: Create artifact management API
 	artifactStore := artifacts.NewStore(dbPool)
@@ -196,6 +200,7 @@ func main() {
 
 	// Health check endpoint
 	mux.HandleFunc("/health", handleHealth(sigGen))
+	mux.HandleFunc("/ready", handleReady(cfg, sigGen, registry, marketTools))
 	mux.HandleFunc("/tools", marketTools.handler())
 
 	// ADR-0012 Phase 4: Artifact promotion workflow API
@@ -365,11 +370,8 @@ func validateEventProviderReadiness(ctx context.Context, db *pgxpool.Pool, regis
 		return nil
 	}
 
-	productionLike := mode == runtimepolicy.ModeLive ||
-		strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "production") ||
-		strings.EqualFold(strings.TrimSpace(os.Getenv("ENV")), "production")
-	if productionLike {
-		return fmt.Errorf("enabled event-dependent strategies require POLYGON_API_KEY or FINNHUB_API_KEY in production/live mode")
+	if err := requireEventProviders(mode, hasPolygon, hasFinnhub); err != nil {
+		return err
 	}
 	log.Printf("event provider warning: enabled event-dependent strategies but no POLYGON_API_KEY/FINNHUB_API_KEY; running degraded outside production")
 	return nil

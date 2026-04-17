@@ -142,7 +142,7 @@ $agentHealthy = $false
 
 for ($i = 1; $i -le 6; $i++) {
     try {
-        $apiResponse = Invoke-WebRequest -Uri "http://localhost:8081/health" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
+        $apiResponse = Invoke-WebRequest -Uri "http://localhost:8100/ready" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
         if ($apiResponse.StatusCode -eq 200) { $apiHealthy = $true }
     } catch { }
 

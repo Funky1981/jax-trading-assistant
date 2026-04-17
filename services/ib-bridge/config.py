@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     # Trading mode
     PAPER_TRADING: bool = True  # Safety: default to paper trading
     IB_MARKET_DATA_TYPE: str = "delayed"  # live, frozen, delayed, delayed-frozen
+    READINESS_SYMBOL: str = "AAPL"
     
     class Config:
         env_file = ".env"

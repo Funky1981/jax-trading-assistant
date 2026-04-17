@@ -196,3 +196,6 @@ class HealthResponse(BaseModel):
     version: str
     market_data_mode: str = "unknown"
     paper_trading: bool = True
+    quote_ready: bool = False
+    quote_symbol: Optional[str] = None
+    quote_error: Optional[str] = None

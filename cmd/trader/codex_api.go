@@ -1075,8 +1075,10 @@ func paperReadinessSummary(ctx context.Context, pool *pgxpool.Pool) map[string]a
 		"reportUri":             "/reports/paper-readiness/latest.md",
 		"jsonReportUri":         "/reports/paper-readiness/latest.json",
 	}
+	runtimeProbes := collectPaperRuntimeProbes(ctx, http.DefaultClient)
 	if pool == nil {
 		summary["error"] = "database pool unavailable"
+		applyPaperRuntimeProbes(summary, runtimeProbes)
 		writePaperReadinessReport(summary)
 		return summary
 	}
@@ -1173,6 +1175,7 @@ func paperReadinessSummary(ctx context.Context, pool *pgxpool.Pool) map[string]a
 	if ready, _ := summary["ready"].(bool); ready {
 		summary["status"] = "ready"
 	}
+	applyPaperRuntimeProbes(summary, runtimeProbes)
 	writePaperReadinessReport(summary)
 	return summary
 }
@@ -1195,6 +1198,7 @@ func writePaperReadinessReport(summary map[string]any) {
 	md.WriteString(fmt.Sprintf("- failed_gates: %v\n", summary["failedGateCount"]))
 	md.WriteString(fmt.Sprintf("- skipped_gates: %v\n", summary["skippedGateCount"]))
 	md.WriteString(fmt.Sprintf("- not_started_gates: %v\n", summary["notStartedGateCount"]))
+	md.WriteString(fmt.Sprintf("- runtime_probe_failures: %v\n", summary["runtimeProbeFailures"]))
 	md.WriteString(fmt.Sprintf("- paper_sessions_observed: %v\n", summary["paperSessionsObserved"]))
 	md.WriteString(fmt.Sprintf("- shadow_parity_required: %v\n", summary["shadowParityRequired"]))
 	md.WriteString(fmt.Sprintf("- shadow_parity_satisfied: %v\n", summary["shadowParitySatisfied"]))
@@ -1202,6 +1206,22 @@ func writePaperReadinessReport(summary map[string]any) {
 	if gates, ok := summary["gateStatuses"].([]map[string]any); ok {
 		for _, gate := range gates {
 			md.WriteString(fmt.Sprintf("- %s: %s\n", toString(gate["gate"]), toString(gate["status"])))
+		}
+	}
+	if probes, ok := summary["runtimeProbes"].(map[string]map[string]any); ok {
+		keys := make([]string, 0, len(probes))
+		for key := range probes {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		md.WriteString("\n## Runtime Probes\n")
+		for _, key := range keys {
+			probe := probes[key]
+			md.WriteString(fmt.Sprintf("- %s: ok=%v status_code=%v url=%s\n",
+				key, probe["ok"], probe["statusCode"], toString(probe["url"])))
+			if errText := toString(probe["error"]); errText != "" {
+				md.WriteString(fmt.Sprintf("  error: %s\n", errText))
+			}
 		}
 	}
 	_ = os.WriteFile(filepath.Join(reportDir, "latest.md"), []byte(md.String()), 0o644)

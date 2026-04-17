@@ -146,7 +146,7 @@ services:
       ib-bridge:
         condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8100/ready || exit 1"]
       interval: 30s
       timeout: 10s
       start_period: 30s

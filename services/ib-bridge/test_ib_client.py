@@ -4,6 +4,7 @@ import unittest
 from ib_insync import Stock
 
 from ib_client import IBClient
+from models import QuoteResponse
 
 
 class FakeEvent:
@@ -96,6 +97,44 @@ class IBClientConnectionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(contract.symbol, "AAPL")
         self.assertEqual(contract.exchange, "SMART")
         self.assertEqual(contract.currency, "USD")
+
+    async def test_build_quote_response_uses_close_when_last_missing(self):
+        client = IBClient()
+        contract = Stock("AAPL", "SMART", "USD")
+
+        class FakeTicker:
+            last = float("nan")
+            bid = 0.0
+            ask = 0.0
+            bidSize = 0
+            askSize = 0
+            volume = 125
+            close = 189.55
+
+            @staticmethod
+            def marketPrice():
+                return 0.0
+
+        quote = client._build_quote_response("AAPL", FakeTicker(), contract)
+
+        self.assertEqual(quote.price, 189.55)
+        self.assertTrue(client._quote_is_usable(quote))
+
+    async def test_quote_is_unusable_when_all_price_fields_are_zero(self):
+        client = IBClient()
+        quote = QuoteResponse(
+            symbol="AAPL",
+            price=0.0,
+            bid=0.0,
+            ask=0.0,
+            bid_size=0,
+            ask_size=0,
+            volume=0,
+            timestamp="2026-04-17T12:00:00Z",
+            exchange="SMART",
+        )
+
+        self.assertFalse(client._quote_is_usable(quote))
 
 
 if __name__ == "__main__":

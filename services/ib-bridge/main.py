@@ -46,6 +46,12 @@ logger = logging.getLogger(__name__)
 ib_client: Optional[IBClient] = None
 
 
+def _quote_failure_http_exception(exc: Exception) -> HTTPException:
+    if isinstance(exc, RuntimeError):
+        return HTTPException(status_code=503, detail=str(exc))
+    return HTTPException(status_code=500, detail=str(exc))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle manager for the FastAPI app"""
@@ -109,9 +115,26 @@ async def health_check():
 async def readiness_check():
     """Readiness probe for connectivity-dependent workflows."""
     health = await health_check()
-    if health.connected:
-        return health
-    return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=health.model_dump())
+    if not health.connected:
+        health.status = "not_ready"
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=health.model_dump())
+
+    readiness_symbol = settings.READINESS_SYMBOL.upper().strip()
+    try:
+        await ib_client.get_quote(readiness_symbol)
+    except Exception as e:
+        logger.error(f"IB readiness quote failed for {readiness_symbol}: {e}")
+        health.status = "not_ready"
+        health.quote_ready = False
+        health.quote_symbol = readiness_symbol
+        health.quote_error = str(e)
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=health.model_dump())
+
+    health.status = "ready"
+    health.quote_ready = True
+    health.quote_symbol = readiness_symbol
+    health.quote_error = None
+    return health
 
 
 @app.post("/connect", response_model=ConnectResponse)
@@ -170,7 +193,7 @@ async def get_quote(symbol: str):
         raise
     except Exception as e:
         logger.error(f"Failed to get quote for {symbol}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise _quote_failure_http_exception(e)
 
 
 @app.post("/candles/{symbol}", response_model=CandlesResponse)
