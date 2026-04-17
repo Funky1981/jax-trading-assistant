@@ -273,6 +273,15 @@ class IBClient:
             return None
         return numeric if numeric > 0 else None
 
+    def _non_negative_int(self, value) -> int:
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return 0
+        if numeric != numeric or numeric <= 0:
+            return 0
+        return int(numeric)
+
     def _first_positive_price(self, *values) -> Optional[float]:
         for value in values:
             price = self._optional_price(value)
@@ -315,9 +324,9 @@ class IBClient:
             price=price,
             bid=bid,
             ask=ask,
-            bid_size=int(getattr(ticker, "bidSize", 0) or 0),
-            ask_size=int(getattr(ticker, "askSize", 0) or 0),
-            volume=int(getattr(ticker, "volume", 0) or 0),
+            bid_size=self._non_negative_int(getattr(ticker, "bidSize", 0)),
+            ask_size=self._non_negative_int(getattr(ticker, "askSize", 0)),
+            volume=self._non_negative_int(getattr(ticker, "volume", 0)),
             timestamp=datetime.now(timezone.utc).isoformat(),
             exchange=contract.exchange if hasattr(contract, 'exchange') else 'SMART',
         )
@@ -836,9 +845,9 @@ class IBClient:
                     price=float(ticker.last) if ticker.last and ticker.last == ticker.last else 0.0,
                     bid=float(ticker.bid) if ticker.bid and ticker.bid == ticker.bid else 0.0,
                     ask=float(ticker.ask) if ticker.ask and ticker.ask == ticker.ask else 0.0,
-                    bid_size=int(ticker.bidSize) if ticker.bidSize and ticker.bidSize == ticker.bidSize else 0,
-                    ask_size=int(ticker.askSize) if ticker.askSize and ticker.askSize == ticker.askSize else 0,
-                    volume=int(ticker.volume) if ticker.volume and ticker.volume == ticker.volume else 0,
+                    bid_size=self._non_negative_int(getattr(ticker, "bidSize", 0)),
+                    ask_size=self._non_negative_int(getattr(ticker, "askSize", 0)),
+                    volume=self._non_negative_int(getattr(ticker, "volume", 0)),
                     timestamp=datetime.now(timezone.utc).isoformat(),
                     exchange=contract.exchange if hasattr(contract, 'exchange') else 'SMART'
                 )

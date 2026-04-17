@@ -136,6 +136,30 @@ class IBClientConnectionTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(client._quote_is_usable(quote))
 
+    async def test_build_quote_response_tolerates_nan_sizes_and_volume(self):
+        client = IBClient()
+        contract = Stock("AAPL", "SMART", "USD")
+
+        class FakeTicker:
+            last = float("nan")
+            bid = 271.40
+            ask = 271.45
+            bidSize = float("nan")
+            askSize = float("nan")
+            volume = float("nan")
+            close = 271.35
+
+            @staticmethod
+            def marketPrice():
+                return 271.42
+
+        quote = client._build_quote_response("AAPL", FakeTicker(), contract)
+
+        self.assertEqual(quote.bid_size, 0)
+        self.assertEqual(quote.ask_size, 0)
+        self.assertEqual(quote.volume, 0)
+        self.assertTrue(client._quote_is_usable(quote))
+
 
 if __name__ == "__main__":
     unittest.main()
