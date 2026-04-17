@@ -315,37 +315,63 @@ func (m *marketTools) getNews(ctx context.Context, in utcp.GetNewsInput) (utcp.G
 }
 
 type ibBridgeHealthResponse struct {
+	Status         string `json:"status"`
 	Connected      bool   `json:"connected"`
+	Version        string `json:"version"`
 	MarketDataMode string `json:"market_data_mode"`
 	PaperTrading   bool   `json:"paper_trading"`
+	QuoteReady     bool   `json:"quote_ready"`
+	QuoteSymbol    string `json:"quote_symbol"`
+	QuoteError     string `json:"quote_error"`
 }
 
-func (m *marketTools) getIBBridgeHealth(ctx context.Context) (*ibBridgeHealthResponse, error) {
+func (m *marketTools) getIBBridgeReadiness(ctx context.Context) (*ibBridgeHealthResponse, int, error) {
 	if strings.TrimSpace(m.ibBridgeURL) == "" {
-		return nil, errors.New("ib bridge url unavailable")
+		return nil, 0, errors.New("ib bridge url unavailable")
 	}
 
-	healthURL := strings.TrimRight(m.ibBridgeURL, "/") + "/health"
+	healthURL := strings.TrimRight(m.ibBridgeURL, "/") + "/ready"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, healthURL, nil)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	resp, err := m.httpClient.Do(req)
+	client := m.httpClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ib bridge health returned %d", resp.StatusCode)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, resp.StatusCode, err
 	}
 
 	var out ibBridgeHealthResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if len(strings.TrimSpace(string(body))) > 0 {
+		if err := json.Unmarshal(body, &out); err != nil {
+			return nil, resp.StatusCode, err
+		}
+	}
+	if resp.StatusCode != http.StatusOK {
+		if strings.TrimSpace(out.QuoteError) != "" {
+			return &out, resp.StatusCode, fmt.Errorf("ib bridge readiness returned %d: %s", resp.StatusCode, out.QuoteError)
+		}
+		return &out, resp.StatusCode, fmt.Errorf("ib bridge readiness returned %d", resp.StatusCode)
+	}
+	return &out, resp.StatusCode, nil
+}
+
+func (m *marketTools) getIBBridgeHealth(ctx context.Context) (*ibBridgeHealthResponse, error) {
+	out, _, err := m.getIBBridgeReadiness(ctx)
+	if err != nil {
 		return nil, err
 	}
-	return &out, nil
+	return out, nil
 }
 
 func normalizeTimeframe(raw string) (string, marketdata.Timeframe, error) {

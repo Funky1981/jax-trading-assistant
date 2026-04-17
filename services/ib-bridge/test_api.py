@@ -18,6 +18,22 @@ class FakeBridge:
     def is_connected(self):
         return self.connected
 
+    def market_data_mode(self):
+        return "delayed"
+
+    async def get_quote(self, _symbol: str):
+        return {
+            "symbol": "AAPL",
+            "price": 201.25,
+            "bid": 201.2,
+            "ask": 201.3,
+            "bid_size": 10,
+            "ask_size": 12,
+            "volume": 100,
+            "timestamp": "2026-04-17T12:00:00Z",
+            "exchange": "SMART",
+        }
+
     async def list_orders(self):
         return [
             BrokerOrder(
@@ -138,6 +154,29 @@ class IBBridgeApiTests(unittest.TestCase):
 
     def test_quote_returns_503_when_bridge_unavailable(self):
         main.ib_client.connected = False
+
+        with self.assertRaises(HTTPException) as ctx:
+            asyncio.run(main.get_quote("AAPL"))
+
+        self.assertEqual(ctx.exception.status_code, 503)
+
+    def test_readiness_returns_503_when_quote_is_unusable(self):
+        class UnusableQuoteBridge(FakeBridge):
+            async def get_quote(self, _symbol: str):
+                raise RuntimeError("quote data unusable")
+
+        main.ib_client = UnusableQuoteBridge()
+
+        response = asyncio.run(main.readiness_check())
+
+        self.assertEqual(response.status_code, 503)
+
+    def test_quote_endpoint_maps_unusable_quote_to_503(self):
+        class UnusableQuoteBridge(FakeBridge):
+            async def get_quote(self, _symbol: str):
+                raise RuntimeError("quote data unusable")
+
+        main.ib_client = UnusableQuoteBridge()
 
         with self.assertRaises(HTTPException) as ctx:
             asyncio.run(main.get_quote("AAPL"))
