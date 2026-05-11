@@ -18,9 +18,10 @@ var excludedETFClasses = map[string]struct{}{
 }
 
 type etfInstrumentPolicy struct {
-	Phase       string          `json:"phase"`
-	Version     string          `json:"version"`
-	Instruments []etfInstrument `json:"instruments"`
+	Phase              string          `json:"phase"`
+	Version            string          `json:"version"`
+	ExcludedETFClasses []string        `json:"excludedEtfClasses"`
+	Instruments        []etfInstrument `json:"instruments"`
 }
 
 type etfInstrument struct {
@@ -81,10 +82,33 @@ func loadETFInstrumentPolicy(path string) (*etfInstrumentPolicy, error) {
 
 func evaluateETFPhase1Eligibility(policy *etfInstrumentPolicy, symbol, mode string) etfEligibilityDecision {
 	normalizedSymbol := strings.ToUpper(strings.TrimSpace(symbol))
-	if normalizedSymbol == "" || policy == nil {
-		return etfEligibilityDecision{Symbol: normalizedSymbol, Allowed: true}
+	if policy == nil {
+		return etfEligibilityDecision{
+			Symbol:     normalizedSymbol,
+			Allowed:    false,
+			ReasonCode: "etf_policy_unavailable",
+			Reason:     "ETF policy is unavailable",
+		}
+	}
+	if normalizedSymbol == "" {
+		return etfEligibilityDecision{
+			Symbol:     normalizedSymbol,
+			Allowed:    false,
+			ReasonCode: "invalid_symbol",
+			Reason:     "symbol is required for ETF eligibility checks",
+		}
 	}
 	normalizedMode := strings.ToLower(strings.TrimSpace(mode))
+	excludedClasses := excludedETFClasses
+	if len(policy.ExcludedETFClasses) > 0 {
+		excludedClasses = make(map[string]struct{}, len(policy.ExcludedETFClasses))
+		for _, item := range policy.ExcludedETFClasses {
+			v := strings.ToLower(strings.TrimSpace(item))
+			if v != "" {
+				excludedClasses[v] = struct{}{}
+			}
+		}
+	}
 	for _, instrument := range policy.Instruments {
 		if strings.ToUpper(strings.TrimSpace(instrument.Symbol)) != normalizedSymbol {
 			continue
@@ -99,7 +123,7 @@ func evaluateETFPhase1Eligibility(policy *etfInstrumentPolicy, symbol, mode stri
 				Allowed: true,
 			}
 		}
-		if _, excluded := excludedETFClasses[strings.ToLower(strings.TrimSpace(instrument.ETFClass))]; excluded {
+		if _, excluded := excludedClasses[strings.ToLower(strings.TrimSpace(instrument.ETFClass))]; excluded {
 			return etfEligibilityDecision{
 				Symbol:     normalizedSymbol,
 				Known:      true,
@@ -192,8 +216,9 @@ func containsFold(items []string, target string) bool {
 
 func defaultETFInstrumentPolicy() *etfInstrumentPolicy {
 	return &etfInstrumentPolicy{
-		Phase:   "phase-1",
-		Version: "fallback-v1",
+		Phase:              "phase-1",
+		Version:            "fallback-v1",
+		ExcludedETFClasses: []string{"leveraged", "inverse", "volatility"},
 		Instruments: []etfInstrument{
 			{Symbol: "SPY", AssetClass: "ETF", InstrumentType: "ETF", ETFClass: "plain_vanilla", TradableModes: []string{"paper"}, EligibilityState: "approved", EffectiveDate: "2026-05-11", ChangeOwner: "trading-risk"},
 			{Symbol: "QQQ", AssetClass: "ETF", InstrumentType: "ETF", ETFClass: "plain_vanilla", TradableModes: []string{"paper"}, EligibilityState: "approved", EffectiveDate: "2026-05-11", ChangeOwner: "trading-risk"},

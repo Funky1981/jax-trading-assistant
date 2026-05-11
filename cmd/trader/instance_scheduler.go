@@ -15,6 +15,7 @@ import (
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 	signalgenerator "jax-trading-assistant/internal/trader/signalgenerator"
 	"jax-trading-assistant/libs/contracts/domain"
+	"jax-trading-assistant/libs/runtimepolicy"
 )
 
 // instanceRecord is a minimal view of a strategy_instance row needed by the watcher.
@@ -91,12 +92,16 @@ func scanInstance(ctx context.Context, svc *candidatesmod.Service, sigGen *signa
 	blockedCount := 0
 	postFlatten := isPastInstanceFlatten(inst, time.Now().UTC())
 	etfPolicy, _, _ := loadActiveETFInstrumentPolicy()
+	eligibilityMode := "paper"
+	if mode, _, err := runtimepolicy.ResolveModeFromEnv(); err == nil {
+		eligibilityMode = string(mode)
+	}
 	for _, sig := range signals {
 		// Only include signals from the strategy type that matches this instance.
 		if !strings.EqualFold(sig.StrategyID, inst.StrategyTypeID) {
 			continue
 		}
-		if decision := evaluateETFPhase1Eligibility(etfPolicy, sig.Symbol, "paper"); decision.IsETF && !decision.Allowed {
+		if decision := evaluateETFPhase1Eligibility(etfPolicy, sig.Symbol, eligibilityMode); decision.IsETF && !decision.Allowed {
 			if blocked := persistBlockedSignal(ctx, svc, inst, sig, decision.ReasonCode, decision.Reason); blocked != nil {
 				blockedCount++
 			}

@@ -27,6 +27,14 @@ func TestEvaluateETFPhase1Eligibility(t *testing.T) {
 	if !unknown.Allowed || unknown.IsETF {
 		t.Fatalf("expected AAPL to pass as non-ETF entry, got %+v", unknown)
 	}
+
+	unavailable := evaluateETFPhase1Eligibility(nil, "SPY", "paper")
+	if unavailable.Allowed {
+		t.Fatalf("expected nil policy to fail closed, got %+v", unavailable)
+	}
+	if unavailable.ReasonCode != "etf_policy_unavailable" {
+		t.Fatalf("unexpected nil policy reason code %q", unavailable.ReasonCode)
+	}
 }
 
 func TestTradingETFPolicyHandler(t *testing.T) {

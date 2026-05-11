@@ -1,6 +1,7 @@
 {
   "phase": "phase-1",
   "version": "2026-05-11",
+  "excludedEtfClasses": ["leveraged", "inverse", "volatility"],
   "instruments": [
     {
       "symbol": "SPY",
