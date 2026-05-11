@@ -6,8 +6,8 @@ Make the approved ETF workflow the only path operators can use, while keeping th
 
 ## Current-state signals
 
-- The frontend and trader runtime already expose pilot-mode broker actions through `/home/runner/work/jax-trading-assistant/jax-trading-assistant/cmd/trader/frontend_api_trading_pilot.go`.
-- Paper execution already expects candidate approval in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/cmd/trader/main.go`.
+- The frontend and trader runtime already expose pilot-mode broker actions through `cmd/trader/frontend_api_trading_pilot.go`.
+- Paper execution already expects candidate approval in `cmd/trader/main.go`.
 - Existing UAT and production-readiness docs cover generic paper trading, not ETF-specific workflow rules.
 
 ## Required outcomes

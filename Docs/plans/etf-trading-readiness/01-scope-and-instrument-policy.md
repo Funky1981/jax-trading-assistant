@@ -6,7 +6,7 @@ Define a narrow, enforceable ETF trading scope for phase 1 so the platform does 
 
 ## Current-state signals
 
-- The market ingester currently uses a generic symbol list and includes `SPY` alongside equities in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/cmd/trader/market_ingester.go` and `/home/runner/work/jax-trading-assistant/jax-trading-assistant/config/jax-market.json`.
+- The market ingester currently uses a generic symbol list and includes `SPY` alongside equities in `cmd/trader/market_ingester.go` and `config/jax-market.json`.
 - Existing strategy typing already references `SPY` and `QQQ`, which shows symbol-level support exists but not ETF-specific policy enforcement.
 - Current runbooks describe paper/live runtime controls, but they do not define an ETF-only trading policy.
 

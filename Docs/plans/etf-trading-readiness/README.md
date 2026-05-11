@@ -6,11 +6,11 @@ This plan set defines the minimum work needed to move Jax from general paper-tra
 
 The repository already has the core paper-trading building blocks:
 
-- runtime mode controls in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/Docs/OPERATIONS.md`
-- IB bridge paper-trading defaults in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/Docs/IB_GUIDE.md`
-- a direct paper execution guard in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/cmd/trader/main.go`
-- pilot broker write paths in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/cmd/trader/frontend_api_trading_pilot.go`
-- paper-trading UAT coverage in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/Docs/UAT_PAPER_TRADING.md`
+- runtime mode controls in `Docs/OPERATIONS.md`
+- IB bridge paper-trading defaults in `Docs/IB_GUIDE.md`
+- a direct paper execution guard in `cmd/trader/main.go`
+- pilot broker write paths in `cmd/trader/frontend_api_trading_pilot.go`
+- paper-trading UAT coverage in `Docs/UAT_PAPER_TRADING.md`
 
 What is still missing is a strict ETF-specific operating model: instrument eligibility, execution guardrails, workflow enforcement, and ETF-focused validation.
 

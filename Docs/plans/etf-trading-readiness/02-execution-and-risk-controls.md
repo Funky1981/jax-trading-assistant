@@ -6,10 +6,10 @@ Add the backend execution controls required so approved ETFs can be traded in pa
 
 ## Current-state signals
 
-- Direct paper execution is already blocked unless it comes through the internal approval path in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/cmd/trader/main.go`.
-- Quote staleness is configured in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/config/jax-market.json` and `/home/runner/work/jax-trading-assistant/jax-trading-assistant/cmd/trader/market_ingester.go`, but that is not yet the same as a pre-trade ETF rejection rule.
+- Direct paper execution is already blocked unless it comes through the internal approval path in `cmd/trader/main.go`.
+- Quote staleness is configured in `config/jax-market.json` and `cmd/trader/market_ingester.go`, but that is not yet the same as a pre-trade ETF rejection rule.
 - The platform persists bid/ask data and already has microstructure utilities, which is enough to support spread and liquidity gates.
-- IB paper/live connection guidance exists in `/home/runner/work/jax-trading-assistant/jax-trading-assistant/Docs/IB_GUIDE.md`, so the remaining work is enforcement and consistency.
+- IB paper/live connection guidance exists in `Docs/IB_GUIDE.md`, so the remaining work is enforcement and consistency.
 
 ## Required controls
 

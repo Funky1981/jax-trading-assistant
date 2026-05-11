@@ -65,10 +65,10 @@ Require sign-off from:
 
 These existing entry points should be extended rather than replaced:
 
-- `/home/runner/work/jax-trading-assistant/jax-trading-assistant/Docs/UAT_PAPER_TRADING.md`
-- `/home/runner/work/jax-trading-assistant/jax-trading-assistant/Docs/PRODUCTION_READINESS.md`
-- `/home/runner/work/jax-trading-assistant/jax-trading-assistant/skills/jax-go-change-workflow/scripts/go-verify.ps1`
-- `/home/runner/work/jax-trading-assistant/jax-trading-assistant/skills/jax-golden-replay-regression/scripts/golden-check.ps1`
+- `Docs/UAT_PAPER_TRADING.md`
+- `Docs/PRODUCTION_READINESS.md`
+- `skills/jax-go-change-workflow/scripts/go-verify.ps1`
+- `skills/jax-golden-replay-regression/scripts/golden-check.ps1`
 
 ## Launch gate
 
