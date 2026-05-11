@@ -1,0 +1,146 @@
+{
+  "phase": "phase-1",
+  "version": "2026-05-11",
+  "instruments": [
+    {
+      "symbol": "SPY",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "QQQ",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "DIA",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "IWM",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "XLK",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "XLF",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "XLE",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "SMH",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "SOXX",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "TLT",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "GLD",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "plain_vanilla",
+      "tradableModes": ["paper"],
+      "eligibilityState": "approved",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "TQQQ",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "leveraged",
+      "tradableModes": [],
+      "eligibilityState": "excluded",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "SQQQ",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "inverse",
+      "tradableModes": [],
+      "eligibilityState": "excluded",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    },
+    {
+      "symbol": "UVXY",
+      "assetClass": "ETF",
+      "instrumentType": "ETF",
+      "etfClass": "volatility",
+      "tradableModes": [],
+      "eligibilityState": "excluded",
+      "effectiveDate": "2026-05-11",
+      "changeOwner": "trading-risk"
+    }
+  ]
+}

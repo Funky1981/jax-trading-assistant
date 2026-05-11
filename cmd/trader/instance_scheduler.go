@@ -90,9 +90,16 @@ func scanInstance(ctx context.Context, svc *candidatesmod.Service, sigGen *signa
 	proposeCount := 0
 	blockedCount := 0
 	postFlatten := isPastInstanceFlatten(inst, time.Now().UTC())
+	etfPolicy, _, _ := loadActiveETFInstrumentPolicy()
 	for _, sig := range signals {
 		// Only include signals from the strategy type that matches this instance.
 		if !strings.EqualFold(sig.StrategyID, inst.StrategyTypeID) {
+			continue
+		}
+		if decision := evaluateETFPhase1Eligibility(etfPolicy, sig.Symbol, "paper"); decision.IsETF && !decision.Allowed {
+			if blocked := persistBlockedSignal(ctx, svc, inst, sig, decision.ReasonCode, decision.Reason); blocked != nil {
+				blockedCount++
+			}
 			continue
 		}
 		signalType := strings.ToUpper(strings.TrimSpace(sig.Type))
