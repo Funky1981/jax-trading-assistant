@@ -56,6 +56,18 @@ function compactId(value?: string) {
   return value.length > 12 ? `${value.slice(0, 8)}...` : value;
 }
 
+function etfPolicyFromMetadata(metadata?: Record<string, unknown>) {
+  const raw = metadata?.etfPolicy;
+  if (!raw || typeof raw !== 'object') return null;
+  const policy = raw as Record<string, unknown>;
+  return {
+    allowed: policy.allowed === true,
+    reasonCode: typeof policy.reasonCode === 'string' ? policy.reasonCode : undefined,
+    reason: typeof policy.reason === 'string' ? policy.reason : undefined,
+    catalogVersion: typeof policy.catalogVersion === 'string' ? policy.catalogVersion : undefined,
+  };
+}
+
 const SNOOZE_OPTIONS = [
   { label: '1h', hours: 1 },
   { label: '4h', hours: 4 },
@@ -78,6 +90,7 @@ function CandidateRow({ item, onDecision, pending }: CandidateRowProps) {
   const [notes, setNotes] = useState('');
   const [snoozeHours, setSnoozeHours] = useState(4);
   const [confirmApprove, setConfirmApprove] = useState(false);
+  const etfPolicy = etfPolicyFromMetadata(item.metadata);
 
   const submit = (action: 'approve' | 'reject' | 'snooze' | 'reanalyze') => {
     onDecision(item.id, action, { snoozeHours, notes: notes.trim() || undefined });
@@ -132,6 +145,19 @@ function CandidateRow({ item, onDecision, pending }: CandidateRowProps) {
             <span>{item.blockReason}</span>
           </div>
         )}
+
+        {etfPolicy ? (
+          <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={etfPolicy.allowed ? 'success' : 'destructive'}>
+                ETF {etfPolicy.allowed ? 'eligible' : 'blocked'}
+              </Badge>
+              {etfPolicy.reasonCode && <span className="font-mono text-xs text-muted-foreground">{etfPolicy.reasonCode}</span>}
+              {etfPolicy.catalogVersion && <span className="text-xs text-muted-foreground">Policy {etfPolicy.catalogVersion}</span>}
+            </div>
+            {etfPolicy.reason && <p className="mt-1 text-xs text-muted-foreground">{etfPolicy.reason}</p>}
+          </div>
+        ) : null}
 
         {showNotes && (
           <div className="flex flex-col gap-1">
@@ -266,6 +292,7 @@ function ExecutionActivityRow({ item }: { item: CandidateTrade }) {
 }
 
 function BlockedCandidateRow({ item }: { item: CandidateTrade }) {
+  const etfPolicy = etfPolicyFromMetadata(item.metadata);
   return (
     <div className="rounded-md border border-border p-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -275,6 +302,11 @@ function BlockedCandidateRow({ item }: { item: CandidateTrade }) {
         <span className="ml-auto text-xs text-muted-foreground">Blocked {fmtDate(item.blockedAt ?? item.detectedAt)}</span>
       </div>
       <p className="mt-2 text-sm text-foreground/80">{item.blockReason ?? 'No block reason recorded.'}</p>
+      {etfPolicy ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          ETF policy: {etfPolicy.reasonCode ?? 'unknown'}{etfPolicy.reason ? ` - ${etfPolicy.reason}` : ''}
+        </p>
+      ) : null}
       <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
         <div className="space-y-2">
           <CandidateMeta label="Candidate" value={item.id} />

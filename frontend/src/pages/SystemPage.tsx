@@ -153,7 +153,7 @@ export function SystemPage() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-3 text-sm md:grid-cols-4">
+          <CardContent className="grid gap-3 text-sm md:grid-cols-5">
             <div className="rounded-md border border-border bg-card/60 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Broker</p>
               <p className="mt-1 font-semibold text-foreground">
@@ -179,6 +179,29 @@ export function SystemPage() {
                 />
               </div>
             </div>
+            <div className="rounded-md border border-border bg-card/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">ETF Workflow</p>
+              <p className="mt-1 font-semibold text-foreground">
+                {pilotStatus.etfPhase1Enabled ? formatWorkflow(pilotStatus.etfEntryWorkflow) : 'Unavailable'}
+              </p>
+              {pilotStatus.etfPolicyVersion ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Policy {pilotStatus.etfPolicyVersion}
+                </p>
+              ) : null}
+            </div>
+            {pilotStatus.etfReadinessReasons.length > 0 ? (
+              <div className="rounded-md border border-border bg-card/60 p-3 md:col-span-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">ETF Readiness</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {pilotStatus.etfReadinessReasons.map((reason) => (
+                    <Badge key={reason} variant="secondary" className="whitespace-normal text-left">
+                      {reason}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
@@ -284,4 +307,12 @@ function fmtDate(raw?: string | null): string {
     return raw;
   }
   return d.toLocaleString();
+}
+
+function formatWorkflow(value: string): string {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
 }

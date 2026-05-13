@@ -42,6 +42,14 @@ describe('ApprovalsPage', () => {
         confidence: 0.82,
         detectedAt: '2026-03-19T13:00:00Z',
         instanceName: 'Opening Range Breakout',
+        metadata: {
+          etfPolicy: {
+            allowed: true,
+            reasonCode: 'allowed',
+            reason: 'SPY is approved for ETF phase-1 paper trading.',
+            catalogVersion: 'phase1-2026-05-13',
+          },
+        },
       },
     ]);
     vi.mocked(candidatesService.list)
@@ -92,6 +100,8 @@ describe('ApprovalsPage', () => {
 
     expect(await screen.findByText('Approval Queue')).toBeInTheDocument();
     expect(await screen.findByText('AAPL')).toBeInTheDocument();
+    expect(await screen.findByText('ETF eligible')).toBeInTheDocument();
+    expect(await screen.findByText('allowed')).toBeInTheDocument();
     expect(await screen.findByText('Recent Execution Activity')).toBeInTheDocument();
     expect(await screen.findByText('NVDA')).toBeInTheDocument();
     expect(await screen.findByText('Recently Blocked')).toBeInTheDocument();

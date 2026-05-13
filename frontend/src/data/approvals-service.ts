@@ -24,6 +24,7 @@ export interface CandidateTrade {
   submittedAt?: string;
   filledAt?: string;
   dataProvenance: string;
+  metadata?: Record<string, unknown>;
   latestApproval?: {
     id: string;
     decision: string;
@@ -83,6 +84,7 @@ export interface ApprovalQueueItem {
   takeProfit?: number;
   reasoning?: string;
   blockReason?: string;
+  metadata?: Record<string, unknown>;
   detectedAt: string;
   expiresAt?: string;
   instanceName: string;

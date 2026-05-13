@@ -37,8 +37,47 @@ export interface TradingPilotStatus {
   requiresManualBrokerConfirmation: boolean;
   reviewAgainstBroker: boolean;
   rollbackToReadOnly: boolean;
+  etfPhase1Enabled: boolean;
+  etfPolicyVersion?: string;
+  etfPolicyHash?: string;
+  etfEntryWorkflow: string;
+  etfReadinessReasons: string[];
   reasons: string[];
   checklist: string[];
+  checkedAt: string;
+}
+
+export interface ETFPolicy {
+  phase: string;
+  quote_freshness_seconds: number;
+  max_spread_bps: number;
+  min_bid_size: number;
+  min_ask_size: number;
+  session_timezone: string;
+  regular_session_start: string;
+  regular_session_end: string;
+  require_stop_loss: boolean;
+  require_flatten_by_close: boolean;
+  entry_modes: string[];
+}
+
+export interface ETFInstrument {
+  symbol: string;
+  asset_class: string;
+  instrument_type: string;
+  tradable_modes: string[];
+  eligibility_state: string;
+  effective_date: string;
+  change_owner: string;
+  exclusions: string[];
+}
+
+export interface ETFInstrumentCatalog {
+  version: string;
+  hash: string;
+  owner: string;
+  policy: ETFPolicy;
+  instruments: ETFInstrument[];
   checkedAt: string;
 }
 

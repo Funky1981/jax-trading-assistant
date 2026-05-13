@@ -8,3 +8,4 @@ export * from './useStrategies';
 export * from './useRisk';
 export * from './useIBAccount';
 export * from './useMarketDataStatus';
+export * from './useETFInstruments';

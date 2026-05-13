@@ -22,6 +22,7 @@ import {
 import { OrderSide, OrderType, useCreateOrder } from '@/hooks/useOrders';
 import { useMarketDataStatus } from '@/hooks/useMarketDataStatus';
 import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
+import { useETFInstruments } from '@/hooks/useETFInstruments';
 import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
 
 interface OrderTicketPanelProps {
@@ -60,12 +61,18 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
   const createOrder = useCreateOrder();
   const { data: marketDataStatus, isError: marketStatusError } = useMarketDataStatus();
   const { data: pilotStatus } = useTradingPilotStatus();
+  const { data: etfCatalog } = useETFInstruments();
   const pilotActionReasons =
     pilotStatus && (pilotStatus.readOnly || !pilotStatus.brokerConnected)
       ? pilotStatus.reasons
       : [];
 
   const hasProtection = Boolean(stopLossPrice || takeProfitPrice);
+  const normalizedSymbol = symbol.toUpperCase().trim();
+  const manualETFBlocked = Boolean(
+    normalizedSymbol &&
+      etfCatalog?.instruments.some((item) => item.symbol.toUpperCase() === normalizedSymbol)
+  );
 
   const resetForm = () => {
     setSymbol('');
@@ -79,7 +86,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!symbol || !quantity || pilotStatus?.readOnly) return;
+    if (!symbol || !quantity || pilotStatus?.readOnly || manualETFBlocked) return;
 
     setBrokerConfirmed(false);
     setPendingOrder({
@@ -141,6 +148,12 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
         {marketDataStatus ? (
           <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
             Orders are submitted with {marketDataStatus.paperTrading ? 'paper trading' : 'live trading'} enabled while quotes are currently in {marketDataStatus.marketDataMode} mode.
+          </div>
+        ) : null}
+
+        {manualETFBlocked ? (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            ETF entries must be submitted through the approval queue. Manual close, cancel, and protection actions remain available from Positions and Blotter.
           </div>
         ) : null}
 
@@ -301,6 +314,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
             !symbol ||
             !quantity ||
             pilotStatus?.readOnly === true ||
+            manualETFBlocked ||
             (orderType === 'limit' && !price) ||
             (orderType === 'stop' && !entryStopPrice) ||
             createOrder.isPending

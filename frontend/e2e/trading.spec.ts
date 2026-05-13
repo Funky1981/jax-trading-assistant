@@ -84,10 +84,39 @@ async function installTradingStubs(page: Page) {
         requiresManualBrokerConfirmation: true,
         reviewAgainstBroker: true,
         rollbackToReadOnly: true,
+        etfPhase1Enabled: true,
+        etfPolicyVersion: 'phase1-2026-05-13',
+        etfPolicyHash: 'stubbed',
+        etfEntryWorkflow: 'approval_only',
+        etfReadinessReasons: [
+          'ETF entries must use the approval workflow.',
+          'Manual ETF entry orders are blocked from the order ticket.',
+        ],
         reasons: [],
         checklist: [
           'Verify IB/TWS is connected and paper trading remains enabled.',
           'Confirm symbol, quantity, and exits in IB/TWS before every broker mutation.',
+        ],
+        checkedAt: '2026-03-06T13:15:00Z',
+      }),
+    });
+  });
+
+  await page.route('**/api/v1/instruments/etfs', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        version: 'phase1-2026-05-13',
+        hash: 'stubbed',
+        owner: 'trading-risk',
+        policy: {
+          quote_freshness_seconds: 60,
+          max_spread_bps: 10,
+        },
+        instruments: [
+          { symbol: 'SPY', instrument_type: 'etf', eligibility_state: 'approved' },
+          { symbol: 'QQQ', instrument_type: 'etf', eligibility_state: 'approved' },
         ],
         checkedAt: '2026-03-06T13:15:00Z',
       }),
@@ -532,4 +561,23 @@ test('submits protected entries and manages orders and positions', async ({ page
   await closeDialog.getByRole('checkbox', { name: /I confirmed this exit in IB\/TWS/i }).check();
   await closeDialog.getByRole('button', { name: 'Submit Close' }).click();
   await expect.poll(() => state.closeRequests).toBe(1);
+});
+
+test('blocks manual ETF entries while leaving exposure actions available', async ({ page }) => {
+  const state = await installTradingStubs(page);
+
+  await page.goto('/trading', { waitUntil: 'domcontentloaded' });
+
+  await page.locator('#order-ticket-symbol').fill('SPY');
+  await page.locator('#order-ticket-quantity').fill('10');
+
+  await expect(page.getByText(/ETF entries must be submitted through the approval queue/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Submit BUY Order' })).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Protect' }).first().click();
+  const protectDialog = page.getByRole('dialog');
+  await protectDialog.getByLabel('Stop Loss').fill('650');
+  await protectDialog.getByRole('checkbox', { name: /I confirmed these protective levels in IB\/TWS/i }).check();
+  await protectDialog.getByRole('button', { name: 'Submit Protection' }).click();
+  await expect.poll(() => state.protectRequests).toBe(1);
 });

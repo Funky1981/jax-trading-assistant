@@ -1,5 +1,5 @@
 import { apiClient } from './http-client';
-import type { MarketDataStatus, TradingPilotStatus } from './types';
+import type { ETFInstrumentCatalog, MarketDataStatus, TradingPilotStatus } from './types';
 
 export const systemService = {
   getMarketDataStatus() {
@@ -7,5 +7,8 @@ export const systemService = {
   },
   getTradingPilotStatus() {
     return apiClient.get<TradingPilotStatus>('/api/v1/trading/pilot-status');
+  },
+  getETFInstruments() {
+    return apiClient.get<ETFInstrumentCatalog>('/api/v1/instruments/etfs');
   },
 };

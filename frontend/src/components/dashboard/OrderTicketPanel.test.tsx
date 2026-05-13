@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderTicketPanel } from './OrderTicketPanel';
 
 const mutate = vi.fn();
@@ -33,7 +33,22 @@ vi.mock('@/hooks/useTradingPilotStatus', () => ({
   }),
 }));
 
+let etfSymbols: string[] = [];
+
+vi.mock('@/hooks/useETFInstruments', () => ({
+  useETFInstruments: () => ({
+    data: {
+      instruments: etfSymbols.map((symbol) => ({ symbol })),
+    },
+  }),
+}));
+
 describe('OrderTicketPanel', () => {
+  beforeEach(() => {
+    mutate.mockClear();
+    etfSymbols = [];
+  });
+
   it('submits a bracket order when stop loss protection is provided', async () => {
     const user = userEvent.setup();
 
@@ -59,5 +74,19 @@ describe('OrderTicketPanel', () => {
       }),
       expect.any(Object)
     );
+  });
+
+  it('blocks manual ETF entries from the order ticket', async () => {
+    const user = userEvent.setup();
+    etfSymbols = ['SPY'];
+
+    render(<OrderTicketPanel isOpen onToggle={() => undefined} />);
+
+    await user.type(screen.getByLabelText('Symbol'), 'SPY');
+    await user.type(screen.getByLabelText('Quantity'), '10');
+
+    expect(screen.getByText(/ETF entries must be submitted through the approval queue/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit BUY Order' })).toBeDisabled();
+    expect(mutate).not.toHaveBeenCalled();
   });
 });

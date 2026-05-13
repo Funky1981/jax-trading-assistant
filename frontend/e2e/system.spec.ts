@@ -4,6 +4,7 @@
  * User stories covered:
  *  US-SYS-1  Dataset snapshots table shows stubbed snapshot entries.
  *  US-SYS-2  System events table shows stubbed event entries.
+ *  US-SYS-3  ETF workflow readiness is shown separately from pilot trading health.
  *
  * Note: Pilot-status and health checks on the system page are already covered
  * in trading.spec.ts via installTradingStubs. These tests focus on the
@@ -96,4 +97,18 @@ test('system page: events table shows stub event title', async ({ page }) => {
   await page.goto('/system', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByText('Fed holds rates steady')).toBeVisible();
+});
+
+// ---------------------------------------------------------------------------
+// US-SYS-3: ETF workflow readiness
+// ---------------------------------------------------------------------------
+test('system page: ETF approval workflow readiness is visible', async ({ page }) => {
+  await stubSystemRoutes(page);
+
+  await page.goto('/system', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByText('ETF Workflow')).toBeVisible();
+  await expect(page.getByText('Candidate Approval Only')).toBeVisible();
+  await expect(page.getByText('Policy phase1-2026-05-13')).toBeVisible();
+  await expect(page.getByText('ETF entries must originate from approved candidates')).toBeVisible();
 });
