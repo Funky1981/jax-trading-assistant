@@ -73,6 +73,7 @@ type TradeResult struct {
 	Error         string
 	ArtifactID    string // ADR-0012 Phase 4: Artifact tracking
 	ArtifactHash  string // ADR-0012 Phase 4: Immutability guarantee
+	ETFPolicy     map[string]any
 }
 
 // Engine handles trade execution logic

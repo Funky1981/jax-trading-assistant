@@ -155,6 +155,12 @@ func scanInstance(ctx context.Context, svc *candidatesmod.Service, sigGen *signa
 				}
 				continue
 			}
+			if result, ok := candidatesmod.InstrumentPolicyResult(err); ok {
+				if blocked := persistBlockedSignal(ctx, svc, inst, sig, result.ReasonCode, result.Reason); blocked != nil {
+					blockedCount++
+				}
+				continue
+			}
 			log.Printf("watcher: propose error for %s/%s: %v", inst.Name, sig.Symbol, err)
 			continue
 		}

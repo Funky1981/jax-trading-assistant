@@ -51,6 +51,7 @@ import (
 
 	artifactdomain "jax-trading-assistant/internal/domain/artifacts"
 	"jax-trading-assistant/internal/modules/audit"
+	"jax-trading-assistant/internal/modules/instruments"
 	"jax-trading-assistant/libs/auth"
 	"jax-trading-assistant/libs/middleware"
 	"jax-trading-assistant/libs/observability"
@@ -195,6 +196,28 @@ func systemMarketDataStatusHandler(mt *marketTools) http.HandlerFunc {
 	}
 }
 
+func etfInstrumentsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		catalog, err := instruments.LoadDefaultCatalog()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("load ETF catalog: %v", err), http.StatusInternalServerError)
+			return
+		}
+		jsonOK(w, map[string]any{
+			"version":     catalog.Version,
+			"hash":        catalog.Hash(),
+			"owner":       catalog.Owner,
+			"policy":      catalog.Policy,
+			"instruments": catalog.ETFList(),
+			"checkedAt":   time.Now().UTC(),
+		})
+	}
+}
+
 // startFrontendAPIServer launches the jax-api-compatible HTTP server.
 // It runs until ctx is cancelled.
 func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strategies.Registry, strategyTypeReg *strategytypes.Registry) {
@@ -259,6 +282,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	mux.HandleFunc("/api/v1/system/runtime", protect(systemRuntimeHandler()))
 	mux.HandleFunc("/api/v1/system/providers", protect(systemProvidersHandler()))
 	mux.HandleFunc("/api/v1/system/market-data-status", protect(systemMarketDataStatusHandler(marketAPI)))
+	mux.HandleFunc("/api/v1/instruments/etfs", protect(etfInstrumentsHandler()))
 	mux.HandleFunc("/api/v1/trading/pilot-status", protect(tradingPilotStatusHandler(jwtManager != nil, marketAPI)))
 	mux.HandleFunc("/api/v1/market/candles", protect(marketCandlesHandler(marketAPI)))
 	mux.HandleFunc("/api/v1/broker/orders", protect(brokerOrdersHandler(jwtManager != nil, marketAPI, auditSvc)))
@@ -450,6 +474,25 @@ func loadSignalStatus(ctx context.Context, pool *pgxpool.Pool, id string) (strin
 	return status, nil
 }
 
+func loadSignalSymbol(ctx context.Context, pool *pgxpool.Pool, id string) (string, error) {
+	var symbol string
+	if err := pool.QueryRow(ctx, `SELECT symbol FROM strategy_signals WHERE id=$1`, id).Scan(&symbol); err != nil {
+		return "", err
+	}
+	return symbol, nil
+}
+
+func legacySignalApprovalETFBlock(symbol string) (bool, string, error) {
+	catalog, err := instruments.LoadDefaultCatalog()
+	if err != nil {
+		return false, "", fmt.Errorf("load ETF catalog: %w", err)
+	}
+	if !catalog.IsKnownETF(symbol) {
+		return false, "", nil
+	}
+	return true, "ETF signal approvals must use the candidate approval workflow", nil
+}
+
 func writeSignalStateConflict(w http.ResponseWriter, status, action string) {
 	if status == "expired" {
 		http.Error(w, fmt.Sprintf("signal cannot be %s because its approval window has expired", action), http.StatusConflict)
@@ -585,6 +628,29 @@ func signalApprove(w http.ResponseWriter, r *http.Request, pool *pgxpool.Pool, i
 	}
 	if err := reconcilePendingSignalExpirations(r.Context(), pool, id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	symbol, err := loadSignalSymbol(r.Context(), pool, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	blocked, reason, err := legacySignalApprovalETFBlock(symbol)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if blocked {
+		observability.LogEvent(r.Context(), "warn", "signal.etf_legacy_approval_blocked", map[string]any{
+			"signal_id": id,
+			"symbol":    strings.ToUpper(strings.TrimSpace(symbol)),
+			"reason":    reason,
+		})
+		http.Error(w, reason, http.StatusForbidden)
 		return
 	}
 	tag, err := pool.Exec(r.Context(),

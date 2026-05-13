@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strings"
 	"time"
 
 	"jax-trading-assistant/internal/modules/audit"
+	"jax-trading-assistant/internal/modules/instruments"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/risk"
 
@@ -90,8 +92,11 @@ type Service struct {
 	riskParams RiskParameters
 	// enforcer applies versioned policy constraints (L16) on top of the
 	// engine's built-in position-level checks. May be nil (no-op).
-	enforcer *risk.Enforcer
-	audit    *audit.Service
+	enforcer         *risk.Enforcer
+	audit            *audit.Service
+	instrumentPolicy *instruments.Catalog
+	runtimeMode      string
+	now              func() time.Time
 }
 
 // OrderIntent records an execution request before/while the broker order is live.
@@ -134,6 +139,16 @@ func (s *Service) WithAudit(auditSvc *audit.Service) *Service {
 	return s
 }
 
+func (s *Service) WithInstrumentPolicy(policy *instruments.Catalog, runtimeMode string, now func() time.Time) *Service {
+	s.instrumentPolicy = policy
+	s.runtimeMode = runtimeMode
+	if s.runtimeMode == "" {
+		s.runtimeMode = "paper"
+	}
+	s.now = now
+	return s
+}
+
 // ExecuteTrade executes a trade for an approved signal
 func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approvedBy string) (*TradeResult, error) {
 	if existing, err := s.store.GetTradeBySignal(ctx, signalID); err == nil && existing != nil {
@@ -155,6 +170,11 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 				return nil, fmt.Errorf("instance guardrail blocked execution: %w", err)
 			}
 		}
+	}
+
+	etfPolicy, err := s.checkInstrumentPolicy(ctx, signal)
+	if err != nil {
+		return nil, err
 	}
 
 	// 2. Validate signal
@@ -276,6 +296,7 @@ func (s *Service) ExecuteTrade(ctx context.Context, signalID uuid.UUID, approved
 		SubmittedAt:   time.Now().UTC(),
 		ArtifactID:    signal.ArtifactID,   // ADR-0012 Phase 4: Propagate artifact tracking
 		ArtifactHash:  signal.ArtifactHash, // ADR-0012 Phase 4: Immutability guarantee
+		ETFPolicy:     etfPolicy,
 	}
 
 	if orderStatus != nil {
@@ -367,6 +388,56 @@ func (s *Service) checkRiskGates(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Service) checkInstrumentPolicy(ctx context.Context, signal *Signal) (map[string]any, error) {
+	if s.instrumentPolicy == nil || signal == nil || !s.instrumentPolicy.IsKnownETF(signal.Symbol) {
+		return nil, nil
+	}
+	quoteReader, ok := s.store.(interface {
+		GetLatestQuote(context.Context, string) (*instruments.QuoteSnapshot, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("ETF policy violation: %s: quote lookup unavailable", instruments.ReasonQuoteMissing)
+	}
+	quote, err := quoteReader.GetLatestQuote(ctx, signal.Symbol)
+	if err != nil || quote == nil {
+		return nil, fmt.Errorf("ETF policy violation: %s: %v", instruments.ReasonQuoteMissing, err)
+	}
+	now := time.Now().UTC()
+	if s.now != nil {
+		now = s.now().UTC()
+	}
+	result := s.instrumentPolicy.EvaluateSubmission(signal.Symbol, s.runtimeMode, instruments.SubmissionContext{
+		Now:          now,
+		QuoteTime:    quote.Timestamp,
+		Bid:          quote.Bid,
+		Ask:          quote.Ask,
+		BidSize:      quote.BidSize,
+		AskSize:      quote.AskSize,
+		HasStopLoss:  signal.StopLoss > 0,
+		FlattenByEOD: true,
+	})
+	if result.Allowed {
+		if s.audit != nil {
+			flowID := observability.FlowIDFromContext(ctx)
+			_ = s.audit.LogAuditEvent(ctx, flowID, "execution", "etf_policy_gate", "allowed", result.Reason, result.Metadata)
+		}
+		return map[string]any{
+			"symbol":         result.Symbol,
+			"allowed":        result.Allowed,
+			"reasonCode":     result.ReasonCode,
+			"reason":         result.Reason,
+			"catalogVersion": result.CatalogVersion,
+			"catalogHash":    result.CatalogHash,
+			"metadata":       result.Metadata,
+		}, nil
+	}
+	if s.audit != nil {
+		flowID := observability.FlowIDFromContext(ctx)
+		_ = s.audit.LogAuditEvent(ctx, flowID, "execution", "etf_policy_gate", "blocked", result.Reason, result.Metadata)
+	}
+	return nil, fmt.Errorf("ETF policy violation: %s: %s", result.ReasonCode, result.Reason)
 }
 
 // pollOrderStatus polls broker for order status updates
@@ -468,6 +539,26 @@ func (s *PostgresTradeStore) GetSignal(ctx context.Context, signalID uuid.UUID) 
 	}
 
 	return &signal, nil
+}
+
+func (s *PostgresTradeStore) GetLatestQuote(ctx context.Context, symbol string) (*instruments.QuoteSnapshot, error) {
+	var quote instruments.QuoteSnapshot
+	err := s.db.QueryRowContext(ctx, `
+		SELECT symbol, COALESCE(bid, 0), COALESCE(ask, 0), COALESCE(bid_size, 0), COALESCE(ask_size, 0), timestamp
+		FROM quotes
+		WHERE symbol = $1
+	`, strings.ToUpper(strings.TrimSpace(symbol))).Scan(
+		&quote.Symbol,
+		&quote.Bid,
+		&quote.Ask,
+		&quote.BidSize,
+		&quote.AskSize,
+		&quote.Timestamp,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &quote, nil
 }
 
 // GetTradeBySignal returns the latest trade for a signal, if one exists.
@@ -629,6 +720,7 @@ func (s *PostgresTradeStore) StoreTrade(ctx context.Context, trade *TradeResult)
 		"quantity":       trade.Quantity,
 		"order_id":       trade.OrderID,
 		"status":         trade.Status,
+		"etf_policy":     trade.ETFPolicy,
 	})
 
 	notes := fmt.Sprintf("Signal ID: %s, Order ID: %s, Approved trade execution at %s",

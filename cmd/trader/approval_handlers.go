@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -135,6 +136,10 @@ func handleApprovalDecision(w http.ResponseWriter, r *http.Request, svc *approva
 		case approvalsmod.ErrCandidateExpired:
 			http.Error(w, err.Error(), http.StatusGone)
 		default:
+			if errors.Is(err, approvalsmod.ErrInstrumentPolicy) {
+				http.Error(w, err.Error(), http.StatusForbidden)
+				return
+			}
 			if strings.Contains(err.Error(), "not in awaiting_approval") {
 				http.Error(w, err.Error(), http.StatusConflict)
 				return

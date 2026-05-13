@@ -2,25 +2,47 @@ package candidates
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+
+	"jax-trading-assistant/internal/modules/instruments"
 )
 
 // Service applies business rules on top of the Store.
 type Service struct {
-	store *Store
+	store          *Store
+	instrumentGate *instruments.Catalog
+	runtimeMode    string
 }
 
 // NewService creates a candidate Service.
 func NewService(store *Store) *Service {
-	return &Service{store: store}
+	svc := &Service{store: store, runtimeMode: "paper"}
+	if catalog, err := instruments.LoadDefaultCatalog(); err == nil {
+		svc.instrumentGate = catalog
+	}
+	return svc
+}
+
+func (s *Service) WithInstrumentPolicy(catalog *instruments.Catalog, runtimeMode string) *Service {
+	s.instrumentGate = catalog
+	if runtimeMode != "" {
+		s.runtimeMode = runtimeMode
+	}
+	return s
 }
 
 // Propose creates a detected candidate after running hard pre-qualification checks.
 // Returns the created candidate, or an error if a hard check fails.
 func (s *Service) Propose(ctx context.Context, req ProposalRequest) (*Candidate, error) {
+	if result, gated := s.evaluateETF(req.Symbol); gated && !result.Allowed {
+		return nil, instrumentPolicyError{result: result}
+	}
+
 	// Hard check: duplicate guard
 	today := time.Now().UTC().Format("2006-01-02")
 	dup, err := s.store.HasOpenForInstanceSymbol(ctx, req.StrategyInstanceID, req.Symbol, today)
@@ -56,11 +78,37 @@ func (s *Service) Propose(ctx context.Context, req ProposalRequest) (*Candidate,
 		exp := time.Now().UTC().Add(req.TTL)
 		c.ExpiresAt = &exp
 	}
+	if result, gated := s.evaluateETF(req.Symbol); gated {
+		c.Metadata = metadataWithETFResult(c.Metadata, result)
+	}
 	return s.store.Create(ctx, c)
 }
 
 // Qualify transitions a detected candidate to qualified and then to awaiting_approval.
 func (s *Service) Qualify(ctx context.Context, id uuid.UUID) error {
+	candidate, err := s.store.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if result, gated := s.evaluateETF(candidate.Symbol); gated {
+		if !result.Allowed {
+			return s.store.UpdateStatus(ctx, id, StatusBlocked, map[string]any{
+				"blockReason":       result.Reason,
+				"blockedReasonCode": result.ReasonCode,
+				"etfPolicy":         result.Metadata,
+			})
+		}
+		if candidate.StopLoss == nil || *candidate.StopLoss <= 0 {
+			result.Allowed = false
+			result.ReasonCode = instruments.ReasonStopLossRequired
+			result.Reason = "ETF candidates require a stop loss before approval."
+			return s.store.UpdateStatus(ctx, id, StatusBlocked, map[string]any{
+				"blockReason":       result.Reason,
+				"blockedReasonCode": result.ReasonCode,
+				"etfPolicy":         result.Metadata,
+			})
+		}
+	}
 	if err := s.store.UpdateStatus(ctx, id, StatusQualified, nil); err != nil {
 		return err
 	}
@@ -165,11 +213,62 @@ func (s *Service) CreateBlocked(ctx context.Context, req BlockRequest) (*Candida
 		exp := time.Now().UTC().Add(req.TTL)
 		candidate.ExpiresAt = &exp
 	}
+	if result, gated := s.evaluateETF(req.Symbol); gated {
+		candidate.Metadata = metadataWithETFResult(candidate.Metadata, result)
+	}
 	return s.store.CreateBlocked(ctx, candidate)
 }
 
 // ErrDuplicateCandidate is returned when an open candidate already exists.
 var ErrDuplicateCandidate = fmt.Errorf("open candidate already exists for this instance/symbol/session")
+
+var ErrInstrumentPolicy = errors.New("instrument policy rejected candidate")
+
+type instrumentPolicyError struct {
+	result instruments.Evaluation
+}
+
+func (e instrumentPolicyError) Error() string {
+	return fmt.Sprintf("%s: %s", ErrInstrumentPolicy, e.result.Reason)
+}
+
+func (e instrumentPolicyError) Unwrap() error {
+	return ErrInstrumentPolicy
+}
+
+func InstrumentPolicyResult(err error) (instruments.Evaluation, bool) {
+	var policyErr instrumentPolicyError
+	if errors.As(err, &policyErr) {
+		return policyErr.result, true
+	}
+	return instruments.Evaluation{}, false
+}
+
+func (s *Service) evaluateETF(symbol string) (instruments.Evaluation, bool) {
+	if s.instrumentGate == nil || !s.instrumentGate.IsKnownETF(symbol) {
+		return instruments.Evaluation{}, false
+	}
+	return s.instrumentGate.Evaluate(symbol, s.runtimeMode), true
+}
+
+func metadataWithETFResult(raw *json.RawMessage, result instruments.Evaluation) *json.RawMessage {
+	metadata := map[string]any{}
+	if raw != nil && len(*raw) > 0 {
+		_ = json.Unmarshal(*raw, &metadata)
+	}
+	metadata["etfPolicy"] = map[string]any{
+		"symbol":         result.Symbol,
+		"allowed":        result.Allowed,
+		"reasonCode":     result.ReasonCode,
+		"reason":         result.Reason,
+		"catalogVersion": result.CatalogVersion,
+		"catalogHash":    result.CatalogHash,
+		"metadata":       result.Metadata,
+	}
+	data, _ := json.Marshal(metadata)
+	msg := json.RawMessage(data)
+	return &msg
+}
 
 func parseOptionalUUID(raw string) *uuid.UUID {
 	if raw == "" {

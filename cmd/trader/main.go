@@ -20,6 +20,7 @@ import (
 	artifactsModule "jax-trading-assistant/internal/modules/artifacts"
 	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/internal/modules/execution"
+	"jax-trading-assistant/internal/modules/instruments"
 	"jax-trading-assistant/internal/trader/signalgenerator"
 	"jax-trading-assistant/libs/risk"
 	"jax-trading-assistant/libs/runtimepolicy"
@@ -76,6 +77,11 @@ func main() {
 	if err := validateStartupProviderPolicy(cfg.RuntimeMode); err != nil {
 		log.Fatalf("startup provider policy failed: %v", err)
 	}
+	etfCatalog, err := instruments.LoadDefaultCatalog()
+	if err != nil {
+		log.Fatalf("failed to load ETF instrument catalog: %v", err)
+	}
+	log.Printf("ETF instrument catalog loaded: version=%s hash=%s", etfCatalog.Version, etfCatalog.Hash())
 
 	// Initialize database connection pool
 	ctx, ctxCancel := context.WithCancel(context.Background())
@@ -172,7 +178,8 @@ func main() {
 
 			// Create execution service (L16: enforcer gates portfolio-level constraints)
 			execService = execution.NewService(engine, ibClient, tradeStore, cfg.DefaultOrderType, riskParams, riskEnforcer).
-				WithAudit(auditSvc)
+				WithAudit(auditSvc).
+				WithInstrumentPolicy(etfCatalog, cfg.RuntimeMode.String(), time.Now)
 			log.Println("execution service initialized")
 			log.Printf("  IB Bridge: %s", cfg.IBBridgeURL)
 			log.Printf("  max risk per trade: %.2f%%", cfg.MaxRiskPerTrade*100)

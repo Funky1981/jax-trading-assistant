@@ -1,0 +1,34 @@
+{
+  "version": "phase1-2026-05-13",
+  "owner": "trading-risk",
+  "policy": {
+    "phase": "phase-1-paper",
+    "quote_freshness_seconds": 60,
+    "max_spread_bps": 10,
+    "min_bid_size": 1,
+    "min_ask_size": 1,
+    "session_timezone": "America/New_York",
+    "regular_session_start": "09:30",
+    "regular_session_end": "16:00",
+    "require_stop_loss": true,
+    "require_flatten_by_close": true,
+    "entry_modes": ["paper"]
+  },
+  "instruments": [
+    { "symbol": "SPY", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "QQQ", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "DIA", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "IWM", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "XLK", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "XLF", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "XLE", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "SMH", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "SOXX", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "TLT", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "GLD", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": ["paper"], "eligibility_state": "approved", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": [] },
+    { "symbol": "TQQQ", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": [], "eligibility_state": "excluded", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": ["leveraged"] },
+    { "symbol": "SQQQ", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": [], "eligibility_state": "excluded", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": ["leveraged", "inverse"] },
+    { "symbol": "UVXY", "asset_class": "equity", "instrument_type": "etf", "tradable_modes": [], "eligibility_state": "excluded", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": ["volatility", "leveraged"] },
+    { "symbol": "VXX", "asset_class": "equity", "instrument_type": "etn", "tradable_modes": [], "eligibility_state": "excluded", "effective_date": "2026-05-13", "change_owner": "trading-risk", "exclusions": ["volatility", "etn"] }
+  ]
+}

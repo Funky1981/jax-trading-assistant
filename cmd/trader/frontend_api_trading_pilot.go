@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"jax-trading-assistant/internal/modules/audit"
+	"jax-trading-assistant/internal/modules/instruments"
 	"jax-trading-assistant/libs/auth"
 	"jax-trading-assistant/libs/observability"
 
@@ -35,6 +36,11 @@ type tradingPilotStatusResponse struct {
 	RequiresManualBrokerConfirmation bool      `json:"requiresManualBrokerConfirmation"`
 	ReviewAgainstBroker              bool      `json:"reviewAgainstBroker"`
 	RollbackToReadOnly               bool      `json:"rollbackToReadOnly"`
+	ETFPhase1Enabled                 bool      `json:"etfPhase1Enabled"`
+	ETFPolicyVersion                 string    `json:"etfPolicyVersion,omitempty"`
+	ETFPolicyHash                    string    `json:"etfPolicyHash,omitempty"`
+	ETFEntryWorkflow                 string    `json:"etfEntryWorkflow"`
+	ETFReadinessReasons              []string  `json:"etfReadinessReasons"`
 	Reasons                          []string  `json:"reasons"`
 	Checklist                        []string  `json:"checklist"`
 	CheckedAt                        time.Time `json:"checkedAt"`
@@ -71,6 +77,8 @@ func buildTradingPilotStatus(ctx context.Context, authEnabled bool, mt *marketTo
 		RequiresManualBrokerConfirmation: true,
 		ReviewAgainstBroker:              true,
 		RollbackToReadOnly:               true,
+		ETFEntryWorkflow:                 "approval_only",
+		ETFReadinessReasons:              []string{},
 		Reasons:                          []string{},
 		Checklist: []string{
 			"Verify IB/TWS is connected and paper trading remains enabled.",
@@ -91,6 +99,21 @@ func buildTradingPilotStatus(ctx context.Context, authEnabled bool, mt *marketTo
 			}
 			status.PaperTrading = bridgeHealth.PaperTrading
 		}
+	}
+	if catalog, err := instruments.LoadDefaultCatalog(); err == nil {
+		status.ETFPhase1Enabled = true
+		status.ETFPolicyVersion = catalog.Version
+		status.ETFPolicyHash = catalog.Hash()
+		status.ETFReadinessReasons = append(status.ETFReadinessReasons,
+			"ETF entries must use the approval workflow.",
+			"Manual ETF entry orders are blocked from the order ticket.",
+			fmt.Sprintf("ETF quote freshness threshold is %d seconds.", catalog.Policy.QuoteFreshnessSeconds),
+			fmt.Sprintf("ETF maximum spread threshold is %.0f bps.", catalog.Policy.MaxSpreadBps),
+			"ETF entries require stop loss and flatten-by-close controls.",
+		)
+	} else {
+		status.ETFReadinessReasons = append(status.ETFReadinessReasons, "ETF instrument catalog could not be loaded.")
+		status.Reasons = append(status.Reasons, "ETF instrument catalog could not be loaded; ETF trading is not ready.")
 	}
 
 	if !status.PilotMode {
@@ -385,6 +408,9 @@ func brokerAccountHandler(mt *marketTools) http.HandlerFunc {
 func allowPilotBrokerWrite(w http.ResponseWriter, r *http.Request, authEnabled bool, mt *marketTools, auditSvc *audit.Service, action string, target string, body []byte) bool {
 	status := buildTradingPilotStatus(r.Context(), authEnabled, mt)
 	if status.CanTrade {
+		if blockManualETFEntry(w, r, auditSvc, action, target, body) {
+			return false
+		}
 		return true
 	}
 
@@ -405,6 +431,35 @@ func allowPilotBrokerWrite(w http.ResponseWriter, r *http.Request, authEnabled b
 		"canTrade": status.CanTrade,
 	})
 	return false
+}
+
+func blockManualETFEntry(w http.ResponseWriter, r *http.Request, auditSvc *audit.Service, action string, target string, body []byte) bool {
+	if action != "orders.submit" && action != "orders.bracket_submit" {
+		return false
+	}
+	var payload struct {
+		Symbol string `json:"symbol"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return false
+	}
+	catalog, err := instruments.LoadDefaultCatalog()
+	if err != nil || !catalog.IsKnownETF(payload.Symbol) {
+		return false
+	}
+	reason := "manual ETF entry orders must use the approval workflow"
+	logPilotBrokerAction(r.Context(), auditSvc, action, "blocked", reason, map[string]any{
+		"target": target,
+		"body":   string(body),
+		"symbol": strings.ToUpper(strings.TrimSpace(payload.Symbol)),
+		"reason": instruments.ReasonModeNotAllowed,
+	})
+	jsonError(w, http.StatusForbidden, map[string]any{
+		"error":      reason,
+		"reasonCode": "manual_etf_entry_blocked",
+		"symbol":     strings.ToUpper(strings.TrimSpace(payload.Symbol)),
+	})
+	return true
 }
 
 func proxyBrokerRequest(ctx context.Context, mt *marketTools, method string, path string, body []byte) ([]byte, error) {

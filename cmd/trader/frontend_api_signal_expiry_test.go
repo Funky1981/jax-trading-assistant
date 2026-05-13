@@ -41,6 +41,11 @@ func testFrontendAPIPool(t *testing.T) *pgxpool.Pool {
 
 func insertSignalForExpiryTest(t *testing.T, pool *pgxpool.Pool, generatedAt time.Time, expiresAt *time.Time, status string) (string, string) {
 	t.Helper()
+	return insertSignalForExpiryTestWithSymbol(t, pool, "AAPL", generatedAt, expiresAt, status)
+}
+
+func insertSignalForExpiryTestWithSymbol(t *testing.T, pool *pgxpool.Pool, symbol string, generatedAt time.Time, expiresAt *time.Time, status string) (string, string) {
+	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -53,7 +58,7 @@ func insertSignalForExpiryTest(t *testing.T, pool *pgxpool.Pool, generatedAt tim
 		VALUES
 			($1, $2, $3, $4, $5, $6, $7, $8)`,
 		signalID,
-		"AAPL",
+		symbol,
 		strategyID,
 		"BUY",
 		0.75,
@@ -200,5 +205,33 @@ func TestSignalApproveRejectsExpiredPendingSignal(t *testing.T) {
 	if expiresAt == nil {
 		t.Fatal("expected expires_at to be backfilled before approve conflict")
 		return
+	}
+}
+
+func TestSignalApproveBlocksETFEntryBypass(t *testing.T) {
+	pool := testFrontendAPIPool(t)
+	generatedAt := time.Now().UTC()
+	expiresAt := generatedAt.Add(15 * time.Minute)
+	signalID, _ := insertSignalForExpiryTestWithSymbol(t, pool, "SPY", generatedAt, &expiresAt, "pending")
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v1/signals/"+signalID+"/approve",
+		strings.NewReader(`{"approved_by":"tester@local"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	signalApprove(rec, req, pool, signalID)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("approve status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "candidate approval workflow") {
+		t.Fatalf("approve error body = %q, want candidate workflow reason", rec.Body.String())
+	}
+
+	status, _ := loadExpiryTestSignal(t, pool, signalID)
+	if status != "pending" {
+		t.Fatalf("signal status = %q, want pending", status)
 	}
 }

@@ -3,6 +3,7 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -109,7 +110,7 @@ func (s *Store) ListQueue(ctx context.Context, limit int) ([]map[string]any, err
 	rows, err := s.pool.Query(ctx, `
 		SELECT ct.id::text, ct.symbol, ct.signal_type, ct.confidence, ct.entry_price,
 		       ct.stop_loss, ct.take_profit, ct.reasoning, ct.block_reason,
-		       ct.detected_at, ct.expires_at, si.name AS instance_name
+		       ct.detected_at, ct.expires_at, si.name AS instance_name, ct.metadata
 		FROM candidate_trades ct
 		LEFT JOIN strategy_instances si ON si.id = ct.strategy_instance_id
 		WHERE ct.status = 'awaiting_approval'
@@ -129,13 +130,18 @@ func (s *Store) ListQueue(ctx context.Context, limit int) ([]map[string]any, err
 			reasoning, blockReason                       *string
 			detectedAt                                   time.Time
 			expiresAt                                    *time.Time
+			metadataRaw                                  []byte
+			metadata                                     map[string]any
 		)
 		if err := rows.Scan(
 			&id, &symbol, &signalType, &confidence, &entryPrice,
 			&stopLoss, &takeProfit, &reasoning, &blockReason,
-			&detectedAt, &expiresAt, &instanceName,
+			&detectedAt, &expiresAt, &instanceName, &metadataRaw,
 		); err != nil {
 			return nil, err
+		}
+		if len(metadataRaw) > 0 {
+			_ = json.Unmarshal(metadataRaw, &metadata)
 		}
 		out = append(out, map[string]any{
 			"id":           id,
@@ -150,6 +156,7 @@ func (s *Store) ListQueue(ctx context.Context, limit int) ([]map[string]any, err
 			"detectedAt":   detectedAt,
 			"expiresAt":    expiresAt,
 			"instanceName": instanceName,
+			"metadata":     metadata,
 		})
 	}
 	return out, rows.Err()

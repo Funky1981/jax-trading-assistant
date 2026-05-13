@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+
+	"jax-trading-assistant/internal/modules/instruments"
 )
 
 type fakeBroker struct {
@@ -37,6 +39,7 @@ type fakeStore struct {
 	signal                   *Signal
 	trade                    *TradeResult
 	intent                   *OrderIntentSummary
+	quote                    *instruments.QuoteSnapshot
 	storeIntentCalls         int
 	updateIntentByTradeCalls int
 }
@@ -85,6 +88,13 @@ func (s *fakeStore) StoreOrderIntent(ctx context.Context, intent *OrderIntent) (
 
 func (s *fakeStore) UpdateOrderIntentStatus(ctx context.Context, signalID uuid.UUID, status *BrokerOrderStatus) error {
 	return nil
+}
+
+func (s *fakeStore) GetLatestQuote(ctx context.Context, symbol string) (*instruments.QuoteSnapshot, error) {
+	if s.quote == nil {
+		return nil, errors.New("quote missing")
+	}
+	return s.quote, nil
 }
 
 func TestExecuteTrade_IdempotentExistingTrade(t *testing.T) {

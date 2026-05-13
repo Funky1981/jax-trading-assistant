@@ -2,6 +2,7 @@ package approvals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
+	"jax-trading-assistant/internal/modules/instruments"
 )
 
 // Service applies approval business rules.
@@ -16,15 +18,30 @@ type Service struct {
 	store          *Store
 	pool           *pgxpool.Pool
 	candidateStore *candidatesmod.Store
+	instrumentGate *instruments.Catalog
+	runtimeMode    string
 }
 
 // NewService creates an approval Service.
 func NewService(pool *pgxpool.Pool) *Service {
-	return &Service{
+	svc := &Service{
 		store:          NewStore(pool),
 		pool:           pool,
 		candidateStore: candidatesmod.NewStore(pool),
+		runtimeMode:    "paper",
 	}
+	if catalog, err := instruments.LoadDefaultCatalog(); err == nil {
+		svc.instrumentGate = catalog
+	}
+	return svc
+}
+
+func (s *Service) WithInstrumentPolicy(catalog *instruments.Catalog, runtimeMode string) *Service {
+	s.instrumentGate = catalog
+	if runtimeMode != "" {
+		s.runtimeMode = runtimeMode
+	}
+	return s
 }
 
 // ApprovalRequest carries input for any approval action.
@@ -59,6 +76,11 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 	}
 	if req.Decision == DecisionApproved && signalID == nil {
 		return nil, ErrCandidateMissingSignal
+	}
+	if req.Decision == DecisionApproved {
+		if err := s.checkETFApprovalGate(ctx, req.CandidateID); err != nil {
+			return nil, err
+		}
 	}
 
 	a := &Approval{
@@ -166,7 +188,31 @@ var (
 	ErrCandidateExpired       = fmt.Errorf("candidate has expired and cannot be approved")
 	ErrNotAwaitingApproval    = fmt.Errorf("candidate is not in awaiting_approval state")
 	ErrCandidateMissingSignal = fmt.Errorf("candidate is missing signal linkage required for paper execution")
+	ErrInstrumentPolicy       = errors.New("instrument policy rejected approval")
 )
+
+func (s *Service) checkETFApprovalGate(ctx context.Context, candidateID uuid.UUID) error {
+	if s.instrumentGate == nil {
+		return nil
+	}
+	var symbol string
+	var stopLoss *float64
+	err := s.pool.QueryRow(ctx, `SELECT symbol, stop_loss FROM candidate_trades WHERE id = $1`, candidateID).Scan(&symbol, &stopLoss)
+	if err != nil {
+		return err
+	}
+	if !s.instrumentGate.IsKnownETF(symbol) {
+		return nil
+	}
+	result := s.instrumentGate.Evaluate(symbol, s.runtimeMode)
+	if !result.Allowed {
+		return fmt.Errorf("%w: %s: %s", ErrInstrumentPolicy, result.ReasonCode, result.Reason)
+	}
+	if stopLoss == nil || *stopLoss <= 0 {
+		return fmt.Errorf("%w: %s: ETF candidates require a stop loss before approval", ErrInstrumentPolicy, instruments.ReasonStopLossRequired)
+	}
+	return nil
+}
 
 func (s *Service) syncSignalDecision(ctx context.Context, signalID uuid.UUID, req ApprovalRequest) error {
 	switch req.Decision {
