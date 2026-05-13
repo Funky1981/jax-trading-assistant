@@ -86,3 +86,19 @@ Ensure ETF trades persist enough metadata to answer:
 ## Exit gate
 
 Do not enable ETF paper trading until all mandatory pre-trade and audit controls reject unsafe submissions by default.
+
+## Implemented controls
+
+- ETF entry runtime mode must be `paper`.
+- Quote age must be <= 60 seconds.
+- Bid and ask must be present with non-zero sizes.
+- Spread must be <= 10 bps.
+- Entry timestamp must be inside US regular trading hours.
+- Stop loss and flatten-by-close controls are required.
+- Gate outcomes are written to execution audit events and trade risk metadata.
+
+## Phase-2 completion evidence
+
+- Execution service tests cover excluded-class, live-mode, stale-quote, missing bid/ask, wide-spread, outside-RTH, missing-stop-loss, and allowed-paper ETF submissions.
+- Direct broker proxy tests cover manual ETF blocks on both `/api/v1/broker/orders` and `/api/v1/broker/orders/bracket`.
+- Allowed ETF paper submissions persist ETF policy evidence on the trade result and trade risk metadata.

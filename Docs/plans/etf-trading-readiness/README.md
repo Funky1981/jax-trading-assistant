@@ -36,6 +36,16 @@ Jax should be considered ETF-ready for phase 1 only when all of the following ar
 - protective exits and audit fields are present for ETF orders
 - ETF-specific automated and manual validation passes in paper trading
 
+## Implementation status
+
+Implemented phase-1 controls:
+
+- `config/etf-instruments.json` is the versioned ETF catalog.
+- `/api/v1/instruments/etfs` exposes the active catalog and thresholds.
+- ETF manual entry orders are blocked from direct broker submit endpoints.
+- Candidate, approval, and execution paths apply ETF eligibility checks.
+- Execution enforces quote freshness, bid/ask presence, spread, session, stop-loss, flatten-by-close, and paper-only requirements.
+
 ## Recommended work order
 
 1. Lock scope and instrument policy.

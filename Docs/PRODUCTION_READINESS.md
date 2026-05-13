@@ -11,6 +11,9 @@ This checklist is the release gate for moving from paper validation to productio
 - `HARNESS_SHADOW_MODE` is explicitly set to the intended rollout mode (`false` for primary path, `true` for log-only shadow mode).
 - `HARNESS_SESSION_RATE_LIMIT_PER_MINUTE` is set to the approved session throttle for the environment.
 - For `live` mode only: `ALLOW_LIVE_TRADING=true` is explicitly set and approved.
+- ETF phase 1 is paper-only: `config/etf-instruments.json` must load successfully and all ETF live submissions must remain blocked.
+- ETF entries must use the candidate approval workflow; manual ETF entry orders from the order ticket are not release-eligible.
+- ETF thresholds are confirmed: quote age <= 60s, spread <= 10 bps, bid/ask size > 0, RTH only, stop loss required, flatten-by-close required.
 
 Validation command:
 
@@ -38,6 +41,7 @@ Validation command:
 - No synthetic data in truth-path providers for `research`, `paper`, or `live`.
 - `/api/v1/testing/status` shows provenance gate pass.
 - Audit queries in `Docs/AUDIT_TRAIL.md` return complete trade-to-decision lineage.
+- ETF audit metadata is present on candidate metadata, candidate events, execution audit events, and trade risk metadata for ETF orders.
 - `flow_id` and `run_id` are present for operational traces.
 - Assistant responses persist `trace_id` and `evidence_bundle`.
 - `harness_traces` is populated for advisory answers and trace payloads are queryable.

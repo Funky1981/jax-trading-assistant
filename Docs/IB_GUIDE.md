@@ -23,6 +23,14 @@ docker compose up -d ib-bridge
 curl http://localhost:8092/health
 ```
 
+## ETF Phase-1 IB Rules
+
+- ETF phase 1 uses IB paper trading only.
+- `IB_PAPER_TRADING=true` is required for ETF paper pilot sessions.
+- ETF entry orders must originate from the approval workflow; direct order-ticket ETF entries are blocked before reaching `ib-bridge`.
+- Operators may still use close, cancel, and protection actions to manage existing paper ETF exposure.
+- Before approving an ETF candidate, confirm IB/TWS is connected and paper trading is visible in `/api/v1/trading/pilot-status`.
+
 ## Connection Settings
 
 | Mode | Host | Port | Notes |

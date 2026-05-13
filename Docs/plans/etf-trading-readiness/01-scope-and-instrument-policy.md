@@ -89,3 +89,11 @@ Identify the narrowest runtime/config locations that must enforce the policy, in
 ## Exit gate
 
 Do not begin paper ETF rollout until the allowlist and exclusion policy are implemented, documented, and testable.
+
+## Implemented policy
+
+- Source of truth: `config/etf-instruments.json`.
+- Operator API: `GET /api/v1/instruments/etfs`.
+- Initial allowlist: SPY, QQQ, DIA, IWM, XLK, XLF, XLE, SMH, SOXX, TLT, GLD.
+- Explicit excluded examples: TQQQ, SQQQ, UVXY, VXX.
+- Policy changes require a repo change to the catalog so version, owner, effective date, and exclusions remain auditable.

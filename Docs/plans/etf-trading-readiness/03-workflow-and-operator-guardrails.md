@@ -64,3 +64,20 @@ Update the related docs once implementation lands:
 ## Exit gate
 
 Do not announce ETF readiness while more than one materially different ETF submission path remains available to operators.
+
+## Implemented workflow
+
+- ETF entries are approval-only through candidate approval and execution instructions.
+- Direct broker ETF entries from `/api/v1/broker/orders` and `/api/v1/broker/orders/bracket` are blocked.
+- Legacy raw signal approvals from `/api/v1/signals/{id}/approve` reject catalog ETF symbols so operators cannot bypass candidate qualification.
+- The frontend order ticket disables manual ETF entry symbols from the active catalog.
+- Approval queue rows show ETF policy metadata when candidates carry it.
+- The System page shows ETF workflow readiness separately from read-only/trade-enabled pilot status.
+- Manual close, cancel, and protect paths stay available for exposure management.
+
+## Phase-3 completion evidence
+
+- Backend guard: `legacySignalApprovalETFBlock` blocks catalog ETF symbols on the legacy signal approval route.
+- Operator feedback: blocked ETF manual orders and blocked legacy approvals return explicit approval-workflow reasons.
+- Frontend visibility: `/system` displays the ETF entry workflow, policy version, and readiness reasons from `TradingPilotStatus`.
+- Runbooks: `Docs/OPERATIONS.md`, `Docs/UAT_PAPER_TRADING.md`, `Docs/PRODUCTION_READINESS.md`, and `Docs/IB_GUIDE.md` describe the phase-1 ETF paper workflow and safety rules.

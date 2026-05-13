@@ -88,3 +88,9 @@ Any of the following should pause ETF rollout immediately:
 - an ETF bypasses approval
 - a stale-quote or spread gate fails open
 - audit records cannot explain an ETF order decision
+
+## Implemented validation entry points
+
+- Backend: `go test ./internal/modules/instruments ./internal/modules/candidates ./internal/modules/approvals ./internal/modules/execution ./cmd/trader`.
+- Frontend focused checks: `npm test -- ApprovalsPage OrderTicketPanel`.
+- Full regression remains gated by `.\scripts\go-verify.ps1 -Mode standard ...`, `.\scripts\golden-check.ps1 -Mode verify`, frontend typecheck/lint, and Playwright `trading.spec.ts`.

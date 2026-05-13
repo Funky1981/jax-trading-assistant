@@ -122,6 +122,56 @@ WHERE ap.artifact_id = a.id
 docker compose restart jax-trader
 ```
 
+## ETF Phase-1 Paper Trading
+
+ETF phase 1 is approval-only and paper-only.
+
+Operator checks:
+
+```powershell
+Invoke-RestMethod http://localhost:8081/api/v1/instruments/etfs
+Invoke-RestMethod http://localhost:8081/api/v1/trading/pilot-status
+```
+
+Rules enforced by runtime:
+
+- Approved ETF list lives in `config/etf-instruments.json`.
+- Manual ETF entry orders through `/api/v1/broker/orders` and `/api/v1/broker/orders/bracket` are blocked.
+- Legacy signal approvals through `/api/v1/signals/{id}/approve` are blocked for catalog ETF symbols.
+- ETF entries must come from an approved candidate and generated execution instruction.
+- ETF broker submission is rejected when quote age exceeds 60 seconds, spread exceeds 10 bps, bid/ask or sizes are missing, the request is outside US RTH, stop loss is missing, or runtime mode is not `paper`.
+- Manual close, cancel, and protection paths remain available for managing existing exposure.
+
+Approve an ETF candidate only from the Approvals page or the candidate approval API after checking the row-level ETF metadata. The expected approved path is:
+
+1. Candidate is created with ETF policy metadata.
+2. Operator approval rechecks the ETF catalog before creating execution instructions.
+3. Execution rechecks quote freshness, spread, RTH, stop loss, flatten-by-close, and paper mode immediately before broker submission.
+
+Investigate blocked ETF entries with:
+
+```sql
+SELECT id, symbol, status, metadata
+FROM candidate_trades
+WHERE symbol IN ('SPY','QQQ','DIA','IWM','XLK','XLF','XLE','SMH','SOXX','TLT','GLD')
+ORDER BY created_at DESC
+LIMIT 20;
+
+SELECT id, candidate_id, event_type, detail, created_at
+FROM candidate_events
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+Revoke a single ETF by changing its `eligibility_state` to `revoked` or adding an exclusion in `config/etf-instruments.json`, then redeploy/restart `jax-trader`. The catalog hash in new audit metadata should change after restart.
+
+To halt ETF trading immediately, disable execution or revoke the relevant strategy/artifact approval, then restart `jax-trader`:
+
+```powershell
+$env:EXECUTION_ENABLED="false"
+docker compose restart jax-trader
+```
+
 ## Monitoring
 
 - Grafana: `http://localhost:3001`
