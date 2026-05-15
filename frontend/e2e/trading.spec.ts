@@ -87,7 +87,7 @@ async function installTradingStubs(page: Page) {
         etfPhase1Enabled: true,
         etfPolicyVersion: 'phase1-2026-05-13',
         etfPolicyHash: 'stubbed',
-        etfEntryWorkflow: 'approval_only',
+        etfEntryWorkflow: 'candidate_approval_only',
         etfReadinessReasons: [
           'ETF entries must use the approval workflow.',
           'Manual ETF entry orders are blocked from the order ticket.',

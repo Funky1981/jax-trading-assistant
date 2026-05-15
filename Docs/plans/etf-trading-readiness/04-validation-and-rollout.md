@@ -4,6 +4,18 @@
 
 Define the evidence required to declare the platform ready for controlled phase-1 ETF paper trading.
 
+## Current status
+
+Phase 4 implementation is technically complete.
+
+- The Docker-backed paper stack now serves the ETF catalog, pilot-status, and readiness endpoints with the expected `candidate_approval_only` workflow.
+- `./scripts/etf-paper-pilot-evidence.ps1` and `./scripts/test-platform.ps1` now auto-authenticate when frontend API JWT auth is enabled, using the configured bootstrap operator credentials.
+- Verified evidence artifacts were generated on 2026-05-14:
+	- `Docs/runs/etf-paper-pilot/etf_pilot_evidence_20260514_174732.md`
+	- `Docs/runs/test_run_20260514_175050.md`
+
+Phase 4 is not operationally signed off yet. The remaining blockers are the explicit ETF phase-1 approval flags listed in the launch gate below.
+
 ## Validation principles
 
 - reuse the existing paper-trading, production-readiness, and regression workflows where possible
@@ -93,4 +105,21 @@ Any of the following should pause ETF rollout immediately:
 
 - Backend: `go test ./internal/modules/instruments ./internal/modules/candidates ./internal/modules/approvals ./internal/modules/execution ./cmd/trader`.
 - Frontend focused checks: `npm test -- ApprovalsPage OrderTicketPanel`.
-- Full regression remains gated by `.\scripts\go-verify.ps1 -Mode standard ...`, `.\scripts\golden-check.ps1 -Mode verify`, frontend typecheck/lint, and Playwright `trading.spec.ts`.
+- UAT runner: `./scripts/uat-paper-trading.ps1` now probes ETF catalog, pilot status, testing readiness, and runs ETF backend validation. When JWT auth is enabled on the frontend API, it authenticates automatically before hitting protected routes.
+- Pilot evidence: `./scripts/etf-paper-pilot-evidence.ps1` captures catalog, pilot-status, readiness, and operator sign-off evidence into `Docs/runs/etf-paper-pilot/`. When JWT auth is enabled on the frontend API, it authenticates automatically before hitting protected routes.
+- Readiness endpoint: `/api/v1/testing/readiness` now includes `etfPhase1Readiness` with catalog status, rollout stages, paper-only/manual-entry/live-trading safety state, and sign-off evidence.
+- Full regression remains gated by `.\scripts\go-verify.ps1 -Mode standard ...`, `.\scripts\golden-check.ps1 -Mode verify`, frontend typecheck/lint, and Playwright `trading.spec.ts` plus `system.spec.ts`.
+
+## Implemented launch gate
+
+ETF phase 1 remains `not_ready` until all of the following are true:
+
+- catalog loads successfully
+- `ETF_PHASE1_AUTOMATED_VALIDATION=passed`
+- `ETF_PHASE1_OPERATOR_UAT=passed`
+- `ETF_PHASE1_PAPER_PILOT_SIGNOFF=passed`
+- `ETF_PHASE1_ENGINEERING_SIGNOFF=true`
+- `ETF_PHASE1_OPERATIONS_SIGNOFF=true`
+- `ETF_PHASE1_TRADING_RISK_SIGNOFF=true`
+
+These values are operational evidence flags. They should be set only after the corresponding run artifact or written approval exists.

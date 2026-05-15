@@ -16,6 +16,7 @@ package pgmemory
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -144,8 +145,8 @@ func TestIntegration_Retain_UnknownBank(t *testing.T) {
 	defer db.Close()
 
 	_, err := store.Retain(context.Background(), "invalid-bank", testItem("x"))
-	if err == nil || !strings.Contains(err.Error(), "unknown bank") {
-		t.Errorf("expected unknown bank error, got: %v", err)
+	if !errors.Is(err, ErrUnknownBank) {
+		t.Errorf("expected ErrUnknownBank, got: %v", err)
 	}
 }
 

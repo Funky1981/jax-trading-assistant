@@ -136,3 +136,43 @@ func TestCollectPaperRuntimeProbesCapturesStatusCodesAndBodies(t *testing.T) {
 		t.Fatalf("statusCode = %v, want %d", traderProbe["statusCode"], http.StatusServiceUnavailable)
 	}
 }
+
+func TestETFPhase1ReadinessRequiresValidationUATAndSignoff(t *testing.T) {
+	readiness := etfPhase1ReadinessEvidence()
+	if ready, _ := readiness["ready"].(bool); ready {
+		t.Fatalf("ETF readiness should not be ready without validation and sign-off evidence: %v", readiness)
+	}
+	if status, _ := readiness["status"].(string); status != "not_ready" {
+		t.Fatalf("status = %q, want not_ready", status)
+	}
+	if workflow, _ := readiness["entryWorkflow"].(string); workflow != "candidate_approval_only" {
+		t.Fatalf("entryWorkflow = %q, want candidate_approval_only", workflow)
+	}
+	signoffs, ok := readiness["signoffs"].(map[string]bool)
+	if !ok {
+		t.Fatalf("signoffs missing from readiness: %v", readiness)
+	}
+	if signoffs["engineering"] || signoffs["operations"] || signoffs["tradingRisk"] {
+		t.Fatalf("expected signoffs to be false by default, got %v", signoffs)
+	}
+}
+
+func TestETFPhase1ReadinessCanPassWithExplicitEvidence(t *testing.T) {
+	t.Setenv("ETF_PHASE1_AUTOMATED_VALIDATION", "passed")
+	t.Setenv("ETF_PHASE1_OPERATOR_UAT", "passed")
+	t.Setenv("ETF_PHASE1_PAPER_PILOT_SIGNOFF", "passed")
+	t.Setenv("ETF_PHASE1_ENGINEERING_SIGNOFF", "true")
+	t.Setenv("ETF_PHASE1_OPERATIONS_SIGNOFF", "true")
+	t.Setenv("ETF_PHASE1_TRADING_RISK_SIGNOFF", "true")
+
+	readiness := etfPhase1ReadinessEvidence()
+	if ready, _ := readiness["ready"].(bool); !ready {
+		t.Fatalf("ETF readiness should be ready with explicit validation, UAT, pilot, and sign-off evidence: %v", readiness)
+	}
+	if status, _ := readiness["status"].(string); status != "ready" {
+		t.Fatalf("status = %q, want ready", status)
+	}
+	if version, _ := readiness["catalogVersion"].(string); version == "" {
+		t.Fatalf("catalogVersion missing from readiness: %v", readiness)
+	}
+}

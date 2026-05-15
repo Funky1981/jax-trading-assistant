@@ -14,6 +14,7 @@ This checklist is the release gate for moving from paper validation to productio
 - ETF phase 1 is paper-only: `config/etf-instruments.json` must load successfully and all ETF live submissions must remain blocked.
 - ETF entries must use the candidate approval workflow; manual ETF entry orders from the order ticket are not release-eligible.
 - ETF thresholds are confirmed: quote age <= 60s, spread <= 10 bps, bid/ask size > 0, RTH only, stop loss required, flatten-by-close required.
+- ETF launch evidence is visible in `/api/v1/testing/readiness` under `etfPhase1Readiness`.
 
 Validation command:
 
@@ -35,6 +36,8 @@ Validation command:
 ```powershell
 .\scripts\test-platform.ps1 -Mode full
 ```
+
+When frontend API auth is enabled, `./scripts/test-platform.ps1` authenticates automatically before probing protected routes.
 
 ## 3) Data Integrity and Auditability
 
@@ -66,5 +69,14 @@ Validation command:
 - Engineering sign-off
 - Operations sign-off
 - Risk/compliance sign-off
+- ETF phase-1 sign-off variables are set only after automated validation, operator UAT, and limited paper pilot evidence are reviewed:
+  - `ETF_PHASE1_AUTOMATED_VALIDATION=passed`
+  - `ETF_PHASE1_OPERATOR_UAT=passed`
+  - `ETF_PHASE1_PAPER_PILOT_SIGNOFF=passed`
+  - `ETF_PHASE1_ENGINEERING_SIGNOFF=true`
+  - `ETF_PHASE1_OPERATIONS_SIGNOFF=true`
+  - `ETF_PHASE1_TRADING_RISK_SIGNOFF=true`
+
+As of 2026-05-14, the technical validation path is green on the Docker-backed paper stack. Release remains blocked only until the ETF phase-1 sign-off values above are explicitly approved and recorded.
 
 Release is blocked until all sections pass.

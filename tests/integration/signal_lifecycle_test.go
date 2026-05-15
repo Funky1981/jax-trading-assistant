@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -66,17 +67,17 @@ func TestSignalLifecycle(t *testing.T) {
 
 	// ── 2. Insert a test signal directly into strategy_signals ─────────────────
 	testTag := fmt.Sprintf("inttest_%d", time.Now().UnixNano())
-	var signalID int64
+	var signalID string
 
 	err = conn.QueryRow(ctx, `
 		INSERT INTO strategy_signals
-			(strategy_id, symbol, direction, confidence, status, entry_price, created_at, updated_at, notes)
+			(strategy_id, symbol, signal_type, confidence, status, entry_price, reasoning, generated_at, expires_at)
 		VALUES
-			($1, $2, $3, $4, 'pending', $5, NOW(), NOW(), $6)
-		RETURNING id`,
+			($1, $2, $3, $4, 'pending', $5, $6, NOW(), NOW() + INTERVAL '1 hour')
+		RETURNING id::text`,
 		"test-strategy",
 		"AAPL",
-		"long",
+		"BUY",
 		0.85,
 		190.00,
 		testTag,
@@ -84,7 +85,7 @@ func TestSignalLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert test signal: %v", err)
 	}
-	t.Logf("inserted test signal id=%d tag=%s", signalID, testTag)
+	t.Logf("inserted test signal id=%s tag=%s", signalID, testTag)
 
 	// Cleanup — always try to remove the test signal.
 	t.Cleanup(func() {
@@ -94,8 +95,9 @@ func TestSignalLifecycle(t *testing.T) {
 	})
 
 	// ── 3. GET /api/v1/signals?status=pending – signal should appear ────────────
+	authHeader := integrationAuthHeader(ctx, t)
 	listURL := fmt.Sprintf("%s/api/v1/signals?status=pending", traderURL())
-	listResp, err := doGET(ctx, listURL)
+	listResp, err := doGET(ctx, listURL, authHeader)
 	if err != nil {
 		t.Fatalf("GET signals list: %v (is jax-trader running at %s?)", err, traderURL())
 	}
@@ -114,21 +116,21 @@ func TestSignalLifecycle(t *testing.T) {
 
 	found := false
 	for _, s := range listPayload.Signals {
-		if parseID(s["id"]) == signalID {
+		if id, _ := s["id"].(string); id == signalID {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("inserted signal %d not found in pending list (got %d signals)", signalID, len(listPayload.Signals))
+		t.Errorf("inserted signal %s not found in pending list (got %d signals)", signalID, len(listPayload.Signals))
 	}
 
 	// ── 4. POST /api/v1/signals/{id}/approve ──────────────────────────────────
-	approveURL := fmt.Sprintf("%s/api/v1/signals/%d/approve", traderURL(), signalID)
+	approveURL := fmt.Sprintf("%s/api/v1/signals/%s/approve", traderURL(), signalID)
 	approveBody, _ := json.Marshal(map[string]any{
 		"approved_by": "integration-test",
 	})
-	approveResp, err := doPOST(ctx, approveURL, approveBody)
+	approveResp, err := doPOST(ctx, approveURL, approveBody, authHeader)
 	if err != nil {
 		t.Fatalf("POST approve: %v", err)
 	}
@@ -137,11 +139,11 @@ func TestSignalLifecycle(t *testing.T) {
 	if approveResp.StatusCode != http.StatusOK {
 		t.Fatalf("POST approve status = %d; want 200", approveResp.StatusCode)
 	}
-	t.Logf("signal %d approved via API", signalID)
+	t.Logf("signal %s approved via API", signalID)
 
 	// ── 5. GET /api/v1/signals/{id} – verify status is now approved ─────────────
-	detailURL := fmt.Sprintf("%s/api/v1/signals/%d", traderURL(), signalID)
-	detailResp, err := doGET(ctx, detailURL)
+	detailURL := fmt.Sprintf("%s/api/v1/signals/%s", traderURL(), signalID)
+	detailResp, err := doGET(ctx, detailURL, authHeader)
 	if err != nil {
 		t.Fatalf("GET signal detail: %v", err)
 	}
@@ -172,37 +174,85 @@ func TestSignalLifecycle(t *testing.T) {
 	if dbStatus != "approved" {
 		t.Errorf("DB signal status = %q; want \"approved\"", dbStatus)
 	}
-	t.Logf("✓ signal %d lifecycle verified: pending → approved", signalID)
+	t.Logf("✓ signal %s lifecycle verified: pending → approved", signalID)
 }
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
-func doGET(ctx context.Context, url string) (*http.Response, error) {
+func integrationAuthHeader(ctx context.Context, t *testing.T) string {
+	t.Helper()
+
+	statusResp, err := doGET(ctx, traderURL()+"/auth/status", "")
+	if err != nil {
+		t.Fatalf("GET auth status: %v (is jax-trader running at %s?)", err, traderURL())
+	}
+	defer statusResp.Body.Close()
+	if statusResp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /auth/status status = %d; want 200", statusResp.StatusCode)
+	}
+	var status struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := json.NewDecoder(statusResp.Body).Decode(&status); err != nil {
+		t.Fatalf("decode auth status: %v", err)
+	}
+	if !status.Enabled {
+		return ""
+	}
+
+	if token := strings.TrimSpace(os.Getenv("TEST_AUTH_TOKEN")); token != "" {
+		return "Bearer " + token
+	}
+	username := strings.TrimSpace(os.Getenv("TEST_AUTH_USERNAME"))
+	password := strings.TrimSpace(os.Getenv("TEST_AUTH_PASSWORD"))
+	if username == "" || password == "" {
+		t.Skip("trader API auth is enabled; set TEST_AUTH_TOKEN or TEST_AUTH_USERNAME/TEST_AUTH_PASSWORD")
+	}
+
+	body, _ := json.Marshal(map[string]string{"username": username, "password": password})
+	loginResp, err := doPOST(ctx, traderURL()+"/auth/login", body, "")
+	if err != nil {
+		t.Fatalf("POST auth login: %v", err)
+	}
+	defer loginResp.Body.Close()
+	if loginResp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /auth/login status = %d; want 200", loginResp.StatusCode)
+	}
+	var login struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+	}
+	if err := json.NewDecoder(loginResp.Body).Decode(&login); err != nil {
+		t.Fatalf("decode auth login: %v", err)
+	}
+	if login.AccessToken == "" {
+		t.Fatal("auth login returned empty access token")
+	}
+	if strings.EqualFold(login.TokenType, "bearer") || login.TokenType == "" {
+		return "Bearer " + login.AccessToken
+	}
+	return login.TokenType + " " + login.AccessToken
+}
+
+func doGET(ctx context.Context, url string, authHeader string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
 	return http.DefaultClient.Do(req)
 }
 
-func doPOST(ctx context.Context, url string, body []byte) (*http.Response, error) {
+func doPOST(ctx context.Context, url string, body []byte, authHeader string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	return http.DefaultClient.Do(req)
-}
-
-func parseID(v any) int64 {
-	switch x := v.(type) {
-	case float64:
-		return int64(x)
-	case int64:
-		return x
-	case json.Number:
-		n, _ := x.Int64()
-		return n
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
 	}
-	return -1
+	return http.DefaultClient.Do(req)
 }

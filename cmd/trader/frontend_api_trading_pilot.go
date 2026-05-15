@@ -77,7 +77,7 @@ func buildTradingPilotStatus(ctx context.Context, authEnabled bool, mt *marketTo
 		RequiresManualBrokerConfirmation: true,
 		ReviewAgainstBroker:              true,
 		RollbackToReadOnly:               true,
-		ETFEntryWorkflow:                 "approval_only",
+		ETFEntryWorkflow:                 "candidate_approval_only",
 		ETFReadinessReasons:              []string{},
 		Reasons:                          []string{},
 		Checklist: []string{

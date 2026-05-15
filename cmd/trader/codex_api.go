@@ -1074,6 +1074,7 @@ func paperReadinessSummary(ctx context.Context, pool *pgxpool.Pool) map[string]a
 		"gateStatuses":          []map[string]any{},
 		"reportUri":             "/reports/paper-readiness/latest.md",
 		"jsonReportUri":         "/reports/paper-readiness/latest.json",
+		"etfPhase1Readiness":    etfPhase1ReadinessEvidence(),
 	}
 	runtimeProbes := collectPaperRuntimeProbes(ctx, http.DefaultClient)
 	if pool == nil {
@@ -1202,6 +1203,33 @@ func writePaperReadinessReport(summary map[string]any) {
 	md.WriteString(fmt.Sprintf("- paper_sessions_observed: %v\n", summary["paperSessionsObserved"]))
 	md.WriteString(fmt.Sprintf("- shadow_parity_required: %v\n", summary["shadowParityRequired"]))
 	md.WriteString(fmt.Sprintf("- shadow_parity_satisfied: %v\n", summary["shadowParitySatisfied"]))
+	if etf, ok := summary["etfPhase1Readiness"].(map[string]any); ok {
+		md.WriteString("\n## ETF Phase-1 Readiness\n")
+		md.WriteString(fmt.Sprintf("- status: %s\n", toString(etf["status"])))
+		md.WriteString(fmt.Sprintf("- ready: %v\n", etf["ready"]))
+		md.WriteString(fmt.Sprintf("- catalog_version: %s\n", toString(etf["catalogVersion"])))
+		md.WriteString(fmt.Sprintf("- entry_workflow: %s\n", toString(etf["entryWorkflow"])))
+		md.WriteString(fmt.Sprintf("- paper_only: %v\n", etf["paperOnly"]))
+		md.WriteString(fmt.Sprintf("- manual_entries_blocked: %v\n", etf["manualEntriesBlocked"]))
+		md.WriteString(fmt.Sprintf("- live_trading_blocked: %v\n", etf["liveTradingBlocked"]))
+		if stages, ok := etf["stages"].([]map[string]any); ok {
+			md.WriteString("\n### ETF Rollout Stages\n")
+			for _, stage := range stages {
+				md.WriteString(fmt.Sprintf("- %s: passed=%v\n", toString(stage["name"]), stage["passed"]))
+			}
+		}
+		if signoffs, ok := etf["signoffs"].(map[string]bool); ok {
+			keys := make([]string, 0, len(signoffs))
+			for key := range signoffs {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+			md.WriteString("\n### ETF Sign-Off\n")
+			for _, key := range keys {
+				md.WriteString(fmt.Sprintf("- %s: %v\n", key, signoffs[key]))
+			}
+		}
+	}
 	md.WriteString("\n## Gates\n")
 	if gates, ok := summary["gateStatuses"].([]map[string]any); ok {
 		for _, gate := range gates {

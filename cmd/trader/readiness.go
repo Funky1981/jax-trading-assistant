@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"jax-trading-assistant/internal/modules/instruments"
 	"jax-trading-assistant/internal/trader/signalgenerator"
 	"jax-trading-assistant/libs/runtimepolicy"
 	"jax-trading-assistant/libs/strategies"
@@ -219,6 +220,60 @@ func applyPaperRuntimeProbes(summary map[string]any, probes map[string]map[strin
 		summary["ready"] = false
 		summary["status"] = "not_ready"
 	}
+}
+
+func etfPhase1ReadinessEvidence() map[string]any {
+	catalog, err := instruments.LoadDefaultCatalog()
+	catalogLoaded := err == nil
+	automatedValidation := strings.EqualFold(strings.TrimSpace(os.Getenv("ETF_PHASE1_AUTOMATED_VALIDATION")), "passed")
+	operatorUAT := strings.EqualFold(strings.TrimSpace(os.Getenv("ETF_PHASE1_OPERATOR_UAT")), "passed")
+	paperPilotSignoff := strings.EqualFold(strings.TrimSpace(os.Getenv("ETF_PHASE1_PAPER_PILOT_SIGNOFF")), "passed")
+	signoffs := map[string]bool{
+		"engineering": envBoolDefault("ETF_PHASE1_ENGINEERING_SIGNOFF", false),
+		"operations":  envBoolDefault("ETF_PHASE1_OPERATIONS_SIGNOFF", false),
+		"tradingRisk": envBoolDefault("ETF_PHASE1_TRADING_RISK_SIGNOFF", false),
+	}
+	stages := []map[string]any{
+		{"name": "implementation_complete", "passed": true},
+		{"name": "automated_validation_green", "passed": automatedValidation, "evidence": "ETF_PHASE1_AUTOMATED_VALIDATION=passed"},
+		{"name": "operator_uat_passed", "passed": operatorUAT, "evidence": "ETF_PHASE1_OPERATOR_UAT=passed"},
+		{"name": "limited_paper_pilot_signed_off", "passed": paperPilotSignoff, "evidence": "ETF_PHASE1_PAPER_PILOT_SIGNOFF=passed"},
+	}
+	ready := catalogLoaded && automatedValidation && operatorUAT && paperPilotSignoff &&
+		signoffs["engineering"] && signoffs["operations"] && signoffs["tradingRisk"]
+
+	out := map[string]any{
+		"status":               "not_ready",
+		"ready":                ready,
+		"catalogLoaded":        catalogLoaded,
+		"entryWorkflow":        "candidate_approval_only",
+		"paperOnly":            true,
+		"manualEntriesBlocked": true,
+		"liveTradingBlocked":   true,
+		"stages":               stages,
+		"signoffs":             signoffs,
+	}
+	if ready {
+		out["status"] = "ready"
+	}
+	if err != nil {
+		out["error"] = err.Error()
+		return out
+	}
+	out["catalogVersion"] = catalog.Version
+	out["catalogHash"] = catalog.Hash()
+	out["allowlistCount"] = len(catalog.ETFList())
+	out["policy"] = map[string]any{
+		"quoteFreshnessSeconds": catalog.Policy.QuoteFreshnessSeconds,
+		"maxSpreadBps":          catalog.Policy.MaxSpreadBps,
+		"minBidSize":            catalog.Policy.MinBidSize,
+		"minAskSize":            catalog.Policy.MinAskSize,
+		"regularSession":        catalog.Policy.RegularSessionStart + "-" + catalog.Policy.RegularSessionEnd,
+		"sessionTimezone":       catalog.Policy.SessionTimezone,
+		"requireStopLoss":       catalog.Policy.RequireStopLoss,
+		"requireFlattenByClose": catalog.Policy.RequireFlattenByClose,
+	}
+	return out
 }
 
 func probeReadinessEndpoint(ctx context.Context, client *http.Client, name, endpoint string, required bool) map[string]any {

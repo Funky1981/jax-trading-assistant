@@ -45,6 +45,9 @@ Implemented phase-1 controls:
 - ETF manual entry orders are blocked from direct broker submit endpoints.
 - Candidate, approval, and execution paths apply ETF eligibility checks.
 - Execution enforces quote freshness, bid/ask presence, spread, session, stop-loss, flatten-by-close, and paper-only requirements.
+- `/api/v1/testing/readiness` exposes ETF phase-1 rollout stages and sign-off state.
+- `.\scripts\uat-paper-trading.ps1` includes ETF catalog, pilot status, readiness, and backend validation checks.
+- `.\scripts\etf-paper-pilot-evidence.ps1` captures pilot evidence before sign-off flags are set.
 
 ## Recommended work order
 

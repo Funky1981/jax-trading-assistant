@@ -6,6 +6,8 @@ Run the platform test runner from repo root:
 .\scripts\uat-paper-trading.ps1 -Mode quick
 ```
 
+If frontend API auth is enabled, the runner automatically logs in with the configured bootstrap operator credentials before probing protected routes.
+
 For full validation (includes Playwright HTML report generation):
 
 ```powershell
@@ -34,12 +36,44 @@ To open the Playwright report after full run:
 Before any ETF paper pilot session, verify:
 
 - `GET /api/v1/instruments/etfs` returns catalog version `phase1-2026-05-13`.
-- `GET /api/v1/trading/pilot-status` reports `etfPhase1Enabled=true` and `etfEntryWorkflow=approval_only`.
+- `GET /api/v1/trading/pilot-status` reports `etfPhase1Enabled=true` and `etfEntryWorkflow=candidate_approval_only`.
+- `GET /api/v1/testing/readiness` includes `etfPhase1Readiness` with catalog, rollout stage, and sign-off evidence.
 - An approved allowlist candidate such as `SPY` reaches the approval queue with ETF policy metadata.
 - A manual `SPY` order from the order ticket is blocked with `manual ETF entry orders must use the approval workflow`.
 - An excluded ETF such as `TQQQ` is blocked before approval.
 - A stale quote, missing bid/ask, wide spread, after-hours timestamp, or missing stop loss rejects before broker submission.
 - Close, cancel, and protection actions remain available for managing existing paper exposure.
+
+ETF readiness sign-off is explicit. Set these only after evidence is reviewed:
+
+```powershell
+$env:ETF_PHASE1_AUTOMATED_VALIDATION="passed"
+$env:ETF_PHASE1_OPERATOR_UAT="passed"
+$env:ETF_PHASE1_PAPER_PILOT_SIGNOFF="passed"
+$env:ETF_PHASE1_ENGINEERING_SIGNOFF="true"
+$env:ETF_PHASE1_OPERATIONS_SIGNOFF="true"
+$env:ETF_PHASE1_TRADING_RISK_SIGNOFF="true"
+```
+
+To capture the operator evidence bundle before setting those values:
+
+```powershell
+.\scripts\etf-paper-pilot-evidence.ps1
+```
+
+If frontend API auth is enabled, the evidence script automatically logs in with the configured bootstrap operator credentials before probing protected routes.
+
+Use the sign-off switches only when the matching evidence has been reviewed:
+
+```powershell
+.\scripts\etf-paper-pilot-evidence.ps1 `
+  -AutomatedValidationPassed `
+  -OperatorUATPassed `
+  -PaperPilotSignedOff `
+  -EngineeringSignoff `
+  -OperationsSignoff `
+  -TradingRiskSignoff
+```
 
 ## Output
 

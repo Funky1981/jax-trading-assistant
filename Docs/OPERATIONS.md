@@ -131,6 +131,7 @@ Operator checks:
 ```powershell
 Invoke-RestMethod http://localhost:8081/api/v1/instruments/etfs
 Invoke-RestMethod http://localhost:8081/api/v1/trading/pilot-status
+Invoke-RestMethod http://localhost:8081/api/v1/testing/readiness
 ```
 
 Rules enforced by runtime:
@@ -164,6 +165,14 @@ LIMIT 20;
 ```
 
 Revoke a single ETF by changing its `eligibility_state` to `revoked` or adding an exclusion in `config/etf-instruments.json`, then redeploy/restart `jax-trader`. The catalog hash in new audit metadata should change after restart.
+
+ETF rollout readiness remains `not_ready` until validation, UAT, pilot, and owner sign-offs are explicitly recorded with the `ETF_PHASE1_*` environment variables documented in `Docs/UAT_PAPER_TRADING.md`.
+
+Capture pilot evidence before sign-off with:
+
+```powershell
+.\scripts\etf-paper-pilot-evidence.ps1
+```
 
 To halt ETF trading immediately, disable execution or revoke the relevant strategy/artifact approval, then restart `jax-trader`:
 
