@@ -1,0 +1,978 @@
+{
+    "status":  "blocked",
+    "generatedAt":  "2026-05-14T16:35:01.0752371Z",
+    "apiBase":  "http://localhost:8081",
+    "pilotSymbol":  "SPY",
+    "excludedSymbol":  "TQQQ",
+    "checks":  [
+                   {
+                       "name":  "auth/login",
+                       "status":  "PASS",
+                       "detail":  "auth enabled; bootstrap login succeeded"
+                   },
+                   {
+                       "name":  "etf/catalog",
+                       "status":  "PASS",
+                       "detail":  "http://localhost:8081/api/v1/instruments/etfs"
+                   },
+                   {
+                       "name":  "etf/pilot-status",
+                       "status":  "PASS",
+                       "detail":  "http://localhost:8081/api/v1/trading/pilot-status"
+                   },
+                   {
+                       "name":  "etf/testing-readiness",
+                       "status":  "PASS",
+                       "detail":  "http://localhost:8081/api/v1/testing/readiness"
+                   },
+                   {
+                       "name":  "catalog/version",
+                       "status":  "PASS",
+                       "detail":  "phase1-2026-05-13"
+                   },
+                   {
+                       "name":  "catalog/pilot-symbol",
+                       "status":  "PASS",
+                       "detail":  "SPY present"
+                   },
+                   {
+                       "name":  "catalog/excluded-symbol",
+                       "status":  "PASS",
+                       "detail":  "TQQQ has exclusions"
+                   },
+                   {
+                       "name":  "pilot/etf-phase1",
+                       "status":  "PASS",
+                       "detail":  "enabled"
+                   },
+                   {
+                       "name":  "pilot/workflow",
+                       "status":  "FAIL",
+                       "detail":  "expected candidate_approval_only, got approval_only"
+                   },
+                   {
+                       "name":  "readiness/catalog-loaded",
+                       "status":  "PASS",
+                       "detail":  "catalog loaded"
+                   },
+                   {
+                       "name":  "readiness/status",
+                       "status":  "PASS",
+                       "detail":  "not_ready"
+                   },
+                   {
+                       "name":  "signoff/automated-validation",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/operator-uat",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/paper-pilot",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/engineering",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/operations",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/trading-risk",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   }
+               ],
+    "catalog":  {
+                    "checkedAt":  "2026-05-14T16:34:59.176370953Z",
+                    "hash":  "0e92a0b0dfc86e82fc8a37ee650046e186dcb77d48ee723ce334c08be2bdb0f8",
+                    "instruments":  [
+                                        {
+                                            "symbol":  "DIA",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "GLD",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "IWM",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "QQQ",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "SMH",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "SOXX",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "SPY",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "SQQQ",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+
+                                                               ],
+                                            "eligibility_state":  "excluded",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+                                                               "leveraged",
+                                                               "inverse"
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "TLT",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "TQQQ",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+
+                                                               ],
+                                            "eligibility_state":  "excluded",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+                                                               "leveraged"
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "UVXY",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+
+                                                               ],
+                                            "eligibility_state":  "excluded",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+                                                               "volatility",
+                                                               "leveraged"
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "XLE",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "XLF",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "symbol":  "XLK",
+                                            "asset_class":  "equity",
+                                            "instrument_type":  "etf",
+                                            "tradable_modes":  [
+                                                                   "paper"
+                                                               ],
+                                            "eligibility_state":  "approved",
+                                            "effective_date":  "2026-05-13",
+                                            "change_owner":  "trading-risk",
+                                            "exclusions":  [
+
+                                                           ]
+                                        }
+                                    ],
+                    "owner":  "trading-risk",
+                    "policy":  {
+                                   "phase":  "phase-1-paper",
+                                   "quote_freshness_seconds":  60,
+                                   "max_spread_bps":  10,
+                                   "min_bid_size":  1,
+                                   "min_ask_size":  1,
+                                   "session_timezone":  "America/New_York",
+                                   "regular_session_start":  "09:30",
+                                   "regular_session_end":  "16:00",
+                                   "require_stop_loss":  true,
+                                   "require_flatten_by_close":  true,
+                                   "entry_modes":  [
+                                                       "paper"
+                                                   ]
+                               },
+                    "version":  "phase1-2026-05-13"
+                },
+    "pilotStatus":  {
+                        "pilotMode":  true,
+                        "authRequired":  true,
+                        "operatorRole":  "admin",
+                        "allowedRoles":  [
+                                             "admin"
+                                         ],
+                        "operatorAccess":  true,
+                        "brokerConnected":  true,
+                        "marketDataMode":  "delayed",
+                        "paperTrading":  true,
+                        "readOnly":  false,
+                        "canTrade":  true,
+                        "quoteAuthority":  false,
+                        "intradayAuthority":  false,
+                        "executionFromChartBlocked":  true,
+                        "requiresManualBrokerConfirmation":  true,
+                        "reviewAgainstBroker":  true,
+                        "rollbackToReadOnly":  true,
+                        "etfPhase1Enabled":  true,
+                        "etfPolicyVersion":  "phase1-2026-05-13",
+                        "etfPolicyHash":  "0e92a0b0dfc86e82fc8a37ee650046e186dcb77d48ee723ce334c08be2bdb0f8",
+                        "etfEntryWorkflow":  "approval_only",
+                        "etfReadinessReasons":  [
+                                                    "ETF entries must use the approval workflow.",
+                                                    "Manual ETF entry orders are blocked from the order ticket.",
+                                                    "ETF quote freshness threshold is 60 seconds.",
+                                                    "ETF maximum spread threshold is 10 bps.",
+                                                    "ETF entries require stop loss and flatten-by-close controls."
+                                                ],
+                        "reasons":  [
+
+                                    ],
+                        "checklist":  [
+                                          "Verify IB/TWS is connected and paper trading remains enabled.",
+                                          "Verify the market-data badge before using prices on this screen.",
+                                          "Confirm symbol, quantity, and exits in IB/TWS before every broker mutation.",
+                                          "Review audit and broker events after each pilot session."
+                                      ],
+                        "checkedAt":  "2026-05-14T16:34:59.187781786Z"
+                    },
+    "readiness":  {
+                      "checkedAt":  "2026-05-14T16:35:00.063863722Z",
+                      "etfPhase1Readiness":  {
+                                                 "allowlistCount":  14,
+                                                 "catalogHash":  "0e92a0b0dfc86e82fc8a37ee650046e186dcb77d48ee723ce334c08be2bdb0f8",
+                                                 "catalogLoaded":  true,
+                                                 "catalogVersion":  "phase1-2026-05-13",
+                                                 "entryWorkflow":  "candidate_approval_only",
+                                                 "liveTradingBlocked":  true,
+                                                 "manualEntriesBlocked":  true,
+                                                 "paperOnly":  true,
+                                                 "policy":  {
+                                                                "maxSpreadBps":  10,
+                                                                "minAskSize":  1,
+                                                                "minBidSize":  1,
+                                                                "quoteFreshnessSeconds":  60,
+                                                                "regularSession":  "09:30-16:00",
+                                                                "requireFlattenByClose":  true,
+                                                                "requireStopLoss":  true,
+                                                                "sessionTimezone":  "America/New_York"
+                                                            },
+                                                 "ready":  false,
+                                                 "signoffs":  {
+                                                                  "engineering":  false,
+                                                                  "operations":  false,
+                                                                  "tradingRisk":  false
+                                                              },
+                                                 "stages":  [
+                                                                {
+                                                                    "name":  "implementation_complete",
+                                                                    "passed":  true
+                                                                },
+                                                                {
+                                                                    "evidence":  "ETF_PHASE1_AUTOMATED_VALIDATION=passed",
+                                                                    "name":  "automated_validation_green",
+                                                                    "passed":  false
+                                                                },
+                                                                {
+                                                                    "evidence":  "ETF_PHASE1_OPERATOR_UAT=passed",
+                                                                    "name":  "operator_uat_passed",
+                                                                    "passed":  false
+                                                                },
+                                                                {
+                                                                    "evidence":  "ETF_PHASE1_PAPER_PILOT_SIGNOFF=passed",
+                                                                    "name":  "limited_paper_pilot_signed_off",
+                                                                    "passed":  false
+                                                                }
+                                                            ],
+                                                 "status":  "not_ready"
+                                             },
+                      "failedGateCount":  0,
+                      "gateStatuses":  [
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate0",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/cmd/trader\t(cached)\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./cmd/trader/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  2029
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/cmd/research\t1.466s\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./cmd/research/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  5258
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1
+                                                                                },
+                                                                                {
+                                                                                    "output":  "{\"missingConfigHash\":0,\"missingTables\":[],\"status\":\"passed\"}",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "config-integrity",
+                                                                                    "summary":  {
+                                                                                                    "status":  "passed",
+                                                                                                    "missingTables":  [
+
+                                                                                                                      ],
+                                                                                                    "missingConfigHash":  0
+                                                                                                },
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  0
+                                                                                }
+                                                                            ],
+                                                               "testType":  "config_integrity",
+                                                               "startedAt":  "2026-03-19T14:02:56Z",
+                                                               "artifactUri":  "/reports/gate0/2026-03-19/config_integrity.md"
+                                                           },
+                                               "gate":  "Gate0",
+                                               "lastRunAt":  "2026-03-19T14:02:56.206858Z",
+                                               "lastRunId":  "662f1c0e-9129-42d9-8683-44f741626691",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:02:56.206858Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate1",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/tests/replay\t1.209s\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./tests/replay/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  3247
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/tests/golden\t1.315s\n?   \tjax-trading-assistant/tests/golden/cmd\t[no test files]\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test -tags=golden ./tests/golden/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  3685
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  2
+                                                                                },
+                                                                                {
+                                                                                    "output":  "{\"blockingViolations\":0,\"checkedAt\":\"2026-03-19T14:03:03Z\",\"checkedRuns\":0,\"hashMismatch\":0,\"missingDatasetID\":0,\"missingRunHash\":0,\"missingSnapshot\":0,\"status\":\"passed\",\"windowDays\":30}",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "dataset-hash-reconciliation",
+                                                                                    "summary":  {
+                                                                                                    "status":  "passed",
+                                                                                                    "checkedAt":  "2026-03-19T14:03:03Z",
+                                                                                                    "windowDays":  30,
+                                                                                                    "checkedRuns":  0,
+                                                                                                    "hashMismatch":  0,
+                                                                                                    "missingRunHash":  0,
+                                                                                                    "missingSnapshot":  0,
+                                                                                                    "missingDatasetID":  0,
+                                                                                                    "blockingViolations":  0
+                                                                                                },
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  0
+                                                                                }
+                                                                            ],
+                                                               "testType":  "data_recon",
+                                                               "startedAt":  "2026-03-19T14:03:03Z",
+                                                               "artifactUri":  "/reports/gate1/2026-03-19/summary.md"
+                                                           },
+                                               "gate":  "Gate1",
+                                               "lastRunAt":  "2026-03-19T14:03:03.188382Z",
+                                               "lastRunId":  "3736f633-506f-4c2f-ae5e-0b3f7291d5b3",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:03.188382Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate2",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/tests/replay\t(cached)\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./tests/replay/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  901
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/tests/golden\t(cached)\n?   \tjax-trading-assistant/tests/golden/cmd\t[no test files]\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test -tags=golden ./tests/golden/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1032
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1
+                                                                                }
+                                                                            ],
+                                                               "testType":  "deterministic_replay",
+                                                               "startedAt":  "2026-03-19T14:03:05Z",
+                                                               "artifactUri":  "/reports/gate2/2026-03-19/deterministic_replay.md"
+                                                           },
+                                               "gate":  "Gate2",
+                                               "lastRunAt":  "2026-03-19T14:03:05.141677Z",
+                                               "lastRunId":  "c935a17b-4608-4621-af44-8ed2720b55f1",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:05.141677Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate3",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/internal/modules/artifacts\t1.032s\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./internal/modules/artifacts/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  3476
+                                                                                },
+                                                                                {
+                                                                                    "output":  "?   \tjax-trading-assistant/cmd/artifact-approver\t[no test files]\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./cmd/artifact-approver/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1199
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  3
+                                                                                },
+                                                                                {
+                                                                                    "output":  "{\"instancesChecked\":0,\"invalidArtifacts\":0,\"missingArtifacts\":0,\"status\":\"passed\"}",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "artifact-promotion",
+                                                                                    "summary":  {
+                                                                                                    "status":  "passed",
+                                                                                                    "instancesChecked":  0,
+                                                                                                    "invalidArtifacts":  0,
+                                                                                                    "missingArtifacts":  0
+                                                                                                },
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  0
+                                                                                }
+                                                                            ],
+                                                               "testType":  "artifact_promotion",
+                                                               "startedAt":  "2026-03-19T14:03:09Z",
+                                                               "artifactUri":  "/reports/gate3/2026-03-19/artifact_promotion.md"
+                                                           },
+                                               "gate":  "Gate3",
+                                               "lastRunAt":  "2026-03-19T14:03:09.837739Z",
+                                               "lastRunId":  "78cee1ad-78f1-4bb4-b15c-d1e7943a9269",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:09.837739Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate4",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/internal/modules/execution\t(cached)\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./internal/modules/execution/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1529
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  3
+                                                                                },
+                                                                                {
+                                                                                    "output":  "{\"checkedCandidates\":0,\"missingApprovalLink\":0,\"missingFillLink\":0,\"missingInstructionLink\":0,\"missingTradeLink\":0,\"reason\":\"no approved/submitted/filled candidates in window\",\"status\":\"skipped\",\"windowDays\":30}",
+                                                                                    "status":  "skipped",
+                                                                                    "command":  "execution-path-integrity",
+                                                                                    "summary":  {
+                                                                                                    "reason":  "no approved/submitted/filled candidates in window",
+                                                                                                    "status":  "skipped",
+                                                                                                    "windowDays":  30,
+                                                                                                    "missingFillLink":  0,
+                                                                                                    "missingTradeLink":  0,
+                                                                                                    "checkedCandidates":  0,
+                                                                                                    "missingApprovalLink":  0,
+                                                                                                    "missingInstructionLink":  0
+                                                                                                },
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  0
+                                                                                }
+                                                                            ],
+                                                               "testType":  "execution_integration",
+                                                               "startedAt":  "2026-03-19T14:03:11Z",
+                                                               "artifactUri":  "/reports/gate4/2026-03-19/execution_integration.md"
+                                                           },
+                                               "gate":  "Gate4",
+                                               "lastRunAt":  "2026-03-19T14:03:11.388769Z",
+                                               "lastRunId":  "96bb7c2a-968d-4bd6-b15a-a1aebb6a2f28",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:11.388769Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate5",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/internal/modules/execution\t(cached)\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./internal/modules/execution/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1109
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/libs/risk\t1.274s\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./libs/risk/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  3261
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1
+                                                                                }
+                                                                            ],
+                                                               "testType":  "pnl_recon",
+                                                               "startedAt":  "2026-03-19T14:03:15Z",
+                                                               "artifactUri":  "/reports/gate5/2026-03-19/pnl_recon.md"
+                                                           },
+                                               "gate":  "Gate5",
+                                               "lastRunAt":  "2026-03-19T14:03:15.779371Z",
+                                               "lastRunId":  "2e272c6c-d86b-47d7-8bbe-37c6c5aaba75",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:15.779371Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate6",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/internal/modules/execution\t(cached)\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./internal/modules/execution/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1251
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/internal/modules/orchestration\t1.588s\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./internal/modules/orchestration/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  4529
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  2
+                                                                                }
+                                                                            ],
+                                                               "testType":  "failure_suite",
+                                                               "startedAt":  "2026-03-19T14:03:21Z",
+                                                               "artifactUri":  "/reports/gate6/2026-03-19/report.md"
+                                                           },
+                                               "gate":  "Gate6",
+                                               "lastRunAt":  "2026-03-19T14:03:21.599416Z",
+                                               "lastRunId":  "894767d6-f91b-4151-a077-aff3471ada61",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:21.599416Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate7",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/internal/modules/execution\t1.105s [no tests to run]\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./internal/modules/execution/... -run Flatten|Close|EOD",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  3486
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1
+                                                                                }
+                                                                            ],
+                                                               "testType":  "flatten_proof",
+                                                               "startedAt":  "2026-03-19T14:03:25Z",
+                                                               "artifactUri":  "/reports/gate7/2026-03-19/proof.md"
+                                                           },
+                                               "gate":  "Gate7",
+                                               "lastRunAt":  "2026-03-19T14:03:25.12328Z",
+                                               "lastRunId":  "5eb5f1cc-9ac5-4494-b93f-9dfef1336297",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:25.12328Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate8",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/internal/modules/orchestration\t(cached)\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./internal/modules/orchestration/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1041
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  2
+                                                                                },
+                                                                                {
+                                                                                    "output":  "{\"assistantDecisions\":0,\"decisions\":0,\"invalidSchema\":0,\"missingAcceptance\":0,\"missingAssistantCoverage\":0,\"status\":\"skipped\",\"windowDays\":30}",
+                                                                                    "status":  "skipped",
+                                                                                    "command":  "ai-audit",
+                                                                                    "summary":  {
+                                                                                                    "status":  "skipped",
+                                                                                                    "decisions":  0,
+                                                                                                    "windowDays":  30,
+                                                                                                    "invalidSchema":  0,
+                                                                                                    "missingAcceptance":  0,
+                                                                                                    "assistantDecisions":  0,
+                                                                                                    "missingAssistantCoverage":  0
+                                                                                                },
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  0
+                                                                                }
+                                                                            ],
+                                                               "testType":  "ai_audit",
+                                                               "startedAt":  "2026-03-19T14:03:26Z",
+                                                               "artifactUri":  "/reports/gate8/2026-03-19/ai_audit.md"
+                                                           },
+                                               "gate":  "Gate8",
+                                               "lastRunAt":  "2026-03-19T14:03:26.185592Z",
+                                               "lastRunId":  "00130212-96d1-44da-8865-797773e7e62c",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:26.185592Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate9",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "ok  \tjax-trading-assistant/cmd/trader\t(cached)\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./cmd/trader/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1486
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  3
+                                                                                },
+                                                                                {
+                                                                                    "output":  "{\"checkedCandidates\":0,\"checkedRuns\":0,\"missingCandidateArtifact\":0,\"missingCandidateSignal\":0,\"missingRunSource\":0,\"missingRunVerifiedAt\":0,\"status\":\"skipped\",\"syntheticRunRows\":0,\"windowDays\":30}",
+                                                                                    "status":  "skipped",
+                                                                                    "command":  "provenance-integrity",
+                                                                                    "summary":  {
+                                                                                                    "status":  "skipped",
+                                                                                                    "windowDays":  30,
+                                                                                                    "checkedRuns":  0,
+                                                                                                    "missingRunSource":  0,
+                                                                                                    "syntheticRunRows":  0,
+                                                                                                    "checkedCandidates":  0,
+                                                                                                    "missingRunVerifiedAt":  0,
+                                                                                                    "missingCandidateSignal":  0,
+                                                                                                    "missingCandidateArtifact":  0
+                                                                                                },
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  0
+                                                                                }
+                                                                            ],
+                                                               "testType":  "provenance_integrity",
+                                                               "startedAt":  "2026-03-19T14:03:27Z",
+                                                               "artifactUri":  "/reports/gate9/2026-03-19/provenance_integrity.md"
+                                                           },
+                                               "gate":  "Gate9",
+                                               "lastRunAt":  "2026-03-19T14:03:27.699363Z",
+                                               "lastRunId":  "6c42bb3f-f9c8-44b6-b125-d6882c70f751",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:27.699363Z"
+                                           },
+                                           {
+                                               "details":  {
+                                                               "gate":  "Gate10",
+                                                               "status":  "passed",
+                                                               "commands":  [
+                                                                                {
+                                                                                    "output":  "?   \tjax-trading-assistant/cmd/shadow-validator\t[no test files]\n",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "go test ./cmd/shadow-validator/...",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  1157
+                                                                                },
+                                                                                {
+                                                                                    "output":  "ok",
+                                                                                    "status":  "passed",
+                                                                                    "command":  "db-ping",
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  3
+                                                                                },
+                                                                                {
+                                                                                    "output":  "{\"prodTrades\":0,\"reason\":\"SHADOW_DATABASE_URL not set\",\"shadowTrades\":0,\"status\":\"skipped\",\"windowDays\":7}",
+                                                                                    "status":  "skipped",
+                                                                                    "command":  "shadow-parity",
+                                                                                    "summary":  {
+                                                                                                    "reason":  "SHADOW_DATABASE_URL not set",
+                                                                                                    "status":  "skipped",
+                                                                                                    "prodTrades":  0,
+                                                                                                    "windowDays":  7,
+                                                                                                    "shadowTrades":  0
+                                                                                                },
+                                                                                    "exitCode":  0,
+                                                                                    "durationMs":  0
+                                                                                }
+                                                                            ],
+                                                               "testType":  "shadow_parity",
+                                                               "startedAt":  "2026-03-19T14:03:28Z",
+                                                               "artifactUri":  "/reports/gate10/2026-03-19/shadow_parity.md"
+                                                           },
+                                               "gate":  "Gate10",
+                                               "lastRunAt":  "2026-03-19T14:03:28.872012Z",
+                                               "lastRunId":  "7a7c71c7-51fb-4107-849e-069598debac6",
+                                               "status":  "passed",
+                                               "updatedAt":  "2026-03-19T14:03:28.872012Z"
+                                           }
+                                       ],
+                      "jsonReportUri":  "/reports/paper-readiness/latest.json",
+                      "notStartedGateCount":  0,
+                      "paperSessionsObserved":  0,
+                      "passedGateCount":  10,
+                      "ready":  false,
+                      "reportUri":  "/reports/paper-readiness/latest.md",
+                      "requiredGateCount":  10,
+                      "runtimeProbeFailures":  1,
+                      "runtimeProbes":  {
+                                            "ibBridge":  {
+                                                             "name":  "ibBridge",
+                                                             "ok":  true,
+                                                             "required":  true,
+                                                             "response":  {
+                                                                              "connected":  true,
+                                                                              "market_data_mode":  "delayed",
+                                                                              "paper_trading":  true,
+                                                                              "quote_error":  null,
+                                                                              "quote_ready":  true,
+                                                                              "quote_symbol":  "AAPL",
+                                                                              "status":  "ready",
+                                                                              "version":  "1.0.0"
+                                                                          },
+                                                             "statusCode":  200,
+                                                             "url":  "http://ib-bridge:8092/ready"
+                                                         },
+                                            "research":  {
+                                                             "name":  "research",
+                                                             "ok":  true,
+                                                             "required":  true,
+                                                             "response":  {
+                                                                              "embedding_provider":  "local",
+                                                                              "memory_error":  "",
+                                                                              "memory_ready":  true,
+                                                                              "memory_schema_dirty":  false,
+                                                                              "memory_schema_ok":  true,
+                                                                              "memory_schema_version":  21,
+                                                                              "memory_status":  "ready",
+                                                                              "service":  "jax-research",
+                                                                              "status":  "healthy",
+                                                                              "uptime":  "8m37s",
+                                                                              "version":  "0.1.0"
+                                                                          },
+                                                             "statusCode":  200,
+                                                             "url":  "http://jax-research:8091/ready"
+                                                         },
+                                            "trader":  {
+                                                           "error":  "{\"checkedAt\":\"2026-05-14T16:35:00.067193853Z\",\"checks\":{\"broker\":{\"ok\":true,\"required\":false,\"skipped\":true},\"signalGenerator\":{\"error\":\"no strategies registered\",\"ok\":false},\"strategies\":{\"count\":0,\"error\":\"no approved strategies loaded\",\"ok\":false}},\"executionEnabled\":true,\"ready\":false,\"runtimeMode\":\"dev\",\"service\":\"jax-trader\",\"status\":\"not_ready\",\"strategiesLoaded\":0,\"uptime\":\"8m35.600252459s\",\"version\":\"0.1.0\"}",
+                                                           "name":  "trader",
+                                                           "ok":  false,
+                                                           "required":  true,
+                                                           "response":  {
+                                                                            "checkedAt":  "2026-05-14T16:35:00.067193853Z",
+                                                                            "checks":  {
+                                                                                           "broker":  {
+                                                                                                          "ok":  true,
+                                                                                                          "required":  false,
+                                                                                                          "skipped":  true
+                                                                                                      },
+                                                                                           "signalGenerator":  {
+                                                                                                                   "error":  "no strategies registered",
+                                                                                                                   "ok":  false
+                                                                                                               },
+                                                                                           "strategies":  {
+                                                                                                              "count":  0,
+                                                                                                              "error":  "no approved strategies loaded",
+                                                                                                              "ok":  false
+                                                                                                          }
+                                                                                       },
+                                                                            "executionEnabled":  true,
+                                                                            "ready":  false,
+                                                                            "runtimeMode":  "dev",
+                                                                            "service":  "jax-trader",
+                                                                            "status":  "not_ready",
+                                                                            "strategiesLoaded":  0,
+                                                                            "uptime":  "8m35.600252459s",
+                                                                            "version":  "0.1.0"
+                                                                        },
+                                                           "statusCode":  503,
+                                                           "url":  "http://localhost:8100/ready"
+                                                       }
+                                        },
+                      "shadowParityRequired":  true,
+                      "shadowParitySatisfied":  true,
+                      "skippedGateCount":  0,
+                      "status":  "not_ready"
+                  }
+}

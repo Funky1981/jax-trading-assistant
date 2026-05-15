@@ -1,0 +1,62 @@
+{
+    "status":  "blocked",
+    "generatedAt":  "2026-05-14T16:14:07.3289240Z",
+    "apiBase":  "http://localhost:8081",
+    "pilotSymbol":  "SPY",
+    "excludedSymbol":  "TQQQ",
+    "checks":  [
+                   {
+                       "name":  "etf/catalog",
+                       "status":  "FAIL",
+                       "detail":  "The remote server returned an error: (404) Not Found."
+                   },
+                   {
+                       "name":  "etf/pilot-status",
+                       "status":  "FAIL",
+                       "detail":  "The remote server returned an error: (401) Unauthorized."
+                   },
+                   {
+                       "name":  "etf/testing-readiness",
+                       "status":  "FAIL",
+                       "detail":  "The remote server returned an error: (401) Unauthorized."
+                   },
+                   {
+                       "name":  "readiness/etf-section",
+                       "status":  "FAIL",
+                       "detail":  "etfPhase1Readiness missing"
+                   },
+                   {
+                       "name":  "signoff/automated-validation",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/operator-uat",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/paper-pilot",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/engineering",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/operations",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/trading-risk",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   }
+               ],
+    "catalog":  null,
+    "pilotStatus":  null,
+    "readiness":  null
+}
