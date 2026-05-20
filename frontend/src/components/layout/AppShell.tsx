@@ -19,15 +19,22 @@ import {
   BookOpen,
   CheckSquare,
   Bot,
+  Globe,
+  Layers,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import JaxLogo from '@/images/jax_ai_trader.svg';
 import { useAuth } from '@/contexts/AuthContext';
+import { BeginnerModeToggle } from '@/components/trading/BeginnerModeToggle';
 
 const navItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, end: true },
   { label: 'Trading', path: '/trading', icon: TrendingUp },
+  { label: 'ETF Universe', path: '/etf-universe', icon: Globe },
+  { label: 'Strategies', path: '/strategies', icon: Layers },
+  { label: 'Timeline', path: '/timeline', icon: Clock },
   { label: 'Order Ticket', path: '/order-ticket', icon: ClipboardPenLine },
   { label: 'System', path: '/system', icon: Server },
   { label: 'Backtesting', path: '/research', icon: FlaskConical },
@@ -160,6 +167,7 @@ export function AppShell() {
           </NavLink>
 
           <div className="ml-auto flex items-center gap-4">
+            <BeginnerModeToggle />
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-success" />
               <span className="text-sm text-muted-foreground">

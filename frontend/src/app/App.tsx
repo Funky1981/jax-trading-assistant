@@ -16,6 +16,10 @@ import { ApprovalsPage } from '@/pages/ApprovalsPage';
 import { AssistantPage } from '@/pages/AssistantPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { BeginnerUXProvider } from '@/context/BeginnerUXContext';
+import { ETFUniversePage } from '@/pages/ETFUniversePage';
+import { StrategyCardsPage } from '@/pages/StrategyCardsPage';
+import { ResearchTimelinePage } from '@/pages/ResearchTimelinePage';
 
 // ── Protected route ────────────────────────────────────────────────────────────
 // If auth is required and the user has no valid token, redirect to /login.
@@ -50,7 +54,9 @@ export const routes = [
     path: '/',
     element: (
       <ProtectedRoute>
-        <AppShell />
+        <BeginnerUXProvider>
+          <AppShell />
+        </BeginnerUXProvider>
       </ProtectedRoute>
     ),
     children: [
@@ -68,6 +74,9 @@ export const routes = [
       { path: 'guide', element: <UserGuidePage /> },
       { path: 'approvals', element: <ApprovalsPage /> },
       { path: 'assistant', element: <AssistantPage /> },
+      { path: 'etf-universe', element: <ETFUniversePage /> },
+      { path: 'strategies', element: <StrategyCardsPage /> },
+      { path: 'timeline', element: <ResearchTimelinePage /> },
     ],
   },
 ];
