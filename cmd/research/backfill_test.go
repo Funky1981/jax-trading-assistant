@@ -21,6 +21,7 @@ type fakeBackfillStore struct {
 	events            map[string]backfillEventRecord
 	normalizedEvents  map[string]backfillNormalizedEvent
 	lastCandleSymbols []string
+	lastScores        []pricedInScoreResult
 }
 
 func (s *fakeBackfillStore) UpsertCandles(ctx context.Context, candles []marketdata.Candle) (int, error) {
@@ -49,6 +50,7 @@ func (s *fakeBackfillStore) LoadEventStudyInputs(ctx context.Context, eventIDs [
 func (s *fakeBackfillStore) UpsertEventStudy(ctx context.Context, windows []eventWindowResult, scores []pricedInScoreResult, confounders []eventConfounderResult) (backfillEventStudyWriteSummary, error) {
 	s.windowUpserts += len(windows)
 	s.scoreUpserts += len(scores)
+	s.lastScores = append([]pricedInScoreResult(nil), scores...)
 	return backfillEventStudyWriteSummary{Windows: len(windows), Scores: len(scores), Confounders: len(confounders)}, nil
 }
 
@@ -245,6 +247,70 @@ func TestBackfillEventStudyComputesWindowsAndPricedInScores(t *testing.T) {
 	}
 	if store.windowUpserts != 2 || store.scoreUpserts != 1 {
 		t.Fatalf("unexpected store writes: windows=%d scores=%d", store.windowUpserts, store.scoreUpserts)
+	}
+}
+
+func TestPricedInEngineVerdictsAndHardRejectReasons(t *testing.T) {
+	windows := []eventWindowResult{
+		{EventID: "event-priced", Symbol: "SPY", WindowName: "-4h_to_event", ReturnPct: 0.032, DataQuality: "complete"},
+		{EventID: "event-priced", Symbol: "SPY", WindowName: "event_to_+15m", ReturnPct: 0.001, DataQuality: "complete"},
+		{EventID: "event-priced", Symbol: "SPY", WindowName: "event_to_+1h", ReturnPct: -0.004, DataQuality: "complete"},
+	}
+
+	score := computePricedInScore("event-priced", "SPY", windows)
+	if score.Verdict != "priced_in" {
+		t.Fatalf("verdict = %q, want priced_in", score.Verdict)
+	}
+	if !score.HardReject {
+		t.Fatal("expected priced_in score to be a hard reject")
+	}
+	if len(score.HardRejectReasons) == 0 || score.HardRejectReasons[0] != "priced_in" {
+		t.Fatalf("hard reject reasons = %#v, want priced_in", score.HardRejectReasons)
+	}
+	if score.PreEvent4HReturn == 0 || score.PostEvent15MReturn == 0 {
+		t.Fatalf("expected pre/post component returns to be populated: %#v", score)
+	}
+	if score.Reason == "" {
+		t.Fatal("expected reason to be stored")
+	}
+}
+
+func TestPricedInEngineDetectsNotPricedInConfirmation(t *testing.T) {
+	windows := []eventWindowResult{
+		{EventID: "event-fresh", Symbol: "QQQ", WindowName: "-1h_to_event", ReturnPct: 0.001, DataQuality: "complete"},
+		{EventID: "event-fresh", Symbol: "QQQ", WindowName: "-4h_to_event", ReturnPct: 0.002, DataQuality: "complete"},
+		{EventID: "event-fresh", Symbol: "QQQ", WindowName: "event_to_+5m", ReturnPct: 0.009, DataQuality: "complete"},
+		{EventID: "event-fresh", Symbol: "QQQ", WindowName: "event_to_+15m", ReturnPct: 0.014, DataQuality: "complete"},
+		{EventID: "event-fresh", Symbol: "QQQ", WindowName: "event_to_+1h", ReturnPct: 0.018, DataQuality: "complete"},
+	}
+
+	score := computePricedInScore("event-fresh", "QQQ", windows)
+	if score.Verdict != "not_priced_in" {
+		t.Fatalf("verdict = %q, want not_priced_in", score.Verdict)
+	}
+	if score.HardReject {
+		t.Fatalf("did not expect hard reject: %#v", score.HardRejectReasons)
+	}
+	if score.PostEvent5MReturn == 0 || score.PostEvent15MReturn == 0 || score.PostEvent1HReturn == 0 {
+		t.Fatalf("expected post-event components to be populated: %#v", score)
+	}
+}
+
+func TestPricedInEngineMarksPoorDataUnclear(t *testing.T) {
+	windows := []eventWindowResult{
+		{EventID: "event-unclear", Symbol: "TLT", WindowName: "-1h_to_event", ReturnPct: 0.001, DataQuality: "missing"},
+		{EventID: "event-unclear", Symbol: "TLT", WindowName: "event_to_+15m", ReturnPct: 0.006, DataQuality: "complete"},
+	}
+
+	score := computePricedInScore("event-unclear", "TLT", windows)
+	if score.Verdict != "unclear" {
+		t.Fatalf("verdict = %q, want unclear", score.Verdict)
+	}
+	if !score.HardReject {
+		t.Fatal("expected unclear score to be a hard reject")
+	}
+	if len(score.HardRejectReasons) == 0 || score.HardRejectReasons[0] != "poor_data_quality" {
+		t.Fatalf("hard reject reasons = %#v, want poor_data_quality", score.HardRejectReasons)
 	}
 }
 

@@ -835,11 +835,25 @@ type eventWindowResult struct {
 }
 
 type pricedInScoreResult struct {
-	EventID    string
-	Symbol     string
-	Score      float64
-	Verdict    string
-	Components map[string]any
+	EventID                string
+	Symbol                 string
+	Score                  float64
+	Verdict                string
+	Reason                 string
+	PreEvent1HReturn       float64
+	PreEvent4HReturn       float64
+	PreEvent1DReturn       float64
+	PostEvent5MReturn      float64
+	PostEvent15MReturn     float64
+	PostEvent1HReturn      float64
+	BenchmarkReturn        float64
+	AbnormalReturn         float64
+	VolumeSpike            float64
+	SpreadQuality          float64
+	VolatilityAdjustedMove float64
+	HardReject             bool
+	HardRejectReasons      []string
+	Components             map[string]any
 }
 
 type eventConfounderResult struct {
@@ -1003,46 +1017,124 @@ func windowVolatility(candles []marketdata.Candle, start, end time.Time) float64
 }
 
 func computePricedInScore(eventID, symbol string, windows []eventWindowResult) pricedInScoreResult {
-	pre := 0.0
-	post := 0.0
+	score := pricedInScoreResult{
+		EventID:       eventID,
+		Symbol:        symbol,
+		SpreadQuality: 1,
+		Components:    map[string]any{},
+	}
+	poorData := false
 	for _, w := range windows {
-		if strings.Contains(w.WindowName, "_to_event") {
-			pre += math.Abs(w.ReturnPct)
+		if w.DataQuality != "" && w.DataQuality != "complete" && w.DataQuality != "ok" {
+			poorData = true
 		}
-		if strings.Contains(w.WindowName, "event_to_") {
-			post += math.Abs(w.ReturnPct)
+		switch w.WindowName {
+		case "-1h_to_event":
+			score.PreEvent1HReturn = w.ReturnPct
+		case "-4h_to_event":
+			score.PreEvent4HReturn = w.ReturnPct
+		case "-1d_to_event":
+			score.PreEvent1DReturn = w.ReturnPct
+		case "event_to_+5m":
+			score.PostEvent5MReturn = w.ReturnPct
+		case "event_to_+15m":
+			score.PostEvent15MReturn = w.ReturnPct
+		case "event_to_+1h":
+			score.PostEvent1HReturn = w.ReturnPct
+		}
+		if math.Abs(w.VolatilityPct) > math.Abs(score.VolatilityAdjustedMove) {
+			score.VolatilityAdjustedMove = w.VolatilityPct
 		}
 	}
-	score := 0.5
-	if pre+post > 0 {
-		score = pre / (pre + post)
-	}
-	verdict := "unclear"
+	preDrift := maxAbs(score.PreEvent1HReturn, score.PreEvent4HReturn, score.PreEvent1DReturn)
+	postConfirmation := maxAbs(score.PostEvent5MReturn, score.PostEvent15MReturn, score.PostEvent1HReturn)
+	score.AbnormalReturn = score.PostEvent15MReturn - score.BenchmarkReturn
+	score.Components["pre_event_max_abs_return"] = preDrift
+	score.Components["post_event_max_abs_return"] = postConfirmation
+	score.Components["window_count"] = len(windows)
+	score.Components["post_event_5m_return"] = score.PostEvent5MReturn
+
 	switch {
-	case score >= 0.67:
-		verdict = "priced_in"
-	case score <= 0.33:
-		verdict = "not_priced_in"
+	case poorData:
+		score.Score = 0.5
+		score.Verdict = "unclear"
+		score.Reason = "priced-in verdict unclear because one or more event windows have poor data quality"
+		score.HardReject = true
+		score.HardRejectReasons = []string{"poor_data_quality"}
+	case math.Abs(score.PostEvent15MReturn) >= 0.05 && signChanged(score.PostEvent15MReturn, score.PostEvent1HReturn):
+		score.Score = clamp01(0.85)
+		score.Verdict = "overreaction"
+		score.Reason = "post-event move was extreme and reversed within the one-hour window"
+	case math.Abs(score.PreEvent4HReturn) >= 0.025 && math.Abs(score.PostEvent15MReturn) <= 0.003:
+		score.Score = clamp01(0.85)
+		score.Verdict = "priced_in"
+		score.Reason = "pre-event four-hour drift already exceeded the reaction threshold while post-event confirmation was weak"
+		score.HardReject = true
+		score.HardRejectReasons = []string{"priced_in"}
+	case preDrift <= 0.005 && postConfirmation >= 0.008:
+		score.Score = clamp01(0.15)
+		score.Verdict = "not_priced_in"
+		score.Reason = "pre-event drift was small and post-event confirmation was strong"
+	case preDrift >= 0.012 && postConfirmation >= 0.006:
+		score.Score = clamp01(0.55)
+		score.Verdict = "partially_priced_in"
+		score.Reason = "both pre-event drift and post-event confirmation were present"
 	default:
-		verdict = "partially_priced_in"
+		score.Score = clamp01(0.5)
+		score.Verdict = "unclear"
+		score.Reason = "priced-in verdict unclear because pre/post event reaction was mixed or too small"
+		score.HardReject = true
+		score.HardRejectReasons = []string{"unclear"}
 	}
-	return pricedInScoreResult{
-		EventID: eventID,
-		Symbol:  symbol,
-		Score:   score,
-		Verdict: verdict,
-		Components: map[string]any{
-			"pre_drift_abs":  pre,
-			"post_drift_abs": post,
-			"window_count":   len(windows),
-		},
+	if math.Abs(preDrift) >= 0.06 || math.Abs(postConfirmation) >= 0.08 {
+		score.HardReject = true
+		score.HardRejectReasons = appendUniqueString(score.HardRejectReasons, "target_like_move")
 	}
+	score.Components["hard_reject"] = score.HardReject
+	score.Components["hard_reject_reasons"] = score.HardRejectReasons
+	return score
+}
+
+func maxAbs(values ...float64) float64 {
+	maxValue := 0.0
+	for _, value := range values {
+		if math.Abs(value) > maxValue {
+			maxValue = math.Abs(value)
+		}
+	}
+	return maxValue
+}
+
+func signChanged(a, b float64) bool {
+	return (a > 0 && b < 0) || (a < 0 && b > 0)
+}
+
+func clamp01(value float64) float64 {
+	if value < 0 {
+		return 0
+	}
+	if value > 1 {
+		return 1
+	}
+	return value
+}
+
+func appendUniqueString(values []string, value string) []string {
+	for _, existing := range values {
+		if existing == value {
+			return values
+		}
+	}
+	return append(values, value)
 }
 
 func pricedInReason(score pricedInScoreResult) string {
-	pre, _ := score.Components["pre_drift_abs"].(float64)
-	post, _ := score.Components["post_drift_abs"].(float64)
-	return fmt.Sprintf("priced-in score %.2f from pre-event absolute drift %.4f and post-event absolute drift %.4f", score.Score, pre, post)
+	if score.Reason != "" {
+		return score.Reason
+	}
+	pre := score.Components["pre_event_max_abs_return"]
+	post := score.Components["post_event_max_abs_return"]
+	return fmt.Sprintf("priced-in score %.2f from pre-event max move %v and post-event max move %v", score.Score, pre, post)
 }
 
 type sqlBackfillStore struct {
@@ -1263,14 +1355,37 @@ func (s *sqlBackfillStore) UpsertEventStudy(ctx context.Context, windows []event
 		}
 	}
 	for _, score := range scores {
+		reasonsJSON, _ := json.Marshal(score.HardRejectReasons)
 		_, err := tx.ExecContext(ctx, `
-			INSERT INTO event_priced_in_scores (event_id, symbol, priced_in_score, verdict, reason)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO event_priced_in_scores (
+				event_id, symbol, pre_event_1h_return, pre_event_4h_return,
+				pre_event_1d_return, post_event_5m_return, post_event_15m_return,
+				post_event_1h_return, benchmark_return, abnormal_return,
+				volume_confirmation_score, spread_quality_score, priced_in_score,
+				verdict, reason, hard_reject, hard_reject_reasons
+			)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::jsonb)
 			ON CONFLICT (event_id, symbol) DO UPDATE SET
+				pre_event_1h_return = EXCLUDED.pre_event_1h_return,
+				pre_event_4h_return = EXCLUDED.pre_event_4h_return,
+				pre_event_1d_return = EXCLUDED.pre_event_1d_return,
+				post_event_5m_return = EXCLUDED.post_event_5m_return,
+				post_event_15m_return = EXCLUDED.post_event_15m_return,
+				post_event_1h_return = EXCLUDED.post_event_1h_return,
+				benchmark_return = EXCLUDED.benchmark_return,
+				abnormal_return = EXCLUDED.abnormal_return,
+				volume_confirmation_score = EXCLUDED.volume_confirmation_score,
+				spread_quality_score = EXCLUDED.spread_quality_score,
 				priced_in_score = EXCLUDED.priced_in_score,
 				verdict = EXCLUDED.verdict,
-				reason = EXCLUDED.reason`,
-			score.EventID, score.Symbol, score.Score, score.Verdict, pricedInReason(score),
+				reason = EXCLUDED.reason,
+				hard_reject = EXCLUDED.hard_reject,
+				hard_reject_reasons = EXCLUDED.hard_reject_reasons`,
+			score.EventID, score.Symbol, score.PreEvent1HReturn, score.PreEvent4HReturn,
+			score.PreEvent1DReturn, score.PostEvent5MReturn, score.PostEvent15MReturn,
+			score.PostEvent1HReturn, score.BenchmarkReturn, score.AbnormalReturn,
+			score.VolumeSpike, score.SpreadQuality, score.Score, score.Verdict,
+			pricedInReason(score), score.HardReject, string(reasonsJSON),
 		)
 		if err != nil {
 			return backfillEventStudyWriteSummary{}, err
