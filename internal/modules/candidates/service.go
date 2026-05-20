@@ -245,7 +245,7 @@ func InstrumentPolicyResult(err error) (instruments.Evaluation, bool) {
 }
 
 func (s *Service) evaluateETF(symbol string) (instruments.Evaluation, bool) {
-	if s.instrumentGate == nil || !s.instrumentGate.IsKnownETF(symbol) {
+	if s.instrumentGate == nil {
 		return instruments.Evaluation{}, false
 	}
 	return s.instrumentGate.Evaluate(symbol, s.runtimeMode), true

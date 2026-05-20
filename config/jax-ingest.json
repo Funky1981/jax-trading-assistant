@@ -2,16 +2,17 @@
   "database_dsn": "postgres://jaxuser:jaxpass@localhost:5432/jaxdb?sslmode=disable",
   "ingest_interval": 300,
   "symbols": [
-    "AAPL",
-    "MSFT",
-    "GOOGL",
-    "AMZN",
-    "NVDA",
-    "TSLA",
-    "META",
     "SPY",
     "QQQ",
-    "IWM"
+    "DIA",
+    "IWM",
+    "XLK",
+    "XLF",
+    "XLE",
+    "SMH",
+    "SOXX",
+    "TLT",
+    "GLD"
   ],
   "polygon": {
     "enabled": true,

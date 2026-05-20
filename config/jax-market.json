@@ -4,16 +4,17 @@
   "candle_backfill": 250,
   "stale_quote_seconds": 300,
   "symbols": [
-    "AAPL",
-    "MSFT",
-    "GOOGL",
-    "AMZN",
-    "TSLA",
-    "META",
-    "NVDA",
-    "AMD",
-    "NFLX",
-    "SPY"
+    "SPY",
+    "QQQ",
+    "DIA",
+    "IWM",
+    "XLK",
+    "XLF",
+    "XLE",
+    "SMH",
+    "SOXX",
+    "TLT",
+    "GLD"
   ],
   "polygon": {
     "enabled": false,

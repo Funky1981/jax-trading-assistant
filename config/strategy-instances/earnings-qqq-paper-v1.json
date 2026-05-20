@@ -1,12 +1,12 @@
 {
-  "name": "earnings-aapl-paper-v1",
+  "name": "earnings-qqq-paper-v1",
   "strategyTypeId": "same_day_earnings_drift_v1",
   "strategyId": "same_day_earnings_drift_v1",
   "enabled": false,
   "sessionTimezone": "America/New_York",
   "flattenByCloseTime": "15:55",
   "config": {
-    "symbols": ["AAPL"],
+    "symbols": ["QQQ"],
     "entryDelayMins": 30,
     "minGapPct": 2.0,
     "minVolumeMultiple": 1.5,

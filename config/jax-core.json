@@ -1,6 +1,6 @@
 {
   "httpPort": 8081,
-  "defaultSymbols": ["AAPL", "MSFT"],
+  "defaultSymbols": ["SPY", "QQQ", "DIA", "IWM", "XLK", "XLF", "XLE", "SMH", "SOXX", "TLT", "GLD"],
   "accountSize": 10000,
   "riskPercent": 3,
   "maxConsecutiveLosses": 3,

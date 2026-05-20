@@ -201,9 +201,6 @@ func (s *Service) checkETFApprovalGate(ctx context.Context, candidateID uuid.UUI
 	if err != nil {
 		return err
 	}
-	if !s.instrumentGate.IsKnownETF(symbol) {
-		return nil
-	}
 	result := s.instrumentGate.Evaluate(symbol, s.runtimeMode)
 	if !result.Allowed {
 		return fmt.Errorf("%w: %s: %s", ErrInstrumentPolicy, result.ReasonCode, result.Reason)

@@ -391,8 +391,16 @@ func (s *Service) checkRiskGates(ctx context.Context) error {
 }
 
 func (s *Service) checkInstrumentPolicy(ctx context.Context, signal *Signal) (map[string]any, error) {
-	if s.instrumentPolicy == nil || signal == nil || !s.instrumentPolicy.IsKnownETF(signal.Symbol) {
+	if s.instrumentPolicy == nil || signal == nil {
 		return nil, nil
+	}
+	base := s.instrumentPolicy.Evaluate(signal.Symbol, s.runtimeMode)
+	if !base.Allowed {
+		if s.audit != nil {
+			flowID := observability.FlowIDFromContext(ctx)
+			_ = s.audit.LogAuditEvent(ctx, flowID, "execution", "etf_policy_gate", "blocked", base.Reason, base.Metadata)
+		}
+		return nil, fmt.Errorf("ETF policy violation: %s: %s", base.ReasonCode, base.Reason)
 	}
 	quoteReader, ok := s.store.(interface {
 		GetLatestQuote(context.Context, string) (*instruments.QuoteSnapshot, error)

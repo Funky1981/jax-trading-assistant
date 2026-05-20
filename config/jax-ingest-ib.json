@@ -1,7 +1,7 @@
 {
   "database_dsn": "postgresql://jax:jax@postgres:5432/jax",
   "ingest_interval": 300,
-  "symbols": ["AAPL", "MSFT", "GOOGL", "AMZN", "SPY", "QQQ"],
+  "symbols": ["SPY", "QQQ", "DIA", "IWM", "XLK", "XLF", "XLE", "SMH", "SOXX", "TLT", "GLD"],
   "polygon": {
     "enabled": false,
     "api_key": "",

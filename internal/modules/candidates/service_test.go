@@ -2,7 +2,10 @@ package candidates
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
+
+	"jax-trading-assistant/internal/modules/instruments"
 )
 
 // TestStatusConstants verifies the lifecycle status strings match the DB enum.
@@ -73,5 +76,24 @@ func TestCandidate_BlockedNeverAwaiting(t *testing.T) {
 func TestCandidate_ExpiredNeverAwaiting(t *testing.T) {
 	if StatusExpired == StatusAwaitingApproval {
 		t.Error("expired and awaiting_approval must be distinct status values")
+	}
+}
+
+func TestEvaluateETFRejectsUnknownSymbolsInPhaseOne(t *testing.T) {
+	catalog, err := instruments.LoadCatalog(filepath.Join("..", "..", "..", "config", "etf-instruments.json"))
+	if err != nil {
+		t.Fatalf("load catalog: %v", err)
+	}
+
+	svc := (&Service{}).WithInstrumentPolicy(catalog, "paper")
+	result, gated := svc.evaluateETF("AAPL")
+	if !gated {
+		t.Fatal("expected non-catalog symbols to be gated in phase-one candidate flow")
+	}
+	if result.Allowed {
+		t.Fatalf("expected AAPL to be rejected by ETF phase-one candidate policy, got %#v", result)
+	}
+	if result.ReasonCode != instruments.ReasonUnknownSymbol {
+		t.Fatalf("reason = %q, want %q", result.ReasonCode, instruments.ReasonUnknownSymbol)
 	}
 }

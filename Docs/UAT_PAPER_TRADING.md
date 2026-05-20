@@ -39,6 +39,8 @@ Before any ETF paper pilot session, verify:
 - `GET /api/v1/trading/pilot-status` reports `etfPhase1Enabled=true` and `etfEntryWorkflow=candidate_approval_only`.
 - `GET /api/v1/testing/readiness` includes `etfPhase1Readiness` with catalog, rollout stage, and sign-off evidence.
 - An approved allowlist candidate such as `SPY` reaches the approval queue with ETF policy metadata.
+- Runtime defaults in `config/jax-core.json`, `config/jax-market.json`, `config/jax-ingest.json`, `config/jax-ingest-ib.json`, and `config/strategy-instances/*.json` contain only approved phase-1 ETF symbols.
+- A single-name stock such as `AAPL` is rejected before candidate creation, approval, and broker submission.
 - A manual `SPY` order from the order ticket is blocked with `manual ETF entry orders must use the approval workflow`.
 - An excluded ETF such as `TQQQ` is blocked before approval.
 - A stale quote, missing bid/ask, wide spread, after-hours timestamp, or missing stop loss rejects before broker submission.

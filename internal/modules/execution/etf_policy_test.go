@@ -26,6 +26,19 @@ func TestExecuteTrade_ETFPolicyBlocksUnsafeSubmissionsBeforeBroker(t *testing.T)
 		wantReason string
 	}{
 		{
+			name: "single-name stock",
+			mode: "paper",
+			signal: Signal{
+				Symbol:     "AAPL",
+				SignalType: "BUY",
+				EntryPrice: 100,
+				StopLoss:   95,
+				TakeProfit: 110,
+				StrategyID: "test",
+			},
+			wantReason: instruments.ReasonUnknownSymbol,
+		},
+		{
 			name: "excluded ETF class",
 			mode: "paper",
 			signal: Signal{
