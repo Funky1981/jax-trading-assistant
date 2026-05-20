@@ -1,0 +1,19 @@
+DROP INDEX IF EXISTS idx_research_summaries_strategy_created;
+DROP INDEX IF EXISTS idx_research_summaries_symbol_created;
+DROP INDEX IF EXISTS idx_research_summaries_event_symbol;
+DROP INDEX IF EXISTS idx_etf_context_snapshots_theme;
+DROP INDEX IF EXISTS idx_etf_context_snapshots_symbol_validity;
+DROP INDEX IF EXISTS idx_event_priced_in_scores_symbol_verdict;
+DROP INDEX IF EXISTS idx_event_priced_in_scores_event_symbol;
+DROP INDEX IF EXISTS idx_event_confounders_confounding_event;
+DROP INDEX IF EXISTS idx_event_confounders_symbol_relationship;
+DROP INDEX IF EXISTS idx_event_confounders_event_symbol;
+DROP INDEX IF EXISTS idx_event_windows_symbol_time;
+DROP INDEX IF EXISTS idx_event_windows_event_symbol;
+DROP INDEX IF EXISTS idx_event_windows_symbol_window;
+
+DROP TABLE IF EXISTS research_summaries;
+DROP TABLE IF EXISTS etf_context_snapshots;
+DROP TABLE IF EXISTS event_priced_in_scores;
+DROP TABLE IF EXISTS event_confounders;
+DROP TABLE IF EXISTS event_windows;
