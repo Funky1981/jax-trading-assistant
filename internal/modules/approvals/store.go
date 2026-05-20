@@ -217,6 +217,97 @@ func (s *Store) GetDetailByCandidateID(ctx context.Context, candidateID uuid.UUI
 	return detail, nil
 }
 
+func (s *Store) CreateNotificationOutboxItem(ctx context.Context, item *NotificationOutboxItem) (*NotificationOutboxItem, error) {
+	if item.ID == uuid.Nil {
+		item.ID = uuid.New()
+	}
+	if item.Status == "" {
+		item.Status = "pending"
+	}
+	if item.SendAfter.IsZero() {
+		item.SendAfter = time.Now().UTC()
+	}
+	payload := item.Payload
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("approvals.Store.CreateNotificationOutboxItem: marshal payload: %w", err)
+	}
+	now := time.Now().UTC()
+	item.CreatedAt = now
+	item.UpdatedAt = now
+	_, err = s.pool.Exec(ctx, `
+		INSERT INTO notification_outbox
+			(id, channel, recipient, candidate_id, message, payload, status, send_after, sent_at, error, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11)`,
+		item.ID, item.Channel, item.Recipient, item.CandidateID, item.Message,
+		payloadBytes, item.Status, item.SendAfter, item.SentAt, item.Error, item.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("approvals.Store.CreateNotificationOutboxItem: %w", err)
+	}
+	item.Payload = payload
+	return item, nil
+}
+
+func (s *Store) CreateMobileApprovalToken(ctx context.Context, token *MobileApprovalTokenRecord) (*MobileApprovalTokenRecord, error) {
+	if token.ID == uuid.Nil {
+		token.ID = uuid.New()
+	}
+	if token.CreatedAt.IsZero() {
+		token.CreatedAt = time.Now().UTC()
+	}
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO mobile_approval_tokens
+			(id, notification_id, candidate_id, channel, token_hash, guardrail_hash, expires_at, used_at, decision, used_by, created_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		token.ID, token.NotificationID, token.CandidateID, token.Channel, token.TokenHash,
+		token.GuardrailHash, token.ExpiresAt, token.UsedAt, token.Decision, token.UsedBy, token.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("approvals.Store.CreateMobileApprovalToken: %w", err)
+	}
+	return token, nil
+}
+
+func (s *Store) GetMobileApprovalTokenByHash(ctx context.Context, tokenHash string) (*MobileApprovalTokenRecord, error) {
+	row := s.pool.QueryRow(ctx, `
+		SELECT id, notification_id, candidate_id, channel, token_hash, guardrail_hash,
+		       expires_at, used_at, COALESCE(decision, ''), COALESCE(used_by, ''), created_at
+		FROM mobile_approval_tokens
+		WHERE token_hash = $1`, tokenHash)
+	var token MobileApprovalTokenRecord
+	if err := row.Scan(
+		&token.ID, &token.NotificationID, &token.CandidateID, &token.Channel,
+		&token.TokenHash, &token.GuardrailHash, &token.ExpiresAt, &token.UsedAt,
+		&token.Decision, &token.UsedBy, &token.CreatedAt,
+	); err != nil {
+		return nil, fmt.Errorf("approvals.Store.GetMobileApprovalTokenByHash: %w", err)
+	}
+	return &token, nil
+}
+
+func (s *Store) MarkMobileApprovalTokenUsed(ctx context.Context, tokenID uuid.UUID, decision, usedBy string, usedAt time.Time) error {
+	if usedAt.IsZero() {
+		usedAt = time.Now().UTC()
+	}
+	tag, err := s.pool.Exec(ctx, `
+		UPDATE mobile_approval_tokens
+		SET used_at = $2, decision = $3, used_by = $4
+		WHERE id = $1 AND used_at IS NULL`,
+		tokenID, usedAt, decision, usedBy,
+	)
+	if err != nil {
+		return fmt.Errorf("approvals.Store.MarkMobileApprovalTokenUsed: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrMobileApprovalUsed
+	}
+	return nil
+}
+
 func scanApproval(row interface{ Scan(...any) error }) (*Approval, error) {
 	var a Approval
 	err := row.Scan(

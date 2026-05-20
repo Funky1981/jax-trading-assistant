@@ -19,6 +19,9 @@ import (
 func registerApprovalRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool) {
 	svc := approvalsmod.NewService(pool)
 
+	// POST /api/v1/mobile/telegram/webhook
+	mux.HandleFunc("/api/v1/mobile/telegram/webhook", mobileTelegramWebhookHandler(svc))
+
 	// GET  /api/v1/approvals/queue
 	mux.HandleFunc("/api/v1/approvals/queue", protect(approvalQueueHandler(svc)))
 
@@ -28,6 +31,80 @@ func registerApprovalRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 	// POST /api/v1/approvals/{candidateId}/snooze
 	// POST /api/v1/approvals/{candidateId}/reanalyze
 	mux.HandleFunc("/api/v1/approvals/", protect(approvalDetailRouter(svc)))
+}
+
+type mobileTelegramWebhookBody struct {
+	Token         string `json:"token"`
+	Action        string `json:"action"`
+	Actor         string `json:"actor"`
+	Reason        string `json:"reason"`
+	GuardrailHash string `json:"guardrailHash"`
+	RuntimeMode   string `json:"runtimeMode"`
+}
+
+func mobileTelegramWebhookHandler(svc *approvalsmod.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var body mobileTelegramWebhookBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "invalid telegram approval payload", http.StatusBadRequest)
+			return
+		}
+		if body.RuntimeMode == "" {
+			body.RuntimeMode = "paper"
+		}
+		if body.Actor == "" {
+			body.Actor = "telegram"
+		}
+		approval, err := svc.SubmitMobileDecision(r.Context(), approvalsmod.MobileApprovalDecisionRequest{
+			Token:         body.Token,
+			Decision:      body.Action,
+			Actor:         body.Actor,
+			Channel:       "telegram",
+			GuardrailHash: body.GuardrailHash,
+			RejectReason:  body.Reason,
+			RuntimeMode:   body.RuntimeMode,
+			Now:           time.Now().UTC(),
+		})
+		if err != nil {
+			writeMobileApprovalError(w, err)
+			return
+		}
+		publishEvent("approval.mobile."+approval.Decision, map[string]any{
+			"candidateId": approval.CandidateID,
+			"approvalId":  approval.ID,
+			"decision":    approval.Decision,
+			"approvedBy":  approval.ApprovedBy,
+			"decidedAt":   approval.DecidedAt,
+			"channel":     "telegram",
+		})
+		jsonOK(w, map[string]any{
+			"approvalId":  approval.ID,
+			"candidateId": approval.CandidateID,
+			"decision":    approval.Decision,
+			"runtimeMode": "paper",
+		})
+	}
+}
+
+func writeMobileApprovalError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, approvalsmod.ErrMobileApprovalExpired), errors.Is(err, approvalsmod.ErrCandidateExpired):
+		http.Error(w, err.Error(), http.StatusGone)
+	case errors.Is(err, approvalsmod.ErrMobileApprovalUsed), errors.Is(err, approvalsmod.ErrNotAwaitingApproval):
+		http.Error(w, err.Error(), http.StatusConflict)
+	case errors.Is(err, approvalsmod.ErrMobileApprovalInvalid),
+		errors.Is(err, approvalsmod.ErrMobileApprovalGuardrailChanged),
+		errors.Is(err, approvalsmod.ErrMobileApprovalLiveMode),
+		errors.Is(err, approvalsmod.ErrMobileApprovalDecisionInvalid),
+		errors.Is(err, approvalsmod.ErrInstrumentPolicy):
+		http.Error(w, err.Error(), http.StatusForbidden)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // GET /api/v1/approvals/queue
