@@ -241,13 +241,60 @@ export interface RecommendationListResponse {
   offset: number;
 }
 
+export interface StrategyTypeRequiredInputs {
+  candles: string[];
+  needsEarnings: boolean;
+  needsNews: boolean;
+}
+
+export interface StrategyTypeParameter {
+  key: string;
+  type: 'int' | 'float' | 'string' | 'bool' | string;
+  default: unknown;
+  min?: number;
+  max?: number;
+  description?: string;
+}
+
 export interface StrategyTypeMetadata {
+  strategyId: string;
+  name: string;
+  description: string;
+  requiredInputs: StrategyTypeRequiredInputs;
+  parameters: StrategyTypeParameter[];
+}
+
+export interface TradingModeStrategy {
+  strategyTypeId: string;
+  name: string;
+  description: string;
+  defaultConfig: Record<string, unknown>;
+}
+
+export interface TradingModeRiskDefaults {
+  maxTradesPerDay: number;
+  maxOpenPositions: number;
+  riskPerTradePct: number;
+  minConfidence: number;
+  flattenBy: string;
+  approvalRequired: boolean;
+}
+
+export interface TradingMode {
   id: string;
   name: string;
-  version?: string;
-  description?: string;
-  requiredInputs?: string[];
-  tags?: string[];
+  description: string;
+  assetClass: string;
+  runtimeMode: string;
+  executionPolicy: string;
+  universe: string[];
+  requiredData: string[];
+  riskDefaults: TradingModeRiskDefaults;
+  strategies: TradingModeStrategy[];
+}
+
+export interface TradingModeCatalog {
+  modes: TradingMode[];
 }
 
 export interface StrategyInstance {

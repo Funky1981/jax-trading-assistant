@@ -1,0 +1,19 @@
+{
+  "name": "etf-news-sector-momentum-paper-v1",
+  "strategyTypeId": "etf_news_sector_momentum_v1",
+  "strategyId": "etf_news_sector_momentum_v1",
+  "enabled": false,
+  "sessionTimezone": "America/New_York",
+  "flattenByCloseTime": "15:55",
+  "config": {
+    "symbols": ["QQQ", "XLK", "SMH", "SOXX", "XLE", "XLF", "IWM", "GLD"],
+    "parameters": {
+      "minConfirmations": 2,
+      "minMovePct": 0.6,
+      "minVolumeMultiple": 1.2,
+      "stabilizationBars": 3,
+      "atrStopMultiple": 1.1,
+      "rewardRiskMultiple": 1.5
+    }
+  }
+}

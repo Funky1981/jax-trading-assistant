@@ -1,0 +1,19 @@
+{
+  "name": "etf-news-market-panic-paper-v1",
+  "strategyTypeId": "etf_news_market_panic_reversal_v1",
+  "strategyId": "etf_news_market_panic_reversal_v1",
+  "enabled": false,
+  "sessionTimezone": "America/New_York",
+  "flattenByCloseTime": "15:55",
+  "config": {
+    "symbols": ["SPY", "QQQ", "DIA", "IWM"],
+    "parameters": {
+      "minDropPct": 1.2,
+      "minConfirmations": 2,
+      "minVolumeMultiple": 1.2,
+      "stabilizationBars": 3,
+      "atrStopMultiple": 1.1,
+      "rewardRiskMultiple": 1.5
+    }
+  }
+}

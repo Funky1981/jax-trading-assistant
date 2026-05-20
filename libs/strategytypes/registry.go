@@ -27,6 +27,9 @@ func DefaultRegistry() *Registry {
 	_ = r.Register(NewPanicReversion())
 	_ = r.Register(NewPairsEventRelative())
 	_ = r.Register(NewIndexFlow())
+	_ = r.Register(NewETFNewsMarketPanicReversal())
+	_ = r.Register(NewETFNewsSectorMomentum())
+	_ = r.Register(NewETFNewsRatesBondsRotation())
 	return r
 }
 

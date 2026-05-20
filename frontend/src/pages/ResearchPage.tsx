@@ -550,8 +550,8 @@ export function ResearchPage() {
                   <SelectContent>
                     <SelectItem value="none">Select strategy type</SelectItem>
                     {(strategyTypesQuery.data ?? []).map((strategyType, idx) => (
-                      <SelectItem key={strategyType.id || `strategy-${idx}`} value={strategyType.id}>
-                        {strategyType.id}
+                      <SelectItem key={strategyType.strategyId || `strategy-${idx}`} value={strategyType.strategyId}>
+                        {strategyType.strategyId}
                       </SelectItem>
                     ))}
                   </SelectContent>

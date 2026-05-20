@@ -1,0 +1,19 @@
+{
+  "name": "etf-news-rates-rotation-paper-v1",
+  "strategyTypeId": "etf_news_rates_bonds_rotation_v1",
+  "strategyId": "etf_news_rates_bonds_rotation_v1",
+  "enabled": false,
+  "sessionTimezone": "America/New_York",
+  "flattenByCloseTime": "15:55",
+  "config": {
+    "symbols": ["TLT", "GLD", "SPY", "QQQ", "XLF"],
+    "parameters": {
+      "minConfirmations": 2,
+      "minMovePct": 0.35,
+      "minVolumeMultiple": 1.1,
+      "stabilizationBars": 2,
+      "atrStopMultiple": 1.0,
+      "rewardRiskMultiple": 1.5
+    }
+  }
+}

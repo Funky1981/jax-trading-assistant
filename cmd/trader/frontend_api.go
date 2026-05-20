@@ -314,6 +314,10 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	mux.HandleFunc("/api/v1/metrics", protect(metricsHandler(pool)))
 	mux.HandleFunc("/api/v1/metrics/runs/", protect(metricsRunDetailHandler(pool)))
 
+	// ── Trading Modes ─────────────────────────────────────────────────────────
+	mux.HandleFunc("/api/v1/trading-modes", protect(tradingModesHandler()))
+	mux.HandleFunc("/api/v1/trading-modes/", protect(tradingModeDetailHandler()))
+
 	// ── Strategies ────────────────────────────────────────────────────────────
 	mux.HandleFunc("/strategies", protect(strategiesListHandler(reg)))
 	mux.HandleFunc("/api/v1/strategies", protect(strategiesListHandler(reg)))

@@ -2,6 +2,8 @@ package main
 
 import (
 	"strings"
+
+	"jax-trading-assistant/internal/modules/etfnews"
 )
 
 type eventClassificationInput struct {
@@ -107,6 +109,26 @@ func classifyEvent(in eventClassificationInput) eventClassification {
 	reasons = append(reasons, "sentiment="+sentiment)
 	if len(tags) > 1 {
 		reasons = append(reasons, "tags="+strings.Join(tags[1:], ","))
+	}
+
+	// Enrich with ETF-specific classification when the news is ETF-relevant.
+	if etfClass, ok := etfnews.Classify(in.Title, in.Summary); ok {
+		class = etfClass.Class
+		if etfClass.Sentiment != "neutral" {
+			sentiment = etfClass.Sentiment
+		}
+		if in.Attributes == nil {
+			in.Attributes = make(map[string]any)
+		}
+		in.Attributes["etfClass"] = etfClass.Class
+		in.Attributes["etfSymbols"] = etfClass.Symbols
+		in.Attributes["etfTags"] = etfClass.Tags
+		if etfClass.Sector != "" {
+			in.Attributes["etfSector"] = etfClass.Sector
+		}
+		for _, tag := range etfClass.Tags {
+			addTag(tag)
+		}
 	}
 
 	return eventClassification{

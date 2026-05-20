@@ -44,11 +44,11 @@ func sampleCandlesWithStart(start time.Time, startPrice float64) map[string][]Ca
 	return map[string][]Candle{"1m": out}
 }
 
-func TestDefaultRegistry_HasEightTypes(t *testing.T) {
+func TestDefaultRegistry_HasElevenTypes(t *testing.T) {
 	r := DefaultRegistry()
 	all := r.ListMetadata()
-	if len(all) != 8 {
-		t.Fatalf("expected 8 strategy types, got %d", len(all))
+	if len(all) != 11 {
+		t.Fatalf("expected 11 strategy types, got %d", len(all))
 	}
 	last := ""
 	for _, m := range all {

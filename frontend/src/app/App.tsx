@@ -20,6 +20,7 @@ import { BeginnerUXProvider } from '@/context/BeginnerUXContext';
 import { ETFUniversePage } from '@/pages/ETFUniversePage';
 import { StrategyCardsPage } from '@/pages/StrategyCardsPage';
 import { ResearchTimelinePage } from '@/pages/ResearchTimelinePage';
+import { TradingModesPage } from '@/pages/TradingModesPage';
 
 // ── Protected route ────────────────────────────────────────────────────────────
 // If auth is required and the user has no valid token, redirect to /login.
@@ -77,6 +78,7 @@ export const routes = [
       { path: 'etf-universe', element: <ETFUniversePage /> },
       { path: 'strategies', element: <StrategyCardsPage /> },
       { path: 'timeline', element: <ResearchTimelinePage /> },
+      { path: 'trading-modes', element: <TradingModesPage /> },
     ],
   },
 ];

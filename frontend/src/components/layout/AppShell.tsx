@@ -22,6 +22,7 @@ import {
   Globe,
   Layers,
   Clock,
+  ListChecks,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ const navItems = [
   { label: 'ETF Universe', path: '/etf-universe', icon: Globe },
   { label: 'Strategies', path: '/strategies', icon: Layers },
   { label: 'Timeline', path: '/timeline', icon: Clock },
+  { label: 'Trading Modes', path: '/trading-modes', icon: ListChecks },
   { label: 'Order Ticket', path: '/order-ticket', icon: ClipboardPenLine },
   { label: 'System', path: '/system', icon: Server },
   { label: 'Backtesting', path: '/research', icon: FlaskConical },
