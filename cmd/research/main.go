@@ -199,6 +199,7 @@ func registerRoutes(mux *http.ServeMux, svc *orchestration.Service, db *sql.DB, 
 	mux.HandleFunc("/backtest", handleBacktest(btDeps))
 	mux.HandleFunc("/research/projects/run", handleResearchProjectRun(runner))
 	mux.HandleFunc("/research/projects/runs/", handleResearchProjectRunStatus(runner))
+	registerBackfillRoutes(mux, newBackfillManager(newBackfillRunner(newSQLBackfillStore(db), buildBackfillCandleFetcherFromEnv())))
 }
 
 func loadMemoryReadiness(ctx context.Context, db *sql.DB) memoryReadiness {
