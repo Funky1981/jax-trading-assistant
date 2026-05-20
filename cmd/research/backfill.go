@@ -64,6 +64,8 @@ type BackfillEventInput struct {
 	Summary       string         `json:"summary,omitempty"`
 	Severity      string         `json:"severity,omitempty"`
 	Symbols       []string       `json:"symbols,omitempty"`
+	Themes        []string       `json:"themes,omitempty"`
+	Categories    []string       `json:"categories,omitempty"`
 	CanonicalKey  string         `json:"canonicalKey,omitempty"`
 	Attributes    map[string]any `json:"attributes,omitempty"`
 	Payload       map[string]any `json:"payload,omitempty"`
@@ -407,6 +409,28 @@ func normalizeETFSymbols(raw []string) ([]string, []BackfillFailure) {
 	return out, failures
 }
 
+func normalizeExplicitETFSymbols(raw []string) ([]string, []BackfillFailure) {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(raw))
+	var failures []BackfillFailure
+	for _, symbol := range raw {
+		symbol = strings.ToUpper(strings.TrimSpace(symbol))
+		if symbol == "" {
+			continue
+		}
+		if _, ok := phaseOneETFs[symbol]; !ok {
+			failures = append(failures, BackfillFailure{Symbol: symbol, Stage: "allowlist", Error: "symbol is not in the phase-one ETF allowlist"})
+			continue
+		}
+		if _, ok := seen[symbol]; ok {
+			continue
+		}
+		seen[symbol] = struct{}{}
+		out = append(out, symbol)
+	}
+	return out, failures
+}
+
 func (req BackfillCandlesRequest) limitOrDefault() int {
 	if req.Limit > 0 {
 		return req.Limit
@@ -476,6 +500,19 @@ type backfillEventWriteSummary struct {
 	SymbolMaps     int
 }
 
+type etfEventClassification struct {
+	EventType        string
+	AffectedETFs     []string
+	PrimaryETF       string
+	Confidence       float64
+	SourceQuality    string
+	TimeSensitivity  string
+	Tradeable        bool
+	Reason           string
+	Rule             string
+	DeterministicMap bool
+}
+
 func buildEventRecord(provider string, input BackfillEventInput) (backfillEventRecord, []BackfillFailure) {
 	provider = strings.TrimSpace(provider)
 	if provider == "" {
@@ -484,11 +521,6 @@ func buildEventRecord(provider string, input BackfillEventInput) (backfillEventR
 	eventTime, ok := parseBackfillTime(input.EventTime)
 	if !ok {
 		return backfillEventRecord{}, []BackfillFailure{{Event: input.SourceEventID, Stage: "parse_event", Error: "eventTime must be RFC3339 or YYYY-MM-DD"}}
-	}
-	symbols, failures := normalizeETFSymbols(input.Symbols)
-	if len(symbols) == 0 {
-		failures = append(failures, BackfillFailure{Event: input.SourceEventID, Stage: "symbols", Error: "event must map to at least one allowlisted ETF"})
-		return backfillEventRecord{}, failures
 	}
 	sourceEventID := strings.TrimSpace(input.SourceEventID)
 	if sourceEventID == "" {
@@ -502,6 +534,12 @@ func buildEventRecord(provider string, input BackfillEventInput) (backfillEventR
 	if title == "" {
 		title = eventKind + " event"
 	}
+	classification := classifyETFEvent(provider, input)
+	if !classification.Tradeable || len(classification.AffectedETFs) == 0 {
+		return backfillEventRecord{}, []BackfillFailure{{Event: sourceEventID, Stage: "classification", Error: "event did not match deterministic ETF classification rules"}}
+	}
+	explicitSymbols, failures := normalizeExplicitETFSymbols(input.Symbols)
+	symbols := mergeETFSymbols(classification.AffectedETFs, explicitSymbols)
 	canonicalKey := strings.TrimSpace(input.CanonicalKey)
 	if canonicalKey == "" {
 		canonicalKey = provider + ":" + sourceEventID
@@ -514,10 +552,8 @@ func buildEventRecord(provider string, input BackfillEventInput) (backfillEventR
 	if payload == nil {
 		payload = map[string]any{}
 	}
-	attributes := input.Attributes
-	if attributes == nil {
-		attributes = map[string]any{}
-	}
+	attributes := cloneAttributes(input.Attributes)
+	applyClassificationAttributes(attributes, classification)
 	hashPayload, _ := json.Marshal(map[string]any{
 		"provider": provider, "sourceEventId": sourceEventID, "title": title, "summary": input.Summary, "time": eventTime,
 	})
@@ -531,12 +567,238 @@ func buildEventRecord(provider string, input BackfillEventInput) (backfillEventR
 		Title:         title,
 		Summary:       input.Summary,
 		Severity:      severity,
-		PrimarySymbol: symbols[0],
+		PrimarySymbol: classification.PrimaryETF,
 		Symbols:       symbols,
 		Attributes:    attributes,
 		Payload:       payload,
 		ContentHash:   hex.EncodeToString(sum[:]),
 	}, failures
+}
+
+func classifyETFEvent(provider string, input BackfillEventInput) etfEventClassification {
+	text := classificationText(provider, input)
+	rules := []struct {
+		eventType       string
+		primaryETF      string
+		affectedETFs    []string
+		keywords        []string
+		reason          string
+		confidence      float64
+		timeSensitivity string
+	}{
+		{
+			eventType:       "semiconductor_ai",
+			primaryETF:      "SMH",
+			affectedETFs:    []string{"SMH", "SOXX", "QQQ"},
+			keywords:        []string{"ai", "artificial intelligence", "chip", "chips", "semiconductor", "nvidia", "nvda", "datacenter", "data center", "gpu"},
+			reason:          "Headline affects semiconductor demand and ETF confirms sector exposure.",
+			confidence:      0.82,
+			timeSensitivity: "high",
+		},
+		{
+			eventType:       "energy_oil",
+			primaryETF:      "XLE",
+			affectedETFs:    []string{"XLE"},
+			keywords:        []string{"oil", "crude", "opec", "energy supply", "refinery", "brent", "wti"},
+			reason:          "Energy or oil supply shock maps directly to XLE.",
+			confidence:      0.80,
+			timeSensitivity: "high",
+		},
+		{
+			eventType:       "inflation",
+			primaryETF:      "TLT",
+			affectedETFs:    []string{"TLT", "SPY", "QQQ", "GLD"},
+			keywords:        []string{"inflation", "cpi", "ppi", "price index", "prices", "yields jumped"},
+			reason:          "Inflation shocks affect rates, broad equities, and gold hedges.",
+			confidence:      0.78,
+			timeSensitivity: "high",
+		},
+		{
+			eventType:       "macro_rates",
+			primaryETF:      "TLT",
+			affectedETFs:    []string{"TLT", "QQQ", "SPY"},
+			keywords:        []string{"rate cut", "rate cuts", "rate hike", "rate hikes", "treasury", "yields", "fed funds", "bond rally", "bonds rally"},
+			reason:          "Rate expectations map to bonds and rate-sensitive broad equity ETFs.",
+			confidence:      0.76,
+			timeSensitivity: "high",
+		},
+		{
+			eventType:       "central_bank",
+			primaryETF:      "TLT",
+			affectedETFs:    []string{"TLT", "QQQ", "SPY"},
+			keywords:        []string{"federal reserve", "fed", "fomc", "central bank", "powell", "ecb"},
+			reason:          "Central bank headlines drive rates and broad market ETFs.",
+			confidence:      0.74,
+			timeSensitivity: "high",
+		},
+		{
+			eventType:       "financial_credit",
+			primaryETF:      "XLF",
+			affectedETFs:    []string{"XLF"},
+			keywords:        []string{"bank", "banks", "banking", "credit stress", "credit crisis", "loan losses", "default risk", "regional lender"},
+			reason:          "Banking or credit stress maps to XLF.",
+			confidence:      0.79,
+			timeSensitivity: "high",
+		},
+		{
+			eventType:       "gold_safe_haven",
+			primaryETF:      "GLD",
+			affectedETFs:    []string{"GLD"},
+			keywords:        []string{"gold", "safe haven", "safe-haven", "fear hedge"},
+			reason:          "Gold or safety demand maps to GLD.",
+			confidence:      0.74,
+			timeSensitivity: "medium",
+		},
+		{
+			eventType:       "geopolitical",
+			primaryETF:      "GLD",
+			affectedETFs:    []string{"GLD", "SPY", "QQQ"},
+			keywords:        []string{"geopolitical", "war", "missile", "sanction", "invasion", "conflict"},
+			reason:          "Geopolitical risk maps to safe-haven gold and broad market risk.",
+			confidence:      0.72,
+			timeSensitivity: "high",
+		},
+		{
+			eventType:       "small_caps",
+			primaryETF:      "IWM",
+			affectedETFs:    []string{"IWM"},
+			keywords:        []string{"small cap", "small-cap", "russell 2000", "risk-on small", "risk off small"},
+			reason:          "Small-cap risk appetite maps to IWM.",
+			confidence:      0.72,
+			timeSensitivity: "medium",
+		},
+		{
+			eventType:       "technology",
+			primaryETF:      "QQQ",
+			affectedETFs:    []string{"QQQ", "XLK"},
+			keywords:        []string{"technology", "software", "cloud", "mega cap tech", "nasdaq", "tech rally"},
+			reason:          "Broad technology momentum maps to QQQ and XLK.",
+			confidence:      0.70,
+			timeSensitivity: "medium",
+		},
+		{
+			eventType:       "broad_market",
+			primaryETF:      "SPY",
+			affectedETFs:    []string{"SPY", "QQQ", "DIA", "IWM"},
+			keywords:        []string{"market panic", "risk-on", "risk off", "risk-off", "selloff", "broad market", "stocks rally", "stocks tumble"},
+			reason:          "Broad market risk-on or panic maps to major index ETFs.",
+			confidence:      0.70,
+			timeSensitivity: "high",
+		},
+		{
+			eventType:       "regulation",
+			primaryETF:      "SPY",
+			affectedETFs:    []string{"SPY", "QQQ"},
+			keywords:        []string{"regulation", "regulator", "antitrust", "sec rule", "ftc"},
+			reason:          "Regulatory shocks map to broad and growth equity ETFs until a tighter sector is known.",
+			confidence:      0.60,
+			timeSensitivity: "medium",
+		},
+	}
+	for _, rule := range rules {
+		if containsAnyKeyword(text, rule.keywords) {
+			return etfEventClassification{
+				EventType:        rule.eventType,
+				AffectedETFs:     rule.affectedETFs,
+				PrimaryETF:       rule.primaryETF,
+				Confidence:       rule.confidence,
+				SourceQuality:    sourceQuality(provider),
+				TimeSensitivity:  rule.timeSensitivity,
+				Tradeable:        true,
+				Reason:           rule.reason,
+				Rule:             rule.eventType,
+				DeterministicMap: true,
+			}
+		}
+	}
+	return etfEventClassification{
+		EventType:       "unknown",
+		Confidence:      0.20,
+		SourceQuality:   sourceQuality(provider),
+		TimeSensitivity: "low",
+		Tradeable:       false,
+		Reason:          "No deterministic ETF classification rule matched the event text or provider categories.",
+		Rule:            "unknown",
+	}
+}
+
+func classificationText(provider string, input BackfillEventInput) string {
+	parts := []string{provider, input.EventKind, input.Title, input.Summary}
+	parts = append(parts, input.Symbols...)
+	parts = append(parts, input.Themes...)
+	parts = append(parts, input.Categories...)
+	for _, key := range []string{"category", "event_type", "macro_category", "theme", "provider_category"} {
+		if value, ok := input.Attributes[key]; ok {
+			parts = append(parts, fmt.Sprintf("%v", value))
+		}
+		if value, ok := input.Payload[key]; ok {
+			parts = append(parts, fmt.Sprintf("%v", value))
+		}
+	}
+	return strings.ToLower(strings.Join(parts, " "))
+}
+
+func containsAnyKeyword(text string, keywords []string) bool {
+	for _, keyword := range keywords {
+		if strings.Contains(text, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+func sourceQuality(provider string) string {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "polygon", "finnhub", "calendar":
+		return "trusted"
+	default:
+		return "unknown"
+	}
+}
+
+func mergeETFSymbols(primary []string, explicit []string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(primary)+len(explicit))
+	for _, group := range [][]string{primary, explicit} {
+		for _, symbol := range group {
+			symbol = strings.ToUpper(strings.TrimSpace(symbol))
+			if symbol == "" {
+				continue
+			}
+			if _, ok := phaseOneETFs[symbol]; !ok {
+				continue
+			}
+			if _, ok := seen[symbol]; ok {
+				continue
+			}
+			seen[symbol] = struct{}{}
+			out = append(out, symbol)
+		}
+	}
+	return out
+}
+
+func cloneAttributes(attributes map[string]any) map[string]any {
+	out := map[string]any{}
+	for key, value := range attributes {
+		out[key] = value
+	}
+	return out
+}
+
+func applyClassificationAttributes(attributes map[string]any, classification etfEventClassification) {
+	attributes["event_type"] = classification.EventType
+	attributes["category"] = classification.EventType
+	attributes["affected_etfs"] = classification.AffectedETFs
+	attributes["primary_etf"] = classification.PrimaryETF
+	attributes["classification_confidence"] = classification.Confidence
+	attributes["source_quality"] = classification.SourceQuality
+	attributes["time_sensitivity"] = classification.TimeSensitivity
+	attributes["tradeable"] = classification.Tradeable
+	attributes["classification_reason"] = classification.Reason
+	attributes["classification_source"] = "rule"
+	attributes["classification_rule"] = classification.Rule
+	attributes["deterministic_mapping"] = classification.DeterministicMap
 }
 
 func deterministicEventID(provider, title string, eventTime time.Time) string {

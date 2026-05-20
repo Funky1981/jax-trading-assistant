@@ -117,6 +117,101 @@ func TestBackfillEventsUpsertsRawNormalizedAndSymbolMaps(t *testing.T) {
 	}
 }
 
+func TestClassifyETFEventMapsSectorNewsWithoutExplicitTickers(t *testing.T) {
+	store := &fakeBackfillStore{}
+	runner := newBackfillRunner(store, nil)
+
+	resp := runner.RunEvents(context.Background(), BackfillEventsRequest{
+		Provider: "finnhub",
+		Events: []BackfillEventInput{{
+			SourceEventID: "evt-ai",
+			EventKind:     "news",
+			EventTime:     "2026-01-02T15:04:05Z",
+			Title:         "Nvidia chip demand surges as AI capex accelerates",
+			Summary:       "Semiconductor suppliers rally on datacenter demand.",
+			CanonicalKey:  "finnhub:evt-ai",
+		}},
+	})
+
+	if resp.Status != "completed" {
+		t.Fatalf("expected completed status, got %q failures=%#v", resp.Status, resp.Failures)
+	}
+	record := store.events["finnhub:evt-ai"]
+	if record.PrimarySymbol != "SMH" {
+		t.Fatalf("primary ETF = %q, want SMH", record.PrimarySymbol)
+	}
+	wantSymbols := []string{"SMH", "SOXX", "QQQ"}
+	if got := record.Symbols; !stringSlicesEqual(got, wantSymbols) {
+		t.Fatalf("symbols = %#v, want %#v", got, wantSymbols)
+	}
+	if got := record.Attributes["event_type"]; got != "semiconductor_ai" {
+		t.Fatalf("event_type = %#v, want semiconductor_ai", got)
+	}
+	if got := record.Attributes["tradeable"]; got != true {
+		t.Fatalf("tradeable = %#v, want true", got)
+	}
+	if got := record.Attributes["classification_source"]; got != "rule" {
+		t.Fatalf("classification_source = %#v, want rule", got)
+	}
+}
+
+func TestClassifyETFEventMarksUnclearNewsUnknownAndNotTradeable(t *testing.T) {
+	store := &fakeBackfillStore{}
+	runner := newBackfillRunner(store, nil)
+
+	resp := runner.RunEvents(context.Background(), BackfillEventsRequest{
+		Provider: "finnhub",
+		Events: []BackfillEventInput{{
+			SourceEventID: "evt-unclear",
+			EventKind:     "news",
+			EventTime:     "2026-01-02T15:04:05Z",
+			Title:         "Company updates office lease plan",
+			Summary:       "Executives discussed facilities planning.",
+			CanonicalKey:  "finnhub:evt-unclear",
+		}},
+	})
+
+	if resp.Status != "failed" {
+		t.Fatalf("expected failed status for unmapped event, got %q", resp.Status)
+	}
+	if len(resp.Failures) == 0 || resp.Failures[0].Stage != "classification" {
+		t.Fatalf("expected classification failure, got %#v", resp.Failures)
+	}
+}
+
+func TestClassifyETFEventPreservesExplicitAllowlistedSymbolsAndAddsClassification(t *testing.T) {
+	store := &fakeBackfillStore{}
+	runner := newBackfillRunner(store, nil)
+
+	resp := runner.RunEvents(context.Background(), BackfillEventsRequest{
+		Provider: "calendar",
+		Events: []BackfillEventInput{{
+			SourceEventID: "evt-cpi",
+			EventKind:     "macro",
+			EventTime:     "2026-01-02T15:04:05Z",
+			Title:         "Inflation shock lifts rate hike fears",
+			Summary:       "CPI surprised higher and Treasury yields jumped.",
+			Symbols:       []string{"GLD"},
+			CanonicalKey:  "calendar:evt-cpi",
+		}},
+	})
+
+	if resp.Status != "completed" {
+		t.Fatalf("expected completed status, got %q failures=%#v", resp.Status, resp.Failures)
+	}
+	record := store.events["calendar:evt-cpi"]
+	if record.PrimarySymbol != "TLT" {
+		t.Fatalf("primary ETF = %q, want TLT", record.PrimarySymbol)
+	}
+	wantSymbols := []string{"TLT", "SPY", "QQQ", "GLD"}
+	if got := record.Symbols; !stringSlicesEqual(got, wantSymbols) {
+		t.Fatalf("symbols = %#v, want %#v", got, wantSymbols)
+	}
+	if got := record.Attributes["event_type"]; got != "inflation" {
+		t.Fatalf("event_type = %#v, want inflation", got)
+	}
+}
+
 func TestBackfillEventStudyComputesWindowsAndPricedInScores(t *testing.T) {
 	eventTime := time.Date(2026, 1, 2, 15, 0, 0, 0, time.UTC)
 	store := &fakeBackfillStore{
@@ -190,4 +285,16 @@ func mapValues[K comparable, V any](m map[K]V) []V {
 		out = append(out, v)
 	}
 	return out
+}
+
+func stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
