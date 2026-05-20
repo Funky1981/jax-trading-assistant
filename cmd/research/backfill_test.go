@@ -17,11 +17,13 @@ type fakeBackfillStore struct {
 	eventUpserts      int
 	windowUpserts     int
 	scoreUpserts      int
+	summaryUpserts    int
 	candles           map[string][]marketdata.Candle
 	events            map[string]backfillEventRecord
 	normalizedEvents  map[string]backfillNormalizedEvent
 	lastCandleSymbols []string
 	lastScores        []pricedInScoreResult
+	lastBundles       []researchEvidenceBundle
 }
 
 func (s *fakeBackfillStore) UpsertCandles(ctx context.Context, candles []marketdata.Candle) (int, error) {
@@ -52,6 +54,12 @@ func (s *fakeBackfillStore) UpsertEventStudy(ctx context.Context, windows []even
 	s.scoreUpserts += len(scores)
 	s.lastScores = append([]pricedInScoreResult(nil), scores...)
 	return backfillEventStudyWriteSummary{Windows: len(windows), Scores: len(scores), Confounders: len(confounders)}, nil
+}
+
+func (s *fakeBackfillStore) UpsertResearchSummaries(ctx context.Context, bundles []researchEvidenceBundle) (int, error) {
+	s.summaryUpserts += len(bundles)
+	s.lastBundles = append([]researchEvidenceBundle(nil), bundles...)
+	return len(bundles), nil
 }
 
 type fakeCandleFetcher struct {
@@ -247,6 +255,97 @@ func TestBackfillEventStudyComputesWindowsAndPricedInScores(t *testing.T) {
 	}
 	if store.windowUpserts != 2 || store.scoreUpserts != 1 {
 		t.Fatalf("unexpected store writes: windows=%d scores=%d", store.windowUpserts, store.scoreUpserts)
+	}
+}
+
+func TestEvidenceBundleBuilderIncludesClassificationPricedInAndBeginnerSummary(t *testing.T) {
+	eventTime := time.Date(2026, 1, 2, 15, 0, 0, 0, time.UTC)
+	event := backfillNormalizedEvent{
+		ID:            "event-1",
+		EventTime:     eventTime,
+		PrimarySymbol: "SMH",
+		EventKind:     "news",
+		Title:         "Nvidia chip demand surges",
+		Summary:       "Semiconductor suppliers rally on AI demand.",
+		SourceID:      "finnhub",
+		Attributes: map[string]any{
+			"event_type":            "semiconductor_ai",
+			"classification_reason": "Headline affects semiconductor demand.",
+			"affected_etfs":         []any{"SMH", "SOXX", "QQQ"},
+		},
+	}
+	windows := []eventWindowResult{
+		{EventID: event.ID, Symbol: "SMH", WindowName: "-1h_to_event", ReturnPct: 0.002, DataQuality: "complete"},
+		{EventID: event.ID, Symbol: "SMH", WindowName: "event_to_+15m", ReturnPct: 0.011, DataQuality: "complete"},
+		{EventID: event.ID, Symbol: "SMH", WindowName: "event_to_+1h", ReturnPct: 0.017, DataQuality: "complete"},
+	}
+	score := computePricedInScore(event.ID, "SMH", windows)
+
+	bundle := buildResearchEvidenceBundle(event, "SMH", windows, score, nil)
+	if bundle.EventID != event.ID || bundle.Symbol != "SMH" {
+		t.Fatalf("unexpected identity fields: %#v", bundle)
+	}
+	if bundle.EventType != "semiconductor_ai" {
+		t.Fatalf("event type = %q, want semiconductor_ai", bundle.EventType)
+	}
+	if bundle.PricedIn.Verdict != "not_priced_in" || bundle.PricedIn.Reason == "" {
+		t.Fatalf("priced-in block not populated: %#v", bundle.PricedIn)
+	}
+	if bundle.PriceReaction.Post15M == 0 || bundle.PriceReaction.Post1H == 0 {
+		t.Fatalf("price reaction not populated: %#v", bundle.PriceReaction)
+	}
+	if bundle.BeginnerSummary.WhatHappened == "" || bundle.BeginnerSummary.WalkAway == "" {
+		t.Fatalf("beginner summary missing required text: %#v", bundle.BeginnerSummary)
+	}
+	if !bundle.Guardrails.AllowlistPass || !bundle.Guardrails.ApprovalRequired {
+		t.Fatalf("guardrails not populated: %#v", bundle.Guardrails)
+	}
+}
+
+func TestBackfillEventStudyPersistsEvidenceBundles(t *testing.T) {
+	eventTime := time.Date(2026, 1, 2, 15, 0, 0, 0, time.UTC)
+	store := &fakeBackfillStore{
+		normalizedEvents: map[string]backfillNormalizedEvent{
+			"event-1": {
+				ID:            "event-1",
+				EventTime:     eventTime,
+				PrimarySymbol: "SMH",
+				EventKind:     "news",
+				Title:         "Nvidia chip demand surges",
+				Summary:       "Semiconductor suppliers rally on AI demand.",
+				SourceID:      "finnhub",
+				Attributes: map[string]any{
+					"event_type":            "semiconductor_ai",
+					"classification_reason": "Headline affects semiconductor demand.",
+				},
+			},
+		},
+		candles: map[string][]marketdata.Candle{
+			"SMH": {
+				{Symbol: "SMH", Timestamp: eventTime.Add(-1 * time.Hour), Close: 100},
+				{Symbol: "SMH", Timestamp: eventTime, Close: 101},
+				{Symbol: "SMH", Timestamp: eventTime.Add(15 * time.Minute), Close: 102},
+				{Symbol: "SMH", Timestamp: eventTime.Add(time.Hour), Close: 104},
+			},
+		},
+	}
+	runner := newBackfillRunner(store, nil)
+
+	resp := runner.RunEventStudy(context.Background(), BackfillEventStudyRequest{
+		EventIDs: []string{"event-1"},
+		Symbols:  []string{"SMH"},
+		Windows:  []string{"-1h_to_event", "event_to_+15m", "event_to_+1h"},
+	})
+
+	if resp.Status != "completed" {
+		t.Fatalf("expected completed status, got %q failures=%#v", resp.Status, resp.Failures)
+	}
+	if store.summaryUpserts != 1 || len(store.lastBundles) != 1 {
+		t.Fatalf("expected one persisted evidence bundle, count=%d bundles=%#v", store.summaryUpserts, store.lastBundles)
+	}
+	bundle := store.lastBundles[0]
+	if bundle.EventType != "semiconductor_ai" || bundle.PricedIn.Verdict == "" || bundle.BeginnerSummary.WhatHappened == "" {
+		t.Fatalf("bundle missing required evidence fields: %#v", bundle)
 	}
 }
 

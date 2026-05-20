@@ -106,6 +106,7 @@ type backfillStore interface {
 	UpsertEvents(context.Context, []backfillEventRecord) (backfillEventWriteSummary, error)
 	LoadEventStudyInputs(context.Context, []string, []string, time.Time, time.Time) ([]backfillNormalizedEvent, map[string][]marketdata.Candle, error)
 	UpsertEventStudy(context.Context, []eventWindowResult, []pricedInScoreResult, []eventConfounderResult) (backfillEventStudyWriteSummary, error)
+	UpsertResearchSummaries(context.Context, []researchEvidenceBundle) (int, error)
 }
 
 type candleFetcher interface {
@@ -331,6 +332,10 @@ func (r *backfillRunner) RunEventStudy(ctx context.Context, req BackfillEventStu
 		resp.Status = "failed"
 		return resp
 	}
+	eventsByID := map[string]backfillNormalizedEvent{}
+	for _, event := range events {
+		eventsByID[event.ID] = event
+	}
 
 	windowResults := make([]eventWindowResult, 0, len(events)*len(symbols)*len(windows))
 	scoreInputs := map[string][]eventWindowResult{}
@@ -349,15 +354,25 @@ func (r *backfillRunner) RunEventStudy(ctx context.Context, req BackfillEventStu
 		}
 	}
 	scores := make([]pricedInScoreResult, 0, len(scoreInputs))
+	bundles := make([]researchEvidenceBundle, 0, len(scoreInputs))
 	for key, wins := range scoreInputs {
 		parts := strings.Split(key, "|")
-		scores = append(scores, computePricedInScore(parts[0], parts[1], wins))
+		score := computePricedInScore(parts[0], parts[1], wins)
+		scores = append(scores, score)
+		if event, ok := eventsByID[parts[0]]; ok {
+			bundles = append(bundles, buildResearchEvidenceBundle(event, parts[1], wins, score, nil))
+		}
 	}
 	summary, err := r.store.UpsertEventStudy(ctx, windowResults, scores, nil)
 	if err != nil {
 		resp.Failures = append(resp.Failures, BackfillFailure{Stage: "write_event_study", Error: err.Error()})
 		resp.Status = "failed"
 		return resp
+	}
+	if len(bundles) > 0 {
+		if _, err := r.store.UpsertResearchSummaries(ctx, bundles); err != nil {
+			resp.Failures = append(resp.Failures, BackfillFailure{Stage: "write_research_summaries", Error: err.Error()})
+		}
 	}
 	resp.Windows = summary.Windows
 	resp.Scores = summary.Scores
@@ -810,6 +825,12 @@ type backfillNormalizedEvent struct {
 	ID            string
 	EventTime     time.Time
 	PrimarySymbol string
+	EventKind     string
+	Title         string
+	Summary       string
+	SourceID      string
+	Severity      string
+	Attributes    map[string]any
 }
 
 type eventStudyWindow struct {
@@ -869,6 +890,80 @@ type backfillEventStudyWriteSummary struct {
 	Windows     int
 	Scores      int
 	Confounders int
+}
+
+type researchEvidenceBundle struct {
+	EventID         string                  `json:"event_id"`
+	Symbol          string                  `json:"symbol"`
+	StrategyID      string                  `json:"strategy_id,omitempty"`
+	EventType       string                  `json:"event_type"`
+	Headline        string                  `json:"headline"`
+	Summary         string                  `json:"summary,omitempty"`
+	Source          string                  `json:"source"`
+	EventTime       string                  `json:"event_time"`
+	WhyThisETF      string                  `json:"why_this_etf"`
+	PriceReaction   evidencePriceReaction   `json:"price_reaction"`
+	PricedIn        evidencePricedIn        `json:"priced_in"`
+	Confounders     []evidenceConfounder    `json:"confounders"`
+	Risk            evidenceRisk            `json:"risk"`
+	Guardrails      evidenceGuardrails      `json:"guardrails"`
+	BeginnerSummary evidenceBeginnerSummary `json:"beginner_summary"`
+	DetailedFields  map[string]any          `json:"detailed_fields,omitempty"`
+}
+
+type evidencePriceReaction struct {
+	Pre1H           float64 `json:"pre_1h"`
+	Pre4H           float64 `json:"pre_4h"`
+	Pre1D           float64 `json:"pre_1d"`
+	Post5M          float64 `json:"post_5m"`
+	Post15M         float64 `json:"post_15m"`
+	Post1H          float64 `json:"post_1h"`
+	Benchmark       string  `json:"benchmark,omitempty"`
+	BenchmarkReturn float64 `json:"benchmark_return"`
+	AbnormalReturn  float64 `json:"abnormal_return"`
+}
+
+type evidencePricedIn struct {
+	Verdict           string   `json:"verdict"`
+	Score             float64  `json:"score"`
+	Reason            string   `json:"reason"`
+	HardReject        bool     `json:"hard_reject"`
+	HardRejectReasons []string `json:"hard_reject_reasons"`
+}
+
+type evidenceConfounder struct {
+	EventID        string  `json:"event_id"`
+	Type           string  `json:"type"`
+	RelevanceScore float64 `json:"relevance_score"`
+	Reason         string  `json:"reason"`
+}
+
+type evidenceRisk struct {
+	Entry          float64 `json:"entry,omitempty"`
+	StopLoss       float64 `json:"stop_loss,omitempty"`
+	TakeProfit     float64 `json:"take_profit,omitempty"`
+	RiskReward     float64 `json:"risk_reward,omitempty"`
+	FlattenByClose bool    `json:"flatten_by_close"`
+}
+
+type evidenceGuardrails struct {
+	AllowlistPass    bool `json:"allowlist_pass"`
+	SpreadPass       bool `json:"spread_pass"`
+	StaleQuotePass   bool `json:"stale_quote_pass"`
+	PaperModePass    bool `json:"paper_mode_pass"`
+	ApprovalRequired bool `json:"approval_required"`
+	HardReject       bool `json:"hard_reject"`
+}
+
+type evidenceBeginnerSummary struct {
+	WhatHappened     string `json:"what_happened"`
+	WhyThisETF       string `json:"why_this_etf"`
+	PricedInView     string `json:"priced_in_view"`
+	WhatElseMattered string `json:"what_else_mattered"`
+	Risk             string `json:"risk"`
+	StopLoss         string `json:"stop_loss"`
+	Expires          string `json:"expires"`
+	WalkAway         string `json:"walk_away"`
 }
 
 func parseEventStudyWindows(raw []string) []eventStudyWindow {
@@ -1128,6 +1223,145 @@ func appendUniqueString(values []string, value string) []string {
 	return append(values, value)
 }
 
+func buildResearchEvidenceBundle(event backfillNormalizedEvent, symbol string, windows []eventWindowResult, score pricedInScoreResult, confounders []eventConfounderResult) researchEvidenceBundle {
+	eventType := stringAttribute(event.Attributes, "event_type")
+	if eventType == "" {
+		eventType = "unknown"
+	}
+	whyThisETF := evidenceWhyThisETF(symbol, eventType, event.Attributes)
+	bundle := researchEvidenceBundle{
+		EventID:    event.ID,
+		Symbol:     symbol,
+		EventType:  eventType,
+		Headline:   event.Title,
+		Summary:    event.Summary,
+		Source:     event.SourceID,
+		EventTime:  event.EventTime.UTC().Format(time.RFC3339),
+		WhyThisETF: whyThisETF,
+		PriceReaction: evidencePriceReaction{
+			Pre1H:           score.PreEvent1HReturn,
+			Pre4H:           score.PreEvent4HReturn,
+			Pre1D:           score.PreEvent1DReturn,
+			Post5M:          score.PostEvent5MReturn,
+			Post15M:         score.PostEvent15MReturn,
+			Post1H:          score.PostEvent1HReturn,
+			Benchmark:       benchmarkForETF(symbol),
+			BenchmarkReturn: score.BenchmarkReturn,
+			AbnormalReturn:  score.AbnormalReturn,
+		},
+		PricedIn: evidencePricedIn{
+			Verdict:           score.Verdict,
+			Score:             score.Score,
+			Reason:            pricedInReason(score),
+			HardReject:        score.HardReject,
+			HardRejectReasons: append([]string(nil), score.HardRejectReasons...),
+		},
+		Confounders: evidenceConfounders(confounders, event.ID, symbol),
+		Risk: evidenceRisk{
+			FlattenByClose: true,
+		},
+		Guardrails: evidenceGuardrails{
+			AllowlistPass:    isPhaseOneETF(symbol),
+			SpreadPass:       score.SpreadQuality >= 0.5,
+			StaleQuotePass:   true,
+			PaperModePass:    true,
+			ApprovalRequired: true,
+			HardReject:       score.HardReject,
+		},
+		DetailedFields: map[string]any{
+			"windows":             windows,
+			"classification":      event.Attributes,
+			"hard_reject_reasons": score.HardRejectReasons,
+		},
+	}
+	bundle.BeginnerSummary = buildBeginnerSummary(bundle)
+	return bundle
+}
+
+func evidenceWhyThisETF(symbol, eventType string, attributes map[string]any) string {
+	if reason := stringAttribute(attributes, "classification_reason"); reason != "" {
+		return fmt.Sprintf("%s is mapped to %s because %s", symbol, eventType, reason)
+	}
+	return fmt.Sprintf("%s is mapped to the %s event theme by deterministic ETF rules.", symbol, eventType)
+}
+
+func evidenceConfounders(confounders []eventConfounderResult, eventID, symbol string) []evidenceConfounder {
+	out := make([]evidenceConfounder, 0, len(confounders))
+	for _, confounder := range confounders {
+		if confounder.EventID != eventID || confounder.Symbol != symbol {
+			continue
+		}
+		out = append(out, evidenceConfounder{
+			EventID:        confounder.ConfoundingEventID,
+			Type:           confounder.RelationshipType,
+			RelevanceScore: confounder.RelevanceScore,
+			Reason:         confounder.Notes,
+		})
+	}
+	return out
+}
+
+func buildBeginnerSummary(bundle researchEvidenceBundle) evidenceBeginnerSummary {
+	walkAway := "Jax walks away if the priced-in verdict is priced_in or unclear, guardrails fail, spreads are abnormal, or the move has already reached a target-like level."
+	if bundle.PricedIn.HardReject && len(bundle.PricedIn.HardRejectReasons) > 0 {
+		walkAway = "Jax walks away because: " + strings.Join(bundle.PricedIn.HardRejectReasons, ", ") + "."
+	}
+	whatElse := "No dominant confounder was stored for this event."
+	if len(bundle.Confounders) > 0 {
+		whatElse = fmt.Sprintf("%d confounder(s) were stored; review relevance before approval.", len(bundle.Confounders))
+	}
+	return evidenceBeginnerSummary{
+		WhatHappened:     firstEvidenceText(bundle.Headline, bundle.Summary, "An ETF-relevant event was detected."),
+		WhyThisETF:       bundle.WhyThisETF,
+		PricedInView:     fmt.Sprintf("Verdict: %s. %s", bundle.PricedIn.Verdict, bundle.PricedIn.Reason),
+		WhatElseMattered: whatElse,
+		Risk:             "Paper approval is required before any candidate trade can proceed.",
+		StopLoss:         "A concrete stop-loss must be present on the candidate before approval.",
+		Expires:          "The idea should expire if the event is stale or the same-session thesis no longer applies.",
+		WalkAway:         walkAway,
+	}
+}
+
+func stringAttribute(attributes map[string]any, key string) string {
+	if attributes == nil {
+		return ""
+	}
+	value, ok := attributes[key]
+	if !ok || value == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprintf("%v", value))
+}
+
+func firstEvidenceText(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func benchmarkForETF(symbol string) string {
+	switch symbol {
+	case "SMH", "SOXX", "XLK", "QQQ":
+		return "QQQ"
+	case "XLE", "XLF", "DIA", "IWM":
+		return "SPY"
+	case "TLT":
+		return "SPY"
+	case "GLD":
+		return "SPY"
+	default:
+		return "SPY"
+	}
+}
+
+func isPhaseOneETF(symbol string) bool {
+	_, ok := phaseOneETFs[strings.ToUpper(strings.TrimSpace(symbol))]
+	return ok
+}
+
 func pricedInReason(score pricedInScoreResult) string {
 	if score.Reason != "" {
 		return score.Reason
@@ -1258,17 +1492,21 @@ func (s *sqlBackfillStore) LoadEventStudyInputs(ctx context.Context, eventIDs []
 	events := make([]backfillNormalizedEvent, 0, len(eventIDs))
 	for _, id := range eventIDs {
 		var event backfillNormalizedEvent
+		var attrsRaw string
 		err := s.db.QueryRowContext(ctx, `
-			SELECT id::text, event_time, COALESCE(primary_symbol, '')
+			SELECT id::text, event_time, COALESCE(primary_symbol, ''), event_kind,
+			       title, COALESCE(summary, ''), source_id, severity, attributes::text
 			FROM event_normalized
 			WHERE id = $1`, id,
-		).Scan(&event.ID, &event.EventTime, &event.PrimarySymbol)
+		).Scan(&event.ID, &event.EventTime, &event.PrimarySymbol, &event.EventKind, &event.Title, &event.Summary, &event.SourceID, &event.Severity, &attrsRaw)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
 			}
 			return nil, nil, err
 		}
+		event.Attributes = map[string]any{}
+		_ = json.Unmarshal([]byte(attrsRaw), &event.Attributes)
 		events = append(events, event)
 	}
 	candles := map[string][]marketdata.Candle{}
@@ -1413,6 +1651,40 @@ func (s *sqlBackfillStore) UpsertEventStudy(ctx context.Context, windows []event
 		return backfillEventStudyWriteSummary{}, err
 	}
 	return backfillEventStudyWriteSummary{Windows: len(windows), Scores: len(scores), Confounders: len(confounders)}, nil
+}
+
+func (s *sqlBackfillStore) UpsertResearchSummaries(ctx context.Context, bundles []researchEvidenceBundle) (int, error) {
+	for _, bundle := range bundles {
+		evidenceJSON, _ := json.Marshal(bundle)
+		_, err := s.db.ExecContext(ctx, `
+			INSERT INTO research_summaries (
+				event_id, symbol, strategy_id, summary, why_this_etf, what_happened,
+				what_else_mattered, priced_in_view, risk_notes, evidence
+			)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)`,
+			bundle.EventID,
+			bundle.Symbol,
+			nullableString(bundle.StrategyID),
+			bundle.BeginnerSummary.WhatHappened,
+			bundle.WhyThisETF,
+			bundle.BeginnerSummary.WhatHappened,
+			bundle.BeginnerSummary.WhatElseMattered,
+			bundle.BeginnerSummary.PricedInView,
+			bundle.BeginnerSummary.WalkAway,
+			string(evidenceJSON),
+		)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return len(bundles), nil
+}
+
+func nullableString(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
 }
 
 func buildBackfillCandleFetcherFromEnv() candleFetcher {
