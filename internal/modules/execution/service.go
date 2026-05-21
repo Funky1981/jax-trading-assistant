@@ -12,6 +12,7 @@ import (
 
 	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/internal/modules/instruments"
+	"jax-trading-assistant/internal/modules/tradingmodule"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/risk"
 
@@ -393,6 +394,16 @@ func (s *Service) checkRiskGates(ctx context.Context) error {
 func (s *Service) checkInstrumentPolicy(ctx context.Context, signal *Signal) (map[string]any, error) {
 	if s.instrumentPolicy == nil || signal == nil {
 		return nil, nil
+	}
+	module := tradingmodule.ResolveFromSymbol(s.instrumentPolicy, signal.Symbol)
+	if !tradingmodule.IsETF(module) {
+		return map[string]any{
+			"symbol":        strings.ToUpper(strings.TrimSpace(signal.Symbol)),
+			"tradingModule": tradingmodule.ModuleLegacy,
+			"allowed":       true,
+			"reasonCode":    "legacy_module",
+			"reason":        "Legacy module execution path bypasses ETF policy gate.",
+		}, nil
 	}
 	base := s.instrumentPolicy.Evaluate(signal.Symbol, s.runtimeMode)
 	if !base.Allowed {

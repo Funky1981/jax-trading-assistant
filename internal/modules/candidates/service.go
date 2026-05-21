@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"jax-trading-assistant/internal/modules/instruments"
+	"jax-trading-assistant/internal/modules/tradingmodule"
 )
 
 // Service applies business rules on top of the Store.
@@ -39,6 +40,7 @@ func (s *Service) WithInstrumentPolicy(catalog *instruments.Catalog, runtimeMode
 // Propose creates a detected candidate after running hard pre-qualification checks.
 // Returns the created candidate, or an error if a hard check fails.
 func (s *Service) Propose(ctx context.Context, req ProposalRequest) (*Candidate, error) {
+	module := tradingmodule.ResolveFromSymbol(s.instrumentGate, req.Symbol)
 	if result, gated := s.evaluateETF(req.Symbol); gated && !result.Allowed {
 		return nil, instrumentPolicyError{result: result}
 	}
@@ -78,6 +80,7 @@ func (s *Service) Propose(ctx context.Context, req ProposalRequest) (*Candidate,
 		exp := time.Now().UTC().Add(req.TTL)
 		c.ExpiresAt = &exp
 	}
+	c.Metadata = metadataWithModule(c.Metadata, module)
 	if result, gated := s.evaluateETF(req.Symbol); gated {
 		c.Metadata = metadataWithETFResult(c.Metadata, result)
 	}
@@ -90,12 +93,14 @@ func (s *Service) Qualify(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
+	module := tradingmodule.ResolveFromSymbol(s.instrumentGate, candidate.Symbol)
 	if result, gated := s.evaluateETF(candidate.Symbol); gated {
 		if !result.Allowed {
 			return s.store.UpdateStatus(ctx, id, StatusBlocked, map[string]any{
 				"blockReason":       result.Reason,
 				"blockedReasonCode": result.ReasonCode,
 				"etfPolicy":         result.Metadata,
+				"tradingModule":     module,
 			})
 		}
 		if candidate.StopLoss == nil || *candidate.StopLoss <= 0 {
@@ -106,6 +111,7 @@ func (s *Service) Qualify(ctx context.Context, id uuid.UUID) error {
 				"blockReason":       result.Reason,
 				"blockedReasonCode": result.ReasonCode,
 				"etfPolicy":         result.Metadata,
+				"tradingModule":     module,
 			})
 		}
 	}
@@ -182,6 +188,7 @@ type BlockRequest struct {
 }
 
 func (s *Service) CreateBlocked(ctx context.Context, req BlockRequest) (*Candidate, error) {
+	module := tradingmodule.ResolveFromSymbol(s.instrumentGate, req.Symbol)
 	candidate := &Candidate{
 		StrategyInstanceID: req.StrategyInstanceID,
 		Symbol:             req.Symbol,
@@ -213,6 +220,7 @@ func (s *Service) CreateBlocked(ctx context.Context, req BlockRequest) (*Candida
 		exp := time.Now().UTC().Add(req.TTL)
 		candidate.ExpiresAt = &exp
 	}
+	candidate.Metadata = metadataWithModule(candidate.Metadata, module)
 	if result, gated := s.evaluateETF(req.Symbol); gated {
 		candidate.Metadata = metadataWithETFResult(candidate.Metadata, result)
 	}
@@ -248,7 +256,21 @@ func (s *Service) evaluateETF(symbol string) (instruments.Evaluation, bool) {
 	if s.instrumentGate == nil {
 		return instruments.Evaluation{}, false
 	}
+	if !s.instrumentGate.IsKnownETF(symbol) {
+		return instruments.Evaluation{}, false
+	}
 	return s.instrumentGate.Evaluate(symbol, s.runtimeMode), true
+}
+
+func metadataWithModule(raw *json.RawMessage, module string) *json.RawMessage {
+	metadata := map[string]any{}
+	if raw != nil && len(*raw) > 0 {
+		_ = json.Unmarshal(*raw, &metadata)
+	}
+	metadata["tradingModule"] = module
+	data, _ := json.Marshal(metadata)
+	msg := json.RawMessage(data)
+	return &msg
 }
 
 func metadataWithETFResult(raw *json.RawMessage, result instruments.Evaluation) *json.RawMessage {

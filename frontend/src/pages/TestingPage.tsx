@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FlaskConical, ShieldCheck, AlertTriangle, Activity, Play } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { testingService } from '@/data/testing-service';
 import { useHealth } from '@/hooks/useHealth';
 import type { TriggerTestResponse } from '@/data/types';
@@ -87,6 +88,11 @@ export function TestingPage() {
         <p className="text-muted-foreground mt-1">
           Run the safety checks that prove data integrity and paper-trading readiness.
         </p>
+        <div className="mt-3">
+          <Button asChild variant="outline">
+            <Link to="/testing/plan">Open Paper Trading Test Plan</Link>
+          </Button>
+        </div>
       </div>
 
       <Card>

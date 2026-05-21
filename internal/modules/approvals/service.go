@@ -14,6 +14,7 @@ import (
 
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 	"jax-trading-assistant/internal/modules/instruments"
+	"jax-trading-assistant/internal/modules/tradingmodule"
 )
 
 // Service applies approval business rules.
@@ -334,6 +335,9 @@ func (s *Service) checkETFApprovalGate(ctx context.Context, candidateID uuid.UUI
 	err := s.pool.QueryRow(ctx, `SELECT symbol, stop_loss FROM candidate_trades WHERE id = $1`, candidateID).Scan(&symbol, &stopLoss)
 	if err != nil {
 		return err
+	}
+	if !tradingmodule.IsETF(tradingmodule.ResolveFromSymbol(s.instrumentGate, symbol)) {
+		return nil
 	}
 	result := s.instrumentGate.Evaluate(symbol, s.runtimeMode)
 	if !result.Allowed {

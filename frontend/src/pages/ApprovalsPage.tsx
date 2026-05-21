@@ -228,7 +228,7 @@ function CandidateRow({ item, onDecision, pending }: CandidateRowProps) {
           </Button>
 
           <Button size="sm" variant="outline" asChild>
-            <Link to={`/candidates/${item.id}/evidence`}>Evidence</Link>
+            <Link to={`/etf/candidates/${item.id}/evidence`}>Evidence</Link>
           </Button>
 
           <button className="ml-auto text-xs text-muted-foreground underline" onClick={() => setShowNotes(!showNotes)}>

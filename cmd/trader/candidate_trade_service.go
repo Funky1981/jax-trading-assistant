@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // candidateTradeService wraps the candidates module for HTTP handler use.

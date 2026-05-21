@@ -22,17 +22,16 @@ import { StrategyCardsPage } from '@/pages/StrategyCardsPage';
 import { ResearchTimelinePage } from '@/pages/ResearchTimelinePage';
 import { TradingModesPage } from '@/pages/TradingModesPage';
 import { CandidateEvidencePage } from '@/pages/CandidateEvidencePage';
-
-// ── Protected route ────────────────────────────────────────────────────────────
-// If auth is required and the user has no valid token, redirect to /login.
-// If auth is disabled (dev mode), renders children immediately.
+import { TradingModulesPage } from '@/pages/TradingModulesPage';
+import { EquityAlphaGuidePage } from '@/pages/EquityAlphaGuidePage';
+import { ETFGuidePage } from '@/pages/ETFGuidePage';
+import { PaperTradingTestPlanPage } from '@/pages/PaperTradingTestPlanPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, authRequired } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
-    // Spinner while /auth/status is resolving - keeps layout stable
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-muted-foreground text-sm">Loading...</p>
@@ -63,37 +62,59 @@ export const routes = [
     ),
     children: [
       { index: true, element: <DashboardPage /> },
-      { path: 'trading', element: <TradingPage /> },
-      { path: 'order-ticket', element: <OrderTicketPage /> },
+      { path: 'modules', element: <TradingModulesPage /> },
+
+      { path: 'trading', element: <Navigate to="/equity-alpha/trading" replace /> },
+      { path: 'order-ticket', element: <Navigate to="/equity-alpha/order-ticket" replace /> },
+      { path: 'approvals', element: <Navigate to="/etf/approvals" replace /> },
+      { path: 'etf-universe', element: <Navigate to="/etf/universe" replace /> },
+      { path: 'strategies', element: <Navigate to="/etf/strategies" replace /> },
+      { path: 'timeline', element: <Navigate to="/etf/timeline" replace /> },
+      { path: 'trading-modes', element: <Navigate to="/etf/trading-modes" replace /> },
+
+      { path: 'legacy/trading', element: <Navigate to="/equity-alpha/trading" replace /> },
+      { path: 'legacy/order-ticket', element: <Navigate to="/equity-alpha/order-ticket" replace /> },
+      { path: 'legacy/guide', element: <Navigate to="/equity-alpha/guide" replace /> },
+
+      { path: 'equity-alpha/trading', element: <TradingPage /> },
+      { path: 'equity-alpha/order-ticket', element: <OrderTicketPage /> },
+      { path: 'equity-alpha/guide', element: <EquityAlphaGuidePage /> },
+      { path: 'equity-alpha/strategies', element: <StrategyCardsPage /> },
+      { path: 'equity-alpha/timeline', element: <ResearchTimelinePage /> },
+      { path: 'equity-alpha/trading-modes', element: <TradingModesPage /> },
+      { path: 'equity-alpha/candidates/:candidateId/evidence', element: <CandidateEvidencePage /> },
+
+      { path: 'etf/trading', element: <TradingPage /> },
+      { path: 'etf/guide', element: <ETFGuidePage /> },
+      { path: 'etf/approvals', element: <ApprovalsPage /> },
+      { path: 'etf/universe', element: <ETFUniversePage /> },
+      { path: 'etf/strategies', element: <StrategyCardsPage /> },
+      { path: 'etf/timeline', element: <ResearchTimelinePage /> },
+      { path: 'etf/trading-modes', element: <TradingModesPage /> },
+      { path: 'etf/candidates/:candidateId/evidence', element: <CandidateEvidencePage /> },
+
       { path: 'system', element: <SystemPage /> },
       { path: 'research', element: <ResearchPage /> },
       { path: 'analysis', element: <AnalysisPage /> },
       { path: 'testing', element: <TestingPage /> },
+      { path: 'testing/plan', element: <PaperTradingTestPlanPage /> },
       { path: 'blotter', element: <BlotterPage /> },
       { path: 'portfolio', element: <PortfolioPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'e2e-tests', element: <E2ETestingPage /> },
       { path: 'guide', element: <UserGuidePage /> },
-      { path: 'approvals', element: <ApprovalsPage /> },
       { path: 'assistant', element: <AssistantPage /> },
-      { path: 'etf-universe', element: <ETFUniversePage /> },
-      { path: 'strategies', element: <StrategyCardsPage /> },
-      { path: 'timeline', element: <ResearchTimelinePage /> },
-      { path: 'trading-modes', element: <TradingModesPage /> },
       { path: 'candidates/:candidateId/evidence', element: <CandidateEvidencePage /> },
     ],
   },
 ];
 
-export const router = createBrowserRouter(
-  routes,
-  {
-    basename: import.meta.env.BASE_URL,
-    future: {
-      v7_relativeSplatPath: true,
-    },
-  }
-);
+export const router = createBrowserRouter(routes, {
+  basename: import.meta.env.BASE_URL,
+  future: {
+    v7_relativeSplatPath: true,
+  },
+});
 
 export default function App() {
   return (

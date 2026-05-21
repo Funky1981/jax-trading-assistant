@@ -79,7 +79,7 @@ func TestCandidate_ExpiredNeverAwaiting(t *testing.T) {
 	}
 }
 
-func TestEvaluateETFRejectsUnknownSymbolsInPhaseOne(t *testing.T) {
+func TestEvaluateETFSkipsLegacySymbolsOutsideETFCatalog(t *testing.T) {
 	catalog, err := instruments.LoadCatalog(filepath.Join("..", "..", "..", "config", "etf-instruments.json"))
 	if err != nil {
 		t.Fatalf("load catalog: %v", err)
@@ -87,13 +87,7 @@ func TestEvaluateETFRejectsUnknownSymbolsInPhaseOne(t *testing.T) {
 
 	svc := (&Service{}).WithInstrumentPolicy(catalog, "paper")
 	result, gated := svc.evaluateETF("AAPL")
-	if !gated {
-		t.Fatal("expected non-catalog symbols to be gated in phase-one candidate flow")
-	}
-	if result.Allowed {
-		t.Fatalf("expected AAPL to be rejected by ETF phase-one candidate policy, got %#v", result)
-	}
-	if result.ReasonCode != instruments.ReasonUnknownSymbol {
-		t.Fatalf("reason = %q, want %q", result.ReasonCode, instruments.ReasonUnknownSymbol)
+	if gated {
+		t.Fatalf("expected legacy symbol to bypass ETF gating, got %#v", result)
 	}
 }
