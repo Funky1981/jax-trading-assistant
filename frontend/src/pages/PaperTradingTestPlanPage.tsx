@@ -179,16 +179,13 @@ export function PaperTradingTestPlanPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="h-3 w-full rounded-full bg-muted">
-            <div
-              className="h-3 rounded-full bg-success transition-all"
-              style={{ width: `${percentComplete}%` }}
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={percentComplete}
-              aria-label="Checklist completion"
-            />
+          <div className="grid grid-cols-6 gap-1 sm:grid-cols-8 md:grid-cols-10" aria-label="Checklist completion">
+            {allTasks.map((task) => (
+              <div
+                key={task.id}
+                className={checked[task.id] ? 'h-2 rounded-sm bg-success' : 'h-2 rounded-sm bg-muted'}
+              />
+            ))}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button

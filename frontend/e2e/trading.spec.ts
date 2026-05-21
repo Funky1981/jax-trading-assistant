@@ -532,6 +532,7 @@ test('submits protected entries and manages orders and positions', async ({ page
   const state = await installTradingStubs(page);
 
   await page.goto('/trading', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#order-ticket-symbol')).toBeVisible();
 
   await page.locator('#order-ticket-symbol').fill('AAPL');
   await page.locator('#order-ticket-quantity').fill('10');
@@ -567,6 +568,7 @@ test('blocks manual ETF entries while leaving exposure actions available', async
   const state = await installTradingStubs(page);
 
   await page.goto('/trading', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#order-ticket-symbol')).toBeVisible();
 
   await page.locator('#order-ticket-symbol').fill('SPY');
   await page.locator('#order-ticket-quantity').fill('10');
