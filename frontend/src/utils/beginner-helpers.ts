@@ -301,9 +301,16 @@ export function formatPrice(price: number | undefined, mode: UXMode): string {
  * Get UX mode from localStorage with default
  */
 export function getBeginnerMode(): UXMode {
-  const stored = localStorage.getItem('beginner-mode');
-  if (stored === 'simple' || stored === 'detailed' || stored === 'technical') {
-    return stored;
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return 'simple';
+    }
+    const stored = window.localStorage.getItem('beginner-mode');
+    if (stored === 'simple' || stored === 'detailed' || stored === 'technical') {
+      return stored;
+    }
+  } catch {
+    return 'simple';
   }
   return 'simple'; // Default to simple mode for beginners
 }
@@ -312,5 +319,12 @@ export function getBeginnerMode(): UXMode {
  * Set UX mode in localStorage
  */
 export function setBeginnerMode(mode: UXMode): void {
-  localStorage.setItem('beginner-mode', mode);
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return;
+    }
+    window.localStorage.setItem('beginner-mode', mode);
+  } catch {
+    // Ignore storage errors and keep mode in memory.
+  }
 }

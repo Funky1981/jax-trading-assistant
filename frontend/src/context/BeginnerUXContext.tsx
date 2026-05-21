@@ -8,7 +8,17 @@ interface BeginnerUXContextType {
   toggleMode: () => void;
 }
 
-const BeginnerUXContext = createContext<BeginnerUXContextType | undefined>(undefined);
+const defaultBeginnerUXContext: BeginnerUXContextType = {
+  mode: 'simple',
+  setMode: () => {
+    // no-op fallback to avoid runtime crashes if used outside provider
+  },
+  toggleMode: () => {
+    // no-op fallback to avoid runtime crashes if used outside provider
+  },
+};
+
+const BeginnerUXContext = createContext<BeginnerUXContextType>(defaultBeginnerUXContext);
 
 export function BeginnerUXProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<UXMode>('simple');
@@ -42,9 +52,5 @@ export function BeginnerUXProvider({ children }: { children: ReactNode }) {
  * Hook to access the beginner UX mode
  */
 export function useBeginnerMode(): BeginnerUXContextType {
-  const context = useContext(BeginnerUXContext);
-  if (!context) {
-    throw new Error('useBeginnerMode must be used within BeginnerUXProvider');
-  }
-  return context;
+  return useContext(BeginnerUXContext);
 }
