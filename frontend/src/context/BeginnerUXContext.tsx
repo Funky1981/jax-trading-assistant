@@ -12,13 +12,11 @@ const BeginnerUXContext = createContext<BeginnerUXContextType | undefined>(undef
 
 export function BeginnerUXProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<UXMode>('simple');
-  const [mounted, setMounted] = useState(false);
 
   // Load from localStorage on mount
   useEffect(() => {
     const saved = getBeginnerMode();
     setModeState(saved);
-    setMounted(true);
   }, []);
 
   const setMode = (newMode: UXMode) => {
@@ -32,11 +30,6 @@ export function BeginnerUXProvider({ children }: { children: ReactNode }) {
     const nextIdx = (currentIdx + 1) % modes.length;
     setMode(modes[nextIdx]);
   };
-
-  // Prevent hydration mismatch
-  if (!mounted) {
-    return <>{children}</>;
-  }
 
   return (
     <BeginnerUXContext.Provider value={{ mode, setMode, toggleMode }}>

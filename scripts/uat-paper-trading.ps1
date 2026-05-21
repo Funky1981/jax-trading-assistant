@@ -11,11 +11,20 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "scripts/test-platform.ps1" `
-  -Mode $Mode `
-  -ApiBase $ApiBase `
-  -ResearchBase $ResearchBase `
-  -IbBridgeBase $IbBridgeBase `
-  -Agent0Base $Agent0Base `
-  -OutputDir $OutputDir `
-  -OpenVisualReport:$OpenVisualReport.IsPresent
+$forwardedArgs = @(
+  "-NoProfile",
+  "-ExecutionPolicy", "Bypass",
+  "-File", "scripts/test-platform.ps1",
+  "-Mode", $Mode,
+  "-ApiBase", $ApiBase,
+  "-ResearchBase", $ResearchBase,
+  "-IbBridgeBase", $IbBridgeBase,
+  "-Agent0Base", $Agent0Base,
+  "-OutputDir", $OutputDir
+)
+
+if ($OpenVisualReport.IsPresent) {
+  $forwardedArgs += "-OpenVisualReport"
+}
+
+& powershell @forwardedArgs

@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 	signalgenerator "jax-trading-assistant/internal/trader/signalgenerator"
 	"jax-trading-assistant/libs/contracts/domain"
@@ -74,7 +75,7 @@ func checkKillSwitch(ctx context.Context, pool *pgxpool.Pool) bool {
 
 // scanInstance evaluates a single strategy instance and proposes candidate trades
 // for any signals the signal generator produces with sufficient confidence.
-func scanInstance(ctx context.Context, svc *candidatesmod.Service, sigGen *signalgenerator.InProcessSignalGenerator, inst instanceRecord) {
+func scanInstance(ctx context.Context, svc *candidatesmod.Service, approvalSvc *approvalsmod.Service, sigGen *signalgenerator.InProcessSignalGenerator, inst instanceRecord) {
 	if len(inst.Symbols) == 0 {
 		log.Printf("watcher: instance %q has no symbols configured, skipping", inst.Name)
 		return
@@ -168,6 +169,10 @@ func scanInstance(ctx context.Context, svc *candidatesmod.Service, sigGen *signa
 		publishCandidateEvent("candidate.detected", candidate)
 		if err := svc.Qualify(ctx, candidate.ID); err != nil {
 			log.Printf("watcher: qualify error for candidate %s: %v", candidate.ID, err)
+			continue
+		}
+		if err := approvalSvc.QueueMobileApprovalNotification(ctx, candidate.ID); err != nil {
+			log.Printf("watcher: queue mobile approval error for candidate %s: %v", candidate.ID, err)
 			continue
 		}
 		if qualified, err := svc.GetByID(ctx, candidate.ID); err == nil {

@@ -1,13 +1,12 @@
-import { AlertCircle, TrendingUp, TrendingDown, Shield, AlertTriangle } from 'lucide-react';
+import { AlertCircle, TrendingUp, Shield, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import {
   type UXMode,
   formatConfidenceForBeginners,
   formatPrice,
-  explainNewsImpact,
-  explainRejectReason,
   ETF_DESCRIPTIONS,
 } from '@/utils/beginner-helpers';
 import type { CandidateTrade } from '@/data/approvals-service';
@@ -30,10 +29,9 @@ export interface CandidateTradeData {
 
 interface TradeStatusIndicatorProps {
   status: string;
-  mode: UXMode;
 }
 
-function TradeStatusIndicator({ status, mode }: TradeStatusIndicatorProps) {
+function TradeStatusIndicator({ status }: TradeStatusIndicatorProps) {
   const statusMap: Record<
     string,
     { color: string; icon: React.ReactNode; label: string; description: string }
@@ -133,7 +131,7 @@ export function CandidateTradeSummary({
               </div>
             </div>
           </div>
-          <TradeStatusIndicator status={candidate.status} mode={mode} />
+          <TradeStatusIndicator status={candidate.status} />
         </div>
 
         <div className="flex items-center gap-3">
@@ -236,12 +234,16 @@ export function CandidateTradeSummary({
                   <span className="text-3xl font-bold">{pricedInVerdictScore}%</span>
                   <span className="text-sm text-muted-foreground mb-1">Priced In</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${pricedInVerdictScore > 70 ? 'bg-red-500' : pricedInVerdictScore > 40 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                    style={{ width: `${pricedInVerdictScore}%` }}
-                  />
-                </div>
+                <Progress
+                  value={pricedInVerdictScore}
+                  indicatorClassName={
+                    pricedInVerdictScore > 70
+                      ? 'bg-red-500'
+                      : pricedInVerdictScore > 40
+                        ? 'bg-yellow-500'
+                        : 'bg-green-500'
+                  }
+                />
               </div>
             </div>
 

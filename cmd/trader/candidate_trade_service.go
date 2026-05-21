@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 	"net/http"
 	"strconv"
@@ -13,11 +14,15 @@ import (
 
 // candidateTradeService wraps the candidates module for HTTP handler use.
 type candidateTradeService struct {
-	svc *candidatesmod.Service
+	svc         *candidatesmod.Service
+	approvalSvc *approvalsmod.Service
 }
 
 func newCandidateTradeService(pool *pgxpool.Pool) *candidateTradeService {
-	return &candidateTradeService{svc: candidatesmod.NewService(candidatesmod.NewStore(pool))}
+	return &candidateTradeService{
+		svc:         candidatesmod.NewService(candidatesmod.NewStore(pool)),
+		approvalSvc: approvalsmod.NewService(pool),
+	}
 }
 
 // GET /api/v1/candidates
@@ -98,6 +103,10 @@ func handleCandidateRefresh(w http.ResponseWriter, r *http.Request, cts *candida
 	}
 	if err := cts.svc.Qualify(r.Context(), id); err != nil {
 		http.Error(w, fmt.Sprintf("qualify: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if err := cts.approvalSvc.QueueMobileApprovalNotification(r.Context(), id); err != nil {
+		http.Error(w, fmt.Sprintf("queue mobile approval: %v", err), http.StatusInternalServerError)
 		return
 	}
 	updated, _ := cts.svc.GetByID(r.Context(), id)

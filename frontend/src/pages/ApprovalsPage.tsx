@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, CheckCircle, Clock, RefreshCw, XCircle } from 'lucide-react';
 import {
@@ -209,6 +210,8 @@ function CandidateRow({ item, onDecision, pending }: CandidateRowProps) {
             <select
               className="h-8 rounded-md border border-input bg-background px-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               value={snoozeHours}
+              title="Snooze duration"
+              aria-label="Snooze duration"
               onChange={(e) => setSnoozeHours(Number(e.target.value))}
               disabled={pending}
             >
@@ -222,6 +225,10 @@ function CandidateRow({ item, onDecision, pending }: CandidateRowProps) {
 
           <Button size="sm" variant="ghost" disabled={pending} onClick={() => submit('reanalyze')}>
             <RefreshCw className="mr-1 h-4 w-4" /> Re-analyse
+          </Button>
+
+          <Button size="sm" variant="outline" asChild>
+            <Link to={`/candidates/${item.id}/evidence`}>Evidence</Link>
           </Button>
 
           <button className="ml-auto text-xs text-muted-foreground underline" onClick={() => setShowNotes(!showNotes)}>

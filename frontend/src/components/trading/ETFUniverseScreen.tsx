@@ -8,10 +8,9 @@ import { ETF_DESCRIPTIONS, type UXMode, explainRiskLevel } from '@/utils/beginne
 interface ETFCardProps {
   symbol: string;
   mode: UXMode;
-  onLearnMore?: (symbol: string) => void;
 }
 
-function ETFCard({ symbol, mode, onLearnMore }: ETFCardProps) {
+function ETFCard({ symbol, mode }: ETFCardProps) {
   const [expanded, setExpanded] = useState(false);
   const etf = ETF_DESCRIPTIONS[symbol];
 

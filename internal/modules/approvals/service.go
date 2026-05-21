@@ -2,8 +2,11 @@ package approvals
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -180,6 +183,137 @@ func (s *Service) GetQueue(ctx context.Context, limit int) ([]map[string]any, er
 // GetByCandidate returns approval detail for a candidate including execution status.
 func (s *Service) GetByCandidate(ctx context.Context, candidateID uuid.UUID) (*ApprovalDetail, error) {
 	return s.store.GetDetailByCandidateID(ctx, candidateID)
+}
+
+// QueueMobileApprovalNotification ensures a candidate awaiting approval has a
+// one-time token and queued Telegram notification. Calls are idempotent.
+func (s *Service) QueueMobileApprovalNotification(ctx context.Context, candidateID uuid.UUID) error {
+	var (
+		symbol     string
+		strategyID string
+		signalType string
+		confidence float64
+		reasoning  string
+		entryPrice float64
+		stopLoss   float64
+		takeProfit float64
+		expiresAt  time.Time
+		status     string
+	)
+	err := s.pool.QueryRow(ctx, `
+		SELECT
+			symbol,
+			COALESCE(strategy_id, ''),
+			signal_type,
+			COALESCE(confidence, 0),
+			COALESCE(reasoning, ''),
+			COALESCE(entry_price, 0),
+			COALESCE(stop_loss, 0),
+			COALESCE(take_profit, 0),
+			COALESCE(expires_at, NOW() + INTERVAL '10 minutes'),
+			status
+		FROM candidate_trades
+		WHERE id = $1`, candidateID,
+	).Scan(&symbol, &strategyID, &signalType, &confidence, &reasoning, &entryPrice, &stopLoss, &takeProfit, &expiresAt, &status)
+	if err != nil {
+		return fmt.Errorf("approvals.Service.QueueMobileApprovalNotification: candidate lookup: %w", err)
+	}
+
+	if status != candidatesmod.StatusAwaitingApproval {
+		return nil
+	}
+
+	var activeTokens int
+	err = s.pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM mobile_approval_tokens
+		WHERE candidate_id = $1
+		  AND used_at IS NULL
+		  AND expires_at > NOW()`,
+		candidateID,
+	).Scan(&activeTokens)
+	if err != nil {
+		return fmt.Errorf("approvals.Service.QueueMobileApprovalNotification: token lookup: %w", err)
+	}
+	if activeTokens > 0 {
+		return nil
+	}
+
+	now := time.Now().UTC()
+	guardrailHash := mobileGuardrailHash(candidateID, symbol, signalType, stopLoss, s.runtimeMode)
+	plainToken, tokenRecord, err := NewMobileApprovalToken(candidateID, "telegram", guardrailHash, now, 10*time.Minute)
+	if err != nil {
+		return fmt.Errorf("approvals.Service.QueueMobileApprovalNotification: new token: %w", err)
+	}
+
+	if strategyID == "" {
+		strategyID = "unknown_strategy"
+	}
+	if reasoning == "" {
+		reasoning = "Awaiting human review before paper execution."
+	}
+
+	notification := BuildMobileApprovalNotification(MobileApprovalSummary{
+		CandidateID:   candidateID,
+		Symbol:        symbol,
+		Strategy:      strategyID,
+		Action:        signalType,
+		Confidence:    confidence,
+		Why:           reasoning,
+		PricedInCheck: "Review priced-in verdict in candidate evidence.",
+		OtherNews:     "Check confounders in the research timeline.",
+		Entry:         entryPrice,
+		StopLoss:      stopLoss,
+		Target:        takeProfit,
+		Risk:          mobileRiskLabel(entryPrice, stopLoss),
+		ExpiresAt:     expiresAt,
+		PlainToken:    plainToken,
+		GuardrailHash: guardrailHash,
+		RuntimeMode:   s.runtimeMode,
+	})
+
+	outboxItem, err := s.store.CreateNotificationOutboxItem(ctx, &NotificationOutboxItem{
+		Channel:     notification.Channel,
+		CandidateID: candidateID,
+		Message:     notification.Message,
+		Payload: map[string]any{
+			"buttons": notification.Buttons,
+			"payload": notification.Payload,
+		},
+		Status:    "pending",
+		SendAfter: now,
+	})
+	if err != nil {
+		return fmt.Errorf("approvals.Service.QueueMobileApprovalNotification: outbox create: %w", err)
+	}
+
+	tokenRecord.NotificationID = &outboxItem.ID
+	if _, err := s.store.CreateMobileApprovalToken(ctx, &tokenRecord); err != nil {
+		return fmt.Errorf("approvals.Service.QueueMobileApprovalNotification: token create: %w", err)
+	}
+
+	return nil
+}
+
+func mobileGuardrailHash(candidateID uuid.UUID, symbol, signalType string, stopLoss float64, runtimeMode string) string {
+	payload := fmt.Sprintf("%s|%s|%s|%.4f|%s", candidateID.String(), symbol, signalType, stopLoss, runtimeMode)
+	sum := sha256.Sum256([]byte(payload))
+	return "guardrails:v1:" + hex.EncodeToString(sum[:])
+}
+
+func mobileRiskLabel(entryPrice, stopLoss float64) string {
+	if entryPrice <= 0 || stopLoss <= 0 {
+		return "Risk requires a valid entry and stop-loss."
+	}
+	riskPct := math.Abs(entryPrice-stopLoss) / entryPrice * 100
+	switch {
+	case riskPct <= 1:
+		return fmt.Sprintf("Low risk (%.2f%% to stop-loss)", riskPct)
+	case riskPct <= 2.5:
+		return fmt.Sprintf("Moderate risk (%.2f%% to stop-loss)", riskPct)
+	default:
+		return fmt.Sprintf("Elevated risk (%.2f%% to stop-loss)", riskPct)
+	}
 }
 
 // ── Sentinel errors ───────────────────────────────────────────────────────────

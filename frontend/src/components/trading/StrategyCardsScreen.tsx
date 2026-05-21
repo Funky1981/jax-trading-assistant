@@ -90,11 +90,10 @@ export const ETF_NEWS_STRATEGIES: StrategyCardData[] = [
 
 interface StrategyCardProps {
   strategy: StrategyCardData;
-  mode: UXMode;
   onSelectStrategy?: (strategyId: string) => void;
 }
 
-function StrategyCard({ strategy, mode, onSelectStrategy }: StrategyCardProps) {
+function StrategyCard({ strategy, onSelectStrategy }: StrategyCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const riskColors = {
@@ -250,7 +249,6 @@ export function StrategyCardsScreen({ mode, onSelectStrategy, showIntroduction =
           <StrategyCard
             key={strategy.id}
             strategy={strategy}
-            mode={mode}
             onSelectStrategy={onSelectStrategy}
           />
         ))}

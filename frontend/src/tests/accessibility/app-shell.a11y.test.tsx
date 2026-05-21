@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { axe } from 'vitest-axe';
 import { AppShell } from '../../components';
 import { AuthProvider } from '../../contexts/AuthContext';
+import { BeginnerUXProvider } from '../../context/BeginnerUXContext';
 
 const fetchMock = vi.fn();
 
@@ -28,13 +29,15 @@ describe('app shell accessibility', () => {
           v7_relativeSplatPath: true,
         }}
       >
-        <AuthProvider>
-          <Routes>
-            <Route element={<AppShell />}>
-              <Route index element={<div>Dashboard content</div>} />
-            </Route>
-          </Routes>
-        </AuthProvider>
+        <BeginnerUXProvider>
+          <AuthProvider>
+            <Routes>
+              <Route element={<AppShell />}>
+                <Route index element={<div>Dashboard content</div>} />
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </BeginnerUXProvider>
       </MemoryRouter>
     );
 

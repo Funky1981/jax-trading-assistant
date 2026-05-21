@@ -21,6 +21,7 @@ import { ETFUniversePage } from '@/pages/ETFUniversePage';
 import { StrategyCardsPage } from '@/pages/StrategyCardsPage';
 import { ResearchTimelinePage } from '@/pages/ResearchTimelinePage';
 import { TradingModesPage } from '@/pages/TradingModesPage';
+import { CandidateEvidencePage } from '@/pages/CandidateEvidencePage';
 
 // ── Protected route ────────────────────────────────────────────────────────────
 // If auth is required and the user has no valid token, redirect to /login.
@@ -79,6 +80,7 @@ export const routes = [
       { path: 'strategies', element: <StrategyCardsPage /> },
       { path: 'timeline', element: <ResearchTimelinePage /> },
       { path: 'trading-modes', element: <TradingModesPage /> },
+      { path: 'candidates/:candidateId/evidence', element: <CandidateEvidencePage /> },
     ],
   },
 ];

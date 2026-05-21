@@ -37,17 +37,29 @@ func TestClassifyEvent_DowngradeLawsuitIsBearish(t *testing.T) {
 	}
 }
 
-func TestClassifyEvent_MacroDefaultsToMacroClass(t *testing.T) {
+func TestClassifyEvent_ETFRelevantMacroMapsToRatesInflation(t *testing.T) {
 	got := classifyEvent(eventClassificationInput{
 		Kind:     "macro",
 		Title:    "US CPI release",
 		Summary:  "Inflation data due",
 		Severity: "medium",
 	})
-	if got.Class != "macro_event" {
-		t.Fatalf("class = %q, want macro_event", got.Class)
+	if got.Class != "rates_inflation" {
+		t.Fatalf("class = %q, want rates_inflation", got.Class)
 	}
 	if got.Horizon != "swing" {
 		t.Fatalf("horizon = %q, want swing", got.Horizon)
+	}
+}
+
+func TestClassifyEvent_NonETFMacroKeepsMacroClass(t *testing.T) {
+	got := classifyEvent(eventClassificationInput{
+		Kind:     "macro",
+		Title:    "Global population report update",
+		Summary:  "Census bureau published long-term demographics update",
+		Severity: "low",
+	})
+	if got.Class != "macro_event" {
+		t.Fatalf("class = %q, want macro_event", got.Class)
 	}
 }

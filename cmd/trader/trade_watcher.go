@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 	signalgenerator "jax-trading-assistant/internal/trader/signalgenerator"
 )
@@ -33,6 +34,7 @@ func startTradeWatcher(ctx context.Context, pool *pgxpool.Pool, sigGen *signalge
 	cfg := defaultWatcherConfig()
 	store := candidatesmod.NewStore(pool)
 	svc := candidatesmod.NewService(store)
+	approvalSvc := approvalsmod.NewService(pool)
 	scheduler := newInstanceScheduler(cfg.ScanInterval)
 
 	expireTicker := time.NewTicker(cfg.ExpiryInterval)
@@ -69,7 +71,7 @@ func startTradeWatcher(ctx context.Context, pool *pgxpool.Pool, sigGen *signalge
 				if !scheduler.due(inst.ID) {
 					continue
 				}
-				scanInstance(ctx, svc, sigGen, inst)
+				scanInstance(ctx, svc, approvalSvc, sigGen, inst)
 				scheduler.mark(inst.ID)
 				publishEvent("watcher.scan", map[string]any{
 					"instanceId":   inst.ID,

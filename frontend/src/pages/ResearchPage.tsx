@@ -586,6 +586,9 @@ export function ResearchPage() {
                 </label>
                 <textarea
                   className="min-h-48 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs"
+                  aria-label="Instance configuration JSON"
+                  title="Instance configuration JSON"
+                  placeholder="Paste instance configuration JSON"
                   value={editor.configText}
                   onChange={(event) => setEditor((prev) => ({ ...prev, configText: event.target.value }))}
                 />
@@ -616,7 +619,15 @@ export function ResearchPage() {
                     Reset
                   </Button>
                 </div>
-                <input ref={importInputRef} type="file" className="hidden" accept=".json,application/json" onChange={onImportConfig} />
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".json,application/json"
+                  title="Import instance configuration JSON"
+                  aria-label="Import instance configuration JSON"
+                  onChange={onImportConfig}
+                />
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                   <div>
                     Dataset snapshots available: <span className="font-semibold text-foreground">{datasetCount}</span>
@@ -765,6 +776,9 @@ export function ResearchPage() {
               </div>
               <textarea
                 className="min-h-40 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs"
+                aria-label="Project parameter grid JSON"
+                title="Project parameter grid JSON"
+                placeholder="Paste project parameter grid JSON"
                 value={projectGridText}
                 onChange={(event) => setProjectGridText(event.target.value)}
               />

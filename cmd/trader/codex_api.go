@@ -2633,10 +2633,6 @@ func writeDataReconCSV(pool *pgxpool.Pool, dir string) {
 	_ = os.WriteFile(file, []byte(out.String()), 0o644)
 
 	datasetFile := filepath.Join(dir, "dataset_recon.csv")
-	if pool == nil {
-		_ = os.WriteFile(datasetFile, []byte("run_id,dataset_id,run_hash,snapshot_hash,status,error\n,,,,,database pool unavailable\n"), 0o644)
-		return
-	}
 	dsRows, err := pool.Query(context.Background(), `
 		SELECT
 			COALESCE(b.external_run_id, b.id::text) AS run_id,

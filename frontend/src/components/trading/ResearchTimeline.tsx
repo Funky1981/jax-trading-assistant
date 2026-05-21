@@ -33,11 +33,10 @@ export interface TimelineEvent {
 
 interface TimelineEventCardProps {
   event: TimelineEvent;
-  mode: UXMode;
   isLast: boolean;
 }
 
-function TimelineEventCard({ event, mode, isLast }: TimelineEventCardProps) {
+function TimelineEventCard({ event, isLast }: TimelineEventCardProps) {
   const icons = {
     news: <AlertCircle className="w-5 h-5 text-blue-600" />,
     analysis: <BookMarked className="w-5 h-5 text-purple-600" />,
@@ -187,7 +186,6 @@ export function ResearchTimeline({
           <TimelineEventCard
             key={idx}
             event={event}
-            mode={mode}
             isLast={idx === events.length - 1}
           />
         ))}
