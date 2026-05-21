@@ -72,11 +72,11 @@ func DefaultCatalog() Catalog {
 					DefaultConfig: map[string]any{
 						"symbols": []string{"SPY", "QQQ", "DIA", "IWM"},
 						"parameters": map[string]any{
-							"minDropPct":        1.2,
-							"minConfirmations":  2,
-							"minVolumeMultiple": 1.2,
-							"stabilizationBars": 3,
-							"atrStopMultiple":   1.1,
+							"minDropPct":         1.2,
+							"minConfirmations":   2,
+							"minVolumeMultiple":  1.2,
+							"stabilizationBars":  3,
+							"atrStopMultiple":    1.1,
 							"rewardRiskMultiple": 1.5,
 						},
 					},
@@ -88,10 +88,10 @@ func DefaultCatalog() Catalog {
 					DefaultConfig: map[string]any{
 						"symbols": []string{"QQQ", "XLK", "SMH", "SOXX", "XLE", "XLF", "IWM", "GLD"},
 						"parameters": map[string]any{
-							"minConfirmations":  2,
-							"minMovePct":        0.4,
-							"minVolumeMultiple": 1.2,
-							"atrStopMultiple":   1.1,
+							"minConfirmations":   2,
+							"minMovePct":         0.4,
+							"minVolumeMultiple":  1.2,
+							"atrStopMultiple":    1.1,
 							"rewardRiskMultiple": 1.5,
 						},
 					},
@@ -103,10 +103,10 @@ func DefaultCatalog() Catalog {
 					DefaultConfig: map[string]any{
 						"symbols": []string{"TLT", "GLD", "SPY", "QQQ", "XLF"},
 						"parameters": map[string]any{
-							"minConfirmations":  2,
-							"minMovePct":        0.35,
-							"minVolumeMultiple": 1.1,
-							"atrStopMultiple":   1.0,
+							"minConfirmations":   2,
+							"minMovePct":         0.35,
+							"minVolumeMultiple":  1.1,
+							"atrStopMultiple":    1.0,
 							"rewardRiskMultiple": 1.5,
 						},
 					},
