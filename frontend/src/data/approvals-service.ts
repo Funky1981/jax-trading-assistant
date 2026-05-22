@@ -90,6 +90,22 @@ export interface ApprovalQueueItem {
   instanceName: string;
 }
 
+export interface MobileTelegramApprovalRequest {
+  token: string;
+  action: 'approved' | 'rejected';
+  actor?: string;
+  reason?: string;
+  guardrailHash?: string;
+  runtimeMode?: 'paper' | 'live';
+}
+
+export interface MobileTelegramApprovalResponse {
+  approvalId: string;
+  candidateId: string;
+  decision: string;
+  runtimeMode: string;
+}
+
 function buildQuery(params: Record<string, string | number | undefined>) {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
   if (!entries.length) return '';
@@ -133,5 +149,9 @@ export const approvalsService = {
 
   reanalyze(candidateId: string, notes?: string) {
     return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/reanalyze`, { notes });
+  },
+
+  submitTelegramDecision(payload: MobileTelegramApprovalRequest) {
+    return apiClient.post<MobileTelegramApprovalResponse>('/api/v1/mobile/telegram/webhook', payload);
   },
 };

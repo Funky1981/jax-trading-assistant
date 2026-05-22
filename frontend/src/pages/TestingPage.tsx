@@ -89,9 +89,14 @@ export function TestingPage() {
           Run the safety checks that prove data integrity and paper-trading readiness.
         </p>
         <div className="mt-3">
-          <Button asChild variant="outline">
-            <Link to="/testing/plan">Open Paper Trading Test Plan</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/testing/plan">Open Paper Trading Test Plan</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/testing/mobile-approval-harness">Open Mobile Approval Harness</Link>
+            </Button>
+          </div>
         </div>
       </div>
 

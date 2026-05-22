@@ -51,6 +51,7 @@ const navItems = [
   { label: 'Analysis', path: '/analysis', icon: BarChart3 },
   { label: 'Testing', path: '/testing', icon: ShieldCheck },
   { label: 'Paper Trading Test Plan', path: '/testing/plan', icon: CheckSquare },
+  { label: 'Mobile Approval Harness', path: '/testing/mobile-approval-harness', icon: CheckSquare },
   { label: 'E2E Tests', path: '/e2e-tests', icon: MonitorCheck },
   { label: 'Portfolio', path: '/portfolio', icon: Briefcase },
   { label: 'Blotter', path: '/blotter', icon: FileText },

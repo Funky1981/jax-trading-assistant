@@ -55,5 +55,6 @@ describe('AppRoutes', () => {
     expect(childPaths).toContain('candidates/:candidateId/evidence');
     expect(childPaths).toContain('etf/candidates/:candidateId/evidence');
     expect(childPaths).toContain('equity-alpha/candidates/:candidateId/evidence');
+    expect(childPaths).toContain('testing/mobile-approval-harness');
   });
 });

@@ -5,10 +5,10 @@ Use this checklist to capture signoff-quality evidence for Prompt 10 acceptance.
 ## Session Metadata
 
 - [ ] Operator name recorded
-- [ ] Branch and commit hash recorded
-- [ ] Runtime mode confirmed as paper
+- [x] Branch and commit hash recorded (branch: work, commit: ade1b37)
+- [x] Runtime mode confirmed as paper (requested in script execution)
 - [ ] Session start/end timestamps recorded
-- [ ] Evidence folder created under Docs/runs/etf-paper-pilot
+- [x] Evidence folder created under Docs/runs/etf-paper-pilot
 
 ## 1. ETF-Only Defaults
 
@@ -64,6 +64,8 @@ Use this checklist to capture signoff-quality evidence for Prompt 10 acceptance.
 - [ ] Capture one full candidate -> approval -> paper submission flow
 - [ ] Save broker-facing confirmation evidence (logs/screenshots)
 
+Status note (2026-05-22): current run is blocked by connectivity/readiness failures; no fresh broker paper-mode proof captured yet.
+
 ## 10. No Live Trading
 
 - [ ] Capture explicit proof live trading path is blocked
@@ -75,6 +77,8 @@ Use this checklist to capture signoff-quality evidence for Prompt 10 acceptance.
 - [ ] Record post-trade reflection entry for the same UAT session
 - [ ] Include rationale, outcome, and next action
 - [ ] Link reflection artifact to candidate/trade id
+
+Status note (2026-05-22): no fresh post-trade reflection artifact captured in this run.
 
 ## Mobile Approval Producer Checks
 
@@ -92,12 +96,20 @@ Use this checklist to capture signoff-quality evidence for Prompt 10 acceptance.
 
 ## Artifacts Index
 
-- [ ] Terminal transcript path:
+- [x] Terminal transcript path: execution_subagent run on 2026-05-22 for scripts/uat-paper-trading.ps1 and scripts/etf-paper-pilot-evidence.ps1
 - [ ] Screenshots folder:
-- [ ] Generated reports folder:
+- [x] Generated reports folder: Docs/runs/etf-paper-pilot
 - [ ] Candidate IDs tested:
 - [ ] Approval IDs tested:
 - [ ] Trade IDs tested:
+
+Generated evidence artifacts (fresh):
+- Docs/runs/etf-paper-pilot/etf_pilot_evidence_20260522_094236.md
+- Docs/runs/etf-paper-pilot/etf_pilot_evidence_20260522_094236.json
+
+Run outcome summary (2026-05-22):
+- uat-paper-trading.ps1 -Mode full: blocked by service connectivity + formatting gate failure (`gofmt would modify: internal/modules/tradingmodule/module.go`).
+- etf-paper-pilot-evidence.ps1 -OperatorUATPassed: blocked (`etf/catalog`, `etf/pilot-status`, `etf/testing-readiness`, `readiness/etf-section`).
 
 ## Recommended Commands
 
