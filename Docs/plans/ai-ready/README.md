@@ -15,6 +15,7 @@ Jax should expose one coherent AI Trading workflow where scanner state is visibl
 
 | File | Priority | Phase | Estimate | Outcome |
 |---|---|---|---:|---|
+| `00-design-system-foundation.md` | P0 | Phase 0 | 2-4d | consistent redesign foundation |
 | `01-homepage-simplified-nav.md` | P0 | Phase 1 | 2-3d | clear first-run IA |
 | `02-ai-trading-opportunity-feed.md` | P0 | Phase 1 | 3-4d | dedicated AI home |
 | `03-opportunity-adapter.md` | P0 | Phase 1 | 2-4d | one user-facing object |
@@ -38,9 +39,10 @@ Jax should expose one coherent AI Trading workflow where scanner state is visibl
 
 ## Recommended work order
 
-1. Land Phase 1 UX and IA tickets first so users have a coherent entry point before backend sentiment is complete.
-2. Land Phase 2 backend/read-model tickets, then connect sentiment evidence into the drawer, approvals, alerts, and research.
-3. Land Phase 3 maturity tickets after the core workflow has usage data and validated evidence semantics.
+1. Land `00-design-system-foundation.md` first so redesign screens share one token system, component base, and Storybook workflow.
+2. Land Phase 1 UX and IA tickets so users have a coherent entry point before backend sentiment is complete.
+3. Land Phase 2 backend/read-model tickets, then connect sentiment evidence into the drawer, approvals, alerts, and research.
+4. Land Phase 3 maturity tickets after the core workflow has usage data and validated evidence semantics.
 
 ## Shared metrics
 

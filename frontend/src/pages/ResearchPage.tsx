@@ -205,7 +205,7 @@ export function ResearchPage() {
       configText: JSON.stringify({ symbols }, null, 2),
     }));
     setGuidedStrategyMessage(
-      `Loaded \"${strategyName}\". Next: pick a Strategy Type, save the instance, then run backtest.`
+      `Loaded "${strategyName}". Next: pick a Strategy Type, save the instance, then run backtest.`
     );
 
     const next = new URLSearchParams(searchParams);

@@ -1,35 +1,33 @@
 import { createTheme } from '@mui/material/styles';
 import { tokens, type ThemeMode } from './tokens';
 
-function getPalette(mode: ThemeMode) {
-  const paletteTokens = mode === 'light' ? tokens.colorsLight : tokens.colors;
-
+function getPalette(mode: ThemeMode = 'dark') {
   return {
     mode,
     background: {
-      default: paletteTokens.bg,
-      paper: paletteTokens.surface,
+      default: tokens.colors.bg,
+      paper: tokens.colors.surface,
     },
     text: {
-      primary: paletteTokens.text,
-      secondary: paletteTokens.textMuted,
+      primary: tokens.colors.text,
+      secondary: tokens.colors.textMuted,
     },
     primary: {
-      main: paletteTokens.accent,
+      main: tokens.colors.accent,
     },
     success: {
-      main: paletteTokens.positive,
+      main: tokens.colors.positive,
     },
     error: {
-      main: paletteTokens.negative,
+      main: tokens.colors.negative,
     },
     warning: {
-      main: paletteTokens.warning,
+      main: tokens.colors.warning,
     },
     info: {
-      main: paletteTokens.info,
+      main: tokens.colors.info,
     },
-    divider: paletteTokens.border,
+    divider: tokens.colors.border,
   };
 }
 
@@ -114,11 +112,11 @@ export function createAppTheme(mode: ThemeMode = 'dark') {
         styleOverrides: {
           root: {
             borderBottom: '1px solid',
-            borderBottomColor: mode === 'dark' ? tokens.colors.border : tokens.colorsLight.border,
+            borderBottomColor: tokens.colors.border,
           },
           head: {
             fontWeight: tokens.typography.weight.semibold,
-            backgroundColor: mode === 'dark' ? tokens.colors.surface : tokens.colorsLight.surface,
+            backgroundColor: tokens.colors.surface,
           },
         },
       },

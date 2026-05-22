@@ -1,7 +1,11 @@
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import type { Preview } from '@storybook/react';
 import { theme } from '../src/styles/theme';
-import '../src/styles/tokens.css';
+import '../src/index.css';
+
+if (typeof document !== 'undefined') {
+  document.documentElement.classList.add('dark');
+}
 
 const preview: Preview = {
   parameters: {

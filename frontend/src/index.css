@@ -27,10 +27,19 @@
     --success-foreground: 355.7 100% 97.3%;
     --warning: 38 92% 50%;
     --warning-foreground: 48 96% 89%;
+    --info: 199 89% 48%;
+    --chart-up: 142.1 76.2% 36.3%;
+    --chart-down: 0 84.2% 60.2%;
+    --chart-volume: 199 89% 48%;
+    --risk: 38 92% 50%;
     --border: 220 13% 91%;
     --input: 220 13% 91%;
     --ring: 224 71.4% 4.1%;
     --radius: 0.5rem;
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', Menlo, monospace;
+    --elevation-sm: 0 1px 2px hsl(224 71.4% 4.1% / 0.08);
+    --elevation-md: 0 8px 24px hsl(224 71.4% 4.1% / 0.12);
   }
 
   .dark {
@@ -54,9 +63,16 @@
     --success-foreground: 144.9 80.4% 10%;
     --warning: 38 92% 50%;
     --warning-foreground: 48 96% 10%;
+    --info: 206 100% 61%;
+    --chart-up: 142.1 70.6% 45.3%;
+    --chart-down: 0 62.8% 50.6%;
+    --chart-volume: 206 100% 61%;
+    --risk: 38 92% 50%;
     --border: 215 27.9% 16.9%;
     --input: 215 27.9% 16.9%;
     --ring: 216 12.2% 83.9%;
+    --elevation-sm: 0 1px 2px hsl(0 0% 0% / 0.2);
+    --elevation-md: 0 8px 24px hsl(0 0% 0% / 0.35);
   }
 }
 
@@ -66,6 +82,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }

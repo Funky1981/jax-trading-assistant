@@ -3,15 +3,18 @@ import { createAppTheme } from '../../styles/theme';
 import { tokens } from '../../styles/tokens';
 
 describe('theme', () => {
-  it('uses dark tokens by default', () => {
+  it('uses semantic CSS variables by default', () => {
     const theme = createAppTheme('dark');
     expect(theme.palette.background.default).toBe(tokens.colors.bg);
+    expect(theme.palette.background.default).toBe('hsl(var(--background))');
     expect(theme.palette.primary.main).toBe(tokens.colors.accent);
+    expect(theme.palette.primary.main).toBe('hsl(var(--accent))');
   });
 
-  it('uses light tokens when requested', () => {
+  it('keeps light mode on the same semantic token contract', () => {
     const theme = createAppTheme('light');
-    expect(theme.palette.background.default).toBe(tokens.colorsLight.bg);
-    expect(theme.palette.text.secondary).toBe(tokens.colorsLight.textMuted);
+    expect(theme.palette.background.default).toBe(tokens.colors.bg);
+    expect(theme.palette.text.secondary).toBe(tokens.colors.textMuted);
+    expect(theme.palette.text.secondary).toBe('hsl(var(--muted-foreground))');
   });
 });
