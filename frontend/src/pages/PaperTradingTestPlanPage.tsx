@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -179,13 +180,26 @@ export function PaperTradingTestPlanPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-6 gap-1 sm:grid-cols-8 md:grid-cols-10" aria-label="Checklist completion">
-            {allTasks.map((task) => (
+          <div className="space-y-2" aria-label="Checklist completion">
+            <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
               <div
-                key={task.id}
-                className={checked[task.id] ? 'h-2 rounded-sm bg-success' : 'h-2 rounded-sm bg-muted'}
+                className="h-full rounded-full bg-success transition-all duration-300"
+                style={{ width: `${percentComplete}%` }}
               />
-            ))}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {sections.map((section) => {
+                const sectionCompleted = section.tasks.filter((task) => checked[task.id]).length;
+                return (
+                  <div key={section.id} className="rounded-md border border-border bg-muted/30 px-2.5 py-2 text-xs">
+                    <div className="font-medium">{section.title}</div>
+                    <div className="text-muted-foreground">
+                      {sectionCompleted}/{section.tasks.length} complete
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -208,6 +222,30 @@ export function PaperTradingTestPlanPage() {
             >
               Clear All
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Guided Quick Start</CardTitle>
+          <CardDescription>Use this sequence to learn how AI suggestions flow into strategy setup, backtesting, and approvals.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            1. Open <Link className="font-medium text-primary underline" to="/etf/guide">ETF Guide</Link> to understand the workflow.
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            2. Open <Link className="font-medium text-primary underline" to="/etf/strategies">ETF Strategies</Link> and choose a setup to prefill Research.
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            3. In <Link className="font-medium text-primary underline" to="/research">Research</Link>, pick Strategy Type, save instance, then run backtest.
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            4. Review outcomes in <Link className="font-medium text-primary underline" to="/analysis">Analysis</Link> and promote a candidate to <Link className="font-medium text-primary underline" to="/etf/approvals">ETF Approvals</Link>.
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            5. Ask <Link className="font-medium text-primary underline" to="/assistant">Assistant</Link> for "top ETF opportunities with cited news + chart context" and compare with your strategy run.
           </div>
         </CardContent>
       </Card>

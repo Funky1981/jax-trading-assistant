@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { PaperTradingTestPlanPage } from './PaperTradingTestPlanPage';
 
@@ -10,7 +11,11 @@ describe('PaperTradingTestPlanPage', () => {
   });
 
   it('persists checklist state in localStorage', () => {
-    render(<PaperTradingTestPlanPage />);
+    render(
+      <MemoryRouter>
+        <PaperTradingTestPlanPage />
+      </MemoryRouter>
+    );
 
     const targetCheckbox = screen.getByRole('checkbox', {
       name: /Switch to paper mode/i,

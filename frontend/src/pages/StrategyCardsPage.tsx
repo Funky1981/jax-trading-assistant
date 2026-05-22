@@ -1,5 +1,6 @@
 import { useBeginnerMode } from '@/context/BeginnerUXContext';
 import { StrategyCardsScreen } from '@/components/trading/StrategyCardsScreen';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Strategy Cards page - shows beginner-friendly strategy explanations
@@ -7,14 +8,19 @@ import { StrategyCardsScreen } from '@/components/trading/StrategyCardsScreen';
  */
 export function StrategyCardsPage() {
   const { mode } = useBeginnerMode();
+  const navigate = useNavigate();
 
   return (
     <div className="overflow-auto">
       <StrategyCardsScreen
         mode={mode}
-        onSelectStrategy={(strategyId) => {
-          console.log('Selected strategy:', strategyId);
-          // Could enable/disable strategy or navigate to strategy settings
+        onSelectStrategy={(strategy) => {
+          const params = new URLSearchParams({
+            guidedStrategy: strategy.id,
+            strategyName: strategy.name,
+            symbols: strategy.relatedETFs.slice(0, 3).join(','),
+          });
+          navigate(`/research?${params.toString()}`);
         }}
         showIntroduction={true}
       />

@@ -90,7 +90,7 @@ export const ETF_NEWS_STRATEGIES: StrategyCardData[] = [
 
 interface StrategyCardProps {
   strategy: StrategyCardData;
-  onSelectStrategy?: (strategyId: string) => void;
+  onSelectStrategy?: (strategy: StrategyCardData) => void;
 }
 
 function StrategyCard({ strategy, onSelectStrategy }: StrategyCardProps) {
@@ -210,7 +210,7 @@ function StrategyCard({ strategy, onSelectStrategy }: StrategyCardProps) {
             variant="default"
             size="sm"
             className="w-full"
-            onClick={() => onSelectStrategy(strategy.id)}
+            onClick={() => onSelectStrategy(strategy)}
           >
             Enable This Strategy
           </Button>
@@ -222,7 +222,7 @@ function StrategyCard({ strategy, onSelectStrategy }: StrategyCardProps) {
 
 export interface StrategyCardsProps {
   mode: UXMode;
-  onSelectStrategy?: (strategyId: string) => void;
+  onSelectStrategy?: (strategy: StrategyCardData) => void;
   showIntroduction?: boolean;
 }
 

@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, Upload, Download, Save, Plus, RefreshCw } from 'lucide-react';
 import { instancesService } from '@/data/instances-service';
 import { backtestService } from '@/data/backtest-service';
@@ -76,6 +76,7 @@ function getInitialDateRange() {
 export function ResearchPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'instances' | 'projects' | 'runs'>('instances');
   const [selectedInstanceId, setSelectedInstanceId] = useState('');
@@ -102,6 +103,7 @@ export function ResearchPage() {
   const [projectRunError, setProjectRunError] = useState('');
   const [backtestError, setBacktestError] = useState('');
   const [datasetsRefreshedAt, setDatasetsRefreshedAt] = useState<Date | null>(null);
+  const [guidedStrategyMessage, setGuidedStrategyMessage] = useState('');
   const editorErrorRef = useRef<HTMLParagraphElement | null>(null);
   const backtestErrorRef = useRef<HTMLParagraphElement | null>(null);
   const projectErrorRef = useRef<HTMLParagraphElement | null>(null);
@@ -176,6 +178,42 @@ export function ResearchPage() {
       setDatasetId(firstDataset.datasetId);
     }
   }, [datasetId, datasetsQuery.data]);
+
+  useEffect(() => {
+    const guidedStrategy = searchParams.get('guidedStrategy');
+    const strategyName = searchParams.get('strategyName');
+    const symbolsParam = searchParams.get('symbols');
+
+    if (!guidedStrategy || !strategyName) {
+      return;
+    }
+
+    const symbols = symbolsParam
+      ? symbolsParam
+          .split(',')
+          .map((value) => value.trim().toUpperCase())
+          .filter(Boolean)
+      : ['SPY'];
+
+    setActiveTab('instances');
+    setSelectedInstanceId('');
+    setEditor((prev) => ({
+      ...prev,
+      name: `${strategyName} paper setup`,
+      strategyId: guidedStrategy,
+      strategyTypeId: '',
+      configText: JSON.stringify({ symbols }, null, 2),
+    }));
+    setGuidedStrategyMessage(
+      `Loaded \"${strategyName}\". Next: pick a Strategy Type, save the instance, then run backtest.`
+    );
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('guidedStrategy');
+    next.delete('strategyName');
+    next.delete('symbols');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (editorError) {
@@ -535,6 +573,11 @@ export function ResearchPage() {
                 <CardDescription>Set strategy parameters, session times, and trading rules.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
+                {guidedStrategyMessage && (
+                  <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">
+                    {guidedStrategyMessage}
+                  </div>
+                )}
                 <Input
                   placeholder="Instance name (e.g., or-spy-paper-v1)"
                   value={editor.name}

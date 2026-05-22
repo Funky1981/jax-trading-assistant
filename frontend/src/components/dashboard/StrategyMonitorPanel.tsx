@@ -1,4 +1,5 @@
 import { Cpu, Play, Pause } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStrategiesSummary, Strategy } from '@/hooks/useStrategies';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,7 @@ interface StrategyMonitorPanelProps {
 
 export function StrategyMonitorPanel({ isOpen, onToggle }: StrategyMonitorPanelProps) {
   const { data: summary, strategies, isLoading } = useStrategiesSummary();
+  const navigate = useNavigate();
 
   const summaryText = summary ? (
     <span>
@@ -30,15 +32,22 @@ export function StrategyMonitorPanel({ isOpen, onToggle }: StrategyMonitorPanelP
       isLoading={isLoading}
     >
       <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Manage strategy enable/disable and run backtests in Research.
+        </p>
         {strategies?.map((strategy) => (
-          <StrategyCard key={strategy.id} strategy={strategy} />
+          <StrategyCard
+            key={strategy.id}
+            strategy={strategy}
+            onManage={() => navigate('/research')}
+          />
         ))}
       </div>
     </CollapsiblePanel>
   );
 }
 
-function StrategyCard({ strategy }: { strategy: Strategy }) {
+function StrategyCard({ strategy, onManage }: { strategy: Strategy; onManage: () => void }) {
   const isActive = strategy.status === 'active';
   
   return (
@@ -64,7 +73,7 @@ function StrategyCard({ strategy }: { strategy: Strategy }) {
             {strategy.description}
           </p>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onManage} title="Open Research to manage strategy">
           {isActive ? (
             <Pause className="h-4 w-4" />
           ) : (
