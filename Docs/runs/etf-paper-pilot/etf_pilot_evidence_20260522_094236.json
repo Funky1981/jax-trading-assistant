@@ -1,0 +1,67 @@
+{
+    "status":  "blocked",
+    "generatedAt":  "2026-05-22T08:42:36.3215398Z",
+    "apiBase":  "http://localhost:8081",
+    "pilotSymbol":  "SPY",
+    "excludedSymbol":  "TQQQ",
+    "checks":  [
+                   {
+                       "name":  "auth/status",
+                       "status":  "WARN",
+                       "detail":  "unable to determine auth mode: The underlying connection was closed: The connection was closed unexpectedly."
+                   },
+                   {
+                       "name":  "etf/catalog",
+                       "status":  "FAIL",
+                       "detail":  "The underlying connection was closed: The connection was closed unexpectedly."
+                   },
+                   {
+                       "name":  "etf/pilot-status",
+                       "status":  "FAIL",
+                       "detail":  "The underlying connection was closed: The connection was closed unexpectedly."
+                   },
+                   {
+                       "name":  "etf/testing-readiness",
+                       "status":  "FAIL",
+                       "detail":  "The underlying connection was closed: The connection was closed unexpectedly."
+                   },
+                   {
+                       "name":  "readiness/etf-section",
+                       "status":  "FAIL",
+                       "detail":  "etfPhase1Readiness missing"
+                   },
+                   {
+                       "name":  "signoff/automated-validation",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/operator-uat",
+                       "status":  "PASS",
+                       "detail":  "provided"
+                   },
+                   {
+                       "name":  "signoff/paper-pilot",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/engineering",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/operations",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   },
+                   {
+                       "name":  "signoff/trading-risk",
+                       "status":  "WARN",
+                       "detail":  "not provided"
+                   }
+               ],
+    "catalog":  null,
+    "pilotStatus":  null,
+    "readiness":  null
+}
