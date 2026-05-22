@@ -214,6 +214,28 @@ export interface SignalListResponse {
   offset: number;
 }
 
+export type OpportunityConfidenceBand = 'high' | 'medium' | 'low' | 'unknown';
+
+export type OpportunityRoute = 'manual_allowed' | 'approval_required' | 'blocked';
+
+export type OpportunitySourceType = 'signal' | 'candidate' | 'approval';
+
+export interface OpportunitySummary {
+  id: string;
+  symbol: string;
+  signalType: string;
+  confidenceBand: OpportunityConfidenceBand;
+  summary: string;
+  detectedAt: string;
+  expiresAt?: string;
+  route: OpportunityRoute;
+  routeReason: string;
+  sentimentSummary?: string;
+  status: string;
+  sourceType: OpportunitySourceType;
+  sourceId: string;
+}
+
 export interface OrchestrationRun {
   id: string;
   symbol: string;

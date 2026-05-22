@@ -116,6 +116,7 @@ describe('ApprovalsPage', () => {
   it('wires blocked refresh action to candidate refresh and mobile queue producer path', async () => {
     vi.mocked(approvalsService.getQueue).mockResolvedValue([]);
     vi.mocked(candidatesService.list)
+      .mockResolvedValue([] as never)
       .mockResolvedValueOnce([
         {
           id: 'candidate-blocked-2',
