@@ -228,7 +228,7 @@ function CandidateRow({ item, onDecision, pending }: CandidateRowProps) {
           </Button>
 
           <Button size="sm" variant="outline" asChild>
-            <Link to={`/etf/candidates/${item.id}/evidence`}>Evidence</Link>
+            <Link to={`/candidates/${item.id}/evidence`}>Evidence</Link>
           </Button>
 
           <button className="ml-auto text-xs text-muted-foreground underline" onClick={() => setShowNotes(!showNotes)}>
@@ -298,7 +298,15 @@ function ExecutionActivityRow({ item }: { item: CandidateTrade }) {
   );
 }
 
-function BlockedCandidateRow({ item }: { item: CandidateTrade }) {
+function BlockedCandidateRow({
+  item,
+  onRefresh,
+  pending,
+}: {
+  item: CandidateTrade;
+  onRefresh: (id: string) => void;
+  pending: boolean;
+}) {
   const etfPolicy = etfPolicyFromMetadata(item.metadata);
   return (
     <div className="rounded-md border border-border p-3">
@@ -333,6 +341,14 @@ function BlockedCandidateRow({ item }: { item: CandidateTrade }) {
             <span className="text-xs font-medium text-muted-foreground">Provenance</span>
             <span className="truncate">{item.dataProvenance || '-'}</span>
           </div>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <Button size="sm" variant="outline" asChild>
+              <Link to={`/candidates/${item.id}/evidence`}>Evidence</Link>
+            </Button>
+            <Button size="sm" disabled={pending} onClick={() => onRefresh(item.id)}>
+              <RefreshCw className="mr-1 h-4 w-4" /> Re-qualify & Queue Mobile
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -343,6 +359,7 @@ export function ApprovalsPage() {
   const qc = useQueryClient();
   const [notification, setNotification] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingRefreshId, setPendingRefreshId] = useState<string | null>(null);
 
   const { data: queue = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['approvals-queue'],
@@ -422,12 +439,34 @@ export function ApprovalsPage() {
     },
   });
 
+  const refreshMutation = useMutation({
+    mutationFn: async (id: string) => candidatesService.refresh(id),
+    onMutate: (id) => setPendingRefreshId(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['approvals-queue'] });
+      qc.invalidateQueries({ queryKey: ['approvals-blocked-candidates'] });
+      qc.invalidateQueries({ queryKey: ['approvals-execution-activity'] });
+      setPendingRefreshId(null);
+      setNotification('Candidate re-qualified and mobile approval notification queued.');
+      setTimeout(() => setNotification(null), 3000);
+    },
+    onError: (err: Error) => {
+      setPendingRefreshId(null);
+      setNotification(`Error: ${err.message}`);
+      setTimeout(() => setNotification(null), 5000);
+    },
+  });
+
   const handleDecision = (
     id: string,
     action: 'approve' | 'reject' | 'snooze' | 'reanalyze',
     opts?: { snoozeHours?: number; notes?: string }
   ) => {
     mutation.mutate({ id, action, opts });
+  };
+
+  const handleRefreshCandidate = (id: string) => {
+    refreshMutation.mutate(id);
   };
 
   return (
@@ -507,7 +546,14 @@ export function ApprovalsPage() {
           {blockedCandidates.length === 0 ? (
             <p className="text-sm text-muted-foreground">No blocked candidates found in the current window.</p>
           ) : (
-            blockedCandidates.map((item) => <BlockedCandidateRow key={item.id} item={item} />)
+            blockedCandidates.map((item) => (
+              <BlockedCandidateRow
+                key={item.id}
+                item={item}
+                onRefresh={handleRefreshCandidate}
+                pending={pendingRefreshId === item.id}
+              />
+            ))
           )}
         </CardContent>
       </Card>

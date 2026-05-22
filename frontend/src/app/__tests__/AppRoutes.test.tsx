@@ -47,4 +47,13 @@ describe('AppRoutes', () => {
 
     expect(await screen.findByText('Review recent orders and their status.')).toBeInTheDocument();
   });
+
+  it('includes candidate evidence routes for generic and module-scoped paths', () => {
+    const root = routes.find((route) => route.path === '/');
+    const childPaths = (root?.children ?? []).map((child) => child.path);
+
+    expect(childPaths).toContain('candidates/:candidateId/evidence');
+    expect(childPaths).toContain('etf/candidates/:candidateId/evidence');
+    expect(childPaths).toContain('equity-alpha/candidates/:candidateId/evidence');
+  });
 });

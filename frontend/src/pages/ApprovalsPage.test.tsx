@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -15,6 +15,7 @@ vi.mock('@/data/approvals-service', () => ({
   },
   candidatesService: {
     list: vi.fn(),
+    refresh: vi.fn(),
   },
 }));
 
@@ -110,5 +111,52 @@ describe('ApprovalsPage', () => {
     expect(await screen.findByText('Recently Blocked')).toBeInTheDocument();
     expect(await screen.findByText('Confidence was below threshold.')).toBeInTheDocument();
     expect(await screen.findByText('low_confidence: 1')).toBeInTheDocument();
+  });
+
+  it('wires blocked refresh action to candidate refresh and mobile queue producer path', async () => {
+    vi.mocked(approvalsService.getQueue).mockResolvedValue([]);
+    vi.mocked(candidatesService.list)
+      .mockResolvedValueOnce([
+        {
+          id: 'candidate-blocked-2',
+          strategyInstanceId: 'instance-3',
+          signalId: 'signal-3',
+          artifactId: 'artifact-3',
+          strategyId: 'etf_orb',
+          symbol: 'SPY',
+          signalType: 'BUY',
+          status: 'blocked',
+          blockedReasonCode: 'priced_in_high',
+          blockReason: 'Move appears mostly priced in.',
+          sessionDate: '2026-03-20',
+          detectedAt: '2026-03-20T10:00:00Z',
+          blockedAt: '2026-03-20T10:01:00Z',
+          dataProvenance: 'watcher:test',
+        },
+      ] as never)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never);
+    vi.mocked(candidatesService.refresh).mockResolvedValue({
+      id: 'candidate-blocked-2',
+      strategyInstanceId: 'instance-3',
+      symbol: 'SPY',
+      signalType: 'BUY',
+      status: 'awaiting_approval',
+      sessionDate: '2026-03-20',
+      detectedAt: '2026-03-20T10:00:00Z',
+      dataProvenance: 'watcher:test',
+    } as never);
+
+    renderPage();
+
+    const evidenceLink = await screen.findByRole('link', { name: 'Evidence' });
+    expect(evidenceLink).toHaveAttribute('href', '/candidates/candidate-blocked-2/evidence');
+
+    fireEvent.click(screen.getByRole('button', { name: /Re-qualify & Queue Mobile/i }));
+
+    await waitFor(() => {
+      expect(candidatesService.refresh).toHaveBeenCalledWith('candidate-blocked-2');
+    });
   });
 });
