@@ -35,7 +35,7 @@ test('signals queue: shows pending signal with symbol and type', async ({ page }
   await stubSignals(page);
   await stubRecommendations(page);
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   // Signal card must show symbol and badge
@@ -76,7 +76,7 @@ test('signals queue: approve trade posts to approve endpoint', async ({ page }) 
     });
   });
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
 
   // Default approver is 'dashboard@local' so the button is enabled.
   await expect(page.getByRole('button', { name: 'Approve Trade' })).toBeVisible();
@@ -114,7 +114,7 @@ test('signals queue: reject posts to reject endpoint', async ({ page }) => {
     });
   });
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('button', { name: 'Reject' })).toBeVisible();
   await page.getByRole('button', { name: 'Reject' }).click();

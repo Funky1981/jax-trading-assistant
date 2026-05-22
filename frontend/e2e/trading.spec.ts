@@ -508,7 +508,7 @@ test('shows pilot trade gate on the system page', async ({ page }) => {
   await expect(page.getByText('Trade Enabled')).toBeVisible();
   await expect(page.getByText('Connected')).toBeVisible();
   await expect(page.getByText('Required')).toBeVisible();
-  await expect(page.getByText('admin')).toBeVisible();
+  await expect(page.getByText('admin', { exact: true })).toBeVisible();
 });
 
 test('loads trading page with operator workflow and management controls', async ({ page }) => {

@@ -14,7 +14,7 @@ import { TEST_JWT } from './helpers';
 // ---------------------------------------------------------------------------
 // US-AUTH-1: Anonymous mode
 // ---------------------------------------------------------------------------
-test('anonymous mode: dashboard accessible without login', async ({ page }) => {
+test('anonymous mode: home accessible without login', async ({ page }) => {
   await page.route('**/auth/status', (route) =>
     route.fulfill({
       status: 200,
@@ -32,7 +32,8 @@ test('anonymous mode: dashboard accessible without login', async ({ page }) => {
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Find AI opportunities/i })).toBeVisible();
   await expect(page).not.toHaveURL(/\/login/);
 });
 
@@ -111,7 +112,7 @@ test('login page: invalid credentials show an error alert', async ({ page }) => 
 // ---------------------------------------------------------------------------
 // US-AUTH-5: Successful login → dashboard
 // ---------------------------------------------------------------------------
-test('login page: valid credentials navigate to dashboard', async ({ page }) => {
+test('login page: valid credentials navigate to home', async ({ page }) => {
   await page.route('**/auth/status', (route) =>
     route.fulfill({
       status: 200,
@@ -142,5 +143,5 @@ test('login page: valid credentials navigate to dashboard', async ({ page }) => 
   await page.locator('#password').fill('password');
   await page.getByRole('button', { name: 'Sign in' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
 });

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('loads dashboard and navigates to order ticket', async ({ page }) => {
+test('loads home and navigates to manual trading', async ({ page }) => {
   await page.route('**/auth/status', async (route) => {
     await route.fulfill({
       status: 200,
@@ -17,9 +17,9 @@ test('loads dashboard and navigates to order ticket', async ({ page }) => {
   });
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Order Ticket' }).click();
-  await expect(page).toHaveURL(/\/order-ticket$/);
-  await expect(page.getByText('Order Ticket').first()).toBeVisible();
+  await page.getByRole('link', { name: /Place a manual trade/i }).click();
+  await expect(page).toHaveURL(/\/equity-alpha\/trading$/);
+  await expect(page.locator('h1').filter({ hasText: 'Trading' })).toBeVisible();
 });

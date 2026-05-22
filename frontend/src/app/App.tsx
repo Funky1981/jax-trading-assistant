@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
+import { HomePage } from '@/pages/HomePage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { TradingPage } from '@/pages/TradingPage';
 import { SystemPage } from '@/pages/SystemPage';
@@ -62,7 +63,11 @@ export const routes = [
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: <HomePage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'ai-trading', element: <Navigate to="/modules" replace /> },
+      { path: 'manual-trading', element: <Navigate to="/equity-alpha/trading" replace /> },
+      { path: 'notifications', element: <Navigate to="/settings" replace /> },
       { path: 'modules', element: <TradingModulesPage /> },
 
       { path: 'trading', element: <Navigate to="/equity-alpha/trading" replace /> },
