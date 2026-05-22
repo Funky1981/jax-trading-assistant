@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { candidatesService } from '@/data/approvals-service';
 import { CandidateTradeSummary, type CandidateTradeData } from '@/components/trading/CandidateTradeSummary';
-import { useBeginnerMode } from '@/context/BeginnerUXContext';
+import { useBeginnerMode } from '@/context/BeginnerUXContextValue';
 import { Button } from '@/components/ui/button';
 
 function readMetadataNumber(metadata: Record<string, unknown> | undefined, keys: string[]): number | undefined {

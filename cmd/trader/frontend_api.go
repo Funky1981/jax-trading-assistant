@@ -1277,7 +1277,7 @@ func tradingGuardHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
-func tradingGuardOutcomeHandler(pool *pgxpool.Pool) http.HandlerFunc {
+func tradingGuardOutcomeHandler(_ *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -1376,7 +1376,7 @@ func marketCandlesHandler(mt *marketTools) http.HandlerFunc {
 	}
 }
 
-func writeCandlesResponse(w http.ResponseWriter, symbol, requestedTimeframe string, out utcp.GetCandlesOutput, degraded bool, message string, bridgeHealth *ibBridgeHealthResponse) {
+func writeCandlesResponse(w http.ResponseWriter, _ string, requestedTimeframe string, out utcp.GetCandlesOutput, degraded bool, message string, bridgeHealth *ibBridgeHealthResponse) {
 	type candlePoint struct {
 		Timestamp string  `json:"timestamp"`
 		Open      float64 `json:"open"`
@@ -1419,7 +1419,7 @@ func writeCandlesResponse(w http.ResponseWriter, symbol, requestedTimeframe stri
 	})
 }
 
-func symbolProcessHandler(orchestratorURL string, pool *pgxpool.Pool) http.HandlerFunc {
+func symbolProcessHandler(orchestratorURL string, _ *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

@@ -840,7 +840,7 @@ func (s *PostgresTradeStore) StoreOrderIntent(ctx context.Context, intent *Order
 		if err == nil {
 			return existingID, nil
 		}
-		if err != nil && err != sql.ErrNoRows {
+		if err != sql.ErrNoRows {
 			return "", err
 		}
 	}

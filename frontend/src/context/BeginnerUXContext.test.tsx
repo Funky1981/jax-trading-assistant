@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { BeginnerUXProvider, useBeginnerMode } from './BeginnerUXContext';
+import { BeginnerUXProvider } from './BeginnerUXContext';
+import { useBeginnerMode } from './BeginnerUXContextValue';
 
 const setBeginnerModeSpy = vi.fn();
 const getBeginnerModeSpy = vi.fn(() => 'simple');

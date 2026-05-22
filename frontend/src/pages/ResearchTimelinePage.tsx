@@ -1,5 +1,6 @@
-import { useBeginnerMode } from '@/context/BeginnerUXContext';
-import { ResearchTimeline, generateExampleTimeline } from '@/components/trading/ResearchTimeline';
+import { useBeginnerMode } from '@/context/BeginnerUXContextValue';
+import { ResearchTimeline } from '@/components/trading/ResearchTimeline';
+import { generateExampleTimeline } from '@/components/trading/ResearchTimeline.fixtures';
 
 /**
  * Research Timeline page - shows narrative flow of trades

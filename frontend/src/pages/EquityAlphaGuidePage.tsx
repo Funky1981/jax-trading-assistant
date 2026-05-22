@@ -1,4 +1,4 @@
-import { useBeginnerMode } from '@/context/BeginnerUXContext';
+import { useBeginnerMode } from '@/context/BeginnerUXContextValue';
 import { ModuleGuideLayout } from '@/components/trading/ModuleGuideLayout';
 
 export function EquityAlphaGuidePage() {

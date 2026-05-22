@@ -160,9 +160,10 @@ func (e *Engine) CreateOrderRequest(signal Signal, quantity int, orderType strin
 	}
 
 	// Set price based on order type
-	if orderType == "LMT" {
+	switch orderType {
+	case "LMT":
 		req.LimitPrice = &signal.EntryPrice
-	} else if orderType == "STP" {
+	case "STP":
 		req.StopPrice = &signal.EntryPrice
 	}
 

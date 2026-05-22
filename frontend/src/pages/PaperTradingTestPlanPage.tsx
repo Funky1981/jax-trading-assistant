@@ -161,6 +161,15 @@ export function PaperTradingTestPlanPage() {
     }
     return Math.round((completedCount / allTasks.length) * 100);
   }, [allTasks.length, completedCount]);
+  const progressWidthClass = percentComplete >= 95
+    ? 'w-full'
+    : percentComplete >= 75
+      ? 'w-3/4'
+      : percentComplete >= 50
+        ? 'w-1/2'
+        : percentComplete >= 25
+          ? 'w-1/4'
+          : 'w-0';
 
   return (
     <div className="space-y-6">
@@ -183,8 +192,7 @@ export function PaperTradingTestPlanPage() {
           <div className="space-y-2" aria-label="Checklist completion">
             <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-success transition-all duration-300"
-                style={{ width: `${percentComplete}%` }}
+                className={`h-full rounded-full bg-success transition-all duration-300 ${progressWidthClass}`}
               />
             </div>
             <div className="grid gap-2 sm:grid-cols-3">

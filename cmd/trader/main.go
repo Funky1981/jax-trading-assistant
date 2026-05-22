@@ -413,7 +413,7 @@ func parseIntEnv(key string, defaultValue int) int {
 }
 
 // maskDSN masks sensitive parts of the database URL for logging
-func maskDSN(dsn string) string {
+func maskDSN(_ string) string {
 	// Simple masking - just show it's postgresql without credentials
 	return "postgresql://***:***@<host>/<database>"
 }

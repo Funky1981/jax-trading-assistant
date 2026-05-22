@@ -45,13 +45,27 @@ const actionConfig: Record<Action, { icon: React.ReactNode; color: string; bgCol
 };
 
 function ConfidenceBarFill({ percentage }: { percentage: number }) {
+  const widthClass = percentage >= 95
+    ? 'w-full'
+    : percentage >= 85
+      ? 'w-11/12'
+      : percentage >= 75
+        ? 'w-4/5'
+        : percentage >= 65
+          ? 'w-2/3'
+          : percentage >= 50
+            ? 'w-1/2'
+            : percentage >= 35
+              ? 'w-1/3'
+              : 'w-1/4';
+
   return (
     <div
       className={cn(
         'h-full rounded-full transition-all duration-500',
+        widthClass,
         percentage >= 70 ? 'bg-emerald-500' : percentage >= 40 ? 'bg-yellow-500' : 'bg-red-500'
       )}
-      style={{ width: `${percentage}%` }}
     />
   );
 }

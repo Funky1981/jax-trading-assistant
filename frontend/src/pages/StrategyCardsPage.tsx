@@ -1,4 +1,4 @@
-import { useBeginnerMode } from '@/context/BeginnerUXContext';
+import { useBeginnerMode } from '@/context/BeginnerUXContextValue';
 import { StrategyCardsScreen } from '@/components/trading/StrategyCardsScreen';
 import { useNavigate } from 'react-router-dom';
 

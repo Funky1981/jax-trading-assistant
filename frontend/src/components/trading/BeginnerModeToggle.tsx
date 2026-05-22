@@ -1,6 +1,6 @@
 import { Check, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useBeginnerMode } from '@/context/BeginnerUXContext';
+import { useBeginnerMode } from '@/context/BeginnerUXContextValue';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
 
@@ -55,7 +55,7 @@ export function BeginnerModeToggle() {
                   setMode(m);
                   setOpen(false);
                 }}
-                aria-pressed={mode === m}
+                aria-pressed={mode === m ? 'true' : 'false'}
               >
                 <div className="flex items-start gap-2">
                   <div className="flex-1">

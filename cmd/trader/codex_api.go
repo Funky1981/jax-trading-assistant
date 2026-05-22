@@ -550,7 +550,7 @@ func backtestRunDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	}
 }
 
-func researchProjectsHandler(pool *pgxpool.Pool, orchestratorURL string) http.HandlerFunc {
+func researchProjectsHandler(pool *pgxpool.Pool, _ string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:

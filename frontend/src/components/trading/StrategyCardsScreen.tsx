@@ -25,7 +25,7 @@ export interface StrategyCardData {
 }
 
 // ETF News Strategies (Step 9 requirement)
-export const ETF_NEWS_STRATEGIES: StrategyCardData[] = [
+const ETF_NEWS_STRATEGIES: StrategyCardData[] = [
   {
     id: 'etf_news_001_market_panic_reversal',
     name: 'Market Panic Reversal',

@@ -204,7 +204,7 @@ export function AppShell() {
                           ? 'bg-accent text-accent-foreground'
                           : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       )}
-                      aria-expanded={expanded}
+                      aria-expanded={expanded ? 'true' : 'false'}
                       aria-controls={`${section.id}-nav-items`}
                       aria-label={`${section.label} navigation`}
                     >

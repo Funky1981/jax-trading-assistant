@@ -1,4 +1,4 @@
-import { useBeginnerMode } from '@/context/BeginnerUXContext';
+import { useBeginnerMode } from '@/context/BeginnerUXContextValue';
 import { ETFUniverseScreen } from '@/components/trading/ETFUniverseScreen';
 
 /**
