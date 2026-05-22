@@ -82,8 +82,9 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
       return null;
     }
 
-    const modes = selectedETF.tradable_modes.map((mode) => mode.toLowerCase());
-    const eligibility = selectedETF.eligibility_state.toLowerCase();
+    const modes = (selectedETF.tradable_modes ?? []).map((mode) => mode.toLowerCase());
+    const eligibility = (selectedETF.eligibility_state ?? '').toLowerCase();
+    const exclusions = selectedETF.exclusions ?? [];
     const hasManualMode = modes.some((mode) => mode.includes('manual'));
     const hasApprovalMode = modes.some((mode) => mode.includes('approval'));
     const isBlockedEligibility =
@@ -91,11 +92,11 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
       eligibility.includes('restricted') ||
       eligibility.includes('ineligible');
 
-    if (hasManualMode && !isBlockedEligibility && selectedETF.exclusions.length === 0) {
+    if (hasManualMode && !isBlockedEligibility && exclusions.length === 0) {
       return 'manual_allowed';
     }
 
-    if (isBlockedEligibility || selectedETF.exclusions.length > 0) {
+    if (isBlockedEligibility || exclusions.length > 0) {
       return 'blocked';
     }
 
@@ -103,13 +104,13 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
       return 'approval_required';
     }
 
-    return 'blocked';
+    return 'approval_required';
   })();
 
   const manualEntryBlocked = manualEntryRoute === 'approval_required' || manualEntryRoute === 'blocked';
   const blockedReason =
     selectedETF && manualEntryRoute === 'blocked'
-      ? selectedETF.exclusions[0] || `Eligibility state: ${selectedETF.eligibility_state}`
+      ? (selectedETF.exclusions ?? [])[0] || `Eligibility state: ${selectedETF.eligibility_state}`
       : null;
 
   const resetForm = () => {

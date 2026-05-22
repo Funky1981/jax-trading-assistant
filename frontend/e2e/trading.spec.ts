@@ -567,7 +567,7 @@ test('submits protected entries and manages orders and positions', async ({ page
   await expect.poll(() => state.closeRequests).toBe(1);
 });
 
-test('blocks manual ETF entries while leaving exposure actions available', async ({ page }) => {
+test('reroutes ETF manual entries to approval flow while leaving exposure actions available', async ({ page }) => {
   const state = await installTradingStubs(page);
 
   await page.goto('/trading', { waitUntil: 'domcontentloaded' });
@@ -576,7 +576,8 @@ test('blocks manual ETF entries while leaving exposure actions available', async
   await page.locator('#order-ticket-symbol').fill('SPY');
   await page.locator('#order-ticket-quantity').fill('10');
 
-  await expect(page.getByText(/ETF entries must be submitted through the approval queue/i)).toBeVisible();
+  await expect(page.getByText(/Approval required for this ETF/i)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open approval flow' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Submit BUY Order' })).toBeDisabled();
 
   await page.getByRole('button', { name: 'Protect' }).first().click();

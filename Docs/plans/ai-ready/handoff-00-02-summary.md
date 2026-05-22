@@ -125,3 +125,37 @@ Validation after cleanup:
 ## Next recommended step
 
 Review and commit the Problems-tab cleanup, then continue with ticket 03 or reconcile ticket 03 with the adapter work already introduced during ticket 02.
+
+---
+
+## Update: tickets 03-05 continuation on `redesign`
+
+Follow-up commits now completed on `redesign`:
+
+- `6577b16 chore: address IDE problems cleanup`
+- `00e1232 feat(frontend): harden opportunity adapter`
+- `708cf50 feat(frontend): add scanner sentiment controls`
+- `055af14 feat(frontend): add manual ETF policy reroute card`
+
+### Ticket 05 scope completed
+
+- Updated `frontend/src/components/dashboard/OrderTicketPanel.tsx` to classify manual entry routing for ETF symbols as:
+  - `manual_allowed`
+  - `approval_required`
+  - `blocked`
+- Replaced the old dead-end ETF message with route-aware reroute cards:
+  - approval-required CTA: Open approval flow
+  - blocked CTA set: Choose another symbol and Open approved ETF workflow
+- Preserved submit blocking and existing backend/pilot guardrails.
+- Updated targeted tests in `frontend/src/components/dashboard/OrderTicketPanel.test.tsx` for manual-allowed, approval-required, and blocked states.
+- Updated Playwright trading coverage in `frontend/e2e/trading.spec.ts` for approval-reroute assertions.
+
+### Validation run (Ticket 05)
+
+- `npm run test -- src/components/dashboard/OrderTicketPanel.test.tsx`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- `npm run test:e2e -- e2e/trading.spec.ts e2e/dashboard.spec.ts`
+
+Result: all commands passed. Frontend build still reports the existing Vite large chunk warning.
