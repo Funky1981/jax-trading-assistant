@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Menu, 
   X, 
@@ -23,6 +23,8 @@ import {
   Layers,
   Clock,
   ListChecks,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -30,22 +32,42 @@ import JaxLogo from '@/images/jax_ai_trader.svg';
 import { useAuth } from '@/contexts/AuthContext';
 import { BeginnerModeToggle } from '@/components/trading/BeginnerModeToggle';
 
-const navItems = [
+const topNavItems = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, end: true },
   { label: 'Trading Modules', path: '/modules', icon: TrendingUp },
-  { label: 'Equity Alpha Trading', path: '/equity-alpha/trading', icon: TrendingUp },
-  { label: 'Equity Alpha Order Ticket', path: '/equity-alpha/order-ticket', icon: ClipboardPenLine },
-  { label: 'Equity Alpha Guide', path: '/equity-alpha/guide', icon: BookOpen },
-  { label: 'Equity Alpha Strategies', path: '/equity-alpha/strategies', icon: Layers },
-  { label: 'Equity Alpha Timeline', path: '/equity-alpha/timeline', icon: Clock },
-  { label: 'Equity Alpha Trading Modes', path: '/equity-alpha/trading-modes', icon: ListChecks },
-  { label: 'ETF Trading', path: '/etf/trading', icon: TrendingUp },
-  { label: 'ETF Guide', path: '/etf/guide', icon: BookOpen },
-  { label: 'ETF Universe', path: '/etf/universe', icon: Globe },
-  { label: 'ETF Strategies', path: '/etf/strategies', icon: Layers },
-  { label: 'ETF Timeline', path: '/etf/timeline', icon: Clock },
-  { label: 'ETF Trading Modes', path: '/etf/trading-modes', icon: ListChecks },
-  { label: 'ETF Approvals', path: '/etf/approvals', icon: CheckSquare },
+];
+
+const moduleSections = [
+  {
+    id: 'equity-alpha',
+    label: 'Equity Alpha Module',
+    icon: TrendingUp,
+    items: [
+      { label: 'Trading', path: '/equity-alpha/trading', icon: TrendingUp },
+      { label: 'Order Ticket', path: '/equity-alpha/order-ticket', icon: ClipboardPenLine },
+      { label: 'Guide', path: '/equity-alpha/guide', icon: BookOpen },
+      { label: 'Strategies', path: '/equity-alpha/strategies', icon: Layers },
+      { label: 'Timeline', path: '/equity-alpha/timeline', icon: Clock },
+      { label: 'Trading Modes', path: '/equity-alpha/trading-modes', icon: ListChecks },
+    ],
+  },
+  {
+    id: 'etf',
+    label: 'ETF Module',
+    icon: TrendingUp,
+    items: [
+      { label: 'Trading', path: '/etf/trading', icon: TrendingUp },
+      { label: 'Guide', path: '/etf/guide', icon: BookOpen },
+      { label: 'Universe', path: '/etf/universe', icon: Globe },
+      { label: 'Strategies', path: '/etf/strategies', icon: Layers },
+      { label: 'Timeline', path: '/etf/timeline', icon: Clock },
+      { label: 'Trading Modes', path: '/etf/trading-modes', icon: ListChecks },
+      { label: 'Approvals', path: '/etf/approvals', icon: CheckSquare },
+    ],
+  },
+];
+
+const bottomNavItems = [
   { label: 'System', path: '/system', icon: Server },
   { label: 'Backtesting', path: '/research', icon: FlaskConical },
   { label: 'Analysis', path: '/analysis', icon: BarChart3 },
@@ -63,6 +85,44 @@ const navItems = [
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, authRequired, logout } = useAuth();
+  const location = useLocation();
+
+  const activeSectionIds = useMemo(() => {
+    return moduleSections
+      .filter((section) => section.items.some((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)))
+      .map((section) => section.id);
+  }, [location.pathname]);
+
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(moduleSections.map((section) => [section.id, true]))
+  );
+
+  useEffect(() => {
+    if (activeSectionIds.length === 0) {
+      return;
+    }
+
+    setExpandedSections((current) => {
+      const next = { ...current };
+      let changed = false;
+
+      for (const sectionId of activeSectionIds) {
+        if (!next[sectionId]) {
+          next[sectionId] = true;
+          changed = true;
+        }
+      }
+
+      return changed ? next : current;
+    });
+  }, [activeSectionIds]);
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections((current) => ({
+      ...current,
+      [sectionId]: !current[sectionId],
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -106,11 +166,87 @@ export function AppShell() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Navigation
             </p>
-            {navItems.map((item) => (
+            {topNavItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 end={item.end}
+                onClick={() => {
+                  setSidebarOpen(false);
+                }}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )
+                }
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </NavLink>
+            ))}
+
+            <div className="pt-1">
+              {moduleSections.map((section) => {
+                const sectionActive = section.items.some(
+                  (item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
+                );
+                const expanded = expandedSections[section.id];
+
+                return (
+                  <div key={section.id} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section.id)}
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors',
+                        sectionActive
+                          ? 'bg-accent text-accent-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                      aria-expanded={expanded}
+                      aria-controls={`${section.id}-nav-items`}
+                    >
+                      <section.icon className="h-4 w-4" />
+                      <span className="flex-1">{section.label}</span>
+                      {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </button>
+
+                    {expanded && (
+                      <div id={`${section.id}-nav-items`} className="ml-4 space-y-1 border-l border-border pl-3">
+                        {section.items.map((item) => (
+                          <NavLink
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => {
+                              setSidebarOpen(false);
+                            }}
+                            className={({ isActive }) =>
+                              cn(
+                                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                                isActive
+                                  ? 'bg-accent text-accent-foreground'
+                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                              )
+                            }
+                          >
+                            <item.icon className="h-4 w-4" />
+                            {item.label}
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {bottomNavItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
                 onClick={() => {
                   setSidebarOpen(false);
                 }}
