@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,6 +61,9 @@ function savePanelState(state: Record<PanelId, boolean>) {
 export function TradingPage() {
   const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelState);
   const { data: pilotStatus } = useTradingPilotStatus();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const inETFModule = location.pathname.startsWith('/etf/');
 
   // Persist panel state
   useEffect(() => {
@@ -147,6 +151,37 @@ export function TradingPage() {
             <p className="font-semibold text-foreground">4. Manage live exposure</p>
             <p>Use Positions to close or re-protect any open position after entry.</p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Manual Trading vs AI Workflow</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          {inETFModule ? (
+            <p>
+              You are in the ETF module. New ETF entries are approval-first, so manual Buy/Sell entry is blocked by policy.
+            </p>
+          ) : (
+            <p>
+              You are in the Equity Alpha module. Manual Buy/Sell entries are allowed here through Order Ticket.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate('/equity-alpha/order-ticket')}>
+              Open Manual Order Ticket
+            </Button>
+            <Button type="button" variant="outline" onClick={() => navigate('/etf/approvals')}>
+              Open ETF Approval Queue
+            </Button>
+            <Button type="button" variant="outline" onClick={() => navigate('/testing/mobile-approval-harness')}>
+              Open Mobile Notification Harness
+            </Button>
+          </div>
+          <p className="text-xs">
+            For AI opportunity scanning, use the AI Trading Assistant panel below and enable Auto Scan.
+          </p>
         </CardContent>
       </Card>
 

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Brain, TrendingUp, TrendingDown, Minus, Eye, AlertTriangle, Target, Shield, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Brain, TrendingUp, TrendingDown, Minus, Eye, AlertTriangle, Target, Shield, Loader2, Bell, BellOff } from 'lucide-react';
 import { useAISuggestion, useAIHealth, useAIConfig, type Action, type AISuggestion } from '@/hooks/useAISuggestion';
 import { CollapsiblePanel, StatusDot } from './CollapsiblePanel';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,15 @@ interface AIAssistantPanelProps {
   isOpen: boolean;
   onToggle: () => void;
 }
+
+type ScanAlert = {
+  id: string;
+  symbol: string;
+  action: Action;
+  confidence: number;
+  timestamp: string;
+  reason: string;
+};
 
 const actionConfig: Record<Action, { icon: React.ReactNode; color: string; bgColor: string }> = {
   BUY: {
@@ -159,17 +168,121 @@ function SuggestionCard({ suggestion, provider, model }: { suggestion: AISuggest
 export function AIAssistantPanel({ isOpen, onToggle }: AIAssistantPanelProps) {
   const [symbol, setSymbol] = useState('AAPL');
   const [context, setContext] = useState('');
+  const [scanSymbolsText, setScanSymbolsText] = useState('SPY,QQQ,SMH');
+  const [autoScanEnabled, setAutoScanEnabled] = useState(false);
+  const [scanIntervalSeconds, setScanIntervalSeconds] = useState(60);
+  const [confidenceThreshold, setConfidenceThreshold] = useState(0.65);
+  const [alerts, setAlerts] = useState<ScanAlert[]>([]);
+  const [isAutoScanning, setIsAutoScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
   
   const { data: health, isError: healthError } = useAIHealth();
   const { data: config } = useAIConfig();
-  const { mutate: getSuggestion, data: suggestionData, isPending, error } = useAISuggestion();
+  const { mutate: getSuggestion, mutateAsync: getSuggestionAsync, data: suggestionData, isPending, error } = useAISuggestion();
+
+  const scanSymbols = useMemo(
+    () =>
+      scanSymbolsText
+        .split(',')
+        .map((value) => value.trim().toUpperCase())
+        .filter(Boolean),
+    [scanSymbolsText]
+  );
+
+  const canUseDesktopNotifications = typeof window !== 'undefined' && 'Notification' in window;
+  const desktopNotificationsGranted = canUseDesktopNotifications && Notification.permission === 'granted';
+  const isHealthy = !healthError && health?.status === 'healthy';
 
   const handleGetSuggestion = () => {
     if (!symbol.trim()) return;
     getSuggestion({ symbol: symbol.toUpperCase(), context: context || undefined });
   };
 
-  const isHealthy = !healthError && health?.status === 'healthy';
+  const handleEnableDesktopNotifications = async () => {
+    if (!canUseDesktopNotifications) {
+      return;
+    }
+    await Notification.requestPermission();
+  };
+
+  useEffect(() => {
+    if (!autoScanEnabled || !isHealthy || scanSymbols.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const runScanCycle = async () => {
+      if (cancelled) {
+        return;
+      }
+
+      setIsAutoScanning(true);
+      setScanError(null);
+
+      try {
+        for (const scanSymbol of scanSymbols) {
+          if (cancelled) {
+            return;
+          }
+
+          const response = await getSuggestionAsync({
+            symbol: scanSymbol,
+            context: context || 'Auto scan for news+chart opportunities.',
+          });
+
+          const candidate = response.suggestion;
+          const actionable = (candidate.action === 'BUY' || candidate.action === 'SELL') && candidate.confidence >= confidenceThreshold;
+
+          if (!actionable) {
+            continue;
+          }
+
+          const alert: ScanAlert = {
+            id: `${candidate.symbol}-${candidate.timestamp}`,
+            symbol: candidate.symbol,
+            action: candidate.action,
+            confidence: candidate.confidence,
+            timestamp: candidate.timestamp,
+            reason: candidate.reasoning,
+          };
+
+          setAlerts((prev) => [alert, ...prev].slice(0, 20));
+
+          if (canUseDesktopNotifications && Notification.permission === 'granted') {
+            new Notification(`Jax ${candidate.action} ${candidate.symbol}`, {
+              body: `Confidence ${(candidate.confidence * 100).toFixed(0)}%`,
+            });
+          }
+        }
+      } catch (err) {
+        setScanError(err instanceof Error ? err.message : 'Auto scan failed.');
+      } finally {
+        if (!cancelled) {
+          setIsAutoScanning(false);
+        }
+      }
+    };
+
+    void runScanCycle();
+    const timer = window.setInterval(() => {
+      void runScanCycle();
+    }, Math.max(scanIntervalSeconds, 20) * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [
+    autoScanEnabled,
+    isHealthy,
+    scanSymbols,
+    getSuggestionAsync,
+    context,
+    confidenceThreshold,
+    scanIntervalSeconds,
+    canUseDesktopNotifications,
+  ]);
 
   const summary = suggestionData?.suggestion ? (
     <div className="flex items-center gap-2">
@@ -205,6 +318,13 @@ export function AIAssistantPanel({ isOpen, onToggle }: AIAssistantPanelProps) {
       onToggle={onToggle}
     >
       <div className="space-y-4">
+        <div className="rounded-md border border-border bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          <p className="font-semibold uppercase tracking-wide text-foreground">AI Opportunity Scanning</p>
+          <p className="mt-2">
+            This panel can run continuous symbol scans using AI + chart context and raise in-app alerts. Mobile push delivery depends on your backend approval pipeline/Telegram bridge.
+          </p>
+        </div>
+
         {/* Service Status */}
         <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
           <div className="flex items-center gap-2">
@@ -260,6 +380,68 @@ export function AIAssistantPanel({ isOpen, onToggle }: AIAssistantPanelProps) {
           </div>
         </div>
 
+        <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">Auto Scan & Notifications</p>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={desktopNotificationsGranted ? 'default' : 'outline'}
+                size="sm"
+                onClick={handleEnableDesktopNotifications}
+                disabled={!canUseDesktopNotifications || desktopNotificationsGranted}
+                title={!canUseDesktopNotifications ? 'Desktop notifications are unavailable in this browser.' : undefined}
+              >
+                {desktopNotificationsGranted ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                {desktopNotificationsGranted ? 'Desktop Alerts On' : 'Enable Desktop Alerts'}
+              </Button>
+              <Button
+                type="button"
+                variant={autoScanEnabled ? 'destructive' : 'default'}
+                size="sm"
+                onClick={() => setAutoScanEnabled((prev) => !prev)}
+                disabled={!isHealthy || scanSymbols.length === 0}
+              >
+                {autoScanEnabled ? 'Stop Auto Scan' : 'Start Auto Scan'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-3">
+            <Input
+              aria-label="Auto scan symbols"
+              placeholder="SPY,QQQ,SMH"
+              value={scanSymbolsText}
+              onChange={(event) => setScanSymbolsText(event.target.value.toUpperCase())}
+            />
+            <Input
+              aria-label="Auto scan interval seconds"
+              type="number"
+              min={20}
+              step={5}
+              value={scanIntervalSeconds}
+              onChange={(event) => setScanIntervalSeconds(Number(event.target.value) || 60)}
+            />
+            <Input
+              aria-label="Auto scan confidence threshold"
+              type="number"
+              min={0.4}
+              max={0.95}
+              step={0.05}
+              value={confidenceThreshold}
+              onChange={(event) => setConfidenceThreshold(Number(event.target.value) || 0.65)}
+            />
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Status: {autoScanEnabled ? (isAutoScanning ? 'scanning now' : 'monitoring') : 'stopped'} • Symbols: {scanSymbols.join(', ') || 'none'}
+          </p>
+
+          {scanError && (
+            <p className="text-xs text-destructive">{scanError}</p>
+          )}
+        </div>
+
         {/* Error Display */}
         {error && (
           <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
@@ -287,6 +469,23 @@ export function AIAssistantPanel({ isOpen, onToggle }: AIAssistantPanelProps) {
             <p className="text-xs mt-1">
               The AI will analyze market data and provide trading recommendations
             </p>
+          </div>
+        )}
+
+        {alerts.length > 0 && (
+          <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
+            <p className="text-sm font-medium">Recent Scan Alerts</p>
+            <div className="space-y-2">
+              {alerts.slice(0, 5).map((alert) => (
+                <div key={alert.id} className="rounded-md border border-border bg-background px-2.5 py-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{alert.action} {alert.symbol}</span>
+                    <span className="text-muted-foreground">{Math.round(alert.confidence * 100)}%</span>
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-muted-foreground">{alert.reason}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
