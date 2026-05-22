@@ -97,4 +97,30 @@ describe('opportunity adapter', () => {
       'signal:signal-old',
     ]);
   });
+
+  it('degrades partial candidate records without crashing', () => {
+    const partialCandidate = {
+      id: 'candidate-partial',
+      symbol: '',
+      signalType: undefined,
+      status: undefined,
+      reasoning: '',
+      sessionDate: '',
+      detectedAt: '',
+      dataProvenance: 'paper',
+    } as unknown as CandidateTrade;
+
+    expect(() => opportunityFromCandidate(partialCandidate)).not.toThrow();
+    expect(opportunityFromCandidate(partialCandidate)).toMatchObject({
+      id: 'candidate:candidate-partial',
+      symbol: 'UNKNOWN',
+      signalType: 'UNKNOWN',
+      confidenceBand: 'unknown',
+      route: 'manual_allowed',
+      routeReason: 'This opportunity can be reviewed in the manual trading workflow.',
+      status: 'unknown',
+      sourceType: 'candidate',
+      sourceId: 'candidate-partial',
+    });
+  });
 });

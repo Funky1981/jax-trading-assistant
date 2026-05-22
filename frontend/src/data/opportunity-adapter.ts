@@ -23,7 +23,7 @@ function sentence(value?: string | null, fallback = 'Opportunity detected by Jax
 }
 
 function routeForCandidate(candidate: CandidateTrade): { route: OpportunityRoute; routeReason: string } {
-  const status = candidate.status.toLowerCase();
+  const status = typeof candidate.status === 'string' ? candidate.status.toLowerCase() : '';
 
   if (BLOCKED_STATUSES.has(status)) {
     return {
