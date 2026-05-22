@@ -100,6 +100,25 @@ describe('AiTradingPage', () => {
     expect(screen.getAllByRole('button', { name: 'Dismiss' }).length).toBeGreaterThan(0);
   });
 
+  it('renders scanner and sentiment settings as Phase 1 placeholders', async () => {
+    vi.mocked(signalsService.list).mockResolvedValue({ signals: [], total: 0, limit: 12, offset: 0 });
+    vi.mocked(candidatesService.list).mockResolvedValue([]);
+    vi.mocked(approvalsService.getQueue).mockResolvedValue([]);
+
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Scanner settings' })).toBeInTheDocument();
+    expect(screen.getByText('Watching')).toBeInTheDocument();
+    expect(screen.getByLabelText('Symbols')).toHaveDisplayValue('SPY, QQQ, IWM');
+    expect(screen.getByLabelText('Minimum confidence')).toHaveDisplayValue('65%');
+    expect(screen.getByLabelText('Sentiment source scope')).toHaveDisplayValue('Trusted news and filings');
+    expect(screen.getByLabelText('Sentiment time window')).toHaveDisplayValue('Last 24 hours');
+    expect(screen.getByLabelText('Minimum sentiment threshold')).toHaveDisplayValue('Positive or better');
+    expect(screen.getByLabelText('Source trust weighting')).toHaveDisplayValue('Trust-weighted sources');
+    expect(screen.getByLabelText('Sentiment mode')).toHaveDisplayValue('Rank boost');
+    expect(screen.getByText(/Settings changes are not connected until Phase 2/i)).toBeInTheDocument();
+  });
+
   it('renders an explicit empty state', async () => {
     vi.mocked(signalsService.list).mockResolvedValue({ signals: [], total: 0, limit: 12, offset: 0 });
     vi.mocked(candidatesService.list).mockResolvedValue([]);

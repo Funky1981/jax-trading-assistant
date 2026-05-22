@@ -236,6 +236,33 @@ export interface OpportunitySummary {
   sourceId: string;
 }
 
+export type ScannerSentimentMode = 'filter' | 'rank_boost' | 'required_feature';
+export type ScannerSourceTrustMode = 'equal' | 'trust_weighted';
+
+export interface ScannerSentimentSettings {
+  enabled: boolean;
+  sourceScope: string;
+  timeWindow: string;
+  minimumThresholdLabel: string;
+  minimumSourceCount: number;
+  sourceTrustMode: ScannerSourceTrustMode;
+  mode: ScannerSentimentMode;
+  supported: boolean;
+  connected: boolean;
+  unsupportedReason?: string;
+}
+
+export interface ScannerSettings {
+  enabled: boolean;
+  assetScope: string;
+  symbols: string[];
+  universePreset: string;
+  intervalSeconds: number;
+  minimumConfidence: number;
+  connected: boolean;
+  sentiment: ScannerSentimentSettings;
+}
+
 export interface OrchestrationRun {
   id: string;
   symbol: string;

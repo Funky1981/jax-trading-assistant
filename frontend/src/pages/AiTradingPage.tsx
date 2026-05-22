@@ -5,13 +5,37 @@ import { AlertTriangle, ArrowRight, Bot, Clock, RefreshCw, ShieldCheck, Sparkles
 import { approvalsService, candidatesService } from '@/data/approvals-service';
 import { signalsService } from '@/data/signals-service';
 import { toOpportunitySummaries } from '@/data/opportunity-adapter';
-import type { OpportunityRoute, OpportunitySummary } from '@/data/types';
+import type { OpportunityRoute, OpportunitySummary, ScannerSettings } from '@/data/types';
+import { ScannerSettingsCard } from '@/components/trading/ScannerSettingsCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const REFRESH_INTERVAL_MS = 30_000;
 const STALE_DATA_MS = 5 * 60_000;
+
+const phaseOneScannerSettings: ScannerSettings = {
+  enabled: true,
+  assetScope: 'ETF pilot',
+  symbols: ['SPY', 'QQQ', 'IWM'],
+  universePreset: 'Phase 1 ETF universe',
+  intervalSeconds: 30,
+  minimumConfidence: 0.65,
+  connected: false,
+  sentiment: {
+    enabled: true,
+    sourceScope: 'Trusted news and filings',
+    timeWindow: 'Last 24 hours',
+    minimumThresholdLabel: 'Positive or better',
+    minimumSourceCount: 2,
+    sourceTrustMode: 'trust_weighted',
+    mode: 'rank_boost',
+    supported: false,
+    connected: false,
+    unsupportedReason:
+      'Sentiment is shown as boost/filter guidance in Phase 1. Required-feature routing needs Phase 2 backend support.',
+  },
+};
 
 const routeLabels: Record<OpportunityRoute, string> = {
   manual_allowed: 'Manual review',
@@ -209,6 +233,8 @@ export function AiTradingPage() {
           </CardContent>
         </Card>
       </section>
+
+      <ScannerSettingsCard settings={phaseOneScannerSettings} />
 
       {staleData && (
         <div className="flex items-center gap-2 rounded-md border border-warning bg-warning/10 px-4 py-3 text-sm text-foreground">
