@@ -604,6 +604,29 @@ export interface EventClassification {
   explanation?: string;
 }
 
+export type NotificationCategory =
+  | 'opportunity'
+  | 'approval'
+  | 'sentiment_triggered'
+  | 'sentiment_invalidated'
+  | 'analysis'
+  | 'settings'
+  | 'system';
+
+export interface NotificationInboxEntry {
+  id: string;
+  category: NotificationCategory;
+  eventType: string;
+  title: string;
+  body: string;
+  destinationPath: string;
+  createdAt: string;
+  stale: boolean;
+  channels: string[];
+  severity?: string;
+  primarySymbol?: string;
+}
+
 export interface DatasetSnapshot {
   datasetId: string;
   datasetHash: string;

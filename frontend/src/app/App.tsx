@@ -29,6 +29,7 @@ import { EquityAlphaGuidePage } from '@/pages/EquityAlphaGuidePage';
 import { ETFGuidePage } from '@/pages/ETFGuidePage';
 import { PaperTradingTestPlanPage } from '@/pages/PaperTradingTestPlanPage';
 import { MobileApprovalHarnessPage } from '@/pages/MobileApprovalHarnessPage';
+import { NotificationCentrePage } from '@/pages/NotificationCentrePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, authRequired } = useAuth();
@@ -68,7 +69,7 @@ export const routes = [
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'ai-trading', element: <AiTradingPage /> },
       { path: 'manual-trading', element: <Navigate to="/equity-alpha/trading" replace /> },
-      { path: 'notifications', element: <Navigate to="/settings" replace /> },
+      { path: 'notifications', element: <NotificationCentrePage /> },
       { path: 'modules', element: <TradingModulesPage /> },
 
       { path: 'trading', element: <Navigate to="/equity-alpha/trading" replace /> },
