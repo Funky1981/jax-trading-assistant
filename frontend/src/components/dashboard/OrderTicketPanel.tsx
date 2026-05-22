@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Receipt } from 'lucide-react';
 import { CollapsiblePanel } from './CollapsiblePanel';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,8 @@ interface OrderTicketPanelProps {
   isOpen: boolean;
   onToggle: () => void;
 }
+
+type ManualEntryRoute = 'manual_allowed' | 'approval_required' | 'blocked';
 
 function formatMessage(result: unknown) {
   if (result && typeof result === 'object' && 'message' in result && typeof result.message === 'string') {
@@ -69,10 +72,45 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
 
   const hasProtection = Boolean(stopLossPrice || takeProfitPrice);
   const normalizedSymbol = symbol.toUpperCase().trim();
-  const manualETFBlocked = Boolean(
-    normalizedSymbol &&
-      etfCatalog?.instruments.some((item) => item.symbol.toUpperCase() === normalizedSymbol)
-  );
+  const selectedETF =
+    normalizedSymbol && etfCatalog
+      ? etfCatalog.instruments.find((item) => item.symbol.toUpperCase() === normalizedSymbol)
+      : undefined;
+
+  const manualEntryRoute: ManualEntryRoute | null = (() => {
+    if (!selectedETF) {
+      return null;
+    }
+
+    const modes = selectedETF.tradable_modes.map((mode) => mode.toLowerCase());
+    const eligibility = selectedETF.eligibility_state.toLowerCase();
+    const hasManualMode = modes.some((mode) => mode.includes('manual'));
+    const hasApprovalMode = modes.some((mode) => mode.includes('approval'));
+    const isBlockedEligibility =
+      eligibility.includes('blocked') ||
+      eligibility.includes('restricted') ||
+      eligibility.includes('ineligible');
+
+    if (hasManualMode && !isBlockedEligibility && selectedETF.exclusions.length === 0) {
+      return 'manual_allowed';
+    }
+
+    if (isBlockedEligibility || selectedETF.exclusions.length > 0) {
+      return 'blocked';
+    }
+
+    if (hasApprovalMode) {
+      return 'approval_required';
+    }
+
+    return 'blocked';
+  })();
+
+  const manualEntryBlocked = manualEntryRoute === 'approval_required' || manualEntryRoute === 'blocked';
+  const blockedReason =
+    selectedETF && manualEntryRoute === 'blocked'
+      ? selectedETF.exclusions[0] || `Eligibility state: ${selectedETF.eligibility_state}`
+      : null;
 
   const resetForm = () => {
     setSymbol('');
@@ -86,7 +124,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!symbol || !quantity || pilotStatus?.readOnly || manualETFBlocked) return;
+    if (!symbol || !quantity || pilotStatus?.readOnly || manualEntryBlocked) return;
 
     setBrokerConfirmed(false);
     setPendingOrder({
@@ -151,9 +189,37 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
           </div>
         ) : null}
 
-        {manualETFBlocked ? (
-          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            ETF entries must be submitted through the approval queue. Manual close, cancel, and protection actions remain available from Positions and Blotter.
+        {manualEntryRoute === 'approval_required' ? (
+          <div className="space-y-3 rounded-md border border-warning/50 bg-warning/10 px-3 py-3 text-sm text-foreground">
+            <p className="font-semibold">Approval required for this ETF</p>
+            <p>
+              New entries for {selectedETF?.symbol} follow the approval-first workflow. Open the approval flow to continue.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild type="button" variant="outline">
+                <Link to="/etf/approvals">Open approval flow</Link>
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {manualEntryRoute === 'blocked' ? (
+          <div className="space-y-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+            <p className="font-semibold">Manual entry is blocked for this ETF</p>
+            <p>
+              {selectedETF?.symbol} is blocked by policy for new manual entries. {blockedReason ? `Reason: ${blockedReason}.` : ''}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" onClick={() => setSymbol('')}>
+                Choose another symbol
+              </Button>
+              <Button asChild type="button" variant="outline">
+                <Link to="/etf/approvals">Open approved ETF workflow</Link>
+              </Button>
+            </div>
+            <p className="text-xs text-destructive/90">
+              Manual close, cancel, and protection actions remain available from Positions and Blotter.
+            </p>
           </div>
         ) : null}
 
@@ -314,7 +380,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
             !symbol ||
             !quantity ||
             pilotStatus?.readOnly === true ||
-            manualETFBlocked ||
+            manualEntryBlocked ||
             (orderType === 'limit' && !price) ||
             (orderType === 'stop' && !entryStopPrice) ||
             createOrder.isPending
