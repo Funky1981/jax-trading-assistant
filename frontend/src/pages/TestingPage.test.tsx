@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { TestingPage } from './TestingPage';
 import { testingService } from '@/data/testing-service';
@@ -49,9 +50,11 @@ function renderPage() {
   });
 
   render(
-    <QueryClientProvider client={queryClient}>
-      <TestingPage />
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <TestingPage />
+      </QueryClientProvider>
+    </MemoryRouter>
   );
 }
 
