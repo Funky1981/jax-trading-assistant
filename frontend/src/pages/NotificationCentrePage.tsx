@@ -8,6 +8,7 @@ import type { NotificationInboxEntry } from '@/data/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { emitAnalyticsEvent } from '@/lib/analytics';
 
 const READ_STORAGE_KEY = 'notification-centre-read-v1';
 
@@ -80,6 +81,10 @@ export function NotificationCentrePage() {
   useEffect(() => {
     window.localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(Array.from(readIds)));
   }, [readIds]);
+
+  useEffect(() => {
+    emitAnalyticsEvent('page_viewed', { source_surface: 'notifications' });
+  }, []);
 
   const toggleRead = (entryId: string) => {
     setReadIds((current) => {
@@ -227,7 +232,20 @@ export function NotificationCentrePage() {
 
                 <div className="flex flex-wrap gap-2">
                   <Button asChild>
-                    <Link to={entry.destinationPath}>Open destination</Link>
+                    <Link
+                      to={entry.destinationPath}
+                      onClick={() => {
+                        if (entry.category === 'sentiment_triggered' || entry.category === 'sentiment_invalidated') {
+                          emitAnalyticsEvent('sentiment_alert_opened', {
+                            source_surface: 'notifications',
+                            destination_path: entry.destinationPath,
+                            sentiment_mode: entry.category,
+                          });
+                        }
+                      }}
+                    >
+                      Open destination
+                    </Link>
                   </Button>
                   <Button type="button" variant="outline" onClick={() => toggleRead(entry.id)}>
                     {unread ? 'Mark read' : 'Mark unread'}

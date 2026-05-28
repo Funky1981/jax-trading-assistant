@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BarChart3, Bot, ClipboardPenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { emitAnalyticsEvent } from '@/lib/analytics';
 
 const startingActions = [
   {
@@ -25,6 +27,10 @@ const startingActions = [
 ];
 
 export function HomePage() {
+  useEffect(() => {
+    emitAnalyticsEvent('page_viewed', { source_surface: 'home' });
+  }, []);
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <section className="space-y-3">

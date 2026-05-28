@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, ArrowRight, Bot, Clock, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
@@ -10,6 +10,7 @@ import { ScannerSettingsCard } from '@/components/trading/ScannerSettingsCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { emitAnalyticsEvent } from '@/lib/analytics';
 
 const REFRESH_INTERVAL_MS = 30_000;
 const STALE_DATA_MS = 5 * 60_000;
@@ -88,6 +89,19 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
   const action = primaryAction(opportunity);
   const expired = isExpired(opportunity.expiresAt);
 
+  useEffect(() => {
+    if (!opportunity.sentimentSummary) {
+      return;
+    }
+
+    emitAnalyticsEvent('opportunity_sentiment_viewed', {
+      source_surface: 'ai_trading',
+      opportunity_id: opportunity.id,
+      route_type: opportunity.route,
+      sentiment_mode: phaseOneScannerSettings.sentiment.mode,
+    });
+  }, [opportunity.id, opportunity.route, opportunity.sentimentSummary]);
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="gap-3 md:flex-row md:items-start md:justify-between">
@@ -146,6 +160,8 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
 }
 
 export function AiTradingPage() {
+  const trackedSetupRef = useRef(false);
+
   const signalsQuery = useQuery({
     queryKey: ['ai-trading', 'signals'],
     queryFn: () => signalsService.list({ status: 'pending', limit: 12 }),
@@ -182,6 +198,28 @@ export function AiTradingPage() {
   const latestUpdate = Math.max(...queries.map((query) => query.dataUpdatedAt).filter(Boolean), 0);
   const staleData = latestUpdate > 0 && Date.now() - latestUpdate > STALE_DATA_MS;
   const scannerStatus = isError ? 'Degraded' : isFetching ? 'Scanning' : 'Ready';
+
+  useEffect(() => {
+    emitAnalyticsEvent('page_viewed', { source_surface: 'ai_trading' });
+  }, []);
+
+  useEffect(() => {
+    if (trackedSetupRef.current) {
+      return;
+    }
+
+    trackedSetupRef.current = true;
+    emitAnalyticsEvent('ai_scanner_enabled', {
+      source_surface: 'ai_trading',
+      enabled: phaseOneScannerSettings.enabled,
+      sentiment_mode: phaseOneScannerSettings.sentiment.mode,
+    });
+    emitAnalyticsEvent('sentiment_settings_opened', {
+      source_surface: 'ai_trading',
+      sentiment_mode: phaseOneScannerSettings.sentiment.mode,
+      enabled: phaseOneScannerSettings.sentiment.enabled,
+    });
+  }, []);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">

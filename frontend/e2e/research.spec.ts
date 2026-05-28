@@ -132,3 +132,106 @@ test('research page: backtests tab shows backtest run history', async ({ page })
   await expect(page.getByText('run-1').first()).toBeVisible();
   await expect(page.getByText('completed').first()).toBeVisible();
 });
+
+test('research page: guided wizard launches backtest and opens analysis from runs', async ({ page }) => {
+  await stubBase(page);
+
+  const runs = [
+    {
+      id: 'run-existing',
+      runId: 'run-existing',
+      instanceId: 'inst-1',
+      status: 'completed',
+      from: '2026-02-01',
+      to: '2026-03-01',
+      datasetId: 'ds-001',
+      stats: { winRate: 0.62, maxDrawdown: -0.11 },
+    },
+  ];
+
+  let guidedPayload: Record<string, unknown> | null = null;
+
+  await page.route('**/api/v1/instances**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'inst-orb',
+          name: 'ORB paper setup',
+          strategyTypeId: 'orb_v1',
+          strategyId: 'orb',
+          enabled: true,
+          sessionTimezone: 'America/New_York',
+          flattenByCloseTime: '15:55',
+          configJson: { symbols: ['SPY'] },
+          createdAt: '2026-01-15T10:00:00Z',
+          updatedAt: '2026-03-01T09:00:00Z',
+        },
+      ]),
+    }),
+  );
+
+  await page.route('**/api/v1/strategy-types**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ strategyId: 'orb_v1' }]),
+    }),
+  );
+
+  await page.route('**/api/v1/backtests/runs**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(runs) }),
+  );
+
+  await page.route('**/api/v1/backtests/run', async (route) => {
+    guidedPayload = route.request().postDataJSON() as Record<string, unknown>;
+    runs.unshift({
+      id: 'run-guided',
+      runId: 'run-guided',
+      instanceId: 'inst-orb',
+      status: 'queued',
+      from: String(guidedPayload?.from ?? '2026-05-01'),
+      to: String(guidedPayload?.to ?? '2026-05-22'),
+      datasetId: String(guidedPayload?.datasetId ?? 'ds-001'),
+      stats: { winRate: 0, maxDrawdown: 0 },
+    });
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ runId: 'run-guided', status: 'queued' }),
+    });
+  });
+
+  await page.route('**/api/v1/datasets**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        datasets: [{ datasetId: 'ds-001', datasetHash: 'hash-1', name: 'ETF baseline' }],
+        total: 1,
+      }),
+    }),
+  );
+
+  await page.route('**/api/v1/research/projects**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }),
+  );
+
+  await page.goto('/research', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByText('Guided Research Wizard')).toBeVisible();
+  await page.getByRole('button', { name: 'Run guided backtest' }).click();
+
+  await expect.poll(() => guidedPayload).not.toBeNull();
+  await expect.poll(() => guidedPayload?.instanceId).toBe('inst-orb');
+  await expect.poll(() => guidedPayload?.datasetId).toBe('ds-001');
+  await expect.poll(() => guidedPayload?.symbolsOverride).toEqual(['SPY', 'QQQ', 'IWM']);
+
+  await expect(page.getByRole('tab', { name: /Backtests/i })).toHaveAttribute('data-state', 'active');
+  await expect(page.getByText('run-guided').first()).toBeVisible();
+
+  await page.getByText('run-guided').first().click();
+  await expect(page).toHaveURL(/\/analysis\?runId=run-guided$/);
+});

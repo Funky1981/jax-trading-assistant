@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ApprovalsPage } from './ApprovalsPage';
 import { approvalsService, candidatesService } from '@/data/approvals-service';
+import { emitAnalyticsEvent } from '@/lib/analytics';
 
 vi.mock('@/data/approvals-service', () => ({
   approvalsService: {
@@ -17,6 +18,10 @@ vi.mock('@/data/approvals-service', () => ({
     list: vi.fn(),
     refresh: vi.fn(),
   },
+}));
+
+vi.mock('@/lib/analytics', () => ({
+  emitAnalyticsEvent: vi.fn(),
 }));
 
 function renderPage() {
@@ -38,6 +43,7 @@ function renderPage() {
 
 describe('ApprovalsPage', () => {
   it('shows approval queue, execution activity, and blocked candidates', async () => {
+    vi.mocked(emitAnalyticsEvent).mockClear();
     vi.mocked(approvalsService.getQueue).mockResolvedValue([
       {
         id: 'candidate-awaiting-1',
@@ -114,6 +120,7 @@ describe('ApprovalsPage', () => {
   });
 
   it('wires blocked refresh action to candidate refresh and mobile queue producer path', async () => {
+    vi.mocked(emitAnalyticsEvent).mockClear();
     vi.mocked(approvalsService.getQueue).mockResolvedValue([]);
     vi.mocked(candidatesService.list)
       .mockResolvedValue([] as never)
@@ -153,6 +160,12 @@ describe('ApprovalsPage', () => {
 
     const evidenceLink = await screen.findByRole('link', { name: 'Evidence' });
     expect(evidenceLink).toHaveAttribute('href', '/candidates/candidate-blocked-2/evidence');
+
+    fireEvent.click(evidenceLink);
+    expect(vi.mocked(emitAnalyticsEvent)).toHaveBeenCalledWith(
+      'approval_sentiment_evidence_viewed',
+      expect.objectContaining({ source_surface: 'approvals', candidate_id: 'candidate-blocked-2' })
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /Re-qualify & Queue Mobile/i }));
 

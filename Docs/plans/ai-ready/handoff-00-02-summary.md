@@ -213,3 +213,57 @@ Validation run (Ticket 07 and notifications e2e coverage):
 - `npm run build`
 
 Result: commands passed; frontend build retains the existing Vite large chunk warning.
+
+---
+
+## Update: ticket 08 instrumentation and PR notes evidence
+
+### Ticket 08 scope completed
+
+- Added a frontend analytics abstraction: `frontend/src/lib/analytics.ts`.
+- Instrumented baseline workflow hooks on the requested surfaces:
+  - Home: page-view event
+  - AI Trading: scanner/sentiment visibility and sentiment opportunity view events
+  - Notifications: sentiment alert open events
+  - Approvals: sentiment evidence open events
+  - Research: sentiment teach-me and guided backtest sentiment events
+- Implemented required baseline event names through one abstraction:
+  - `ai_scanner_enabled`
+  - `sentiment_settings_opened`
+  - `opportunity_sentiment_viewed`
+  - `sentiment_alert_opened`
+  - `approval_sentiment_evidence_viewed`
+  - `backtest_sentiment_enabled`
+  - `teach_me_sentiment_opened`
+- Added event-emission spy coverage in page tests plus abstraction tests.
+
+### Additional requested coverage
+
+- Added guided research Playwright happy-path test in `frontend/e2e/research.spec.ts`:
+  - launches guided backtest
+  - validates backend request shape
+  - confirms transition to Backtests tab
+  - opens Analysis route from run row
+
+### PR notes evidence summary (tickets 06-08)
+
+- Notification centre and route coverage:
+  - `frontend/src/pages/NotificationCentrePage.test.tsx`
+  - `frontend/e2e/notifications.spec.ts`
+- Guided research wizard coverage:
+  - `frontend/src/pages/ResearchPage.test.tsx`
+  - `frontend/src/pages/research-guided-wizard.test.ts`
+  - `frontend/e2e/research.spec.ts`
+- Analytics emission coverage:
+  - `frontend/src/lib/analytics.test.ts`
+  - page-level spy assertions in Approvals, Notifications, and Research tests
+
+Validation run (Ticket 08 + requested follow-ups):
+
+- `npm run test -- src/lib/analytics.test.ts src/pages/research-guided-wizard.test.ts src/pages/ResearchPage.test.tsx src/pages/ApprovalsPage.test.tsx src/data/notification-adapter.test.ts src/pages/NotificationCentrePage.test.tsx src/app/__tests__/AppRoutes.test.tsx`
+- `npm run test:e2e -- e2e/notifications.spec.ts e2e/research.spec.ts`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+
+Result: passing locally; existing Vite large chunk warning remains.

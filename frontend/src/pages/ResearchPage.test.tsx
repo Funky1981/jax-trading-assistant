@@ -8,6 +8,7 @@ import { instancesService } from '@/data/instances-service';
 import { backtestService } from '@/data/backtest-service';
 import { researchService } from '@/data/research-service';
 import { datasetsService } from '@/data/datasets-service';
+import { emitAnalyticsEvent } from '@/lib/analytics';
 
 vi.mock('@/data/instances-service', () => ({
   instancesService: {
@@ -42,6 +43,10 @@ vi.mock('@/data/datasets-service', () => ({
   },
 }));
 
+vi.mock('@/lib/analytics', () => ({
+  emitAnalyticsEvent: vi.fn(),
+}));
+
 function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -61,6 +66,7 @@ function renderPage() {
 
 describe('ResearchPage guided wizard', () => {
   beforeEach(() => {
+    vi.mocked(emitAnalyticsEvent).mockClear();
     vi.mocked(instancesService.list).mockResolvedValue([
       {
         id: 'instance-orb',
@@ -114,6 +120,17 @@ describe('ResearchPage guided wizard', () => {
         })
       );
     });
+
+    expect(vi.mocked(emitAnalyticsEvent)).toHaveBeenCalledWith(
+      'backtest_sentiment_enabled',
+      expect.objectContaining({ source_surface: 'research', sentiment_mode: 'phase2_pending' })
+    );
+
+    await user.click(screen.getByRole('link', { name: 'Teach me sentiment' }));
+    expect(vi.mocked(emitAnalyticsEvent)).toHaveBeenCalledWith(
+      'teach_me_sentiment_opened',
+      expect.objectContaining({ source_surface: 'research', sentiment_mode: 'phase2_pending' })
+    );
   });
 
   it('shows missing-data guidance when no dataset snapshots exist', async () => {

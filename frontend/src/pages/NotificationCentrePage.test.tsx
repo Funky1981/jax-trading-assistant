@@ -5,11 +5,16 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationCentrePage } from './NotificationCentrePage';
 import { eventsService } from '@/data/events-service';
+import { emitAnalyticsEvent } from '@/lib/analytics';
 
 vi.mock('@/data/events-service', () => ({
   eventsService: {
     list: vi.fn(),
   },
+}));
+
+vi.mock('@/lib/analytics', () => ({
+  emitAnalyticsEvent: vi.fn(),
 }));
 
 function renderPage() {
@@ -31,6 +36,7 @@ function renderPage() {
 describe('NotificationCentrePage', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    vi.mocked(emitAnalyticsEvent).mockClear();
   });
 
   it('renders durable inbox entries with route-aware destinations', async () => {
@@ -46,9 +52,9 @@ describe('NotificationCentrePage', () => {
         },
         {
           id: 'event-opportunity',
-          kind: 'opportunity_detected',
-          title: 'New opportunity for SPY',
-          summary: 'Scanner confidence improved.',
+          kind: 'sentiment_invalidated',
+          title: 'Sentiment invalidated previous setup',
+          summary: 'Review AI Trading for updated evidence and next steps.',
           eventTime: '2026-05-22T09:30:00Z',
           attributes: { route: '/ai-trading', channels: ['in_app', 'email'] },
         },
@@ -65,6 +71,13 @@ describe('NotificationCentrePage', () => {
     const destinationLinks = screen.getAllByRole('link', { name: 'Open destination' }).map((link) => link.getAttribute('href'));
     expect(destinationLinks).toContain('/etf/approvals');
     expect(destinationLinks).toContain('/ai-trading');
+
+    await userEvent.setup().click(screen.getAllByRole('link', { name: 'Open destination' })[1]);
+    const sentimentCall = vi.mocked(emitAnalyticsEvent).mock.calls.find(
+      (call) => call[0] === 'sentiment_alert_opened' && call[1]?.destination_path === '/ai-trading'
+    );
+    expect(sentimentCall).toBeTruthy();
+
     expect(screen.getAllByText('In-app inbox').length).toBeGreaterThan(0);
     expect(screen.getByText('Email')).toBeInTheDocument();
   });

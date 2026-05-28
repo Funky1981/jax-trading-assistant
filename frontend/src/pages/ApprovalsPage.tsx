@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, CheckCircle, Clock, RefreshCw, XCircle } from 'lucide-react';
@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { emitAnalyticsEvent } from '@/lib/analytics';
 
 function fmtDate(raw?: string | null) {
   if (!raw) return '-';
@@ -83,9 +84,10 @@ interface CandidateRowProps {
     opts?: { snoozeHours?: number; notes?: string }
   ) => void;
   pending: boolean;
+  onEvidenceOpen: (item: ApprovalQueueItem) => void;
 }
 
-function CandidateRow({ item, onDecision, pending }: CandidateRowProps) {
+function CandidateRow({ item, onDecision, pending, onEvidenceOpen }: CandidateRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState('');
@@ -228,7 +230,9 @@ function CandidateRow({ item, onDecision, pending }: CandidateRowProps) {
           </Button>
 
           <Button size="sm" variant="outline" asChild>
-            <Link to={`/candidates/${item.id}/evidence`}>Evidence</Link>
+            <Link to={`/candidates/${item.id}/evidence`} onClick={() => onEvidenceOpen(item)}>
+              Evidence
+            </Link>
           </Button>
 
           <button className="ml-auto text-xs text-muted-foreground underline" onClick={() => setShowNotes(!showNotes)}>
@@ -302,10 +306,12 @@ function BlockedCandidateRow({
   item,
   onRefresh,
   pending,
+  onEvidenceOpen,
 }: {
   item: CandidateTrade;
   onRefresh: (id: string) => void;
   pending: boolean;
+  onEvidenceOpen: (item: CandidateTrade) => void;
 }) {
   const etfPolicy = etfPolicyFromMetadata(item.metadata);
   return (
@@ -343,7 +349,9 @@ function BlockedCandidateRow({
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <Button size="sm" variant="outline" asChild>
-              <Link to={`/candidates/${item.id}/evidence`}>Evidence</Link>
+              <Link to={`/candidates/${item.id}/evidence`} onClick={() => onEvidenceOpen(item)}>
+                Evidence
+              </Link>
             </Button>
             <Button size="sm" disabled={pending} onClick={() => onRefresh(item.id)}>
               <RefreshCw className="mr-1 h-4 w-4" /> Re-qualify & Queue Mobile
@@ -360,6 +368,10 @@ export function ApprovalsPage() {
   const [notification, setNotification] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingRefreshId, setPendingRefreshId] = useState<string | null>(null);
+
+  useEffect(() => {
+    emitAnalyticsEvent('page_viewed', { source_surface: 'approvals' });
+  }, []);
 
   const { data: queue = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['approvals-queue'],
@@ -469,6 +481,22 @@ export function ApprovalsPage() {
     refreshMutation.mutate(id);
   };
 
+  const handleEvidenceOpen = (item: ApprovalQueueItem | CandidateTrade) => {
+    const routeType = 'status' in item && typeof item.status === 'string' ? item.status : 'approval_required';
+
+    emitAnalyticsEvent('approval_sentiment_evidence_viewed', {
+      source_surface: 'approvals',
+      candidate_id: item.id,
+      route_type: routeType,
+      sentiment_mode:
+        typeof item.metadata?.sentimentMode === 'string'
+          ? item.metadata.sentimentMode
+          : typeof item.metadata?.sentiment_mode === 'string'
+            ? item.metadata.sentiment_mode
+            : undefined,
+    });
+  };
+
   return (
     <div className="container mx-auto max-w-5xl p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -507,7 +535,13 @@ export function ApprovalsPage() {
       )}
 
       {queue.map((item) => (
-        <CandidateRow key={item.id} item={item} onDecision={handleDecision} pending={pendingId === item.id} />
+        <CandidateRow
+          key={item.id}
+          item={item}
+          onDecision={handleDecision}
+          pending={pendingId === item.id}
+          onEvidenceOpen={handleEvidenceOpen}
+        />
       ))}
 
       <Card className="mt-6">
@@ -552,6 +586,7 @@ export function ApprovalsPage() {
                 item={item}
                 onRefresh={handleRefreshCandidate}
                 pending={pendingRefreshId === item.id}
+                onEvidenceOpen={handleEvidenceOpen}
               />
             ))
           )}

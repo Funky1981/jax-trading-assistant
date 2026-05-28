@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { HelpHint } from '@/components/ui/help-hint';
+import { emitAnalyticsEvent } from '@/lib/analytics';
 import {
   buildGuidedBacktestRequest,
   GUIDED_MARKETS,
@@ -181,6 +182,10 @@ export function ResearchPage() {
     setSelectedInstanceId(first.id);
     setEditor(toEditorState(first));
   }, [instancesQuery.data, instanceById, selectedInstanceId]);
+
+  useEffect(() => {
+    emitAnalyticsEvent('page_viewed', { source_surface: 'research' });
+  }, []);
 
   useEffect(() => {
     if (!projectsQuery.data || projectsQuery.data.length === 0) {
@@ -350,6 +355,12 @@ export function ResearchPage() {
       if (!datasetId) {
         throw new Error('A dataset snapshot is required before running guided research.');
       }
+
+      emitAnalyticsEvent('backtest_sentiment_enabled', {
+        source_surface: 'research',
+        enabled: false,
+        sentiment_mode: 'phase2_pending',
+      });
 
       return backtestService.run(
         buildGuidedBacktestRequest({
@@ -635,6 +646,19 @@ export function ResearchPage() {
             </Button>
             <Button type="button" variant="outline" onClick={() => setActiveTab('instances')}>
               Open advanced controls
+            </Button>
+            <Button type="button" variant="ghost" asChild>
+              <Link
+                to="/guide"
+                onClick={() =>
+                  emitAnalyticsEvent('teach_me_sentiment_opened', {
+                    source_surface: 'research',
+                    sentiment_mode: 'phase2_pending',
+                  })
+                }
+              >
+                Teach me sentiment
+              </Link>
             </Button>
           </div>
         </CardContent>
