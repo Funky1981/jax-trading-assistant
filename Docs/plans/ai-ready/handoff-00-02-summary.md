@@ -159,3 +159,57 @@ Follow-up commits now completed on `redesign`:
 - `npm run test:e2e -- e2e/trading.spec.ts e2e/dashboard.spec.ts`
 
 Result: all commands passed. Frontend build still reports the existing Vite large chunk warning.
+
+---
+
+## Update: tickets 06-07 continuation on `redesign`
+
+Follow-up commits completed on `redesign`:
+
+- `04a92b7 feat(frontend): add notification centre inbox v1`
+
+### Ticket 06 scope completed
+
+- Added `NotificationCentrePage` as the `/notifications` destination.
+- Implemented durable in-app inbox semantics in phase 1:
+  - unread/read state with persisted read markers
+  - event type, title, body, destination route, created time, and delivery channel labels
+  - stale badges for old notifications
+- Added notification event adapter and typed models:
+  - `frontend/src/data/notification-adapter.ts`
+  - `frontend/src/data/types.ts` additions
+- Wired route and routing tests:
+  - `/notifications` now renders Notification Centre
+- Added targeted tests for adapter/page/routing.
+
+Validation run (Ticket 06):
+
+- `npm run test -- src/data/notification-adapter.test.ts src/pages/NotificationCentrePage.test.tsx src/app/__tests__/AppRoutes.test.tsx`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+
+### Ticket 07 scope completed
+
+- Added Guided Research Wizard V1 to `frontend/src/pages/ResearchPage.tsx` with beginner-first steps:
+  - strategy template
+  - market scope
+  - period selection
+  - sentiment step visible but disabled for phase 1
+- Kept existing advanced tabs and raw controls (Instances / Projects / Backtests) intact.
+- Added missing-data UX in product language with operator path guidance.
+- Wizard output launches existing backtest flow by building the backend-compatible run payload.
+- Added helper logic and tests:
+  - `frontend/src/pages/research-guided-wizard.ts`
+  - `frontend/src/pages/research-guided-wizard.test.ts`
+  - `frontend/src/pages/ResearchPage.test.tsx`
+
+Validation run (Ticket 07 and notifications e2e coverage):
+
+- `npm run test -- src/pages/research-guided-wizard.test.ts src/pages/ResearchPage.test.tsx src/data/notification-adapter.test.ts src/pages/NotificationCentrePage.test.tsx src/app/__tests__/AppRoutes.test.tsx`
+- `npm run test:e2e -- e2e/notifications.spec.ts`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+
+Result: commands passed; frontend build retains the existing Vite large chunk warning.

@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, Upload, Download, Save, Plus, RefreshCw } from 'lucide-react';
 import { instancesService } from '@/data/instances-service';
 import { backtestService } from '@/data/backtest-service';
@@ -15,6 +15,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { HelpHint } from '@/components/ui/help-hint';
+import {
+  buildGuidedBacktestRequest,
+  GUIDED_MARKETS,
+  GUIDED_TEMPLATES,
+  resolveGuidedInstance,
+  resolveGuidedMarket,
+} from '@/pages/research-guided-wizard';
 
 type InstanceEditorState = {
   id?: string;
@@ -104,6 +111,10 @@ export function ResearchPage() {
   const [backtestError, setBacktestError] = useState('');
   const [datasetsRefreshedAt, setDatasetsRefreshedAt] = useState<Date | null>(null);
   const [guidedStrategyMessage, setGuidedStrategyMessage] = useState('');
+  const [guidedTemplateId, setGuidedTemplateId] = useState(GUIDED_TEMPLATES[0].id);
+  const [guidedMarketId, setGuidedMarketId] = useState(GUIDED_TEMPLATES[0].defaultMarketId);
+  const [guidedRange, setGuidedRange] = useState(getInitialDateRange());
+  const [guidedError, setGuidedError] = useState('');
   const editorErrorRef = useRef<HTMLParagraphElement | null>(null);
   const backtestErrorRef = useRef<HTMLParagraphElement | null>(null);
   const projectErrorRef = useRef<HTMLParagraphElement | null>(null);
@@ -146,6 +157,18 @@ export function ResearchPage() {
     }
     return map;
   }, [instancesQuery.data]);
+
+  const selectedGuidedTemplate = useMemo(
+    () => GUIDED_TEMPLATES.find((template) => template.id === guidedTemplateId) ?? GUIDED_TEMPLATES[0],
+    [guidedTemplateId]
+  );
+
+  const selectedGuidedMarket = useMemo(() => resolveGuidedMarket(guidedMarketId), [guidedMarketId]);
+
+  const guidedInstance = useMemo(
+    () => resolveGuidedInstance(instancesQuery.data ?? [], selectedGuidedTemplate),
+    [instancesQuery.data, selectedGuidedTemplate]
+  );
 
   useEffect(() => {
     if (!instancesQuery.data || instancesQuery.data.length === 0) {
@@ -319,6 +342,35 @@ export function ResearchPage() {
     },
   });
 
+  const runGuidedBacktestMutation = useMutation({
+    mutationFn: async () => {
+      if (!guidedInstance) {
+        throw new Error('No matching strategy setup is available yet for this guided template.');
+      }
+      if (!datasetId) {
+        throw new Error('A dataset snapshot is required before running guided research.');
+      }
+
+      return backtestService.run(
+        buildGuidedBacktestRequest({
+          instanceId: guidedInstance.id,
+          from: guidedRange.fromStr,
+          to: guidedRange.toStr,
+          marketId: selectedGuidedMarket.id,
+          datasetId,
+        })
+      );
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['backtest-runs'] });
+      setGuidedError('');
+      setActiveTab('runs');
+    },
+    onError: (err) => {
+      setGuidedError(formatError(err));
+    },
+  });
+
   const createProjectMutation = useMutation({
     mutationFn: async () => {
       if (!projectForm.name.trim()) {
@@ -463,6 +515,130 @@ export function ResearchPage() {
           Create strategy setups and run dataset-backed backtests. This is the main backtesting workspace.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            Guided Research Wizard
+            <HelpHint text="Run beginner-friendly backtests without editing raw JSON. Advanced controls stay available below." />
+          </CardTitle>
+          <CardDescription>
+            Pick a template, market, and period. Sentiment options are visible for planning and will be enabled in a later phase.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Step 1: Strategy template</p>
+              <Select
+                value={guidedTemplateId}
+                onValueChange={(value) => {
+                  setGuidedTemplateId(value);
+                  const nextTemplate = GUIDED_TEMPLATES.find((template) => template.id === value);
+                  if (nextTemplate) {
+                    setGuidedMarketId(nextTemplate.defaultMarketId);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select strategy template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GUIDED_TEMPLATES.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{selectedGuidedTemplate.description}</p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Step 2: Market scope</p>
+              <Select value={guidedMarketId} onValueChange={setGuidedMarketId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select market" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GUIDED_MARKETS.map((market) => (
+                    <SelectItem key={market.id} value={market.id}>
+                      {market.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Symbols: {selectedGuidedMarket.symbols.join(', ')}</p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Step 3: Backtest period</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  type="date"
+                  value={guidedRange.fromStr}
+                  onChange={(event) => setGuidedRange((prev) => ({ ...prev, fromStr: event.target.value }))}
+                />
+                <Input
+                  type="date"
+                  value={guidedRange.toStr}
+                  onChange={(event) => setGuidedRange((prev) => ({ ...prev, toStr: event.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Step 4: Sentiment feature</p>
+              <Select value="phase2_pending" disabled>
+                <SelectTrigger>
+                  <SelectValue placeholder="Phase 2 pending" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="phase2_pending">Visible now, available in Phase 2</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Sentiment ranking and gating options are planned but not connected in this phase.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            {guidedInstance
+              ? `Using existing strategy setup: ${guidedInstance.name}`
+              : 'No matching strategy setup is available yet for this template.'}
+          </div>
+
+          {!datasetId && (
+            <div className="rounded-md border border-warning bg-warning/10 px-3 py-2 text-sm text-foreground">
+              Research needs a prepared dataset snapshot before running. Ask an operator to refresh dataset snapshots,
+              then pick one below in Advanced controls or review snapshots in <Link className="underline" to="/system">System</Link>.
+            </div>
+          )}
+
+          {!guidedInstance && (
+            <div className="rounded-md border border-warning bg-warning/10 px-3 py-2 text-sm text-foreground">
+              This template needs a strategy setup first. Open Advanced controls and create one in Instances.
+            </div>
+          )}
+
+          {guidedError && <p className="text-sm text-destructive">{guidedError}</p>}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => runGuidedBacktestMutation.mutate()}
+              disabled={!guidedInstance || !datasetId || runGuidedBacktestMutation.isPending}
+            >
+              <Play className="mr-1 h-4 w-4" />
+              {runGuidedBacktestMutation.isPending ? 'Running guided backtest...' : 'Run guided backtest'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setActiveTab('instances')}>
+              Open advanced controls
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'instances' | 'projects' | 'runs')}>
         <TabsList>
