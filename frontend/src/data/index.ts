@@ -8,4 +8,5 @@ export { eventsService } from './events-service';
 export { datasetsService } from './datasets-service';
 export { systemService } from './system-service';
 export { tradingModesService } from './trading-modes-service';
+export { aiService } from './ai-service';
 export * from './types';

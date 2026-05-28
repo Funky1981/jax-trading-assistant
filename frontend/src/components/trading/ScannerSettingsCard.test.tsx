@@ -5,23 +5,22 @@ import type { ScannerSettings } from '@/data/types';
 
 const baseSettings: ScannerSettings = {
   enabled: true,
-  assetScope: 'ETF pilot',
+  assetScope: 'etf',
   symbols: ['SPY', 'QQQ', 'IWM'],
-  universePreset: 'Phase 1 ETF universe',
-  intervalSeconds: 30,
-  minimumConfidence: 0.65,
-  connected: false,
+  universePreset: 'etf-core',
+  intervalSeconds: 300,
+  minimumConfidence: 0.7,
+  connected: true,
   sentiment: {
-    enabled: true,
-    sourceScope: 'Trusted news and filings',
-    timeWindow: 'Last 24 hours',
-    minimumThresholdLabel: 'Positive or better',
-    minimumSourceCount: 2,
-    sourceTrustMode: 'trust_weighted',
-    mode: 'rank_boost',
-    supported: false,
-    connected: false,
-    unsupportedReason: 'Sentiment routing needs Phase 2 backend support.',
+    enabled: false,
+    sourceScope: 'news',
+    timeWindow: '24h',
+    minimumThresholdLabel: '60%',
+    minimumSourceCount: 3,
+    sourceTrustMode: 'equal',
+    mode: 'filter',
+    supported: true,
+    connected: true,
   },
 };
 
@@ -31,25 +30,25 @@ describe('ScannerSettingsCard', () => {
 
     expect(screen.getByRole('heading', { name: 'Scanner settings' })).toBeInTheDocument();
     expect(screen.getByText('Watching')).toBeInTheDocument();
-    expect(screen.getByLabelText('Asset scope')).toHaveDisplayValue('ETF pilot');
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.getByLabelText('Asset scope')).toHaveDisplayValue('etf');
     expect(screen.getByLabelText('Symbols')).toHaveDisplayValue('SPY, QQQ, IWM');
-    expect(screen.getByLabelText('Minimum confidence')).toHaveDisplayValue('65%');
-    expect(screen.getByLabelText('Sentiment source scope')).toHaveDisplayValue('Trusted news and filings');
-    expect(screen.getByLabelText('Sentiment mode')).toHaveDisplayValue('Rank boost');
+    expect(screen.getByLabelText('Minimum confidence')).toHaveDisplayValue('70%');
+    expect(screen.getByLabelText('Sentiment source scope')).toHaveDisplayValue('news');
+    expect(screen.getByLabelText('Sentiment mode')).toHaveDisplayValue('Filter');
   });
 
   it('shows disabled scanner state without hiding the settings', () => {
     render(<ScannerSettingsCard settings={{ ...baseSettings, enabled: false }} />);
 
     expect(screen.getByText('Paused')).toBeInTheDocument();
-    expect(screen.getByLabelText('Scan interval')).toHaveDisplayValue('30 seconds');
+    expect(screen.getByLabelText('Scan interval')).toHaveDisplayValue('300 seconds');
   });
 
-  it('explains unsupported sentiment placeholders', () => {
-    render(<ScannerSettingsCard settings={baseSettings} />);
+  it('shows connected scanner help text and toggle button', () => {
+    render(<ScannerSettingsCard onToggleScanner={() => undefined} settings={baseSettings} />);
 
-    expect(screen.getByText('Unsupported until Phase 2')).toBeInTheDocument();
-    expect(screen.getByText('Sentiment routing needs Phase 2 backend support.')).toBeInTheDocument();
-    expect(screen.getByText(/Settings changes are not connected until Phase 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/persisted and connected to the AI scanner API/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pause scanner/i })).toBeInTheDocument();
   });
 });

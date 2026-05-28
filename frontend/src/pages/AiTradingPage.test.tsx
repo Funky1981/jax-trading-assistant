@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { AiTradingPage } from './AiTradingPage';
 import { approvalsService, candidatesService } from '@/data/approvals-service';
+import { aiService } from '@/data/ai-service';
 import { signalsService } from '@/data/signals-service';
 
 vi.mock('@/data/signals-service', () => ({
@@ -20,6 +21,62 @@ vi.mock('@/data/approvals-service', () => ({
     list: vi.fn(),
   },
 }));
+
+vi.mock('@/data/ai-service', () => ({
+  aiService: {
+    getOverview: vi.fn(),
+    updateScanner: vi.fn(),
+  },
+}));
+
+function mockOverview() {
+  vi.mocked(aiService.getOverview).mockResolvedValue({
+    checkedAt: '2026-05-22T10:00:00Z',
+    scanner: {
+      enabled: true,
+      assetScope: 'etf',
+      symbols: ['SPY', 'QQQ', 'IWM'],
+      universePreset: 'etf-core',
+      intervalSeconds: 300,
+      minimumConfidence: 0.7,
+      sentiment: {
+        enabled: false,
+        sourceScope: 'news',
+        window: '24h',
+        threshold: 0.6,
+        minimumSourceCount: 3,
+        sourceTrustWeightingMode: 'equal',
+        mode: 'filter',
+      },
+      status: 'ready',
+      channels: {
+        inApp: true,
+        desktopWeb: false,
+        mobilePush: false,
+      },
+      policy: {
+        manualRouteEnabled: true,
+        approvalRouteEnabled: true,
+        requiresHumanApproval: true,
+      },
+    },
+    opportunityCounts: {
+      signalsPending: 1,
+      candidates: 1,
+      approvals: 1,
+    },
+    policySummary: {
+      requiresHumanApproval: true,
+      manualRouteEnabled: true,
+      approvalRouteEnabled: true,
+    },
+    channelSummary: {
+      inApp: true,
+      desktopWeb: false,
+      mobilePush: false,
+    },
+  });
+}
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -39,6 +96,7 @@ function renderPage() {
 
 describe('AiTradingPage', () => {
   it('renders scanner state and unified Opportunity feed with route-aware actions', async () => {
+    mockOverview();
     vi.mocked(signalsService.list).mockResolvedValue({
       signals: [
         {
@@ -100,7 +158,8 @@ describe('AiTradingPage', () => {
     expect(screen.getAllByRole('button', { name: 'Dismiss' }).length).toBeGreaterThan(0);
   });
 
-  it('renders scanner and sentiment settings as Phase 1 placeholders', async () => {
+  it('renders scanner and sentiment settings from API overview', async () => {
+    mockOverview();
     vi.mocked(signalsService.list).mockResolvedValue({ signals: [], total: 0, limit: 12, offset: 0 });
     vi.mocked(candidatesService.list).mockResolvedValue([]);
     vi.mocked(approvalsService.getQueue).mockResolvedValue([]);
@@ -109,17 +168,20 @@ describe('AiTradingPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Scanner settings' })).toBeInTheDocument();
     expect(screen.getByText('Watching')).toBeInTheDocument();
+    expect(screen.getByText('Connected')).toBeInTheDocument();
     expect(screen.getByLabelText('Symbols')).toHaveDisplayValue('SPY, QQQ, IWM');
-    expect(screen.getByLabelText('Minimum confidence')).toHaveDisplayValue('65%');
-    expect(screen.getByLabelText('Sentiment source scope')).toHaveDisplayValue('Trusted news and filings');
-    expect(screen.getByLabelText('Sentiment time window')).toHaveDisplayValue('Last 24 hours');
-    expect(screen.getByLabelText('Minimum sentiment threshold')).toHaveDisplayValue('Positive or better');
-    expect(screen.getByLabelText('Source trust weighting')).toHaveDisplayValue('Trust-weighted sources');
-    expect(screen.getByLabelText('Sentiment mode')).toHaveDisplayValue('Rank boost');
-    expect(screen.getByText(/Settings changes are not connected until Phase 2/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Minimum confidence')).toHaveDisplayValue('70%');
+    expect(screen.getByLabelText('Sentiment source scope')).toHaveDisplayValue('news');
+    expect(screen.getByLabelText('Sentiment time window')).toHaveDisplayValue('24h');
+    expect(screen.getByLabelText('Minimum sentiment threshold')).toHaveDisplayValue('60%');
+    expect(screen.getByLabelText('Source trust weighting')).toHaveDisplayValue('Equal source weighting');
+    expect(screen.getByLabelText('Sentiment mode')).toHaveDisplayValue('Filter');
+    expect(screen.getByText(/persisted and connected to the AI scanner API/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pause scanner/i })).toBeInTheDocument();
   });
 
   it('renders an explicit empty state', async () => {
+    mockOverview();
     vi.mocked(signalsService.list).mockResolvedValue({ signals: [], total: 0, limit: 12, offset: 0 });
     vi.mocked(candidatesService.list).mockResolvedValue([]);
     vi.mocked(approvalsService.getQueue).mockResolvedValue([]);
@@ -130,6 +192,7 @@ describe('AiTradingPage', () => {
   });
 
   it('renders an explicit partial error state', async () => {
+    mockOverview();
     vi.mocked(signalsService.list).mockRejectedValue(new Error('offline'));
     vi.mocked(candidatesService.list).mockResolvedValue([]);
     vi.mocked(approvalsService.getQueue).mockResolvedValue([]);

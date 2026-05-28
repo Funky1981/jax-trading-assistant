@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowRight, Bot, Clock, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
 import { approvalsService, candidatesService } from '@/data/approvals-service';
+import { aiService } from '@/data/ai-service';
 import { signalsService } from '@/data/signals-service';
 import { toOpportunitySummaries } from '@/data/opportunity-adapter';
-import type { OpportunityRoute, OpportunitySummary, ScannerSettings } from '@/data/types';
+import type { AIScannerApiState, OpportunityRoute, OpportunitySummary, ScannerSettings } from '@/data/types';
 import { ScannerSettingsCard } from '@/components/trading/ScannerSettingsCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,28 +16,53 @@ import { emitAnalyticsEvent } from '@/lib/analytics';
 const REFRESH_INTERVAL_MS = 30_000;
 const STALE_DATA_MS = 5 * 60_000;
 
-const phaseOneScannerSettings: ScannerSettings = {
+const defaultScannerSettings: ScannerSettings = {
   enabled: true,
-  assetScope: 'ETF pilot',
+  assetScope: 'etf',
   symbols: ['SPY', 'QQQ', 'IWM'],
-  universePreset: 'Phase 1 ETF universe',
-  intervalSeconds: 30,
-  minimumConfidence: 0.65,
-  connected: false,
+  universePreset: 'etf-core',
+  intervalSeconds: 300,
+  minimumConfidence: 0.7,
+  connected: true,
   sentiment: {
-    enabled: true,
-    sourceScope: 'Trusted news and filings',
-    timeWindow: 'Last 24 hours',
-    minimumThresholdLabel: 'Positive or better',
-    minimumSourceCount: 2,
-    sourceTrustMode: 'trust_weighted',
-    mode: 'rank_boost',
-    supported: false,
-    connected: false,
-    unsupportedReason:
-      'Sentiment is shown as boost/filter guidance in Phase 1. Required-feature routing needs Phase 2 backend support.',
+    enabled: false,
+    sourceScope: 'news',
+    timeWindow: '24h',
+    minimumThresholdLabel: '60%',
+    minimumSourceCount: 3,
+    sourceTrustMode: 'equal',
+    mode: 'filter',
+    supported: true,
+    connected: true,
   },
 };
+
+function mapScannerToSettings(scanner?: AIScannerApiState): ScannerSettings {
+  if (!scanner) {
+    return defaultScannerSettings;
+  }
+
+  return {
+    enabled: scanner.enabled,
+    assetScope: scanner.assetScope,
+    symbols: scanner.symbols,
+    universePreset: scanner.universePreset,
+    intervalSeconds: scanner.intervalSeconds,
+    minimumConfidence: scanner.minimumConfidence,
+    connected: true,
+    sentiment: {
+      enabled: scanner.sentiment.enabled,
+      sourceScope: scanner.sentiment.sourceScope,
+      timeWindow: scanner.sentiment.window,
+      minimumThresholdLabel: `${Math.round(scanner.sentiment.threshold * 100)}%`,
+      minimumSourceCount: scanner.sentiment.minimumSourceCount,
+      sourceTrustMode: scanner.sentiment.sourceTrustWeightingMode,
+      mode: scanner.sentiment.mode,
+      supported: true,
+      connected: true,
+    },
+  };
+}
 
 const routeLabels: Record<OpportunityRoute, string> = {
   manual_allowed: 'Manual review',
@@ -98,7 +124,7 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
       source_surface: 'ai_trading',
       opportunity_id: opportunity.id,
       route_type: opportunity.route,
-      sentiment_mode: phaseOneScannerSettings.sentiment.mode,
+      sentiment_mode: 'api_scanner',
     });
   }, [opportunity.id, opportunity.route, opportunity.sentimentSummary]);
 
@@ -161,6 +187,14 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
 
 export function AiTradingPage() {
   const trackedSetupRef = useRef(false);
+  const queryClient = useQueryClient();
+
+  const overviewQuery = useQuery({
+    queryKey: ['ai-trading', 'overview'],
+    queryFn: () => aiService.getOverview(),
+    refetchInterval: REFRESH_INTERVAL_MS,
+    staleTime: 60_000,
+  });
 
   const signalsQuery = useQuery({
     queryKey: ['ai-trading', 'signals'],
@@ -191,13 +225,36 @@ export function AiTradingPage() {
     [approvalsQuery.data, candidatesQuery.data, signalsQuery.data]
   );
 
-  const queries = [signalsQuery, candidatesQuery, approvalsQuery];
+  const scannerSettings = useMemo(
+    () => mapScannerToSettings(overviewQuery.data?.scanner),
+    [overviewQuery.data?.scanner]
+  );
+
+  const scannerMutation = useMutation({
+    mutationFn: (state: AIScannerApiState) => aiService.updateScanner(state),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-trading', 'overview'] });
+    },
+  });
+
+  const queries = [overviewQuery, signalsQuery, candidatesQuery, approvalsQuery];
   const isLoading = queries.some((query) => query.isPending);
   const isError = queries.some((query) => query.isError);
   const isFetching = queries.some((query) => query.isFetching);
   const latestUpdate = Math.max(...queries.map((query) => query.dataUpdatedAt).filter(Boolean), 0);
   const staleData = latestUpdate > 0 && Date.now() - latestUpdate > STALE_DATA_MS;
-  const scannerStatus = isError ? 'Degraded' : isFetching ? 'Scanning' : 'Ready';
+  const rawScannerStatus = overviewQuery.data?.scanner.status;
+  const scannerStatus = rawScannerStatus
+    ? `${rawScannerStatus.charAt(0).toUpperCase()}${rawScannerStatus.slice(1)}`
+    : isError
+      ? 'Degraded'
+      : isFetching
+        ? 'Scanning'
+        : 'Ready';
+  const opportunitiesCount =
+    (overviewQuery.data?.opportunityCounts.signalsPending ?? 0) +
+    (overviewQuery.data?.opportunityCounts.candidates ?? 0) +
+    (overviewQuery.data?.opportunityCounts.approvals ?? 0);
 
   useEffect(() => {
     emitAnalyticsEvent('page_viewed', { source_surface: 'ai_trading' });
@@ -209,17 +266,33 @@ export function AiTradingPage() {
     }
 
     trackedSetupRef.current = true;
+    if (!overviewQuery.data?.scanner) {
+      return;
+    }
+
     emitAnalyticsEvent('ai_scanner_enabled', {
       source_surface: 'ai_trading',
-      enabled: phaseOneScannerSettings.enabled,
-      sentiment_mode: phaseOneScannerSettings.sentiment.mode,
+      enabled: overviewQuery.data.scanner.enabled,
+      sentiment_mode: overviewQuery.data.scanner.sentiment.mode,
     });
     emitAnalyticsEvent('sentiment_settings_opened', {
       source_surface: 'ai_trading',
-      sentiment_mode: phaseOneScannerSettings.sentiment.mode,
-      enabled: phaseOneScannerSettings.sentiment.enabled,
+      sentiment_mode: overviewQuery.data.scanner.sentiment.mode,
+      enabled: overviewQuery.data.scanner.sentiment.enabled,
     });
-  }, []);
+  }, [overviewQuery.data?.scanner]);
+
+  const toggleScanner = () => {
+    const scanner = overviewQuery.data?.scanner;
+    if (!scanner) {
+      return;
+    }
+
+    scannerMutation.mutate({
+      ...scanner,
+      enabled: !scanner.enabled,
+    });
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -254,8 +327,8 @@ export function AiTradingPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{opportunities.length}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Unified across signals, candidates, and approvals.</p>
+            <p className="text-2xl font-semibold">{Math.max(opportunities.length, opportunitiesCount)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Unified across signals, candidates, approvals, and API overview counts.</p>
           </CardContent>
         </Card>
         <Card>
@@ -272,7 +345,7 @@ export function AiTradingPage() {
         </Card>
       </section>
 
-      <ScannerSettingsCard settings={phaseOneScannerSettings} />
+      <ScannerSettingsCard isSaving={scannerMutation.isPending} onToggleScanner={toggleScanner} settings={scannerSettings} />
 
       {staleData && (
         <div className="flex items-center gap-2 rounded-md border border-warning bg-warning/10 px-4 py-3 text-sm text-foreground">
@@ -301,6 +374,7 @@ export function AiTradingPage() {
               signalsQuery.refetch();
               candidatesQuery.refetch();
               approvalsQuery.refetch();
+              overviewQuery.refetch();
             }}
           >
             <RefreshCw className="h-4 w-4" />

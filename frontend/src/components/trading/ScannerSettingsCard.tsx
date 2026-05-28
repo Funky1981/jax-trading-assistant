@@ -1,6 +1,7 @@
 import { RadioTower, SlidersHorizontal } from 'lucide-react';
 import type { ScannerSentimentMode, ScannerSettings, ScannerSourceTrustMode } from '@/data/types';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const sentimentModeLabels: Record<ScannerSentimentMode, string> = {
@@ -43,14 +44,22 @@ function Field({ id, label, value, help }: { id: string; label: string; value: s
   );
 }
 
-export function ScannerSettingsCard({ settings }: { settings: ScannerSettings }) {
+export function ScannerSettingsCard({
+  settings,
+  onToggleScanner,
+  isSaving,
+}: {
+  settings: ScannerSettings;
+  onToggleScanner?: () => void;
+  isSaving?: boolean;
+}) {
   const sentiment = settings.sentiment;
   const controlsHelp = settings.connected
-    ? 'Scanner settings are connected.'
-    : 'Settings changes are not connected until Phase 2 scanner APIs are available.';
+    ? 'Scanner settings are persisted and connected to the AI scanner API.'
+    : 'Scanner settings are currently unavailable.';
   const sentimentHelp = sentiment.connected
-    ? 'Sentiment settings are connected.'
-    : 'Sentiment settings are placeholders until Phase 2 sentiment APIs are available.';
+    ? 'Sentiment settings are connected to scanner filtering.'
+    : 'Sentiment settings are currently unavailable.';
 
   return (
     <Card>
@@ -64,7 +73,12 @@ export function ScannerSettingsCard({ settings }: { settings: ScannerSettings })
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant={settings.enabled ? 'default' : 'secondary'}>{settings.enabled ? 'Watching' : 'Paused'}</Badge>
-          <Badge variant={settings.connected ? 'default' : 'outline'}>{settings.connected ? 'Connected' : 'Phase 1 placeholder'}</Badge>
+          <Badge variant={settings.connected ? 'default' : 'outline'}>{settings.connected ? 'Connected' : 'Offline'}</Badge>
+          {onToggleScanner && (
+            <Button disabled={!!isSaving} onClick={onToggleScanner} size="sm" type="button" variant="outline">
+              {isSaving ? 'Saving...' : settings.enabled ? 'Pause scanner' : 'Resume scanner'}
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -87,7 +101,7 @@ export function ScannerSettingsCard({ settings }: { settings: ScannerSettings })
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold text-foreground">Sentiment controls</p>
             <Badge variant={sentiment.enabled ? 'secondary' : 'outline'}>{sentiment.enabled ? 'Included' : 'Off'}</Badge>
-            {!sentiment.supported && <Badge variant="outline">Unsupported until Phase 2</Badge>}
+            {!sentiment.supported && <Badge variant="outline">Unsupported</Badge>}
           </div>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             <Field id="sentiment-source-scope" label="Sentiment source scope" value={sentiment.sourceScope} />

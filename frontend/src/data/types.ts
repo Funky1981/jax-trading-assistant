@@ -263,6 +263,64 @@ export interface ScannerSettings {
   sentiment: ScannerSentimentSettings;
 }
 
+export interface AIScannerApiSentiment {
+  enabled: boolean;
+  sourceScope: string;
+  window: string;
+  threshold: number;
+  minimumSourceCount: number;
+  sourceTrustWeightingMode: ScannerSourceTrustMode;
+  mode: ScannerSentimentMode;
+}
+
+export interface AIScannerApiChannels {
+  inApp: boolean;
+  desktopWeb: boolean;
+  mobilePush: boolean;
+}
+
+export interface AIScannerApiPolicy {
+  manualRouteEnabled: boolean;
+  approvalRouteEnabled: boolean;
+  blockedReason?: string;
+  requiresHumanApproval: boolean;
+}
+
+export interface AIScannerApiState {
+  enabled: boolean;
+  assetScope: string;
+  symbols: string[];
+  universePreset: string;
+  intervalSeconds: number;
+  minimumConfidence: number;
+  sentiment: AIScannerApiSentiment;
+  status: string;
+  lastScanCompletedAt?: string;
+  nextScanAt?: string;
+  channels: AIScannerApiChannels;
+  policy: AIScannerApiPolicy;
+}
+
+export interface AIOverviewApiResponse {
+  checkedAt: string;
+  scanner: AIScannerApiState;
+  opportunityCounts: {
+    signalsPending: number;
+    candidates: number;
+    approvals: number;
+  };
+  policySummary: {
+    requiresHumanApproval: boolean;
+    manualRouteEnabled: boolean;
+    approvalRouteEnabled: boolean;
+  };
+  channelSummary: {
+    inApp: boolean;
+    desktopWeb: boolean;
+    mobilePush: boolean;
+  };
+}
+
 export interface OrchestrationRun {
   id: string;
   symbol: string;

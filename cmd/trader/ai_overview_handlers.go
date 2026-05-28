@@ -2,23 +2,28 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type aiScannerSentimentState struct {
-	Enabled                   bool    `json:"enabled"`
-	SourceScope               string  `json:"sourceScope"`
-	Window                    string  `json:"window"`
-	Threshold                 float64 `json:"threshold"`
-	MinimumSourceCount        int     `json:"minimumSourceCount"`
-	SourceTrustWeightingMode  string  `json:"sourceTrustWeightingMode"`
-	Mode                      string  `json:"mode"`
+	Enabled                  bool    `json:"enabled"`
+	SourceScope              string  `json:"sourceScope"`
+	Window                   string  `json:"window"`
+	Threshold                float64 `json:"threshold"`
+	MinimumSourceCount       int     `json:"minimumSourceCount"`
+	SourceTrustWeightingMode string  `json:"sourceTrustWeightingMode"`
+	Mode                     string  `json:"mode"`
 }
 
 type aiScannerChannels struct {
@@ -28,25 +33,25 @@ type aiScannerChannels struct {
 }
 
 type aiScannerPolicy struct {
-	ManualRouteEnabled      bool   `json:"manualRouteEnabled"`
-	ApprovalRouteEnabled    bool   `json:"approvalRouteEnabled"`
-	BlockedReason           string `json:"blockedReason,omitempty"`
-	RequiresHumanApproval   bool   `json:"requiresHumanApproval"`
+	ManualRouteEnabled    bool   `json:"manualRouteEnabled"`
+	ApprovalRouteEnabled  bool   `json:"approvalRouteEnabled"`
+	BlockedReason         string `json:"blockedReason,omitempty"`
+	RequiresHumanApproval bool   `json:"requiresHumanApproval"`
 }
 
 type aiScannerState struct {
-	Enabled             bool                     `json:"enabled"`
-	AssetScope          string                   `json:"assetScope"`
-	Symbols             []string                 `json:"symbols"`
-	UniversePreset      string                   `json:"universePreset"`
-	IntervalSeconds     int                      `json:"intervalSeconds"`
-	MinimumConfidence   float64                  `json:"minimumConfidence"`
-	Sentiment           aiScannerSentimentState  `json:"sentiment"`
-	Status              string                   `json:"status"`
-	LastScanCompletedAt *time.Time               `json:"lastScanCompletedAt,omitempty"`
-	NextScanAt          *time.Time               `json:"nextScanAt,omitempty"`
-	Channels            aiScannerChannels        `json:"channels"`
-	Policy              aiScannerPolicy          `json:"policy"`
+	Enabled             bool                    `json:"enabled"`
+	AssetScope          string                  `json:"assetScope"`
+	Symbols             []string                `json:"symbols"`
+	UniversePreset      string                  `json:"universePreset"`
+	IntervalSeconds     int                     `json:"intervalSeconds"`
+	MinimumConfidence   float64                 `json:"minimumConfidence"`
+	Sentiment           aiScannerSentimentState `json:"sentiment"`
+	Status              string                  `json:"status"`
+	LastScanCompletedAt *time.Time              `json:"lastScanCompletedAt,omitempty"`
+	NextScanAt          *time.Time              `json:"nextScanAt,omitempty"`
+	Channels            aiScannerChannels       `json:"channels"`
+	Policy              aiScannerPolicy         `json:"policy"`
 }
 
 type aiScannerStateStore struct {
@@ -112,11 +117,16 @@ func defaultAIScannerState() aiScannerState {
 	}
 }
 
-func aiScannerHandler() http.HandlerFunc {
+func aiScannerHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			jsonOK(w, globalAIScannerStore.get())
+			state, err := loadAIScannerState(r.Context(), pool)
+			if err != nil {
+				http.Error(w, "failed to load scanner settings", http.StatusInternalServerError)
+				return
+			}
+			jsonOK(w, state)
 		case http.MethodPut:
 			var req aiScannerState
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -137,12 +147,153 @@ func aiScannerHandler() http.HandlerFunc {
 			next := now.Add(time.Duration(req.IntervalSeconds) * time.Second)
 			req.LastScanCompletedAt = &now
 			req.NextScanAt = &next
-			globalAIScannerStore.set(req)
+			if err := saveAIScannerState(r.Context(), pool, req); err != nil {
+				http.Error(w, "failed to persist scanner settings", http.StatusInternalServerError)
+				return
+			}
 			jsonOK(w, req)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
+}
+
+func loadAIScannerState(ctx context.Context, pool *pgxpool.Pool) (aiScannerState, error) {
+	if pool == nil {
+		return globalAIScannerStore.get(), nil
+	}
+
+	var (
+		state       aiScannerState
+		symbolsRaw  []byte
+		sentRaw     []byte
+		channelsRaw []byte
+		policyRaw   []byte
+		lastScan    sql.NullTime
+		nextScan    sql.NullTime
+	)
+
+	err := pool.QueryRow(ctx, `
+		SELECT enabled, asset_scope, symbols, universe_preset, interval_seconds,
+		       minimum_confidence, sentiment, status, last_scan_completed_at,
+		       next_scan_at, channels, policy
+		FROM ai_scanner_settings
+		WHERE id = 1
+	`).Scan(
+		&state.Enabled,
+		&state.AssetScope,
+		&symbolsRaw,
+		&state.UniversePreset,
+		&state.IntervalSeconds,
+		&state.MinimumConfidence,
+		&sentRaw,
+		&state.Status,
+		&lastScan,
+		&nextScan,
+		&channelsRaw,
+		&policyRaw,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			defaultState := defaultAIScannerState()
+			if saveErr := saveAIScannerState(ctx, pool, defaultState); saveErr != nil {
+				return aiScannerState{}, saveErr
+			}
+			return defaultState, nil
+		}
+		return aiScannerState{}, fmt.Errorf("query scanner settings: %w", err)
+	}
+
+	if err := json.Unmarshal(symbolsRaw, &state.Symbols); err != nil {
+		return aiScannerState{}, fmt.Errorf("decode symbols: %w", err)
+	}
+	if err := json.Unmarshal(sentRaw, &state.Sentiment); err != nil {
+		return aiScannerState{}, fmt.Errorf("decode sentiment: %w", err)
+	}
+	if err := json.Unmarshal(channelsRaw, &state.Channels); err != nil {
+		return aiScannerState{}, fmt.Errorf("decode channels: %w", err)
+	}
+	if err := json.Unmarshal(policyRaw, &state.Policy); err != nil {
+		return aiScannerState{}, fmt.Errorf("decode policy: %w", err)
+	}
+
+	if lastScan.Valid {
+		t := lastScan.Time.UTC()
+		state.LastScanCompletedAt = &t
+	}
+	if nextScan.Valid {
+		t := nextScan.Time.UTC()
+		state.NextScanAt = &t
+	}
+
+	return state, nil
+}
+
+func saveAIScannerState(ctx context.Context, pool *pgxpool.Pool, state aiScannerState) error {
+	if pool == nil {
+		globalAIScannerStore.set(state)
+		return nil
+	}
+
+	symbolsRaw, err := json.Marshal(state.Symbols)
+	if err != nil {
+		return fmt.Errorf("encode symbols: %w", err)
+	}
+	sentRaw, err := json.Marshal(state.Sentiment)
+	if err != nil {
+		return fmt.Errorf("encode sentiment: %w", err)
+	}
+	channelsRaw, err := json.Marshal(state.Channels)
+	if err != nil {
+		return fmt.Errorf("encode channels: %w", err)
+	}
+	policyRaw, err := json.Marshal(state.Policy)
+	if err != nil {
+		return fmt.Errorf("encode policy: %w", err)
+	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO ai_scanner_settings (
+			id, enabled, asset_scope, symbols, universe_preset, interval_seconds,
+			minimum_confidence, sentiment, status, last_scan_completed_at,
+			next_scan_at, channels, policy
+		)
+		VALUES (
+			1, $1, $2, $3::jsonb, $4, $5, $6, $7::jsonb, $8, $9, $10, $11::jsonb, $12::jsonb
+		)
+		ON CONFLICT (id) DO UPDATE SET
+			enabled = EXCLUDED.enabled,
+			asset_scope = EXCLUDED.asset_scope,
+			symbols = EXCLUDED.symbols,
+			universe_preset = EXCLUDED.universe_preset,
+			interval_seconds = EXCLUDED.interval_seconds,
+			minimum_confidence = EXCLUDED.minimum_confidence,
+			sentiment = EXCLUDED.sentiment,
+			status = EXCLUDED.status,
+			last_scan_completed_at = EXCLUDED.last_scan_completed_at,
+			next_scan_at = EXCLUDED.next_scan_at,
+			channels = EXCLUDED.channels,
+			policy = EXCLUDED.policy,
+			updated_at = NOW()
+	`,
+		state.Enabled,
+		state.AssetScope,
+		symbolsRaw,
+		state.UniversePreset,
+		state.IntervalSeconds,
+		state.MinimumConfidence,
+		sentRaw,
+		state.Status,
+		state.LastScanCompletedAt,
+		state.NextScanAt,
+		channelsRaw,
+		policyRaw,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert scanner settings: %w", err)
+	}
+
+	return nil
 }
 
 func deriveScannerStatus(state aiScannerState) string {
@@ -191,11 +342,11 @@ func validateAIScannerState(state aiScannerState) map[string]string {
 }
 
 type aiOverviewResponse struct {
-	CheckedAt          time.Time          `json:"checkedAt"`
-	Scanner            aiScannerState     `json:"scanner"`
-	OpportunityCounts  map[string]int     `json:"opportunityCounts"`
-	PolicySummary      map[string]any     `json:"policySummary"`
-	ChannelSummary     map[string]any     `json:"channelSummary"`
+	CheckedAt         time.Time      `json:"checkedAt"`
+	Scanner           aiScannerState `json:"scanner"`
+	OpportunityCounts map[string]int `json:"opportunityCounts"`
+	PolicySummary     map[string]any `json:"policySummary"`
+	ChannelSummary    map[string]any `json:"channelSummary"`
 }
 
 func aiOverviewHandler(pool *pgxpool.Pool) http.HandlerFunc {
@@ -205,7 +356,11 @@ func aiOverviewHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
-		scanner := globalAIScannerStore.get()
+		scanner, err := loadAIScannerState(r.Context(), pool)
+		if err != nil {
+			log.Printf("warn: failed to load ai scanner settings for overview: %v", err)
+			scanner = defaultAIScannerState()
+		}
 		counts := loadAIOpportunityCounts(r.Context(), pool)
 		jsonOK(w, aiOverviewResponse{
 			CheckedAt:         time.Now().UTC(),
@@ -213,8 +368,8 @@ func aiOverviewHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			OpportunityCounts: counts,
 			PolicySummary: map[string]any{
 				"requiresHumanApproval": scanner.Policy.RequiresHumanApproval,
-				"manualRouteEnabled":   scanner.Policy.ManualRouteEnabled,
-				"approvalRouteEnabled": scanner.Policy.ApprovalRouteEnabled,
+				"manualRouteEnabled":    scanner.Policy.ManualRouteEnabled,
+				"approvalRouteEnabled":  scanner.Policy.ApprovalRouteEnabled,
 			},
 			ChannelSummary: map[string]any{
 				"inApp":      scanner.Channels.InApp,

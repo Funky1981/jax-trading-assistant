@@ -13,7 +13,7 @@ func TestAIScannerHandlerGetDefaultState(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/ai/scanner", nil)
 	rec := httptest.NewRecorder()
-	aiScannerHandler().ServeHTTP(rec, req)
+	aiScannerHandler(nil).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
@@ -51,12 +51,12 @@ func TestAIScannerHandlerRejectsInvalidPayload(t *testing.T) {
 			Mode:                     "",
 		},
 		Channels: aiScannerChannels{InApp: true},
-		Policy: aiScannerPolicy{RequiresHumanApproval: true},
+		Policy:   aiScannerPolicy{RequiresHumanApproval: true},
 	}
 	body, _ := json.Marshal(bad)
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/ai/scanner", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
-	aiScannerHandler().ServeHTTP(rec, req)
+	aiScannerHandler(nil).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
@@ -79,14 +79,14 @@ func TestAIScannerHandlerPersistsValidatedState(t *testing.T) {
 
 	putReq := httptest.NewRequest(http.MethodPut, "/api/v1/ai/scanner", bytes.NewReader(body))
 	putRec := httptest.NewRecorder()
-	aiScannerHandler().ServeHTTP(putRec, putReq)
+	aiScannerHandler(nil).ServeHTTP(putRec, putReq)
 	if putRec.Code != http.StatusOK {
 		t.Fatalf("put status = %d, body = %s", putRec.Code, putRec.Body.String())
 	}
 
 	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/ai/scanner", nil)
 	getRec := httptest.NewRecorder()
-	aiScannerHandler().ServeHTTP(getRec, getReq)
+	aiScannerHandler(nil).ServeHTTP(getRec, getReq)
 	if getRec.Code != http.StatusOK {
 		t.Fatalf("get status = %d, body = %s", getRec.Code, getRec.Body.String())
 	}

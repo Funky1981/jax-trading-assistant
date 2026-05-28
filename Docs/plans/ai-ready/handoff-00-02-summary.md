@@ -279,3 +279,42 @@ Validation run (Ticket 08 + requested follow-ups):
 - `npm run build`
 
 Result: passing locally; existing Vite large chunk warning remains.
+
+---
+
+## Update: AI scanner API integration + persistence + validation
+
+### Scope completed (frontend + backend + persistence)
+
+- Backend scanner settings are now persisted in Postgres instead of process memory:
+  - `cmd/trader/ai_overview_handlers.go`
+  - Added DB-backed load/save with upsert semantics and no-row default bootstrap.
+  - Kept nil-pool fallback behavior for isolated handler tests.
+- AI scanner route now receives DB pool:
+  - `cmd/trader/frontend_api.go`
+- Added migration for durable scanner settings:
+  - `db/postgres/migrations/000025_ai_scanner_settings.up.sql`
+  - `db/postgres/migrations/000025_ai_scanner_settings.down.sql`
+- Frontend AI Trading page now consumes API-backed scanner/overview state:
+  - Added `frontend/src/data/ai-service.ts`
+  - Exported via `frontend/src/data/index.ts`
+  - Added API contracts in `frontend/src/data/types.ts`
+  - Replaced Phase placeholder scanner settings with live `/api/v1/ai/overview` data in `frontend/src/pages/AiTradingPage.tsx`
+  - Added scanner enable/pause mutation through `/api/v1/ai/scanner`
+- Scanner settings card now reflects connected state and supports toggle action:
+  - `frontend/src/components/trading/ScannerSettingsCard.tsx`
+
+### Test updates
+
+- Backend test updates:
+  - `cmd/trader/ai_overview_handlers_test.go` updated for `aiScannerHandler(pool)` signature.
+- Frontend test updates:
+  - `frontend/src/pages/AiTradingPage.test.tsx` now mocks API overview + connected scanner state.
+  - `frontend/src/components/trading/ScannerSettingsCard.test.tsx` now verifies connected copy and toggle button.
+
+### Validation run
+
+- `go test ./cmd/trader -run AI -count=1`
+- `npm test -- src/pages/AiTradingPage.test.tsx src/components/trading/ScannerSettingsCard.test.tsx --run` (from `frontend/`)
+
+Result: all targeted checks passed.
