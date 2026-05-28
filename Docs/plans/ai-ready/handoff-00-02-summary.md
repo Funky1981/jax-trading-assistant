@@ -237,6 +237,18 @@ Result: commands passed; frontend build retains the existing Vite large chunk wa
   - `teach_me_sentiment_opened`
 - Added event-emission spy coverage in page tests plus abstraction tests.
 
+### Analytics event matrix (Ticket 08)
+
+| Event name | Trigger surface | Trigger action | Stable payload keys |
+| --- | --- | --- | --- |
+| `ai_scanner_enabled` | AI Trading | scanner toggle enabled | `source_surface`, `enabled` |
+| `sentiment_settings_opened` | AI Trading | open sentiment settings | `source_surface` |
+| `opportunity_sentiment_viewed` | AI Trading | open sentiment details for an opportunity | `source_surface`, `opportunity_id`, `route_type`, `sentiment_mode` |
+| `sentiment_alert_opened` | Notifications | open notification destination for sentiment alert | `source_surface`, `destination_path`, `sentiment_mode` |
+| `approval_sentiment_evidence_viewed` | Approvals | open sentiment evidence from approval item | `source_surface`, `candidate_id`, `route_type` |
+| `backtest_sentiment_enabled` | Research | launch guided backtest with sentiment option | `source_surface`, `enabled`, `sentiment_mode` |
+| `teach_me_sentiment_opened` | Research | open teach-me/explainer for sentiment controls | `source_surface`, `sentiment_mode` |
+
 ### Additional requested coverage
 
 - Added guided research Playwright happy-path test in `frontend/e2e/research.spec.ts`:
