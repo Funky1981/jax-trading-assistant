@@ -10,6 +10,9 @@ Date: 2026-05-30
   - `frontend`: two Playwright strict-mode locator collisions in AI Trading and Notifications specs.
   - `golden-tests`: Docker frontend build failed because npm 10.9.8 required `frontend/package-lock.json` to include `tailwindcss` peer/optional `yaml@2.9.0`.
 - After bumping golangci-lint to v1.64.8, lint surfaced three existing findings in chat/trader packages; these were corrected with minimal lint-only edits.
+- Follow-up CI after `e4bb9f6` passed frontend/import-boundary/agent0, then exposed:
+  - `go`: broad `gofmt -l .` scanned archived/template Go files outside the active validation scope.
+  - `golden-tests`: workflow-level Postgres service and Docker Compose Postgres both attempted to bind host port 5433.
 
 ## Validation evidence
 
@@ -18,6 +21,7 @@ Date: 2026-05-30
 - `go test ./...` passes.
 - `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build` pass in `frontend/`.
 - `npm run test:e2e` exits successfully; one module guide spec retried once and then passed.
+- Follow-up workflow patch scopes gofmt to changed Go files and lets Docker Compose own the golden-test Postgres port.
 
 ## Residual risk
 

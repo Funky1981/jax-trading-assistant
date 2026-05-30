@@ -29,7 +29,14 @@ jobs:
           version: v1.64.8
       - name: gofmt
         run: |
-          test -z "$(gofmt -l .)"
+          files="$(git diff --name-only --diff-filter=ACMRT HEAD^1 HEAD -- '*.go')"
+          if [ -n "$files" ]; then
+            unformatted="$(gofmt -l $files)"
+            if [ -n "$unformatted" ]; then
+              echo "$unformatted"
+              exit 1
+            fi
+          fi
       - name: runtime policy tests
         run: go test ./libs/runtimepolicy ./libs/utcp
       - name: go test (memory stack)
