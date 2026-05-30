@@ -65,13 +65,65 @@ test('AI Trading opens from the shell and renders route-aware opportunities', as
       ]),
     })
   );
+  await page.route('**/api/v1/ai/overview', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        checkedAt: '2026-05-22T10:00:00Z',
+        scanner: {
+          enabled: true,
+          assetScope: 'etf',
+          symbols: ['SPY', 'QQQ', 'IWM'],
+          universePreset: 'etf-core',
+          intervalSeconds: 300,
+          minimumConfidence: 0.7,
+          sentiment: {
+            enabled: false,
+            sourceScope: 'news',
+            window: '24h',
+            threshold: 0.6,
+            minimumSourceCount: 3,
+            sourceTrustWeightingMode: 'equal',
+            mode: 'filter',
+          },
+          status: 'ready',
+          channels: {
+            inApp: true,
+            desktopWeb: false,
+            mobilePush: false,
+          },
+          policy: {
+            manualRouteEnabled: true,
+            approvalRouteEnabled: true,
+            requiresHumanApproval: true,
+          },
+        },
+        opportunityCounts: {
+          signalsPending: 1,
+          candidates: 1,
+          approvals: 1,
+        },
+        policySummary: {
+          requiresHumanApproval: true,
+          manualRouteEnabled: true,
+          approvalRouteEnabled: true,
+        },
+        channelSummary: {
+          inApp: true,
+          desktopWeb: false,
+          mobilePush: false,
+        },
+      }),
+    })
+  );
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.getByRole('link', { name: 'AI Trading' }).click();
 
   await expect(page).toHaveURL(/\/ai-trading$/);
   await expect(page.getByRole('heading', { name: 'AI Trading' })).toBeVisible();
-  await expect(page.getByText('Opportunity queue')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Opportunity queue' })).toBeVisible();
   await expect(page.getByText('AAPL')).toBeVisible();
   await expect(page.getByText('SPY')).toBeVisible();
   await expect(page.getByText('QQQ')).toBeVisible();

@@ -408,10 +408,7 @@ func brokerAccountHandler(mt *marketTools) http.HandlerFunc {
 func allowPilotBrokerWrite(w http.ResponseWriter, r *http.Request, authEnabled bool, mt *marketTools, auditSvc *audit.Service, action string, target string, body []byte) bool {
 	status := buildTradingPilotStatus(r.Context(), authEnabled, mt)
 	if status.CanTrade {
-		if blockManualETFEntry(w, r, auditSvc, action, target, body) {
-			return false
-		}
-		return true
+		return !blockManualETFEntry(w, r, auditSvc, action, target, body)
 	}
 
 	httpStatus := http.StatusForbidden

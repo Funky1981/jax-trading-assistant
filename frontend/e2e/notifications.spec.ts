@@ -39,7 +39,7 @@ test('notifications inbox shows unread/read, stale, and route-aware destinations
   await expect(page.getByRole('heading', { name: 'Notification Centre' })).toBeVisible();
   await expect(page.getByText('Approval required for QQQ candidate')).toBeVisible();
   await expect(page.getByText('Sentiment invalidated previous setup')).toBeVisible();
-  await expect(page.getByText('Stale')).toBeVisible();
+  await expect(page.getByLabel('Notification inbox').getByText('Stale')).toHaveCount(2);
 
   const destinationLinks = page.getByRole('link', { name: 'Open destination' });
   await expect(destinationLinks).toHaveCount(2);

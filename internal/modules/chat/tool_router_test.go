@@ -140,6 +140,7 @@ func TestErrUnknownTool_IsSentinel(t *testing.T) {
 	}
 	wrapped := errors.New("tool not found: " + ErrUnknownTool.Error())
 	if errors.Is(wrapped, ErrUnknownTool) {
+		t.Fatal("errors.New should not chain ErrUnknownTool")
 		// wrapped with errors.New won't chain — that's expected
 	}
 	// Direct identity check:

@@ -132,13 +132,5 @@ func errResult(msg string) *ToolResult {
 	return &ToolResult{Ok: false, Error: msg}
 }
 
-func okResult(data any) (*ToolResult, error) {
-	b, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-	return &ToolResult{Ok: true, Data: json.RawMessage(b)}, nil
-}
-
 // ErrUnknownTool is returned when a tool name is not registered.
 var ErrUnknownTool = fmt.Errorf("unknown tool")
