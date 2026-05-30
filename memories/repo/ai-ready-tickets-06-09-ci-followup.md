@@ -13,6 +13,9 @@ Date: 2026-05-30
 - Follow-up CI after `e4bb9f6` passed frontend/import-boundary/agent0, then exposed:
   - `go`: broad `gofmt -l .` scanned archived/template Go files outside the active validation scope.
   - `golden-tests`: workflow-level Postgres service and Docker Compose Postgres both attempted to bind host port 5433.
+- Follow-up CI after `4d3d2a2` passed frontend/import-boundary/agent0, then exposed:
+  - `go`: shallow checkout did not include `HEAD^1` for scoped gofmt diffing.
+  - `golden-tests`: Compose startup reached `jax-trader`, but `/ready` stayed unhealthy because Compose defaulted `EXECUTION_ENABLED=true` and required broker readiness.
 
 ## Validation evidence
 
@@ -22,6 +25,7 @@ Date: 2026-05-30
 - `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build` pass in `frontend/`.
 - `npm run test:e2e` exits successfully; one module guide spec retried once and then passed.
 - Follow-up workflow patch scopes gofmt to changed Go files and lets Docker Compose own the golden-test Postgres port.
+- Second follow-up patch fetches enough git history for scoped gofmt and starts golden-test Compose with `EXECUTION_ENABLED=false`.
 
 ## Residual risk
 

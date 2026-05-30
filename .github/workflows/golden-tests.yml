@@ -39,6 +39,8 @@ jobs:
           go build -v ./...
       
       - name: Start services with Docker Compose
+        env:
+          EXECUTION_ENABLED: "false"
         run: |
           docker compose up -d
       
