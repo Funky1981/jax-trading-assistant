@@ -30,6 +30,8 @@ Do not interrupt the redesign with n8n, Hermes-style agents, paid AI expansion, 
 
 # Phase 1 — Finish Current Redesign
 
+Status: complete on `redesign`. Evidence: `PHASE_01_COMPLETION.md`.
+
 ## Goal
 
 Complete the user-facing redesign shell.
