@@ -219,7 +219,10 @@ func TestIncidentLog_Persistence(t *testing.T) {
 func TestIncidentLog_ListFilter(t *testing.T) {
 	il := newLog(t)
 	inc1, _ := il.Open("A", SeverityWarning, "t")
-	_, _ = il.Open("B", SeverityCritical, "t")
+	inc2, _ := il.Open("B", SeverityCritical, "t")
+	if inc1.ID == inc2.ID {
+		t.Fatalf("incident IDs should be unique, got %q", inc1.ID)
+	}
 	_ = il.Resolve(inc1.ID, "")
 
 	open := il.List(IncidentOpen)

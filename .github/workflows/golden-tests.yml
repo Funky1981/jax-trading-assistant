@@ -42,7 +42,13 @@ jobs:
         env:
           EXECUTION_ENABLED: "false"
         run: |
-          docker compose up -d
+          docker compose up -d postgres db-migrate ib-bridge agent0-service jax-research jax-trader
+
+      - name: Dump compose logs on startup failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color postgres db-migrate ib-bridge agent0-service jax-research jax-trader
       
       - name: Wait for services to be ready
         run: |

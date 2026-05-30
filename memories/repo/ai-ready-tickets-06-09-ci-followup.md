@@ -16,6 +16,9 @@ Date: 2026-05-30
 - Follow-up CI after `4d3d2a2` passed frontend/import-boundary/agent0, then exposed:
   - `go`: shallow checkout did not include `HEAD^1` for scoped gofmt diffing.
   - `golden-tests`: Compose startup reached `jax-trader`, but `/ready` stayed unhealthy because Compose defaulted `EXECUTION_ENABLED=true` and required broker readiness.
+- Follow-up CI after `6550b9d` passed frontend/import-boundary/agent0 and showed:
+  - `go`: `libs/guardrails` incident IDs were millisecond-based; two rapid `Open` calls could collide and overwrite the first incident before `Resolve`, making `TestIncidentLog_ListFilter` flaky on fast Linux runners.
+  - `golden-tests`: `EXECUTION_ENABLED=false` was propagated, but `docker compose up -d` still included `frontend`; frontend depends on `jax-trader` being Docker-healthy on `/ready`, while the golden workflow only needs backend `/health` endpoints and has its own wait loop.
 
 ## Validation evidence
 
@@ -26,6 +29,8 @@ Date: 2026-05-30
 - `npm run test:e2e` exits successfully; one module guide spec retried once and then passed.
 - Follow-up workflow patch scopes gofmt to changed Go files and lets Docker Compose own the golden-test Postgres port.
 - Second follow-up patch fetches enough git history for scoped gofmt and starts golden-test Compose with `EXECUTION_ENABLED=false`.
+- Third follow-up patch makes `IncidentLog.Open` allocate unique same-millisecond IDs with a suffix and adds a uniqueness assertion to the filter test.
+- Third follow-up patch starts only golden-test backend services (`postgres`, `db-migrate`, `ib-bridge`, `agent0-service`, `jax-research`, `jax-trader`) and adds compose log dumping if startup fails before the wait loop.
 
 ## Residual risk
 

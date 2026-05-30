@@ -269,7 +269,7 @@ func (il *IncidentLog) Open(title string, severity Severity, source string) (*In
 	defer il.mu.Unlock()
 
 	now := time.Now().UTC()
-	id := fmt.Sprintf("INC-%d", now.UnixMilli())
+	id := il.nextIncidentID(now)
 	inc := &Incident{
 		ID:        id,
 		Title:     title,
@@ -282,6 +282,19 @@ func (il *IncidentLog) Open(title string, severity Severity, source string) (*In
 	il.incidents[id] = inc
 	log.Printf("[guardrail] incident opened: id=%s severity=%s title=%q", id, severity, title)
 	return inc, il.save()
+}
+
+func (il *IncidentLog) nextIncidentID(now time.Time) string {
+	base := fmt.Sprintf("INC-%d", now.UnixMilli())
+	if _, exists := il.incidents[base]; !exists {
+		return base
+	}
+	for suffix := 1; ; suffix++ {
+		id := fmt.Sprintf("%s-%d", base, suffix)
+		if _, exists := il.incidents[id]; !exists {
+			return id
+		}
+	}
 }
 
 // Acknowledge marks an incident as acknowledged by an operator.
