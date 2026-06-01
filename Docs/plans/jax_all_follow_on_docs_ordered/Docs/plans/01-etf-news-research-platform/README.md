@@ -1,5 +1,7 @@
 # ETF News Research Platform
 
+Status: complete on `redesign`. Evidence: `PHASE_01_ETF_NEWS_COMPLETION.md`.
+
 ## Purpose
 
 Turn Jax into an ETF-only, news-driven research and paper-trading assistant.
