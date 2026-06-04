@@ -40,11 +40,24 @@ This pack adds the missing infrastructure around token caching, prompt construct
 |---|---|
 | `00-current-gap-review.md` | Review what exists and what is missing |
 | `01-target-architecture.md` | Define the LLM cost/context architecture |
-| `02-cacheable-prompt-layout.md` | Define stable prefix and dynamic prompt sections |
-| `03-context-compaction.md` | Define how raw context becomes compact memory |
-| `04-model-router-and-cost-governor.md` | Define routing, budgets, and blocking behaviour |
-| `05-database-schema.md` | Define Postgres tables for usage, cache, and artifacts |
-| `06-implementation-plan.md` | Codex-ready build order and acceptance checks |
+| `02-home-server-litellm-setup.md` | Define the local LiteLLM/Ollama gateway setup |
+| `03-jax-llm-cost-architecture.md` | Define the Jax provider boundary and cost architecture |
+| `04-model-routing-policy.md` | Define routing from deterministic/local/cheap/strong models |
+| `05-token-tracking-and-budgets.md` | Define token logging, budget checks, and blocking behaviour |
+| `06-cache-policy.md` | Define what may be cached and how cache safety is enforced |
+| `07-context-compaction.md` | Define how raw context becomes compact reusable memory |
+| `08-jax-integration-contracts.md` | Define the contracts between Jax, LiteLLM, and providers |
+| `09-security-and-secrets.md` | Define secret handling and provider safety boundaries |
+| `10-uat-and-acceptance.md` | Define UAT checks for cost, routing, and safety |
+| `11-foundation-codex-prompts.md` | Codex prompts for the foundation implementation slice |
+| `12-token-saving-playbook.md` | Practical token-saving rules for prompts and context |
+| `13-safe-compression-policy.md` | Safe compression rules for evidence and memories |
+| `14-headroom-trial-plan.md` | Trial plan for budget headroom and paid API opt-in |
+| `15-ai-eligibility-gate.md` | Define when AI calls are allowed or blocked |
+| `16-event-clustering-and-dedupe.md` | Define event clustering and duplicate suppression |
+| `17-template-output-policy.md` | Define cheap template outputs before model calls |
+| `18-cost-per-candidate-metrics.md` | Define cost metrics per candidate and paper trade |
+| `19-optimization-codex-prompts.md` | Codex prompts for cost/context optimization work |
 
 ## Non-Negotiables
 
