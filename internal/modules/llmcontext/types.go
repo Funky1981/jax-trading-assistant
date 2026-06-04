@@ -128,6 +128,7 @@ type UsageRecord struct {
 	EstimatedCostUSD      float64
 	ActualCostUSD         float64
 	CacheHit              bool
+	CacheEligible         bool
 	VirtualKey            string
 	EventID               string
 	CandidateID           string
@@ -149,6 +150,7 @@ type CostRollup struct {
 	TotalOutputTokens   int
 	TotalCostUSD        float64
 	PaidCallsAvoided    int
+	CacheHitCount       int
 	HeadroomTokensSaved int
 	From                time.Time
 	To                  time.Time
