@@ -1,0 +1,34 @@
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    command: ["--config", "/app/config/litellm-config.yaml", "--port", "4000"]
+    ports:
+      - "4000:4000"
+    environment:
+      JAX_LITELLM_MASTER_KEY: ${JAX_LITELLM_MASTER_KEY:?set a LiteLLM virtual master key}
+      JAX_LITELLM_DATABASE_URL: ${JAX_LITELLM_DATABASE_URL:-}
+      JAX_LITELLM_REDIS_HOST: ${JAX_LITELLM_REDIS_HOST:-}
+      JAX_LITELLM_REDIS_PASSWORD: ${JAX_LITELLM_REDIS_PASSWORD:-}
+      JAX_OPENAI_API_KEY: ${JAX_OPENAI_API_KEY:-}
+    volumes:
+      - ./litellm-config.yaml:/app/config/litellm-config.yaml:ro
+    depends_on:
+      - ollama
+    networks:
+      - jax-ai-private
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - jax-ai-private
+
+volumes:
+  ollama-data:
+
+networks:
+  jax-ai-private:
+    driver: bridge

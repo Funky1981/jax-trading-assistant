@@ -1,0 +1,32 @@
+general_settings:
+  master_key: os.environ/JAX_LITELLM_MASTER_KEY
+  database_url: os.environ/JAX_LITELLM_DATABASE_URL
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+
+model_list:
+  - model_name: local-small
+    litellm_params:
+      model: ollama_chat/qwen2.5:7b
+      api_base: http://ollama:11434
+
+  - model_name: paid-cheap
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/JAX_OPENAI_API_KEY
+
+  - model_name: paid-strong
+    litellm_params:
+      model: openai/o3
+      api_key: os.environ/JAX_OPENAI_API_KEY
+
+router_settings:
+  routing_strategy: simple-shuffle
+  redis_host: os.environ/JAX_LITELLM_REDIS_HOST
+  redis_password: os.environ/JAX_LITELLM_REDIS_PASSWORD
+
+guardrails:
+  strong_model_default_enabled: false
+  direct_provider_calls_allowed: false
