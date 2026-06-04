@@ -9,7 +9,7 @@ type ServiceConfig struct {
 	Builder  PromptBuilder
 	Router   ModelRouter
 	Governor CostGovernor
-	Logger   *MemoryUsageLogger
+	Logger   UsageLogger
 	Provider LLMProviderClient
 }
 
@@ -17,7 +17,7 @@ type Service struct {
 	builder  PromptBuilder
 	router   ModelRouter
 	governor CostGovernor
-	logger   *MemoryUsageLogger
+	logger   UsageLogger
 	provider LLMProviderClient
 	gate     EligibilityGate
 }

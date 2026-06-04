@@ -11,7 +11,7 @@ import (
 )
 
 type CostManagedConfig struct {
-	Logger    *llmcontext.MemoryUsageLogger
+	Logger    llmcontext.UsageLogger
 	Limits    llmcontext.BudgetLimits
 	Estimator llmcontext.TokenEstimator
 }

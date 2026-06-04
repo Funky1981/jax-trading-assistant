@@ -2,6 +2,11 @@ package llmcontext
 
 import "time"
 
+type UsageLogger interface {
+	RecordPlanned(pkg PromptPackage, decision CostDecision) error
+	RecordActual(result LLMResult) error
+}
+
 type MemoryUsageLogger struct {
 	records []UsageRecord
 }

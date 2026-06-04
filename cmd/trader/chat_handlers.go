@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	chatmod "jax-trading-assistant/internal/modules/chat"
+	"jax-trading-assistant/internal/modules/llmcontext"
 )
 
 // registerChatRoutes wires the assistant chat endpoints.
@@ -22,7 +24,11 @@ func registerChatRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.
 	// Explicitly convert to the interface type so the nil check in Service works.
 	var llm chatmod.LLMClient
 	if c := chatmod.NewOpenAIChatClientFromEnv(); c != nil {
-		llm = chatmod.NewCostManagedLLMClient(c, chatmod.CostManagedConfig{})
+		var logger llmcontext.UsageLogger
+		if pool != nil {
+			logger = llmcontext.NewPGXUsageLogger(pgxPoolExec{pool: pool})
+		}
+		llm = chatmod.NewCostManagedLLMClient(c, chatmod.CostManagedConfig{Logger: logger})
 	}
 	svc := chatmod.NewService(pool, llm)
 
@@ -36,6 +42,15 @@ func registerChatRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.
 
 	// Tool catalogue
 	mux.HandleFunc("/api/v1/chat/tools", protect(chatToolsHandler(svc)))
+}
+
+type pgxPoolExec struct {
+	pool *pgxpool.Pool
+}
+
+func (e pgxPoolExec) Exec(ctx context.Context, query string, args ...any) error {
+	_, err := e.pool.Exec(ctx, query, args...)
+	return err
 }
 
 // GET /api/v1/chat/traces/{traceId} — returns a persisted harness trace.
