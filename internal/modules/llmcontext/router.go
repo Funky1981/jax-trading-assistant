@@ -59,3 +59,9 @@ func (g CostGovernor) CanRun(pkg PromptPackage, route ModelRoute) (CostDecision,
 	}
 	return CostDecision{Allowed: true, Reason: "budget available"}, nil
 }
+
+func EstimateCostUSD(pkg PromptPackage, route ModelRoute) float64 {
+	inputCost := float64(pkg.EstimatedInputTokens) / 1000 * route.InputUSDPer1K
+	outputCost := float64(pkg.EstimatedOutputTokens) / 1000 * route.OutputUSDPer1K
+	return inputCost + outputCost
+}

@@ -22,7 +22,7 @@ func registerChatRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.
 	// Explicitly convert to the interface type so the nil check in Service works.
 	var llm chatmod.LLMClient
 	if c := chatmod.NewOpenAIChatClientFromEnv(); c != nil {
-		llm = c
+		llm = chatmod.NewCostManagedLLMClient(c, chatmod.CostManagedConfig{})
 	}
 	svc := chatmod.NewService(pool, llm)
 

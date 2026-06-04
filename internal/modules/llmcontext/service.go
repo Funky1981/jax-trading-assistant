@@ -58,6 +58,7 @@ func (s Service) Execute(ctx context.Context, task LLMTask, eligibility Eligibil
 	}
 	pkg.Model = route.ModelAlias
 	pkg.Provider = route.Provider
+	pkg.EstimatedCostUSD = EstimateCostUSD(pkg, route)
 	cost := s.governor.CanRun
 	costDecision, err := cost(pkg, route)
 	if err != nil {

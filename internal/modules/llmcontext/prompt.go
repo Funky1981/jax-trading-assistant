@@ -35,13 +35,17 @@ func (SimpleTokenEstimator) Estimate(text string) int {
 	return words + (len(trimmed) / 24)
 }
 
+type TokenEstimator interface {
+	Estimate(text string) int
+}
+
 type PromptBuilder struct {
 	prefix    StaticPrefixBuilder
-	estimator SimpleTokenEstimator
+	estimator TokenEstimator
 	policy    CachePolicy
 }
 
-func NewPromptBuilder(prefix StaticPrefixBuilder, estimator SimpleTokenEstimator) PromptBuilder {
+func NewPromptBuilder(prefix StaticPrefixBuilder, estimator TokenEstimator) PromptBuilder {
 	return PromptBuilder{prefix: prefix, estimator: estimator, policy: DefaultCachePolicy()}
 }
 
