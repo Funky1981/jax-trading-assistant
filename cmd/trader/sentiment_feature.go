@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -54,7 +57,10 @@ type sentimentAggregateOptions struct {
 }
 
 type sentimentProviderConfig struct {
-	Mode string
+	Mode     string
+	Endpoint string
+	APIKey   string
+	Timeout  time.Duration
 }
 
 type sentimentProvider interface {
@@ -73,6 +79,13 @@ type hybridSentimentProvider struct {
 	lastError string
 }
 
+type externalHTTPSentimentProvider struct {
+	endpoint string
+	apiKey   string
+	timeout  time.Duration
+	client   *http.Client
+}
+
 func newSentimentProvider(config sentimentProviderConfig) sentimentProvider {
 	switch strings.ToLower(strings.TrimSpace(config.Mode)) {
 	case "", "local":
@@ -80,9 +93,26 @@ func newSentimentProvider(config sentimentProviderConfig) sentimentProvider {
 	case "disabled":
 		return disabledSentimentProvider{}
 	case "external":
-		return newHybridSentimentProvider(config, failingExternalSentimentProvider{}, nil)
+		if strings.TrimSpace(config.Endpoint) == "" {
+			return newHybridSentimentProvider(config, failingExternalSentimentProvider{}, nil)
+		}
+		return externalHTTPSentimentProvider{
+			endpoint: strings.TrimSpace(config.Endpoint),
+			apiKey:   strings.TrimSpace(config.APIKey),
+			timeout:  defaultDuration(config.Timeout, 3*time.Second),
+			client:   http.DefaultClient,
+		}
 	case "hybrid":
-		return newHybridSentimentProvider(config, failingExternalSentimentProvider{}, newLocalSentimentProvider())
+		primary := sentimentProvider(failingExternalSentimentProvider{})
+		if strings.TrimSpace(config.Endpoint) != "" {
+			primary = externalHTTPSentimentProvider{
+				endpoint: strings.TrimSpace(config.Endpoint),
+				apiKey:   strings.TrimSpace(config.APIKey),
+				timeout:  defaultDuration(config.Timeout, 3*time.Second),
+				client:   http.DefaultClient,
+			}
+		}
+		return newHybridSentimentProvider(config, primary, newLocalSentimentProvider())
 	default:
 		return newLocalSentimentProvider()
 	}
@@ -128,6 +158,67 @@ func (localSentimentProvider) Score(ctx context.Context, document sentimentSourc
 		Drivers:      drivers,
 		Limitations:  limitations,
 		ProviderMode: "local",
+	}, nil
+}
+
+func (p externalHTTPSentimentProvider) Score(ctx context.Context, document sentimentSourceDocument) (sentimentScore, error) {
+	if p.endpoint == "" {
+		return sentimentScore{Label: "unavailable", ProviderMode: "external", Degraded: true, Limitations: []string{"External provider endpoint is not configured."}}, errors.New("external sentiment endpoint not configured")
+	}
+	timeout := defaultDuration(p.timeout, 3*time.Second)
+	reqCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	payload, _ := json.Marshal(map[string]any{
+		"id":           document.ID,
+		"symbol":       document.Symbol,
+		"title":        document.Title,
+		"body":         document.Body,
+		"sourceFamily": document.SourceFamily,
+		"publishedAt":  document.PublishedAt,
+		"metadata":     document.Metadata,
+	})
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, p.endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return sentimentScore{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if p.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+p.apiKey)
+	}
+	client := p.client
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return sentimentScore{Label: "unavailable", ProviderMode: "external", Degraded: true, Limitations: []string{err.Error()}}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		err := fmt.Errorf("external sentiment provider status %d", resp.StatusCode)
+		return sentimentScore{Label: "unavailable", ProviderMode: "external", Degraded: true, Limitations: []string{err.Error()}}, err
+	}
+	var decoded struct {
+		Score       float64  `json:"score"`
+		Label       string   `json:"label"`
+		Confidence  float64  `json:"confidence"`
+		Drivers     []string `json:"drivers"`
+		Limitations []string `json:"limitations"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
+		return sentimentScore{Label: "unavailable", ProviderMode: "external", Degraded: true, Limitations: []string{err.Error()}}, err
+	}
+	label := decoded.Label
+	if label != "positive" && label != "negative" && label != "mixed" {
+		label = sentimentLabel(decoded.Score)
+	}
+	return sentimentScore{
+		Score:        roundSentiment(decoded.Score),
+		Label:        label,
+		Confidence:   roundSentiment(decoded.Confidence),
+		Drivers:      decoded.Drivers,
+		Limitations:  appendUnique(decoded.Limitations, "External provider output is normalized before reaching UI contracts."),
+		ProviderMode: "external",
 	}, nil
 }
 
@@ -383,4 +474,11 @@ func nonEmptyStrings(values, fallback []string) []string {
 
 func roundSentiment(value float64) float64 {
 	return math.Round(value*1000) / 1000
+}
+
+func defaultDuration(value, fallback time.Duration) time.Duration {
+	if value <= 0 {
+		return fallback
+	}
+	return value
 }

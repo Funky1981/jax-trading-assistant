@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -88,6 +91,47 @@ func TestSentimentProviderDisabledAndExternalFailureBecomeExplicitStates(t *test
 	}
 	if aggregate.ProviderMode != "hybrid" {
 		t.Fatalf("provider mode = %q, want hybrid", aggregate.ProviderMode)
+	}
+}
+
+func TestExternalHTTPSentimentProviderNormalizesProviderResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("method = %s, want POST", r.Method)
+		}
+		var request map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if request["symbol"] != "SPY" {
+			t.Fatalf("symbol = %v, want SPY", request["symbol"])
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"score":       0.61,
+			"label":       "positive",
+			"confidence":  0.82,
+			"drivers":     []string{"trusted source upgrade"},
+			"limitations": []string{"External model coverage varies by source."},
+		})
+	}))
+	defer server.Close()
+
+	provider := newSentimentProvider(sentimentProviderConfig{Mode: "external", Endpoint: server.URL, Timeout: time.Second})
+	score, err := provider.Score(context.Background(), sentimentSourceDocument{
+		ID:           "news-external",
+		Symbol:       "SPY",
+		Title:        "SPY upgraded",
+		Body:         "Trusted provider sees stronger flows.",
+		SourceFamily: "trusted_news",
+	})
+	if err != nil {
+		t.Fatalf("score: %v", err)
+	}
+	if score.ProviderMode != "external" || score.Score != 0.61 || score.Confidence != 0.82 {
+		t.Fatalf("unexpected score: %+v", score)
+	}
+	if len(score.Drivers) != 1 || score.Drivers[0] != "trusted source upgrade" {
+		t.Fatalf("drivers = %+v", score.Drivers)
 	}
 }
 
