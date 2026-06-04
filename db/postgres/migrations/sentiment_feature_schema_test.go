@@ -25,6 +25,7 @@ func TestSentimentFeatureSchema(t *testing.T) {
 		"drivers JSONB NOT NULL DEFAULT '[]'::jsonb",
 		"limitations JSONB NOT NULL DEFAULT '[]'::jsonb",
 		"CREATE TABLE IF NOT EXISTS sentiment_aggregates",
+		"time_window TEXT NOT NULL",
 		"source_groups JSONB NOT NULL DEFAULT '{}'::jsonb",
 		"state TEXT NOT NULL DEFAULT 'available'",
 		"CREATE TABLE IF NOT EXISTS opportunity_sentiment_snapshots",

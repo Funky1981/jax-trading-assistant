@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_sentiment_events_news_item ON sentiment_events(ne
 CREATE TABLE IF NOT EXISTS sentiment_aggregates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     symbol TEXT NOT NULL,
-    window TEXT NOT NULL,
+    time_window TEXT NOT NULL,
     provider_mode TEXT NOT NULL,
     score NUMERIC NOT NULL DEFAULT 0,
     label TEXT NOT NULL DEFAULT 'mixed',
@@ -53,10 +53,10 @@ CREATE TABLE IF NOT EXISTS sentiment_aggregates (
     state TEXT NOT NULL DEFAULT 'available',
     computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     stale_after TIMESTAMPTZ,
-    UNIQUE(symbol, window, provider_mode)
+    UNIQUE(symbol, time_window, provider_mode)
 );
 
-CREATE INDEX IF NOT EXISTS idx_sentiment_aggregates_symbol_window ON sentiment_aggregates(symbol, window);
+CREATE INDEX IF NOT EXISTS idx_sentiment_aggregates_symbol_window ON sentiment_aggregates(symbol, time_window);
 CREATE INDEX IF NOT EXISTS idx_sentiment_aggregates_state ON sentiment_aggregates(state);
 
 CREATE TABLE IF NOT EXISTS opportunity_sentiment_snapshots (
