@@ -24,6 +24,7 @@ tmp/
 # OS / Editor
 .DS_Store
 Thumbs.db
+.vs/
 .vscode/
 
 # Local dev artifacts
