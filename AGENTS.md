@@ -27,3 +27,4 @@ A skill is a set of local instructions to follow that is stored in a `SKILL.md` 
 
 - In this repository, automatically select and use the appropriate skill(s) for every task unless the user explicitly asks not to use skills.
 - Announce chosen skill(s) in one short line before doing substantive work.
+- At the end of every work-completion response, include a clear `What's Left` section. List remaining required work, skipped checks, optional broader validation, deployment/migration steps, and known risks. If nothing remains, explicitly say so.
