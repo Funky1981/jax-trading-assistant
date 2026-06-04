@@ -345,6 +345,7 @@ type aiOverviewResponse struct {
 	CheckedAt         time.Time      `json:"checkedAt"`
 	Scanner           aiScannerState `json:"scanner"`
 	OpportunityCounts map[string]int `json:"opportunityCounts"`
+	CostSummary       map[string]any `json:"costSummary"`
 	PolicySummary     map[string]any `json:"policySummary"`
 	ChannelSummary    map[string]any `json:"channelSummary"`
 }
@@ -366,6 +367,7 @@ func aiOverviewHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			CheckedAt:         time.Now().UTC(),
 			Scanner:           scanner,
 			OpportunityCounts: counts,
+			CostSummary:       loadLLMCostSummary(r.Context(), pool),
 			PolicySummary: map[string]any{
 				"requiresHumanApproval": scanner.Policy.RequiresHumanApproval,
 				"manualRouteEnabled":    scanner.Policy.ManualRouteEnabled,
@@ -400,4 +402,106 @@ func loadAIOpportunityCounts(ctx context.Context, pool *pgxpool.Pool) map[string
 	counts["candidates"] = candidates
 	counts["approvals"] = approvals
 	return counts
+}
+
+func loadLLMCostSummary(ctx context.Context, pool *pgxpool.Pool) map[string]any {
+	summary := map[string]any{
+		"todaySpend":             0.0,
+		"monthSpend":             0.0,
+		"costPerCandidate":       0.0,
+		"costPerApprovedTrade":   0.0,
+		"paidCallsAvoided":       0,
+		"cacheHitRate":           0.0,
+		"headroomTokensSaved":    0,
+		"eventsRejectedBeforeAI": 0,
+		"topExpensiveWorkflows":  []map[string]any{},
+	}
+	if pool == nil {
+		return summary
+	}
+
+	var todaySpend float64
+	_ = pool.QueryRow(ctx, `
+		SELECT COALESCE(SUM(actual_cost_usd + estimated_cost_usd), 0)
+		FROM llm_usage_logs
+		WHERE created_at >= date_trunc('day', NOW())
+	`).Scan(&todaySpend)
+	summary["todaySpend"] = todaySpend
+
+	var monthSpend float64
+	_ = pool.QueryRow(ctx, `
+		SELECT COALESCE(SUM(actual_cost_usd + estimated_cost_usd), 0)
+		FROM llm_usage_logs
+		WHERE created_at >= date_trunc('month', NOW())
+	`).Scan(&monthSpend)
+	summary["monthSpend"] = monthSpend
+
+	var candidateCost float64
+	_ = pool.QueryRow(ctx, `
+		SELECT COALESCE(
+			SUM(actual_cost_usd + estimated_cost_usd) / NULLIF(COUNT(DISTINCT candidate_id), 0),
+			0
+		)
+		FROM llm_usage_logs
+		WHERE candidate_id IS NOT NULL
+	`).Scan(&candidateCost)
+	summary["costPerCandidate"] = candidateCost
+
+	var approvedCost float64
+	_ = pool.QueryRow(ctx, `
+		SELECT COALESCE(
+			SUM(total_cost_usd) / NULLIF(SUM(approved_count), 0),
+			0
+		)
+		FROM llm_cost_rollups
+	`).Scan(&approvedCost)
+	summary["costPerApprovedTrade"] = approvedCost
+
+	var paidCallsAvoided int
+	var headroomTokensSaved int
+	_ = pool.QueryRow(ctx, `
+		SELECT COALESCE(SUM(paid_calls_avoided), 0), COALESCE(SUM(headroom_tokens_saved), 0)
+		FROM llm_cost_rollups
+	`).Scan(&paidCallsAvoided, &headroomTokensSaved)
+	summary["paidCallsAvoided"] = paidCallsAvoided
+	summary["headroomTokensSaved"] = headroomTokensSaved
+
+	var totalCalls int
+	var cacheHits int
+	_ = pool.QueryRow(ctx, `
+		SELECT COUNT(*), COALESCE(SUM(CASE WHEN cache_hit THEN 1 ELSE 0 END), 0)
+		FROM llm_usage_logs
+	`).Scan(&totalCalls, &cacheHits)
+	if totalCalls > 0 {
+		summary["cacheHitRate"] = float64(cacheHits) / float64(totalCalls)
+	}
+
+	var rejectedBeforeAI int
+	_ = pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM llm_usage_logs
+		WHERE blocked = TRUE AND block_reason IS NOT NULL
+	`).Scan(&rejectedBeforeAI)
+	summary["eventsRejectedBeforeAI"] = rejectedBeforeAI
+
+	rows, err := pool.Query(ctx, `
+		SELECT task_type, COALESCE(SUM(actual_cost_usd + estimated_cost_usd), 0) AS spend
+		FROM llm_usage_logs
+		GROUP BY task_type
+		ORDER BY spend DESC
+		LIMIT 5
+	`)
+	if err == nil {
+		defer rows.Close()
+		var workflows []map[string]any
+		for rows.Next() {
+			var taskType string
+			var spend float64
+			if err := rows.Scan(&taskType, &spend); err == nil {
+				workflows = append(workflows, map[string]any{"taskType": taskType, "spend": spend})
+			}
+		}
+		summary["topExpensiveWorkflows"] = workflows
+	}
+	return summary
 }

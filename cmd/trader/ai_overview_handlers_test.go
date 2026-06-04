@@ -130,4 +130,12 @@ func TestAIOverviewHandlerReturnsCoherentModelWithoutDB(t *testing.T) {
 	if _, ok := payload.PolicySummary["requiresHumanApproval"]; !ok {
 		t.Fatalf("expected policy summary fields, got %+v", payload.PolicySummary)
 	}
+	if payload.CostSummary == nil {
+		t.Fatal("expected LLM cost summary in overview payload")
+	}
+	for _, key := range []string{"todaySpend", "monthSpend", "costPerCandidate", "paidCallsAvoided", "cacheHitRate", "headroomTokensSaved", "eventsRejectedBeforeAI"} {
+		if _, ok := payload.CostSummary[key]; !ok {
+			t.Fatalf("expected cost summary key %q, got %+v", key, payload.CostSummary)
+		}
+	}
 }

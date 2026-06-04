@@ -68,8 +68,26 @@ type OpenAIChatClient struct {
 // NewOpenAIChatClientFromEnv creates a client from environment variables.
 // Returns nil if OPENAI_API_KEY is not set.
 func NewOpenAIChatClientFromEnv() *OpenAIChatClient {
-	key := os.Getenv("OPENAI_API_KEY")
-	if key == "" {
+	gatewayKey := strings.TrimSpace(os.Getenv("AI_GATEWAY_API_KEY"))
+	gatewayBase := strings.TrimSpace(os.Getenv("AI_GATEWAY_BASE_URL"))
+	if gatewayKey != "" && gatewayBase != "" {
+		model := strings.TrimSpace(os.Getenv("AI_DEFAULT_MODEL"))
+		if model == "" {
+			model = strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
+		}
+		if model == "" {
+			model = "local-small"
+		}
+		return &OpenAIChatClient{
+			baseURL: strings.TrimRight(gatewayBase, "/"),
+			apiKey:  gatewayKey,
+			model:   model,
+			http:    &http.Client{Timeout: 30 * time.Second},
+		}
+	}
+
+	key := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	if key == "" || !envBool("AI_ALLOW_DIRECT_PROVIDER", false) {
 		return nil
 	}
 	base := os.Getenv("OPENAI_BASE_URL")
