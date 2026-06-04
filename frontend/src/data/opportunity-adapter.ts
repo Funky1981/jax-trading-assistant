@@ -1,5 +1,5 @@
 import type { ApprovalQueueItem, CandidateTrade } from '@/data/approvals-service';
-import type { OpportunityConfidenceBand, OpportunityRoute, OpportunitySummary, Signal } from '@/data/types';
+import type { OpportunityConfidenceBand, OpportunityRoute, OpportunitySummary, SentimentEvidence, Signal } from '@/data/types';
 
 interface OpportunitySources {
   signals?: Signal[];
@@ -45,9 +45,85 @@ function routeForCandidate(candidate: CandidateTrade): { route: OpportunityRoute
   };
 }
 
-function sentimentFromMetadata(metadata?: Record<string, unknown>): string | undefined {
-  const value = metadata?.sentimentSummary ?? metadata?.sentiment_summary;
-  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
+function stringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const out = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+  return out.length > 0 ? out : undefined;
+}
+
+function numberRecord(value: unknown): Record<string, number> | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]));
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+function sentimentFromMetadata(metadata?: Record<string, unknown>): SentimentEvidence | undefined {
+  const raw = metadata?.sentiment ?? metadata?.sentiment_summary_structured ?? metadata?.sentimentSummaryStructured;
+  const legacySummary = metadata?.sentimentSummary ?? metadata?.sentiment_summary;
+  if (raw && typeof raw === 'object') {
+    const value = raw as Record<string, unknown>;
+    const label = typeof value.label === 'string' ? value.label : 'mixed';
+    const state = typeof value.state === 'string' ? value.state : 'available';
+    return {
+      score: typeof value.score === 'number' ? value.score : undefined,
+      label: label === 'positive' || label === 'negative' || label === 'mixed' || label === 'unavailable' ? label : 'mixed',
+      confidence: typeof value.confidence === 'number' ? value.confidence : undefined,
+      window: typeof value.window === 'string' ? value.window : typeof value.timeWindow === 'string' ? value.timeWindow : undefined,
+      sourceCount:
+        typeof value.sourceCount === 'number'
+          ? value.sourceCount
+          : typeof value.source_count === 'number'
+            ? value.source_count
+            : undefined,
+      sourceGroups: numberRecord(value.sourceGroups ?? value.source_groups),
+      priceAgreement:
+        value.priceAgreement === 'agreeing' ||
+        value.priceAgreement === 'diverging' ||
+        value.priceAgreement === 'neutral' ||
+        value.priceAgreement === 'unknown'
+          ? value.priceAgreement
+          : value.price_agreement === 'agreeing' ||
+              value.price_agreement === 'diverging' ||
+              value.price_agreement === 'neutral' ||
+              value.price_agreement === 'unknown'
+            ? value.price_agreement
+            : undefined,
+      topDrivers: stringArray(value.topDrivers ?? value.top_drivers),
+      limitations: stringArray(value.limitations),
+      state:
+        state === 'available' ||
+        state === 'disabled' ||
+        state === 'missing' ||
+        state === 'sparse' ||
+        state === 'low_confidence' ||
+        state === 'degraded' ||
+        state === 'error'
+          ? state
+          : 'available',
+      summary: typeof value.summary === 'string' ? value.summary : typeof legacySummary === 'string' ? legacySummary : undefined,
+      snapshotAt:
+        typeof value.snapshotAt === 'string'
+          ? value.snapshotAt
+          : typeof value.snapshot_at === 'string'
+            ? value.snapshot_at
+            : undefined,
+      intendedUse:
+        typeof value.intendedUse === 'string'
+          ? value.intendedUse
+          : 'Use sentiment as supporting evidence beside strategy, price, policy, and risk.',
+    };
+  }
+  if (typeof legacySummary === 'string' && legacySummary.trim().length > 0) {
+    return {
+      label: 'mixed',
+      state: 'available',
+      summary: legacySummary,
+      intendedUse: 'Use sentiment as supporting evidence beside strategy, price, policy, and risk.',
+      limitations: ['Legacy sentiment summary does not include source counts or confidence.'],
+    };
+  }
+  return undefined;
 }
 
 export function opportunityFromSignal(signal: Signal): OpportunitySummary {
@@ -80,7 +156,8 @@ export function opportunityFromCandidate(candidate: CandidateTrade): Opportunity
     expiresAt: candidate.expiresAt,
     route: route.route,
     routeReason: route.routeReason,
-    sentimentSummary: sentimentFromMetadata(candidate.metadata),
+    sentimentSummary: sentimentFromMetadata(candidate.metadata)?.summary,
+    sentiment: candidate.sentiment ?? sentimentFromMetadata(candidate.metadata),
     status: candidate.status || 'unknown',
     sourceType: 'candidate',
     sourceId: candidate.id,
@@ -98,7 +175,8 @@ export function opportunityFromApproval(item: ApprovalQueueItem): OpportunitySum
     expiresAt: item.expiresAt,
     route: 'approval_required',
     routeReason: item.blockReason ?? 'Approval is required before this opportunity can move to execution.',
-    sentimentSummary: sentimentFromMetadata(item.metadata),
+    sentimentSummary: sentimentFromMetadata(item.metadata)?.summary,
+    sentiment: item.sentiment ?? sentimentFromMetadata(item.metadata),
     status: 'awaiting_approval',
     sourceType: 'approval',
     sourceId: item.id,

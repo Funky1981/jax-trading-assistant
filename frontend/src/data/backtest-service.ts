@@ -4,6 +4,7 @@ import type {
   BacktestRunStats,
   BacktestRunSummary,
   BacktestTrade,
+  SentimentEvidence,
   RunTimelineEvent,
   RunSummary,
 } from './types';
@@ -21,6 +22,7 @@ interface BacktestRunSummaryDTO {
   datasetId?: string;
   datasetHash?: string;
   provenance?: Record<string, unknown>;
+  sentiment?: SentimentEvidence;
   startedAt?: string;
   completedAt?: string;
   createdAt?: string;
@@ -48,6 +50,7 @@ function toSummary(dto: BacktestRunSummaryDTO): BacktestRunSummary {
     datasetId: dto.datasetId,
     datasetHash: dto.datasetHash,
     provenance: dto.provenance,
+    sentiment: dto.sentiment,
     startedAt: dto.startedAt,
     completedAt: dto.completedAt,
     createdAt: dto.createdAt,
@@ -76,6 +79,18 @@ interface RunBacktestInput {
   seed?: number;
   initialCapital?: number;
   riskPerTrade?: number;
+  sentiment?: BacktestSentimentConfig;
+}
+
+export interface BacktestSentimentConfig {
+  enabled: boolean;
+  mode: 'disabled' | 'filter' | 'boost';
+  sourceScope: string;
+  window: string;
+  threshold: number;
+  decayMode: 'none' | 'linear' | 'exponential';
+  weightingMode: 'equal' | 'trust_weighted';
+  divergenceEnabled: boolean;
 }
 
 export const backtestService = {
@@ -101,6 +116,13 @@ export const backtestService = {
   async get(runId: string): Promise<BacktestRunDetail> {
     const dto = await apiClient.get<BacktestRunDetailDTO>(`/api/v1/backtests/runs/${runId}`);
     return toDetail(dto);
+  },
+
+  savePaperSetup(runId: string, input: { setupName: string; targetMode?: 'paper' | 'live'; sentiment?: BacktestSentimentConfig }) {
+    return apiClient.post<{ id: string; setupName: string; targetMode: string; liveReady: boolean }>(
+      `/api/v1/backtests/runs/${runId}/save-paper-setup`,
+      input
+    );
   },
 
   listRuns(limit = 100): Promise<RunSummary[]> {

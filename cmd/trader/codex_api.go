@@ -305,6 +305,7 @@ type backtestRunRequest struct {
 	Parameters         map[string]any `json:"parameters,omitempty"`
 	SessionTimezone    string         `json:"sessionTimezone,omitempty"`
 	FlattenByCloseTime string         `json:"flattenByCloseTime,omitempty"`
+	Sentiment          map[string]any `json:"sentiment,omitempty"`
 }
 
 type clientRequestError struct {
@@ -412,13 +413,21 @@ func backtestRunsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 func backtestRunDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
 		id := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/v1/backtests/runs/"), "/")
 		if id == "" {
 			http.NotFound(w, r)
+			return
+		}
+		if strings.HasSuffix(id, "/save-paper-setup") {
+			if r.Method != http.MethodPost {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			saveBacktestPaperSetupHandler(pool, strings.TrimSuffix(id, "/save-paper-setup"))(w, r)
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		var (
@@ -546,6 +555,73 @@ func backtestRunDetailHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			"completedAt": completed,
 			"createdAt":   created,
 			"error":       errText,
+		})
+	}
+}
+
+type saveBacktestPaperSetupRequest struct {
+	SetupName  string         `json:"setupName"`
+	TargetMode string         `json:"targetMode"`
+	Sentiment  map[string]any `json:"sentiment,omitempty"`
+}
+
+func saveBacktestPaperSetupHandler(pool *pgxpool.Pool, runID string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req saveBacktestPaperSetupRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if strings.TrimSpace(req.SetupName) == "" {
+			req.SetupName = "sentiment paper setup"
+		}
+		if req.TargetMode == "" {
+			req.TargetMode = "paper"
+		}
+		if req.TargetMode != "paper" && req.TargetMode != "live" {
+			http.Error(w, "targetMode must be paper or live", http.StatusBadRequest)
+			return
+		}
+
+		var rowID, cfgText string
+		if err := pool.QueryRow(r.Context(), `
+			SELECT id::text, config_snapshot::text
+			FROM backtest_runs
+			WHERE external_run_id = $1 OR id::text = $1
+		`, runID).Scan(&rowID, &cfgText); err != nil {
+			if err == pgx.ErrNoRows {
+				http.NotFound(w, r)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if len(req.Sentiment) == 0 {
+			var cfg map[string]any
+			if err := json.Unmarshal([]byte(cfgText), &cfg); err == nil {
+				if sentiment, ok := cfg["sentiment"].(map[string]any); ok {
+					req.Sentiment = sentiment
+				}
+			}
+		}
+		sentimentJSON, _ := json.Marshal(req.Sentiment)
+		provenanceJSON, _ := json.Marshal(map[string]any{"backtestRunId": runID, "source": "research"})
+		liveReady := false
+		var handoffID string
+		if err := pool.QueryRow(r.Context(), `
+			INSERT INTO sentiment_paper_live_handoffs (backtest_run_id, target_mode, setup_name, sentiment_config, provenance, live_ready)
+			VALUES ($1::uuid, $2, $3, $4::jsonb, $5::jsonb, $6)
+			RETURNING id::text
+		`, rowID, req.TargetMode, req.SetupName, string(sentimentJSON), string(provenanceJSON), liveReady).Scan(&handoffID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		jsonOK(w, map[string]any{
+			"id":         handoffID,
+			"setupName":  req.SetupName,
+			"targetMode": req.TargetMode,
+			"liveReady":  liveReady,
+			"sentiment":  req.Sentiment,
 		})
 	}
 }
@@ -1746,6 +1822,25 @@ func normalizeBacktestMetrics(raw any) map[string]float64 {
 	return out
 }
 
+func normalizeBacktestSentimentPayload(input map[string]any) map[string]any {
+	out := make(map[string]any, len(input))
+	for key, value := range input {
+		switch key {
+		case "sourceScope":
+			out["source_scope"] = value
+		case "decayMode":
+			out["decay_mode"] = value
+		case "weightingMode":
+			out["weighting_mode"] = value
+		case "divergenceEnabled":
+			out["divergence_enabled"] = value
+		default:
+			out[key] = value
+		}
+	}
+	return out
+}
+
 func deterministicSweepSeed(projectID string, idx int, combo map[string]any) int64 {
 	encoded, _ := json.Marshal(combo)
 	sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%d|%s", projectID, idx, string(encoded))))
@@ -1812,6 +1907,9 @@ func runBacktestAndPersist(ctx context.Context, pool *pgxpool.Pool, orchestrator
 	}
 	if req.FlattenByCloseTime != "" {
 		payload["flatten_by_close_time"] = req.FlattenByCloseTime
+	}
+	if len(req.Sentiment) > 0 {
+		payload["sentiment"] = normalizeBacktestSentimentPayload(req.Sentiment)
 	}
 	body, _ := json.Marshal(payload)
 	respRaw, err := proxyPost(ctx, orchestratorURL+"/backtest", body)

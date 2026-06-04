@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { SentimentEvidencePanel } from '@/components/trading/SentimentEvidencePanel';
 import { emitAnalyticsEvent } from '@/lib/analytics';
 
 function fmtDate(raw?: string | null) {
@@ -81,7 +82,7 @@ interface CandidateRowProps {
   onDecision: (
     id: string,
     action: 'approve' | 'reject' | 'snooze' | 'reanalyze',
-    opts?: { snoozeHours?: number; notes?: string }
+    opts?: { snoozeHours?: number; notes?: string; overrideReason?: string }
   ) => void;
   pending: boolean;
   onEvidenceOpen: (item: ApprovalQueueItem) => void;
@@ -91,12 +92,21 @@ function CandidateRow({ item, onDecision, pending, onEvidenceOpen }: CandidateRo
   const [expanded, setExpanded] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState('');
+  const [overrideReason, setOverrideReason] = useState('risk_concern');
   const [snoozeHours, setSnoozeHours] = useState(4);
   const [confirmApprove, setConfirmApprove] = useState(false);
   const etfPolicy = etfPolicyFromMetadata(item.metadata);
 
   const submit = (action: 'approve' | 'reject' | 'snooze' | 'reanalyze') => {
-    onDecision(item.id, action, { snoozeHours, notes: notes.trim() || undefined });
+    if (action === 'reject' || action === 'snooze') {
+      emitAnalyticsEvent('approval_override_reason_selected', {
+        source_surface: 'approvals',
+        candidate_id: item.id,
+        reason_code: overrideReason,
+        sentiment_evidence_viewed: Boolean(item.sentiment ?? item.metadata?.sentiment),
+      });
+    }
+    onDecision(item.id, action, { snoozeHours, notes: notes.trim() || undefined, overrideReason });
     setNotes('');
     setShowNotes(false);
     setConfirmApprove(false);
@@ -162,8 +172,27 @@ function CandidateRow({ item, onDecision, pending, onEvidenceOpen }: CandidateRo
           </div>
         ) : null}
 
+        <SentimentEvidencePanel sentiment={item.sentiment ?? (item.metadata?.sentiment as never)} compact={!expanded} />
+
         {showNotes && (
           <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor={`override-${item.id}`}>
+              Override reason
+            </label>
+            <select
+              id={`override-${item.id}`}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              value={overrideReason}
+              onChange={(event) => setOverrideReason(event.target.value)}
+            >
+              <option value="weak_sentiment_evidence">Weak sentiment evidence</option>
+              <option value="stale_sources">Stale sources</option>
+              <option value="policy_concern">Policy concern</option>
+              <option value="risk_concern">Risk concern</option>
+              <option value="price_sentiment_divergence">Price/sentiment divergence</option>
+              <option value="duplicate_idea">Duplicate idea</option>
+              <option value="other">Other</option>
+            </select>
             <textarea
               className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               rows={2}
@@ -419,15 +448,15 @@ export function ApprovalsPage() {
     }: {
       id: string;
       action: 'approve' | 'reject' | 'snooze' | 'reanalyze';
-      opts?: { snoozeHours?: number; notes?: string };
+      opts?: { snoozeHours?: number; notes?: string; overrideReason?: string };
     }) => {
       switch (action) {
         case 'approve':
           return approvalsService.approve(id, opts?.notes);
         case 'reject':
-          return approvalsService.reject(id, opts?.notes);
+          return approvalsService.reject(id, opts?.notes, opts?.overrideReason ? { reasonCode: opts.overrideReason, sentimentEvidenceViewed: true } : undefined);
         case 'snooze':
-          return approvalsService.snooze(id, opts?.snoozeHours ?? 4, opts?.notes);
+          return approvalsService.snooze(id, opts?.snoozeHours ?? 4, opts?.notes, opts?.overrideReason ? { reasonCode: opts.overrideReason, sentimentEvidenceViewed: true } : undefined);
         case 'reanalyze':
           return approvalsService.reanalyze(id, opts?.notes);
       }

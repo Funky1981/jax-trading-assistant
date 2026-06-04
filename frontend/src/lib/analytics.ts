@@ -5,6 +5,7 @@ export type AnalyticsEventName =
   | 'opportunity_sentiment_viewed'
   | 'sentiment_alert_opened'
   | 'approval_sentiment_evidence_viewed'
+  | 'approval_override_reason_selected'
   | 'backtest_sentiment_enabled'
   | 'teach_me_sentiment_opened';
 

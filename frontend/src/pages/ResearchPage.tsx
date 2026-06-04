@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, Upload, Download, Save, Plus, RefreshCw } from 'lucide-react';
 import { instancesService } from '@/data/instances-service';
 import { backtestService } from '@/data/backtest-service';
+import type { BacktestSentimentConfig } from '@/data/backtest-service';
 import { researchService } from '@/data/research-service';
 import { datasetsService } from '@/data/datasets-service';
 import type { ResearchProject, StrategyInstance } from '@/data/types';
@@ -23,6 +24,17 @@ import {
   resolveGuidedInstance,
   resolveGuidedMarket,
 } from '@/pages/research-guided-wizard';
+
+const guidedSentimentConfig: BacktestSentimentConfig = {
+  enabled: true,
+  mode: 'boost',
+  sourceScope: 'trusted_news',
+  window: '24h',
+  threshold: 0.2,
+  decayMode: 'linear',
+  weightingMode: 'trust_weighted',
+  divergenceEnabled: true,
+};
 
 type InstanceEditorState = {
   id?: string;
@@ -358,19 +370,20 @@ export function ResearchPage() {
 
       emitAnalyticsEvent('backtest_sentiment_enabled', {
         source_surface: 'research',
-        enabled: false,
-        sentiment_mode: 'phase2_pending',
+        enabled: true,
+        sentiment_mode: guidedSentimentConfig.mode,
       });
 
-      return backtestService.run(
-        buildGuidedBacktestRequest({
+      return backtestService.run({
+        ...buildGuidedBacktestRequest({
           instanceId: guidedInstance.id,
           from: guidedRange.fromStr,
           to: guidedRange.toStr,
           marketId: selectedGuidedMarket.id,
           datasetId,
-        })
-      );
+        }),
+        sentiment: guidedSentimentConfig,
+      });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['backtest-runs'] });
@@ -600,16 +613,16 @@ export function ResearchPage() {
 
             <div className="space-y-2">
               <p className="text-sm font-medium">Step 4: Sentiment feature</p>
-              <Select value="phase2_pending" disabled>
+              <Select value={guidedSentimentConfig.mode} disabled>
                 <SelectTrigger>
-                  <SelectValue placeholder="Phase 2 pending" />
+                  <SelectValue placeholder="Sentiment mode" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="phase2_pending">Visible now, available in Phase 2</SelectItem>
+                  <SelectItem value="boost">Sentiment boost</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Sentiment ranking and gating options are planned but not connected in this phase.
+                Trusted-news sentiment is saved with this backtest as a confidence boost and disclosed in results.
               </p>
             </div>
           </div>
@@ -653,7 +666,7 @@ export function ResearchPage() {
                 onClick={() =>
                   emitAnalyticsEvent('teach_me_sentiment_opened', {
                     source_surface: 'research',
-                    sentiment_mode: 'phase2_pending',
+                    sentiment_mode: guidedSentimentConfig.mode,
                   })
                 }
               >

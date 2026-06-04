@@ -1,4 +1,5 @@
 import { apiClient } from './http-client';
+import type { SentimentEvidence } from './types';
 
 export interface CandidateTrade {
   id: string;
@@ -25,6 +26,7 @@ export interface CandidateTrade {
   filledAt?: string;
   dataProvenance: string;
   metadata?: Record<string, unknown>;
+  sentiment?: SentimentEvidence;
   latestApproval?: {
     id: string;
     decision: string;
@@ -88,6 +90,7 @@ export interface ApprovalQueueItem {
   detectedAt: string;
   expiresAt?: string;
   instanceName: string;
+  sentiment?: SentimentEvidence;
 }
 
 export interface MobileTelegramApprovalRequest {
@@ -135,16 +138,16 @@ export const approvalsService = {
     return apiClient.get<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}`);
   },
 
-  approve(candidateId: string, notes?: string) {
-    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/approve`, { notes });
+  approve(candidateId: string, notes?: string, overrideReason?: ApprovalOverrideReasonInput) {
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/approve`, { notes, overrideReason });
   },
 
-  reject(candidateId: string, notes?: string) {
-    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/reject`, { notes });
+  reject(candidateId: string, notes?: string, overrideReason?: ApprovalOverrideReasonInput) {
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/reject`, { notes, overrideReason });
   },
 
-  snooze(candidateId: string, snoozeHours = 4, notes?: string) {
-    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/snooze`, { snoozeHours, notes });
+  snooze(candidateId: string, snoozeHours = 4, notes?: string, overrideReason?: ApprovalOverrideReasonInput) {
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/snooze`, { snoozeHours, notes, overrideReason });
   },
 
   reanalyze(candidateId: string, notes?: string) {
@@ -155,3 +158,8 @@ export const approvalsService = {
     return apiClient.post<MobileTelegramApprovalResponse>('/api/v1/mobile/telegram/webhook', payload);
   },
 };
+
+export interface ApprovalOverrideReasonInput {
+  reasonCode: string;
+  sentimentEvidenceViewed: boolean;
+}

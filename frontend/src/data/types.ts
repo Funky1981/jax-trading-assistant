@@ -220,6 +220,30 @@ export type OpportunityRoute = 'manual_allowed' | 'approval_required' | 'blocked
 
 export type OpportunitySourceType = 'signal' | 'candidate' | 'approval';
 
+export type SentimentEvidenceState = 'available' | 'disabled' | 'missing' | 'sparse' | 'low_confidence' | 'degraded' | 'error';
+
+export interface SentimentEvidence {
+  score?: number;
+  label: 'positive' | 'negative' | 'mixed' | 'unavailable';
+  confidence?: number;
+  window?: string;
+  sourceCount?: number;
+  sourceGroups?: Record<string, number>;
+  priceAgreement?: 'agreeing' | 'diverging' | 'neutral' | 'unknown';
+  topDrivers?: string[];
+  limitations?: string[];
+  sourceItems?: Array<{
+    title: string;
+    sourceFamily?: string;
+    url?: string;
+    publishedAt?: string;
+  }>;
+  state: SentimentEvidenceState;
+  summary?: string;
+  snapshotAt?: string;
+  intendedUse?: string;
+}
+
 export interface OpportunitySummary {
   id: string;
   symbol: string;
@@ -231,6 +255,7 @@ export interface OpportunitySummary {
   route: OpportunityRoute;
   routeReason: string;
   sentimentSummary?: string;
+  sentiment?: SentimentEvidence;
   status: string;
   sourceType: OpportunitySourceType;
   sourceId: string;
@@ -465,6 +490,7 @@ export interface BacktestRunSummary {
   datasetId?: string;
   datasetHash?: string;
   provenance?: ProvenanceInfo;
+  sentiment?: SentimentEvidence;
   startedAt?: string;
   completedAt?: string;
   createdAt?: string;
@@ -683,6 +709,9 @@ export interface NotificationInboxEntry {
   channels: string[];
   severity?: string;
   primarySymbol?: string;
+  sentimentTriggerType?: string;
+  entityType?: string;
+  entityId?: string;
 }
 
 export interface DatasetSnapshot {

@@ -63,6 +63,21 @@ describe('opportunity adapter', () => {
       detectedAt: '2026-05-22T09:40:00Z',
       expiresAt: '2026-05-22T10:00:00Z',
       instanceName: 'ETF guardrail',
+      metadata: {
+        sentiment: {
+          score: -0.42,
+          label: 'negative',
+          confidence: 0.77,
+          window: '24h',
+          sourceCount: 5,
+          sourceGroups: { trusted_news: 3, market_news: 2 },
+          priceAgreement: 'diverging',
+          topDrivers: ['weak breadth', 'risk-off flows'],
+          limitations: ['Sentiment is evidence only; approval policy still applies.'],
+          state: 'available',
+          snapshotAt: '2026-05-22T09:39:00Z',
+        },
+      },
     };
 
     expect(opportunityFromApproval(approval)).toMatchObject({
@@ -70,6 +85,34 @@ describe('opportunity adapter', () => {
       confidenceBand: 'low',
       route: 'approval_required',
       status: 'awaiting_approval',
+      sentiment: {
+        score: -0.42,
+        label: 'negative',
+        confidence: 0.77,
+        sourceCount: 5,
+        priceAgreement: 'diverging',
+        state: 'available',
+      },
+    });
+  });
+
+  it('maps legacy sentiment strings to unavailable structured evidence', () => {
+    const candidate: CandidateTrade = {
+      id: 'candidate-sentiment-legacy',
+      strategyInstanceId: 'instance-1',
+      symbol: 'SPY',
+      signalType: 'BUY',
+      status: 'detected',
+      sessionDate: '2026-05-22',
+      detectedAt: '2026-05-22T09:35:00Z',
+      dataProvenance: 'paper',
+      metadata: { sentimentSummary: 'Positive news tone from three trusted sources.' },
+    };
+
+    expect(opportunityFromCandidate(candidate).sentiment).toMatchObject({
+      state: 'available',
+      label: 'mixed',
+      summary: 'Positive news tone from three trusted sources.',
     });
   });
 

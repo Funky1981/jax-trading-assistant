@@ -8,6 +8,7 @@ import { signalsService } from '@/data/signals-service';
 import { toOpportunitySummaries } from '@/data/opportunity-adapter';
 import type { AIScannerApiState, OpportunityRoute, OpportunitySummary, ScannerSettings } from '@/data/types';
 import { ScannerSettingsCard } from '@/components/trading/ScannerSettingsCard';
+import { SentimentEvidencePanel } from '@/components/trading/SentimentEvidencePanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -116,7 +117,7 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
   const expired = isExpired(opportunity.expiresAt);
 
   useEffect(() => {
-    if (!opportunity.sentimentSummary) {
+    if (!opportunity.sentiment) {
       return;
     }
 
@@ -126,7 +127,7 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
       route_type: opportunity.route,
       sentiment_mode: 'api_scanner',
     });
-  }, [opportunity.id, opportunity.route, opportunity.sentimentSummary]);
+  }, [opportunity.id, opportunity.route, opportunity.sentiment]);
 
   return (
     <Card className="overflow-hidden">
@@ -160,11 +161,7 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
           </div>
         </div>
 
-        {opportunity.sentimentSummary && (
-          <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
-            {opportunity.sentimentSummary}
-          </div>
-        )}
+        <SentimentEvidencePanel sentiment={opportunity.sentiment} />
 
         <div className="flex flex-wrap gap-2">
           <Button asChild>

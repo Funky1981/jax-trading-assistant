@@ -75,6 +75,31 @@ type BacktestRequest struct {
 	SessionTimezone string `json:"session_timezone,omitempty"`
 	// FlattenByCloseTime is used by same-day strategies for end-of-session rules.
 	FlattenByCloseTime string `json:"flatten_by_close_time,omitempty"`
+	// Sentiment controls optional deterministic sentiment features for research runs.
+	Sentiment BacktestSentimentConfig `json:"sentiment,omitempty"`
+}
+
+type BacktestSentimentConfig struct {
+	Enabled           bool    `json:"enabled"`
+	Mode              string  `json:"mode,omitempty"`
+	SourceScope       string  `json:"source_scope,omitempty"`
+	Window            string  `json:"window,omitempty"`
+	Threshold         float64 `json:"threshold,omitempty"`
+	DecayMode         string  `json:"decay_mode,omitempty"`
+	WeightingMode     string  `json:"weighting_mode,omitempty"`
+	DivergenceEnabled bool    `json:"divergence_enabled"`
+}
+
+type BacktestSentimentSummary struct {
+	Enabled             bool     `json:"enabled"`
+	Mode                string   `json:"mode"`
+	SourceScope         string   `json:"source_scope,omitempty"`
+	Window              string   `json:"window,omitempty"`
+	Threshold           float64  `json:"threshold,omitempty"`
+	CoverageState       string   `json:"coverage_state"`
+	Contribution        string   `json:"contribution"`
+	Limitations         []string `json:"limitations,omitempty"`
+	PreservedForHandoff bool     `json:"preserved_for_handoff"`
 }
 
 // BacktestResponse is the JSON payload returned on success.
@@ -94,16 +119,17 @@ type BacktestResponse struct {
 	MaxDrawdown   float64 `json:"max_drawdown"`
 	FinalCapital  float64 `json:"final_capital"`
 	// DatasetInfo shows which dataset was used (for reproducibility).
-	DatasetID          string `json:"dataset_id"`
-	DatasetHash        string `json:"dataset_hash,omitempty"`
-	DatasetName        string `json:"dataset_name,omitempty"`
-	DatasetSymbol      string `json:"dataset_symbol,omitempty"`
-	DatasetSource      string `json:"dataset_source,omitempty"`
-	DatasetSchemaVer   string `json:"dataset_schema_ver,omitempty"`
-	DatasetRecordCount int    `json:"dataset_record_count,omitempty"`
-	DatasetStartDate   string `json:"dataset_start_date,omitempty"`
-	DatasetEndDate     string `json:"dataset_end_date,omitempty"`
-	DatasetFilePath    string `json:"dataset_file_path,omitempty"`
+	DatasetID          string                   `json:"dataset_id"`
+	DatasetHash        string                   `json:"dataset_hash,omitempty"`
+	DatasetName        string                   `json:"dataset_name,omitempty"`
+	DatasetSymbol      string                   `json:"dataset_symbol,omitempty"`
+	DatasetSource      string                   `json:"dataset_source,omitempty"`
+	DatasetSchemaVer   string                   `json:"dataset_schema_ver,omitempty"`
+	DatasetRecordCount int                      `json:"dataset_record_count,omitempty"`
+	DatasetStartDate   string                   `json:"dataset_start_date,omitempty"`
+	DatasetEndDate     string                   `json:"dataset_end_date,omitempty"`
+	DatasetFilePath    string                   `json:"dataset_file_path,omitempty"`
+	Sentiment          BacktestSentimentSummary `json:"sentiment,omitempty"`
 }
 
 // ─── handler ──────────────────────────────────────────────────────────────────
@@ -185,6 +211,7 @@ func runBacktest(ctx context.Context, deps *backtestDeps, req BacktestRequest) (
 			resp.DatasetStartDate = ds.StartDate.UTC().Format(time.RFC3339)
 			resp.DatasetEndDate = ds.EndDate.UTC().Format(time.RFC3339)
 			resp.DatasetFilePath = ds.FilePath
+			resp.Sentiment = buildBacktestSentimentSummary(req.Sentiment)
 			return resp, nil
 		}
 	}
@@ -234,6 +261,7 @@ func runBacktest(ctx context.Context, deps *backtestDeps, req BacktestRequest) (
 		DatasetStartDate:   ds.StartDate.UTC().Format(time.RFC3339),
 		DatasetEndDate:     ds.EndDate.UTC().Format(time.RFC3339),
 		DatasetFilePath:    ds.FilePath,
+		Sentiment:          buildBacktestSentimentSummary(req.Sentiment),
 	}
 	return resp, nil
 }
@@ -261,5 +289,49 @@ func validateBacktestRequest(req BacktestRequest) error {
 	if req.DatasetID == "" {
 		return fmt.Errorf("dataset_id is required (research runtime has no live broker connection)")
 	}
+	if err := validateBacktestSentimentConfig(req.Sentiment); err != nil {
+		return err
+	}
 	return nil
+}
+
+func validateBacktestSentimentConfig(config BacktestSentimentConfig) error {
+	if !config.Enabled {
+		return nil
+	}
+	switch config.Mode {
+	case "", "disabled", "filter", "boost":
+	default:
+		return fmt.Errorf("sentiment.mode must be disabled, filter, or boost")
+	}
+	if config.Threshold < -1 || config.Threshold > 1 {
+		return fmt.Errorf("sentiment.threshold must be between -1 and 1")
+	}
+	return nil
+}
+
+func buildBacktestSentimentSummary(config BacktestSentimentConfig) BacktestSentimentSummary {
+	mode := config.Mode
+	if mode == "" {
+		mode = "disabled"
+	}
+	if !config.Enabled || mode == "disabled" {
+		return BacktestSentimentSummary{
+			Enabled:       false,
+			Mode:          "disabled",
+			CoverageState: "not_used",
+			Contribution:  "Sentiment was disabled for this run.",
+		}
+	}
+	return BacktestSentimentSummary{
+		Enabled:             true,
+		Mode:                mode,
+		SourceScope:         config.SourceScope,
+		Window:              config.Window,
+		Threshold:           config.Threshold,
+		CoverageState:       "not_measured",
+		Contribution:        "Sentiment configuration was preserved for deterministic filtering or boosting; historical coverage is disclosed as not measured until sentiment events are linked to this dataset.",
+		Limitations:         []string{"Historical sentiment coverage may be incomplete for this dataset.", "Sentiment features do not bypass approval or risk controls."},
+		PreservedForHandoff: true,
+	}
 }

@@ -122,6 +122,10 @@ export function eventToNotificationEntry(event: EventSummary, nowMs = Date.now()
     channels: parseChannels(event.attributes),
     severity: event.severity,
     primarySymbol: event.primarySymbol,
+    sentimentTriggerType:
+      typeof event.attributes?.sentimentTriggerType === 'string' ? event.attributes.sentimentTriggerType : undefined,
+    entityType: typeof event.attributes?.entityType === 'string' ? event.attributes.entityType : undefined,
+    entityId: typeof event.attributes?.entityId === 'string' ? event.attributes.entityId : undefined,
   };
 }
 

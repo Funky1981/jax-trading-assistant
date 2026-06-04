@@ -123,13 +123,13 @@ describe('ResearchPage guided wizard', () => {
 
     expect(vi.mocked(emitAnalyticsEvent)).toHaveBeenCalledWith(
       'backtest_sentiment_enabled',
-      expect.objectContaining({ source_surface: 'research', sentiment_mode: 'phase2_pending' })
+      expect.objectContaining({ source_surface: 'research', sentiment_mode: 'boost' })
     );
 
     await user.click(screen.getByRole('link', { name: 'Teach me sentiment' }));
     expect(vi.mocked(emitAnalyticsEvent)).toHaveBeenCalledWith(
       'teach_me_sentiment_opened',
-      expect.objectContaining({ source_surface: 'research', sentiment_mode: 'phase2_pending' })
+      expect.objectContaining({ source_surface: 'research', sentiment_mode: 'boost' })
     );
   });
 

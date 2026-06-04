@@ -47,6 +47,34 @@ describe('notification adapter', () => {
     });
   });
 
+  it('preserves sentiment alert metadata for inbox labels and routing', () => {
+    const event: EventSummary = {
+      id: 'event-sentiment-boost',
+      kind: 'sentiment_conviction_boost',
+      title: 'Sentiment boosted SPY setup',
+      summary: 'Trusted news moved above the configured threshold.',
+      createdAt: '2026-05-22T09:00:00Z',
+      attributes: {
+        sentimentTriggerType: 'conviction_boost',
+        entityType: 'opportunity',
+        entityId: 'candidate-1',
+        route: '/ai-trading?symbol=SPY',
+        channels: ['in_app', 'desktop_web'],
+      },
+      primarySymbol: 'SPY',
+    };
+
+    expect(eventToNotificationEntry(event)).toMatchObject({
+      category: 'sentiment_triggered',
+      destinationPath: '/ai-trading?symbol=SPY',
+      sentimentTriggerType: 'conviction_boost',
+      entityType: 'opportunity',
+      entityId: 'candidate-1',
+      channels: ['In-app inbox', 'Desktop Web'],
+      primarySymbol: 'SPY',
+    });
+  });
+
   it('returns deterministic newest-first ordering', () => {
     const events: EventSummary[] = [
       {
