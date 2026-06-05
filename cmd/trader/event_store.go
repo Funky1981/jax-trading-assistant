@@ -23,6 +23,11 @@ type eventStore struct {
 	pool *pgxpool.Pool
 }
 
+type persistedEventRef struct {
+	RawID        string
+	NormalizedID string
+}
+
 type persistEventInput struct {
 	SourceID      string
 	SourceName    string
@@ -181,11 +186,16 @@ func (s *eventStore) SaveMacroNews(ctx context.Context, sourceID string, events 
 }
 
 func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) error {
+	_, err := s.persistEventWithRef(ctx, in)
+	return err
+}
+
+func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInput) (persistedEventRef, error) {
 	if in.EventTime.IsZero() {
 		in.EventTime = time.Now().UTC()
 	}
 	if strings.TrimSpace(in.SourceID) == "" {
-		return fmt.Errorf("event source is required")
+		return persistedEventRef{}, fmt.Errorf("event source is required")
 	}
 	if strings.TrimSpace(in.SourceEventID) == "" {
 		in.SourceEventID = deterministicEventID(in.SourceID, in.EventKind, in.Title, in.EventTime.Format(time.RFC3339))
@@ -227,16 +237,16 @@ func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) err
 	}
 
 	if err := s.ensureSource(ctx, in.SourceID, in.SourceName, in.ProviderType); err != nil {
-		return err
+		return persistedEventRef{}, err
 	}
 
 	payloadJSON, err := json.Marshal(in.Payload)
 	if err != nil {
-		return fmt.Errorf("marshal event payload: %w", err)
+		return persistedEventRef{}, fmt.Errorf("marshal event payload: %w", err)
 	}
 	attrJSON, err := json.Marshal(in.Attributes)
 	if err != nil {
-		return fmt.Errorf("marshal event attributes: %w", err)
+		return persistedEventRef{}, fmt.Errorf("marshal event attributes: %w", err)
 	}
 	contentHash := hashBytes(payloadJSON)
 	canonicalKey := deterministicEventID(in.EventKind, strings.ToUpper(strings.TrimSpace(in.PrimarySymbol)), in.Title, in.EventTime.UTC().Format(time.RFC3339))
@@ -244,7 +254,7 @@ func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) err
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin event tx: %w", err)
+		return persistedEventRef{}, fmt.Errorf("begin event tx: %w", err)
 	}
 	defer func() {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && rollbackErr.Error() != "tx is closed" {
@@ -280,7 +290,7 @@ func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) err
 	`, in.SourceID, in.SourceEventID, in.EventKind, in.EventTime.UTC(), strings.TrimSpace(in.PrimarySymbol), string(payloadJSON), contentHash,
 		flowID, in.SourceID).Scan(&rawID)
 	if err != nil {
-		return fmt.Errorf("upsert event_raw: %w", err)
+		return persistedEventRef{}, fmt.Errorf("upsert event_raw: %w", err)
 	}
 
 	var normalizedID string
@@ -316,13 +326,13 @@ func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) err
 	`, rawID, canonicalKey, in.EventKind, in.Title, strings.TrimSpace(in.Summary), in.Severity, in.EventTime.UTC(), in.SourceID,
 		strings.TrimSpace(in.PrimarySymbol), in.Confidence, string(attrJSON), in.SourceID).Scan(&normalizedID)
 	if err != nil {
-		return fmt.Errorf("upsert event_normalized: %w", err)
+		return persistedEventRef{}, fmt.Errorf("upsert event_normalized: %w", err)
 	}
 
 	symbols := normalizeSymbols(in.PrimarySymbol, in.Symbols)
 	if len(symbols) == 0 {
 		if _, err := tx.Exec(ctx, `DELETE FROM event_symbol_map WHERE normalized_event_id = $1::uuid`, normalizedID); err != nil {
-			return fmt.Errorf("clear event symbol map: %w", err)
+			return persistedEventRef{}, fmt.Errorf("clear event symbol map: %w", err)
 		}
 	} else {
 		if _, err := tx.Exec(ctx, `
@@ -330,7 +340,7 @@ func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) err
 			WHERE normalized_event_id = $1::uuid
 			  AND NOT (symbol = ANY($2))
 		`, normalizedID, symbols); err != nil {
-			return fmt.Errorf("prune event symbol map: %w", err)
+			return persistedEventRef{}, fmt.Errorf("prune event symbol map: %w", err)
 		}
 		for _, symbol := range symbols {
 			isPrimary := strings.EqualFold(symbol, strings.TrimSpace(in.PrimarySymbol))
@@ -346,16 +356,16 @@ func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) err
 					mapping_method = EXCLUDED.mapping_method,
 					is_primary = EXCLUDED.is_primary
 			`, normalizedID, symbol, isPrimary); err != nil {
-				return fmt.Errorf("upsert event symbol map: %w", err)
+				return persistedEventRef{}, fmt.Errorf("upsert event symbol map: %w", err)
 			}
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit event tx: %w", err)
+		return persistedEventRef{}, fmt.Errorf("commit event tx: %w", err)
 	}
 	s.logAudit(ctx, flowID, normalizedID, in)
-	return nil
+	return persistedEventRef{RawID: rawID, NormalizedID: normalizedID}, nil
 }
 
 func (s *eventStore) ensureSource(ctx context.Context, sourceID, sourceName, providerType string) error {
