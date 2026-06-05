@@ -39,6 +39,7 @@ func (s *worldMonitorResearchInboxService) Validate(trigger worldMonitorResearch
 }
 
 func (s *worldMonitorResearchInboxService) Ingest(ctx context.Context, trigger worldMonitorResearchTrigger) (worldMonitorResearchReceipt, error) {
+	trigger = normalizeWorldMonitorResearchTrigger(trigger)
 	validation := s.Validate(trigger, s.now())
 	if !validation.Valid {
 		receipt := worldMonitorResearchReceipt{

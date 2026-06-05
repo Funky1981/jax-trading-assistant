@@ -105,6 +105,61 @@ func validateWorldMonitorResearchTrigger(trigger worldMonitorResearchTrigger, no
 	return worldMonitorValidationResult{Valid: true}
 }
 
+func normalizeWorldMonitorResearchTrigger(trigger worldMonitorResearchTrigger) worldMonitorResearchTrigger {
+	if strings.TrimSpace(trigger.Severity) == "" {
+		trigger.Severity = rawWorldMonitorString(trigger.RawPayload, "threat_level")
+	}
+	if strings.TrimSpace(trigger.Severity) == "" {
+		trigger.Severity = "medium"
+	}
+
+	if strings.TrimSpace(trigger.SourceTier) == "" {
+		if trigger.SourceCount <= 1 {
+			trigger.SourceTier = "tier1"
+		} else {
+			trigger.SourceTier = "tier2"
+		}
+	}
+
+	if len(nonEmptyWorldMonitorStrings(trigger.ConfidenceReasons)) == 0 {
+		reasons := []string{}
+		if reason := strings.TrimSpace(trigger.Reason); reason != "" {
+			reasons = append(reasons, reason)
+		}
+		if trigger.SourceCount > 0 {
+			reasons = append(reasons, fmt.Sprintf("%d source%s reported by World Monitor", trigger.SourceCount, pluralSuffix(trigger.SourceCount)))
+		}
+		if severity := strings.TrimSpace(trigger.Severity); severity != "" {
+			reasons = append(reasons, "World Monitor severity: "+strings.ToLower(severity))
+		}
+		trigger.ConfidenceReasons = reasons
+	}
+
+	return trigger
+}
+
+func rawWorldMonitorString(payload map[string]any, key string) string {
+	if len(payload) == 0 {
+		return ""
+	}
+	value, ok := payload[key]
+	if !ok {
+		return ""
+	}
+	text, ok := value.(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(text)
+}
+
+func pluralSuffix(count int) string {
+	if count == 1 {
+		return ""
+	}
+	return "s"
+}
+
 func rejectWorldMonitorTrigger(reason string) worldMonitorValidationResult {
 	return worldMonitorValidationResult{Valid: false, Reason: reason}
 }

@@ -42,6 +42,35 @@ func TestWorldMonitorResearchTrigger_ValidPayloadPasses(t *testing.T) {
 	}
 }
 
+func TestWorldMonitorResearchTrigger_NormalizesCurrentWorldMonitorPayload(t *testing.T) {
+	now := time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC)
+	trigger := validWorldMonitorResearchTrigger(now)
+	trigger.SourceCount = 1
+	trigger.Severity = ""
+	trigger.SourceTier = ""
+	trigger.ConfidenceReasons = nil
+	trigger.RawPayload = map[string]any{
+		"threat_level":    "critical",
+		"threat_category": "military",
+	}
+
+	normalized := normalizeWorldMonitorResearchTrigger(trigger)
+	result := validateWorldMonitorResearchTrigger(normalized, now)
+
+	if !result.Valid {
+		t.Fatalf("expected normalized trigger to pass, got rejection %q", result.Reason)
+	}
+	if normalized.Severity != "critical" {
+		t.Fatalf("Severity = %q, want critical", normalized.Severity)
+	}
+	if normalized.SourceTier != "tier1" {
+		t.Fatalf("SourceTier = %q, want tier1", normalized.SourceTier)
+	}
+	if len(normalized.ConfidenceReasons) == 0 {
+		t.Fatal("expected derived confidence reasons")
+	}
+}
+
 func TestWorldMonitorResearchTrigger_RejectsMissingTimestamp(t *testing.T) {
 	now := time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC)
 	trigger := validWorldMonitorResearchTrigger(now)
