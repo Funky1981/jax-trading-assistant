@@ -22,7 +22,7 @@ Branch: redesign
 | 05 | Event Playbook Library | done | unassigned | event-to-playbook mapping + allowlist gates | playbook catalog + scenario enrichment + tests |
 | 06 | Analyst Scoring Service | done | unassigned | combined score + hard veto overrides | analyst scoring model + service + persistence + tests |
 | 07 | Multi-Analyst Review | done | unassigned | role outputs + linked final decision | deterministic review orchestration + persistence + tests |
-| 08 | Analyst Memory | not_started | unassigned | case study persistence + retrieval | pending |
+| 08 | Analyst Memory | done | unassigned | case study persistence + retrieval | case study + feedback persistence + similarity retrieval + tests |
 | 09 | Evidence Bundle Integration | not_started | unassigned | TA/FA sections included in evidence | pending |
 | 10 | Backtesting and UAT Fixtures | not_started | unassigned | deterministic fixture coverage + no broker writes | pending |
 
@@ -75,6 +75,13 @@ Branch: redesign
   - internal/modules/macroevents/review.go
   - internal/modules/macroevents/review_test.go
   - internal/modules/macroevents/review_service_test.go
+- Added analyst memory and feedback loop:
+  - db/postgres/migrations/000041_analyst_memory_case_studies.up.sql
+  - db/postgres/migrations/000041_analyst_memory_case_studies.down.sql
+  - db/postgres/migrations/analyst_memory_case_studies_schema_test.go
+  - internal/modules/macroevents/memory.go
+  - internal/modules/macroevents/memory_test.go
+  - internal/modules/macroevents/memory_service_test.go
 
 ## Verification Commands
 

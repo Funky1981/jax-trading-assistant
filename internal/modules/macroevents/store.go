@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -409,6 +410,181 @@ func (s *Store) SaveMultiAnalystReview(ctx context.Context, review MultiAnalystR
 		return MultiAnalystReviewRecord{}, fmt.Errorf("insert multi analyst review: %w", err)
 	}
 	return review, nil
+}
+
+func (s *Store) SaveAnalysisCaseStudy(ctx context.Context, study AnalysisCaseStudyRecord) (AnalysisCaseStudyRecord, error) {
+	if s == nil || s.pool == nil {
+		if study.ID == "" {
+			study.ID = uuid.NewString()
+		}
+		return study, nil
+	}
+	id := uuid.NewString()
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO analysis_case_studies (
+			id, macro_event_id, symbol, event_type, playbook_key,
+			technical_snapshot_id, fundamental_snapshot_id, analyst_decision_id, review_id,
+			decision, expected_outcome, surprise_bucket, technical_setup, market_regime, tags
+		)
+		VALUES (
+			$1::uuid, $2::uuid, $3, $4, $5,
+			NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''),
+			$10, $11, NULLIF($12, ''), NULLIF($13, ''), NULLIF($14, ''), $15
+		)
+		RETURNING id::text
+	`, id, study.MacroEventID, study.Symbol, study.EventType, study.PlaybookKey,
+		study.TechnicalSnapshotID, study.FundamentalSnapshotID, study.AnalystDecisionID, study.ReviewID,
+		study.Decision, study.ExpectedOutcome, study.SurpriseBucket, study.TechnicalSetup, study.MarketRegime, study.Tags).Scan(&study.ID)
+	if err != nil {
+		return AnalysisCaseStudyRecord{}, fmt.Errorf("insert analysis case study: %w", err)
+	}
+	return study, nil
+}
+
+func (s *Store) UpdateAnalysisCaseStudyOutcome(ctx context.Context, update AnalysisCaseStudyOutcomeUpdate) (AnalysisCaseStudyRecord, error) {
+	if s == nil || s.pool == nil {
+		now := time.Now().UTC()
+		return AnalysisCaseStudyRecord{
+			ID:            update.CaseStudyID,
+			ActualOutcome: update.ActualOutcome,
+			OutcomeR:      update.OutcomeR,
+			WhatWorked:    append([]string(nil), update.WhatWorked...),
+			WhatFailed:    append([]string(nil), update.WhatFailed...),
+			Lesson:        update.Lesson,
+			ReviewedAt:    &now,
+		}, nil
+	}
+	var reviewedAt time.Time
+	err := s.pool.QueryRow(ctx, `
+		UPDATE analysis_case_studies
+		SET actual_outcome = NULLIF($2, ''),
+			outcome_r = $3,
+			what_worked = $4,
+			what_failed = $5,
+			lesson = NULLIF($6, ''),
+			reviewed_at = NOW()
+		WHERE id = $1::uuid
+		RETURNING reviewed_at
+	`, update.CaseStudyID, update.ActualOutcome, update.OutcomeR, update.WhatWorked, update.WhatFailed, update.Lesson).Scan(&reviewedAt)
+	if err != nil {
+		return AnalysisCaseStudyRecord{}, fmt.Errorf("update analysis case study outcome: %w", err)
+	}
+	return AnalysisCaseStudyRecord{
+		ID:            update.CaseStudyID,
+		ActualOutcome: update.ActualOutcome,
+		OutcomeR:      update.OutcomeR,
+		WhatWorked:    append([]string(nil), update.WhatWorked...),
+		WhatFailed:    append([]string(nil), update.WhatFailed...),
+		Lesson:        update.Lesson,
+		ReviewedAt:    &reviewedAt,
+	}, nil
+}
+
+func (s *Store) SaveAnalystFeedback(ctx context.Context, feedback AnalystFeedbackRecord) (AnalystFeedbackRecord, error) {
+	if s == nil || s.pool == nil {
+		if feedback.ID == "" {
+			feedback.ID = uuid.NewString()
+		}
+		return feedback, nil
+	}
+	id := uuid.NewString()
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO analyst_feedback (id, case_study_id, feedback_source, rating, comment)
+		VALUES ($1::uuid, $2::uuid, $3, $4, $5)
+		RETURNING id::text, created_at
+	`, id, feedback.CaseStudyID, feedback.FeedbackSource, feedback.Rating, feedback.Comment).Scan(&feedback.ID, &feedback.CreatedAt)
+	if err != nil {
+		return AnalystFeedbackRecord{}, fmt.Errorf("insert analyst feedback: %w", err)
+	}
+	return feedback, nil
+}
+
+func (s *Store) FindSimilarAnalysisCaseStudies(ctx context.Context, query SimilarCaseQuery) ([]AnalysisCaseStudyRecord, error) {
+	if s == nil || s.pool == nil {
+		return []AnalysisCaseStudyRecord{}, nil
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT
+			id::text,
+			COALESCE(macro_event_id::text, ''),
+			symbol,
+			event_type,
+			playbook_key,
+			COALESCE(technical_snapshot_id::text, ''),
+			COALESCE(fundamental_snapshot_id::text, ''),
+			COALESCE(analyst_decision_id::text, ''),
+			COALESCE(review_id::text, ''),
+			decision,
+			expected_outcome,
+			COALESCE(actual_outcome, ''),
+			outcome_r,
+			COALESCE(surprise_bucket, ''),
+			COALESCE(technical_setup, ''),
+			COALESCE(market_regime, ''),
+			what_worked,
+			what_failed,
+			COALESCE(lesson, ''),
+			tags,
+			created_at,
+			reviewed_at
+		FROM analysis_case_studies
+		WHERE symbol = $1
+		ORDER BY (
+			CASE WHEN $2 <> '' AND event_type = $2 THEN 3 ELSE 0 END +
+			CASE WHEN $3 <> '' AND playbook_key = $3 THEN 3 ELSE 0 END +
+			CASE WHEN $4 <> '' AND surprise_bucket = $4 THEN 1 ELSE 0 END +
+			CASE WHEN $5 <> '' AND technical_setup = $5 THEN 1 ELSE 0 END +
+			CASE WHEN $6 <> '' AND market_regime = $6 THEN 1 ELSE 0 END
+		) DESC,
+		created_at DESC
+		LIMIT $7
+	`, query.Symbol, query.EventType, query.PlaybookKey, query.SurpriseBucket, query.TechnicalSetup, query.MarketRegime, query.Limit)
+	if err != nil {
+		return nil, fmt.Errorf("query similar analysis case studies: %w", err)
+	}
+	defer rows.Close()
+
+	items := []AnalysisCaseStudyRecord{}
+	for rows.Next() {
+		var item AnalysisCaseStudyRecord
+		var decision string
+		var outcomeR *float64
+		var reviewedAt *time.Time
+		if err := rows.Scan(
+			&item.ID,
+			&item.MacroEventID,
+			&item.Symbol,
+			&item.EventType,
+			&item.PlaybookKey,
+			&item.TechnicalSnapshotID,
+			&item.FundamentalSnapshotID,
+			&item.AnalystDecisionID,
+			&item.ReviewID,
+			&decision,
+			&item.ExpectedOutcome,
+			&item.ActualOutcome,
+			&outcomeR,
+			&item.SurpriseBucket,
+			&item.TechnicalSetup,
+			&item.MarketRegime,
+			&item.WhatWorked,
+			&item.WhatFailed,
+			&item.Lesson,
+			&item.Tags,
+			&item.CreatedAt,
+			&reviewedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan similar analysis case study: %w", err)
+		}
+		item.Decision = AnalystDecision(decision)
+		item.OutcomeR = outcomeR
+		item.ReviewedAt = reviewedAt
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate similar analysis case studies: %w", err)
+	}
+	return items, nil
 }
 
 func (s *Store) SaveScenarioResult(ctx context.Context, result ScenarioEvaluation) (ScenarioEvaluation, error) {
