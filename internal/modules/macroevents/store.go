@@ -193,6 +193,122 @@ func (s *Store) SaveReactionSnapshot(ctx context.Context, snapshot ReactionSnaps
 	return snapshot, nil
 }
 
+func (s *Store) SaveTechnicalAnalysisSnapshot(ctx context.Context, snapshot TechnicalSnapshot) (TechnicalSnapshot, error) {
+	if s == nil || s.pool == nil {
+		if snapshot.ID == "" {
+			snapshot.ID = uuid.NewString()
+		}
+		return snapshot, nil
+	}
+	keyLevelsJSON, err := json.Marshal(snapshot.KeyLevels)
+	if err != nil {
+		return TechnicalSnapshot{}, fmt.Errorf("marshal technical key levels: %w", err)
+	}
+	eventReactionJSON, err := json.Marshal(snapshot.EventReaction)
+	if err != nil {
+		return TechnicalSnapshot{}, fmt.Errorf("marshal technical event reaction: %w", err)
+	}
+	volumeVolatilityJSON, err := json.Marshal(snapshot.VolumeVolatility)
+	if err != nil {
+		return TechnicalSnapshot{}, fmt.Errorf("marshal technical volume volatility: %w", err)
+	}
+	relativeStrengthJSON, err := json.Marshal(snapshot.RelativeStrength)
+	if err != nil {
+		return TechnicalSnapshot{}, fmt.Errorf("marshal technical relative strength: %w", err)
+	}
+	id := uuid.NewString()
+	var macroEventID any
+	if snapshot.MacroEventID != "" {
+		macroEventID = snapshot.MacroEventID
+	}
+	err = s.pool.QueryRow(ctx, `
+		INSERT INTO technical_analysis_snapshots (
+			id, macro_event_id, symbol, analysis_time_utc, timeframe,
+			trend_state, structure_state, key_levels, event_reaction,
+			volume_volatility, relative_strength, technical_score,
+			verdict, reasons, invalidation_rules
+		)
+		VALUES (
+			$1::uuid, $2::uuid, $3, $4, $5,
+			$6, $7, $8::jsonb, $9::jsonb,
+			$10::jsonb, $11::jsonb, $12,
+			$13, $14, $15
+		)
+		ON CONFLICT (macro_event_id, symbol, timeframe) DO UPDATE SET
+			analysis_time_utc = EXCLUDED.analysis_time_utc,
+			trend_state = EXCLUDED.trend_state,
+			structure_state = EXCLUDED.structure_state,
+			key_levels = EXCLUDED.key_levels,
+			event_reaction = EXCLUDED.event_reaction,
+			volume_volatility = EXCLUDED.volume_volatility,
+			relative_strength = EXCLUDED.relative_strength,
+			technical_score = EXCLUDED.technical_score,
+			verdict = EXCLUDED.verdict,
+			reasons = EXCLUDED.reasons,
+			invalidation_rules = EXCLUDED.invalidation_rules
+		RETURNING id::text
+	`, id, macroEventID, snapshot.Symbol, snapshot.AnalysisTimeUTC, snapshot.Timeframe,
+		snapshot.TrendState, snapshot.StructureState, string(keyLevelsJSON), string(eventReactionJSON),
+		string(volumeVolatilityJSON), string(relativeStrengthJSON), snapshot.TechnicalScore,
+		snapshot.Verdict, snapshot.Reasons, snapshot.InvalidationRules).Scan(&snapshot.ID)
+	if err != nil {
+		return TechnicalSnapshot{}, fmt.Errorf("insert technical analysis snapshot: %w", err)
+	}
+	return snapshot, nil
+}
+
+func (s *Store) SaveFundamentalAnalysisSnapshot(ctx context.Context, snapshot FundamentalSnapshot) (FundamentalSnapshot, error) {
+	if s == nil || s.pool == nil {
+		if snapshot.ID == "" {
+			snapshot.ID = uuid.NewString()
+		}
+		return snapshot, nil
+	}
+	crossMarketJSON, err := json.Marshal(snapshot.CrossMarketChecks)
+	if err != nil {
+		return FundamentalSnapshot{}, fmt.Errorf("marshal fundamental cross-market checks: %w", err)
+	}
+	confoundersJSON, err := json.Marshal(snapshot.Confounders)
+	if err != nil {
+		return FundamentalSnapshot{}, fmt.Errorf("marshal fundamental confounders: %w", err)
+	}
+	id := uuid.NewString()
+	var macroEventID any
+	if snapshot.MacroEventID != "" {
+		macroEventID = snapshot.MacroEventID
+	}
+	err = s.pool.QueryRow(ctx, `
+		INSERT INTO fundamental_analysis_snapshots (
+			id, macro_event_id, symbol, analysis_time_utc, event_summary,
+			expected_market_impact, affected_themes, cross_market_checks,
+			confounders, fundamental_score, verdict, reasons, missing_evidence
+		)
+		VALUES (
+			$1::uuid, $2::uuid, $3, $4, $5,
+			$6, $7, $8::jsonb,
+			$9::jsonb, $10, $11, $12, $13
+		)
+		ON CONFLICT (macro_event_id, symbol) DO UPDATE SET
+			analysis_time_utc = EXCLUDED.analysis_time_utc,
+			event_summary = EXCLUDED.event_summary,
+			expected_market_impact = EXCLUDED.expected_market_impact,
+			affected_themes = EXCLUDED.affected_themes,
+			cross_market_checks = EXCLUDED.cross_market_checks,
+			confounders = EXCLUDED.confounders,
+			fundamental_score = EXCLUDED.fundamental_score,
+			verdict = EXCLUDED.verdict,
+			reasons = EXCLUDED.reasons,
+			missing_evidence = EXCLUDED.missing_evidence
+		RETURNING id::text
+	`, id, macroEventID, snapshot.Symbol, snapshot.AnalysisTimeUTC, snapshot.EventSummary,
+		snapshot.ExpectedMarketImpact, snapshot.AffectedThemes, string(crossMarketJSON), string(confoundersJSON),
+		snapshot.FundamentalScore, snapshot.Verdict, snapshot.Reasons, snapshot.MissingEvidence).Scan(&snapshot.ID)
+	if err != nil {
+		return FundamentalSnapshot{}, fmt.Errorf("insert fundamental analysis snapshot: %w", err)
+	}
+	return snapshot, nil
+}
+
 func (s *Store) SaveScenarioResult(ctx context.Context, result ScenarioEvaluation) (ScenarioEvaluation, error) {
 	if s == nil || s.pool == nil {
 		if result.ID == "" {
