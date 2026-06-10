@@ -749,3 +749,141 @@ export interface DatasetListResponse {
 export interface DatasetDetail extends DatasetSnapshot {
   links?: DatasetSnapshotLink[];
 }
+
+export interface MacroETFMapping {
+  id: string;
+  symbol: string;
+  theme: string;
+  mappingReason: string;
+  confidence: number;
+  createdAt: string;
+}
+
+export interface MacroEvent {
+  id: string;
+  source: string;
+  sourceEventId: string;
+  eventType: string;
+  region: string;
+  eventTimeUtc: string;
+  headline: string;
+  summary?: string;
+  actualValue?: number | null;
+  expectedValue?: number | null;
+  previousValue?: number | null;
+  unit?: string;
+  surpriseValue?: number | null;
+  surprisePercent?: number | null;
+  direction: string;
+  confidence: number;
+  status: string;
+  rawPayload?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  etfMappings?: MacroETFMapping[];
+  candidateCount: number;
+  evidenceCount: number;
+}
+
+export interface MacroReaction {
+  id: string;
+  symbol: string;
+  timeframe: string;
+  prePrice: number;
+  postPrice: number;
+  changeAbs: number;
+  changePercent: number;
+  highAfter?: number | null;
+  lowAfter?: number | null;
+  volumeRatio?: number | null;
+  atrRatio?: number | null;
+  direction: string;
+  confirmsEvent: boolean;
+  tooExtended: boolean;
+  noisy: boolean;
+  reason: string;
+  rawCandles?: unknown[];
+  createdAt: string;
+}
+
+export interface MacroScenario {
+  id: string;
+  scenarioKey: string;
+  candidateBias: string;
+  primarySymbols: string[];
+  secondarySymbols: string[];
+  requiredConfirmations: string[];
+  expectedReactions: Record<string, unknown>;
+  result: string;
+  reason: string;
+  createdAt: string;
+}
+
+export interface MacroPricedInScore {
+  id: string;
+  symbol: string;
+  verdict: string;
+  score: number;
+  reasons: string[];
+  createdAt: string;
+}
+
+export interface MacroConfounder {
+  id: string;
+  confounderType: string;
+  headline: string;
+  source?: string;
+  severity: string;
+  reason: string;
+  createdAt: string;
+}
+
+export interface MacroEvidenceBundle {
+  id: string;
+  symbol: string;
+  status: string;
+  verdict: string;
+  summary: string;
+  evidence: Record<string, unknown>;
+  missingEvidence: string[];
+  walkawayReasons: string[];
+  createdAt: string;
+}
+
+export interface MacroCandidate {
+  id: string;
+  macroEventId: string;
+  evidenceBundleId: string;
+  symbol: string;
+  side: string;
+  bias: string;
+  entryType: string;
+  entryReferencePrice: number;
+  stopReferencePrice: number;
+  targetReferencePrice: number;
+  riskPercent: number;
+  timeLimit: string;
+  status: string;
+  createdReason: string;
+  rejectionReason?: string;
+  walkawayReasons: string[];
+  createdAt: string;
+  humanApprovalRequired: boolean;
+}
+
+export interface MacroEventListResponse {
+  events: MacroEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface MacroEventDetail {
+  event: MacroEvent;
+  reactions: MacroReaction[];
+  scenarios: MacroScenario[];
+  pricedInScores: MacroPricedInScore[];
+  confounders: MacroConfounder[];
+  evidenceBundles: MacroEvidenceBundle[];
+  candidates: MacroCandidate[];
+}

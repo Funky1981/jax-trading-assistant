@@ -39,6 +39,7 @@ const primaryNavItems = [
   { label: 'Manual Trading', path: '/manual-trading', icon: ClipboardPenLine },
   { label: 'Approvals', path: '/etf/approvals', icon: CheckSquare },
   { label: 'Research', path: '/research', icon: FlaskConical },
+  { label: 'Macro Events', path: '/macro/events', icon: Globe },
   { label: 'Analysis', path: '/analysis', icon: BarChart3 },
   { label: 'Notifications', path: '/notifications', icon: Bell },
   { label: 'Settings', path: '/settings', icon: Settings },
