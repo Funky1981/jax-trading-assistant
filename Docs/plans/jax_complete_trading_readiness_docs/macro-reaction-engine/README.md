@@ -89,3 +89,9 @@ candidate_trade or rejected_candidate
   ↓
 human approval
 ```
+
+## Next Plan
+
+After macro event reaction and evidence bundles are implemented, continue with:
+
+`Docs/plans/analysis-intelligence-layer/README.md`
