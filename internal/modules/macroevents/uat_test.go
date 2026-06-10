@@ -16,6 +16,7 @@ type macroUATFixture struct {
 	newsSaturation     float64
 	volatilityElevated bool
 	confounders        []Confounder
+	similarCases       []AnalysisCaseStudyRecord
 	plan               CandidatePlan
 	side               CandidateSide
 }
@@ -103,6 +104,29 @@ func TestMacroReactionUATDeterministicFixtures(t *testing.T) {
 			wantReason:        "priced-in verdict blocks candidate",
 		},
 		{
+			name: "fixture confounder rejects",
+			fixture: macroUATFixture{
+				event:   macroUATEvent(eventTime, EventTypeUSCPIHeadline, DirectionInflationHot, 5.3, 3.0, "Hot CPI with overlapping bank stress headline"),
+				symbol:  "QQQ",
+				candles: macroUATCandles(eventTime, "QQQ", 100.0, 99.4, 98.8),
+				confounders: []Confounder{{
+					Type:            "bank_stress",
+					Headline:        "Regional bank liquidity concern",
+					Severity:        "high",
+					Reason:          "separate risk-off catalyst",
+					BlocksCandidate: true,
+				}},
+				plan: macroUATPlan(&shortEntry, &shortStop, &shortTarget),
+				side: CandidateSideShortBias,
+			},
+			wantDirection:     ReactionDirectionDown,
+			wantConfirms:      true,
+			wantEvidence:      EvidenceVerdictCandidateBlocked,
+			wantCandidate:     MacroCandidateStatusBlocked,
+			wantCandidateSide: CandidateSideNoTrade,
+			wantReason:        "high-severity confounder blocks candidate",
+		},
+		{
 			name: "fixture missing candles rejects",
 			fixture: macroUATFixture{
 				event:  macroUATEvent(eventTime, EventTypeUSNonfarmPayrolls, DirectionGrowthStrong, 350000, 200000, "Strong jobs but missing candles"),
@@ -140,8 +164,19 @@ func TestMacroReactionUATDeterministicFixtures(t *testing.T) {
 			if out.candidate.Side != tt.wantCandidateSide {
 				t.Fatalf("candidate side = %q, want %q", out.candidate.Side, tt.wantCandidateSide)
 			}
+			if out.candidate.ID != "" {
+				t.Fatalf("uat fixture must not persist candidate id, got %q", out.candidate.ID)
+			}
 			if tt.wantReason != "" && !macroUATContains(out, tt.wantReason) {
 				t.Fatalf("fixture output did not contain reason %q; evidence=%v candidate=%s", tt.wantReason, out.evidence.WalkawayReasons, out.candidate.RejectionReason)
+			}
+			if tt.wantEvidence == EvidenceVerdictCandidateAllowed {
+				if out.technical.Verdict != TechnicalVerdictConfirmedBearish && out.technical.Verdict != TechnicalVerdictConfirmedBullish {
+					t.Fatalf("technical verdict = %q, want confirmed bullish/bearish", out.technical.Verdict)
+				}
+				if out.fundamental.Verdict != FundamentalVerdictStrongBearish && out.fundamental.Verdict != FundamentalVerdictStrongBullish {
+					t.Fatalf("fundamental verdict = %q, want strong bullish/bearish", out.fundamental.Verdict)
+				}
 			}
 		})
 	}
@@ -170,11 +205,15 @@ func TestMacroReactionUATCandidateCannotBecomeOrderWithoutSeparateApproval(t *te
 }
 
 type macroUATOutput struct {
-	scenario  ScenarioEvaluation
-	reaction  ReactionSnapshot
-	pricedIn  PricedInScore
-	evidence  EvidenceBundle
-	candidate MacroCandidate
+	scenario    ScenarioEvaluation
+	reaction    ReactionSnapshot
+	technical   TechnicalSnapshot
+	fundamental FundamentalSnapshot
+	pricedIn    PricedInScore
+	analyst     AnalystDecisionRecord
+	review      MultiAnalystReviewRecord
+	evidence    EvidenceBundle
+	candidate   MacroCandidate
 }
 
 func runMacroUATFixture(f macroUATFixture) macroUATOutput {
@@ -198,12 +237,75 @@ func runMacroUATFixture(f macroUATFixture) macroUATOutput {
 		AnalystConsensusTight: false,
 		Reaction:              reaction,
 	})
+	bias := TechnicalBiasBearish
+	if reaction.Direction == ReactionDirectionUp {
+		bias = TechnicalBiasBullish
+	}
+	technical := EvaluateTechnicalSnapshot(TechnicalInput{
+		MacroEventID:     f.event.MacroEventID,
+		Symbol:           f.symbol,
+		Timeframe:        TimeframePostEvent15M,
+		TrendState:       macroUATTrendState(reaction.Direction),
+		StructureState:   macroUATStructureState(reaction),
+		Bias:             bias,
+		KeyLevels:        map[string]float64{"pre_event_high": reaction.PrePrice + 0.1, "pre_event_low": reaction.PrePrice - 0.1, "vwap": reaction.PrePrice},
+		EventReaction:    macroUATTechnicalReaction(reaction),
+		VolumeVolatility: TechnicalVolumeVolatility{VolumeRatio: macroUATFloat(reaction.VolumeRatio), ATRRatio: macroUATFloat(reaction.ATRRatio)},
+		RelativeStrength: TechnicalRelativeStrength{BenchmarkSymbol: "SPY", SpreadToBenchmark: 0.2, AlignsWithScenario: reaction.ConfirmsEvent},
+		Candles:          f.candles,
+		HasStopLevel:     f.plan.StopPrice != nil,
+		RewardRisk:       f.plan.RewardRiskRatio,
+	})
+	fundamental := EvaluateFundamentalSnapshot(FundamentalInput{
+		MacroEventID: f.event.MacroEventID,
+		Symbol:       f.symbol,
+		Event:        f.event,
+		Scenario:     scenario,
+		EventSummary: f.event.Headline,
+		CrossMarketChecks: []FundamentalCheck{{
+			Symbol:    f.symbol,
+			Expected:  string(scenario.CandidateBias),
+			Observed:  string(reaction.Direction),
+			Confirmed: reaction.ConfirmsEvent,
+			Reason:    "deterministic fixture check",
+		}},
+		Confounders: f.confounders,
+	})
+	analyst := ScoreAnalystDecision(AnalystDecisionInput{
+		MacroEventID:      f.event.MacroEventID,
+		Symbol:            f.symbol,
+		Technical:         technical,
+		Fundamental:       fundamental,
+		PricedIn:          pricedIn,
+		RiskScore:         74,
+		ConfidenceScore:   clampConfidence(f.event.Confidence) * 100,
+		HasStopLevel:      f.plan.StopPrice != nil,
+		RewardRisk:        f.plan.RewardRiskRatio,
+		Allowlisted:       true,
+		MarketDataMissing: reaction.Status != ReactionStatusAvailable,
+		RiskGuardrail:     "paper-only risk guardrail passed",
+		EntryStopTarget:   "fixture entry/stop/target proposal",
+		Confounders:       f.confounders,
+		EvidenceBundleID:  "",
+	})
+	review := EvaluateMultiAnalystReview(MultiAnalystReviewInput{
+		MacroEventID:    f.event.MacroEventID,
+		Symbol:          f.symbol,
+		Fundamental:     fundamental,
+		Technical:       technical,
+		AnalystDecision: analyst,
+	})
 	evidence := BuildEvidenceBundle(EvidenceInput{
 		MacroEvent:           f.event,
 		Scenario:             scenario,
+		Technical:            technical,
+		Fundamental:          fundamental,
+		AnalystDecision:      analyst,
+		Review:               review,
 		Reaction:             reaction,
 		PricedIn:             pricedIn,
 		Confounders:          f.confounders,
+		SimilarCases:         f.similarCases,
 		HistoricalComparison: "deterministic fixture historical comparison",
 		RiskGuardrail:        "paper-only risk guardrail passed",
 		EntryStopTarget:      "fixture entry/stop/target proposal",
@@ -214,7 +316,45 @@ func runMacroUATFixture(f macroUATFixture) macroUATOutput {
 		Side:   f.side,
 		Plan:   f.plan,
 	})
-	return macroUATOutput{scenario: scenario, reaction: reaction, pricedIn: pricedIn, evidence: evidence, candidate: candidate}
+	return macroUATOutput{scenario: scenario, reaction: reaction, technical: technical, fundamental: fundamental, pricedIn: pricedIn, analyst: analyst, review: review, evidence: evidence, candidate: candidate}
+}
+
+func macroUATTrendState(direction ReactionDirection) string {
+	if direction == ReactionDirectionDown {
+		return "downtrend"
+	}
+	if direction == ReactionDirectionUp {
+		return "uptrend"
+	}
+	return "range"
+}
+
+func macroUATStructureState(reaction ReactionSnapshot) string {
+	if reaction.Direction == ReactionDirectionDown && reaction.ConfirmsEvent {
+		return "breakdown"
+	}
+	if reaction.Direction == ReactionDirectionUp && reaction.ConfirmsEvent {
+		return "breakout"
+	}
+	return "range"
+}
+
+func macroUATTechnicalReaction(reaction ReactionSnapshot) TechnicalEventReaction {
+	return TechnicalEventReaction{
+		BreaksPreEventRange: reaction.ConfirmsEvent,
+		ConfirmationPresent: reaction.ConfirmsEvent,
+		VWAPHold:            reaction.Direction == ReactionDirectionUp,
+		VWAPReject:          reaction.Direction == ReactionDirectionDown,
+		TooExtended:         reaction.TooExtended,
+		Whipsaw:             reaction.Direction == ReactionDirectionWhipsaw,
+	}
+}
+
+func macroUATFloat(v *float64) float64 {
+	if v == nil {
+		return 0
+	}
+	return *v
 }
 
 func macroUATEvent(eventTime time.Time, eventType EventType, direction Direction, actual float64, expected float64, headline string) EventInput {

@@ -24,7 +24,7 @@ Branch: redesign
 | 07 | Multi-Analyst Review | done | unassigned | role outputs + linked final decision | deterministic review orchestration + persistence + tests |
 | 08 | Analyst Memory | done | unassigned | case study persistence + retrieval | case study + feedback persistence + similarity retrieval + tests |
 | 09 | Evidence Bundle Integration | done | unassigned | TA/FA sections included in evidence | TA/FA + scoring/veto + similar-case sections integrated in evidence bundle |
-| 10 | Backtesting and UAT Fixtures | not_started | unassigned | deterministic fixture coverage + no broker writes | pending |
+| 10 | Backtesting and UAT Fixtures | done | unassigned | deterministic fixture coverage + no broker writes | deterministic TA/FA fixture pipeline + confounder/missing-data/no-broker-write assertions |
 
 ## Completed in this run
 
@@ -85,6 +85,8 @@ Branch: redesign
 - Added Ticket 09 evidence bundle integration for TA/FA and analyst outputs:
   - internal/modules/macroevents/evidence.go
   - internal/modules/macroevents/evidence_test.go
+- Added Ticket 10 deterministic TA/FA backtesting fixtures:
+  - internal/modules/macroevents/uat_test.go
 
 ## Verification Commands
 
