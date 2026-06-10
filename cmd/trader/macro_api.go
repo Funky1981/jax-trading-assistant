@@ -69,6 +69,24 @@ type macroReactionDTO struct {
 	CreatedAt     time.Time       `json:"createdAt"`
 }
 
+type macroTechnicalDTO struct {
+	ID                string          `json:"id"`
+	Symbol            string          `json:"symbol"`
+	Timeframe         string          `json:"timeframe"`
+	AnalysisTimeUTC   time.Time       `json:"analysisTimeUtc"`
+	TrendState        string          `json:"trendState"`
+	StructureState    string          `json:"structureState"`
+	KeyLevels         json.RawMessage `json:"keyLevels"`
+	EventReaction     json.RawMessage `json:"eventReaction"`
+	VolumeVolatility  json.RawMessage `json:"volumeVolatility"`
+	RelativeStrength  json.RawMessage `json:"relativeStrength"`
+	TechnicalScore    float64         `json:"technicalScore"`
+	Verdict           string          `json:"verdict"`
+	Reasons           []string        `json:"reasons"`
+	InvalidationRules []string        `json:"invalidationRules"`
+	CreatedAt         time.Time       `json:"createdAt"`
+}
+
 type macroScenarioDTO struct {
 	ID                    string          `json:"id"`
 	ScenarioKey           string          `json:"scenarioKey"`
@@ -135,13 +153,14 @@ type macroCandidateDTO struct {
 }
 
 type macroEventDetailDTO struct {
-	Event           macroEventDTO            `json:"event"`
-	Reactions       []macroReactionDTO       `json:"reactions"`
-	Scenarios       []macroScenarioDTO       `json:"scenarios"`
-	PricedInScores  []macroPricedInDTO       `json:"pricedInScores"`
-	Confounders     []macroConfounderDTO     `json:"confounders"`
-	EvidenceBundles []macroEvidenceBundleDTO `json:"evidenceBundles"`
-	Candidates      []macroCandidateDTO      `json:"candidates"`
+	Event             macroEventDTO            `json:"event"`
+	Reactions         []macroReactionDTO       `json:"reactions"`
+	TechnicalAnalysis []macroTechnicalDTO      `json:"technicalAnalysis"`
+	Scenarios         []macroScenarioDTO       `json:"scenarios"`
+	PricedInScores    []macroPricedInDTO       `json:"pricedInScores"`
+	Confounders       []macroConfounderDTO     `json:"confounders"`
+	EvidenceBundles   []macroEvidenceBundleDTO `json:"evidenceBundles"`
+	Candidates        []macroCandidateDTO      `json:"candidates"`
 }
 
 func macroEventsHandler(pool *pgxpool.Pool) http.HandlerFunc {
@@ -383,6 +402,9 @@ func loadMacroEventDetail(r *http.Request, pool *pgxpool.Pool, eventID string) (
 	if detail.Reactions, err = loadMacroReactions(r, pool, eventID); err != nil {
 		return detail, err
 	}
+	if detail.TechnicalAnalysis, err = loadMacroTechnicalAnalysis(r, pool, eventID); err != nil {
+		return detail, err
+	}
 	if detail.Scenarios, err = loadMacroScenarios(r, pool, eventID); err != nil {
 		return detail, err
 	}
@@ -461,6 +483,37 @@ func loadMacroReactions(r *http.Request, pool *pgxpool.Pool, eventID string) ([]
 		item.VolumeRatio = nullableFloat(volume)
 		item.ATRRatio = nullableFloat(atr)
 		item.RawCandles = json.RawMessage(defaultJSON(raw, "[]"))
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func loadMacroTechnicalAnalysis(r *http.Request, pool *pgxpool.Pool, eventID string) ([]macroTechnicalDTO, error) {
+	rows, err := pool.Query(r.Context(), `
+		SELECT id::text, symbol, timeframe, analysis_time_utc, trend_state, structure_state,
+			key_levels::text, event_reaction::text, volume_volatility::text, relative_strength::text,
+			technical_score::float8, verdict, reasons, invalidation_rules, created_at
+		FROM technical_analysis_snapshots
+		WHERE macro_event_id = $1::uuid
+		ORDER BY created_at DESC, symbol, timeframe
+	`, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []macroTechnicalDTO{}
+	for rows.Next() {
+		var item macroTechnicalDTO
+		var keyLevels, eventReaction, volumeVolatility, relativeStrength string
+		if err := rows.Scan(&item.ID, &item.Symbol, &item.Timeframe, &item.AnalysisTimeUTC, &item.TrendState, &item.StructureState,
+			&keyLevels, &eventReaction, &volumeVolatility, &relativeStrength, &item.TechnicalScore, &item.Verdict,
+			&item.Reasons, &item.InvalidationRules, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		item.KeyLevels = json.RawMessage(defaultJSON(keyLevels, "{}"))
+		item.EventReaction = json.RawMessage(defaultJSON(eventReaction, "{}"))
+		item.VolumeVolatility = json.RawMessage(defaultJSON(volumeVolatility, "{}"))
+		item.RelativeStrength = json.RawMessage(defaultJSON(relativeStrength, "{}"))
 		out = append(out, item)
 	}
 	return out, rows.Err()

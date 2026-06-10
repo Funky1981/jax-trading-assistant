@@ -53,6 +53,46 @@ func insertMacroAPITestEvent(t *testing.T, pool *pgxpool.Pool) string {
 		t.Fatalf("insert macro reaction: %v", err)
 	}
 	_, err = pool.Exec(t.Context(), `
+		CREATE TABLE IF NOT EXISTS technical_analysis_snapshots (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			macro_event_id UUID NULL REFERENCES macro_events(id) ON DELETE SET NULL,
+			symbol TEXT NOT NULL,
+			analysis_time_utc TIMESTAMPTZ NOT NULL,
+			timeframe TEXT NOT NULL,
+			trend_state TEXT NOT NULL,
+			structure_state TEXT NOT NULL,
+			key_levels JSONB NOT NULL DEFAULT '{}'::jsonb,
+			event_reaction JSONB NOT NULL DEFAULT '{}'::jsonb,
+			volume_volatility JSONB NOT NULL DEFAULT '{}'::jsonb,
+			relative_strength JSONB NOT NULL DEFAULT '{}'::jsonb,
+			technical_score NUMERIC NOT NULL,
+			verdict TEXT NOT NULL,
+			reasons TEXT[] NOT NULL DEFAULT '{}',
+			invalidation_rules TEXT[] NOT NULL DEFAULT '{}',
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		)
+	`)
+	if err != nil {
+		t.Fatalf("ensure technical analysis snapshot table: %v", err)
+	}
+	_, err = pool.Exec(t.Context(), `
+		INSERT INTO technical_analysis_snapshots (
+			macro_event_id, symbol, analysis_time_utc, timeframe, trend_state, structure_state,
+			key_levels, event_reaction, volume_volatility, relative_strength, technical_score,
+			verdict, reasons, invalidation_rules
+		) VALUES (
+			$1::uuid, 'TLT', $2, '15m', 'uptrend', 'breakout',
+			'{"pre_event_low":90.95,"vwap":91.40}'::jsonb,
+			'{"BreaksPreEventRange":true,"ConfirmationPresent":true,"VWAPHold":true}'::jsonb,
+			'{"VolumeRatio":1.8,"ATRRatio":1.2}'::jsonb,
+			'{"BenchmarkSymbol":"SPY","SpreadToBenchmark":0.012,"AlignsWithScenario":true,"ConflictingBasket":false}'::jsonb,
+			82.5, 'confirmed_bullish', ARRAY['TLT confirmed duration bid'], ARRAY['reject if price closes back inside pre-event range']
+		)
+	`, eventID, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("insert technical analysis snapshot: %v", err)
+	}
+	_, err = pool.Exec(t.Context(), `
 		INSERT INTO macro_scenario_results (
 			macro_event_id, scenario_key, candidate_bias, primary_symbols, secondary_symbols,
 			required_confirmations, expected_reactions, result, reason
@@ -164,6 +204,9 @@ func TestMacroEventDetailHandlerLoadsAnalysis(t *testing.T) {
 	}
 	if len(payload.Reactions) != 1 || !payload.Reactions[0].ConfirmsEvent {
 		t.Fatalf("reactions = %#v, want confirmed reaction", payload.Reactions)
+	}
+	if len(payload.TechnicalAnalysis) != 1 || payload.TechnicalAnalysis[0].Verdict != "confirmed_bullish" {
+		t.Fatalf("technical analysis = %#v, want confirmed_bullish", payload.TechnicalAnalysis)
 	}
 	if len(payload.EvidenceBundles) != 1 || payload.EvidenceBundles[0].Verdict != "candidate_allowed" {
 		t.Fatalf("evidence = %#v, want candidate_allowed", payload.EvidenceBundles)
