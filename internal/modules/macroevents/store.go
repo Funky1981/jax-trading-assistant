@@ -330,3 +330,48 @@ func (s *Store) SaveEvidenceBundle(ctx context.Context, bundle EvidenceBundle) (
 	}
 	return bundle, nil
 }
+
+func (s *Store) SaveMacroCandidate(ctx context.Context, candidate MacroCandidate) (MacroCandidate, error) {
+	if s == nil || s.pool == nil {
+		if candidate.ID == "" {
+			candidate.ID = uuid.NewString()
+		}
+		return candidate, nil
+	}
+	id := uuid.NewString()
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO macro_candidate_trades (
+			id, macro_event_id, evidence_bundle_id, symbol, side, bias, entry_type,
+			entry_reference_price, stop_reference_price, target_reference_price,
+			risk_percent, time_limit, status, created_reason, rejection_reason,
+			walkaway_reasons
+		)
+		VALUES (
+			$1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7,
+			$8, $9, $10,
+			$11, $12, $13, $14, NULLIF($15, ''),
+			$16
+		)
+		ON CONFLICT (macro_event_id, evidence_bundle_id, symbol) DO UPDATE SET
+			side = EXCLUDED.side,
+			bias = EXCLUDED.bias,
+			entry_type = EXCLUDED.entry_type,
+			entry_reference_price = EXCLUDED.entry_reference_price,
+			stop_reference_price = EXCLUDED.stop_reference_price,
+			target_reference_price = EXCLUDED.target_reference_price,
+			risk_percent = EXCLUDED.risk_percent,
+			time_limit = EXCLUDED.time_limit,
+			status = EXCLUDED.status,
+			created_reason = EXCLUDED.created_reason,
+			rejection_reason = EXCLUDED.rejection_reason,
+			walkaway_reasons = EXCLUDED.walkaway_reasons
+		RETURNING id::text
+	`, id, candidate.MacroEventID, candidate.EvidenceBundleID, candidate.Symbol, candidate.Side, candidate.Bias, candidate.EntryType,
+		candidate.EntryReferencePrice, candidate.StopReferencePrice, candidate.TargetReferencePrice,
+		candidate.RiskPercent, candidate.TimeLimit, candidate.Status, candidate.CreatedReason, candidate.RejectionReason,
+		candidate.WalkawayReasons).Scan(&candidate.ID)
+	if err != nil {
+		return MacroCandidate{}, fmt.Errorf("insert macro candidate: %w", err)
+	}
+	return candidate, nil
+}
