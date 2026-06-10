@@ -233,3 +233,66 @@ func (s *Store) SaveScenarioResult(ctx context.Context, result ScenarioEvaluatio
 	}
 	return result, nil
 }
+
+func (s *Store) SavePricedInScore(ctx context.Context, score PricedInScore) (PricedInScore, error) {
+	if s == nil || s.pool == nil {
+		if score.ID == "" {
+			score.ID = uuid.NewString()
+		}
+		return score, nil
+	}
+	id := uuid.NewString()
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO macro_priced_in_scores (
+			id, macro_event_id, symbol, verdict, score, reasons
+		)
+		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)
+		ON CONFLICT (macro_event_id, symbol) DO UPDATE SET
+			verdict = EXCLUDED.verdict,
+			score = EXCLUDED.score,
+			reasons = EXCLUDED.reasons
+		RETURNING id::text
+	`, id, score.MacroEventID, score.Symbol, score.Verdict, score.Score, score.Reasons).Scan(&score.ID)
+	if err != nil {
+		return PricedInScore{}, fmt.Errorf("insert macro priced-in score: %w", err)
+	}
+	return score, nil
+}
+
+func (s *Store) SaveConfounders(ctx context.Context, confounders []Confounder) ([]Confounder, error) {
+	if s == nil || s.pool == nil {
+		out := append([]Confounder(nil), confounders...)
+		for i := range out {
+			if out[i].ID == "" {
+				out[i].ID = uuid.NewString()
+			}
+		}
+		return out, nil
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin macro confounder insert: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	out := make([]Confounder, 0, len(confounders))
+	for _, confounder := range confounders {
+		id := uuid.NewString()
+		err := tx.QueryRow(ctx, `
+			INSERT INTO macro_confounders (
+				id, macro_event_id, confounder_type, headline, source, severity, reason
+			)
+			VALUES ($1::uuid, $2::uuid, $3, $4, NULLIF($5, ''), $6, $7)
+			RETURNING id::text
+		`, id, confounder.MacroEventID, confounder.Type, confounder.Headline,
+			confounder.Source, confounder.Severity, confounder.Reason).Scan(&confounder.ID)
+		if err != nil {
+			return nil, fmt.Errorf("insert macro confounder: %w", err)
+		}
+		out = append(out, confounder)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit macro confounder insert: %w", err)
+	}
+	return out, nil
+}
