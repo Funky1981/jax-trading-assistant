@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS idx_fundamental_analysis_snapshots_symbol_timeframe;
+DROP INDEX IF EXISTS idx_fundamental_analysis_snapshots_event;
+DROP TABLE IF EXISTS fundamental_analysis_snapshots;
