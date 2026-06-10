@@ -20,7 +20,7 @@ Branch: redesign
 | 03 | Fundamental Analysis Snapshot Model | done | unassigned | storage + model + validation + tests | fundamental migration + model/service/tests + store persistence |
 | 04 | Fundamental Analysis Engine | not_started | unassigned | deterministic FA checks implemented | pending |
 | 05 | Event Playbook Library | done | unassigned | event-to-playbook mapping + allowlist gates | playbook catalog + scenario enrichment + tests |
-| 06 | Analyst Scoring Service | not_started | unassigned | combined score + hard veto overrides | pending |
+| 06 | Analyst Scoring Service | done | unassigned | combined score + hard veto overrides | analyst scoring model + service + persistence + tests |
 | 07 | Multi-Analyst Review | not_started | unassigned | role outputs + linked final decision | pending |
 | 08 | Analyst Memory | not_started | unassigned | case study persistence + retrieval | pending |
 | 09 | Evidence Bundle Integration | not_started | unassigned | TA/FA sections included in evidence | pending |
@@ -61,6 +61,13 @@ Branch: redesign
   - internal/modules/macroevents/playbook_test.go
   - internal/modules/macroevents/scenario.go
   - internal/modules/macroevents/scenario_test.go
+- Added analyst scoring service and persistence:
+  - db/postgres/migrations/000039_analyst_decisions.up.sql
+  - db/postgres/migrations/000039_analyst_decisions.down.sql
+  - db/postgres/migrations/analyst_decisions_schema_test.go
+  - internal/modules/macroevents/analyst.go
+  - internal/modules/macroevents/analyst_test.go
+  - internal/modules/macroevents/analyst_service_test.go
 
 ## Verification Commands
 

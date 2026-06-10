@@ -309,6 +309,53 @@ func (s *Store) SaveFundamentalAnalysisSnapshot(ctx context.Context, snapshot Fu
 	return snapshot, nil
 }
 
+func (s *Store) SaveAnalystDecision(ctx context.Context, decision AnalystDecisionRecord) (AnalystDecisionRecord, error) {
+	if s == nil || s.pool == nil {
+		if decision.ID == "" {
+			decision.ID = uuid.NewString()
+		}
+		return decision, nil
+	}
+	id := uuid.NewString()
+	hardVetoes := make([]string, 0, len(decision.HardVetoes))
+	for _, veto := range decision.HardVetoes {
+		hardVetoes = append(hardVetoes, string(veto))
+	}
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO analyst_decisions (
+			id, macro_event_id, symbol, fundamental_snapshot_id, technical_snapshot_id,
+			evidence_bundle_id, fundamental_score, technical_score, risk_score,
+			confidence_score, candidate_score, decision, hard_vetoes, reasons
+		)
+		VALUES (
+			$1::uuid, $2::uuid, $3, NULLIF($4, ''), NULLIF($5, ''),
+			NULLIF($6, ''), $7, $8, $9,
+			$10, $11, $12, $13::text[], $14
+		)
+		ON CONFLICT (id) DO UPDATE SET
+			macro_event_id = EXCLUDED.macro_event_id,
+			symbol = EXCLUDED.symbol,
+			fundamental_snapshot_id = EXCLUDED.fundamental_snapshot_id,
+			technical_snapshot_id = EXCLUDED.technical_snapshot_id,
+			evidence_bundle_id = EXCLUDED.evidence_bundle_id,
+			fundamental_score = EXCLUDED.fundamental_score,
+			technical_score = EXCLUDED.technical_score,
+			risk_score = EXCLUDED.risk_score,
+			confidence_score = EXCLUDED.confidence_score,
+			candidate_score = EXCLUDED.candidate_score,
+			decision = EXCLUDED.decision,
+			hard_vetoes = EXCLUDED.hard_vetoes,
+			reasons = EXCLUDED.reasons
+		RETURNING id::text
+	`, id, decision.MacroEventID, decision.Symbol, decision.FundamentalSnapshotID, decision.TechnicalSnapshotID,
+		decision.EvidenceBundleID, decision.FundamentalScore, decision.TechnicalScore, decision.RiskScore,
+		decision.ConfidenceScore, decision.CandidateScore, decision.Decision, hardVetoes, decision.Reasons).Scan(&decision.ID)
+	if err != nil {
+		return AnalystDecisionRecord{}, fmt.Errorf("insert analyst decision: %w", err)
+	}
+	return decision, nil
+}
+
 func (s *Store) SaveScenarioResult(ctx context.Context, result ScenarioEvaluation) (ScenarioEvaluation, error) {
 	if s == nil || s.pool == nil {
 		if result.ID == "" {
