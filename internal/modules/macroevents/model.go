@@ -38,6 +38,7 @@ const (
 )
 
 type EventInput struct {
+	MacroEventID  string
 	Source        string
 	SourceEventID string
 	EventType     EventType

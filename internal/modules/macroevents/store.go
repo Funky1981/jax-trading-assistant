@@ -192,3 +192,44 @@ func (s *Store) SaveReactionSnapshot(ctx context.Context, snapshot ReactionSnaps
 	}
 	return snapshot, nil
 }
+
+func (s *Store) SaveScenarioResult(ctx context.Context, result ScenarioEvaluation) (ScenarioEvaluation, error) {
+	if s == nil || s.pool == nil {
+		if result.ID == "" {
+			result.ID = uuid.NewString()
+		}
+		return result, nil
+	}
+	expectedReactionsJSON, err := MarshalExpectedReactions(result.ExpectedReactions)
+	if err != nil {
+		return ScenarioEvaluation{}, err
+	}
+	id := uuid.NewString()
+	err = s.pool.QueryRow(ctx, `
+		INSERT INTO macro_scenario_results (
+			id, macro_event_id, scenario_key, candidate_bias, primary_symbols,
+			secondary_symbols, required_confirmations, expected_reactions,
+			result, reason
+		)
+		VALUES (
+			$1::uuid, $2::uuid, $3, $4, $5,
+			$6, $7, $8::jsonb,
+			$9, $10
+		)
+		ON CONFLICT (macro_event_id, scenario_key) DO UPDATE SET
+			candidate_bias = EXCLUDED.candidate_bias,
+			primary_symbols = EXCLUDED.primary_symbols,
+			secondary_symbols = EXCLUDED.secondary_symbols,
+			required_confirmations = EXCLUDED.required_confirmations,
+			expected_reactions = EXCLUDED.expected_reactions,
+			result = EXCLUDED.result,
+			reason = EXCLUDED.reason
+		RETURNING id::text
+	`, id, result.MacroEventID, result.ScenarioKey, result.CandidateBias, result.PrimarySymbols,
+		result.SecondarySymbols, result.RequiredConfirmations, string(expectedReactionsJSON),
+		result.Result, result.Reason).Scan(&result.ID)
+	if err != nil {
+		return ScenarioEvaluation{}, fmt.Errorf("insert macro scenario result: %w", err)
+	}
+	return result, nil
+}
