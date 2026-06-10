@@ -12,11 +12,12 @@ type ScenarioResult string
 type CandidateBias string
 
 const (
-	ScenarioHawkishRates ScenarioKey = "hawkish_rates"
-	ScenarioDovishRates  ScenarioKey = "dovish_rates"
-	ScenarioBankStress   ScenarioKey = "bank_stress"
-	ScenarioOilShock     ScenarioKey = "oil_shock"
-	ScenarioUnknown      ScenarioKey = "unknown"
+	ScenarioHawkishRates    ScenarioKey = "hawkish_rates"
+	ScenarioDovishRates     ScenarioKey = "dovish_rates"
+	ScenarioSemiconductorAI ScenarioKey = "semiconductor_ai"
+	ScenarioBankStress      ScenarioKey = "bank_stress"
+	ScenarioOilShock        ScenarioKey = "oil_shock"
+	ScenarioUnknown         ScenarioKey = "unknown"
 )
 
 const (
@@ -35,21 +36,31 @@ const (
 )
 
 type ScenarioEvaluation struct {
-	ID                    string
-	MacroEventID          string
-	ScenarioKey           ScenarioKey
-	CandidateBias         CandidateBias
-	PrimarySymbols        []string
-	SecondarySymbols      []string
-	RequiredConfirmations []string
-	ExpectedReactions     map[string]ReactionDirection
-	Result                ScenarioResult
-	Reason                string
+	ID                        string
+	MacroEventID              string
+	PlaybookKey               string
+	PlaybookName              string
+	ScenarioKey               ScenarioKey
+	CandidateBias             CandidateBias
+	PrimarySymbols            []string
+	SecondarySymbols          []string
+	RequiredConfirmations     []string
+	RequiredTechnicalChecks   []string
+	RequiredFundamentalChecks []string
+	ConfoundersToCheck        []string
+	WalkawayRules             []string
+	ExpectedReactions         map[string]ReactionDirection
+	Result                    ScenarioResult
+	Reason                    string
 }
 
 func EvaluateScenario(input EventInput) ScenarioEvaluation {
 	if !supportedEventType(input.EventType) {
 		return blockedScenario(ScenarioResultBlockedUnknownEvent, "macro event type is not supported")
+	}
+	playbook, ok := LookupEventPlaybook(input)
+	if !ok {
+		return blockedScenario(ScenarioResultBlockedUnknownEvent, "no deterministic macro playbook matched")
 	}
 	mappings, err := ValidateAndNormalizeETFs(input.AffectedETFs)
 	if err != nil {
@@ -59,60 +70,22 @@ func EvaluateScenario(input EventInput) ScenarioEvaluation {
 		return blockedScenario(ScenarioResultBlockedDisallowedInstrument, err.Error())
 	}
 
-	switch classifyScenario(input) {
-	case ScenarioHawkishRates:
-		return scenarioFromPlaybook(input, mappings, ScenarioEvaluation{
-			ScenarioKey:           ScenarioHawkishRates,
-			CandidateBias:         CandidateBiasShortOrAvoidLong,
-			PrimarySymbols:        []string{"QQQ", "SPY", "TLT"},
-			SecondarySymbols:      []string{"IWM", "XLK", "SMH", "SOXX"},
-			RequiredConfirmations: hawkishConfirmations(input.EventType),
-			ExpectedReactions: map[string]ReactionDirection{
-				"QQQ":  ReactionDirectionDown,
-				"SPY":  ReactionDirectionDown,
-				"TLT":  ReactionDirectionDown,
-				"IWM":  ReactionDirectionDown,
-				"XLK":  ReactionDirectionDown,
-				"SMH":  ReactionDirectionDown,
-				"SOXX": ReactionDirectionDown,
-			},
-			Result: ScenarioResultEligibleForReactionCheck,
-			Reason: "hawkish rates playbook selected for strong jobs, hot inflation, or hawkish Fed event",
-		})
-	case ScenarioDovishRates:
-		return scenarioFromPlaybook(input, mappings, ScenarioEvaluation{
-			ScenarioKey:           ScenarioDovishRates,
-			CandidateBias:         CandidateBiasLong,
-			PrimarySymbols:        []string{"QQQ", "SPY", "TLT"},
-			SecondarySymbols:      []string{"IWM", "XLK", "SMH", "SOXX"},
-			RequiredConfirmations: []string{string(TimeframePostEvent5M), string(TimeframePostEvent15M)},
-			ExpectedReactions: map[string]ReactionDirection{
-				"QQQ":  ReactionDirectionUp,
-				"SPY":  ReactionDirectionUp,
-				"TLT":  ReactionDirectionUp,
-				"IWM":  ReactionDirectionUp,
-				"XLK":  ReactionDirectionUp,
-				"SMH":  ReactionDirectionUp,
-				"SOXX": ReactionDirectionUp,
-			},
-			Result: ScenarioResultEligibleForReactionCheck,
-			Reason: "dovish rates playbook selected for weak jobs, cool inflation, or dovish Fed event",
-		})
-	default:
-		return blockedScenario(ScenarioResultBlockedUnknownEvent, "no deterministic macro scenario matched")
-	}
-}
-
-func classifyScenario(input EventInput) ScenarioKey {
-	direction := Direction(strings.ToLower(strings.TrimSpace(string(input.Direction))))
-	switch direction {
-	case DirectionHawkishRates, DirectionInflationHot, DirectionGrowthStrong:
-		return ScenarioHawkishRates
-	case DirectionDovishRates, DirectionInflationCool, DirectionGrowthWeak:
-		return ScenarioDovishRates
-	default:
-		return ScenarioUnknown
-	}
+	return scenarioFromPlaybook(input, mappings, ScenarioEvaluation{
+		PlaybookKey:               playbook.Key,
+		PlaybookName:              playbook.Name,
+		ScenarioKey:               playbook.ScenarioKey,
+		CandidateBias:             playbook.CandidateBias,
+		PrimarySymbols:            append([]string(nil), playbook.PrimarySymbols...),
+		SecondarySymbols:          append([]string(nil), playbook.SecondarySymbols...),
+		RequiredConfirmations:     append([]string(nil), playbook.RequiredConfirmations...),
+		RequiredTechnicalChecks:   append([]string(nil), playbook.RequiredTechnicalChecks...),
+		RequiredFundamentalChecks: append([]string(nil), playbook.RequiredFundamentalChecks...),
+		ConfoundersToCheck:        append([]string(nil), playbook.ConfoundersToCheck...),
+		WalkawayRules:             append([]string(nil), playbook.WalkawayRules...),
+		ExpectedReactions:         playbook.ExpectedReactions,
+		Result:                    ScenarioResultEligibleForReactionCheck,
+		Reason:                    playbook.Name + " playbook selected",
+	})
 }
 
 func hawkishConfirmations(eventType EventType) []string {
@@ -154,12 +127,18 @@ func filterAllowedSymbols(symbols []string, allowed map[string]bool) []string {
 
 func blockedScenario(result ScenarioResult, reason string) ScenarioEvaluation {
 	return ScenarioEvaluation{
-		ScenarioKey:           ScenarioUnknown,
-		CandidateBias:         CandidateBiasWatchOnly,
-		RequiredConfirmations: []string{},
-		ExpectedReactions:     map[string]ReactionDirection{},
-		Result:                result,
-		Reason:                reason,
+		ScenarioKey:               ScenarioUnknown,
+		PlaybookKey:               "",
+		PlaybookName:              "",
+		CandidateBias:             CandidateBiasWatchOnly,
+		RequiredConfirmations:     []string{},
+		RequiredTechnicalChecks:   []string{},
+		RequiredFundamentalChecks: []string{},
+		ConfoundersToCheck:        []string{},
+		WalkawayRules:             []string{},
+		ExpectedReactions:         map[string]ReactionDirection{},
+		Result:                    result,
+		Reason:                    reason,
 	}
 }
 

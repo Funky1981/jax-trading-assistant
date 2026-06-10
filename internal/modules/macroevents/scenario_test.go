@@ -16,6 +16,9 @@ func TestEvaluateScenarioMapsNFPBeatToHawkishRatesPlaybook(t *testing.T) {
 	if result.Result != ScenarioResultEligibleForReactionCheck {
 		t.Fatalf("result = %q, want eligible", result.Result)
 	}
+	if result.PlaybookKey != "strong_jobs_hawkish_rates" {
+		t.Fatalf("playbook = %q, want strong_jobs_hawkish_rates", result.PlaybookKey)
+	}
 	if result.ScenarioKey != ScenarioHawkishRates {
 		t.Fatalf("scenario = %q, want %q", result.ScenarioKey, ScenarioHawkishRates)
 	}
@@ -38,6 +41,9 @@ func TestEvaluateScenarioMapsHotCPIToHawkishRatesPlaybook(t *testing.T) {
 	if result.ScenarioKey != ScenarioHawkishRates {
 		t.Fatalf("scenario = %q, want hawkish rates", result.ScenarioKey)
 	}
+	if result.PlaybookKey != "hot_cpi_rates_hawkish" {
+		t.Fatalf("playbook = %q, want hot_cpi_rates_hawkish", result.PlaybookKey)
+	}
 	if result.CandidateBias != CandidateBiasShortOrAvoidLong {
 		t.Fatalf("candidate bias = %q, want short/avoid-long", result.CandidateBias)
 	}
@@ -56,6 +62,9 @@ func TestEvaluateScenarioMapsCoolCPIToDovishRatesPlaybook(t *testing.T) {
 
 	if result.ScenarioKey != ScenarioDovishRates {
 		t.Fatalf("scenario = %q, want dovish rates", result.ScenarioKey)
+	}
+	if result.PlaybookKey != "cool_cpi_rates_dovish" {
+		t.Fatalf("playbook = %q, want cool_cpi_rates_dovish", result.PlaybookKey)
 	}
 	if result.ExpectedReactions["TLT"] != ReactionDirectionUp {
 		t.Fatalf("TLT expected reaction = %q, want up", result.ExpectedReactions["TLT"])
