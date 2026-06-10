@@ -296,3 +296,37 @@ func (s *Store) SaveConfounders(ctx context.Context, confounders []Confounder) (
 	}
 	return out, nil
 }
+
+func (s *Store) SaveEvidenceBundle(ctx context.Context, bundle EvidenceBundle) (EvidenceBundle, error) {
+	if s == nil || s.pool == nil {
+		if bundle.ID == "" {
+			bundle.ID = uuid.NewString()
+		}
+		return bundle, nil
+	}
+	evidenceJSON, err := MarshalEvidence(bundle.Evidence)
+	if err != nil {
+		return EvidenceBundle{}, fmt.Errorf("marshal macro evidence bundle: %w", err)
+	}
+	id := uuid.NewString()
+	err = s.pool.QueryRow(ctx, `
+		INSERT INTO macro_evidence_bundles (
+			id, macro_event_id, symbol, status, verdict, summary, evidence,
+			missing_evidence, walkaway_reasons
+		)
+		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7::jsonb, $8, $9)
+		ON CONFLICT (macro_event_id, symbol) DO UPDATE SET
+			status = EXCLUDED.status,
+			verdict = EXCLUDED.verdict,
+			summary = EXCLUDED.summary,
+			evidence = EXCLUDED.evidence,
+			missing_evidence = EXCLUDED.missing_evidence,
+			walkaway_reasons = EXCLUDED.walkaway_reasons
+		RETURNING id::text
+	`, id, bundle.MacroEventID, bundle.Symbol, bundle.Status, bundle.Verdict, bundle.Summary,
+		string(evidenceJSON), bundle.MissingEvidence, bundle.WalkawayReasons).Scan(&bundle.ID)
+	if err != nil {
+		return EvidenceBundle{}, fmt.Errorf("insert macro evidence bundle: %w", err)
+	}
+	return bundle, nil
+}
