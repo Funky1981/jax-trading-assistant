@@ -11,6 +11,18 @@ func TestBuildEvidenceBundleFullEvidenceAllowsCandidate(t *testing.T) {
 	if len(bundle.MissingEvidence) != 0 {
 		t.Fatalf("missing evidence = %#v, want none", bundle.MissingEvidence)
 	}
+	if _, ok := bundle.Evidence["technical_analysis"]; !ok {
+		t.Fatalf("evidence missing technical_analysis section")
+	}
+	if _, ok := bundle.Evidence["fundamental_analysis"]; !ok {
+		t.Fatalf("evidence missing fundamental_analysis section")
+	}
+	if _, ok := bundle.Evidence["analyst_scoring"]; !ok {
+		t.Fatalf("evidence missing analyst_scoring section")
+	}
+	if _, ok := bundle.Evidence["similar_case_studies"]; !ok {
+		t.Fatalf("evidence missing similar_case_studies section")
+	}
 }
 
 func TestBuildEvidenceBundleMissingChartReactionInsufficientEvidence(t *testing.T) {
@@ -109,6 +121,47 @@ func fullEvidenceInput() EvidenceInput {
 			Verdict: PricedInVerdictNotPricedIn,
 			Reasons: []string{"large surprise with small pre-event drift"},
 		},
+		Technical: TechnicalSnapshot{
+			ID:             "ta-1",
+			MacroEventID:   "macro-1",
+			Symbol:         "QQQ",
+			TechnicalScore: 78,
+			Verdict:        TechnicalVerdictConfirmedBearish,
+			Reasons:        []string{"failed reclaim"},
+		},
+		Fundamental: FundamentalSnapshot{
+			ID:               "fa-1",
+			MacroEventID:     "macro-1",
+			Symbol:           "QQQ",
+			FundamentalScore: 82,
+			Verdict:          FundamentalVerdictStrongBearish,
+			Reasons:          []string{"hot inflation"},
+		},
+		AnalystDecision: AnalystDecisionRecord{
+			ID:             "ad-1",
+			MacroEventID:   "macro-1",
+			Symbol:         "QQQ",
+			CandidateScore: 78.4,
+			Decision:       AnalystDecisionCandidateAllowed,
+			HardVetoes:     []AnalystHardVeto{},
+			Reasons:        []string{"aligned"},
+		},
+		Review: MultiAnalystReviewRecord{
+			ID: "mar-1",
+			Review: TradeReviewerOutput{
+				Decision:         AnalystDecisionCandidateAllowed,
+				CandidateScore:   78.4,
+				ApprovalRequired: true,
+			},
+		},
+		SimilarCases: []AnalysisCaseStudyRecord{{
+			ID:              "cs-1",
+			Symbol:          "QQQ",
+			EventType:       "cpi",
+			PlaybookKey:     "hot_cpi_bearish",
+			Decision:        AnalystDecisionCandidateAllowed,
+			ExpectedOutcome: "bearish continuation",
+		}},
 		Confounders:          nil,
 		HistoricalComparison: "phase-1 placeholder: historical comparison engine not complete",
 		RiskGuardrail:        "paper mode only; human approval required",

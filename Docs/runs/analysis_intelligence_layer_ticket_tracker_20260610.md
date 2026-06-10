@@ -23,7 +23,7 @@ Branch: redesign
 | 06 | Analyst Scoring Service | done | unassigned | combined score + hard veto overrides | analyst scoring model + service + persistence + tests |
 | 07 | Multi-Analyst Review | done | unassigned | role outputs + linked final decision | deterministic review orchestration + persistence + tests |
 | 08 | Analyst Memory | done | unassigned | case study persistence + retrieval | case study + feedback persistence + similarity retrieval + tests |
-| 09 | Evidence Bundle Integration | not_started | unassigned | TA/FA sections included in evidence | pending |
+| 09 | Evidence Bundle Integration | done | unassigned | TA/FA sections included in evidence | TA/FA + scoring/veto + similar-case sections integrated in evidence bundle |
 | 10 | Backtesting and UAT Fixtures | not_started | unassigned | deterministic fixture coverage + no broker writes | pending |
 
 ## Completed in this run
@@ -82,6 +82,9 @@ Branch: redesign
   - internal/modules/macroevents/memory.go
   - internal/modules/macroevents/memory_test.go
   - internal/modules/macroevents/memory_service_test.go
+- Added Ticket 09 evidence bundle integration for TA/FA and analyst outputs:
+  - internal/modules/macroevents/evidence.go
+  - internal/modules/macroevents/evidence_test.go
 
 ## Verification Commands
 

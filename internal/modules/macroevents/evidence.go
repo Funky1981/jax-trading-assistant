@@ -18,9 +18,14 @@ const (
 type EvidenceInput struct {
 	MacroEvent           EventInput
 	Scenario             ScenarioEvaluation
+	Technical            TechnicalSnapshot
+	Fundamental          FundamentalSnapshot
+	AnalystDecision      AnalystDecisionRecord
+	Review               MultiAnalystReviewRecord
 	Reaction             ReactionSnapshot
 	PricedIn             PricedInScore
 	Confounders          []Confounder
+	SimilarCases         []AnalysisCaseStudyRecord
 	HistoricalComparison string
 	RiskGuardrail        string
 	EntryStopTarget      string
@@ -55,13 +60,38 @@ func BuildEvidenceBundle(input EvidenceInput) EvidenceBundle {
 			"why_this_etf":          input.Scenario.PrimarySymbols,
 			"expected_reaction":     input.Scenario.ExpectedReactions,
 			"actual_chart_reaction": input.Reaction,
+			"technical_analysis":    input.Technical,
+			"fundamental_analysis":  input.Fundamental,
+			"analyst_scoring": map[string]any{
+				"decision":        input.AnalystDecision.Decision,
+				"candidate_score": input.AnalystDecision.CandidateScore,
+				"hard_vetoes":     input.AnalystDecision.HardVetoes,
+				"reasons":         input.AnalystDecision.Reasons,
+			},
+			"final_review": map[string]any{
+				"decision":               input.Review.Review.Decision,
+				"candidate_score":        input.Review.Review.CandidateScore,
+				"approval_required":      input.Review.Review.ApprovalRequired,
+				"llm_override_attempted": input.Review.Review.LLMOverrideAttempted,
+			},
 			"priced_in_verdict":     input.PricedIn,
 			"confounders":           input.Confounders,
+			"similar_case_studies":  input.SimilarCases,
 			"historical_comparison": input.HistoricalComparison,
 			"risk_guardrail_result": input.RiskGuardrail,
 			"entry_stop_target":     input.EntryStopTarget,
 			"beginner_summary":      beginnerSummary(input),
 		},
+	}
+
+	if input.Technical.ID == "" {
+		bundle.MissingEvidence = append(bundle.MissingEvidence, "technical analysis snapshot")
+	}
+	if input.Fundamental.ID == "" {
+		bundle.MissingEvidence = append(bundle.MissingEvidence, "fundamental analysis snapshot")
+	}
+	if input.AnalystDecision.Decision == "" {
+		bundle.MissingEvidence = append(bundle.MissingEvidence, "analyst scoring decision")
 	}
 
 	if input.MacroEvent.MacroEventID == "" {
