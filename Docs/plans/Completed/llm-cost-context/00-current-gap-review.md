@@ -18,8 +18,8 @@ The redesign branch already has strong foundations:
 
 ## Key Existing Files To Respect
 
-- `Docs/jax_etf_news_research_build_pack/Docs/plans/etf-news-research-platform/08-research-evidence-bundles.md`
-- `Docs/jax_etf_news_research_build_pack/Docs/plans/etf-news-research-platform/09-ai-guardrails.md`
+- `Docs/plans/Completed/01-etf-news-research-platform/07-research-evidence-bundles.md`
+- `Docs/plans/Completed/01-etf-news-research-platform/08-ai-guardrails.md`
 - `cmd/research/ai_guardrails.go`
 - `cmd/research/backfill.go`
 - `internal/modules/approvals`

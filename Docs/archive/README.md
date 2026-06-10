@@ -15,15 +15,18 @@ Historical note:
   - historical phase implementation docs and phase4 workstream files.
 - `reports/`
   - milestone/summary reports superseded by current runbooks.
+  - includes archived source reports later copied into completed plan folders.
 - `programs/`
   - legacy planning workstreams:
     - `masterplan/`
     - `upgrades/`
     - `codex/`
     - `ejlayer/`
+  - includes archived ETF/news build packs and completed agent execution notes.
 - `evidence/`
   - historical runtime and UAT artifacts.
   - `manual-tests/` contains archived manual paper-trading test scripts that are no longer top-level runbooks.
+  - `runs/` contains older generated run artifacts that reference retired runtime topology.
 - `diagrams/`
   - legacy architecture diagram sources.
 - `docs-original/`

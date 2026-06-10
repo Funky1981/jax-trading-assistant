@@ -1,0 +1,72 @@
+[
+    {
+        "Step":  "health/trader-api",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8081/health"
+    },
+    {
+        "Step":  "health/research",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8091/health"
+    },
+    {
+        "Step":  "health/ib-bridge",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8092/health"
+    },
+    {
+        "Step":  "health/agent0-service",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8093/health"
+    },
+    {
+        "Step":  "health/hindsight",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8888/metrics"
+    },
+    {
+        "Step":  "api/signals",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8081/api/v1/signals?limit=1"
+    },
+    {
+        "Step":  "api/artifacts",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8081/api/v1/artifacts"
+    },
+    {
+        "Step":  "api/testing-status",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8081/api/v1/testing/status"
+    },
+    {
+        "Step":  "api/runs",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8081/api/v1/runs?limit=5"
+    },
+    {
+        "Step":  "api/ai-decisions",
+        "Status":  "PASS",
+        "Detail":  "http://localhost:8081/api/v1/ai-decisions?limit=5"
+    },
+    {
+        "Step":  "go-verify full",
+        "Status":  "FAIL",
+        "Detail":  "Formatting check failed. Run: gofmt -w \u003clisted files\u003e"
+    },
+    {
+        "Step":  "golden verify",
+        "Status":  "PASS",
+        "Detail":  "completed"
+    },
+    {
+        "Step":  "frontend lint/type/test",
+        "Status":  "PASS",
+        "Detail":  "completed"
+    },
+    {
+        "Step":  "frontend e2e (playwright html report)",
+        "Status":  "PASS",
+        "Detail":  "completed"
+    }
+]

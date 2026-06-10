@@ -105,7 +105,7 @@ The user pasted IDE Problems entries. Cleanup fixes have been applied but are no
 - Split non-component exports out of component files to satisfy `react-refresh/only-export-components`.
 - Fixed ARIA values for `aria-expanded` and `aria-pressed`.
 - Replaced inline style usages flagged by Edge Tools.
-- Cleaned markdownlint formatting issues in `Docs/deep-research-report.md`.
+- Cleaned markdownlint formatting issues in `Docs/archive/reports/deep-research-report.md`.
 - Fixed Go analyzer findings:
   - tautological nilness condition
   - unused parameters
@@ -120,7 +120,7 @@ Validation after cleanup:
 - `npm run test:e2e`
 - `go test ./internal/modules/execution ./cmd/trader`
 - `go vet ./cmd/trader ./internal/modules/execution`
-- `markdownlint-cli2` on `Docs/deep-research-report.md` with `MD013` disabled
+- `markdownlint-cli2` on `Docs/archive/reports/deep-research-report.md` with `MD013` disabled
 
 ## Next recommended step
 

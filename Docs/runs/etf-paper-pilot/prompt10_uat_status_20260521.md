@@ -3,7 +3,7 @@
 ## Scope
 
 This report tracks Prompt 10 acceptance items from:
-- Docs/jax_etf_news_research_build_pack/Docs/plans/etf-news-research-platform/15-codex-implementation-prompts.md
+- Docs/archive/programs/codex/jax-etf-news-research-build-pack/Docs/plans/etf-news-research-platform/15-codex-implementation-prompts.md
 
 Prompt 10 requires proof of:
 - ETF-only defaults

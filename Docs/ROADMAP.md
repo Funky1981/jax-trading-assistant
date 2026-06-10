@@ -8,7 +8,7 @@
    - Add persistence-failure path tests.
 2. **Runtime/Docs Alignment**
    - Keep operator docs aligned to the active `cmd/trader` + `cmd/research` topology.
-   - Remove stale references to superseded `services/jax-*` runtime paths in non-archived docs.
+   - Keep superseded `services/jax-*` runtime-path references confined to ADR history, completed plans, run evidence, and archive material.
 3. **Market Data Ingestion**
    - Tighten ingestion/storage validation for IB bridge sourced data.
    - Close any remaining provider-method gaps in market-data adapters.

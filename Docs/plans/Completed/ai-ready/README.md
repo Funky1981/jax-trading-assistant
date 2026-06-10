@@ -5,7 +5,7 @@ This plan set turns the deep research report into implementation-ready tickets f
 ## Source
 
 - Research report: `deep-research-report.md`
-- Original source path: `Docs/deep-research-report.md`
+- Archived original source path: `Docs/archive/reports/deep-research-report.md`
 
 ## Target state
 
