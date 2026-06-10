@@ -21,7 +21,7 @@ Branch: redesign
 | 04 | Fundamental Analysis Engine | not_started | unassigned | deterministic FA checks implemented | pending |
 | 05 | Event Playbook Library | done | unassigned | event-to-playbook mapping + allowlist gates | playbook catalog + scenario enrichment + tests |
 | 06 | Analyst Scoring Service | done | unassigned | combined score + hard veto overrides | analyst scoring model + service + persistence + tests |
-| 07 | Multi-Analyst Review | not_started | unassigned | role outputs + linked final decision | pending |
+| 07 | Multi-Analyst Review | done | unassigned | role outputs + linked final decision | deterministic review orchestration + persistence + tests |
 | 08 | Analyst Memory | not_started | unassigned | case study persistence + retrieval | pending |
 | 09 | Evidence Bundle Integration | not_started | unassigned | TA/FA sections included in evidence | pending |
 | 10 | Backtesting and UAT Fixtures | not_started | unassigned | deterministic fixture coverage + no broker writes | pending |
@@ -68,6 +68,13 @@ Branch: redesign
   - internal/modules/macroevents/analyst.go
   - internal/modules/macroevents/analyst_test.go
   - internal/modules/macroevents/analyst_service_test.go
+- Added multi-analyst review orchestration and persistence:
+  - db/postgres/migrations/000040_multi_analyst_reviews.up.sql
+  - db/postgres/migrations/000040_multi_analyst_reviews.down.sql
+  - db/postgres/migrations/multi_analyst_reviews_schema_test.go
+  - internal/modules/macroevents/review.go
+  - internal/modules/macroevents/review_test.go
+  - internal/modules/macroevents/review_service_test.go
 
 ## Verification Commands
 

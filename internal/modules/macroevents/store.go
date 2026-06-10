@@ -356,6 +356,61 @@ func (s *Store) SaveAnalystDecision(ctx context.Context, decision AnalystDecisio
 	return decision, nil
 }
 
+func (s *Store) SaveMultiAnalystReview(ctx context.Context, review MultiAnalystReviewRecord) (MultiAnalystReviewRecord, error) {
+	if s == nil || s.pool == nil {
+		if review.ID == "" {
+			review.ID = uuid.NewString()
+		}
+		return review, nil
+	}
+	id := uuid.NewString()
+	riskHardBlocks := make([]string, 0, len(review.Risk.HardBlocks))
+	for _, block := range review.Risk.HardBlocks {
+		riskHardBlocks = append(riskHardBlocks, string(block))
+	}
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO multi_analyst_reviews (
+			id, macro_event_id, symbol, fundamental_snapshot_id, technical_snapshot_id,
+			analyst_decision_id, fundamental_verdict, fundamental_score, technical_verdict,
+			technical_score, risk_verdict, risk_score, risk_hard_blocks, review_decision,
+			candidate_score, approval_required, review_reasons, llm_summary, llm_override_attempted
+		)
+		VALUES (
+			$1::uuid, $2::uuid, $3, NULLIF($4, ''), NULLIF($5, ''),
+			NULLIF($6, ''), $7, $8, $9,
+			$10, $11, $12, $13::text[], $14,
+			$15, $16, $17, NULLIF($18, ''), $19
+		)
+		ON CONFLICT (id) DO UPDATE SET
+			macro_event_id = EXCLUDED.macro_event_id,
+			symbol = EXCLUDED.symbol,
+			fundamental_snapshot_id = EXCLUDED.fundamental_snapshot_id,
+			technical_snapshot_id = EXCLUDED.technical_snapshot_id,
+			analyst_decision_id = EXCLUDED.analyst_decision_id,
+			fundamental_verdict = EXCLUDED.fundamental_verdict,
+			fundamental_score = EXCLUDED.fundamental_score,
+			technical_verdict = EXCLUDED.technical_verdict,
+			technical_score = EXCLUDED.technical_score,
+			risk_verdict = EXCLUDED.risk_verdict,
+			risk_score = EXCLUDED.risk_score,
+			risk_hard_blocks = EXCLUDED.risk_hard_blocks,
+			review_decision = EXCLUDED.review_decision,
+			candidate_score = EXCLUDED.candidate_score,
+			approval_required = EXCLUDED.approval_required,
+			review_reasons = EXCLUDED.review_reasons,
+			llm_summary = EXCLUDED.llm_summary,
+			llm_override_attempted = EXCLUDED.llm_override_attempted
+		RETURNING id::text
+	`, id, review.MacroEventID, review.Symbol, review.Fundamental.ID, review.Technical.ID,
+		review.AnalystDecision.ID, review.Fundamental.Verdict, review.Fundamental.FundamentalScore, review.Technical.Verdict,
+		review.Technical.TechnicalScore, review.Risk.Verdict, review.Risk.RiskScore, riskHardBlocks, review.Review.Decision,
+		review.Review.CandidateScore, review.Review.ApprovalRequired, review.Review.Reasons, review.Review.LLMSummary, review.Review.LLMOverrideAttempted).Scan(&review.ID)
+	if err != nil {
+		return MultiAnalystReviewRecord{}, fmt.Errorf("insert multi analyst review: %w", err)
+	}
+	return review, nil
+}
+
 func (s *Store) SaveScenarioResult(ctx context.Context, result ScenarioEvaluation) (ScenarioEvaluation, error) {
 	if s == nil || s.pool == nil {
 		if result.ID == "" {
