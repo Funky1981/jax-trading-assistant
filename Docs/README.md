@@ -26,7 +26,6 @@ This directory contains the current operating documentation for the active runti
 
 ## Active Folders
 
-- `jax-harness-full-package/` - next active harness package kept at the top level
 - `plans/` - active implementation plans and completed plan evidence
 - `runs/` - generated run evidence and readiness notes
 
@@ -52,6 +51,7 @@ Archive guidance:
 - When archive content conflicts with current runtime behavior, follow the active docs in this directory.
 
 Recently archived from the top level:
+- `Docs/plans/Completed/jax-harness-full-package/`
 - `Docs/archive/programs/codex/jax-assistant-approval-continuation-v1/`
 - `Docs/archive/programs/codex/jax-paper-trading-finish-plan-phased-v1/`
 - `Docs/archive/programs/codex/jax-etf-news-research-build-pack/`
