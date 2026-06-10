@@ -90,7 +90,7 @@ func EvaluateFundamentalSnapshot(input FundamentalInput) FundamentalSnapshot {
 		snapshot.Reasons = append(snapshot.Reasons, "event type is unsupported")
 		return snapshot
 	}
-	if input.Event.ActualValue == nil || input.Event.ExpectedValue == nil {
+	if numericReleaseRequiresValues(input.Event.EventType) && (input.Event.ActualValue == nil || input.Event.ExpectedValue == nil) {
 		snapshot.Verdict = FundamentalVerdictInsufficientData
 		snapshot.MissingEvidence = appendUnique(snapshot.MissingEvidence, "actual vs expected")
 		snapshot.Reasons = append(snapshot.Reasons, "missing actual versus expected release data")

@@ -329,8 +329,8 @@ func (s *Store) SaveAnalystDecision(ctx context.Context, decision AnalystDecisio
 			confidence_score, candidate_score, decision, hard_vetoes, reasons
 		)
 		VALUES (
-			$1::uuid, $2::uuid, $3, NULLIF($4, ''), NULLIF($5, ''),
-			NULLIF($6, ''), $7, $8, $9,
+			$1::uuid, $2::uuid, $3, NULLIF($4, '')::uuid, NULLIF($5, '')::uuid,
+			NULLIF($6, '')::uuid, $7, $8, $9,
 			$10, $11, $12, $13::text[], $14
 		)
 		ON CONFLICT (id) DO UPDATE SET
@@ -377,8 +377,8 @@ func (s *Store) SaveMultiAnalystReview(ctx context.Context, review MultiAnalystR
 			candidate_score, approval_required, review_reasons, llm_summary, llm_override_attempted
 		)
 		VALUES (
-			$1::uuid, $2::uuid, $3, NULLIF($4, ''), NULLIF($5, ''),
-			NULLIF($6, ''), $7, $8, $9,
+			$1::uuid, $2::uuid, $3, NULLIF($4, '')::uuid, NULLIF($5, '')::uuid,
+			NULLIF($6, '')::uuid, $7, $8, $9,
 			$10, $11, $12, $13::text[], $14,
 			$15, $16, $17, NULLIF($18, ''), $19
 		)
@@ -428,7 +428,7 @@ func (s *Store) SaveAnalysisCaseStudy(ctx context.Context, study AnalysisCaseStu
 		)
 		VALUES (
 			$1::uuid, $2::uuid, $3, $4, $5,
-			NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''),
+			NULLIF($6, '')::uuid, NULLIF($7, '')::uuid, NULLIF($8, '')::uuid, NULLIF($9, '')::uuid,
 			$10, $11, NULLIF($12, ''), NULLIF($13, ''), NULLIF($14, ''), $15
 		)
 		RETURNING id::text

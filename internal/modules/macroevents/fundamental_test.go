@@ -23,6 +23,32 @@ func TestEvaluateFundamentalSnapshotReturnsInsufficientDataOnMissingExpectedValu
 	}
 }
 
+func TestEvaluateFundamentalSnapshotAllowsQualitativeFedEventsWithoutNumericValues(t *testing.T) {
+	snapshot := EvaluateFundamentalSnapshot(FundamentalInput{
+		MacroEventID:   "macro-1",
+		Symbol:         "QQQ",
+		ExpectedImpact: "hawkish rates pressure growth equities",
+		AffectedThemes: []string{"growth", "rates"},
+		CrossMarketChecks: []FundamentalCheck{
+			{Symbol: "TLT", Expected: "down", Observed: "down", Confirmed: true, Reason: "rates confirmed"},
+		},
+		Event: EventInput{
+			Headline:     "Fed statement reads hawkish",
+			EventType:    EventTypeFOMCStatement,
+			Direction:    DirectionHawkishRates,
+			AffectedETFs: []string{"QQQ", "SPY", "TLT"},
+			Confidence:   0.85,
+		},
+	})
+
+	if snapshot.Verdict == FundamentalVerdictInsufficientData {
+		t.Fatalf("verdict = %q, want qualitative Fed event to proceed", snapshot.Verdict)
+	}
+	if containsStringFold(snapshot.MissingEvidence, "actual vs expected") {
+		t.Fatalf("missing evidence = %v, did not expect numeric release requirement", snapshot.MissingEvidence)
+	}
+}
+
 func TestEvaluateFundamentalSnapshotStrongBearishForHotCPI(t *testing.T) {
 	actual := 3.1
 	expected := 2.7
