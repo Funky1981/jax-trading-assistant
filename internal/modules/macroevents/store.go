@@ -141,3 +141,54 @@ func (s *Store) loadMappings(ctx context.Context, macroEventID string) ([]ETFMap
 	}
 	return mappings, nil
 }
+
+func (s *Store) SaveReactionSnapshot(ctx context.Context, snapshot ReactionSnapshot) (ReactionSnapshot, error) {
+	if s == nil || s.pool == nil {
+		if snapshot.ID == "" {
+			snapshot.ID = uuid.NewString()
+		}
+		return snapshot, nil
+	}
+	rawCandlesJSON, err := json.Marshal(snapshot.RawCandles)
+	if err != nil {
+		return ReactionSnapshot{}, fmt.Errorf("marshal macro reaction raw candles: %w", err)
+	}
+	id := uuid.NewString()
+	err = s.pool.QueryRow(ctx, `
+		INSERT INTO macro_reaction_snapshots (
+			id, macro_event_id, symbol, timeframe, pre_price, post_price,
+			change_abs, change_percent, high_after, low_after, volume_ratio,
+			atr_ratio, direction, confirms_event, too_extended, noisy, reason,
+			raw_candles
+		)
+		VALUES (
+			$1::uuid, $2::uuid, $3, $4, $5, $6,
+			$7, $8, $9, $10, $11,
+			$12, $13, $14, $15, $16, $17,
+			$18::jsonb
+		)
+		ON CONFLICT (macro_event_id, symbol, timeframe) DO UPDATE SET
+			pre_price = EXCLUDED.pre_price,
+			post_price = EXCLUDED.post_price,
+			change_abs = EXCLUDED.change_abs,
+			change_percent = EXCLUDED.change_percent,
+			high_after = EXCLUDED.high_after,
+			low_after = EXCLUDED.low_after,
+			volume_ratio = EXCLUDED.volume_ratio,
+			atr_ratio = EXCLUDED.atr_ratio,
+			direction = EXCLUDED.direction,
+			confirms_event = EXCLUDED.confirms_event,
+			too_extended = EXCLUDED.too_extended,
+			noisy = EXCLUDED.noisy,
+			reason = EXCLUDED.reason,
+			raw_candles = EXCLUDED.raw_candles
+		RETURNING id::text
+	`, id, snapshot.MacroEventID, snapshot.Symbol, snapshot.Timeframe, snapshot.PrePrice, snapshot.PostPrice,
+		snapshot.ChangeAbs, snapshot.ChangePercent, snapshot.HighAfter, snapshot.LowAfter, snapshot.VolumeRatio,
+		snapshot.ATRRatio, snapshot.Direction, snapshot.ConfirmsEvent, snapshot.TooExtended, snapshot.Noisy, snapshot.Reason,
+		string(rawCandlesJSON)).Scan(&snapshot.ID)
+	if err != nil {
+		return ReactionSnapshot{}, fmt.Errorf("insert macro reaction snapshot: %w", err)
+	}
+	return snapshot, nil
+}
