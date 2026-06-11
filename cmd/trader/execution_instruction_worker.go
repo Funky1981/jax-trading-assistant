@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -16,6 +17,10 @@ import (
 
 func startExecutionInstructionWorker(ctx context.Context, pool *pgxpool.Pool, execService *execution.Service) {
 	if pool == nil || execService == nil {
+		return
+	}
+	if !executionInstructionWorkerSafetyEnabled() {
+		log.Println("execution worker disabled: requires paper runtime, IB_PAPER_TRADING=true, and ALLOW_LIVE_TRADING=false")
 		return
 	}
 
@@ -33,6 +38,21 @@ func startExecutionInstructionWorker(ctx context.Context, pool *pgxpool.Pool, ex
 			processNextInstruction(ctx, builder, candidateStore, execService)
 		}
 	}
+}
+
+func executionInstructionWorkerSafetyEnabled() bool {
+	liveAllowed := strings.EqualFold(strings.TrimSpace(os.Getenv("ALLOW_LIVE_TRADING")), "true")
+	if liveAllowed {
+		return false
+	}
+	if !strings.EqualFold(strings.TrimSpace(os.Getenv("IB_PAPER_TRADING")), "true") {
+		return false
+	}
+	mode := strings.ToLower(strings.TrimSpace(os.Getenv("JAX_RUNTIME_MODE")))
+	if mode == "" {
+		mode = strings.ToLower(strings.TrimSpace(os.Getenv("JAX_TRADER_RUNTIME_MODE")))
+	}
+	return mode == "paper"
 }
 
 func processNextInstruction(ctx context.Context, builder *execution.InstructionBuilder, candidateStore *candidatesmod.Store, execService *execution.Service) {

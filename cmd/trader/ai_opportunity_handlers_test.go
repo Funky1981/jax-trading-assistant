@@ -8,6 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+
+	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 )
 
 func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
@@ -90,6 +94,44 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	}
 	if executionCount != 0 {
 		t.Fatalf("execution instruction count = %d, want 0 before approval", executionCount)
+	}
+
+	candidateID, err := uuid.Parse(response.CandidateID)
+	if err != nil {
+		t.Fatalf("parse candidate id: %v", err)
+	}
+	approval, err := approvalsmod.NewService(pool).Decide(ctx, approvalsmod.ApprovalRequest{
+		CandidateID: candidateID,
+		Decision:    approvalsmod.DecisionApproved,
+		ApprovedBy:  "test-operator",
+	})
+	if err != nil {
+		t.Fatalf("approve candidate: %v", err)
+	}
+	if approval.Decision != approvalsmod.DecisionApproved {
+		t.Fatalf("approval decision = %q, want approved", approval.Decision)
+	}
+
+	var approvedStatus string
+	if err := pool.QueryRow(ctx, `
+		SELECT status
+		FROM candidate_trades
+		WHERE id = $1::uuid
+	`, response.CandidateID).Scan(&approvedStatus); err != nil {
+		t.Fatalf("query approved candidate: %v", err)
+	}
+	if approvedStatus != "approved" {
+		t.Fatalf("candidate status after approval = %q, want approved", approvedStatus)
+	}
+	if err := pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM execution_instructions
+		WHERE candidate_id = $1::uuid AND approval_id = $2
+	`, response.CandidateID, approval.ID).Scan(&executionCount); err != nil {
+		t.Fatalf("query execution instructions after approval: %v", err)
+	}
+	if executionCount != 1 {
+		t.Fatalf("execution instruction count after approval = %d, want 1", executionCount)
 	}
 }
 

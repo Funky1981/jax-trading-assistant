@@ -95,6 +95,9 @@ if (-not $env:EMBEDDING_PROVIDER) {
 if (-not $env:JAX_TRADER_RUNTIME_MODE) {
     $env:JAX_TRADER_RUNTIME_MODE = "paper"
 }
+if (-not $env:JAX_RUNTIME_MODE) {
+    $env:JAX_RUNTIME_MODE = $env:JAX_TRADER_RUNTIME_MODE
+}
 if (-not $env:JAX_RESEARCH_RUNTIME_MODE) {
     $env:JAX_RESEARCH_RUNTIME_MODE = "research"
 }

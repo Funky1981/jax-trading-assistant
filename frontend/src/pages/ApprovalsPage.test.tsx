@@ -112,6 +112,7 @@ describe('ApprovalsPage', () => {
     expect(await screen.findByText('AAPL')).toBeInTheDocument();
     expect(await screen.findByText('ETF eligible')).toBeInTheDocument();
     expect(await screen.findByText('allowed')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Approve for paper order/i })).toBeInTheDocument();
     expect(await screen.findByText('Recent Execution Activity')).toBeInTheDocument();
     expect(await screen.findByText('NVDA')).toBeInTheDocument();
     expect(await screen.findByText('Recently Blocked')).toBeInTheDocument();

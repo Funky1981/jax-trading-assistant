@@ -83,3 +83,30 @@ func TestNormalizeExecutionStatus(t *testing.T) {
 		}
 	}
 }
+
+func TestExecutionInstructionWorkerSafetyEnabled(t *testing.T) {
+	t.Setenv("JAX_RUNTIME_MODE", "paper")
+	t.Setenv("JAX_TRADER_RUNTIME_MODE", "")
+	t.Setenv("IB_PAPER_TRADING", "true")
+	t.Setenv("ALLOW_LIVE_TRADING", "false")
+	if !executionInstructionWorkerSafetyEnabled() {
+		t.Fatal("expected paper runtime safety settings to enable worker")
+	}
+
+	t.Setenv("ALLOW_LIVE_TRADING", "true")
+	if executionInstructionWorkerSafetyEnabled() {
+		t.Fatal("expected live trading flag to disable worker")
+	}
+
+	t.Setenv("ALLOW_LIVE_TRADING", "false")
+	t.Setenv("IB_PAPER_TRADING", "false")
+	if executionInstructionWorkerSafetyEnabled() {
+		t.Fatal("expected non-paper IB flag to disable worker")
+	}
+
+	t.Setenv("IB_PAPER_TRADING", "true")
+	t.Setenv("JAX_RUNTIME_MODE", "dev")
+	if executionInstructionWorkerSafetyEnabled() {
+		t.Fatal("expected non-paper runtime to disable worker")
+	}
+}

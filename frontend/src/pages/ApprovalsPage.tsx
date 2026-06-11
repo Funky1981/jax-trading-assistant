@@ -211,18 +211,18 @@ function CandidateRow({ item, onDecision, pending, onEvidenceOpen }: CandidateRo
               onClick={() => setConfirmApprove(true)}
               className="bg-green-600 text-white hover:bg-green-700"
             >
-              <CheckCircle className="mr-1 h-4 w-4" /> Approve
+              <CheckCircle className="mr-1 h-4 w-4" /> Approve for paper order
             </Button>
           ) : (
             <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">Confirm?</span>
+              <span className="text-xs text-muted-foreground">Create paper instruction?</span>
               <Button
                 size="sm"
                 disabled={pending}
                 onClick={() => submit('approve')}
                 className="bg-green-600 text-white hover:bg-green-700"
               >
-                Yes, approve
+                Yes, create paper order
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setConfirmApprove(false)}>
                 Cancel

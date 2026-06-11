@@ -586,3 +586,151 @@ test('reroutes ETF manual entries to approval flow while leaving exposure action
   await protectDialog.getByRole('button', { name: 'Submit Protection' }).click();
   await expect.poll(() => state.protectRequests).toBe(1);
 });
+
+test('approval paper order flow from promoted news idea', async ({ page }) => {
+  await installTradingStubs(page);
+  let approved = false;
+  let approveRequests = 0;
+
+  const queueCandidate = {
+    id: 'candidate-news-approval-1',
+    symbol: 'QQQ',
+    signalType: 'BUY',
+    confidence: 0.72,
+    entryPrice: 500,
+    stopLoss: 490,
+    takeProfit: 520,
+    reasoning: 'World Monitor highlighted QQQ after a rates-sensitive headline.',
+    detectedAt: '2026-06-11T13:00:00Z',
+    expiresAt: '2026-06-11T13:45:00Z',
+    instanceName: 'etf-news-sector-momentum-paper-v1',
+    metadata: {
+      etfPolicy: {
+        allowed: true,
+        reasonCode: 'allowed',
+        reason: 'QQQ is approved for ETF phase-1 paper trading.',
+        catalogVersion: 'phase1-2026-05-13',
+      },
+      worldMonitor: {
+        sourceEventId: 'wm-e2e-approval-1',
+        headline: 'Rates-sensitive headline supports QQQ review.',
+      },
+    },
+  };
+
+  const approvedCandidate = {
+    id: queueCandidate.id,
+    strategyInstanceId: 'instance-etf-news',
+    signalId: 'signal-news-approval-1',
+    strategyId: 'etf_news_sector_momentum_v1',
+    symbol: 'QQQ',
+    signalType: 'BUY',
+    status: 'approved',
+    entryPrice: 500,
+    stopLoss: 490,
+    takeProfit: 520,
+    confidence: 0.72,
+    reasoning: queueCandidate.reasoning,
+    sessionDate: '2026-06-11',
+    detectedAt: '2026-06-11T13:00:00Z',
+    dataProvenance: 'world-monitor',
+    latestApproval: {
+      id: 'approval-news-1',
+      decision: 'approved',
+      approvedBy: 'admin',
+      decidedAt: '2026-06-11T13:05:00Z',
+    },
+    executionInstructionId: 'instruction-news-1',
+  };
+
+  await page.route('**/api/v1/research/events/world-monitor', async (route) => {
+    await route.fulfill({
+      status: 202,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        inbox_id: 'inbox-news-1',
+        event_id: 'event-news-1',
+        status: 'new',
+        duplicate: false,
+      }),
+    });
+  });
+
+  await page.route('**/api/v1/research/events/world-monitor/promote', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        promoted: [
+          {
+            inboxId: 'inbox-news-1',
+            eventId: 'event-news-1',
+            signalId: 'signal-news-approval-1',
+            candidateId: queueCandidate.id,
+            symbol: 'QQQ',
+            route: 'approval_required',
+          },
+        ],
+        skipped: 0,
+      }),
+    });
+  });
+
+  await page.route('**/api/v1/approvals/queue**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(approved ? [] : [queueCandidate]),
+    });
+  });
+
+  await page.route('**/api/v1/approvals/*/approve', async (route) => {
+    approved = true;
+    approveRequests += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        candidateId: queueCandidate.id,
+        latestApproval: approvedCandidate.latestApproval,
+        execution: {
+          id: 'instruction-news-1',
+          approvalId: 'approval-news-1',
+          candidateId: queueCandidate.id,
+          symbol: 'QQQ',
+          signalType: 'BUY',
+          entryPrice: 500,
+          stopLoss: 490,
+          takeProfit: 520,
+          status: 'pending',
+          createdAt: '2026-06-11T13:05:01Z',
+          updatedAt: '2026-06-11T13:05:01Z',
+        },
+      }),
+    });
+  });
+
+  await page.route('**/api/v1/candidates**', async (route) => {
+    const url = new URL(route.request().url());
+    const status = url.searchParams.get('status');
+    const rows = approved && status === 'approved' ? [approvedCandidate] : [];
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(rows),
+    });
+  });
+
+  await page.goto('/etf/approvals', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByRole('heading', { name: 'Approval Queue' })).toBeVisible();
+  await expect(page.getByText('QQQ', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show reasoning' })).toBeVisible();
+  await page.getByRole('button', { name: /Approve for paper order/i }).click();
+  await expect(page.getByText('Create paper instruction?')).toBeVisible();
+  await page.getByRole('button', { name: /Yes, create paper order/i }).click();
+
+  await expect.poll(() => approveRequests).toBe(1);
+  await expect(page.getByText('Decision recorded: approve. Execution: pending')).toBeVisible();
+  await expect(page.getByText('instruct...')).toBeVisible();
+});

@@ -284,7 +284,7 @@ git commit -m "feat: promote ai suggestions into opportunity queue"
 - Modify: `frontend/src/pages/ApprovalsPage.tsx`
 - Add/modify: Playwright spec under `frontend/e2e/trading.spec.ts`
 
-- [ ] **Step 1: Verify approval endpoint behavior**
+- [x] **Step 1: Verify approval endpoint behavior**
 
 Use a seeded candidate and call:
 
@@ -297,7 +297,7 @@ Expected backend result:
 - execution instruction created
 - candidate status transitions to `approved` or `submitted`
 
-- [ ] **Step 2: Ensure paper-only execution worker consumes approved candidates**
+- [x] **Step 2: Ensure paper-only execution worker consumes approved candidates**
 
 Confirm `execution_instruction_worker.go` is started in local paper runtime and only allows:
 
@@ -307,7 +307,7 @@ IB_PAPER_TRADING=true
 ALLOW_LIVE_TRADING=false
 ```
 
-- [ ] **Step 3: Add UI confirmation**
+- [x] **Step 3: Add UI confirmation**
 
 Approvals page must clearly show:
 
@@ -317,7 +317,7 @@ Approve for paper order
 
 and not vague “Approve” when the next action can create broker instructions.
 
-- [ ] **Step 4: Playwright test**
+- [x] **Step 4: Playwright test**
 
 Write an E2E that:
 1. Creates a Jax World News Monitor trigger.
