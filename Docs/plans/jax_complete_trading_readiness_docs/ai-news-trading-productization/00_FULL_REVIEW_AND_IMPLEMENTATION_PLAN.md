@@ -203,7 +203,7 @@ git commit -m "feat: promote Jax World News Monitor triggers to approval candida
 - Modify: `cmd/trader/ai_overview_handlers.go` or create `cmd/trader/ai_opportunity_handlers.go`
 - Test: `frontend/src/pages/AiTradingPage.test.tsx`
 
-- [ ] **Step 1: Add endpoint**
+- [x] **Step 1: Add endpoint**
 
 Expose:
 
@@ -234,11 +234,11 @@ Response:
 }
 ```
 
-- [ ] **Step 2: Enforce policy**
+- [x] **Step 2: Enforce policy**
 
 If symbol is ETF, create `awaiting_approval`. If symbol is non-ETF and paper mode allows manual route, create `detected` with route `manual_allowed`. Never place an order from this endpoint.
 
-- [ ] **Step 3: Add UI action**
+- [x] **Step 3: Add UI action**
 
 In `AiTradingPage.tsx`, after an AI suggestion appears, show:
 
@@ -252,7 +252,7 @@ For ETF symbols, button copy should be:
 Send to approval queue
 ```
 
-- [ ] **Step 4: Test**
+- [x] **Step 4: Test**
 
 Run:
 

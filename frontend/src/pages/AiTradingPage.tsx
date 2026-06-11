@@ -275,6 +275,30 @@ export function AiTradingPage() {
     },
   });
 
+  const promoteSuggestionMutation = useMutation({
+    mutationFn: () => {
+      const suggestion = aiSuggestion.data?.suggestion;
+      if (!suggestion || (suggestion.action !== 'BUY' && suggestion.action !== 'SELL')) {
+        throw new Error('Only BUY or SELL suggestions can be promoted.');
+      }
+      return aiService.promoteSuggestion({
+        symbol: suggestion.symbol,
+        action: suggestion.action,
+        confidence: suggestion.confidence,
+        reasoning: suggestion.reasoning,
+        risk: suggestion.risk_assessment,
+        source: 'agent0_manual_review',
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['ai-trading', 'overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['ai-trading', 'candidates'] }),
+        queryClient.invalidateQueries({ queryKey: ['ai-trading', 'approval-queue'] }),
+      ]);
+    },
+  });
+
   const queries = [overviewQuery, signalsQuery, candidatesQuery, approvalsQuery];
   const isLoading = queries.some((query) => query.isPending);
   const isError = queries.some((query) => query.isError);
@@ -294,6 +318,12 @@ export function AiTradingPage() {
     (overviewQuery.data?.opportunityCounts.candidates ?? 0) +
     (overviewQuery.data?.opportunityCounts.approvals ?? 0);
   const watchedCount = watchedIds.filter((id) => allOpportunities.some((opportunity) => opportunity.id === id)).length;
+  const suggestionAction = aiSuggestion.data?.suggestion.action;
+  const suggestionCanPromote = suggestionAction === 'BUY' || suggestionAction === 'SELL';
+  const suggestionPromoteLabel =
+    aiSuggestion.data && scannerSettings.symbols.includes(aiSuggestion.data.suggestion.symbol.toUpperCase())
+      ? 'Send to approval queue'
+      : 'Send to opportunity queue';
 
   useEffect(() => {
     emitAnalyticsEvent('page_viewed', { source_surface: 'ai_trading' });
@@ -438,19 +468,42 @@ export function AiTradingPage() {
             {aiSuggestion.isPending && <p className="text-muted-foreground">Jax is checking market data, recent news, and risk context.</p>}
             {aiSuggestion.error && <p className="text-destructive">AI request failed: {aiSuggestion.error.message}</p>}
             {aiSuggestion.data && (
-              <div className="grid gap-3 md:grid-cols-[180px_1fr]">
-                <div className="rounded-md border border-border p-3">
-                  <p className="text-xs uppercase text-muted-foreground">Suggestion</p>
-                  <p className="mt-1 text-xl font-semibold">{aiSuggestion.data.suggestion.action}</p>
-                  <p className="text-muted-foreground">
-                    {aiSuggestion.data.suggestion.symbol} - {Math.round(aiSuggestion.data.suggestion.confidence * 100)}% confidence
-                  </p>
+              <div className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-[180px_1fr]">
+                  <div className="rounded-md border border-border p-3">
+                    <p className="text-xs uppercase text-muted-foreground">Suggestion</p>
+                    <p className="mt-1 text-xl font-semibold">{aiSuggestion.data.suggestion.action}</p>
+                    <p className="text-muted-foreground">
+                      {aiSuggestion.data.suggestion.symbol} - {Math.round(aiSuggestion.data.suggestion.confidence * 100)}% confidence
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border p-3">
+                    <p className="font-semibold text-foreground">Reason</p>
+                    <p className="mt-1 text-muted-foreground">{aiSuggestion.data.suggestion.reasoning || 'No reasoning returned.'}</p>
+                    <p className="mt-3 font-semibold text-foreground">Risk</p>
+                    <p className="mt-1 text-muted-foreground">{aiSuggestion.data.suggestion.risk_assessment || 'No risk summary returned.'}</p>
+                  </div>
                 </div>
-                <div className="rounded-md border border-border p-3">
-                  <p className="font-semibold text-foreground">Reason</p>
-                  <p className="mt-1 text-muted-foreground">{aiSuggestion.data.suggestion.reasoning || 'No reasoning returned.'}</p>
-                  <p className="mt-3 font-semibold text-foreground">Risk</p>
-                  <p className="mt-1 text-muted-foreground">{aiSuggestion.data.suggestion.risk_assessment || 'No risk summary returned.'}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    disabled={!suggestionCanPromote || promoteSuggestionMutation.isPending}
+                    onClick={() => promoteSuggestionMutation.mutate()}
+                    type="button"
+                  >
+                    {promoteSuggestionMutation.isPending ? 'Sending...' : suggestionPromoteLabel}
+                  </Button>
+                  {!suggestionCanPromote && (
+                    <p className="text-sm text-muted-foreground">Watch-only suggestions are advisory and cannot be sent to approval.</p>
+                  )}
+                  {promoteSuggestionMutation.data && (
+                    <p className="text-sm text-muted-foreground">
+                      Sent to {promoteSuggestionMutation.data.route === 'approval_required' ? 'Approvals' : 'Opportunities'} as candidate{' '}
+                      {promoteSuggestionMutation.data.candidateId}.
+                    </p>
+                  )}
+                  {promoteSuggestionMutation.error && (
+                    <p className="text-sm text-destructive">Promotion failed: {promoteSuggestionMutation.error.message}</p>
+                  )}
                 </div>
               </div>
             )}

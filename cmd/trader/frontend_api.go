@@ -285,6 +285,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	mux.HandleFunc("/api/v1/instruments/etfs", protect(etfInstrumentsHandler()))
 	mux.HandleFunc("/api/v1/ai/overview", protect(aiOverviewHandler(pool)))
 	mux.HandleFunc("/api/v1/ai/scanner", protect(aiScannerHandler(pool)))
+	mux.HandleFunc("/api/v1/ai/suggestions/promote", protect(aiSuggestionPromoteHandler(pool)))
 	mux.HandleFunc("/api/v1/trading/pilot-status", protect(tradingPilotStatusHandler(jwtManager != nil, marketAPI)))
 	mux.HandleFunc("/api/v1/market/candles", protect(marketCandlesHandler(marketAPI)))
 	mux.HandleFunc("/api/v1/broker/orders", protect(brokerOrdersHandler(jwtManager != nil, marketAPI, auditSvc)))

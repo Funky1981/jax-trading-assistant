@@ -28,6 +28,7 @@ vi.mock('@/data/ai-service', () => ({
   aiService: {
     getOverview: vi.fn(),
     updateScanner: vi.fn(),
+    promoteSuggestion: vi.fn(),
   },
 }));
 
@@ -101,6 +102,8 @@ function renderPage() {
 describe('AiTradingPage', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('renders scanner state and unified Opportunity feed with route-aware actions', async () => {
@@ -262,5 +265,49 @@ describe('AiTradingPage', () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText(/Failed to load one or more Opportunity sources/i)).toBeInTheDocument());
+  });
+
+  it('promotes a BUY suggestion into the approval queue', async () => {
+    const user = userEvent.setup();
+    mockOverview();
+    vi.mocked(signalsService.list).mockResolvedValue({ signals: [], total: 0, limit: 12, offset: 0 });
+    vi.mocked(candidatesService.list).mockResolvedValue([]);
+    vi.mocked(approvalsService.getQueue).mockResolvedValue([]);
+    vi.mocked(aiService.promoteSuggestion).mockResolvedValue({
+      candidateId: 'candidate-ai-1',
+      signalId: 'signal-ai-1',
+      route: 'approval_required',
+      status: 'awaiting_approval',
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        symbol: 'SPY',
+        action: 'BUY',
+        confidence: 64,
+        reasoning: 'Agent0 found a paper-only setup.',
+        risk: { risk_level: 'medium' },
+        generated_at: '2026-06-11T10:00:00Z',
+      }),
+    } as Response);
+
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Ask' }));
+    expect(await screen.findByText('Agent0 found a paper-only setup.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Send to approval queue' }));
+
+    await waitFor(() =>
+      expect(aiService.promoteSuggestion).toHaveBeenCalledWith({
+        symbol: 'SPY',
+        action: 'BUY',
+        confidence: 0.64,
+        reasoning: 'Agent0 found a paper-only setup.',
+        risk: 'medium',
+        source: 'agent0_manual_review',
+      })
+    );
+    expect(await screen.findByText(/Sent to Approvals as candidate candidate-ai-1/i)).toBeInTheDocument();
   });
 });
