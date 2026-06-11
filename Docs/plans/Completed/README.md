@@ -18,6 +18,8 @@ This directory contains the active implementation plans for Jax. Each plan has i
 | `Completed/etf-trading-readiness/` | `README.md` implemented phase-1 controls |
 | `Completed/llm-cost-context/` | `UAT-EVIDENCE.md` and committed LLM cost/context implementation phases |
 | `Completed/world-monitor-jax-awareness/` | `COMPLETION.md` and end-to-end local smoke proving research-only ingest |
+| `../analysis-intelligence-layer/` | `COMPLETION.md` and full local platform run evidence |
+| `../robust-profitability-layer/` | `COMPLETION.md`, robust API smoke, and full local platform run evidence |
 
 ## Read First
 

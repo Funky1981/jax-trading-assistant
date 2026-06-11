@@ -5,7 +5,8 @@ import { Download, Sparkles } from 'lucide-react';
 import { backtestService } from '@/data/backtest-service';
 import { datasetsService } from '@/data/datasets-service';
 import { eventsService } from '@/data/events-service';
-import type { BacktestRunBySymbol, BacktestTrade } from '@/data/types';
+import { robustService } from '@/data/robust-service';
+import type { BacktestRunBySymbol, BacktestTrade, RobustPerformance } from '@/data/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,6 +20,11 @@ export function AnalysisPage() {
   const runsQuery = useQuery({
     queryKey: ['analysis-runs-selector'],
     queryFn: () => backtestService.list({ limit: 200 }),
+  });
+  const robustQuery = useQuery({
+    queryKey: ['robust-performance'],
+    queryFn: () => robustService.getPerformance(),
+    staleTime: 30_000,
   });
   const runDetailQuery = useQuery({
     queryKey: ['analysis-run-detail', runId],
@@ -111,6 +117,8 @@ export function AnalysisPage() {
           Review backtest results, trades, and the timeline for a selected run.
         </p>
       </div>
+
+      <RobustPerformanceSection data={robustQuery.data} isLoading={robustQuery.isPending} isError={robustQuery.isError} />
 
       <Card>
         <CardHeader>
@@ -377,6 +385,76 @@ export function AnalysisPage() {
   );
 }
 
+function RobustPerformanceSection({
+  data,
+  isLoading,
+  isError,
+}: {
+  data?: RobustPerformance;
+  isLoading: boolean;
+  isError: boolean;
+}) {
+  const funnel = data?.funnel;
+  const strategies = data?.strategies ?? [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          Robust Profitability
+          <HelpHint text="Read-only summary of event funnel, walk-away decisions, reviewed trades, and strategy outcomes." />
+        </CardTitle>
+        <CardDescription>Paper-trading robustness checks and post-trade performance summary.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading && <p className="text-sm text-muted-foreground">Loading robust profitability metrics...</p>}
+        {isError && (
+          <p className="rounded-md border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            Robust profitability metrics are unavailable. Check migrations and API health.
+          </p>
+        )}
+        {funnel && (
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <MetricCard title="Events Analyzed" value={numOrDash(funnel.eventsAnalyzed, 0)} />
+            <MetricCard title="Candidates Created" value={numOrDash(funnel.candidatesCreated, 0)} />
+            <MetricCard title="Walk-Aways" value={numOrDash(funnel.blockingWalkaways, 0)} />
+            <MetricCard title="Reviewed Trades" value={numOrDash(funnel.reviewedTrades, 0)} />
+          </div>
+        )}
+        {!isLoading && !isError && strategies.length === 0 && (
+          <p className="rounded-md border border-border p-4 text-sm text-muted-foreground">
+            No reviewed strategy performance is available yet.
+          </p>
+        )}
+        {strategies.length > 0 && (
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[600px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Strategy</TableHead>
+                  <TableHead className="text-right">Trades</TableHead>
+                  <TableHead className="text-right">Average R</TableHead>
+                  <TableHead className="text-right">Win Rate</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {strategies.map((strategy) => (
+                  <TableRow key={strategy.strategyKey}>
+                    <TableCell className="font-medium">{strategy.strategyKey}</TableCell>
+                    <TableCell className="text-right">{numOrDash(strategy.trades, 0)}</TableCell>
+                    <TableCell className="text-right">{numOrDash(strategy.averageR, 2)}</TableCell>
+                    <TableCell className="text-right">{pctOrDash(strategy.winRate)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function MetricCard({ title, value }: { title: string; value: string }) {
   return (
     <Card>
@@ -423,11 +501,11 @@ function fmtDate(raw?: string | null): string {
   return d.toLocaleString();
 }
 
-function numOrDash(value: unknown): string {
+function numOrDash(value: unknown, digits = 4): string {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return '-';
   }
-  return value.toFixed(4);
+  return value.toFixed(digits);
 }
 
 function pctOrDash(value: unknown): string {

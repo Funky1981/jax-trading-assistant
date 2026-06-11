@@ -887,3 +887,22 @@ export interface MacroEventDetail {
   evidenceBundles: MacroEvidenceBundle[];
   candidates: MacroCandidate[];
 }
+
+export interface RobustEventFunnel {
+  eventsAnalyzed: number;
+  candidatesCreated: number;
+  blockingWalkaways: number;
+  reviewedTrades: number;
+}
+
+export interface RobustStrategyMetric {
+  strategyKey: string;
+  trades: number;
+  averageR: number;
+  winRate: number;
+}
+
+export interface RobustPerformance {
+  funnel: RobustEventFunnel;
+  strategies: RobustStrategyMetric[];
+}

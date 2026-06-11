@@ -9,11 +9,11 @@ Implemented and testable now:
 - Deterministic robust-profitability services in `internal/modules/profitability`.
 - Database migration `000042_robust_profitability_layer`.
 - Read-only performance API: `GET /api/v1/robust/performance`.
+- Frontend summary on `/analysis` under `Robust Profitability`.
 - Active plan docs in `Docs/plans/robust-profitability-layer/`.
 
 Not implemented in this pass:
 
-- A dedicated frontend page for robust profitability metrics.
 - Live provider ingestion for calendar/confounder/execution-quality feeds.
 - Any broker/order-writing path. This layer is read-only or candidate-gating logic only.
 
