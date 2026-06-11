@@ -186,7 +186,7 @@ go test ./cmd/trader -run WorldMonitor
 go test ./internal/modules/approvals ./internal/modules/candidates
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add cmd/trader/world_monitor_opportunity_promoter.go cmd/trader/world_monitor_opportunity_promoter_test.go cmd/trader/world_monitor_research_inbox.go
@@ -266,7 +266,7 @@ Expected:
 - AI Trading queue count updates.
 - Approvals page is no longer empty after promoting an ETF suggestion.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add frontend/src/pages/AiTradingPage.tsx frontend/src/data/ai-service.ts cmd/trader/*ai* frontend/src/pages/AiTradingPage.test.tsx
@@ -333,7 +333,7 @@ cd frontend
 npm run test:e2e -- --grep "approval paper order"
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add cmd/trader/approval_handlers.go cmd/trader/execution_instruction_worker.go frontend/src/pages/ApprovalsPage.tsx frontend/e2e/trading.spec.ts
@@ -392,7 +392,7 @@ Expected:
 - scanner does not duplicate existing candidates
 - scanner does not create broker orders
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add cmd/trader/opportunity_scanner.go cmd/trader/opportunity_scanner_test.go cmd/trader/main.go cmd/trader/ai_overview_handlers.go
