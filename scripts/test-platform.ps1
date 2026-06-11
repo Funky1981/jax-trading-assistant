@@ -187,6 +187,7 @@ Invoke-HttpCheck -Name "api/runs" -Url "$ApiBase/api/v1/runs?limit=5"
 Invoke-HttpCheck -Name "api/ai-decisions" -Url "$ApiBase/api/v1/ai-decisions?limit=5"
 Invoke-HttpCheck -Name "api/etf-instruments" -Url "$ApiBase/api/v1/instruments/etfs"
 Invoke-HttpCheck -Name "api/trading-pilot-status" -Url "$ApiBase/api/v1/trading/pilot-status"
+Invoke-HttpCheck -Name "api/robust-performance" -Url "$ApiBase/api/v1/robust/performance"
 
 # 3) Backend checks
 if ($Mode -eq "quick") {

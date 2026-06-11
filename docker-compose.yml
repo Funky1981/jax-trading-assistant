@@ -88,6 +88,9 @@ services:
         BUILD_TIME: "${BUILD_TIME:-unknown}"
     environment:
       DATABASE_URL: postgresql://jax:jax@postgres:5432/jax
+      JAX_RUNTIME_MODE: ${JAX_TRADER_RUNTIME_MODE:-paper}
+      JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-false}
+      ALLOW_LIVE_TRADING: ${ALLOW_LIVE_TRADING:-false}
       IB_BRIDGE_URL: ${IB_BRIDGE_URL:-http://ib-bridge:8092}
       PORT: "8100"
       # ADR-0012 Phase 6: frontend API (replaces jax-api on port 8081)
@@ -164,6 +167,8 @@ services:
         BUILD_TIME: "${BUILD_TIME:-unknown}"
     environment:
       DATABASE_URL: postgresql://jax:jax@postgres:5432/jax
+      JAX_RUNTIME_MODE: ${JAX_RESEARCH_RUNTIME_MODE:-research}
+      JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-false}
       AGENT0_SERVICE_URL: ${AGENT0_SERVICE_URL:-http://agent0-service:8093}
       DEXTER_SERVICE_URL: ${DEXTER_SERVICE_URL:-}
       MEMORY_SERVICE_URL: http://jax-research:8091/tools

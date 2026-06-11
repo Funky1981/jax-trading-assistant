@@ -126,3 +126,9 @@ Stop can be placed above failed VWAP reclaim. Reward:risk is acceptable.
 Decision:
 Paper candidate allowed. Awaiting human approval.
 ```
+
+## Next Plan
+
+After analysis intelligence is implemented, continue with:
+
+`Docs/plans/robust-profitability-layer/README.md`

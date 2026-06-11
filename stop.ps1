@@ -5,6 +5,21 @@ $RuntimeDir = ".runtime"
 $FrontendPidFile = Join-Path $RuntimeDir "frontend-dev.pid"
 $AgentPidFile = Join-Path $RuntimeDir "playwright-agent.pid"
 
+function Stop-ListeningProcessOnPort([int]$Port) {
+    $matches = netstat -ano 2>$null | Select-String ":$Port\s+.*LISTENING"
+    foreach ($match in $matches) {
+        $pidText = ($match.Line.Trim() -split '\s+')[-1]
+        if ($pidText -match '^\d+$') {
+            $portPid = [int]$pidText
+            $proc = Get-Process -Id $portPid -ErrorAction SilentlyContinue
+            if ($proc) {
+                Write-Host "Stopping stale frontend listener on port $Port (PID $portPid)..." -ForegroundColor Cyan
+                Stop-Process -Id $portPid -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+}
+
 Write-Host "Stopping JAX Trading Assistant..." -ForegroundColor Yellow
 
 if (Test-Path $FrontendPidFile) {
@@ -19,6 +34,9 @@ if (Test-Path $FrontendPidFile) {
 
     Remove-Item $FrontendPidFile -ErrorAction SilentlyContinue
 }
+
+Stop-ListeningProcessOnPort 5173
+Stop-ListeningProcessOnPort 5174
 
 if (Test-Path $AgentPidFile) {
     try {

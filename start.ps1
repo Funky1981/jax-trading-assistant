@@ -1,5 +1,12 @@
 # JAX Trading Assistant - Start Script
-# Starts all services and opens the dashboard
+# Starts Docker services, applies migrations, starts the Vite frontend, and opens the dashboard.
+
+param(
+    [switch]$Build,
+    [ValidateSet("none", "quick", "full")]
+    [string]$TestMode = "none",
+    [switch]$NoBrowser
+)
 
 $ErrorActionPreference = "Continue"
 $RuntimeDir = ".runtime"
@@ -30,6 +37,21 @@ function Stop-StaleFrontendProcess {
     Remove-Item $FrontendPidFile -ErrorAction SilentlyContinue
 }
 
+function Stop-ListeningProcessOnPort([int]$Port) {
+    $matches = netstat -ano 2>$null | Select-String ":$Port\s+.*LISTENING"
+    foreach ($match in $matches) {
+        $pidText = ($match.Line.Trim() -split '\s+')[-1]
+        if ($pidText -match '^\d+$') {
+            $portPid = [int]$pidText
+            $proc = Get-Process -Id $portPid -ErrorAction SilentlyContinue
+            if ($proc) {
+                Write-Host "  Killing stale frontend process on port $Port (PID $portPid)..." -ForegroundColor Gray
+                Stop-Process -Id $portPid -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+}
+
 function Wait-ForHttp([string]$Url, [int]$Attempts = 20, [int]$DelaySeconds = 2) {
     for ($i = 1; $i -le $Attempts; $i++) {
         try {
@@ -49,6 +71,7 @@ function Wait-ForHttp([string]$Url, [int]$Attempts = 20, [int]$DelaySeconds = 2)
 
 Write-Host "Starting JAX Trading Assistant..." -ForegroundColor Green
 Write-Host "See Docs/DEBUGGING.md for troubleshooting" -ForegroundColor Gray
+Write-Host "Runtime defaults: trader=paper, research=research, IB paper=true, live trading disabled" -ForegroundColor Gray
 
 Initialize-Directory $RuntimeDir
 Initialize-Directory "logs"
@@ -68,6 +91,21 @@ if (-not $env:DATABASE_URL) {
 }
 if (-not $env:EMBEDDING_PROVIDER) {
     $env:EMBEDDING_PROVIDER = "local"
+}
+if (-not $env:JAX_TRADER_RUNTIME_MODE) {
+    $env:JAX_TRADER_RUNTIME_MODE = "paper"
+}
+if (-not $env:JAX_RESEARCH_RUNTIME_MODE) {
+    $env:JAX_RESEARCH_RUNTIME_MODE = "research"
+}
+if (-not $env:IB_PAPER_TRADING) {
+    $env:IB_PAPER_TRADING = "true"
+}
+if (-not $env:ALLOW_LIVE_TRADING) {
+    $env:ALLOW_LIVE_TRADING = "false"
+}
+if ($Build.IsPresent) {
+    $env:JAX_BUILD = "true"
 }
 
 # Build service images: auto when any required image is missing, or when JAX_BUILD=true.
@@ -190,20 +228,14 @@ Pop-Location
 
 Stop-StaleFrontendProcess
 
-# Kill any orphaned process still holding port 5173 (e.g. from a previous crashed run).
-$netout = netstat -ano 2>$null | Select-String ":5173\s.*LISTENING"
-if ($netout) {
-    $stalePid = ($netout.ToString().Trim() -split '\s+')[-1]
-    if ($stalePid -match '^\d+$') {
-        Write-Host "  Killing stale process on port 5173 (PID $stalePid)..." -ForegroundColor Gray
-        Stop-Process -Id ([int]$stalePid) -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 500
-    }
-}
+# Kill orphaned Vite processes from interrupted runs.
+Stop-ListeningProcessOnPort 5173
+Stop-ListeningProcessOnPort 5174
+Start-Sleep -Milliseconds 500
 
 Write-Host "  Launching frontend dev server..." -ForegroundColor Gray
 $frontendProcess = Start-Process powershell `
-    -ArgumentList '-NoProfile', '-Command', "Set-Location '$PWD\frontend'; npm run dev *> '$PWD\$FrontendLogFile'" `
+    -ArgumentList '-NoProfile', '-Command', "Set-Location '$PWD\frontend'; npm run dev -- --port 5173 --strictPort *> '$PWD\$FrontendLogFile'" `
     -PassThru `
     -WindowStyle Hidden
 $frontendProcess.Id | Set-Content $FrontendPidFile
@@ -242,8 +274,23 @@ $agentProcess = Start-Process node `
 $agentProcess.Id | Set-Content $AgentPidFile
 Write-Host "  Playwright agent PID: $($agentProcess.Id)" -ForegroundColor Gray
 
-Write-Host "`nOpening dashboard at http://localhost:5173" -ForegroundColor Green
-Start-Process "http://localhost:5173" | Out-Null
+if (-not $NoBrowser.IsPresent) {
+    Write-Host "`nOpening dashboard at http://localhost:5173" -ForegroundColor Green
+    Start-Process "http://localhost:5173" | Out-Null
+} else {
+    Write-Host "`nDashboard ready at http://localhost:5173" -ForegroundColor Green
+}
 Write-Host "Frontend dev server PID: $($frontendProcess.Id)" -ForegroundColor Gray
 Write-Host "Frontend log: $FrontendLogFile" -ForegroundColor Gray
-Write-Host "Use .\\stop.ps1 to stop backend and frontend`n" -ForegroundColor Gray
+Write-Host "Use .\\stop.ps1 to stop backend and frontend" -ForegroundColor Gray
+
+if ($TestMode -ne "none") {
+    Write-Host "`nRunning platform tests ($TestMode)..." -ForegroundColor Cyan
+    & powershell -NoProfile -ExecutionPolicy Bypass -File "scripts/test-platform.ps1" -Mode $TestMode
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Platform tests failed with exit code $LASTEXITCODE" -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+}
+
+Write-Host "`nJAX Trading Assistant is running." -ForegroundColor Green

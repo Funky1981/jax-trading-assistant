@@ -29,13 +29,15 @@ External boundaries kept as separate processes:
 ## Quick Start
 
 ```powershell
-docker compose up -d
+.\start.ps1
 ```
 
-Services start automatically. Trader and research runtimes load approved strategy artifacts from Postgres on startup.
+Services start automatically, migrations are applied, the Vite frontend starts, and the dashboard opens.
+Trader and research runtimes load approved strategy artifacts from Postgres on startup.
 The compose topology does not start standalone orchestration or legacy market-data containers. Those seams now live inside `cmd/trader` and `cmd/research`.
 
 See `Docs/QUICKSTART.md` for full setup including IB Gateway connection.
+For local full-site research and paper-trading validation, use `Docs/LOCAL_PAPER_TRADING_TESTING.md`.
 
 ## Environment
 

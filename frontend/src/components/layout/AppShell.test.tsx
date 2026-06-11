@@ -35,6 +35,7 @@ describe('AppShell', () => {
       'Manual Trading',
       'Approvals',
       'Research',
+      'Macro Events',
       'Analysis',
       'Notifications',
       'Settings',

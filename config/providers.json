@@ -20,8 +20,9 @@
     {
       "id": "broker",
       "transport": "http",
-      "endpoint": "http://broker-sim:8080/tools",
-      "data_source_type": "unknown"
+      "endpoint": "http://ib-bridge:8092/tools",
+      "data_source_type": "real",
+      "source_provider": "ib-bridge.paper"
     },
     {
       "id": "storage",

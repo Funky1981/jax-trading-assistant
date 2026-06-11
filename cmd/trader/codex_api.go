@@ -61,6 +61,7 @@ func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 	mux.HandleFunc("/api/v1/macro/events", protect(macroEventsHandler(pool)))
 	mux.HandleFunc("/api/v1/macro/events/", protect(macroEventDetailHandler(pool)))
 	mux.HandleFunc("/api/v1/macro/candidates/", protect(macroCandidateDetailHandler(pool)))
+	mux.HandleFunc("/api/v1/robust/performance", protect(robustPerformanceHandler(pool)))
 
 	mux.HandleFunc("/api/v1/testing/status", protect(testingStatusHandler(pool)))
 	mux.HandleFunc("/api/v1/testing/readiness", protect(testingReadinessHandler(pool)))

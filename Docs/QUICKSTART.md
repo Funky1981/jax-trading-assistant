@@ -6,10 +6,30 @@
 - Node.js 20+
 - Go 1.22+ (optional for local Go runs)
 
-## Start Stack (Compose)
+## Start Everything
 
 ```powershell
-docker compose up -d
+.\start.ps1
+```
+
+This starts Docker services, applies migrations, starts the local Vite frontend, starts the Playwright test agent, and opens the dashboard.
+
+Run startup plus a quick whole-platform smoke test:
+
+```powershell
+.\start.ps1 -TestMode quick
+```
+
+Run the full local site test, including Playwright e2e:
+
+```powershell
+.\start.ps1 -TestMode full
+```
+
+Force rebuild first:
+
+```powershell
+.\start.ps1 -Build -TestMode quick
 ```
 
 Core runtime services:
@@ -18,7 +38,11 @@ Core runtime services:
 - `ib-bridge` (`http://localhost:8092/health`)
 - `agent0-service` (`http://localhost:8093/health`)
 
-## Start Frontend
+Frontend URL: `http://localhost:5173`
+
+Full paper-trading test runbook: `Docs/LOCAL_PAPER_TRADING_TESTING.md`
+
+## Manual Frontend Only
 
 ```powershell
 cd frontend
@@ -26,7 +50,7 @@ npm install
 npm run dev
 ```
 
-Frontend URL: `http://localhost:5173`
+Use this only when the backend is already running and you want to restart the frontend manually.
 
 ## Health Checks
 
@@ -59,6 +83,12 @@ docker compose logs -f agent0-service
 
 ```powershell
 docker compose down
+```
+
+Preferred full stop:
+
+```powershell
+.\stop.ps1
 ```
 
 Full cleanup (removes volumes):
