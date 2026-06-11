@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowRight, Bot, Clock, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
@@ -12,10 +12,13 @@ import { SentimentEvidencePanel } from '@/components/trading/SentimentEvidencePa
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useBeginnerMode } from '@/context/BeginnerUXContextValue';
 import { emitAnalyticsEvent } from '@/lib/analytics';
 
 const REFRESH_INTERVAL_MS = 30_000;
 const STALE_DATA_MS = 5 * 60_000;
+const WATCHED_STORAGE_KEY = 'jax-ai-trading-watched-opportunities';
+const DISMISSED_STORAGE_KEY = 'jax-ai-trading-dismissed-opportunities';
 
 const defaultScannerSettings: ScannerSettings = {
   enabled: true,
@@ -112,7 +115,35 @@ function primaryAction(opportunity: OpportunitySummary) {
   return { label: 'Review order', path: '/manual-trading' };
 }
 
-function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
+function loadStoredIds(key: string): string[] {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredIds(key: string, ids: string[]) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(ids));
+  } catch {
+    // Keep the interaction working in memory when storage is unavailable.
+  }
+}
+
+function OpportunityCard({
+  opportunity,
+  watched,
+  onWatch,
+  onDismiss,
+}: {
+  opportunity: OpportunitySummary;
+  watched: boolean;
+  onWatch: (id: string) => void;
+  onDismiss: (id: string) => void;
+}) {
   const action = primaryAction(opportunity);
   const expired = isExpired(opportunity.expiresAt);
 
@@ -170,10 +201,10 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
-          <Button type="button" variant="outline">
-            Watch
+          <Button type="button" variant="outline" onClick={() => onWatch(opportunity.id)}>
+            {watched ? 'Watching' : 'Watch'}
           </Button>
-          <Button type="button" variant="ghost">
+          <Button type="button" variant="ghost" onClick={() => onDismiss(opportunity.id)}>
             Dismiss
           </Button>
         </div>
@@ -185,6 +216,9 @@ function OpportunityCard({ opportunity }: { opportunity: OpportunitySummary }) {
 export function AiTradingPage() {
   const trackedSetupRef = useRef(false);
   const queryClient = useQueryClient();
+  const { mode } = useBeginnerMode();
+  const [watchedIds, setWatchedIds] = useState<string[]>(() => loadStoredIds(WATCHED_STORAGE_KEY));
+  const [dismissedIds, setDismissedIds] = useState<string[]>(() => loadStoredIds(DISMISSED_STORAGE_KEY));
 
   const overviewQuery = useQuery({
     queryKey: ['ai-trading', 'overview'],
@@ -212,7 +246,7 @@ export function AiTradingPage() {
     staleTime: 60_000,
   });
 
-  const opportunities = useMemo(
+  const allOpportunities = useMemo(
     () =>
       toOpportunitySummaries({
         signals: signalsQuery.data?.signals ?? [],
@@ -220,6 +254,10 @@ export function AiTradingPage() {
         approvals: approvalsQuery.data ?? [],
       }),
     [approvalsQuery.data, candidatesQuery.data, signalsQuery.data]
+  );
+  const opportunities = useMemo(
+    () => allOpportunities.filter((opportunity) => !dismissedIds.includes(opportunity.id)),
+    [allOpportunities, dismissedIds]
   );
 
   const scannerSettings = useMemo(
@@ -252,6 +290,7 @@ export function AiTradingPage() {
     (overviewQuery.data?.opportunityCounts.signalsPending ?? 0) +
     (overviewQuery.data?.opportunityCounts.candidates ?? 0) +
     (overviewQuery.data?.opportunityCounts.approvals ?? 0);
+  const watchedCount = watchedIds.filter((id) => allOpportunities.some((opportunity) => opportunity.id === id)).length;
 
   useEffect(() => {
     emitAnalyticsEvent('page_viewed', { source_surface: 'ai_trading' });
@@ -291,17 +330,65 @@ export function AiTradingPage() {
     });
   };
 
+  const watchOpportunity = (id: string) => {
+    setWatchedIds((current) => {
+      const next = current.includes(id) ? current.filter((currentId) => currentId !== id) : [id, ...current];
+      saveStoredIds(WATCHED_STORAGE_KEY, next);
+      return next;
+    });
+  };
+
+  const dismissOpportunity = (id: string) => {
+    setDismissedIds((current) => {
+      const next = current.includes(id) ? current : [id, ...current];
+      saveStoredIds(DISMISSED_STORAGE_KEY, next);
+      return next;
+    });
+  };
+
+  const resetDismissed = () => {
+    setDismissedIds([]);
+    saveStoredIds(DISMISSED_STORAGE_KEY, []);
+  };
+
+  const isSimple = mode === 'simple';
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <section className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-widest text-primary">AI Trading</p>
         <div className="max-w-3xl space-y-2">
-          <h1 className="text-2xl font-bold md:text-3xl">AI Trading</h1>
+          <h1 className="text-2xl font-bold md:text-3xl">{isSimple ? 'Find Trade Ideas' : 'AI Trading'}</h1>
           <p className="text-base text-muted-foreground">
-            Review AI-backed Opportunities in one queue, then choose the right manual, approval, watch, or blocked-state path.
+            {isSimple
+              ? 'Jax collects possible trade ideas here. Your job is to review each one, then send it to the safe next step.'
+              : 'Review AI-backed Opportunities in one queue, then choose the right manual, approval, watch, or blocked-state path.'}
           </p>
         </div>
       </section>
+
+      {isSimple && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Start Here</CardTitle>
+            <CardDescription>Use this page as a triage desk. It does not place live trades.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 text-sm md:grid-cols-3">
+            <div>
+              <p className="font-semibold text-foreground">1. Read the idea</p>
+              <p className="text-muted-foreground">Check the symbol, confidence, and why Jax found it.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">2. Choose the route</p>
+              <p className="text-muted-foreground">Use Review order, Send to approval, Watch, or Dismiss.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">3. Keep it paper-safe</p>
+              <p className="text-muted-foreground">Approval and broker confirmation stay separate from this screen.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <section className="grid gap-4 md:grid-cols-3" aria-label="Scanner state">
         <Card>
@@ -342,7 +429,22 @@ export function AiTradingPage() {
         </Card>
       </section>
 
-      <ScannerSettingsCard isSaving={scannerMutation.isPending} onToggleScanner={toggleScanner} settings={scannerSettings} />
+      {!isSimple && (
+        <ScannerSettingsCard isSaving={scannerMutation.isPending} onToggleScanner={toggleScanner} settings={scannerSettings} />
+      )}
+      {isSimple && (
+        <Card>
+          <CardHeader className="gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <CardTitle>Scanner</CardTitle>
+              <CardDescription>Jax is watching {scannerSettings.symbols.join(', ')} for new ideas.</CardDescription>
+            </div>
+            <Button disabled={scannerMutation.isPending} onClick={toggleScanner} type="button" variant="outline">
+              {scannerMutation.isPending ? 'Saving...' : scannerSettings.enabled ? 'Pause scanner' : 'Resume scanner'}
+            </Button>
+          </CardHeader>
+        </Card>
+      )}
 
       {staleData && (
         <div className="flex items-center gap-2 rounded-md border border-warning bg-warning/10 px-4 py-3 text-sm text-foreground">
@@ -362,21 +464,30 @@ export function AiTradingPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold">Opportunity queue</h2>
-            <p className="text-sm text-muted-foreground">Every item includes a visible next action.</p>
+            <p className="text-sm text-muted-foreground">
+              Every item includes a visible next action. {watchedCount > 0 ? `${watchedCount} currently watched.` : ''}
+            </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              signalsQuery.refetch();
-              candidatesQuery.refetch();
-              approvalsQuery.refetch();
-              overviewQuery.refetch();
-            }}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {dismissedIds.length > 0 && (
+              <Button type="button" variant="ghost" onClick={resetDismissed}>
+                Show dismissed
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                signalsQuery.refetch();
+                candidatesQuery.refetch();
+                approvalsQuery.refetch();
+                overviewQuery.refetch();
+              }}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {isLoading && <p className="rounded-md border border-border p-6 text-muted-foreground">Loading Opportunity queue...</p>}
@@ -389,7 +500,15 @@ export function AiTradingPage() {
           </Card>
         )}
 
-        {!isLoading && opportunities.map((opportunity) => <OpportunityCard key={opportunity.id} opportunity={opportunity} />)}
+        {!isLoading && opportunities.map((opportunity) => (
+          <OpportunityCard
+            key={opportunity.id}
+            opportunity={opportunity}
+            watched={watchedIds.includes(opportunity.id)}
+            onWatch={watchOpportunity}
+            onDismiss={dismissOpportunity}
+          />
+        ))}
       </section>
     </div>
   );

@@ -32,9 +32,11 @@ import { Button } from '@/components/ui/button';
 import JaxLogo from '@/images/jax_ai_trader.svg';
 import { useAuth } from '@/contexts/AuthContext';
 import { BeginnerModeToggle } from '@/components/trading/BeginnerModeToggle';
+import { useBeginnerMode } from '@/context/BeginnerUXContextValue';
 
 const primaryNavItems = [
   { label: 'Home', path: '/', icon: LayoutDashboard, end: true },
+  { label: 'Guide', path: '/guide', icon: BookOpen },
   { label: 'AI Trading', path: '/ai-trading', icon: Bot },
   { label: 'Manual Trading', path: '/manual-trading', icon: ClipboardPenLine },
   { label: 'Approvals', path: '/etf/approvals', icon: CheckSquare },
@@ -63,7 +65,7 @@ const advancedSections = [
   },
   {
     id: 'learn-legacy',
-    label: 'Learn and legacy',
+    label: 'Guides and legacy',
     icon: BookOpen,
     items: [
       { label: 'User Guide', path: '/guide', icon: BookOpen },
@@ -86,13 +88,29 @@ const advancedSections = [
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, authRequired, logout } = useAuth();
+  const { mode } = useBeginnerMode();
   const location = useLocation();
+  const visibleAdvancedSections = useMemo(() => {
+    if (mode !== 'simple') {
+      return advancedSections;
+    }
+
+    return advancedSections.map((section) =>
+      section.id === 'learn-legacy'
+        ? {
+            ...section,
+            label: 'Legacy pages',
+            items: section.items.filter((item) => item.path !== '/guide'),
+          }
+        : section
+    );
+  }, [mode]);
 
   const activeSectionIds = useMemo(() => {
-    return advancedSections
+    return visibleAdvancedSections
       .filter((section) => section.items.some((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)))
       .map((section) => section.id);
-  }, [location.pathname]);
+  }, [location.pathname, visibleAdvancedSections]);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(advancedSections.map((section) => [section.id, false]))
@@ -188,7 +206,7 @@ export function AppShell() {
                 Advanced
               </p>
 
-              {advancedSections.map((section) => {
+              {visibleAdvancedSections.map((section) => {
                 const sectionActive = section.items.some(
                   (item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
                 );
@@ -220,6 +238,7 @@ export function AppShell() {
                           <NavLink
                             key={item.path}
                             to={item.path}
+                            end
                             onClick={() => setSidebarOpen(false)}
                             className={navLinkClass}
                           >

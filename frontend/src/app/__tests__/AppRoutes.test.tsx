@@ -45,8 +45,9 @@ describe('AppRoutes', () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
-    expect(screen.getByText('Jax helps you find AI-backed trading opportunities, review the evidence, and act through the right safety-controlled workflow.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start Here' })).toBeInTheDocument();
+    expect(screen.getByText('Jax is a paper-trading assistant. It helps you find ideas, check evidence, and keep every action behind safety steps.')).toBeInTheDocument();
+    expect(screen.getByText('How The App Fits Together')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Find AI opportunities/i })).toHaveAttribute('href', '/ai-trading');
     expect(screen.getByRole('link', { name: /Place a manual trade/i })).toHaveAttribute('href', '/manual-trading');
     expect(screen.getByRole('link', { name: /Test a strategy/i })).toHaveAttribute('href', '/research');

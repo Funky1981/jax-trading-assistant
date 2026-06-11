@@ -18,6 +18,7 @@ import {
 import { HelpHint } from '@/components/ui/help-hint';
 import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
 import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
+import { useBeginnerMode } from '@/context/BeginnerUXContextValue';
 
 // Panel IDs for state management
 const PANEL_IDS = [
@@ -61,9 +62,11 @@ function savePanelState(state: Record<PanelId, boolean>) {
 export function TradingPage() {
   const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelState);
   const { data: pilotStatus } = useTradingPilotStatus();
+  const { mode } = useBeginnerMode();
   const location = useLocation();
   const navigate = useNavigate();
   const inETFModule = location.pathname.startsWith('/etf/');
+  const isSimple = mode === 'simple';
 
   // Persist panel state
   useEffect(() => {
@@ -94,14 +97,16 @@ export function TradingPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
-            TRADING TOOLS
+            {isSimple ? 'PAPER TRADING WORKFLOW' : 'TRADING TOOLS'}
           </p>
           <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
-            Trading
+            {isSimple ? 'Manual Paper Trading' : 'Trading'}
             <HelpHint text="Use the panels below to monitor markets, submit and manage broker orders, and review signals." />
           </h1>
           <p className="text-muted-foreground mt-1">
-            Monitor markets, place protected paper orders, manage working exits, and review signals in one place.
+            {isSimple
+              ? 'Use this page only after you understand the trade idea. Start with the order ticket, then manage orders and positions.'
+              : 'Monitor markets, place protected paper orders, manage working exits, and review signals in one place.'}
           </p>
         </div>
 
@@ -136,20 +141,20 @@ export function TradingPage() {
         </CardHeader>
         <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-4">
           <div>
-            <p className="font-semibold text-foreground">1. Build the entry</p>
-            <p>Use Watchlist and Price Chart to pick a symbol, then submit a market or limit entry in Order Ticket.</p>
+            <p className="font-semibold text-foreground">{isSimple ? '1. Choose the symbol' : '1. Build the entry'}</p>
+            <p>{isSimple ? 'Type the ticker you want to paper trade into Order Ticket.' : 'Use Watchlist and Price Chart to pick a symbol, then submit a market or limit entry in Order Ticket.'}</p>
           </div>
           <div>
-            <p className="font-semibold text-foreground">2. Attach risk</p>
-            <p>Add a stop loss and optional take profit in the ticket to send a bracket order from the start.</p>
+            <p className="font-semibold text-foreground">{isSimple ? '2. Add protection' : '2. Attach risk'}</p>
+            <p>{isSimple ? 'Use a stop loss before you submit. This is the price where the trade idea is wrong.' : 'Add a stop loss and optional take profit in the ticket to send a bracket order from the start.'}</p>
           </div>
           <div>
-            <p className="font-semibold text-foreground">3. Manage working orders</p>
-            <p>Use Trade Blotter to cancel pending broker orders before they fill.</p>
+            <p className="font-semibold text-foreground">{isSimple ? '3. Check pending orders' : '3. Manage working orders'}</p>
+            <p>{isSimple ? 'Use Trade Blotter to see orders that have not filled yet.' : 'Use Trade Blotter to cancel pending broker orders before they fill.'}</p>
           </div>
           <div>
-            <p className="font-semibold text-foreground">4. Manage live exposure</p>
-            <p>Use Positions to close or re-protect any open position after entry.</p>
+            <p className="font-semibold text-foreground">{isSimple ? '4. Check open trades' : '4. Manage live exposure'}</p>
+            <p>{isSimple ? 'Use Positions to close or protect anything that is open.' : 'Use Positions to close or re-protect any open position after entry.'}</p>
           </div>
         </CardContent>
       </Card>
@@ -198,6 +203,28 @@ export function TradingPage() {
         />
       ) : null}
 
+      {isSimple && (
+        <Card>
+          <CardHeader>
+            <CardTitle>What You Can Do Here</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 text-sm md:grid-cols-3">
+            <div>
+              <p className="font-semibold text-foreground">Paper order</p>
+              <p className="text-muted-foreground">Submit a paper order after confirming it in IB/TWS.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Cancel order</p>
+              <p className="text-muted-foreground">Cancel an order that is still waiting to fill.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Close or protect</p>
+              <p className="text-muted-foreground">Manage a position after it exists.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dashboard Grid */}
       <DashboardGrid>
         {/* Row 1: Watchlist, Order Ticket, Risk Summary */}
@@ -230,12 +257,14 @@ export function TradingPage() {
           />
         </DashboardPanel>
 
-        <DashboardPanel>
-          <StrategyMonitorPanel
-            isOpen={panelStates.strategy}
-            onToggle={() => togglePanel('strategy')}
-          />
-        </DashboardPanel>
+        {!isSimple && (
+          <DashboardPanel>
+            <StrategyMonitorPanel
+              isOpen={panelStates.strategy}
+              onToggle={() => togglePanel('strategy')}
+            />
+          </DashboardPanel>
+        )}
 
         {/* Row 3: Price Chart (wide), Trade Blotter */}
         <DashboardPanel colSpan={2}>
@@ -253,20 +282,24 @@ export function TradingPage() {
         </DashboardPanel>
 
         {/* Row 4: AI Assistant (full width) */}
-        <DashboardPanel colSpan={3}>
-          <SignalsQueuePanel
-            isOpen={panelStates.signalsQueue}
-            onToggle={() => togglePanel('signalsQueue')}
-          />
-        </DashboardPanel>
+        {!isSimple && (
+          <DashboardPanel colSpan={3}>
+            <SignalsQueuePanel
+              isOpen={panelStates.signalsQueue}
+              onToggle={() => togglePanel('signalsQueue')}
+            />
+          </DashboardPanel>
+        )}
 
         {/* Row 5: AI Assistant (full width) */}
-        <DashboardPanel colSpan={3}>
-          <AIAssistantPanel
-            isOpen={panelStates.aiAssistant}
-            onToggle={() => togglePanel('aiAssistant')}
-          />
-        </DashboardPanel>
+        {!isSimple && (
+          <DashboardPanel colSpan={3}>
+            <AIAssistantPanel
+              isOpen={panelStates.aiAssistant}
+              onToggle={() => togglePanel('aiAssistant')}
+            />
+          </DashboardPanel>
+        )}
       </DashboardGrid>
     </div>
   );

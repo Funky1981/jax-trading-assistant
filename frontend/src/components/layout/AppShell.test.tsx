@@ -31,6 +31,7 @@ describe('AppShell', () => {
 
     expect(links).toEqual([
       'Home',
+      'Guide',
       'AI Trading',
       'Manual Trading',
       'Approvals',
@@ -48,6 +49,6 @@ describe('AppShell', () => {
     expect(screen.queryByRole('link', { name: 'Trading Modules' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'System' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Admin and QA/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Learn and legacy/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Legacy pages/i })).toBeInTheDocument();
   });
 });
