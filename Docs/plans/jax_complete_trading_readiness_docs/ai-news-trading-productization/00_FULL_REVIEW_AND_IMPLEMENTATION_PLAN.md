@@ -350,7 +350,7 @@ git commit -m "feat: execute approved opportunities in paper mode"
 - Modify: `cmd/trader/main.go`
 - Modify: `cmd/trader/ai_overview_handlers.go`
 
-- [ ] **Step 1: Define scanner loop**
+- [x] **Step 1: Define scanner loop**
 
 Every `scanner.intervalSeconds`, scan configured symbols from `ai_scanner_state`.
 
@@ -361,7 +361,7 @@ Inputs:
 - sentiment aggregates if present
 - existing candidates to dedupe
 
-- [ ] **Step 2: Dedupe candidates**
+- [x] **Step 2: Dedupe candidates**
 
 Do not create duplicate candidates for same:
 
@@ -371,7 +371,7 @@ symbol + strategy_id + source_event_id + direction
 
 inside a configurable expiry window.
 
-- [ ] **Step 3: Candidate creation rule**
+- [x] **Step 3: Candidate creation rule**
 
 For phase 1:
 - confidence >= scanner minimum
@@ -379,7 +379,7 @@ For phase 1:
 - valid stop/target/risk fields
 - paper runtime only
 
-- [ ] **Step 4: Test**
+- [x] **Step 4: Test**
 
 Run:
 

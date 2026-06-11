@@ -201,6 +201,9 @@ func main() {
 	// Always-on trade watcher: continuously evaluates enabled strategy instances
 	// and creates candidate trades independent of browser presence.
 	go startTradeWatcher(ctx, dbPool, sigGen)
+	if cfg.RuntimeMode == runtimepolicy.ModePaper {
+		go startOpportunityScanner(ctx, dbPool)
+	}
 	if execService != nil && cfg.RuntimeMode == runtimepolicy.ModePaper {
 		go startExecutionInstructionWorker(ctx, dbPool, execService)
 	}
