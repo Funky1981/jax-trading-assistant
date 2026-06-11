@@ -17,9 +17,9 @@ test('loads home and navigates to manual trading', async ({ page }) => {
   });
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start Here' })).toBeVisible();
 
   await page.getByRole('link', { name: /Place a manual trade/i }).click();
-  await expect(page).toHaveURL(/\/equity-alpha\/trading$/);
-  await expect(page.locator('h1').filter({ hasText: 'Trading' })).toBeVisible();
+  await expect(page).toHaveURL(/\/manual-trading$/);
+  await expect(page.locator('h1').filter({ hasText: 'Manual Paper Trading' })).toBeVisible();
 });

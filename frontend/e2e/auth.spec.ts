@@ -32,7 +32,7 @@ test('anonymous mode: home accessible without login', async ({ page }) => {
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start Here' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Find AI opportunities/i })).toBeVisible();
   await expect(page).not.toHaveURL(/\/login/);
 });
@@ -143,5 +143,5 @@ test('login page: valid credentials navigate to home', async ({ page }) => {
   await page.locator('#password').fill('password');
   await page.getByRole('button', { name: 'Sign in' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start Here' })).toBeVisible();
 });

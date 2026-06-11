@@ -122,11 +122,11 @@ test('AI Trading opens from the shell and renders route-aware opportunities', as
   await page.getByRole('link', { name: 'AI Trading' }).click();
 
   await expect(page).toHaveURL(/\/ai-trading$/);
-  await expect(page.getByRole('heading', { name: 'AI Trading' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find Trade Ideas' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Opportunity queue' })).toBeVisible();
-  await expect(page.getByText('AAPL')).toBeVisible();
-  await expect(page.getByText('SPY')).toBeVisible();
-  await expect(page.getByText('QQQ')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'AAPL' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'SPY' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'QQQ' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Review order/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /Send to approval/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /Open blocked-state guidance/i })).toBeVisible();

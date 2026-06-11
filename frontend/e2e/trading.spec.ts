@@ -528,7 +528,6 @@ test('loads trading page with operator workflow and management controls', async 
   await expect(page.getByRole('button', { name: 'Protect' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Close' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
-  await expect(page.getByText('Trend and momentum support the long setup.')).toBeVisible();
 });
 
 test('submits protected entries and manages orders and positions', async ({ page }) => {

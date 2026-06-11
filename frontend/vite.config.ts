@@ -41,11 +41,20 @@ export default defineConfig({
         target: 'http://localhost:8092',
         changeOrigin: true,
       },
+      '/ib-health': {
+        target: 'http://localhost:8092',
+        changeOrigin: true,
+        rewrite: () => '/health',
+      },
       '/v1/memory': {
         target: 'http://localhost:8091',
         changeOrigin: true,
       },
-      // Proxy jax-research health to avoid CORS (browser → 5173 → 8091)
+      '/agent0': {
+        target: 'http://localhost:8093',
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/agent0/, ''),
+      },
       '/research-health': {
         target: 'http://localhost:8091',
         changeOrigin: true,
@@ -54,6 +63,6 @@ export default defineConfig({
     },
   },
   build: {
-    chunkSizeWarningLimit: 1000, // Suppress warning for chunks > 500KB
+    chunkSizeWarningLimit: 1000,
   },
 });

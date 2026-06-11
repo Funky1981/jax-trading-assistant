@@ -17,7 +17,6 @@ export class HttpError extends Error {
 }
 
 export function buildUrl(baseUrl: string, path: string, params?: Record<string, string>) {
-  // If baseUrl is empty (dev Vite proxy mode), resolve against the page origin
   const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081');
   const url = new URL(path, base);
   if (params) {
@@ -27,10 +26,6 @@ export function buildUrl(baseUrl: string, path: string, params?: Record<string, 
   }
   return url.toString();
 }
-
-// ── Auth token injection ───────────────────────────────────────────────────────
-// Reads directly from localStorage using the same key as AuthContext so that
-// there is no import cycle (http-client does not import AuthContext).
 
 const TOKEN_KEY = 'jax_token';
 
@@ -54,8 +49,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    return response;
+    return await fetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timeout);
   }
@@ -71,7 +65,7 @@ export function createHttpClient(options: HttpClientOptions = {}) {
 
     const token = getAuthToken();
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers.Authorization = `Bearer ${token}`;
     }
 
     const init: RequestInit = {
@@ -103,15 +97,16 @@ export function createHttpClient(options: HttpClientOptions = {}) {
   };
 }
 
-// Backend service clients
-// In dev mode, use empty string so requests resolve against the Vite dev server
-// and get proxied to localhost:8081 — avoids CORS from absolute URL.
+function devProxyBaseUrl(envUrl: string | undefined, productionFallback: string) {
+  return import.meta.env.DEV ? '' : envUrl || productionFallback;
+}
+
 export const apiClient = createHttpClient({
-  baseUrl: import.meta.env.VITE_JAX_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:8081'),
+  baseUrl: devProxyBaseUrl(import.meta.env.VITE_JAX_API_URL, 'http://localhost:8081'),
   timeoutMs: 30_000,
 });
 
 export const memoryClient = createHttpClient({
-  baseUrl: import.meta.env.VITE_MEMORY_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:8091'),
+  baseUrl: devProxyBaseUrl(import.meta.env.VITE_MEMORY_API_URL, 'http://localhost:8091'),
   timeoutMs: 15_000,
 });
