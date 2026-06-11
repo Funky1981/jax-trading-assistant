@@ -10,13 +10,13 @@ export function UserGuidePage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">GETTING STARTED</p>
+        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-primary">Getting started</p>
         <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
           User Guide
-          <HelpHint text="Step-by-step instructions for trading, backtesting, analysis, and testing workflows." />
+          <HelpHint text="A practical first-run workflow for research, AI review, and paper trading." />
         </h1>
-        <p className="text-muted-foreground mt-1">
-          Practical steps for placing and managing paper trades, running real-data backtests, reviewing results, and validating trust gates.
+        <p className="mt-1 text-muted-foreground">
+          Use this as the first full local test: confirm data, run research, ask the local AI, then place a tiny paper trade.
         </p>
       </div>
 
@@ -31,22 +31,42 @@ export function UserGuidePage() {
 
       <Card>
         <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <BookOpen className="h-5 w-5" />
+          <ListChecks className="h-5 w-5" />
           <div>
-            <CardTitle>Place and Manage a Trade</CardTitle>
-            <CardDescription>Use the trading UI as an operator workflow, not just a dashboard.</CardDescription>
+            <CardTitle>First Full Test</CardTitle>
+            <CardDescription>The shortest path that proves the local stack is useful.</CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <ol className="list-decimal pl-5 space-y-1 text-foreground">
-            <li>Open `Trading` and pick a symbol from Watchlist or the chart.</li>
-            <li>Confirm the market context in IB/TWS before using any price shown in the pilot UI.</li>
-            <li>Use `Order Ticket` for a market or limit entry.</li>
-            <li>Add `Stop Loss` and optional `Take Profit` before submitting if you want bracket protection.</li>
-            <li>Complete the manual confirmation step before every submit, cancel, close, or protect action.</li>
-            <li>Use `Trade Blotter` to cancel any working broker order that has not filled.</li>
-            <li>Use `Portfolio` or `Positions` to close or re-protect an open position.</li>
+        <CardContent className="space-y-2 text-sm">
+          <ol className="list-decimal space-y-1 pl-5 text-foreground">
+            <li>Start everything from this repo with `.\start.ps1`.</li>
+            <li>Open `Research` and confirm `SPY_2026-06-09_2026-06-11_1m` is selected.</li>
+            <li>Click `Run guided backtest`; the first beginner setup should use `or-spy-paper-v1`.</li>
+            <li>Open `AI Trading`, enter `AAPL` or `SPY` in `Ask Jax`, and click `Ask`.</li>
+            <li>Open `Manual Trading`, use 1 share, add a stop loss, add a take profit, and submit only in paper mode.</li>
+            <li>Check `Trade Blotter` for the parent entry and attached stop/target orders.</li>
           </ol>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
+          <BookOpen className="h-5 w-5" />
+          <div>
+            <CardTitle>What Each Main Page Does</CardTitle>
+            <CardDescription>Use these pages in order while learning the app.</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <ul className="list-disc space-y-1 pl-5 text-foreground">
+            <li>`Research` runs dataset-backed backtests. It does not place trades.</li>
+            <li>`AI Trading` shows queued opportunities and can ask the local AI for a symbol view.</li>
+            <li>`Manual Trading` is where protected paper orders are submitted and managed.</li>
+            <li>`Approvals` is for approval-required ETF ideas; manual ETF entries are blocked by policy.</li>
+            <li>`Macro Events` shows ingested research events, including World Monitor triggers.</li>
+            <li>`Analysis` opens completed backtests so you can inspect results and provenance.</li>
+            <li>`System` shows runtime health, datasets, and diagnostics.</li>
+          </ul>
         </CardContent>
       </Card>
 
@@ -54,17 +74,17 @@ export function UserGuidePage() {
         <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
           <CheckCircle2 className="h-5 w-5" />
           <div>
-            <CardTitle>Close or Protect Open Exposure</CardTitle>
-            <CardDescription>Position management happens from the Positions panel.</CardDescription>
+            <CardTitle>Dataset Snapshots</CardTitle>
+            <CardDescription>Backtests run from registered CSV snapshots, not from whatever file happens to exist.</CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <ul className="list-disc pl-5 space-y-1 text-foreground">
-            <li>`Close` submits a market or limit exit for all or part of a position.</li>
-            <li>`Protect` submits a stop loss and optional take profit on the broker for the chosen quantity.</li>
-            <li>When you submit new protection, existing UI-created protection for that symbol is replaced.</li>
-            <li>Use `Trade Blotter` to cancel working orders; filled history remains visible but read only.</li>
-          </ul>
+        <CardContent className="space-y-2 text-sm">
+          <ol className="list-decimal space-y-1 pl-5 text-foreground">
+            <li>Datasets live in `data/datasets` and are listed in `data/datasets/catalog.json`.</li>
+            <li>`.\start.ps1` syncs that catalog into Postgres after migrations.</li>
+            <li>`jax-research` loads the catalog on startup, so restart it after adding new dataset files by hand.</li>
+            <li>For the beginner research path, use the SPY 1-minute snapshot because opening-range strategies need intraday candles.</li>
+          </ol>
         </CardContent>
       </Card>
 
@@ -72,71 +92,18 @@ export function UserGuidePage() {
         <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
           <BookOpen className="h-5 w-5" />
           <div>
-            <CardTitle>Dataset Snapshots</CardTitle>
-            <CardDescription>Backtests require dataset snapshots (CSV OHLCV).</CardDescription>
+            <CardTitle>Paper Orders</CardTitle>
+            <CardDescription>Paper trading is still a broker mutation, so keep every test tiny.</CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <ol className="list-decimal pl-5 space-y-1 text-foreground">
-            <li>Open `System` → `Dataset Snapshots`.</li>
-            <li>Confirm at least one snapshot exists.</li>
-            <li>If empty, add a dataset under `data/datasets` and restart `jax-research`.</li>
+        <CardContent className="space-y-2 text-sm">
+          <ol className="list-decimal space-y-1 pl-5 text-foreground">
+            <li>Use `Manual Trading` for non-ETF manual paper orders such as AAPL.</li>
+            <li>Start with quantity `1`, add `Stop Loss`, and add optional `Take Profit`.</li>
+            <li>Confirm the IB/TWS checkbox before submitting.</li>
+            <li>Use `Trade Blotter` to inspect or cancel working stop/target orders.</li>
+            <li>Use `Positions` to close or protect open exposure after a fill.</li>
           </ol>
-          <img
-            className="rounded-md border border-border"
-            src="/user-guide/system-datasets.png"
-            alt="System page showing dataset snapshots"
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <ListChecks className="h-5 w-5" />
-          <div>
-            <CardTitle>Run a Backtest</CardTitle>
-            <CardDescription>Use a strategy instance with a dataset snapshot.</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <ol className="list-decimal pl-5 space-y-1 text-foreground">
-            <li>Go to `Backtesting` → `Research`.</li>
-            <li>Select a Strategy Instance in the table.</li>
-            <li>Pick a Dataset Snapshot in the editor below.</li>
-            <li>Click `Run Backtest`.</li>
-          </ol>
-          <img
-            className="rounded-md border border-border"
-            src="/user-guide/research-backtest.png"
-            alt="Research page showing dataset selection and Run Backtest button"
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <ListChecks className="h-5 w-5" />
-          <div>
-            <CardTitle>Review Results</CardTitle>
-            <CardDescription>Open the run in Analysis to inspect trades and timeline.</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <ol className="list-decimal pl-5 space-y-1 text-foreground">
-            <li>Go to `Backtesting` → `Backtests` tab.</li>
-            <li>Click a run row to open `Analysis`.</li>
-            <li>Check dataset hash and provenance.</li>
-          </ol>
-          <img
-            className="rounded-md border border-border"
-            src="/user-guide/backtest-runs.png"
-            alt="Backtests list showing completed runs"
-          />
-          <img
-            className="rounded-md border border-border"
-            src="/user-guide/analysis-run.png"
-            alt="Analysis page with run details"
-          />
         </CardContent>
       </Card>
 
@@ -144,35 +111,17 @@ export function UserGuidePage() {
         <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
           <Wrench className="h-5 w-5" />
           <div>
-            <CardTitle>Testing and Trust Gates</CardTitle>
-            <CardDescription>Validate data integrity and safety checks.</CardDescription>
+            <CardTitle>News Monitor Flow</CardTitle>
+            <CardDescription>World Monitor input is research context, not an order instruction.</CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <ul className="list-disc pl-5 space-y-1 text-foreground">
-            <li>Open `Testing` and run the reconciliation jobs in paper mode.</li>
-            <li>Each gate produces an artifact report under `/reports`.</li>
-            <li>Review failed gates before enabling live trading.</li>
+        <CardContent className="space-y-2 text-sm">
+          <ul className="list-disc space-y-1 pl-5 text-foreground">
+            <li>The Jax endpoint is `POST /api/v1/research/events/world-monitor`.</li>
+            <li>Accepted payloads become `research_trigger` inbox rows and normalized events.</li>
+            <li>They must not create candidates, approvals, broker orders, or execution instructions directly.</li>
+            <li>Use `Macro Events` to inspect accepted research events after ingestion.</li>
           </ul>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <CheckCircle2 className="h-5 w-5" />
-          <div>
-            <CardTitle>Daily Workflow</CardTitle>
-            <CardDescription>Suggested routine for paper trading.</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <ol className="list-decimal pl-5 space-y-1 text-foreground">
-            <li>Check `System` health, the pilot banner, and broker connectivity before opening Trading.</li>
-            <li>Run backtests for new ideas in `Research`.</li>
-            <li>Inspect results in `Analysis` and document observations.</li>
-            <li>Review `Events`, `Runs`, and audit outputs after each pilot session.</li>
-            <li>Run `Testing` gates and archive artifacts.</li>
-          </ol>
         </CardContent>
       </Card>
     </div>

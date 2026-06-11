@@ -341,8 +341,10 @@ export function ResearchPage() {
         .split(',')
         .map((symbol) => symbol.trim().toUpperCase())
         .filter(Boolean);
+      const instance = instancesQuery.data?.find((item) => item.id === instanceId);
       return backtestService.run({
         instanceId,
+        strategyId: instance?.strategyId || instance?.strategyTypeId,
         from: runRange.fromStr,
         to: runRange.toStr,
         symbolsOverride: symbols,
@@ -382,6 +384,7 @@ export function ResearchPage() {
           marketId: selectedGuidedMarket.id,
           datasetId,
         }),
+        strategyId: guidedInstance.strategyId || guidedInstance.strategyTypeId,
         sentiment: guidedSentimentConfig,
       });
     },

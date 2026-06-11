@@ -8,6 +8,7 @@ import { signalsService } from '@/data/signals-service';
 import { toOpportunitySummaries } from '@/data/opportunity-adapter';
 import type { AIScannerApiState, OpportunityRoute, OpportunitySummary, ScannerSettings } from '@/data/types';
 import { ScannerSettingsCard } from '@/components/trading/ScannerSettingsCard';
+import { useAISuggestion } from '@/hooks/useAISuggestion';
 import { SentimentEvidencePanel } from '@/components/trading/SentimentEvidencePanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -219,6 +220,8 @@ export function AiTradingPage() {
   const { mode } = useBeginnerMode();
   const [watchedIds, setWatchedIds] = useState<string[]>(() => loadStoredIds(WATCHED_STORAGE_KEY));
   const [dismissedIds, setDismissedIds] = useState<string[]>(() => loadStoredIds(DISMISSED_STORAGE_KEY));
+  const [aiSymbol, setAiSymbol] = useState('SPY');
+  const aiSuggestion = useAISuggestion();
 
   const overviewQuery = useQuery({
     queryKey: ['ai-trading', 'overview'],
@@ -351,6 +354,19 @@ export function AiTradingPage() {
     saveStoredIds(DISMISSED_STORAGE_KEY, []);
   };
 
+  const askAI = () => {
+    const symbol = aiSymbol.trim().toUpperCase();
+    if (!symbol || aiSuggestion.isPending) {
+      return;
+    }
+
+    setAiSymbol(symbol);
+    aiSuggestion.mutate({
+      symbol,
+      context: 'Beginner AI Trading page check. Explain the paper-trading idea, risk, and next safe action.',
+    });
+  };
+
   const isSimple = mode === 'simple';
 
   return (
@@ -389,6 +405,58 @@ export function AiTradingPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Ask Jax
+            </CardTitle>
+            <CardDescription>Check that the local AI is connected and get a paper-trading view of one symbol.</CardDescription>
+          </div>
+          <div className="flex w-full gap-2 md:w-auto">
+            <input
+              aria-label="AI symbol"
+              className="min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground md:w-28"
+              maxLength={12}
+              onChange={(event) => setAiSymbol(event.target.value.toUpperCase())}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  askAI();
+                }
+              }}
+              value={aiSymbol}
+            />
+            <Button disabled={aiSuggestion.isPending || !aiSymbol.trim()} onClick={askAI} type="button">
+              {aiSuggestion.isPending ? 'Asking...' : 'Ask'}
+            </Button>
+          </div>
+        </CardHeader>
+        {(aiSuggestion.data || aiSuggestion.error || aiSuggestion.isPending) && (
+          <CardContent className="space-y-3 text-sm">
+            {aiSuggestion.isPending && <p className="text-muted-foreground">Jax is checking market data, recent news, and risk context.</p>}
+            {aiSuggestion.error && <p className="text-destructive">AI request failed: {aiSuggestion.error.message}</p>}
+            {aiSuggestion.data && (
+              <div className="grid gap-3 md:grid-cols-[180px_1fr]">
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-xs uppercase text-muted-foreground">Suggestion</p>
+                  <p className="mt-1 text-xl font-semibold">{aiSuggestion.data.suggestion.action}</p>
+                  <p className="text-muted-foreground">
+                    {aiSuggestion.data.suggestion.symbol} - {Math.round(aiSuggestion.data.suggestion.confidence * 100)}% confidence
+                  </p>
+                </div>
+                <div className="rounded-md border border-border p-3">
+                  <p className="font-semibold text-foreground">Reason</p>
+                  <p className="mt-1 text-muted-foreground">{aiSuggestion.data.suggestion.reasoning || 'No reasoning returned.'}</p>
+                  <p className="mt-3 font-semibold text-foreground">Risk</p>
+                  <p className="mt-1 text-muted-foreground">{aiSuggestion.data.suggestion.risk_assessment || 'No risk summary returned.'}</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
 
       <section className="grid gap-4 md:grid-cols-3" aria-label="Scanner state">
         <Card>

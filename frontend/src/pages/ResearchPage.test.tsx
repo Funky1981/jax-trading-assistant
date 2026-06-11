@@ -115,8 +115,9 @@ describe('ResearchPage guided wizard', () => {
       expect(backtestService.run).toHaveBeenCalledWith(
         expect.objectContaining({
           instanceId: 'instance-orb',
+          strategyId: 'orb',
           datasetId: 'dataset-1',
-          symbolsOverride: ['SPY', 'QQQ', 'IWM'],
+          symbolsOverride: ['SPY'],
         })
       );
     });

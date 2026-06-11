@@ -27,8 +27,8 @@ export const GUIDED_TEMPLATES: GuidedTemplate[] = [
     id: 'trend_breakout',
     title: 'Trend breakout',
     description: 'Find momentum breakouts with confirmation signals.',
-    strategyKeywords: ['orb', 'breakout', 'momentum'],
-    defaultMarketId: 'us_index_etfs',
+    strategyKeywords: ['opening_range', 'orb', 'breakout', 'momentum'],
+    defaultMarketId: 'spy_sample',
   },
   {
     id: 'mean_reversion',
@@ -47,6 +47,11 @@ export const GUIDED_TEMPLATES: GuidedTemplate[] = [
 ];
 
 export const GUIDED_MARKETS: GuidedMarket[] = [
+  {
+    id: 'spy_sample',
+    label: 'SPY only (available sample dataset)',
+    symbols: ['SPY'],
+  },
   {
     id: 'us_index_etfs',
     label: 'US index ETFs (SPY, QQQ, IWM)',
@@ -67,12 +72,12 @@ export const GUIDED_MARKETS: GuidedMarket[] = [
 export function resolveGuidedInstance(instances: StrategyInstance[], template: GuidedTemplate): StrategyInstance | null {
   const keywords = template.strategyKeywords.map((keyword) => keyword.toLowerCase());
 
-  const matched = instances.find((instance) => {
+  const matches = instances.filter((instance) => {
     const target = `${instance.strategyId ?? ''} ${instance.strategyTypeId ?? ''} ${instance.name ?? ''}`.toLowerCase();
     return keywords.some((keyword) => target.includes(keyword));
   });
 
-  return matched ?? null;
+  return matches.find((instance) => instance.enabled) ?? matches[0] ?? null;
 }
 
 export function resolveGuidedMarket(marketId: string): GuidedMarket {

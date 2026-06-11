@@ -164,6 +164,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "  Migrations applied." -ForegroundColor Green
 
+Write-Host "  Syncing dataset snapshots..." -ForegroundColor Gray
+& powershell -NoProfile -ExecutionPolicy Bypass -File "scripts/sync-dataset-snapshots.ps1"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  Dataset snapshot sync failed." -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
 # Start other services
 Write-Host "  Starting core services..." -ForegroundColor Gray
 docker compose up -d --no-build jax-trader jax-research ib-bridge agent0-service prometheus grafana 2>$null

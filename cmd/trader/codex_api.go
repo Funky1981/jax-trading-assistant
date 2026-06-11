@@ -1867,6 +1867,9 @@ func runBacktestAndPersist(ctx context.Context, pool *pgxpool.Pool, orchestrator
 	if req.StrategyID == "" {
 		req.StrategyID = req.StrategyConfigID
 	}
+	if req.StrategyID == "" && req.InstanceID != "" {
+		req.StrategyID = instanceStrategyID(ctx, pool, req.InstanceID)
+	}
 	if req.StrategyID == "" {
 		req.StrategyID = "rsi_momentum_v1"
 	}
