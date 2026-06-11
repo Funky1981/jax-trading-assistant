@@ -4,7 +4,7 @@
 
 **Goal:** Turn the current research/paper-trading shell into a usable local AI trading workflow where news and market data create reviewable opportunities, ETF trades enter approval, approved opportunities become paper broker orders, and users understand what each page is for.
 
-**Architecture:** Keep Jax World News Monitor, Agent0, Jax Research, and Jax Trader as separate services. Add a Jax-side opportunity pipeline that consumes Jax World News Monitor research triggers, market quotes/candles, and Agent0 analysis, then writes durable `candidate_trades` and `candidate_approvals` rows for the existing AI Trading and Approvals UI. Operator screens must show only real/provenance-labelled data by default and must never route users to an empty dead-end.
+**Architecture:** Keep Jax World News Monitor, Agent0, Jax Research, and Jax Trader as separate services. Add a Jax-side opportunity pipeline that consumes Jax World News Monitor research triggers, market quotes/candles, and Agent0 analysis, then writes durable `strategy_signals` and `candidate_trades` rows for the existing AI Trading and Approvals UI. Operator screens must show only real/provenance-labelled data by default and must never route users to an empty dead-end.
 
 **Tech Stack:** Go backend in `cmd/trader` and `internal/modules/*`, React/Vite frontend in `frontend/src`, Postgres via Docker Compose, Playwright/Vitest/Go tests for verification.
 
@@ -109,7 +109,7 @@ git commit -m "fix: hide fixture macro data from operator screens"
 - Modify: `cmd/trader/world_monitor_research_inbox.go`
 - Modify: `cmd/trader/main.go` or `cmd/trader/frontend_api.go`
 
-- [ ] **Step 1: Define promotion input/output**
+- [x] **Step 1: Define promotion input/output**
 
 Create `cmd/trader/world_monitor_opportunity_promoter.go`:
 
@@ -127,7 +127,7 @@ type promotedOpportunity struct {
 }
 ```
 
-- [ ] **Step 2: Load eligible inbox rows**
+- [x] **Step 2: Load eligible inbox rows**
 
 Select `world_monitor_research_inbox` rows where:
 
@@ -141,7 +141,7 @@ AND confidence >= 0.55
 
 For phase 1, cap each run at `10` rows ordered by `received_at ASC`.
 
-- [ ] **Step 3: Create candidate rows**
+- [x] **Step 3: Create signal-linked candidate rows**
 
 For each eligible trigger, create one candidate per primary ETF in `possible_affected_etfs`. Insert into `candidate_trades` using:
 
@@ -157,27 +157,27 @@ confidence = trigger confidence
 
 Store the source inbox ID, source event ID, headline, URLs, and Agent0 status in metadata/rule trace.
 
-- [ ] **Step 4: Create approval rows for ETF candidates**
+- [x] **Step 4: Queue ETF candidates for approval**
 
-Use the existing approvals service or insert through its store so `GET /api/v1/approvals/queue` returns the candidate. Route all ETFs through approval; do not allow direct execution.
+Use the existing candidate lifecycle so `GET /api/v1/approvals/queue` returns `candidate_trades.status = 'awaiting_approval'`. Do not pre-create `candidate_approvals` decision rows; those rows are created only when a human approves, rejects, snoozes, or requests reanalysis. Route all ETFs through approval; do not allow direct execution.
 
-- [ ] **Step 5: Mark inbox row promoted**
+- [x] **Step 5: Mark inbox row promoted**
 
 Add or reuse a status such as:
 
 ```text
-promoted
+candidate_created
 ```
 
 Set `candidate_id` on `world_monitor_research_inbox`.
 
-- [ ] **Step 6: Test**
+- [x] **Step 6: Test**
 
-Create `world_monitor_opportunity_promoter_test.go` with a valid Jax World News Monitor trigger for `SPY`. Assert:
+Create `world_monitor_opportunity_promoter_test.go` with a valid Jax World News Monitor trigger for `QQQ`. Assert:
+- one `strategy_signals` row exists and is linked
 - one `candidate_trades` row exists
-- one approval row exists
-- AI overview counts increase
-- no broker order exists
+- the candidate appears in the approval queue
+- no execution instruction or broker order exists before human approval
 
 Run:
 

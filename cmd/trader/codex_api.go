@@ -57,6 +57,7 @@ func registerCodexAPIRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 
 	mux.HandleFunc("/api/v1/research/projects", protect(researchProjectsHandler(pool, orchestratorURL)))
 	mux.HandleFunc("/api/v1/research/projects/", protect(researchProjectsDetailHandler(pool, orchestratorURL)))
+	mux.HandleFunc("/api/v1/research/events/world-monitor/promote", protect(worldMonitorOpportunityPromoteHandler(pool)))
 	mux.HandleFunc("/api/v1/research/events/world-monitor", protect(worldMonitorResearchIngestHandler(pool)))
 	mux.HandleFunc("/api/v1/macro/events", protect(macroEventsHandler(pool)))
 	mux.HandleFunc("/api/v1/macro/events/", protect(macroEventDetailHandler(pool)))

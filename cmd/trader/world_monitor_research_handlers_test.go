@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +22,17 @@ type fakeWorldMonitorIngestService struct {
 func (f *fakeWorldMonitorIngestService) Ingest(_ context.Context, trigger worldMonitorResearchTrigger) (worldMonitorResearchReceipt, error) {
 	f.seen = trigger
 	return f.receipt, f.err
+}
+
+type fakeWorldMonitorPromoteService struct {
+	result worldMonitorPromotionResult
+	err    error
+	limit  int
+}
+
+func (f *fakeWorldMonitorPromoteService) PromotePending(_ context.Context, limit int) (worldMonitorPromotionResult, error) {
+	f.limit = limit
+	return f.result, f.err
 }
 
 func TestWorldMonitorResearchHandler_AcceptsValidTrigger(t *testing.T) {
@@ -112,6 +124,38 @@ func TestWorldMonitorResearchHandler_RejectsTradeLanguage(t *testing.T) {
 	}
 }
 
+func TestWorldMonitorOpportunityPromoteHandler_RunsPromoter(t *testing.T) {
+	candidateID := "00000000-0000-0000-0000-0000000000aa"
+	fake := &fakeWorldMonitorPromoteService{
+		result: worldMonitorPromotionResult{
+			Promoted: []worldMonitorPromotedOpportunity{{
+				InboxID:     "inbox-1",
+				SignalID:    "00000000-0000-0000-0000-0000000000bb",
+				CandidateID: candidateID,
+				Symbol:      "QQQ",
+				Route:       "approval_required",
+			}},
+		},
+	}
+	restore := replaceWorldMonitorPromoteServiceFactory(fake)
+	defer restore()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/research/events/world-monitor/promote", nil)
+	res := httptest.NewRecorder()
+
+	worldMonitorOpportunityPromoteHandler(nil)(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", res.Code, http.StatusOK, res.Body.String())
+	}
+	if fake.limit != 10 {
+		t.Fatalf("limit = %d, want 10", fake.limit)
+	}
+	if !strings.Contains(res.Body.String(), candidateID) {
+		t.Fatalf("response missing candidate id: %s", res.Body.String())
+	}
+}
+
 func performWorldMonitorResearchRequest(t *testing.T, method string, trigger worldMonitorResearchTrigger) *httptest.ResponseRecorder {
 	t.Helper()
 	body, err := json.Marshal(trigger)
@@ -131,5 +175,15 @@ func replaceWorldMonitorIngestServiceFactory(fake *fakeWorldMonitorIngestService
 	}
 	return func() {
 		newWorldMonitorResearchIngestService = original
+	}
+}
+
+func replaceWorldMonitorPromoteServiceFactory(fake *fakeWorldMonitorPromoteService) func() {
+	original := newWorldMonitorOpportunityPromoteService
+	newWorldMonitorOpportunityPromoteService = func(_ *pgxpool.Pool) worldMonitorOpportunityPromoteService {
+		return fake
+	}
+	return func() {
+		newWorldMonitorOpportunityPromoteService = original
 	}
 }

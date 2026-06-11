@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	worldMonitorInboxStatusNew      = "new"
-	worldMonitorInboxStatusIgnored  = "ignored"
-	worldMonitorInboxStatusRejected = "rejected"
+	worldMonitorInboxStatusNew              = "new"
+	worldMonitorInboxStatusIgnored          = "ignored"
+	worldMonitorInboxStatusCandidateCreated = "candidate_created"
+	worldMonitorInboxStatusRejected         = "rejected"
 )
 
 type worldMonitorResearchInboxService struct {
