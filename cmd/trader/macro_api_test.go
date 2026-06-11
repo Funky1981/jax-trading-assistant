@@ -157,7 +157,7 @@ func TestMacroEventsHandlerListsEvents(t *testing.T) {
 	pool := testFrontendAPIPool(t)
 	eventID := insertMacroAPITestEvent(t, pool)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/macro/events?limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/macro/events?limit=10&includeFixtures=true", nil)
 	rec := httptest.NewRecorder()
 	macroEventsHandler(pool).ServeHTTP(rec, req)
 
@@ -182,6 +182,30 @@ func TestMacroEventsHandlerListsEvents(t *testing.T) {
 		}
 	}
 	t.Fatalf("macro event %s not found in list", eventID)
+}
+
+func TestMacroEventsHandlerHidesFixtureEventsByDefault(t *testing.T) {
+	pool := testFrontendAPIPool(t)
+	eventID := insertMacroAPITestEvent(t, pool)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/macro/events?limit=10", nil)
+	rec := httptest.NewRecorder()
+	macroEventsHandler(pool).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Events []macroEventDTO `json:"events"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode macro list: %v", err)
+	}
+	for _, event := range payload.Events {
+		if event.ID == eventID {
+			t.Fatalf("fixture macro event %s was returned by default list", eventID)
+		}
+	}
 }
 
 func TestMacroEventDetailHandlerLoadsAnalysis(t *testing.T) {

@@ -41,7 +41,7 @@
 - Modify: `cmd/trader/macro_api_test.go`
 - Create: `scripts/clean-fixture-runtime-data.ps1`
 
-- [ ] **Step 1: Add source filtering to macro API**
+- [x] **Step 1: Add source filtering to macro API**
 
 In `cmd/trader/macro_api.go`, update `macroEventsHandler` to exclude fixture/test rows by default:
 
@@ -55,7 +55,7 @@ if includeFixtures {
 
 Apply `where` to both the list query and the count query.
 
-- [ ] **Step 2: Add a visible empty state**
+- [x] **Step 2: Add a visible empty state**
 
 In `frontend/src/pages/MacroEventsPage.tsx`, show:
 
@@ -65,7 +65,7 @@ No live macro events have been ingested yet. Connect Jax World News Monitor or a
 
 Only show fixture data when the URL/query explicitly includes `includeFixtures=true`.
 
-- [ ] **Step 3: Add cleanup script**
+- [x] **Step 3: Add cleanup script**
 
 Create `scripts/clean-fixture-runtime-data.ps1`:
 
@@ -79,7 +79,7 @@ DELETE FROM macro_events WHERE source IN ('test','fixture') OR raw_payload->>'fi
 "
 ```
 
-- [ ] **Step 4: Test**
+- [x] **Step 4: Test**
 
 Run:
 
@@ -92,7 +92,7 @@ Expected:
 - Macro API default list does not return `source=test`.
 - Macro page no longer presents test rows as live data.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add cmd/trader/macro_api.go frontend/src/pages/MacroEventsPage.tsx cmd/trader/macro_api_test.go scripts/clean-fixture-runtime-data.ps1

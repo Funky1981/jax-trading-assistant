@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, Eye, RefreshCw, XCircle } from 'lucide-react';
 import { macroService } from '@/data/macro-service';
 import type { MacroCandidate, MacroEvent } from '@/data/types';
@@ -52,11 +53,13 @@ function statusVariant(status: string): 'default' | 'secondary' | 'outline' | 'w
 
 export function MacroEventsPage() {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [selectedEventId, setSelectedEventId] = useState('');
+  const includeFixtures = searchParams.get('includeFixtures') === 'true';
 
   const eventsQuery = useQuery({
-    queryKey: ['macro-events'],
-    queryFn: () => macroService.listEvents({ limit: 100 }),
+    queryKey: ['macro-events', includeFixtures],
+    queryFn: () => macroService.listEvents({ limit: 100, includeFixtures }),
     staleTime: 30_000,
   });
 
@@ -171,7 +174,7 @@ export function MacroEventsPage() {
             {eventsQuery.isPending && <p className="text-sm text-muted-foreground">Loading macro events...</p>}
             {!eventsQuery.isPending && events.length === 0 && (
               <p className="rounded-md border border-border p-6 text-sm text-muted-foreground">
-                No macro events are available yet.
+                No live macro events have been ingested yet. Connect Jax World News Monitor or a macro calendar feed to populate this page.
               </p>
             )}
             {events.length > 0 && (

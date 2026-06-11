@@ -181,6 +181,14 @@ func macroEventsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		if offset < 0 {
 			offset = 0
 		}
+		includeFixtures := strings.EqualFold(r.URL.Query().Get("includeFixtures"), "true")
+		whereClause := `
+			WHERE me.source NOT IN ('test', 'fixture')
+			  AND COALESCE(me.raw_payload->>'fixture', 'false') <> 'true'
+		`
+		if includeFixtures {
+			whereClause = ""
+		}
 		rows, err := pool.Query(r.Context(), `
 			SELECT
 				me.id::text, me.source, me.source_event_id, me.event_type, me.region, me.event_time_utc,
@@ -193,6 +201,7 @@ func macroEventsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			FROM macro_events me
 			LEFT JOIN macro_evidence_bundles eb ON eb.macro_event_id = me.id
 			LEFT JOIN macro_candidate_trades ct ON ct.macro_event_id = me.id
+			`+whereClause+`
 			GROUP BY me.id
 			ORDER BY me.event_time_utc DESC
 			LIMIT $1 OFFSET $2
@@ -213,7 +222,7 @@ func macroEventsHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			events = append(events, event)
 		}
 		var total int
-		if err := pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM macro_events`).Scan(&total); err != nil {
+		if err := pool.QueryRow(r.Context(), `SELECT COUNT(*) FROM macro_events me `+whereClause).Scan(&total); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
