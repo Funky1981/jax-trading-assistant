@@ -434,7 +434,7 @@ Open in Analysis
 
 for completed runs.
 
-- [ ] **Step 4: Test**
+- [x] **Step 4: Test**
 
 Run:
 
@@ -443,7 +443,7 @@ npm run test -- --run src/pages/ResearchPage.test.tsx
 npm run typecheck
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add frontend/src/pages/AnalysisPage.tsx frontend/src/pages/ResearchPage.tsx frontend/src/pages/ResearchPage.test.tsx
@@ -458,7 +458,7 @@ git commit -m "fix: explain analysis and link completed research runs"
 - Create: `scripts/test-ai-news-paper-workflow.ps1`
 - Create: `frontend/e2e/ai-news-paper-workflow.spec.ts`
 
-- [ ] **Step 1: Create script**
+- [x] **Step 1: Create script**
 
 The script should:
 1. Start stack or verify stack health.
@@ -469,7 +469,7 @@ The script should:
 6. Verify AI Trading count > 0.
 7. Open browser E2E and approve one paper ETF opportunity.
 
-- [ ] **Step 2: Add Playwright spec**
+- [x] **Step 2: Add Playwright spec**
 
 Spec assertions:
 - AI Trading shows at least one opportunity.
@@ -477,7 +477,7 @@ Spec assertions:
 - Approvals page has the same opportunity.
 - Approving creates paper broker instruction/order.
 
-- [ ] **Step 3: Run**
+- [x] **Step 3: Run**
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-ai-news-paper-workflow.ps1
@@ -490,7 +490,7 @@ Expected:
 - One paper order or execution instruction created.
 - No live-trading path used.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add scripts/test-ai-news-paper-workflow.ps1 frontend/e2e/ai-news-paper-workflow.spec.ts
