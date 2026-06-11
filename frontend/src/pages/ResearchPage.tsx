@@ -1202,6 +1202,7 @@ export function ResearchPage() {
                       <TableHead>Win Rate</TableHead>
                       <TableHead>Drawdown</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1219,6 +1220,20 @@ export function ResearchPage() {
                         <TableCell>{num(run.stats.winRate)}</TableCell>
                         <TableCell>{num(run.stats.maxDrawdown)}</TableCell>
                         <TableCell>{run.status}</TableCell>
+                        <TableCell className="text-right">
+                          {String(run.status).toLowerCase() === 'completed' ? (
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <Link to={`/analysis?runId=${encodeURIComponent(run.runId)}`}>Open in Analysis</Link>
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Available when complete</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

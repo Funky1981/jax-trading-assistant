@@ -408,7 +408,7 @@ git commit -m "feat: scan news and market data into opportunities"
 - Modify: `frontend/src/pages/ResearchPage.tsx`
 - Test: `frontend/src/pages/ResearchPage.test.tsx`
 
-- [ ] **Step 1: Add clear Analysis description**
+- [x] **Step 1: Add clear Analysis description**
 
 Add a top card:
 
@@ -416,7 +416,7 @@ Add a top card:
 Analysis is for reviewing completed backtests. It does not create trade ideas or place orders. Use it to understand whether a strategy has worked on a selected dataset.
 ```
 
-- [ ] **Step 2: Add empty state**
+- [x] **Step 2: Add empty state**
 
 When no `runId` is selected:
 
@@ -424,7 +424,7 @@ When no `runId` is selected:
 Choose a completed backtest run from the selector, or open a run from Research -> Backtests.
 ```
 
-- [ ] **Step 3: Make Research rows link clearly**
+- [x] **Step 3: Make Research rows link clearly**
 
 In `ResearchPage.tsx`, add an explicit button:
 

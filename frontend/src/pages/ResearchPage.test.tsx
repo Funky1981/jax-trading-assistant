@@ -142,4 +142,30 @@ describe('ResearchPage guided wizard', () => {
     expect(await screen.findByText(/Research needs a prepared dataset snapshot before running/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'System' })).toHaveAttribute('href', '/system');
   });
+
+  it('links completed backtest runs to Analysis', async () => {
+    const user = userEvent.setup();
+    vi.mocked(backtestService.list).mockResolvedValue([
+      {
+        id: 'row-1',
+        runId: 'bt-completed-1',
+        instanceId: 'instance-orb',
+        datasetId: 'dataset-1',
+        from: '2026-06-01T00:00:00Z',
+        to: '2026-06-10T00:00:00Z',
+        status: 'completed',
+        stats: {
+          winRate: 0.55,
+          maxDrawdown: 0.02,
+        },
+      },
+    ] as never);
+
+    renderPage();
+
+    await user.click(await screen.findByRole('tab', { name: 'Backtests' }));
+
+    const link = await screen.findByRole('link', { name: 'Open in Analysis' });
+    expect(link).toHaveAttribute('href', '/analysis?runId=bt-completed-1');
+  });
 });

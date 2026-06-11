@@ -118,6 +118,16 @@ export function AnalysisPage() {
         </p>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>What Analysis Is For</CardTitle>
+          <CardDescription>
+            Analysis is for reviewing completed backtests. It does not create trade ideas or place orders. Use it to
+            understand whether a strategy has worked on a selected dataset.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
       <RobustPerformanceSection data={robustQuery.data} isLoading={robustQuery.isPending} isError={robustQuery.isError} />
 
       <Card>
@@ -155,6 +165,14 @@ export function AnalysisPage() {
           </Select>
         </CardContent>
       </Card>
+
+      {!runId && (
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            Choose a completed backtest run from the selector, or open a run from Research -&gt; Backtests.
+          </CardContent>
+        </Card>
+      )}
 
       {runDetailQuery.data && (
         <>
