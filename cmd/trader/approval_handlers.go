@@ -40,6 +40,48 @@ type mobileTelegramWebhookBody struct {
 	Reason        string `json:"reason"`
 	GuardrailHash string `json:"guardrailHash"`
 	RuntimeMode   string `json:"runtimeMode"`
+	CallbackQuery *struct {
+		Data string `json:"data"`
+		From *struct {
+			ID       int64  `json:"id"`
+			Username string `json:"username"`
+		} `json:"from"`
+	} `json:"callback_query"`
+}
+
+func (b mobileTelegramWebhookBody) mobileDecisionRequest(now time.Time) approvalsmod.MobileApprovalDecisionRequest {
+	token := strings.TrimSpace(b.Token)
+	action := strings.TrimSpace(b.Action)
+	actor := strings.TrimSpace(b.Actor)
+	if b.CallbackQuery != nil {
+		parts := strings.SplitN(strings.TrimSpace(b.CallbackQuery.Data), ":", 2)
+		if len(parts) == 2 {
+			action = parts[0]
+			token = parts[1]
+		}
+		if actor == "" && b.CallbackQuery.From != nil {
+			actor = strings.TrimSpace(b.CallbackQuery.From.Username)
+			if actor == "" {
+				actor = strconv.FormatInt(b.CallbackQuery.From.ID, 10)
+			}
+		}
+	}
+	if b.RuntimeMode == "" {
+		b.RuntimeMode = "paper"
+	}
+	if actor == "" {
+		actor = "telegram"
+	}
+	return approvalsmod.MobileApprovalDecisionRequest{
+		Token:         token,
+		Decision:      action,
+		Actor:         actor,
+		Channel:       "telegram",
+		GuardrailHash: b.GuardrailHash,
+		RejectReason:  b.Reason,
+		RuntimeMode:   b.RuntimeMode,
+		Now:           now,
+	}
 }
 
 func mobileTelegramWebhookHandler(svc *approvalsmod.Service) http.HandlerFunc {
@@ -53,22 +95,7 @@ func mobileTelegramWebhookHandler(svc *approvalsmod.Service) http.HandlerFunc {
 			http.Error(w, "invalid telegram approval payload", http.StatusBadRequest)
 			return
 		}
-		if body.RuntimeMode == "" {
-			body.RuntimeMode = "paper"
-		}
-		if body.Actor == "" {
-			body.Actor = "telegram"
-		}
-		approval, err := svc.SubmitMobileDecision(r.Context(), approvalsmod.MobileApprovalDecisionRequest{
-			Token:         body.Token,
-			Decision:      body.Action,
-			Actor:         body.Actor,
-			Channel:       "telegram",
-			GuardrailHash: body.GuardrailHash,
-			RejectReason:  body.Reason,
-			RuntimeMode:   body.RuntimeMode,
-			Now:           time.Now().UTC(),
-		})
+		approval, err := svc.SubmitMobileDecision(r.Context(), body.mobileDecisionRequest(time.Now().UTC()))
 		if err != nil {
 			writeMobileApprovalError(w, err)
 			return

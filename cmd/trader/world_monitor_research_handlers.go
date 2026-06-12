@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -22,6 +23,51 @@ type worldMonitorOpportunityPromoteService interface {
 
 type worldMonitorResearchStatusService interface {
 	Status(ctx context.Context) (worldMonitorResearchStatus, error)
+}
+
+type worldMonitorResearchInboxListService interface {
+	List(ctx context.Context, filter worldMonitorResearchInboxFilter) (worldMonitorResearchInboxList, error)
+}
+
+type worldMonitorResearchInboxFilter struct {
+	Status string
+	Limit  int
+}
+
+type worldMonitorResearchInboxList struct {
+	Items     []worldMonitorResearchInboxItem  `json:"items"`
+	Total     int                              `json:"total"`
+	Counts    worldMonitorResearchStatusCounts `json:"counts"`
+	CheckedAt time.Time                        `json:"checkedAt"`
+}
+
+type worldMonitorResearchInboxItem struct {
+	ID                   string         `json:"id"`
+	Source               string         `json:"source"`
+	SourceEventID        string         `json:"sourceEventId"`
+	WorldMonitorEventID  string         `json:"worldMonitorEventId"`
+	Status               string         `json:"status"`
+	RejectionReason      string         `json:"rejectionReason,omitempty"`
+	EventType            string         `json:"eventType"`
+	Headline             string         `json:"headline"`
+	Summary              string         `json:"summary,omitempty"`
+	SourceURLs           []string       `json:"sourceUrls"`
+	SourceCount          int            `json:"sourceCount"`
+	EventTime            time.Time      `json:"eventTime"`
+	ReceivedAt           time.Time      `json:"receivedAt"`
+	Region               string         `json:"region,omitempty"`
+	PossibleAffectedETFs []string       `json:"possibleAffectedEtfs"`
+	AssetThemes          []string       `json:"assetThemes"`
+	Severity             string         `json:"severity"`
+	SourceTier           string         `json:"sourceTier"`
+	Confidence           float64        `json:"confidence"`
+	ConfidenceReasons    []string       `json:"confidenceReasons"`
+	MappingReason        string         `json:"mappingReason"`
+	NormalizedEventID    string         `json:"normalizedEventId,omitempty"`
+	CandidateID          string         `json:"candidateId,omitempty"`
+	OperatorDecision     string         `json:"operatorDecision,omitempty"`
+	OperatorReason       string         `json:"operatorReason,omitempty"`
+	RawPayload           map[string]any `json:"rawPayload"`
 }
 
 type worldMonitorResearchStatus struct {
@@ -53,6 +99,10 @@ var newWorldMonitorOpportunityPromoteService = func(pool *pgxpool.Pool) worldMon
 }
 
 var newWorldMonitorResearchStatusService = func(pool *pgxpool.Pool) worldMonitorResearchStatusService {
+	return &worldMonitorResearchStatusStore{pool: pool}
+}
+
+var newWorldMonitorResearchInboxListService = func(pool *pgxpool.Pool) worldMonitorResearchInboxListService {
 	return &worldMonitorResearchStatusStore{pool: pool}
 }
 
@@ -124,6 +174,145 @@ func (s *worldMonitorResearchStatusStore) Status(ctx context.Context) (worldMoni
 	return status, nil
 }
 
+func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter worldMonitorResearchInboxFilter) (worldMonitorResearchInboxList, error) {
+	if filter.Limit <= 0 || filter.Limit > 250 {
+		filter.Limit = 100
+	}
+	out := worldMonitorResearchInboxList{
+		Items:     []worldMonitorResearchInboxItem{},
+		CheckedAt: time.Now().UTC(),
+	}
+	if s.pool == nil {
+		return out, nil
+	}
+
+	err := s.pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*)::int,
+			COUNT(*) FILTER (WHERE status = 'new')::int,
+			COUNT(*) FILTER (WHERE status = 'candidate_created')::int,
+			COUNT(*) FILTER (WHERE status = 'rejected')::int,
+			COUNT(*) FILTER (WHERE status = 'ignored')::int
+		FROM world_monitor_research_inbox
+	`).Scan(
+		&out.Counts.Total,
+		&out.Counts.Pending,
+		&out.Counts.CandidatesCreated,
+		&out.Counts.Rejected,
+		&out.Counts.Ignored,
+	)
+	if err != nil {
+		return worldMonitorResearchInboxList{}, fmt.Errorf("world monitor inbox counts: %w", err)
+	}
+	out.Total = out.Counts.Total
+
+	args := []any{}
+	where := "WHERE 1=1"
+	if filter.Status != "" && filter.Status != "all" {
+		args = append(args, filter.Status)
+		where += fmt.Sprintf(" AND status = $%d", len(args))
+	}
+	args = append(args, filter.Limit)
+	query := fmt.Sprintf(`
+		SELECT
+			id::text,
+			source,
+			source_event_id,
+			world_monitor_event_id,
+			status,
+			COALESCE(rejection_reason, ''),
+			event_type,
+			headline,
+			COALESCE(summary, ''),
+			COALESCE(source_urls, '[]'::jsonb),
+			source_count,
+			event_time,
+			received_at,
+			COALESCE(region, ''),
+			COALESCE(possible_affected_etfs, '[]'::jsonb),
+			COALESCE(asset_themes, '[]'::jsonb),
+			severity,
+			source_tier,
+			confidence,
+			COALESCE(confidence_reasons, '[]'::jsonb),
+			mapping_reason,
+			COALESCE(normalized_event_id::text, ''),
+			COALESCE(candidate_id::text, ''),
+			COALESCE(operator_decision, ''),
+			COALESCE(operator_reason, ''),
+			COALESCE(raw_payload, '{}'::jsonb)
+		FROM world_monitor_research_inbox
+		%s
+		ORDER BY received_at DESC
+		LIMIT $%d
+	`, where, len(args))
+	rows, err := s.pool.Query(ctx, query, args...)
+	if err != nil {
+		return worldMonitorResearchInboxList{}, fmt.Errorf("world monitor inbox rows: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item worldMonitorResearchInboxItem
+		var sourceURLsRaw, etfsRaw, themesRaw, confidenceReasonsRaw, rawPayload []byte
+		if err := rows.Scan(
+			&item.ID,
+			&item.Source,
+			&item.SourceEventID,
+			&item.WorldMonitorEventID,
+			&item.Status,
+			&item.RejectionReason,
+			&item.EventType,
+			&item.Headline,
+			&item.Summary,
+			&sourceURLsRaw,
+			&item.SourceCount,
+			&item.EventTime,
+			&item.ReceivedAt,
+			&item.Region,
+			&etfsRaw,
+			&themesRaw,
+			&item.Severity,
+			&item.SourceTier,
+			&item.Confidence,
+			&confidenceReasonsRaw,
+			&item.MappingReason,
+			&item.NormalizedEventID,
+			&item.CandidateID,
+			&item.OperatorDecision,
+			&item.OperatorReason,
+			&rawPayload,
+		); err != nil {
+			return worldMonitorResearchInboxList{}, err
+		}
+		_ = json.Unmarshal(sourceURLsRaw, &item.SourceURLs)
+		_ = json.Unmarshal(etfsRaw, &item.PossibleAffectedETFs)
+		_ = json.Unmarshal(themesRaw, &item.AssetThemes)
+		_ = json.Unmarshal(confidenceReasonsRaw, &item.ConfidenceReasons)
+		_ = json.Unmarshal(rawPayload, &item.RawPayload)
+		if item.SourceURLs == nil {
+			item.SourceURLs = []string{}
+		}
+		if item.PossibleAffectedETFs == nil {
+			item.PossibleAffectedETFs = []string{}
+		}
+		if item.AssetThemes == nil {
+			item.AssetThemes = []string{}
+		}
+		if item.ConfidenceReasons == nil {
+			item.ConfidenceReasons = []string{}
+		}
+		if item.RawPayload == nil {
+			item.RawPayload = map[string]any{}
+		}
+		out.Items = append(out.Items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return worldMonitorResearchInboxList{}, err
+	}
+	return out, nil
+}
+
 func worldMonitorResearchIngestHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -154,6 +343,26 @@ func worldMonitorResearchIngestHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 		w.WriteHeader(statusCode)
 		_ = json.NewEncoder(w).Encode(receipt)
+	}
+}
+
+func worldMonitorResearchInboxHandler(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+		filter := worldMonitorResearchInboxFilter{
+			Status: r.URL.Query().Get("status"),
+			Limit:  limit,
+		}
+		result, err := newWorldMonitorResearchInboxListService(pool).List(r.Context(), filter)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("world monitor inbox: %v", err), http.StatusInternalServerError)
+			return
+		}
+		jsonOK(w, result)
 	}
 }
 

@@ -207,6 +207,7 @@ func main() {
 	if execService != nil && cfg.RuntimeMode == runtimepolicy.ModePaper {
 		go startExecutionInstructionWorker(ctx, dbPool, execService)
 	}
+	go startMobileNotificationDispatcher(ctx, dbPool)
 
 	// Health check endpoint
 	mux.HandleFunc("/health", handleHealth(sigGen))

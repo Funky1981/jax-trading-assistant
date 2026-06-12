@@ -44,6 +44,17 @@ func (f *fakeWorldMonitorStatusService) Status(_ context.Context) (worldMonitorR
 	return f.status, f.err
 }
 
+type fakeWorldMonitorInboxListService struct {
+	result worldMonitorResearchInboxList
+	err    error
+	filter worldMonitorResearchInboxFilter
+}
+
+func (f *fakeWorldMonitorInboxListService) List(_ context.Context, filter worldMonitorResearchInboxFilter) (worldMonitorResearchInboxList, error) {
+	f.filter = filter
+	return f.result, f.err
+}
+
 func TestWorldMonitorResearchHandler_AcceptsValidTrigger(t *testing.T) {
 	now := time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC)
 	fake := &fakeWorldMonitorIngestService{
@@ -201,6 +212,71 @@ func TestWorldMonitorResearchStatusHandler_ReturnsLatestMonitorState(t *testing.
 	}
 }
 
+func TestWorldMonitorResearchInboxHandler_ReturnsAcceptedAndRejectedRows(t *testing.T) {
+	receivedAt := time.Date(2026, 6, 12, 11, 0, 0, 0, time.UTC)
+	fake := &fakeWorldMonitorInboxListService{
+		result: worldMonitorResearchInboxList{
+			Items: []worldMonitorResearchInboxItem{
+				{
+					ID:                   "inbox-accepted",
+					Source:               "world-monitor",
+					SourceEventID:        "accepted-1",
+					WorldMonitorEventID:  "accepted-1",
+					Status:               "candidate_created",
+					EventType:            "macro_rates",
+					Headline:             "Accepted monitor item",
+					SourceURLs:           []string{"https://example.com/accepted"},
+					SourceCount:          1,
+					EventTime:            receivedAt,
+					ReceivedAt:           receivedAt,
+					PossibleAffectedETFs: []string{"QQQ"},
+					Severity:             "high",
+					SourceTier:           "tier2",
+					Confidence:           0.8,
+					ConfidenceReasons:    []string{"trusted source"},
+					MappingReason:        "mapped to QQQ",
+					CandidateID:          "candidate-1",
+					RawPayload:           map[string]any{"fixture": true},
+				},
+				{
+					ID:              "inbox-rejected",
+					Source:          "world-monitor",
+					SourceEventID:   "rejected-1",
+					Status:          "rejected",
+					RejectionReason: "source_urls are required",
+					EventType:       "macro_rates",
+					Headline:        "Rejected monitor item",
+					EventTime:       receivedAt,
+					ReceivedAt:      receivedAt,
+					Severity:        "high",
+					SourceTier:      "tier2",
+					MappingReason:   "rejected before mapping",
+					RawPayload:      map[string]any{"bad": true},
+				},
+			},
+			Total:     2,
+			CheckedAt: receivedAt,
+		},
+	}
+	restore := replaceWorldMonitorInboxListServiceFactory(fake)
+	defer restore()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/research/events/world-monitor/inbox?status=rejected&limit=25", nil)
+	res := httptest.NewRecorder()
+
+	worldMonitorResearchInboxHandler(nil)(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", res.Code, http.StatusOK, res.Body.String())
+	}
+	if fake.filter.Status != "rejected" || fake.filter.Limit != 25 {
+		t.Fatalf("filter = %+v, want rejected limit 25", fake.filter)
+	}
+	if !strings.Contains(res.Body.String(), "Accepted monitor item") || !strings.Contains(res.Body.String(), "source_urls are required") {
+		t.Fatalf("response missing monitor inbox audit data: %s", res.Body.String())
+	}
+}
+
 func performWorldMonitorResearchRequest(t *testing.T, method string, trigger worldMonitorResearchTrigger) *httptest.ResponseRecorder {
 	t.Helper()
 	body, err := json.Marshal(trigger)
@@ -240,5 +316,15 @@ func replaceWorldMonitorStatusServiceFactory(fake *fakeWorldMonitorStatusService
 	}
 	return func() {
 		newWorldMonitorResearchStatusService = original
+	}
+}
+
+func replaceWorldMonitorInboxListServiceFactory(fake *fakeWorldMonitorInboxListService) func() {
+	original := newWorldMonitorResearchInboxListService
+	newWorldMonitorResearchInboxListService = func(_ *pgxpool.Pool) worldMonitorResearchInboxListService {
+		return fake
+	}
+	return func() {
+		newWorldMonitorResearchInboxListService = original
 	}
 }

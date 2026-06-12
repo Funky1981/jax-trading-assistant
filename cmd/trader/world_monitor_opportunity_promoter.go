@@ -49,6 +49,8 @@ type worldMonitorInboxPromotionRow struct {
 	EventType            string
 	Headline             string
 	Summary              string
+	SourceURLs           []string
+	SourceCount          int
 	PossibleAffectedETFs []string
 	AssetThemes          []string
 	Confidence           float64
@@ -117,6 +119,8 @@ func (p *worldMonitorOpportunityPromoter) loadPromotionRows(ctx context.Context,
 			event_type,
 			headline,
 			COALESCE(summary, ''),
+			COALESCE(source_urls, '[]'::jsonb),
+			source_count,
 			possible_affected_etfs,
 			asset_themes,
 			confidence,
@@ -139,7 +143,7 @@ func (p *worldMonitorOpportunityPromoter) loadPromotionRows(ctx context.Context,
 	out := []worldMonitorInboxPromotionRow{}
 	for rows.Next() {
 		var row worldMonitorInboxPromotionRow
-		var etfsRaw, themesRaw, confidenceReasonsRaw []byte
+		var sourceURLsRaw, etfsRaw, themesRaw, confidenceReasonsRaw []byte
 		var normalizedEventID uuid.NullUUID
 		if err := rows.Scan(
 			&row.ID,
@@ -148,6 +152,8 @@ func (p *worldMonitorOpportunityPromoter) loadPromotionRows(ctx context.Context,
 			&row.EventType,
 			&row.Headline,
 			&row.Summary,
+			&sourceURLsRaw,
+			&row.SourceCount,
 			&etfsRaw,
 			&themesRaw,
 			&row.Confidence,
@@ -161,6 +167,7 @@ func (p *worldMonitorOpportunityPromoter) loadPromotionRows(ctx context.Context,
 			v := normalizedEventID.UUID
 			row.NormalizedEventID = &v
 		}
+		_ = json.Unmarshal(sourceURLsRaw, &row.SourceURLs)
 		_ = json.Unmarshal(etfsRaw, &row.PossibleAffectedETFs)
 		_ = json.Unmarshal(themesRaw, &row.AssetThemes)
 		_ = json.Unmarshal(confidenceReasonsRaw, &row.ConfidenceReasons)
@@ -215,7 +222,7 @@ func (p *worldMonitorOpportunityPromoter) promoteRow(ctx context.Context, row wo
 		if err != nil {
 			return worldMonitorPromotedOpportunity{}, err
 		}
-		if err := p.attachCandidateMetadata(ctx, candidate.ID, row, uuid.Nil, symbol, strategyID, "blocked", chart); err != nil {
+		if err := p.attachCandidateMetadata(ctx, candidate.ID, row, uuid.Nil, symbol, strategyID, "blocked", chart, entry, stop, target); err != nil {
 			return worldMonitorPromotedOpportunity{}, err
 		}
 		if err := p.markInboxCandidateCreated(ctx, row.ID, candidate.ID); err != nil {
@@ -259,7 +266,7 @@ func (p *worldMonitorOpportunityPromoter) promoteRow(ctx context.Context, row wo
 	if err := candidateSvc.Qualify(ctx, candidate.ID); err != nil {
 		return worldMonitorPromotedOpportunity{}, err
 	}
-	if err := p.attachCandidateMetadata(ctx, candidate.ID, row, signalID, symbol, strategyID, "approval_required", chart); err != nil {
+	if err := p.attachCandidateMetadata(ctx, candidate.ID, row, signalID, symbol, strategyID, "approval_required", chart, entry, stop, target); err != nil {
 		return worldMonitorPromotedOpportunity{}, err
 	}
 	if err := p.markInboxCandidateCreated(ctx, row.ID, candidate.ID); err != nil {
@@ -445,7 +452,7 @@ func (p *worldMonitorOpportunityPromoter) createStrategySignal(ctx context.Conte
 	return signalID, nil
 }
 
-func (p *worldMonitorOpportunityPromoter) attachCandidateMetadata(ctx context.Context, candidateID uuid.UUID, row worldMonitorInboxPromotionRow, signalID uuid.UUID, symbol, strategyID, route string, chart worldMonitorChartConfirmation) error {
+func (p *worldMonitorOpportunityPromoter) attachCandidateMetadata(ctx context.Context, candidateID uuid.UUID, row worldMonitorInboxPromotionRow, signalID uuid.UUID, symbol, strategyID, route string, chart worldMonitorChartConfirmation, entry, stop, target float64) error {
 	eventID := ""
 	if row.NormalizedEventID != nil {
 		eventID = row.NormalizedEventID.String()
@@ -461,6 +468,8 @@ func (p *worldMonitorOpportunityPromoter) attachCandidateMetadata(ctx context.Co
 		"eventType":         row.EventType,
 		"headline":          row.Headline,
 		"summary":           row.Summary,
+		"sourceURLs":        row.SourceURLs,
+		"sourceCount":       row.SourceCount,
 		"assetThemes":       row.AssetThemes,
 		"confidenceReasons": row.ConfidenceReasons,
 		"mappingReason":     row.MappingReason,
@@ -472,6 +481,7 @@ func (p *worldMonitorOpportunityPromoter) attachCandidateMetadata(ctx context.Co
 	payload, _ := json.Marshal(map[string]any{
 		"worldMonitor":      metadata,
 		"chartConfirmation": chart,
+		"sizing":            worldMonitorSuggestedSizing(entry, stop, target),
 	})
 	_, err := p.pool.Exec(ctx, `
 		UPDATE candidate_trades
@@ -512,4 +522,45 @@ func (p *worldMonitorOpportunityPromoter) reasoning(row worldMonitorInboxPromoti
 
 func roundPrice(value float64) float64 {
 	return math.Round(value*100) / 100
+}
+
+func worldMonitorSuggestedSizing(entry, stop, target float64) map[string]any {
+	if entry <= 0 || stop <= 0 {
+		return map[string]any{
+			"model":  "paper_fixed_risk_v1",
+			"status": "unavailable",
+			"reason": "entry and stop are required for sizing",
+		}
+	}
+	riskPerShare := math.Abs(entry - stop)
+	if riskPerShare <= 0 {
+		return map[string]any{
+			"model":  "paper_fixed_risk_v1",
+			"status": "unavailable",
+			"reason": "stop must differ from entry for sizing",
+		}
+	}
+	const riskBudget = 100.0
+	shares := math.Max(1, math.Floor(riskBudget/riskPerShare))
+	rewardPerShare := 0.0
+	if target > 0 {
+		rewardPerShare = math.Abs(target - entry)
+	}
+	sizing := map[string]any{
+		"model":          "paper_fixed_risk_v1",
+		"status":         "available",
+		"riskBudget":     riskBudget,
+		"shares":         shares,
+		"quantity":       shares,
+		"notional":       roundPrice(shares * entry),
+		"riskPerShare":   roundPrice(riskPerShare),
+		"riskToStop":     roundPrice(shares * riskPerShare),
+		"source":         "world-monitor-promoter",
+		"reviewRequired": true,
+	}
+	if rewardPerShare > 0 {
+		sizing["rewardToTarget"] = roundPrice(shares * rewardPerShare)
+		sizing["riskReward"] = roundPrice(rewardPerShare / riskPerShare)
+	}
+	return sizing
 }

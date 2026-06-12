@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -93,12 +94,13 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 
 	var candidateStatus string
 	var signalID string
+	var metadata []byte
 	var entryPrice, stopLoss, takeProfit float64
 	if err := pool.QueryRow(ctx, `
-		SELECT status, signal_id::text, entry_price::float8, stop_loss::float8, take_profit::float8
+		SELECT status, signal_id::text, COALESCE(metadata, '{}'::jsonb), entry_price::float8, stop_loss::float8, take_profit::float8
 		FROM candidate_trades
 		WHERE id = $1::uuid
-	`, promoted.CandidateID).Scan(&candidateStatus, &signalID, &entryPrice, &stopLoss, &takeProfit); err != nil {
+	`, promoted.CandidateID).Scan(&candidateStatus, &signalID, &metadata, &entryPrice, &stopLoss, &takeProfit); err != nil {
 		t.Fatalf("query promoted candidate: %v", err)
 	}
 	if candidateStatus != "awaiting_approval" {
@@ -109,6 +111,12 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	}
 	if entryPrice != 500 || stopLoss != 490 || takeProfit != 520 {
 		t.Fatalf("unexpected prices entry=%f stop=%f target=%f", entryPrice, stopLoss, takeProfit)
+	}
+	if !json.Valid(metadata) || !containsJSONKey(metadata, "worldMonitor") || !containsJSONKey(metadata, "sizing") {
+		t.Fatalf("metadata should include source URLs and sizing evidence, got %s", string(metadata))
+	}
+	if !strings.Contains(string(metadata), `"sourceURLs"`) || !strings.Contains(string(metadata), `"shares": 10`) || !strings.Contains(string(metadata), trigger.SourceURLs[0]) {
+		t.Fatalf("metadata should include calculated 10-share paper size and monitor URL, got %s", string(metadata))
 	}
 
 	queue, err := approvalsmod.NewService(pool).GetQueue(ctx, 25)

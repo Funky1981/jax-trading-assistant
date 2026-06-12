@@ -252,6 +252,98 @@ func (s *Store) CreateNotificationOutboxItem(ctx context.Context, item *Notifica
 	return item, nil
 }
 
+func (s *Store) ClaimPendingNotificationOutboxItems(ctx context.Context, channel string, limit int) ([]*NotificationOutboxItem, error) {
+	if limit <= 0 {
+		limit = 25
+	}
+	rows, err := s.pool.Query(ctx, `
+		UPDATE notification_outbox
+		SET status = 'sending',
+		    updated_at = NOW()
+		WHERE id IN (
+			SELECT id
+			FROM notification_outbox
+			WHERE status = 'pending'
+			  AND channel = $1
+			  AND send_after <= NOW()
+			ORDER BY send_after ASC, created_at ASC
+			LIMIT $2
+			FOR UPDATE SKIP LOCKED
+		)
+		RETURNING id, channel, recipient, candidate_id, message, payload, status, send_after, sent_at, error, created_at, updated_at
+	`, channel, limit)
+	if err != nil {
+		return nil, fmt.Errorf("approvals.Store.ClaimPendingNotificationOutboxItems: %w", err)
+	}
+	defer rows.Close()
+
+	out := []*NotificationOutboxItem{}
+	for rows.Next() {
+		var item NotificationOutboxItem
+		var payloadRaw []byte
+		if err := rows.Scan(
+			&item.ID,
+			&item.Channel,
+			&item.Recipient,
+			&item.CandidateID,
+			&item.Message,
+			&payloadRaw,
+			&item.Status,
+			&item.SendAfter,
+			&item.SentAt,
+			&item.Error,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("approvals.Store.ClaimPendingNotificationOutboxItems: scan: %w", err)
+		}
+		if len(payloadRaw) > 0 {
+			_ = json.Unmarshal(payloadRaw, &item.Payload)
+		}
+		if item.Payload == nil {
+			item.Payload = map[string]any{}
+		}
+		out = append(out, &item)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) MarkNotificationOutboxSent(ctx context.Context, id uuid.UUID, sentAt time.Time) error {
+	if sentAt.IsZero() {
+		sentAt = time.Now().UTC()
+	}
+	_, err := s.pool.Exec(ctx, `
+		UPDATE notification_outbox
+		SET status = 'sent',
+		    sent_at = $2,
+		    error = NULL,
+		    updated_at = NOW()
+		WHERE id = $1
+	`, id, sentAt)
+	if err != nil {
+		return fmt.Errorf("approvals.Store.MarkNotificationOutboxSent: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) MarkNotificationOutboxFailed(ctx context.Context, id uuid.UUID, message string) error {
+	message = strings.TrimSpace(message)
+	if message == "" {
+		message = "notification dispatch failed"
+	}
+	_, err := s.pool.Exec(ctx, `
+		UPDATE notification_outbox
+		SET status = 'failed',
+		    error = $2,
+		    updated_at = NOW()
+		WHERE id = $1
+	`, id, message)
+	if err != nil {
+		return fmt.Errorf("approvals.Store.MarkNotificationOutboxFailed: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) CreateMobileApprovalToken(ctx context.Context, token *MobileApprovalTokenRecord) (*MobileApprovalTokenRecord, error) {
 	if token.ID == uuid.Nil {
 		token.ID = uuid.New()

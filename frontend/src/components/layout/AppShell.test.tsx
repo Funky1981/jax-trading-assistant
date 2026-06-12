@@ -37,6 +37,7 @@ describe('AppShell', () => {
       'Approvals',
       'Research',
       'Macro Events',
+      'Monitor Inbox',
       'Analysis',
       'Notifications',
       'Settings',

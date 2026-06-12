@@ -35,6 +35,42 @@ export interface WorldMonitorStatus {
   checkedAt: string;
 }
 
+export interface WorldMonitorInboxItem {
+  id: string;
+  source: string;
+  sourceEventId: string;
+  worldMonitorEventId: string;
+  status: string;
+  rejectionReason?: string;
+  eventType: string;
+  headline: string;
+  summary?: string;
+  sourceUrls: string[];
+  sourceCount: number;
+  eventTime: string;
+  receivedAt: string;
+  region?: string;
+  possibleAffectedEtfs: string[];
+  assetThemes: string[];
+  severity: string;
+  sourceTier: string;
+  confidence: number;
+  confidenceReasons: string[];
+  mappingReason: string;
+  normalizedEventId?: string;
+  candidateId?: string;
+  operatorDecision?: string;
+  operatorReason?: string;
+  rawPayload: Record<string, unknown>;
+}
+
+export interface WorldMonitorInboxResponse {
+  items: WorldMonitorInboxItem[];
+  total: number;
+  counts: WorldMonitorStatus['counts'];
+  checkedAt: string;
+}
+
 export const aiService = {
   getOverview() {
     return apiClient.get<AIOverviewApiResponse>('/api/v1/ai/overview');
@@ -50,5 +86,16 @@ export const aiService = {
   },
   getWorldMonitorStatus() {
     return apiClient.get<WorldMonitorStatus>('/api/v1/research/events/world-monitor/status');
+  },
+  getWorldMonitorInbox(params: { status?: string; limit?: number } = {}) {
+    const query = new URLSearchParams();
+    if (params.status && params.status !== 'all') {
+      query.set('status', params.status);
+    }
+    if (params.limit) {
+      query.set('limit', String(params.limit));
+    }
+    const qs = query.toString();
+    return apiClient.get<WorldMonitorInboxResponse>(`/api/v1/research/events/world-monitor/inbox${qs ? `?${qs}` : ''}`);
   },
 };

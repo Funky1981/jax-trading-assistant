@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 )
@@ -18,6 +19,36 @@ func TestMobileTelegramWebhookRejectsInvalidPayloadBeforeApprovalService(t *test
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestMobileTelegramWebhookBodyParsesTelegramCallbackQuery(t *testing.T) {
+	body := mobileTelegramWebhookBody{
+		GuardrailHash: "guardrail:v1",
+		CallbackQuery: &struct {
+			Data string `json:"data"`
+			From *struct {
+				ID       int64  `json:"id"`
+				Username string `json:"username"`
+			} `json:"from"`
+		}{
+			Data: "approve:plain-token",
+			From: &struct {
+				ID       int64  `json:"id"`
+				Username string `json:"username"`
+			}{ID: 12345, Username: "operator"},
+		},
+	}
+
+	req := body.mobileDecisionRequest(time.Date(2026, 6, 12, 10, 0, 0, 0, time.UTC))
+	if req.Token != "plain-token" || req.Decision != "approve" {
+		t.Fatalf("parsed token/action = %q/%q", req.Token, req.Decision)
+	}
+	if req.Actor != "operator" || req.Channel != "telegram" || req.RuntimeMode != "paper" {
+		t.Fatalf("parsed actor/channel/runtime = %q/%q/%q", req.Actor, req.Channel, req.RuntimeMode)
+	}
+	if req.GuardrailHash != "guardrail:v1" {
+		t.Fatalf("guardrail hash = %q", req.GuardrailHash)
 	}
 }
 

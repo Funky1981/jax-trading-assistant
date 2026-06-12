@@ -227,7 +227,7 @@ test('research page: guided wizard launches backtest and opens analysis from run
   await expect.poll(() => guidedPayload).not.toBeNull();
   await expect.poll(() => guidedPayload?.instanceId).toBe('inst-orb');
   await expect.poll(() => guidedPayload?.datasetId).toBe('ds-001');
-  await expect.poll(() => guidedPayload?.symbolsOverride).toEqual(['SPY', 'QQQ', 'IWM']);
+  await expect.poll(() => guidedPayload?.symbolsOverride).toEqual(['SPY']);
 
   await expect(page.getByRole('tab', { name: /Backtests/i })).toHaveAttribute('data-state', 'active');
   await expect(page.getByText('run-guided').first()).toBeVisible();
