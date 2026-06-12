@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 )
@@ -54,6 +55,10 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert quote: %v", err)
 	}
+	insertWorldMonitorChartCandles(t, ctx, pool, "QQQ", now, []float64{
+		480, 482, 484, 486, 488, 490, 492, 494, 496, 498,
+		500, 502, 504, 506, 508, 510, 512, 514, 516, 520,
+	})
 
 	receipt, err := newWorldMonitorResearchInboxService(pool).Ingest(ctx, trigger)
 	if err != nil {
@@ -140,6 +145,109 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	}
 }
 
+func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *testing.T) {
+	pool := testFrontendAPIPool(t)
+	requireWorldMonitorSmokeSchema(t, pool)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	now := time.Now().UTC()
+	instanceID := uuid.New()
+	instanceName := "wm-chart-block-test-" + uuid.NewString()
+	trigger := validWorldMonitorResearchTrigger(now)
+	trigger.SourceEventID = "wm-chart-block-" + uuid.NewString()
+	trigger.TimestampUTC = now.Add(-5 * time.Minute)
+	trigger.PossibleAffectedETFs = []string{"WMZZ"}
+
+	_, err := pool.Exec(ctx, `
+		INSERT INTO strategy_instances (
+			id, name, strategy_type_id, strategy_id, enabled,
+			session_timezone, flatten_by_close_time, config, config_hash
+		)
+		VALUES (
+			$1, $2, 'etf_news_sector_momentum_v1', 'etf_news_sector_momentum_v1', true,
+			'America/New_York', '15:55', '{"symbols":["WMZZ"]}'::jsonb, $2
+		)
+	`, instanceID, instanceName)
+	if err != nil {
+		t.Fatalf("insert strategy instance: %v", err)
+	}
+	_, err = pool.Exec(ctx, `
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, updated_at)
+		VALUES ('WMZZ', 500.00, 499.95, 500.05, 100, 100, 100000, NOW(), 'TEST', NOW())
+		ON CONFLICT (symbol) DO UPDATE
+		SET price = EXCLUDED.price,
+		    bid = EXCLUDED.bid,
+		    ask = EXCLUDED.ask,
+		    bid_size = EXCLUDED.bid_size,
+		    ask_size = EXCLUDED.ask_size,
+		    timestamp = EXCLUDED.timestamp,
+		    updated_at = EXCLUDED.updated_at
+	`)
+	if err != nil {
+		t.Fatalf("insert quote: %v", err)
+	}
+
+	receipt, err := newWorldMonitorResearchInboxService(pool).Ingest(ctx, trigger)
+	if err != nil {
+		t.Fatalf("ingest world monitor trigger: %v", err)
+	}
+
+	promoter := newWorldMonitorOpportunityPromoter(pool)
+	row, err := loadWorldMonitorPromotionRowForTest(ctx, t, promoter, trigger.SourceEventID)
+	if err != nil {
+		t.Fatalf("load promotion row: %v", err)
+	}
+	promoted, err := promoter.promoteRow(ctx, row)
+	if err != nil {
+		t.Fatalf("promote world monitor trigger: %v", err)
+	}
+	if promoted.Route != "blocked" {
+		t.Fatalf("route = %q, want blocked", promoted.Route)
+	}
+
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cleanupCancel()
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM world_monitor_research_inbox WHERE source_event_id = $1`, trigger.SourceEventID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM candidate_trades WHERE id = $1::uuid`, promoted.CandidateID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM event_normalized WHERE id = $1::uuid`, receipt.EventID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM event_raw WHERE source_id = 'world-monitor' AND source_event_id = $1`, trigger.SourceEventID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM strategy_instances WHERE id = $1`, instanceID)
+	})
+
+	var candidateStatus, blockReason, reasonCode string
+	var metadata []byte
+	if err := pool.QueryRow(ctx, `
+		SELECT status, COALESCE(block_reason, ''), COALESCE(blocked_reason_code, ''), COALESCE(metadata, '{}'::jsonb)
+		FROM candidate_trades
+		WHERE id = $1::uuid
+	`, promoted.CandidateID).Scan(&candidateStatus, &blockReason, &reasonCode, &metadata); err != nil {
+		t.Fatalf("query blocked candidate: %v", err)
+	}
+	if candidateStatus != "blocked" {
+		t.Fatalf("candidate status = %q, want blocked", candidateStatus)
+	}
+	if reasonCode != "no_chart_confirmation" {
+		t.Fatalf("blocked reason code = %q, want no_chart_confirmation", reasonCode)
+	}
+	if blockReason == "" {
+		t.Fatalf("block reason should explain missing chart confirmation")
+	}
+	if !json.Valid(metadata) || !containsJSONKey(metadata, "chartConfirmation") {
+		t.Fatalf("metadata should include chartConfirmation evidence, got %s", string(metadata))
+	}
+
+	queue, err := approvalsmod.NewService(pool).GetQueue(ctx, 25)
+	if err != nil {
+		t.Fatalf("get approval queue: %v", err)
+	}
+	if queueContainsCandidate(queue, promoted.CandidateID) {
+		t.Fatalf("blocked candidate %s must not appear in approval queue", promoted.CandidateID)
+	}
+}
+
 func queueContainsCandidate(queue []map[string]any, candidateID string) bool {
 	for _, item := range queue {
 		if item["id"] == candidateID {
@@ -203,4 +311,28 @@ func loadWorldMonitorPromotionRowForTest(ctx context.Context, t *testing.T, prom
 	_ = json.Unmarshal(themesRaw, &row.AssetThemes)
 	_ = json.Unmarshal(confidenceReasonsRaw, &row.ConfidenceReasons)
 	return row, nil
+}
+
+func insertWorldMonitorChartCandles(t *testing.T, ctx context.Context, pool *pgxpool.Pool, symbol string, now time.Time, closes []float64) {
+	t.Helper()
+	for i, close := range closes {
+		ts := now.Add(time.Duration(i-len(closes)) * time.Minute)
+		_, err := pool.Exec(ctx, `
+			INSERT INTO candles (symbol, timestamp, open, high, low, close, volume, vwap)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $6)
+			ON CONFLICT DO NOTHING
+		`, symbol, ts, close-0.2, close+0.5, close-0.5, close, 1000+i)
+		if err != nil {
+			t.Fatalf("insert candle %d: %v", i, err)
+		}
+	}
+}
+
+func containsJSONKey(raw []byte, key string) bool {
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return false
+	}
+	_, ok := payload[key]
+	return ok
 }

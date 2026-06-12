@@ -57,6 +57,17 @@ type worldMonitorInboxPromotionRow struct {
 	EventTime            time.Time
 }
 
+type worldMonitorChartConfirmation struct {
+	Confirmed           bool      `json:"confirmed"`
+	ReasonCode          string    `json:"reasonCode"`
+	Reason              string    `json:"reason"`
+	CandleCount         int       `json:"candleCount"`
+	LastClose           float64   `json:"lastClose,omitempty"`
+	SMA20               float64   `json:"sma20,omitempty"`
+	FiveCandleChangePct float64   `json:"fiveCandleChangePct,omitempty"`
+	CheckedAt           time.Time `json:"checkedAt"`
+}
+
 func newWorldMonitorOpportunityPromoter(pool *pgxpool.Pool) *worldMonitorOpportunityPromoter {
 	return &worldMonitorOpportunityPromoter{
 		pool: pool,
@@ -179,13 +190,55 @@ func (p *worldMonitorOpportunityPromoter) promoteRow(ctx context.Context, row wo
 	confidence := row.Confidence
 	expiresAt := p.now().Add(worldMonitorCandidateTTL)
 	reasoning := p.reasoning(row, symbol)
+	chart, err := p.confirmChart(ctx, symbol)
+	if err != nil {
+		return worldMonitorPromotedOpportunity{}, err
+	}
+
+	candidateSvc := candidatesmod.NewService(candidatesmod.NewStore(p.pool))
+	if !chart.Confirmed {
+		candidate, err := candidateSvc.CreateBlocked(ctx, candidatesmod.BlockRequest{
+			StrategyInstanceID: instanceID,
+			StrategyID:         strategyID,
+			Symbol:             symbol,
+			SignalType:         "BUY",
+			EntryPrice:         &entry,
+			StopLoss:           &stop,
+			TakeProfit:         &target,
+			Confidence:         &confidence,
+			Reasoning:          &reasoning,
+			DataProvenance:     "world-monitor",
+			ReasonCode:         chart.ReasonCode,
+			Reason:             chart.Reason,
+			TTL:                worldMonitorCandidateTTL,
+		})
+		if err != nil {
+			return worldMonitorPromotedOpportunity{}, err
+		}
+		if err := p.attachCandidateMetadata(ctx, candidate.ID, row, uuid.Nil, symbol, strategyID, "blocked", chart); err != nil {
+			return worldMonitorPromotedOpportunity{}, err
+		}
+		if err := p.markInboxCandidateCreated(ctx, row.ID, candidate.ID); err != nil {
+			return worldMonitorPromotedOpportunity{}, err
+		}
+		eventID := ""
+		if row.NormalizedEventID != nil {
+			eventID = row.NormalizedEventID.String()
+		}
+		return worldMonitorPromotedOpportunity{
+			InboxID:     row.ID.String(),
+			EventID:     eventID,
+			CandidateID: candidate.ID.String(),
+			Symbol:      symbol,
+			Route:       "blocked",
+		}, nil
+	}
 
 	signalID, err := p.createStrategySignal(ctx, instanceID, strategyID, symbol, confidence, entry, stop, target, reasoning, expiresAt)
 	if err != nil {
 		return worldMonitorPromotedOpportunity{}, err
 	}
 
-	candidateSvc := candidatesmod.NewService(candidatesmod.NewStore(p.pool))
 	candidate, err := candidateSvc.Propose(ctx, candidatesmod.ProposalRequest{
 		StrategyInstanceID: instanceID,
 		SignalID:           signalID.String(),
@@ -206,7 +259,7 @@ func (p *worldMonitorOpportunityPromoter) promoteRow(ctx context.Context, row wo
 	if err := candidateSvc.Qualify(ctx, candidate.ID); err != nil {
 		return worldMonitorPromotedOpportunity{}, err
 	}
-	if err := p.attachCandidateMetadata(ctx, candidate.ID, row, signalID, symbol, strategyID); err != nil {
+	if err := p.attachCandidateMetadata(ctx, candidate.ID, row, signalID, symbol, strategyID, "approval_required", chart); err != nil {
 		return worldMonitorPromotedOpportunity{}, err
 	}
 	if err := p.markInboxCandidateCreated(ctx, row.ID, candidate.ID); err != nil {
@@ -228,19 +281,36 @@ func (p *worldMonitorOpportunityPromoter) promoteRow(ctx context.Context, row wo
 }
 
 func (p *worldMonitorOpportunityPromoter) findStrategyInstance(ctx context.Context, symbol string) (uuid.UUID, string, error) {
+	var id uuid.UUID
+	var strategyID string
+	err := p.pool.QueryRow(ctx, `
+		SELECT id, COALESCE(NULLIF(strategy_id, ''), strategy_type_id)
+		FROM strategy_instances
+		WHERE enabled = TRUE
+		  AND strategy_type_id LIKE 'etf_%'
+		  AND config->'symbols' ? $1
+		ORDER BY updated_at DESC
+		LIMIT 1
+	`, symbol).Scan(&id, &strategyID)
+	if err == nil {
+		return id, strategyID, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, "", fmt.Errorf("find matching strategy instance for %s: %w", symbol, err)
+	}
+
 	preferred := []string{
 		"etf-news-sector-momentum-paper-v1",
 		"etf-news-rates-rotation-paper-v1",
 		"etf-news-market-panic-paper-v1",
 		"or-spy-paper-v1",
 	}
-	var id uuid.UUID
-	var strategyID string
 	for _, name := range preferred {
-		err := p.pool.QueryRow(ctx, `
+		err = p.pool.QueryRow(ctx, `
 			SELECT id, COALESCE(NULLIF(strategy_id, ''), strategy_type_id)
 			FROM strategy_instances
 			WHERE name = $1
+			  AND enabled = TRUE
 			  AND (config->'symbols' ? $2 OR name = 'or-spy-paper-v1')
 			LIMIT 1
 		`, name, symbol).Scan(&id, &strategyID)
@@ -252,7 +322,7 @@ func (p *worldMonitorOpportunityPromoter) findStrategyInstance(ctx context.Conte
 		}
 	}
 
-	err := p.pool.QueryRow(ctx, `
+	err = p.pool.QueryRow(ctx, `
 		SELECT id, COALESCE(NULLIF(strategy_id, ''), strategy_type_id)
 		FROM strategy_instances
 		WHERE strategy_type_id LIKE 'etf_%'
@@ -263,6 +333,85 @@ func (p *worldMonitorOpportunityPromoter) findStrategyInstance(ctx context.Conte
 		return uuid.Nil, "", fmt.Errorf("find fallback strategy instance for %s: %w", symbol, err)
 	}
 	return id, strategyID, nil
+}
+
+func (p *worldMonitorOpportunityPromoter) confirmChart(ctx context.Context, symbol string) (worldMonitorChartConfirmation, error) {
+	checkedAt := p.now()
+	rows, err := p.pool.Query(ctx, `
+		SELECT close::float8
+		FROM candles
+		WHERE symbol = $1
+		ORDER BY timestamp DESC
+		LIMIT 30
+	`, symbol)
+	if err != nil {
+		return worldMonitorChartConfirmation{}, fmt.Errorf("load chart candles for %s: %w", symbol, err)
+	}
+	defer rows.Close()
+
+	closesDesc := []float64{}
+	for rows.Next() {
+		var close float64
+		if err := rows.Scan(&close); err != nil {
+			return worldMonitorChartConfirmation{}, fmt.Errorf("scan chart candle for %s: %w", symbol, err)
+		}
+		if close > 0 {
+			closesDesc = append(closesDesc, close)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return worldMonitorChartConfirmation{}, err
+	}
+	if len(closesDesc) < 20 {
+		return worldMonitorChartConfirmation{
+			Confirmed:   false,
+			ReasonCode:  "no_chart_confirmation",
+			Reason:      fmt.Sprintf("Needs chart confirmation: only %d recent candles are available for %s; at least 20 are required.", len(closesDesc), symbol),
+			CandleCount: len(closesDesc),
+			CheckedAt:   checkedAt,
+		}, nil
+	}
+
+	closes := make([]float64, len(closesDesc))
+	for i := range closesDesc {
+		closes[len(closesDesc)-1-i] = closesDesc[i]
+	}
+	last := closes[len(closes)-1]
+	window := closes[len(closes)-20:]
+	var sum float64
+	for _, close := range window {
+		sum += close
+	}
+	sma20 := sum / 20
+	fiveStart := closes[len(closes)-5]
+	fiveChange := 0.0
+	if fiveStart > 0 {
+		fiveChange = ((last - fiveStart) / fiveStart) * 100
+	}
+
+	out := worldMonitorChartConfirmation{
+		CandleCount:         len(closes),
+		LastClose:           roundPrice(last),
+		SMA20:               roundPrice(sma20),
+		FiveCandleChangePct: math.Round(fiveChange*100) / 100,
+		CheckedAt:           checkedAt,
+	}
+	if last < sma20 {
+		out.Confirmed = false
+		out.ReasonCode = "no_chart_confirmation"
+		out.Reason = fmt.Sprintf("Needs chart confirmation: %s latest close %.2f is below its 20-candle average %.2f.", symbol, last, sma20)
+		return out, nil
+	}
+	if fiveChange < -0.5 {
+		out.Confirmed = false
+		out.ReasonCode = "no_chart_confirmation"
+		out.Reason = fmt.Sprintf("Needs chart confirmation: %s has fallen %.2f%% over the last five candles.", symbol, math.Abs(fiveChange))
+		return out, nil
+	}
+	out.Confirmed = true
+	out.ReasonCode = "chart_confirmed"
+	out.Reason = fmt.Sprintf("Chart confirmed: %s latest close %.2f is above its 20-candle average %.2f and recent momentum is not materially negative.", symbol, last, sma20)
+	return out, nil
 }
 
 func (p *worldMonitorOpportunityPromoter) latestEntryPrice(ctx context.Context, symbol string) (float64, error) {
@@ -296,10 +445,14 @@ func (p *worldMonitorOpportunityPromoter) createStrategySignal(ctx context.Conte
 	return signalID, nil
 }
 
-func (p *worldMonitorOpportunityPromoter) attachCandidateMetadata(ctx context.Context, candidateID uuid.UUID, row worldMonitorInboxPromotionRow, signalID uuid.UUID, symbol, strategyID string) error {
+func (p *worldMonitorOpportunityPromoter) attachCandidateMetadata(ctx context.Context, candidateID uuid.UUID, row worldMonitorInboxPromotionRow, signalID uuid.UUID, symbol, strategyID, route string, chart worldMonitorChartConfirmation) error {
 	eventID := ""
 	if row.NormalizedEventID != nil {
 		eventID = row.NormalizedEventID.String()
+	}
+	signalIDValue := ""
+	if signalID != uuid.Nil {
+		signalIDValue = signalID.String()
 	}
 	metadata := map[string]any{
 		"source":            "world-monitor",
@@ -313,10 +466,13 @@ func (p *worldMonitorOpportunityPromoter) attachCandidateMetadata(ctx context.Co
 		"mappingReason":     row.MappingReason,
 		"promotedSymbol":    symbol,
 		"strategyId":        strategyID,
-		"signalId":          signalID.String(),
-		"route":             "approval_required",
+		"signalId":          signalIDValue,
+		"route":             route,
 	}
-	payload, _ := json.Marshal(map[string]any{"worldMonitor": metadata})
+	payload, _ := json.Marshal(map[string]any{
+		"worldMonitor":      metadata,
+		"chartConfirmation": chart,
+	})
 	_, err := p.pool.Exec(ctx, `
 		UPDATE candidate_trades
 		SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,

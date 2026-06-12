@@ -27,6 +27,7 @@ vi.mock('@/data/approvals-service', () => ({
 vi.mock('@/data/ai-service', () => ({
   aiService: {
     getOverview: vi.fn(),
+    getWorldMonitorStatus: vi.fn(),
     updateScanner: vi.fn(),
     promoteSuggestion: vi.fn(),
   },
@@ -78,6 +79,23 @@ function mockOverview() {
       desktopWeb: false,
       mobilePush: false,
     },
+  });
+  vi.mocked(aiService.getWorldMonitorStatus).mockResolvedValue({
+    connected: true,
+    lastReceivedAt: '2026-05-22T09:41:00Z',
+    lastSourceEventId: 'world-monitor-event-1',
+    lastStatus: 'candidate_created',
+    lastHeadline: 'Softer inflation supports growth ETF review',
+    lastSymbols: ['QQQ'],
+    lastCandidateId: 'candidate-approval',
+    counts: {
+      total: 3,
+      pending: 0,
+      candidatesCreated: 2,
+      rejected: 1,
+      ignored: 0,
+    },
+    checkedAt: '2026-05-22T09:42:00Z',
   });
 }
 
@@ -134,11 +152,31 @@ describe('AiTradingPage', () => {
         signalType: 'BUY',
         status: 'blocked',
         confidence: 0.71,
-        reasoning: 'ETF setup is positive but blocked by policy.',
-        blockReason: 'ETF entries require approval queue routing.',
+        reasoning: 'News is relevant but chart confirmation is missing.',
+        blockReason: 'Needs chart confirmation: only 0 recent candles are available for SPY; at least 20 are required.',
+        blockedReasonCode: 'no_chart_confirmation',
         sessionDate: '2026-05-22',
         detectedAt: '2026-05-22T09:35:00Z',
         dataProvenance: 'paper',
+      },
+      {
+        id: 'candidate-approved',
+        strategyInstanceId: 'instance-2',
+        symbol: 'IWM',
+        signalType: 'BUY',
+        status: 'approved',
+        confidence: 0.82,
+        reasoning: 'Approved after evidence review and waiting in the execution chain.',
+        sessionDate: '2026-05-22',
+        detectedAt: '2026-05-22T09:37:00Z',
+        dataProvenance: 'world-monitor',
+        latestApproval: {
+          id: 'approval-1',
+          decision: 'approved',
+          approvedBy: 'operator',
+          decidedAt: '2026-05-22T09:42:00Z',
+        },
+        executionInstructionId: 'instruction-1',
       },
     ]);
     vi.mocked(approvalsService.getQueue).mockResolvedValue([
@@ -157,11 +195,17 @@ describe('AiTradingPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Find Trade Ideas' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Start Here' })).toBeInTheDocument();
+    expect(await screen.findByText('Softer inflation supports growth ETF review')).toBeInTheDocument();
+    expect(screen.getByText('Receiving news')).toBeInTheDocument();
     expect(await screen.findByText('QQQ')).toBeInTheDocument();
     expect(screen.getByText('SPY')).toBeInTheDocument();
+    expect(screen.getByText('IWM')).toBeInTheDocument();
     expect(screen.getByText('AAPL')).toBeInTheDocument();
+    expect(screen.getByText('Needs chart confirmation')).toBeInTheDocument();
+    expect(screen.getByText('Execution chain')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Send to approval/i })).toHaveAttribute('href', '/etf/approvals');
-    expect(screen.getByRole('link', { name: /Open blocked-state guidance/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /View execution chain/i })).toHaveAttribute('href', '/approvals');
+    expect(screen.getByRole('link', { name: /Review chart evidence/i })).toHaveAttribute(
       'href',
       '/candidates/candidate-blocked/evidence'
     );

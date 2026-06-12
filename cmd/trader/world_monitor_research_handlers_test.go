@@ -35,6 +35,15 @@ func (f *fakeWorldMonitorPromoteService) PromotePending(_ context.Context, limit
 	return f.result, f.err
 }
 
+type fakeWorldMonitorStatusService struct {
+	status worldMonitorResearchStatus
+	err    error
+}
+
+func (f *fakeWorldMonitorStatusService) Status(_ context.Context) (worldMonitorResearchStatus, error) {
+	return f.status, f.err
+}
+
 func TestWorldMonitorResearchHandler_AcceptsValidTrigger(t *testing.T) {
 	now := time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC)
 	fake := &fakeWorldMonitorIngestService{
@@ -156,6 +165,42 @@ func TestWorldMonitorOpportunityPromoteHandler_RunsPromoter(t *testing.T) {
 	}
 }
 
+func TestWorldMonitorResearchStatusHandler_ReturnsLatestMonitorState(t *testing.T) {
+	receivedAt := time.Date(2026, 6, 12, 10, 30, 0, 0, time.UTC)
+	fake := &fakeWorldMonitorStatusService{
+		status: worldMonitorResearchStatus{
+			Connected:         true,
+			LastReceivedAt:    &receivedAt,
+			LastSourceEventID: "monitor-event-1",
+			LastStatus:        "candidate_created",
+			LastHeadline:      "Softer inflation supports growth ETF review",
+			LastSymbols:       []string{"QQQ"},
+			LastCandidateID:   "candidate-1",
+			Counts: worldMonitorResearchStatusCounts{
+				Total:             3,
+				Pending:           1,
+				CandidatesCreated: 1,
+				Rejected:          1,
+			},
+			CheckedAt: receivedAt,
+		},
+	}
+	restore := replaceWorldMonitorStatusServiceFactory(fake)
+	defer restore()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/research/events/world-monitor/status", nil)
+	res := httptest.NewRecorder()
+
+	worldMonitorResearchStatusHandler(nil)(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", res.Code, http.StatusOK, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "monitor-event-1") || !strings.Contains(res.Body.String(), "candidate_created") {
+		t.Fatalf("response missing latest monitor state: %s", res.Body.String())
+	}
+}
+
 func performWorldMonitorResearchRequest(t *testing.T, method string, trigger worldMonitorResearchTrigger) *httptest.ResponseRecorder {
 	t.Helper()
 	body, err := json.Marshal(trigger)
@@ -185,5 +230,15 @@ func replaceWorldMonitorPromoteServiceFactory(fake *fakeWorldMonitorPromoteServi
 	}
 	return func() {
 		newWorldMonitorOpportunityPromoteService = original
+	}
+}
+
+func replaceWorldMonitorStatusServiceFactory(fake *fakeWorldMonitorStatusService) func() {
+	original := newWorldMonitorResearchStatusService
+	newWorldMonitorResearchStatusService = func(_ *pgxpool.Pool) worldMonitorResearchStatusService {
+		return fake
+	}
+	return func() {
+		newWorldMonitorResearchStatusService = original
 	}
 }

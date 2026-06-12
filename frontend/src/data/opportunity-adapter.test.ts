@@ -96,6 +96,35 @@ describe('opportunity adapter', () => {
     });
   });
 
+  it('routes approved candidates to the execution chain instead of manual trading', () => {
+    const candidate: CandidateTrade = {
+      id: 'candidate-approved',
+      strategyInstanceId: 'instance-1',
+      symbol: 'SPY',
+      signalType: 'BUY',
+      status: 'approved',
+      confidence: 0.81,
+      reasoning: 'Approved by operator after evidence review.',
+      sessionDate: '2026-05-22',
+      detectedAt: '2026-05-22T09:35:00Z',
+      dataProvenance: 'world-monitor',
+      latestApproval: {
+        id: 'approval-1',
+        decision: 'approved',
+        approvedBy: 'operator',
+        decidedAt: '2026-05-22T09:42:00Z',
+      },
+      executionInstructionId: 'instruction-1',
+    };
+
+    expect(opportunityFromCandidate(candidate)).toMatchObject({
+      id: 'candidate:candidate-approved',
+      route: 'execution_ready',
+      routeReason: 'This candidate has left the approval queue. Review its approval -> instruction -> broker status in the execution chain.',
+      status: 'approved',
+    });
+  });
+
   it('maps legacy sentiment strings to unavailable structured evidence', () => {
     const candidate: CandidateTrade = {
       id: 'candidate-sentiment-legacy',

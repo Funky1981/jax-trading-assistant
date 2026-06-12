@@ -40,6 +40,10 @@ func TestOpportunityScannerPromotesEligibleWorldMonitorTrigger(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert quote: %v", err)
 	}
+	insertWorldMonitorChartCandles(t, ctx, pool, "SOXX", now, []float64{
+		460, 462, 464, 466, 468, 470, 472, 474, 476, 478,
+		480, 482, 484, 486, 488, 490, 492, 494, 496, 500,
+	})
 
 	state := defaultAIScannerState()
 	state.Symbols = []string{"SOXX"}

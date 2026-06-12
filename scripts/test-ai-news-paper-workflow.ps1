@@ -146,6 +146,12 @@ try {
     $ingest = Invoke-JsonPost "$ApiUrl/api/v1/research/events/world-monitor" $trigger
     Write-Host "  Trigger accepted: inbox=$($ingest.inbox_id) status=$($ingest.status)" -ForegroundColor Green
 
+    $monitorStatus = Invoke-RestMethod -Method Get -Uri "$ApiUrl/api/v1/research/events/world-monitor/status" -Headers $script:ApiHeaders -TimeoutSec 15
+    if ($monitorStatus.lastSourceEventId -ne $sourceEventId) {
+        throw "World Monitor status did not reflect the posted trigger. Expected $sourceEventId, got $($monitorStatus.lastSourceEventId)."
+    }
+    Write-Host "  Monitor status: last=$($monitorStatus.lastStatus), headline='$($monitorStatus.lastHeadline)'" -ForegroundColor Green
+
     Write-Host "  Running promoter once..." -ForegroundColor Gray
     $promotion = Invoke-RestMethod -Method Post -Uri "$ApiUrl/api/v1/research/events/world-monitor/promote" -Headers $script:ApiHeaders -TimeoutSec 30
     $promotedCount = @($promotion.promoted).Count
@@ -154,6 +160,23 @@ try {
     if ($promotedCount -lt 1) {
         throw "World Monitor trigger did not promote into an AI opportunity. Check market quote availability and scanner settings."
     }
+
+    $promoted = @($promotion.promoted)[0]
+    if ($promoted.route -ne "approval_required") {
+        throw "Promoted trigger route is '$($promoted.route)', not approval_required. The chart gate or policy gate likely blocked the candidate; review AI Trading evidence for candidate $($promoted.candidateId)."
+    }
+
+    Write-Host "  Approving paper candidate $($promoted.candidateId)..." -ForegroundColor Gray
+    $approvalDetail = Invoke-JsonPost "$ApiUrl/api/v1/approvals/$($promoted.candidateId)/approve" @{
+        notes = "Operator smoke approval from scripts/test-ai-news-paper-workflow.ps1"
+    }
+    if ([string]::IsNullOrWhiteSpace($approvalDetail.execution.id)) {
+        throw "Approval succeeded but no execution instruction was returned for candidate $($promoted.candidateId)."
+    }
+    Write-Host "  Execution instruction created: $($approvalDetail.execution.id) status=$($approvalDetail.execution.status)" -ForegroundColor Green
+
+    $pilotStatus = Invoke-RestMethod -Method Get -Uri "$ApiUrl/api/v1/trading/pilot-status" -Headers $script:ApiHeaders -TimeoutSec 15
+    Write-Host "  Broker readiness: connected=$($pilotStatus.brokerConnected), readOnly=$($pilotStatus.readOnly), paper=$($pilotStatus.paperTrading)" -ForegroundColor Green
 
     $overview = Invoke-RestMethod -Method Get -Uri "$ApiUrl/api/v1/ai/overview" -Headers $script:ApiHeaders -TimeoutSec 15
     $counts = $overview.opportunityCounts

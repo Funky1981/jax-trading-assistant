@@ -72,8 +72,16 @@ function mapScannerToSettings(scanner?: AIScannerApiState): ScannerSettings {
 const routeLabels: Record<OpportunityRoute, string> = {
   manual_allowed: 'Manual review',
   approval_required: 'Approval required',
+  execution_ready: 'Execution chain',
   blocked: 'Blocked',
 };
+
+function routeLabel(opportunity: OpportunitySummary) {
+  if (opportunity.routeReasonCode === 'no_chart_confirmation') {
+    return 'Needs chart confirmation';
+  }
+  return routeLabels[opportunity.route];
+}
 
 function formatConfidence(band: OpportunitySummary['confidenceBand']) {
   if (band === 'unknown') return 'Confidence unknown';
@@ -101,7 +109,7 @@ function isExpired(value?: string) {
 function primaryAction(opportunity: OpportunitySummary) {
   if (opportunity.route === 'blocked') {
     return {
-      label: 'Open blocked-state guidance',
+      label: opportunity.routeReasonCode === 'no_chart_confirmation' ? 'Review chart evidence' : 'Open blocked-state guidance',
       path:
         opportunity.sourceType === 'candidate' || opportunity.sourceType === 'approval'
           ? `/candidates/${opportunity.sourceId}/evidence`
@@ -111,6 +119,10 @@ function primaryAction(opportunity: OpportunitySummary) {
 
   if (opportunity.route === 'approval_required') {
     return { label: 'Send to approval', path: '/etf/approvals' };
+  }
+
+  if (opportunity.route === 'execution_ready') {
+    return { label: 'View execution chain', path: '/approvals' };
   }
 
   return { label: 'Review order', path: '/manual-trading' };
@@ -168,7 +180,7 @@ function OpportunityCard({
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle className="text-xl">{opportunity.symbol}</CardTitle>
             <Badge variant={opportunity.route === 'blocked' ? 'destructive' : opportunity.route === 'approval_required' ? 'warning' : 'default'}>
-              {routeLabels[opportunity.route]}
+              {routeLabel(opportunity)}
             </Badge>
             <Badge variant="outline">{opportunity.signalType}</Badge>
             <Badge variant="secondary">{formatConfidence(opportunity.confidenceBand)}</Badge>
@@ -245,6 +257,12 @@ export function AiTradingPage() {
   const approvalsQuery = useQuery({
     queryKey: ['ai-trading', 'approval-queue'],
     queryFn: () => approvalsService.getQueue(12),
+    refetchInterval: REFRESH_INTERVAL_MS,
+    staleTime: 60_000,
+  });
+  const monitorStatusQuery = useQuery({
+    queryKey: ['ai-trading', 'world-monitor-status'],
+    queryFn: () => aiService.getWorldMonitorStatus(),
     refetchInterval: REFRESH_INTERVAL_MS,
     staleTime: 60_000,
   });
@@ -511,6 +529,43 @@ export function AiTradingPage() {
         )}
       </Card>
 
+      <Card>
+        <CardHeader className="gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <CardTitle>News Monitor</CardTitle>
+            <CardDescription>Shows whether Jax has received news from Jax World News Monitor.</CardDescription>
+          </div>
+          <Badge variant={monitorStatusQuery.data?.connected ? 'success' : monitorStatusQuery.isError ? 'destructive' : 'secondary'}>
+            {monitorStatusQuery.data?.connected ? 'Receiving news' : monitorStatusQuery.isError ? 'Status unavailable' : 'No news yet'}
+          </Badge>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm md:grid-cols-[1fr_180px]">
+          <div>
+            <p className="font-semibold text-foreground">
+              {monitorStatusQuery.data?.lastHeadline ?? (monitorStatusQuery.isError ? 'Monitor status could not be loaded.' : 'No Monitor trigger received yet.')}
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              {monitorStatusQuery.data?.lastReceivedAt
+                ? `Last received ${formatDateTime(monitorStatusQuery.data.lastReceivedAt)}; status ${monitorStatusQuery.data.lastStatus ?? 'unknown'}.`
+                : 'Start Jax World News Monitor and post a trigger to populate this pipeline.'}
+            </p>
+            {monitorStatusQuery.data?.lastSymbols?.length ? (
+              <p className="mt-1 text-muted-foreground">Mapped symbols: {monitorStatusQuery.data.lastSymbols.join(', ')}</p>
+            ) : null}
+            {monitorStatusQuery.data?.lastCandidateId ? (
+              <p className="mt-1 text-muted-foreground">Latest candidate: {monitorStatusQuery.data.lastCandidateId}</p>
+            ) : null}
+          </div>
+          <div className="rounded-md border border-border p-3">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Inbox</p>
+            <p className="mt-2 text-2xl font-semibold">{monitorStatusQuery.data?.counts.total ?? 0}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {monitorStatusQuery.data?.counts.pending ?? 0} pending / {monitorStatusQuery.data?.counts.candidatesCreated ?? 0} candidates
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <section className="grid gap-4 md:grid-cols-3" aria-label="Scanner state">
         <Card>
           <CardHeader>
@@ -603,6 +658,7 @@ export function AiTradingPage() {
                 candidatesQuery.refetch();
                 approvalsQuery.refetch();
                 overviewQuery.refetch();
+                monitorStatusQuery.refetch();
               }}
             >
               <RefreshCw className="h-4 w-4" />

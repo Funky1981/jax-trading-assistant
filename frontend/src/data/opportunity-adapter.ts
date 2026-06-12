@@ -9,6 +9,7 @@ interface OpportunitySources {
 
 const BLOCKED_STATUSES = new Set(['blocked', 'rejected', 'expired']);
 const APPROVAL_STATUSES = new Set(['awaiting_approval', 'pending_approval', 'pending', 'snoozed']);
+const EXECUTION_STATUSES = new Set(['approved', 'submitted', 'filled', 'cancelled']);
 
 function confidenceBand(confidence?: number | null): OpportunityConfidenceBand {
   if (typeof confidence !== 'number') return 'unknown';
@@ -22,13 +23,14 @@ function sentence(value?: string | null, fallback = 'Opportunity detected by Jax
   return trimmed && trimmed.length > 0 ? trimmed : fallback;
 }
 
-function routeForCandidate(candidate: CandidateTrade): { route: OpportunityRoute; routeReason: string } {
+function routeForCandidate(candidate: CandidateTrade): { route: OpportunityRoute; routeReason: string; routeReasonCode?: string } {
   const status = typeof candidate.status === 'string' ? candidate.status.toLowerCase() : '';
 
   if (BLOCKED_STATUSES.has(status)) {
     return {
       route: 'blocked',
       routeReason: candidate.blockReason ?? candidate.blockedReasonCode ?? 'Policy or data quality checks blocked this opportunity.',
+      routeReasonCode: candidate.blockedReasonCode,
     };
   }
 
@@ -36,6 +38,16 @@ function routeForCandidate(candidate: CandidateTrade): { route: OpportunityRoute
     return {
       route: 'approval_required',
       routeReason: 'This proposed trade requires approval before execution.',
+    };
+  }
+
+  if (EXECUTION_STATUSES.has(status)) {
+    return {
+      route: 'execution_ready',
+      routeReason:
+        candidate.executionInstructionId || candidate.latestApproval
+          ? 'This candidate has left the approval queue. Review its approval -> instruction -> broker status in the execution chain.'
+          : 'This candidate has left the approval queue. Review its current execution state before taking any action.',
     };
   }
 
@@ -156,6 +168,7 @@ export function opportunityFromCandidate(candidate: CandidateTrade): Opportunity
     expiresAt: candidate.expiresAt,
     route: route.route,
     routeReason: route.routeReason,
+    routeReasonCode: route.routeReasonCode,
     sentimentSummary: sentimentFromMetadata(candidate.metadata)?.summary,
     sentiment: candidate.sentiment ?? sentimentFromMetadata(candidate.metadata),
     status: candidate.status || 'unknown',

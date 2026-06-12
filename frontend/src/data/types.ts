@@ -216,7 +216,7 @@ export interface SignalListResponse {
 
 export type OpportunityConfidenceBand = 'high' | 'medium' | 'low' | 'unknown';
 
-export type OpportunityRoute = 'manual_allowed' | 'approval_required' | 'blocked';
+export type OpportunityRoute = 'manual_allowed' | 'approval_required' | 'execution_ready' | 'blocked';
 
 export type OpportunitySourceType = 'signal' | 'candidate' | 'approval';
 
@@ -254,6 +254,7 @@ export interface OpportunitySummary {
   expiresAt?: string;
   route: OpportunityRoute;
   routeReason: string;
+  routeReasonCode?: string;
   sentimentSummary?: string;
   sentiment?: SentimentEvidence;
   status: string;

@@ -17,6 +17,24 @@ export interface AISuggestionPromotionResponse {
   status: string;
 }
 
+export interface WorldMonitorStatus {
+  connected: boolean;
+  lastReceivedAt?: string;
+  lastSourceEventId?: string;
+  lastStatus?: string;
+  lastHeadline?: string;
+  lastSymbols?: string[];
+  lastCandidateId?: string;
+  counts: {
+    total: number;
+    pending: number;
+    candidatesCreated: number;
+    rejected: number;
+    ignored: number;
+  };
+  checkedAt: string;
+}
+
 export const aiService = {
   getOverview() {
     return apiClient.get<AIOverviewApiResponse>('/api/v1/ai/overview');
@@ -29,5 +47,8 @@ export const aiService = {
   },
   promoteSuggestion(request: AISuggestionPromotionRequest) {
     return apiClient.post<AISuggestionPromotionResponse>('/api/v1/ai/suggestions/promote', request);
+  },
+  getWorldMonitorStatus() {
+    return apiClient.get<WorldMonitorStatus>('/api/v1/research/events/world-monitor/status');
   },
 };
