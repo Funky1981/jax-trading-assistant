@@ -1,6 +1,6 @@
 # AI News Trading Productization Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use Markdown checkbox syntax for tracking.
 
 **Goal:** Turn the current research/paper-trading shell into a usable local AI trading workflow where news and market data create reviewable opportunities, ETF trades enter approval, approved opportunities become paper broker orders, and users understand what each page is for.
 

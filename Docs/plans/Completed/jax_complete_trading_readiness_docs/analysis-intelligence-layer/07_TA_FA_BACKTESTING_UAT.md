@@ -86,16 +86,34 @@ fundamental score correlation with outcome
 ## UAT checklist
 
 ```text
-[ ] Hot CPI fixture creates bearish TA/FA alignment
-[ ] Cool CPI fixture creates bullish TA/FA alignment
-[ ] Fed whipsaw fixture rejects
-[ ] Confounder fixture rejects
-[ ] Missing data fixture rejects
-[ ] High score with no stop rejects
-[ ] LLM summary cannot override veto
-[ ] Candidate remains paper-only
-[ ] Human approval required
-[ ] No broker order created
+[x] Hot CPI fixture creates bearish TA/FA alignment
+[x] Cool CPI fixture creates bullish TA/FA alignment
+[x] Fed whipsaw fixture rejects
+[x] Confounder fixture rejects
+[x] Missing data fixture rejects
+[x] High score with no stop rejects
+[x] LLM summary cannot override veto
+[x] Candidate remains paper-only
+[x] Human approval required
+[x] No broker order created
+```
+
+## Completion evidence
+
+Closed on 2026-06-17 against deterministic automated coverage:
+
+- `internal/modules/macroevents/uat_test.go`
+  - `TestMacroReactionUATDeterministicFixtures` covers hot CPI bearish alignment, cool CPI bullish alignment, Fed whipsaw rejection, confounder rejection, missing-candle rejection, and paper-only non-persisted candidate handling.
+  - `TestMacroReactionUATCandidateCannotBecomeOrderWithoutSeparateApproval` covers human approval required and no broker order creation.
+- `internal/modules/macroevents/candidate_test.go`
+  - `TestGenerateCandidateMissingStopBlocksCandidate` covers high score/no-stop rejection.
+- `internal/modules/macroevents/review_test.go`
+  - `TestEvaluateMultiAnalystReviewLLMSummaryCannotOverrideVeto` covers LLM summary override prevention.
+
+Verification command:
+
+```powershell
+go test ./internal/modules/macroevents -count=1
 ```
 
 ## Codex task

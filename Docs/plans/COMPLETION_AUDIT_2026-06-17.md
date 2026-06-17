@@ -10,9 +10,15 @@ Reviewed these folders:
 
 ## Decision
 
-Do not move these folders to `Docs/plans/Completed` yet.
+Superseded by the 2026-06-17 closure pass.
 
-The standalone `analysis-intelligence-layer` and `robust-profitability-layer` folders both contain `COMPLETION.md` files, but the reviewed plan set is not cleanly 100% complete because unchecked validation and implementation items remain in the active planning tree.
+The previously open non-swing checklist items were reconciled against automated tests and completion evidence. The three reviewed folders are ready to move to `Docs/plans/Completed`:
+
+- `Docs/plans/analysis-intelligence-layer`
+- `Docs/plans/robust-profitability-layer`
+- `Docs/plans/jax_complete_trading_readiness_docs`
+
+`Docs/plans/jax-all-plans-pack-swing-v2` remains active and is explicitly excluded from this completion pass.
 
 ## Evidence
 
@@ -31,30 +37,29 @@ The standalone `analysis-intelligence-layer` and `robust-profitability-layer` fo
 - Human approval required
 - No broker order created
 
-Resolution: either run and record these UAT results, or update the folder to explicitly mark them as superseded by later automated tests with file/test references.
+Resolution: closed in `07_TA_FA_BACKTESTING_UAT.md` with exact automated test references.
 
 ### `robust-profitability-layer`
 
 `COMPLETION.md` says the current repository scope was completed on 2026-06-11. No unchecked checklist items were found in the standalone folder.
 
-Resolution: this folder can be moved after the completion audit also confirms that the duplicated copy inside `jax_complete_trading_readiness_docs` is either archived, superseded, or reconciled.
+Resolution: duplicated readiness-pack items were reconciled and the folder can be moved.
 
 ### `jax_complete_trading_readiness_docs`
 
-This folder is not 100% complete. It contains active unchecked implementation work in:
+This folder is complete for the non-swing readiness scope. It previously contained active unchecked implementation work in:
 
 - `macro-reaction-engine/12_PHASE_1_IMPLEMENTATION_PLAN.md`
 - `analysis-intelligence-layer/07_TA_FA_BACKTESTING_UAT.md`
 
-The macro reaction Phase 1 plan still has unchecked migration, validation, mapping, service, verification, and acceptance checklist items.
+The macro reaction Phase 1 plan has now been closed with file and test evidence for migration, validation, mapping, service, verification, and acceptance checklist items.
 
 Resolution: complete or explicitly supersede the macro reaction Phase 1 plan before moving the full readiness pack to `Completed`.
 
 ## Required Closure Path
 
-1. Run or supersede the remaining TA/FA UAT checklist and record exact evidence.
-2. Complete or supersede `macro-reaction-engine/12_PHASE_1_IMPLEMENTATION_PLAN.md`.
-3. Re-run focused backend/frontend tests covering macro events, World Monitor promotion, analysis, approvals, and chart provenance.
-4. Add a final `COMPLETION.md` at `Docs/plans/jax_complete_trading_readiness_docs/COMPLETION.md`.
-5. Move all three folders to `Docs/plans/Completed` in one commit.
-
+1. Completed: remaining TA/FA UAT checklist recorded with exact evidence.
+2. Completed: `macro-reaction-engine/12_PHASE_1_IMPLEMENTATION_PLAN.md` recorded with exact evidence.
+3. Completed: focused backend/frontend tests were re-run during closure.
+4. Completed: final `COMPLETION.md` added at `Docs/plans/jax_complete_trading_readiness_docs/COMPLETION.md`.
+5. Completed: all three non-swing folders moved to `Docs/plans/Completed`.

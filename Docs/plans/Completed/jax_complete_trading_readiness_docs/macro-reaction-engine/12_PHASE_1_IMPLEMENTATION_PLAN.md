@@ -1,6 +1,6 @@
 # Macro Reaction Engine Phase 1 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use Markdown checkbox syntax for tracking.
 
 **Goal:** Build the first macro-reaction-engine slice: structured macro event storage, validation, dedupe, and ETF allowlist mapping without creating candidates, approvals, orders, or broker writes.
 
@@ -67,7 +67,7 @@ Do not start with chart reactions, candidate generation, UI, or backtesting unti
 **Files:**
 - Create: `db/postgres/migrations/macro_events_schema_test.go`
 
-- [ ] **Step 1: Write the failing migration test**
+- [x] **Step 1: Write the failing migration test**
 
 ```go
 package migrations
@@ -116,7 +116,7 @@ func TestMacroEventsMigrationDefinesRequiredTablesConstraintsAndIndexes(t *testi
 }
 ```
 
-- [ ] **Step 2: Run the failing test**
+- [x] **Step 2: Run the failing test**
 
 Run:
 
@@ -134,7 +134,7 @@ Expected: fail because `000031_macro_events.up.sql` does not exist yet.
 - Create: `db/postgres/migrations/000031_macro_events.up.sql`
 - Create: `db/postgres/migrations/000031_macro_events.down.sql`
 
-- [ ] **Step 1: Add the up migration**
+- [x] **Step 1: Add the up migration**
 
 ```sql
 CREATE TABLE IF NOT EXISTS macro_events (
@@ -204,7 +204,7 @@ CREATE INDEX IF NOT EXISTS idx_macro_event_etf_map_event
     ON macro_event_etf_map(macro_event_id);
 ```
 
-- [ ] **Step 2: Add the down migration**
+- [x] **Step 2: Add the down migration**
 
 ```sql
 DROP INDEX IF EXISTS idx_macro_event_etf_map_event;
@@ -216,7 +216,7 @@ DROP TABLE IF EXISTS macro_event_etf_map;
 DROP TABLE IF EXISTS macro_events;
 ```
 
-- [ ] **Step 3: Run the migration test**
+- [x] **Step 3: Run the migration test**
 
 Run:
 
@@ -226,7 +226,7 @@ go test ./db/postgres/migrations -run TestMacroEventsMigrationDefinesRequiredTab
 
 Expected: pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add db/postgres/migrations/000031_macro_events.* db/postgres/migrations/macro_events_schema_test.go
@@ -242,7 +242,7 @@ git commit -m "feat: add macro event schema"
 - Create: `internal/modules/macroevents/validation.go`
 - Create: `internal/modules/macroevents/validation_test.go`
 
-- [ ] **Step 1: Write validation tests**
+- [x] **Step 1: Write validation tests**
 
 Cover these cases in `validation_test.go`:
 
@@ -261,7 +261,7 @@ Use a fixed `now` value:
 now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
 ```
 
-- [ ] **Step 2: Add model types**
+- [x] **Step 2: Add model types**
 
 Define these types in `model.go`:
 
@@ -297,7 +297,7 @@ type ValidationResult struct {
 
 Use a small internal numeric wrapper if the package does not already have a shared decimal type. Keep DB conversion inside the store.
 
-- [ ] **Step 3: Add deterministic validation**
+- [x] **Step 3: Add deterministic validation**
 
 Validation must enforce:
 
@@ -316,7 +316,7 @@ affected_etfs required
 trade/order/runtime override payload keys reject
 ```
 
-- [ ] **Step 4: Run validation tests**
+- [x] **Step 4: Run validation tests**
 
 Run:
 
@@ -334,7 +334,7 @@ Expected: pass.
 - Create: `internal/modules/macroevents/mapping.go`
 - Create: `internal/modules/macroevents/mapping_test.go`
 
-- [ ] **Step 1: Write mapping tests**
+- [x] **Step 1: Write mapping tests**
 
 Cover:
 
@@ -346,7 +346,7 @@ empty ETF list is rejected
 symbols normalize to uppercase and dedupe
 ```
 
-- [ ] **Step 2: Implement mapping guard**
+- [x] **Step 2: Implement mapping guard**
 
 Use `internal/modules/instruments.LoadDefaultCatalog()` and `catalog.Evaluate(symbol, "paper")`.
 
@@ -377,7 +377,7 @@ XLE -> energy
 GLD -> safe_haven
 ```
 
-- [ ] **Step 3: Run mapping tests**
+- [x] **Step 3: Run mapping tests**
 
 Run:
 
@@ -396,7 +396,7 @@ Expected: pass.
 - Create: `internal/modules/macroevents/service.go`
 - Create: `internal/modules/macroevents/service_test.go`
 
-- [ ] **Step 1: Write service tests with a fake store**
+- [x] **Step 1: Write service tests with a fake store**
 
 Cover:
 
@@ -408,7 +408,7 @@ invalid unsupported event stores status rejected when configured to retain rejec
 no candidate/order/trade APIs are called
 ```
 
-- [ ] **Step 2: Implement service**
+- [x] **Step 2: Implement service**
 
 Service shape:
 
@@ -434,7 +434,7 @@ type Receipt struct {
 }
 ```
 
-- [ ] **Step 3: Implement Postgres store**
+- [x] **Step 3: Implement Postgres store**
 
 Store must:
 
@@ -445,7 +445,7 @@ return existing row on unique source/source_event_id
 never write candidate_trades, candidate_events, approvals, executions, or orders
 ```
 
-- [ ] **Step 4: Run service tests**
+- [x] **Step 4: Run service tests**
 
 Run:
 
@@ -455,7 +455,7 @@ go test ./internal/modules/macroevents -count=1
 
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add internal/modules/macroevents
@@ -469,7 +469,7 @@ git commit -m "feat: add macro event ingestion service"
 **Files:**
 - No new files.
 
-- [ ] **Step 1: Run focused backend tests**
+- [x] **Step 1: Run focused backend tests**
 
 ```powershell
 go test ./db/postgres/migrations ./internal/modules/macroevents -count=1
@@ -477,7 +477,7 @@ go test ./db/postgres/migrations ./internal/modules/macroevents -count=1
 
 Expected: pass.
 
-- [ ] **Step 2: Run broader backend tests**
+- [x] **Step 2: Run broader backend tests**
 
 ```powershell
 go test ./cmd/trader ./internal/modules/... ./libs/... -count=1
@@ -485,15 +485,17 @@ go test ./cmd/trader ./internal/modules/... ./libs/... -count=1
 
 Expected: pass.
 
-- [ ] **Step 3: Check no forbidden writes were added**
+- [x] **Step 3: Check no forbidden writes were added**
 
 ```powershell
 rg -n "candidate_trades|candidate_events|orders|execution|broker" internal/modules/macroevents cmd/trader
 ```
 
-Expected: no matches in `internal/modules/macroevents`; existing matches elsewhere are allowed if pre-existing.
+Original Phase 1 expectation: no matches in `internal/modules/macroevents`; existing matches elsewhere are allowed if pre-existing.
 
-- [ ] **Step 4: Commit verification docs if needed**
+2026-06-17 closure result: later phases intentionally added paper-only macro candidate persistence in `internal/modules/macroevents/store.go`, and validation tests intentionally include forbidden broker/order payload keys. The Phase 1 ingestion boundary is therefore validated by the narrower service contract and tests instead of this package-wide grep: `Service.Ingest` depends only on `eventStore`, stores accepted/quarantined/rejected macro events, maps ETFs only for accepted events, and has no broker/order/execution interface.
+
+- [x] **Step 4: Commit verification docs if needed**
 
 Only add a short note if there is a useful result to preserve:
 
@@ -513,14 +515,38 @@ git commit -m "docs: plan macro reaction engine phase 1"
 
 ## Acceptance Checklist
 
-- [ ] `macro_events` table exists.
-- [ ] `macro_event_etf_map` table exists.
-- [ ] Valid NFP/CPI/Fed events persist.
-- [ ] Invalid events reject or quarantine.
-- [ ] Duplicate `source/source_event_id` is idempotent.
-- [ ] ETF mapping uses the existing allowlist/catalog.
-- [ ] No candidate trade is created.
-- [ ] No order or broker execution path is added.
-- [ ] Focused tests pass.
-- [ ] Broader backend tests pass.
+- [x] `macro_events` table exists.
+- [x] `macro_event_etf_map` table exists.
+- [x] Valid NFP/CPI/Fed events persist.
+- [x] Invalid events reject or quarantine.
+- [x] Duplicate `source/source_event_id` is idempotent.
+- [x] ETF mapping uses the existing allowlist/catalog.
+- [x] No candidate trade is created.
+- [x] No order or broker execution path is added.
+- [x] Focused tests pass.
+- [x] Broader backend tests pass.
 
+## Completion Evidence
+
+Closed on 2026-06-17.
+
+Implementation evidence:
+
+- Schema and migration: `db/postgres/migrations/000031_macro_events.up.sql`, `db/postgres/migrations/000031_macro_events.down.sql`, `db/postgres/migrations/macro_events_schema_test.go`.
+- Domain validation: `internal/modules/macroevents/model.go`, `internal/modules/macroevents/validation.go`, `internal/modules/macroevents/validation_test.go`.
+- ETF allowlist mapping: `internal/modules/macroevents/mapping.go`, `internal/modules/macroevents/mapping_test.go`.
+- Ingestion store/service: `internal/modules/macroevents/store.go`, `internal/modules/macroevents/service.go`, `internal/modules/macroevents/service_test.go`.
+- Read-only API integration: `cmd/trader/macro_api.go`, `cmd/trader/macro_api_test.go`.
+- No trading boundary: macro ingestion tests use the narrow `eventStore` interface only, and `TestServiceIngestDoesNotExposeTradingHooks` prevents the ingestion service contract from growing broker/order hooks.
+
+Verification evidence:
+
+```powershell
+go test ./db/postgres/migrations ./internal/modules/macroevents -count=1
+go test ./cmd/trader ./internal/modules/... ./libs/... -count=1
+```
+
+Notes:
+
+- Later phases added chart reactions, scenarios, priced-in checks, evidence bundles, paper-only macro candidates, and read-only API/UI surfaces. Those later additions do not change the Phase 1 boundary: macro event ingestion does not create candidate trades, approvals, broker orders, or execution records.
+- Live trading remains outside this plan and must stay gated by the broker/runtime safety controls.
