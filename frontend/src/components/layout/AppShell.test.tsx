@@ -34,6 +34,7 @@ describe('AppShell', () => {
       'Guide',
       'AI Trading',
       'Manual Trading',
+      'Swing Trading',
       'Approvals',
       'Research',
       'Macro Events',

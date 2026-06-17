@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
+	"jax-trading-assistant/internal/modules/tradingmodes"
 )
 
 const (
@@ -203,6 +204,7 @@ func (p *worldMonitorOpportunityPromoter) promoteRow(ctx context.Context, row wo
 	}
 
 	candidateSvc := candidatesmod.NewService(candidatesmod.NewStore(p.pool))
+	horizonPolicy := tradingmodes.SwingHorizonPolicy(3, 10)
 	if !chart.Confirmed {
 		candidate, err := candidateSvc.CreateBlocked(ctx, candidatesmod.BlockRequest{
 			StrategyInstanceID: instanceID,
@@ -218,6 +220,9 @@ func (p *worldMonitorOpportunityPromoter) promoteRow(ctx context.Context, row wo
 			ReasonCode:         chart.ReasonCode,
 			Reason:             chart.Reason,
 			TTL:                worldMonitorCandidateTTL,
+			HorizonPolicy:      &horizonPolicy,
+			PaperOnly:          true,
+			ApprovalRequired:   true,
 		})
 		if err != nil {
 			return worldMonitorPromotedOpportunity{}, err
@@ -259,6 +264,9 @@ func (p *worldMonitorOpportunityPromoter) promoteRow(ctx context.Context, row wo
 		Reasoning:          &reasoning,
 		DataProvenance:     "world-monitor",
 		TTL:                worldMonitorCandidateTTL,
+		HorizonPolicy:      &horizonPolicy,
+		PaperOnly:          true,
+		ApprovalRequired:   true,
 	})
 	if err != nil {
 		return worldMonitorPromotedOpportunity{}, err

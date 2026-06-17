@@ -21,18 +21,19 @@ function ModeCard({ mode }: { mode: TradingMode }) {
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="text-base font-semibold text-white">{mode.name}</h3>
-          <p className="text-sm text-zinc-400 mt-0.5">{mode.description}</p>
+          <p className="text-sm text-zinc-400 mt-0.5">{mode.displayCopy ?? mode.description}</p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
+          {mode.horizonLabel && <BadgePill label={mode.horizonLabel} variant="green" />}
           <BadgePill label={mode.runtimeMode} variant="blue" />
           <BadgePill label={mode.executionPolicy} variant="yellow" />
         </div>
       </div>
 
-      {/* ETF Universe */}
+      {/* Universe */}
       {mode.universe && mode.universe.length > 0 && (
         <div>
-          <p className="text-xs text-zinc-500 uppercase tracking-wide mb-1.5">ETF Universe</p>
+          <p className="text-xs text-zinc-500 uppercase tracking-wide mb-1.5">Universe</p>
           <div className="flex flex-wrap gap-1.5">
             {mode.universe.map(sym => (
               <BadgePill key={sym} label={sym} variant="green" />
@@ -114,7 +115,7 @@ export function TradingModesPage() {
       <div>
         <h1 className="text-xl font-bold text-white">Trading Modes</h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Pre-configured trading modes defining strategy sets, risk defaults, and ETF universes.
+          Pre-configured trading modes defining strategy sets, risk defaults, horizons, and universes.
         </p>
       </div>
 

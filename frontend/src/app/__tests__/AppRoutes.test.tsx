@@ -140,6 +140,7 @@ describe('AppRoutes', () => {
 
     expect(childPaths).toContain('ai-trading');
     expect(childPaths).toContain('manual-trading');
+    expect(childPaths).toContain('swing-trading');
     expect(childPaths).toContain('notifications');
     expect(childPaths).toContain('macro/events');
     expect(childPaths).toContain('monitor/inbox');

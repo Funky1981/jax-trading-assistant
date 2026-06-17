@@ -125,7 +125,104 @@ func DefaultCatalog() Catalog {
 			RiskDefaults:    RiskDefaults{ApprovalRequired: true},
 			Strategies:      nil,
 		},
+		{
+			ID:              "etf_swing_research",
+			Name:            "ETF Swing Research",
+			Description:     "Research-only multi-day ETF setups with event evidence, daily candles, confounder checks, and thesis invalidators.",
+			AssetClass:      "ETF",
+			RuntimeMode:     "research",
+			ExecutionPolicy: "no_execution",
+			Universe:        etfUniverse,
+			RequiredData:    []string{"daily_candles", "news", "event_classification", "event_study", "confounder_scan"},
+			RiskDefaults: RiskDefaults{
+				MaxTradesPerDay:  0,
+				MaxOpenPositions: 0,
+				RiskPerTradePct:  0,
+				MinConfidence:    0.7,
+				FlattenBy:        "no_execution",
+				ApprovalRequired: true,
+			},
+			Strategies: swingStrategyRefs(),
+		},
+		{
+			ID:              "etf_swing_paper",
+			Name:            "ETF Swing Paper",
+			Description:     "Paper-only multi-day ETF candidates that require human approval and daily revalidation before any paper execution step.",
+			AssetClass:      "ETF",
+			RuntimeMode:     "paper",
+			ExecutionPolicy: "candidate_approval_only",
+			Universe:        etfUniverse,
+			RequiredData:    []string{"daily_candles", "quotes", "news", "event_classification", "event_study", "confounder_scan"},
+			RiskDefaults: RiskDefaults{
+				MaxTradesPerDay:  1,
+				MaxOpenPositions: 1,
+				RiskPerTradePct:  0.15,
+				MinConfidence:    0.7,
+				FlattenBy:        "daily_revalidation",
+				ApprovalRequired: true,
+			},
+			Strategies: swingStrategyRefs(),
+		},
 	}}
+}
+
+func swingStrategyRefs() []StrategyRef {
+	return []StrategyRef{
+		{
+			StrategyTypeID: "etf_swing_macro_rates_rotation_v1",
+			Name:           "Swing Macro Rates Rotation",
+			Description:    "Maps rates, inflation, and policy events into multi-day ETF rotation theses.",
+			DefaultConfig: map[string]any{
+				"symbols": []string{"TLT", "GLD", "SPY", "QQQ", "XLF"},
+				"horizonPolicy": map[string]any{
+					"horizon":              string(HorizonSwing),
+					"holdTargetDays":       3,
+					"maxHoldDays":          10,
+					"flattenByClose":       false,
+					"overnightRiskAllowed": true,
+					"weekendHoldAllowed":   false,
+					"requiresDailyReview":  true,
+					"revalidationSchedule": "daily_after_close",
+				},
+			},
+		},
+		{
+			StrategyTypeID: "etf_swing_sector_event_momentum_v1",
+			Name:           "Swing Sector Event Momentum",
+			Description:    "Researches sector events for multi-day momentum in liquid ETF proxies.",
+			DefaultConfig: map[string]any{
+				"symbols": []string{"QQQ", "XLK", "SMH", "SOXX", "XLE", "XLF", "IWM"},
+				"horizonPolicy": map[string]any{
+					"horizon":              string(HorizonSwing),
+					"holdTargetDays":       3,
+					"maxHoldDays":          10,
+					"flattenByClose":       false,
+					"overnightRiskAllowed": true,
+					"weekendHoldAllowed":   false,
+					"requiresDailyReview":  true,
+					"revalidationSchedule": "daily_after_close",
+				},
+			},
+		},
+		{
+			StrategyTypeID: "etf_swing_risk_on_off_reversal_v1",
+			Name:           "Swing Risk-On/Risk-Off Reversal",
+			Description:    "Evaluates broad risk regime shocks for multi-day ETF reversal theses.",
+			DefaultConfig: map[string]any{
+				"symbols": []string{"SPY", "QQQ", "IWM", "TLT", "GLD"},
+				"horizonPolicy": map[string]any{
+					"horizon":              string(HorizonSwing),
+					"holdTargetDays":       3,
+					"maxHoldDays":          10,
+					"flattenByClose":       false,
+					"overnightRiskAllowed": true,
+					"weekendHoldAllowed":   false,
+					"requiresDailyReview":  true,
+					"revalidationSchedule": "daily_after_close",
+				},
+			},
+		},
+	}
 }
 
 // Get returns the mode with the given ID, or false if not found.

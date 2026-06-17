@@ -1,11 +1,13 @@
 package candidates
 
 import (
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"testing"
 
 	"jax-trading-assistant/internal/modules/instruments"
+	"jax-trading-assistant/internal/modules/tradingmodes"
 )
 
 // TestStatusConstants verifies the lifecycle status strings match the DB enum.
@@ -44,9 +46,10 @@ func TestErrDuplicateCandidate_IsSentinel(t *testing.T) {
 // TestProposalRequest_Fields sanity-checks that the ProposalRequest struct
 // has the expected shape (fields used by the watcher).
 func TestProposalRequest_Fields(t *testing.T) {
-	// Verify the struct can be fully populated — will fail to compile if fields are removed.
+	// Verify the struct can be fully populated; this fails to compile if fields are removed.
 	conf := 0.8
 	reasoning := "test"
+	horizon := tradingmodes.SwingHorizonPolicy(3, 10)
 	_ = ProposalRequest{
 		StrategyInstanceID: [16]byte{},
 		SignalID:           "00000000-0000-0000-0000-000000000001",
@@ -57,6 +60,41 @@ func TestProposalRequest_Fields(t *testing.T) {
 		Confidence:         &conf,
 		Reasoning:          &reasoning,
 		DataProvenance:     "unit-test",
+		HorizonPolicy:      &horizon,
+		PaperOnly:          true,
+		ApprovalRequired:   true,
+	}
+}
+
+func TestMetadataWithSwingPolicyMarksPaperOnlyApprovalRequired(t *testing.T) {
+	horizon := tradingmodes.SwingHorizonPolicy(3, 10)
+
+	raw := metadataWithSwingPolicy(nil, &horizon, true, true)
+	if raw == nil {
+		t.Fatal("expected metadata")
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(*raw, &payload); err != nil {
+		t.Fatalf("unmarshal metadata: %v", err)
+	}
+	horizonPayload, ok := payload["horizonPolicy"].(map[string]any)
+	if !ok {
+		t.Fatalf("missing horizonPolicy metadata: %#v", payload)
+	}
+	if horizonPayload["horizon"] != "swing" {
+		t.Fatalf("horizon = %#v, want swing", horizonPayload["horizon"])
+	}
+	if maxHoldDays, ok := horizonPayload["maxHoldDays"].(float64); !ok || maxHoldDays > 10 {
+		t.Fatalf("maxHoldDays = %#v, want <= 10", horizonPayload["maxHoldDays"])
+	}
+	if horizonPayload["requiresDailyReview"] != true {
+		t.Fatalf("requiresDailyReview = %#v, want true", horizonPayload["requiresDailyReview"])
+	}
+	if payload["paperOnly"] != true {
+		t.Fatalf("paperOnly = %#v, want true", payload["paperOnly"])
+	}
+	if payload["approvalRequired"] != true {
+		t.Fatalf("approvalRequired = %#v, want true", payload["approvalRequired"])
 	}
 }
 

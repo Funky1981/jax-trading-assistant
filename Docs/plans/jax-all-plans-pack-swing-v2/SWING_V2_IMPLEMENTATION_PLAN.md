@@ -24,7 +24,7 @@
 - Modify: `internal/modules/tradingmodes/catalog.go`
 - Modify: `internal/modules/tradingmodes/catalog_test.go`
 
-- [ ] **Step 1: Write failing catalog tests**
+- [x] **Step 1: Write failing catalog tests**
 
 Add tests requiring two new modes:
 
@@ -64,7 +64,7 @@ func TestDefaultCatalogIncludesSwingPaperMode(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run failing tests**
+- [x] **Step 2: Run failing tests**
 
 Run:
 
@@ -74,7 +74,7 @@ go test ./internal/modules/tradingmodes
 
 Expected: FAIL because the two modes do not exist.
 
-- [ ] **Step 3: Add catalog modes**
+- [x] **Step 3: Add catalog modes**
 
 Add:
 
@@ -87,7 +87,7 @@ Use existing ETF universe symbols and strategy refs:
 - `etf_swing_sector_event_momentum_v1`
 - `etf_swing_risk_on_off_reversal_v1`
 
-- [ ] **Step 4: Verify tests pass**
+- [x] **Step 4: Verify tests pass**
 
 Run:
 
@@ -104,7 +104,7 @@ Expected: PASS.
 - Create: `internal/modules/tradingmodes/horizon.go`
 - Create: `internal/modules/tradingmodes/horizon_test.go`
 
-- [ ] **Step 1: Write horizon validation tests**
+- [x] **Step 1: Write horizon validation tests**
 
 Required behavior:
 
@@ -113,7 +113,7 @@ Required behavior:
 - Swing rejects `MaxHoldDays > 10`.
 - Swing defaults to no weekend hold.
 
-- [ ] **Step 2: Implement horizon policy**
+- [x] **Step 2: Implement horizon policy**
 
 Create:
 
@@ -139,7 +139,7 @@ type CandidateHorizonPolicy struct {
 }
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -158,7 +158,7 @@ Expected: PASS.
 - Modify World Monitor promotion code in `cmd/trader/world_monitor_opportunity_promoter.go`
 - Test: candidate service and promoter tests
 
-- [ ] **Step 1: Add migration test or migration smoke check**
+- [x] **Step 1: Add migration test or migration smoke check**
 
 Acceptance:
 
@@ -166,7 +166,7 @@ Acceptance:
 - Existing candidates remain readable.
 - Swing candidates can be queried separately from intraday candidates.
 
-- [ ] **Step 2: Write failing service tests**
+- [x] **Step 2: Write failing service tests**
 
 Assert proposed swing candidate metadata contains:
 
@@ -176,11 +176,11 @@ Assert proposed swing candidate metadata contains:
 - `paperOnly: true`
 - `approvalRequired: true`
 
-- [ ] **Step 3: Implement minimal persistence**
+- [x] **Step 3: Implement minimal persistence**
 
 Prefer storing horizon policy in existing candidate metadata first unless query performance requires a new column.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -196,7 +196,7 @@ go test ./internal/modules/candidates ./cmd/trader -run "TestWorldMonitorOpportu
 - Modify: `cmd/trader/world_monitor_opportunity_promoter.go`
 - Tests: `internal/modules/swingresearch/*_test.go`
 
-- [ ] **Step 1: Write tests for swing thesis gating**
+- [x] **Step 1: Write tests for swing thesis gating**
 
 Required outcomes:
 
@@ -205,7 +205,7 @@ Required outcomes:
 - Confounder present blocks or downgrades to watch.
 - Valid evidence returns a swing thesis, not an order.
 
-- [ ] **Step 2: Implement deterministic engine**
+- [x] **Step 2: Implement deterministic engine**
 
 The engine should return:
 
@@ -218,7 +218,7 @@ The engine should return:
 - risk notes
 - blocker reasons
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -235,7 +235,7 @@ go test ./internal/modules/swingresearch
 - Modify relevant trading/research page navigation
 - Add Vitest coverage
 
-- [ ] **Step 1: Add frontend type coverage**
+- [x] **Step 1: Add frontend type coverage**
 
 Ensure trading modes expose:
 
@@ -247,7 +247,7 @@ Ensure trading modes expose:
 - risk defaults
 - horizon label when available
 
-- [ ] **Step 2: Add Swing option**
+- [x] **Step 2: Add Swing option**
 
 Add a visible Swing Trading option separate from Manual Trading and existing ETF news paper flow. Copy should say:
 
@@ -255,7 +255,7 @@ Add a visible Swing Trading option separate from Manual Trading and existing ETF
 Swing Trading researches multi-day ETF setups. It creates approval-gated paper candidates only after evidence, chart history, and daily revalidation checks pass.
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -272,7 +272,7 @@ npm run typecheck
 - Modify candidate metadata/status updates
 - Add tests
 
-- [ ] **Step 1: Write failing scheduler tests**
+- [x] **Step 1: Write failing scheduler tests**
 
 Required outcomes:
 
@@ -280,11 +280,11 @@ Required outcomes:
 - Failed invalidator marks candidate blocked or review-required.
 - No broker instruction is created by revalidation.
 
-- [ ] **Step 2: Implement scheduler**
+- [x] **Step 2: Implement scheduler**
 
 Run only in paper runtime. Emit audit events for each decision.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -299,13 +299,13 @@ go test ./cmd/trader -run "Test.*Swing|Test.*Revalidation"
 - Add run report under `Docs/runs/`
 - Update Swing plan checklist
 
-- [ ] **Step 1: Run backend checks**
+- [x] **Step 1: Run backend checks**
 
 ```powershell
 go test ./internal/modules/tradingmodes ./internal/modules/candidates ./cmd/trader
 ```
 
-- [ ] **Step 2: Run frontend checks**
+- [x] **Step 2: Run frontend checks**
 
 ```powershell
 npm test -- --run src
@@ -313,6 +313,8 @@ npm run typecheck
 ```
 
 - [ ] **Step 3: Manual smoke test**
+
+Skipped in-app browser smoke on 2026-06-17 because the Codex Browser backend reported `iab` unavailable. Route/rendering behavior was verified by Vitest and `npm run build`; see `Docs/runs/swing_v2_20260617.md`.
 
 Verify:
 
@@ -331,4 +333,3 @@ Verify:
 - No manual ETF shortcut is added.
 - Existing intraday workflow remains intact.
 - Tests pass and a run report is recorded.
-

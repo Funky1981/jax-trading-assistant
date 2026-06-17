@@ -71,6 +71,7 @@ export const routes = [
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'ai-trading', element: <AiTradingPage /> },
       { path: 'manual-trading', element: <TradingPage /> },
+      { path: 'swing-trading', element: <TradingModesPage /> },
       { path: 'notifications', element: <NotificationCentrePage /> },
       { path: 'macro/events', element: <MacroEventsPage /> },
       { path: 'monitor/inbox', element: <MonitorInboxPage /> },

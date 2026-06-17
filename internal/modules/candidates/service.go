@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"jax-trading-assistant/internal/modules/instruments"
+	"jax-trading-assistant/internal/modules/tradingmodes"
 	"jax-trading-assistant/internal/modules/tradingmodule"
 )
 
@@ -84,6 +85,7 @@ func (s *Service) Propose(ctx context.Context, req ProposalRequest) (*Candidate,
 	if result, gated := s.evaluateETF(req.Symbol); gated {
 		c.Metadata = metadataWithETFResult(c.Metadata, result)
 	}
+	c.Metadata = metadataWithSwingPolicy(c.Metadata, req.HorizonPolicy, req.PaperOnly, req.ApprovalRequired)
 	return s.store.Create(ctx, c)
 }
 
@@ -167,6 +169,9 @@ type ProposalRequest struct {
 	Reasoning          *string
 	DataProvenance     string
 	TTL                time.Duration
+	HorizonPolicy      *tradingmodes.CandidateHorizonPolicy
+	PaperOnly          bool
+	ApprovalRequired   bool
 }
 
 type BlockRequest struct {
@@ -185,6 +190,9 @@ type BlockRequest struct {
 	ReasonCode         string
 	Reason             string
 	TTL                time.Duration
+	HorizonPolicy      *tradingmodes.CandidateHorizonPolicy
+	PaperOnly          bool
+	ApprovalRequired   bool
 }
 
 func (s *Service) CreateBlocked(ctx context.Context, req BlockRequest) (*Candidate, error) {
@@ -224,6 +232,7 @@ func (s *Service) CreateBlocked(ctx context.Context, req BlockRequest) (*Candida
 	if result, gated := s.evaluateETF(req.Symbol); gated {
 		candidate.Metadata = metadataWithETFResult(candidate.Metadata, result)
 	}
+	candidate.Metadata = metadataWithSwingPolicy(candidate.Metadata, req.HorizonPolicy, req.PaperOnly, req.ApprovalRequired)
 	return s.store.CreateBlocked(ctx, candidate)
 }
 
@@ -286,6 +295,28 @@ func metadataWithETFResult(raw *json.RawMessage, result instruments.Evaluation) 
 		"catalogVersion": result.CatalogVersion,
 		"catalogHash":    result.CatalogHash,
 		"metadata":       result.Metadata,
+	}
+	data, _ := json.Marshal(metadata)
+	msg := json.RawMessage(data)
+	return &msg
+}
+
+func metadataWithSwingPolicy(raw *json.RawMessage, policy *tradingmodes.CandidateHorizonPolicy, paperOnly, approvalRequired bool) *json.RawMessage {
+	if policy == nil && !paperOnly && !approvalRequired {
+		return raw
+	}
+	metadata := map[string]any{}
+	if raw != nil && len(*raw) > 0 {
+		_ = json.Unmarshal(*raw, &metadata)
+	}
+	if policy != nil {
+		metadata["horizonPolicy"] = policy
+	}
+	if paperOnly {
+		metadata["paperOnly"] = true
+	}
+	if approvalRequired {
+		metadata["approvalRequired"] = true
 	}
 	data, _ := json.Marshal(metadata)
 	msg := json.RawMessage(data)

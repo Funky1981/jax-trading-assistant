@@ -40,6 +40,7 @@ const primaryNavItems = [
   { label: 'Guide', path: '/guide', icon: BookOpen },
   { label: 'AI Trading', path: '/ai-trading', icon: Bot },
   { label: 'Manual Trading', path: '/manual-trading', icon: ClipboardPenLine },
+  { label: 'Swing Trading', path: '/swing-trading', icon: TrendingUp },
   { label: 'Approvals', path: '/etf/approvals', icon: CheckSquare },
   { label: 'Research', path: '/research', icon: FlaskConical },
   { label: 'Macro Events', path: '/macro/events', icon: Globe },

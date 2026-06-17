@@ -66,6 +66,40 @@ func TestDefaultCatalogIncludesResearchOnlyMode(t *testing.T) {
 	}
 }
 
+func TestDefaultCatalogIncludesSwingResearchMode(t *testing.T) {
+	catalog := DefaultCatalog()
+	mode, ok := catalog.Get("etf_swing_research")
+	if !ok {
+		t.Fatalf("expected etf_swing_research mode")
+	}
+	if mode.RuntimeMode != "research" {
+		t.Fatalf("runtime mode = %q, want research", mode.RuntimeMode)
+	}
+	if mode.ExecutionPolicy != "no_execution" {
+		t.Fatalf("execution policy = %q, want no_execution", mode.ExecutionPolicy)
+	}
+	if !mode.RiskDefaults.ApprovalRequired {
+		t.Fatal("swing research must remain approval-gated before promotion")
+	}
+}
+
+func TestDefaultCatalogIncludesSwingPaperMode(t *testing.T) {
+	catalog := DefaultCatalog()
+	mode, ok := catalog.Get("etf_swing_paper")
+	if !ok {
+		t.Fatalf("expected etf_swing_paper mode")
+	}
+	if mode.RuntimeMode != "paper" {
+		t.Fatalf("runtime mode = %q, want paper", mode.RuntimeMode)
+	}
+	if mode.ExecutionPolicy != "candidate_approval_only" {
+		t.Fatalf("execution policy = %q, want candidate_approval_only", mode.ExecutionPolicy)
+	}
+	if mode.RiskDefaults.FlattenBy != "daily_revalidation" {
+		t.Fatalf("flatten policy = %q, want daily_revalidation", mode.RiskDefaults.FlattenBy)
+	}
+}
+
 func TestCatalogGetUnknownMode(t *testing.T) {
 	catalog := DefaultCatalog()
 	_, ok := catalog.Get("does_not_exist")

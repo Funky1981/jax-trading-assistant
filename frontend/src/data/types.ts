@@ -417,6 +417,8 @@ export interface TradingMode {
   id: string;
   name: string;
   description: string;
+  displayCopy?: string;
+  horizonLabel?: string;
   assetClass: string;
   runtimeMode: string;
   executionPolicy: string;

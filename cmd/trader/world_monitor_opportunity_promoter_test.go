@@ -118,6 +118,7 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	if !strings.Contains(string(metadata), `"sourceURLs"`) || !strings.Contains(string(metadata), `"shares": 10`) || !strings.Contains(string(metadata), trigger.SourceURLs[0]) {
 		t.Fatalf("metadata should include calculated 10-share paper size and monitor URL, got %s", string(metadata))
 	}
+	assertSwingPaperMetadata(t, metadata)
 
 	queue, err := approvalsmod.NewService(pool).GetQueue(ctx, 25)
 	if err != nil {
@@ -343,4 +344,31 @@ func containsJSONKey(raw []byte, key string) bool {
 	}
 	_, ok := payload[key]
 	return ok
+}
+
+func assertSwingPaperMetadata(t *testing.T, raw []byte) {
+	t.Helper()
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatalf("metadata is invalid JSON: %v", err)
+	}
+	horizon, ok := payload["horizonPolicy"].(map[string]any)
+	if !ok {
+		t.Fatalf("metadata missing horizonPolicy: %s", string(raw))
+	}
+	if horizon["horizon"] != "swing" {
+		t.Fatalf("horizon = %#v, want swing", horizon["horizon"])
+	}
+	if maxHold, ok := horizon["maxHoldDays"].(float64); !ok || maxHold > 10 {
+		t.Fatalf("maxHoldDays = %#v, want <= 10", horizon["maxHoldDays"])
+	}
+	if horizon["requiresDailyReview"] != true {
+		t.Fatalf("requiresDailyReview = %#v, want true", horizon["requiresDailyReview"])
+	}
+	if payload["paperOnly"] != true {
+		t.Fatalf("paperOnly = %#v, want true", payload["paperOnly"])
+	}
+	if payload["approvalRequired"] != true {
+		t.Fatalf("approvalRequired = %#v, want true", payload["approvalRequired"])
+	}
 }
