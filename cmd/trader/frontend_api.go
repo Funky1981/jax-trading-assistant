@@ -196,6 +196,50 @@ func systemMarketDataStatusHandler(mt *marketTools) http.HandlerFunc {
 	}
 }
 
+func systemDiagnosticsHandler(pool *pgxpool.Pool, mt *marketTools) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		reqCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		monitorStatus, monitorErr := newWorldMonitorResearchStatusService(pool).Status(reqCtx)
+		marketData := map[string]any{
+			"connected":      false,
+			"marketDataMode": "unknown",
+			"paperTrading":   true,
+		}
+		if mt != nil {
+			if bridgeHealth, err := mt.getIBBridgeHealth(reqCtx); err == nil && bridgeHealth != nil {
+				mode := strings.TrimSpace(bridgeHealth.MarketDataMode)
+				if mode == "" {
+					mode = "unknown"
+				}
+				marketData = map[string]any{
+					"connected":      bridgeHealth.Connected,
+					"marketDataMode": mode,
+					"paperTrading":   bridgeHealth.PaperTrading,
+				}
+			} else if err != nil {
+				marketData["error"] = err.Error()
+			}
+		}
+
+		response := map[string]any{
+			"worldMonitor": monitorStatus,
+			"marketData":   marketData,
+			"checkedAt":    time.Now().UTC(),
+		}
+		if monitorErr != nil {
+			response["worldMonitorError"] = monitorErr.Error()
+		}
+		jsonOK(w, response)
+	}
+}
+
 func etfInstrumentsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -282,6 +326,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	mux.HandleFunc("/api/v1/system/runtime", protect(systemRuntimeHandler()))
 	mux.HandleFunc("/api/v1/system/providers", protect(systemProvidersHandler()))
 	mux.HandleFunc("/api/v1/system/market-data-status", protect(systemMarketDataStatusHandler(marketAPI)))
+	mux.HandleFunc("/api/v1/system/diagnostics", protect(systemDiagnosticsHandler(pool, marketAPI)))
 	mux.HandleFunc("/api/v1/instruments/etfs", protect(etfInstrumentsHandler()))
 	mux.HandleFunc("/api/v1/ai/overview", protect(aiOverviewHandler(pool)))
 	mux.HandleFunc("/api/v1/ai/scanner", protect(aiScannerHandler(pool)))
@@ -1367,7 +1412,7 @@ func marketCandlesHandler(mt *marketTools) http.HandlerFunc {
 					Limit:     min(limit, 90),
 				})
 				if fallbackErr == nil && len(fallbackOut.Candles) > 0 {
-					writeCandlesResponse(w, symbol, timeframe, fallbackOut, true, "intraday candles unavailable; showing daily fallback", bridgeHealth)
+					writeCandlesResponse(w, symbol, timeframe, fallbackOut, true, "intraday candles unavailable; showing daily fallback", bridgeHealth, mt.providerNames())
 					return
 				}
 			}
@@ -1375,11 +1420,11 @@ func marketCandlesHandler(mt *marketTools) http.HandlerFunc {
 			return
 		}
 
-		writeCandlesResponse(w, symbol, timeframe, out, false, "", bridgeHealth)
+		writeCandlesResponse(w, symbol, timeframe, out, false, "", bridgeHealth, mt.providerNames())
 	}
 }
 
-func writeCandlesResponse(w http.ResponseWriter, _ string, requestedTimeframe string, out utcp.GetCandlesOutput, degraded bool, message string, bridgeHealth *ibBridgeHealthResponse) {
+func writeCandlesResponse(w http.ResponseWriter, _ string, requestedTimeframe string, out utcp.GetCandlesOutput, degraded bool, message string, bridgeHealth *ibBridgeHealthResponse, providerNames []string) {
 	type candlePoint struct {
 		Timestamp string  `json:"timestamp"`
 		Open      float64 `json:"open"`
@@ -1418,8 +1463,28 @@ func writeCandlesResponse(w http.ResponseWriter, _ string, requestedTimeframe st
 		"message":            message,
 		"marketDataMode":     marketDataMode,
 		"paperTrading":       paperTrading,
+		"source":             marketDataSourceLabel(providerNames),
+		"providerChain":      providerNames,
+		"checkedAt":          time.Now().UTC(),
 		"candles":            candles,
 	})
+}
+
+func (m *marketTools) providerNames() []string {
+	if m == nil || m.mdClient == nil {
+		return nil
+	}
+	return m.mdClient.ProviderNames()
+}
+
+func marketDataSourceLabel(providerNames []string) string {
+	if len(providerNames) == 0 {
+		return "unavailable"
+	}
+	if len(providerNames) == 1 {
+		return providerNames[0]
+	}
+	return "provider-chain: " + strings.Join(providerNames, ",")
 }
 
 func symbolProcessHandler(orchestratorURL string, _ *pgxpool.Pool) http.HandlerFunc {

@@ -86,7 +86,7 @@ describe('OrderTicketPanel', () => {
     );
   });
 
-  it('blocks manual ETF entries from the order ticket', async () => {
+  it('blocks approval-first ETF entries without claiming an approval already exists', async () => {
     const user = userEvent.setup();
     etfInstruments = [
       {
@@ -106,8 +106,9 @@ describe('OrderTicketPanel', () => {
     await user.type(screen.getByLabelText('Symbol'), 'SPY');
     await user.type(screen.getByLabelText('Quantity'), '10');
 
-    expect(screen.getByText(/Approval required for this ETF/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open approval flow' })).toHaveAttribute('href', '/etf/approvals');
+    expect(screen.getByText(/Approval-first ETF workflow/i)).toBeInTheDocument();
+    expect(screen.getByText(/No approval item has been created from this manual ticket/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Review approval queue' })).toHaveAttribute('href', '/etf/approvals');
     expect(screen.getByRole('button', { name: 'Submit BUY Order' })).toBeDisabled();
     expect(mutate).not.toHaveBeenCalled();
   });
@@ -132,7 +133,7 @@ describe('OrderTicketPanel', () => {
     await user.type(screen.getByLabelText('Symbol'), 'IWM');
     await user.type(screen.getByLabelText('Quantity'), '5');
 
-    expect(screen.queryByText(/Approval required for this ETF/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Approval-first ETF workflow/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Manual entry is blocked for this ETF/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Submit BUY Order' })).toBeEnabled();
   });

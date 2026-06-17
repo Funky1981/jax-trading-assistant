@@ -29,6 +29,7 @@ func NewAlpacaProvider(config ProviderConfig) (*AlpacaProvider, error) {
 		APIKey:    config.APIKey,
 		APISecret: config.APISecret,
 		BaseURL:   baseURL,
+		Feed:      marketdata.Feed(config.Feed),
 	})
 
 	// Create circuit breaker for this provider

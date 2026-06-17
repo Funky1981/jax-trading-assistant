@@ -131,6 +131,25 @@ if (-not $needsBuild) {
         Write-Host "  All images cached. Skipping build (set JAX_BUILD=true to force rebuild)." -ForegroundColor Gray
     }
 }
+if (-not $needsBuild) {
+    try {
+        $imageCreatedRaw = docker image inspect "jax-trading-assistant-jax-trader:latest" --format "{{.Created}}" 2>$null
+        if ($imageCreatedRaw) {
+            $imageCreated = [DateTime]::Parse($imageCreatedRaw).ToUniversalTime()
+            $sourceRoots = @("cmd/trader", "cmd/research", "internal", "libs", "tools", "config", "go.mod", "go.sum", "go.work", "docker-compose.yml")
+            $newestSource = Get-ChildItem -Path $sourceRoots -Recurse -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -notmatch "\\(node_modules|\.git|\.runtime)\\" } |
+                Sort-Object LastWriteTimeUtc -Descending |
+                Select-Object -First 1
+            if ($newestSource -and $newestSource.LastWriteTimeUtc -gt $imageCreated) {
+                Write-Host "  Source changed after cached service image ($($newestSource.FullName)); rebuilding..." -ForegroundColor Yellow
+                $needsBuild = $true
+            }
+        }
+    } catch {
+        Write-Host "  Could not compare image timestamp to source; keeping cached images." -ForegroundColor Yellow
+    }
+}
 if ($needsBuild) {
     Write-Host "  Building service images..." -ForegroundColor Gray
     docker compose build 2>$null

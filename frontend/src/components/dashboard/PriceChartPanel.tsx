@@ -48,6 +48,8 @@ interface ChartCandlesResponse {
   message?: string;
   marketDataMode?: string;
   paperTrading?: boolean;
+  source?: string;
+  checkedAt?: string;
   candles?: RawCandle[];
 }
 
@@ -59,6 +61,16 @@ interface ChartCandlesResult {
   message: string;
   marketDataMode: string;
   paperTrading: boolean;
+  source: string;
+  checkedAt: string;
+  errorMessage?: string;
+}
+
+function formatCheckedAt(value?: string): string {
+  if (!value) return 'unknown';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
 }
 
 async function fetchCandles(symbol: string, timeframe: string): Promise<ChartCandlesResult> {
@@ -81,9 +93,8 @@ async function fetchCandles(symbol: string, timeframe: string): Promise<ChartCan
     })
     .filter((value): value is CandlestickData => value !== null);
 
-  if (mapped.length === 0) {
-    throw new Error('Chart data unavailable (no valid candles)');
-  }
+  const source = payload.source ?? 'market API';
+  const checkedAt = payload.checkedAt ?? new Date().toISOString();
 
   return {
     candles: mapped,
@@ -93,6 +104,12 @@ async function fetchCandles(symbol: string, timeframe: string): Promise<ChartCan
     message: payload.message ?? '',
     marketDataMode: payload.marketDataMode ?? 'unknown',
     paperTrading: payload.paperTrading !== false,
+    source,
+    checkedAt,
+    errorMessage:
+      mapped.length < 2
+        ? `No usable candles returned for ${symbol}. At least 2 candles are required to render a trustworthy chart.`
+        : undefined,
   };
 }
 
@@ -119,6 +136,10 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
   const degradedMessage = data?.message ?? '';
   const marketDataMode = data?.marketDataMode ?? 'unknown';
   const paperTrading = data?.paperTrading !== false;
+  const source = data?.source ?? 'market API';
+  const checkedAt = data?.checkedAt;
+  const chartErrorMessage = data?.errorMessage;
+  const chartUnavailable = Boolean(chartErrorMessage) || isError;
   const marketDataLabel = getMarketDataLabel(marketDataMode);
   const marketDataTone = getMarketDataTone(marketDataMode);
   const pilotChartWarning = pilotStatus && !pilotStatus.brokerConnected ? (
@@ -138,6 +159,7 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
   const statusSummary = useMemo(() => {
     if (isLoading) return <span className="text-xs text-muted-foreground">Loading live candles...</span>;
     if (isError && fallbackQuote) return <span className="text-xs text-warning">Live candles unavailable - delayed quote</span>;
+    if (chartErrorMessage) return <span className="text-xs text-destructive">{chartErrorMessage}</span>;
     if (isError) return <span className="text-xs text-destructive">Chart feed unavailable</span>;
     if (isDegraded) {
       return (
@@ -163,6 +185,7 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
     chartTimeframe,
     currentPrice,
     fallbackQuote,
+    chartErrorMessage,
     isDegraded,
     isError,
     isLoading,
@@ -173,7 +196,7 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
   ]);
 
   useEffect(() => {
-    if (!chartContainerRef.current || !isOpen || isError || candles.length === 0) return;
+    if (!chartContainerRef.current || !isOpen || chartUnavailable || candles.length === 0) return;
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
@@ -228,7 +251,7 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
       chartRef.current = null;
       seriesRef.current = null;
     };
-  }, [candles, isError, isOpen]);
+  }, [candles, chartUnavailable, isOpen]);
 
   useEffect(() => {
     if (seriesRef.current && isOpen && candles.length > 0) {
@@ -304,15 +327,27 @@ export function PriceChartPanel({ isOpen, onToggle }: PriceChartPanelProps) {
           </div>
         </div>
 
+        <div className="flex flex-wrap gap-3 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          <span>Source: {source}</span>
+          <span>Last checked: {formatCheckedAt(checkedAt)}</span>
+          <span>Candles: {candles.length}</span>
+        </div>
+
         {isDegraded ? (
           <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             {degradedMessage || `${requestedTimeframe} candles are unavailable. Showing ${chartTimeframe} instead.`}
           </div>
         ) : null}
 
-        {isError ? (
+        {chartUnavailable ? (
           <div className="h-[300px] flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border text-sm text-muted-foreground">
-            {fallbackQuote ? (
+            {chartErrorMessage ? (
+              <>
+                <div className="text-xs uppercase tracking-wide text-destructive">Chart unavailable</div>
+                <div className="max-w-md text-center">{chartErrorMessage}</div>
+                <div className="text-xs">Source: {source} - Last checked: {formatCheckedAt(checkedAt)}</div>
+              </>
+            ) : fallbackQuote ? (
               <>
                 <div className="text-xs uppercase tracking-wide text-warning">Delayed Quote</div>
                 <div className="font-mono text-lg text-foreground">{formatCurrency(fallbackQuote.price)}</div>

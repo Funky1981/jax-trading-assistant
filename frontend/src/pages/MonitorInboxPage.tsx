@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { aiService, type WorldMonitorInboxItem } from '@/data/ai-service';
+import { HttpError } from '@/data/http-client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,6 +59,38 @@ function rawPayloadText(item?: WorldMonitorInboxItem): string {
   return JSON.stringify(item.rawPayload ?? {}, null, 2);
 }
 
+function errorDetail(error: unknown): { title: string; detail: string; action: string } {
+  if (error instanceof HttpError) {
+    const body = typeof error.body === 'string' ? error.body : JSON.stringify(error.body);
+    if (error.status === 401 || error.status === 403) {
+      return {
+        title: 'Sign in to view Monitor payloads.',
+        detail: body || error.message,
+        action: 'Your session is missing the entitlement token required by the API.',
+      };
+    }
+    if (error.status === 404) {
+      return {
+        title: 'Monitor inbox API route was not found.',
+        detail: body || error.message,
+        action: 'Rebuild and restart jax-trader so the frontend API includes the World Monitor routes.',
+      };
+    }
+    if (error.status >= 500) {
+      return {
+        title: 'Monitor inbox query failed.',
+        detail: body || error.message,
+        action: 'Check database migrations and jax-trader logs with the request timestamp.',
+      };
+    }
+  }
+  return {
+    title: 'Monitor inbox could not be loaded.',
+    detail: error instanceof Error ? error.message : 'Unexpected frontend error',
+    action: 'Check API health, database migrations, and the World Monitor ingest job.',
+  };
+}
+
 function SummaryTile({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md border border-border bg-card/60 p-3">
@@ -100,6 +133,7 @@ export function MonitorInboxPage() {
     () => items.find((item) => item.id === selectedId) ?? items[0],
     [items, selectedId]
   );
+  const loadError = inboxQuery.isError ? errorDetail(inboxQuery.error) : null;
 
   useEffect(() => {
     if (!selectedId && items[0]?.id) {
@@ -162,10 +196,12 @@ export function MonitorInboxPage() {
           </CardHeader>
           <CardContent>
             {inboxQuery.isPending && <p className="text-sm text-muted-foreground">Loading Monitor inbox...</p>}
-            {inboxQuery.isError && (
-              <p className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-                Monitor inbox could not be loaded. Check the API service and database migrations.
-              </p>
+            {loadError && (
+              <div className="space-y-1 rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+                <p className="font-semibold">{loadError.title}</p>
+                <p>{loadError.action}</p>
+                <p className="text-xs text-destructive/80">Diagnostic: {loadError.detail}</p>
+              </div>
             )}
             {!inboxQuery.isPending && !inboxQuery.isError && items.length === 0 && (
               <p className="rounded-md border border-border p-6 text-sm text-muted-foreground">

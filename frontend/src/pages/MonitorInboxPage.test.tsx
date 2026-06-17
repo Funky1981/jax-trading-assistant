@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MonitorInboxPage } from './MonitorInboxPage';
 import { aiService } from '@/data/ai-service';
+import { HttpError } from '@/data/http-client';
 import { emitAnalyticsEvent } from '@/lib/analytics';
 
 vi.mock('@/data/ai-service', () => ({
@@ -123,5 +124,28 @@ describe('MonitorInboxPage', () => {
 
     expect(aiService.getWorldMonitorInbox).toHaveBeenLastCalledWith({ status: 'rejected', limit: 100 });
     expect(await screen.findByText('source_urls are required')).toBeInTheDocument();
+  });
+
+  it('distinguishes a stale or missing Monitor API route from an empty inbox', async () => {
+    vi.mocked(aiService.getWorldMonitorInbox).mockRejectedValue(
+      new HttpError('Request failed: 404', 404, '404 page not found')
+    );
+
+    renderPage();
+
+    expect(await screen.findByText(/Monitor inbox API route was not found/i)).toBeInTheDocument();
+    expect(screen.getByText(/rebuild and restart jax-trader/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No Monitor payloads match this filter yet/i)).not.toBeInTheDocument();
+  });
+
+  it('shows an entitlement message when the Monitor inbox is protected by auth', async () => {
+    vi.mocked(aiService.getWorldMonitorInbox).mockRejectedValue(
+      new HttpError('Request failed: 401', 401, 'missing authorization token')
+    );
+
+    renderPage();
+
+    expect(await screen.findByText(/Sign in to view Monitor payloads/i)).toBeInTheDocument();
+    expect(screen.getByText(/missing authorization token/i)).toBeInTheDocument();
   });
 });

@@ -46,6 +46,20 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 		ibBridgeURL: strings.TrimSpace(ibBridgeURL),
 	}
 
+	providers := marketDataProviderConfigs(ibBridgeURL)
+	if len(providers) > 0 {
+		cfg := &marketdata.Config{Providers: providers}
+		mdClient, err := marketdata.NewClient(cfg)
+		if err == nil {
+			mt.mdClient = mdClient
+		}
+	}
+
+	mt.events = newEventAggregator(mt.httpClient, pool)
+	return mt
+}
+
+func marketDataProviderConfigs(ibBridgeURL string) []marketdata.ProviderConfig {
 	providers := make([]marketdata.ProviderConfig, 0, 4)
 	if strings.TrimSpace(ibBridgeURL) != "" {
 		// The operator-facing trader UI should prefer the broker's market-data mode
@@ -63,6 +77,8 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 			Name:      marketdata.ProviderAlpaca,
 			APIKey:    alpacaKey,
 			APISecret: alpacaSecret,
+			Tier:      envStr("ALPACA_TIER", "free"),
+			Feed:      envStr("ALPACA_DATA_FEED", "iex"),
 			Priority:  5,
 			Enabled:   true,
 		})
@@ -89,16 +105,7 @@ func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
 			Enabled:  true,
 		})
 	}
-	if len(providers) > 0 {
-		cfg := &marketdata.Config{Providers: providers}
-		mdClient, err := marketdata.NewClient(cfg)
-		if err == nil {
-			mt.mdClient = mdClient
-		}
-	}
-
-	mt.events = newEventAggregator(mt.httpClient, pool)
-	return mt
+	return providers
 }
 
 func (m *marketTools) handler() http.HandlerFunc {

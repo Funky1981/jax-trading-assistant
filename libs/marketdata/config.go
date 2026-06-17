@@ -29,6 +29,7 @@ type ProviderConfig struct {
 	APIKey    string
 	APISecret string // Only used for Alpaca
 	Tier      string // "free", "starter", "developer", "unlimited"
+	Feed      string // Optional market-data feed, e.g. "iex" or "sip" for Alpaca
 	Priority  int    // Lower number = higher priority (1 is highest)
 	Enabled   bool
 

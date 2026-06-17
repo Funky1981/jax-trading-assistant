@@ -83,15 +83,8 @@ func startMarketIngester(ctx context.Context, pool *pgxpool.Pool) {
 	}
 
 	mdCfg := &marketdata.Config{
-		Providers: []marketdata.ProviderConfig{
-			{
-				Name:        marketdata.ProviderIBBridge,
-				IBBridgeURL: cfg.IBBridgeURL,
-				Priority:    1,
-				Enabled:     true,
-			},
-		},
-		Symbols: cfg.Symbols,
+		Providers: marketDataProviderConfigs(cfg.IBBridgeURL),
+		Symbols:   cfg.Symbols,
 	}
 
 	client, err := marketdata.NewClient(mdCfg)

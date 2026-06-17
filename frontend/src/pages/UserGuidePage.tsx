@@ -16,7 +16,7 @@ export function UserGuidePage() {
           <HelpHint text="A practical first-run workflow for research, AI review, and paper trading." />
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Use this as the first full local test: confirm data, run research, ask the local AI, then place a tiny paper trade.
+          Use this to prove the local stack is healthy before trusting any research result or paper-trading workflow.
         </p>
       </div>
 
@@ -33,19 +33,22 @@ export function UserGuidePage() {
         <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
           <ListChecks className="h-5 w-5" />
           <div>
-            <CardTitle>First Full Test</CardTitle>
-            <CardDescription>The shortest path that proves the local stack is useful.</CardDescription>
+            <CardTitle>First-Run Checklist</CardTitle>
+            <CardDescription>Run these checks in order. Stop at the first failed check and use the linked diagnostic page.</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <ol className="list-decimal space-y-1 pl-5 text-foreground">
-            <li>Start everything from this repo with `.\start.ps1`.</li>
-            <li>Open `Research` and confirm `SPY_2026-06-09_2026-06-11_1m` is selected.</li>
-            <li>Click `Run guided backtest`; the first beginner setup should use `or-spy-paper-v1`.</li>
-            <li>Open `AI Trading`, enter `AAPL` or `SPY` in `Ask Jax`, and click `Ask`.</li>
-            <li>Open `Manual Trading`, use 1 share, add a stop loss, add a take profit, and submit only in paper mode.</li>
-            <li>Check `Trade Blotter` for the parent entry and attached stop/target orders.</li>
+            <li>Start the stack with `.\start.ps1`. It applies migrations, syncs dataset snapshots, and rebuilds stale service images.</li>
+            <li>Confirm services: open `System` and check runtime, providers, market data, and dataset snapshots.</li>
+            <li>Confirm Monitor ingestion: open `Monitor Inbox`. Empty means no payload has arrived; route/auth/schema errors are shown separately.</li>
+            <li>Run one dataset-backed research check from `Research`. A dataset ID and hash must be visible before running.</li>
+            <li>Open the completed run in `Analysis` and verify the dataset hash, source provider, and trade table are present.</li>
+            <li>Only after those checks pass, use `Manual Trading` for a tiny non-ETF paper order. ETF entries must come from a real candidate approval.</li>
           </ol>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Troubleshooting: use `System` for service health, `Monitor Inbox` for payload diagnostics, `Testing` for gate checks, and `Docs/DEBUGGING.md` for container logs.
+          </div>
         </CardContent>
       </Card>
 
@@ -118,9 +121,10 @@ export function UserGuidePage() {
         <CardContent className="space-y-2 text-sm">
           <ul className="list-disc space-y-1 pl-5 text-foreground">
             <li>The Jax endpoint is `POST /api/v1/research/events/world-monitor`.</li>
-            <li>Accepted payloads become `research_trigger` inbox rows and normalized events.</li>
-            <li>They must not create candidates, approvals, broker orders, or execution instructions directly.</li>
-            <li>Use `Macro Events` to inspect accepted research events after ingestion.</li>
+            <li>Accepted payloads become Monitor Inbox rows and normalized research events with original source URLs retained.</li>
+            <li>Promotion to a candidate is a separate step and requires evidence, mapping, and chart confirmation.</li>
+            <li>Payload receipt must not create broker orders or execution instructions directly.</li>
+            <li>Use `Monitor Inbox` for raw payload provenance and `Macro Events` for normalized event context.</li>
           </ul>
         </CardContent>
       </Card>

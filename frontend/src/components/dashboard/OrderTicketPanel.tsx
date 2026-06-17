@@ -192,13 +192,17 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
 
         {manualEntryRoute === 'approval_required' ? (
           <div className="space-y-3 rounded-md border border-warning/50 bg-warning/10 px-3 py-3 text-sm text-foreground">
-            <p className="font-semibold">Approval required for this ETF</p>
+            <p className="font-semibold">Approval-first ETF workflow</p>
             <p>
-              New entries for {selectedETF?.symbol} follow the approval-first workflow. Open the approval flow to continue.
+              New entries for {selectedETF?.symbol} must start from a monitored candidate with evidence and chart confirmation.
+              No approval item has been created from this manual ticket.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Use AI Trading or Monitor Inbox to promote a real candidate. Then it will appear in the approval queue.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button asChild type="button" variant="outline">
-                <Link to="/etf/approvals">Open approval flow</Link>
+                <Link to="/etf/approvals">Review approval queue</Link>
               </Button>
             </div>
           </div>

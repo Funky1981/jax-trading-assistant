@@ -160,7 +160,7 @@ class IBBridgeApiTests(unittest.TestCase):
 
         self.assertEqual(ctx.exception.status_code, 503)
 
-    def test_readiness_returns_503_when_quote_is_unusable(self):
+    def test_readiness_stays_200_when_connected_but_quote_is_unusable(self):
         class UnusableQuoteBridge(FakeBridge):
             async def get_quote(self, _symbol: str):
                 raise RuntimeError("quote data unusable")
@@ -169,7 +169,9 @@ class IBBridgeApiTests(unittest.TestCase):
 
         response = asyncio.run(main.readiness_check())
 
-        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.status, "ready")
+        self.assertFalse(response.quote_ready)
+        self.assertEqual(response.quote_error, "quote data unusable")
 
     def test_quote_endpoint_maps_unusable_quote_to_503(self):
         class UnusableQuoteBridge(FakeBridge):

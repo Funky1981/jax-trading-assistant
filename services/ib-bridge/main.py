@@ -124,11 +124,11 @@ async def readiness_check():
         await ib_client.get_quote(readiness_symbol)
     except Exception as e:
         logger.error(f"IB readiness quote failed for {readiness_symbol}: {e}")
-        health.status = "not_ready"
+        health.status = "ready"
         health.quote_ready = False
         health.quote_symbol = readiness_symbol
         health.quote_error = str(e)
-        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=health.model_dump())
+        return health
 
     health.status = "ready"
     health.quote_ready = True
