@@ -7,6 +7,7 @@
 | NOT_PLANNED | Explicitly excluded from current roadmap |
 | PLANNED | Desired capability but not designed |
 | DESIGNED | Spec exists but code does not |
+| PARTIAL | Existing support exists but does not satisfy the full Jax capability |
 | IMPLEMENTED | Code exists |
 | TESTED | Automated tests exist |
 | PROVEN | Validated through paper/research evidence |
@@ -17,19 +18,21 @@
 |---|---:|---|---|---|---|---|
 | Product charter | DESIGNED | Docs | Approved product truth | `Docs/JAX_PRODUCT_CHARTER.md` | N/A | Source of truth |
 | Capability matrix | DESIGNED | Docs | Matrix exists and is maintained | `Docs/CAPABILITY_MATRIX.md` | N/A | Must be updated every phase |
-| Event intake | PLANNED | Decisioning | Event input schema + parser tests | `internal/decisioning/core` | `tests/golden/events` | Pasted/news/manual event first |
+| Phase 0 capability reset | DESIGNED | Docs | Phase 0 contract accepted | `Docs/PHASE_CONTRACTS/00_CAPABILITY_RESET.md` | N/A | Governance/reset phase only; no trading logic |
+| Decision Core Phase 1 | TESTED | Decision Core | Unit tests + FTSE golden fixture | `internal/decisioning/core` | `internal/decisioning/core/decision_test.go`, `tests/golden/decision_runner_test.go` | Deterministic structured decision core implemented; Phase 2 Event Intelligence is next |
+| Event intake | TESTED | Decisioning | Structured event schema + golden input decode | `internal/decisioning/core/event.go` | `tests/golden/events` | Structured event input only; no scraping or article parsing |
 | Event classification | PLANNED | Event Intelligence | Golden classification tests | `internal/decisioning/classify` | `*_test.go` | Macro/company/commodity/etc |
 | Primary driver extraction | PLANNED | Event Intelligence | Golden extraction tests | `internal/decisioning/classify` | `*_test.go` | Extract main causes |
 | Conflicting signal detection | PLANNED | Event Intelligence | Conflict golden cases | `internal/decisioning/classify` | `tests/golden/events` | Critical no-trade feature |
 | Affected asset mapping | PLANNED | Event Intelligence | Driver→asset tests | `internal/decisioning/classify` | `*_test.go` | Oil→BP/SHEL etc |
-| Decision enum | PLANNED | Decision Core | Enum tests | `internal/decisioning/core/decision.go` | `decision_test.go` | Must include NO_TRADE |
-| NO_TRADE decision | PLANNED | Decision Core | Golden rejection tests | `internal/decisioning/core` | `tests/golden/events` | Default outcome |
-| WATCH decision | PLANNED | Decision Core | Golden watch tests | `internal/decisioning/core` | `tests/golden/events` | Missing confirmation |
+| Decision enum | TESTED | Decision Core | Enum tests | `internal/decisioning/core/decision.go` | `internal/decisioning/core/decision_test.go` | Includes all Phase 1 allowed decisions |
+| NO_TRADE decision | TESTED | Decision Core | Golden rejection tests | `internal/decisioning/core` | `tests/golden/events` | Default decision and expected common outcome; not an error |
+| WATCH decision | TESTED | Decision Core | Rule tests | `internal/decisioning/core` | `internal/decisioning/core/decision_test.go` | Missing confirmation |
 | SETUP_FORMING decision | PLANNED | Decision Core | Golden setup tests | `internal/decisioning/core` | `tests/golden/events` | Not tradable yet |
-| TRADE_CANDIDATE decision | PLANNED | Decision Core | Candidate tests | `internal/decisioning/core` | `tests/golden/events` | Must include risk/invalidation |
-| Evidence bundle | PLANNED | Decision Core | Schema validation | `internal/decisioning/core/evidence.go` | `evidence_test.go` | Carries event/reasoning/scores |
-| Swing Brain v1 | PLANNED | Trading Brain | 25 golden cases | `internal/decisioning/brains/swing` | `brain_test.go` | First active brain |
-| Day Trading Brain | NOT_PLANNED | Future | Not in current roadmap | N/A | N/A | Excluded until swing proven |
+| TRADE_CANDIDATE decision | TESTED | Decision Core | Candidate tests | `internal/decisioning/core` | `internal/decisioning/core/decision_test.go` | Structured candidate only; no paper approval or execution |
+| Evidence bundle | TESTED | Decision Core | Schema validation | `internal/decisioning/core/evidence.go` | `internal/decisioning/core/decision_test.go` | Carries event/reasoning/scores/final decision |
+| Swing Brain v1 | PLANNED | Trading Brain | 25 golden cases | `internal/decisioning/brains/swing` | `brain_test.go` | First active strategy brain after Decision Core |
+| Day Trading Brain | NOT_PLANNED | Future | Not in current roadmap | N/A | N/A | Explicitly excluded; do not add day-trading infrastructure |
 | Long-Term Brain | PLANNED | Future | Future charter | `internal/decisioning/brains/longterm` | TBD | Later, not before swing |
 | Risk veto | PLANNED | Risk | Veto tests | `internal/decisioning/risk` | `risk_test.go` | Can downgrade/reject |
 | Human approval | PARTIAL | Trader/API | Approval workflow test | Existing approval routes | Existing tests | Must carry decision evidence |
@@ -41,7 +44,7 @@
 | Decision memory logging | PLANNED | Memory/Review | Decision records persisted | `internal/decisioning/review` | `review_test.go` | Every decision logged |
 | No-trade outcome review | PLANNED | Memory/Review | 1d/1w/1m review records | `internal/decisioning/review` | `review_test.go` | Must review rejected trades |
 | Paper-trade outcome review | PLANNED | Memory/Review | Outcome review | `internal/decisioning/review` | `review_test.go` | Learn from paper trades |
-| Live trading | NOT_PLANNED | Execution | Explicitly excluded | N/A | N/A | Do not implement |
+| Live trading | NOT_PLANNED | Execution | Explicitly excluded | N/A | N/A | Do not implement live orders, auto execution, or broker order placement |
 
 ## Matrix rule
 

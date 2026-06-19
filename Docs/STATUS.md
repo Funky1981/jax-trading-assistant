@@ -1,27 +1,32 @@
-# Project Status (Condensed)
+# Project Status
 
 ## Snapshot
 
 - **Active runtime layout**: `cmd/trader` serves deterministic runtime plus frontend API surface; `cmd/research` serves orchestration/research and memory tools.
 - **External service boundaries retained**: `services/ib-bridge` and `services/agent0-service`.
 - **Core stack target**: `jax-trader` (8081/8100), `jax-research` (8091), `ib-bridge` (8092), `agent0-service` (8093), frontend dev server (5173).
-- **Recent completions**: artifact validation now requires Gate2+Gate3 evidence, auth login now uses persisted users with lockout policy, provider gaps and deterministic test shims have been tightened.
+- **Product truth**: Jax is an event-driven trading research assistant. See `Docs/JAX_PRODUCT_CHARTER.md`.
+- **Capability truth**: current capability status lives in `Docs/CAPABILITY_MATRIX.md`.
 
-## What Works (High Confidence)
+## Phase 1 Status
 
-- **Trader frontend API**: health, risk, testing, artifact, run-history, orchestration-proxy, and trades endpoints (`cmd/trader/frontend_api.go`, `cmd/trader/codex_api.go`).
-- **Research runtime**: orchestration, backtest/research pathways, and memory tooling endpoints in-process (`cmd/research`).
-- **Artifact workflow**: validation and promotion are tied to persisted trust-gate evidence and approval state transitions.
-- **Memory backend integration**: Research runtime owns the Postgres + pgvector memory flow directly.
+- **Current completed phase**: Phase 1 Decision Core.
+- **Phase source**: `Docs/PHASE_CONTRACTS/01_DECISION_CORE.md`.
+- **Default decision**: `NO_TRADE`.
+- **Implemented**: structured Event, Decision, Scores, EvidenceBundle, deterministic evaluator v1, and golden decision runner.
+- **Tested**: FTSE/oil/labour conflict returns `NO_TRADE`; `NO_TRADE` is valid and not an error.
+- **Next implementation phase**: Phase 2 Event Intelligence.
 
-## Partial / Incomplete
+## Explicit Exclusions
 
-- **Artifact API tests**: additional targeted coverage is still needed for filtered listing and failure-path behavior.
-- **Market ingestion confidence**: adapter support is improved, but ingestion and persistence validation remains a hardening area.
-- **Ops polish**: observability/reporting and docs hygiene still have ongoing work.
+- Day trading is `NOT_PLANNED`.
+- Live trading is `NOT_PLANNED`.
+- Auto execution, broker order placement, unattended trading, and live capital are outside the current roadmap.
+- Phase 1 does not implement Swing Brain, paper trading, broker execution, frontend UI, or LLM calls inside Decision Core.
 
 ## Next Focus
 
-- **Roadmap**: `Docs/ROADMAP.md`
-- **Tracked backlog**: `Docs/TODO.md`
-- **Local bootstrap/runbook**: `Docs/QUICKSTART.md`
+- **Roadmap**: `Docs/ROADMAP.md`.
+- **Phase 2 contract**: `Docs/PHASE_CONTRACTS/02_EVENT_INTELLIGENCE.md`.
+- **Golden fixtures**: `tests/golden/events/`.
+- **Project-management process**: `Docs/PROJECT_MANAGEMENT/`.
