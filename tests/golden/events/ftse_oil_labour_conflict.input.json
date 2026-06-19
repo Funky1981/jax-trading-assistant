@@ -2,6 +2,7 @@
   "event_id": "evt_2026_06_18_ftse_oil_labour",
   "source_type": "news_url",
   "source_url": "https://uk.investing.com/news/stock-market-news/ftse-100-today-stocks-fall-as-oil-slump-outweighs-strong-uk-labour-data-4734603",
+  "received_at": "2026-06-18T10:30:00Z",
   "headline": "FTSE 100 today: stocks fall as oil slump outweighs strong UK labour data",
   "summary": "FTSE falls because oil weakness drags energy names while UK labour data is stronger than expected and BoE decision risk remains.",
   "event_type": "MACRO_COMMODITY_INDEX_MOVE",
