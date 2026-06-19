@@ -1,0 +1,47 @@
+name: Risk
+description: Track a project risk
+title: "[Risk]: "
+labels: ["risk"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Risk Description
+      description: What could go wrong?
+    validations:
+      required: true
+  - type: dropdown
+    id: likelihood
+    attributes:
+      label: Likelihood
+      options:
+        - Low
+        - Medium
+        - High
+    validations:
+      required: true
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - Low
+        - Medium
+        - High
+    validations:
+      required: true
+  - type: textarea
+    id: trigger
+    attributes:
+      label: Trigger
+      description: What would show this risk is happening?
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Mitigation
+      description: How will this be reduced?
+  - type: textarea
+    id: contingency
+    attributes:
+      label: Contingency
+      description: What is the fallback?

@@ -1,0 +1,22 @@
+{
+  "decision": "NO_TRADE",
+  "brain": "DECISION_CORE",
+  "primary_reason_contains": "Conflicting macro drivers",
+  "min_conflict_score": 0.7,
+  "max_edge_score": 0.6,
+  "allowed_actions_contains": [
+    "store_event",
+    "monitor",
+    "review_later"
+  ],
+  "forbidden_actions_contains": [
+    "execute_trade",
+    "create_live_order",
+    "auto_approve"
+  ],
+  "review_after_contains": [
+    "1_day",
+    "1_week",
+    "1_month"
+  ]
+}

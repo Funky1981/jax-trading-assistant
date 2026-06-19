@@ -1,0 +1,40 @@
+name: Architecture Decision
+description: Propose or record an architecture decision
+title: "[Decision]: "
+labels: ["architecture", "decision"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why is this decision needed?
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options Considered
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Proposed Decision
+    validations:
+      required: true
+  - type: textarea
+    id: consequences
+    attributes:
+      label: Consequences / Trade-offs
+    validations:
+      required: true
+  - type: textarea
+    id: followup
+    attributes:
+      label: Follow-up Actions
+      value: |
+        - [ ] 
