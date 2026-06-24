@@ -1,0 +1,38 @@
+{
+  "name": "FTSE oil/labour conflict",
+  "event": {
+    "event_id": "evt_2026_06_18_ftse_oil_labour_swing",
+    "source_type": "news_url",
+    "received_at": "2026-06-18T10:30:00Z",
+    "headline": "FTSE falls as oil drops, UK labour data is strong, and BoE decision is pending",
+    "summary": "FTSE weakness appears driven by oil weakness while labour data is stronger than expected and the Bank of England decision remains unresolved.",
+    "event_type": "MACRO_COMMODITY_INDEX_MOVE",
+    "primary_drivers": ["oil"],
+    "conflicting_drivers": ["labour_data", "central_bank", "rates"],
+    "affected_assets": ["FTSE100", "BP", "SHEL", "GBP", "UK_GILTS"],
+    "asset_classes": ["equity_index", "single_stock", "fx", "rates"],
+    "geography": ["UK"],
+    "time_sensitivity": "medium",
+    "uncertainty_notes": ["BoE decision pending", "Index move may be composition-driven"]
+  },
+  "scores": {
+    "clarity_score": 0.48,
+    "edge_score": 0.30,
+    "conflict_score": 0.82,
+    "risk_score": 0.62
+  },
+  "catalyst": "oil price drop",
+  "setup_family": "INDEX_HEAVYWEIGHT_DISTORTION_WATCH",
+  "required_confirmations": ["oil stabilises", "energy sector stops underperforming", "BoE decision resolves policy uncertainty"],
+  "missing_confirmations": ["BoE decision resolves policy uncertainty"],
+  "invalidation_conditions": ["oil continues falling", "FTSE breaks lower on strong volume"],
+  "risk_reward_ratio": 0,
+  "unresolved_event_risk": ["BoE decision pending"],
+  "market_sector_alignment": "conflicting macro and sector drivers",
+  "expected_decision": "NO_TRADE",
+  "expected_primary_reason": "Conflicting drivers dominate and edge is weak.",
+  "expected_allowed_actions": ["store_event", "review_later"],
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_review_after": ["1_day", "1_week", "1_month"],
+  "never_decision": ["TRADE_CANDIDATE"]
+}

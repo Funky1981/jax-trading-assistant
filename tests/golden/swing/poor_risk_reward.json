@@ -1,0 +1,32 @@
+{
+  "name": "Poor risk/reward",
+  "event": {
+    "event_id": "evt_poor_risk_reward",
+    "source_type": "structured_event",
+    "received_at": "2026-06-24T09:00:00Z",
+    "headline": "Semiconductor leader confirms sector rotation",
+    "summary": "The catalyst is clear, but the remaining target does not justify the stop distance.",
+    "event_type": "SECTOR_ROTATION",
+    "primary_drivers": ["sector_rotation"],
+    "affected_assets": ["SMH", "NVDA"],
+    "asset_classes": ["sector_etf", "single_stock"],
+    "time_sensitivity": "medium"
+  },
+  "scores": {
+    "clarity_score": 0.80,
+    "edge_score": 0.74,
+    "conflict_score": 0.10,
+    "risk_score": 0.30
+  },
+  "catalyst": "sector rotation",
+  "setup_family": "SECTOR_RELATIVE_REPRICING",
+  "required_confirmations": ["sector relative strength persists"],
+  "present_confirmations": ["sector relative strength persists"],
+  "invalidation_conditions": ["SMH closes below relative breakout"],
+  "risk_reward_ratio": 1.6,
+  "expected_decision": "NO_TRADE",
+  "expected_primary_reason": "Risk/reward is below the 2:1 minimum.",
+  "expected_allowed_actions": ["store_event", "review_later"],
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_review_after": ["1_day", "1_week", "1_month"]
+}

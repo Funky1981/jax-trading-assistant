@@ -1,0 +1,31 @@
+{
+  "name": "Missing invalidation",
+  "event": {
+    "event_id": "evt_missing_invalidation",
+    "source_type": "structured_event",
+    "received_at": "2026-06-24T09:00:00Z",
+    "headline": "Retailer rallies after stronger guidance",
+    "summary": "The company has a possible guidance catalyst, but no invalidation level is defined.",
+    "event_type": "GUIDANCE",
+    "primary_drivers": ["guidance"],
+    "affected_assets": ["ABC"],
+    "asset_classes": ["single_stock"],
+    "time_sensitivity": "medium"
+  },
+  "scores": {
+    "clarity_score": 0.72,
+    "edge_score": 0.66,
+    "conflict_score": 0.12,
+    "risk_score": 0.34
+  },
+  "catalyst": "positive guidance",
+  "setup_family": "POST_EARNINGS_DRIFT_CONTINUATION",
+  "required_confirmations": ["price holds breakout"],
+  "present_confirmations": ["price holds breakout"],
+  "risk_reward_ratio": 2.3,
+  "expected_decision": "NO_TRADE",
+  "expected_primary_reason": "Missing invalidation condition.",
+  "expected_allowed_actions": ["store_event", "review_later"],
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_review_after": ["1_day", "1_week", "1_month"]
+}

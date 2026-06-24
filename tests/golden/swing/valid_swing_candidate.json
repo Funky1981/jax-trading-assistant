@@ -1,0 +1,35 @@
+{
+  "name": "Valid swing candidate",
+  "event": {
+    "event_id": "evt_valid_swing_candidate",
+    "source_type": "structured_event",
+    "received_at": "2026-06-24T09:00:00Z",
+    "headline": "Energy equity confirms commodity-linked continuation setup",
+    "summary": "The asset confirms a clear commodity catalyst with defined invalidation and adequate reward.",
+    "event_type": "COMMODITY_SHOCK",
+    "primary_drivers": ["oil"],
+    "affected_assets": ["BP"],
+    "asset_classes": ["single_stock"],
+    "time_sensitivity": "medium"
+  },
+  "scores": {
+    "clarity_score": 0.84,
+    "edge_score": 0.82,
+    "conflict_score": 0.18,
+    "risk_score": 0.34,
+    "confirmation_score": 0.76,
+    "timing_score": 0.70
+  },
+  "catalyst": "confirmed oil supply disruption",
+  "setup_family": "COMMODITY_LINKED_EQUITY_DISLOCATION",
+  "required_confirmations": ["price holds support", "energy sector confirms"],
+  "present_confirmations": ["price holds support", "energy sector confirms"],
+  "invalidation_conditions": ["BP closes below 470p"],
+  "risk_reward_ratio": 2.6,
+  "market_sector_alignment": "energy sector aligned",
+  "expected_decision": "TRADE_CANDIDATE",
+  "expected_primary_reason": "Swing trade candidate meets catalyst, confirmation, invalidation, and risk/reward requirements.",
+  "expected_allowed_actions": ["store_event", "monitor", "prepare_research", "prepare_paper_candidate"],
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_review_after": ["1_day", "1_week", "1_month"]
+}

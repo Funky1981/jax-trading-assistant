@@ -31,7 +31,7 @@
 | SETUP_FORMING decision | PLANNED | Decision Core | Golden setup tests | `internal/decisioning/core` | `tests/golden/events` | Not tradable yet |
 | TRADE_CANDIDATE decision | TESTED | Decision Core | Candidate tests | `internal/decisioning/core` | `internal/decisioning/core/decision_test.go` | Structured candidate only; no paper approval or execution |
 | Evidence bundle | TESTED | Decision Core | Schema validation | `internal/decisioning/core/evidence.go` | `internal/decisioning/core/decision_test.go` | Carries event/reasoning/scores/final decision |
-| Swing Brain v1 | PLANNED | Trading Brain | 25 golden cases | `internal/decisioning/brains/swing` | `brain_test.go` | First active strategy brain after Decision Core |
+| Swing Brain v1 | TESTED | Trading Brain | Unit tests + 5 golden swing cases | `internal/decisioning/brains/swing` | `internal/decisioning/brains/swing/brain_test.go`, `tests/golden/swing` | Deterministic swing setup evaluator implemented; outputs `NO_TRADE`, `WATCH`, `SETUP_FORMING`, or `TRADE_CANDIDATE` without execution authority |
 | Day Trading Brain | NOT_PLANNED | Future | Not in current roadmap | N/A | N/A | Explicitly excluded; do not add day-trading infrastructure |
 | Long-Term Brain | PLANNED | Future | Future charter | `internal/decisioning/brains/longterm` | TBD | Later, not before swing |
 | Risk veto | PLANNED | Risk | Veto tests | `internal/decisioning/risk` | `risk_test.go` | Can downgrade/reject |

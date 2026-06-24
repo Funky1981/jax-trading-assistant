@@ -23,9 +23,12 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Goal: classify events, extract drivers, detect conflicts, and map affected assets.
    - Constraint: use Decision Core outputs; do not add trading execution or Swing Brain logic.
 4. **Phase 3: Swing Brain v1**
-   - Status: next implementation phase.
+   - Status: implemented and tested.
    - Source: `Docs/STRATEGIES/SWING_TRADING/` and `Docs/PHASE_CONTRACTS/03_SWING_BRAIN_V1.md`.
    - Goal: evaluate swing setups only after Decision Core and Event Intelligence exist.
+5. **Phase 4: Risk Veto**
+   - Status: next implementation phase.
+   - Goal: reject or downgrade swing candidates when risk constraints fail before any paper ticket or approval workflow exists.
 
 ## Explicitly Not Planned
 
@@ -35,5 +38,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Risk veto, paper approval, research/backtest evidence, and memory/review remain planned supporting phases.
+- Paper approval, research/backtest evidence, and memory/review remain planned supporting phases after Risk Veto.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.

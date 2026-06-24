@@ -6,6 +6,7 @@ const (
 	ActionStoreEvent      = "store_event"
 	ActionMonitor         = "monitor"
 	ActionReviewLater     = "review_later"
+	ActionPrepareResearch = "prepare_research"
 	ActionPreparePaper    = "prepare_paper_candidate"
 	ActionExecuteTrade    = "execute_trade"
 	ActionCreateLiveOrder = "create_live_order"

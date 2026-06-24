@@ -1,0 +1,35 @@
+{
+  "name": "Missing confirmation",
+  "event": {
+    "event_id": "evt_missing_confirmation",
+    "source_type": "structured_event",
+    "received_at": "2026-06-24T09:00:00Z",
+    "headline": "Copper producer may benefit from supply disruption",
+    "summary": "The catalyst and risk/reward are promising, but sector confirmation is not available.",
+    "event_type": "COMMODITY_SHOCK",
+    "primary_drivers": ["commodity"],
+    "affected_assets": ["FCX"],
+    "asset_classes": ["single_stock"],
+    "time_sensitivity": "medium"
+  },
+  "scores": {
+    "clarity_score": 0.76,
+    "edge_score": 0.70,
+    "conflict_score": 0.20,
+    "risk_score": 0.36
+  },
+  "catalyst": "copper supply disruption",
+  "setup_family": "COMMODITY_LINKED_EQUITY_DISLOCATION",
+  "required_confirmations": ["price holds support", "sector confirms"],
+  "present_confirmations": ["price holds support"],
+  "missing_confirmations": ["sector confirms"],
+  "invalidation_conditions": ["FCX closes below support"],
+  "risk_reward_ratio": 2.5,
+  "market_sector_alignment": "sector confirmation unavailable",
+  "expected_decision": "WATCH",
+  "expected_primary_reason": "Required confirmations are missing.",
+  "expected_allowed_actions": ["store_event", "monitor", "review_later", "prepare_research"],
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_review_after": ["1_day", "1_week", "1_month"],
+  "never_decision": ["TRADE_CANDIDATE"]
+}
