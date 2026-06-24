@@ -4,22 +4,22 @@ This file tells humans and AI assistants what matters right now.
 
 ## Current Objective
 
-Implement Phase 6 Paper Approval Loop after Phase 5 Research/Backtest Evidence.
+Implement Phase 7 Post Decision Review after Phase 6 Paper Approval Loop.
 
 ## Active Phase
 
-Phase 6 - Paper Approval Loop
+Phase 7 - Post Decision Review
 
 ## Active Work Items
 
-- Define deterministic human approval requirements before paper tickets are created.
+- Define deterministic outcome review requirements for decisions, no-trades, and paper approvals.
 - Preserve `NO_TRADE` as the default outcome.
-- Keep paper approval separate from broker execution and live trading.
+- Keep review and learning separate from broker execution and live trading.
 
 ## Do Not Work On
 
 - Live trading, broker execution, auto execution, unattended trading, and day trading.
-- Paper ticket creation unless explicitly included in the Phase 6 contract.
+- Paper execution unless explicitly included in a later phase contract.
 - Frontend UI work unless a later phase calls for it.
 
 ## Current Constraints
@@ -36,19 +36,20 @@ Summarise recent decisions. Full details go in `/project/decisions.md`.
 - Phase 3 Swing Brain v1 is implemented and tested in `internal/decisioning/brains/swing`.
 - Phase 4 Risk Veto is implemented and tested in `internal/decisioning/risk`.
 - Phase 5 Research/Backtest Evidence is implemented and tested.
+- Phase 6 Paper Approval Loop is implemented and tested.
 
 ## Current Risks
 
 Summarise current risks. Full details go in `/project/risks.md`.
 
-- Paper approval could accidentally imply execution authority; keep it approval-only until a later phase.
-- Golden coverage must protect Research Evidence, Swing Brain, and Risk Veto outputs from bypassing human approval.
+- Post-decision review could accidentally imply strategy promotion without enough outcomes; keep review evidence-only until promotion rules are satisfied.
+- Golden coverage must protect Research Evidence, Swing Brain, Risk Veto, and Paper Approval outputs from bypassing review requirements.
 
 ## Next 3 Actions
 
-1. Read the Phase 6 Paper Approval Loop contract.
-2. Define deterministic approval inputs and outputs on top of Research Evidence, Swing Brain, and Risk Veto results.
-3. Add golden approval cases for missing evidence, rejected approval, approved paper-only candidate, and prohibited live-execution promotion.
+1. Read the Phase 7 Post Decision Review contract.
+2. Define deterministic review inputs and outputs on top of Decision Core, Research Evidence, Risk Veto, and Paper Approval results.
+3. Add golden review cases for no-trades, rejected candidates, approved paper tickets, and prohibited live-execution promotion.
 
 ## Last Updated
 

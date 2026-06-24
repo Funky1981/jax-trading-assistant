@@ -33,8 +33,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Status: implemented and tested.
    - Goal: attach structured research and backtest evidence before any setup family can progress toward paper approval.
 7. **Phase 6: Paper Approval Loop**
-   - Status: next implementation phase.
+   - Status: implemented and tested.
    - Goal: require human approval before any paper-trading workflow can be prepared.
+8. **Phase 7: Post Decision Review**
+   - Status: next implementation phase.
+   - Goal: record and review outcomes for decisions, including no-trades and paper approvals.
 
 ## Explicitly Not Planned
 
@@ -44,5 +47,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Paper approval is the next planned supporting phase after Research/Backtest Evidence; memory/review remains planned after approval flow.
+- Post Decision Review is the next planned supporting phase after Paper Approval Loop.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.

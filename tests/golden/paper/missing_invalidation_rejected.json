@@ -1,0 +1,48 @@
+{
+  "name": "missing invalidation rejected",
+  "mode": "create",
+  "ticket_request": {
+    "paper_ticket_id": "pt_missing_invalidation",
+    "source_decision": {
+      "decision_id": "dec_missing_invalidation",
+      "event_id": "evt_missing_invalidation",
+      "brain": "SWING_BRAIN_V1",
+      "decision": "TRADE_CANDIDATE",
+      "allowed_actions": ["store_event", "monitor", "prepare_research", "prepare_paper_candidate"],
+      "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+      "review_after": ["1_day"]
+    },
+    "risk_assessment": {
+      "risk_decision": "PASS",
+      "original_decision": "TRADE_CANDIDATE",
+      "final_decision": "TRADE_CANDIDATE",
+      "required_actions": ["human_approval_required"],
+      "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+      "allowed_actions": ["store_event", "monitor", "prepare_research", "prepare_paper_candidate"],
+      "max_position_size": 33.33,
+      "requires_human_approval": true,
+      "paper_only": true,
+      "live_trading_blocked": true,
+      "review_after": ["1_day"]
+    },
+    "research_evidence_summary": { "summary": "Evidence available." },
+    "asset": "BP",
+    "setup_family": "commodity_linked_equity_dislocation",
+    "proposed_entry_zone": { "low": 500, "high": 505 },
+    "proposed_stop": 470,
+    "proposed_target": 575,
+    "risk_reward": 2.5,
+    "created_at": "2026-06-24T12:00:00Z",
+    "expires_at": "2026-06-25T12:00:00Z",
+    "invalidation_conditions": [],
+    "explicit_human_approval_required": true
+  },
+  "expected_valid": false,
+  "expected_can_create_ticket": false,
+  "expected_can_approve_for_paper": false,
+  "expected_human_approval_status": "",
+  "expected_paper_only": true,
+  "expected_live_trading_blocked": true,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_errors_contain": ["invalidation_conditions"]
+}

@@ -1,0 +1,28 @@
+{
+  "name": "auto approval rejected",
+  "mode": "approve",
+  "approval_request": {
+    "ticket": {
+      "paper_ticket_id": "pt_auto_rejected",
+      "human_approval_status": "PENDING_REVIEW",
+      "lifecycle_state": "PENDING_REVIEW",
+      "expires_at": "2026-06-25T12:00:00Z",
+      "paper_only": true,
+      "live_trading_blocked": true,
+      "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+    },
+    "approved_by": "system",
+    "approved_at": "2026-06-24T12:00:00Z",
+    "now": "2026-06-24T12:00:00Z",
+    "explicit_human_approval": false,
+    "automatic_approval": true
+  },
+  "expected_valid": false,
+  "expected_can_create_ticket": false,
+  "expected_can_approve_for_paper": false,
+  "expected_human_approval_status": "PENDING_REVIEW",
+  "expected_paper_only": true,
+  "expected_live_trading_blocked": true,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_errors_contain": ["human"]
+}
