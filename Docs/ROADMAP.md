@@ -27,8 +27,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Source: `Docs/STRATEGIES/SWING_TRADING/` and `Docs/PHASE_CONTRACTS/03_SWING_BRAIN_V1.md`.
    - Goal: evaluate swing setups only after Decision Core and Event Intelligence exist.
 5. **Phase 4: Risk Veto**
-   - Status: next implementation phase.
+   - Status: implemented and tested.
    - Goal: reject or downgrade swing candidates when risk constraints fail before any paper ticket or approval workflow exists.
+6. **Phase 5: Research/Backtest Evidence**
+   - Status: next implementation phase.
+   - Goal: attach structured research and backtest evidence before any setup family can progress toward paper approval.
 
 ## Explicitly Not Planned
 
@@ -38,5 +41,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Paper approval, research/backtest evidence, and memory/review remain planned supporting phases after Risk Veto.
+- Paper approval and memory/review remain planned supporting phases after Research/Backtest Evidence.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.

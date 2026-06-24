@@ -8,25 +8,25 @@
 - **Product truth**: Jax is an event-driven trading research assistant. See `Docs/JAX_PRODUCT_CHARTER.md`.
 - **Capability truth**: current capability status lives in `Docs/CAPABILITY_MATRIX.md`.
 
-## Phase 3 Status
+## Phase 4 Status
 
-- **Current completed phase**: Phase 3 Swing Brain v1.
-- **Phase source**: `Docs/PHASE_CONTRACTS/03_SWING_BRAIN_V1.md`.
+- **Current completed phase**: Phase 4 Risk Veto.
+- **Phase source**: `Docs/PHASE_CONTRACTS/04_RISK_VETO.md`.
 - **Default decision**: `NO_TRADE`.
-- **Implemented**: deterministic Swing Brain v1 on top of existing Decision Core and Event Intelligence types, including setup family selection, catalyst checks, confirmation gates, invalidation requirements, risk/reward minimums, unresolved event-risk downgrades, structured explanations, and non-execution allowed/forbidden actions.
-- **Tested**: FTSE/oil/labour cannot become `TRADE_CANDIDATE`; missing invalidation and poor risk/reward return `NO_TRADE`; missing confirmation returns `WATCH`; a fully confirmed setup can return `TRADE_CANDIDATE` while still forbidding live execution.
-- **Next implementation phase**: Phase 4 Risk Veto.
+- **Implemented**: deterministic Risk Veto layer for Swing Brain decisions, including structured risk assessment output, portfolio context, exposure thresholds, risk/reward and invalidation checks, paper-only/human-approval requirements, live account rejection, and mandatory forbidden execution actions.
+- **Tested**: valid Swing candidate can pass risk; poor risk/reward, missing stop/invalidation, and live account mode are rejected; high sector and correlated exposure downgrade to `WATCH`; existing `WATCH` and `NO_TRADE` decisions cannot be upgraded.
+- **Next implementation phase**: Phase 5 Research/Backtest Evidence.
 
 ## Explicit Exclusions
 
 - Day trading is `NOT_PLANNED`.
 - Live trading is `NOT_PLANNED`.
 - Auto execution, broker order placement, unattended trading, and live capital are outside the current roadmap.
-- Phase 3 does not implement paper trading, broker execution, frontend UI, LLM calls inside Swing Brain, full Risk Veto, paper ticket creation, live trading, auto execution, options trading, or day trading.
+- Phase 4 does not implement paper trading, broker execution, frontend UI, paper ticket creation, live trading, auto execution, options trading, day trading, or strategy promotion from backtest evidence.
 
 ## Next Focus
 
 - **Roadmap**: `Docs/ROADMAP.md`.
-- **Phase 4 target**: Risk Veto.
-- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`.
+- **Phase 5 target**: Research/Backtest Evidence.
+- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`.
 - **Project-management process**: `Docs/PROJECT_MANAGEMENT/`.

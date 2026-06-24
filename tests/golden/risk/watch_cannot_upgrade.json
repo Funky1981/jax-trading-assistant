@@ -1,0 +1,52 @@
+{
+  "name": "Existing WATCH cannot be upgraded",
+  "swing_decision": {
+    "decision_id": "swing_evt_risk_watch",
+    "event_id": "evt_risk_watch",
+    "brain": "SWING_BRAIN_V1",
+    "decision": "WATCH",
+    "confidence_score": 0.78,
+    "clarity_score": 0.78,
+    "edge_score": 0.72,
+    "conflict_score": 0.20,
+    "risk_score": 0.35,
+    "primary_reason": "Required confirmations are missing.",
+    "required_confirmations": ["price holds support", "energy sector confirms"],
+    "invalidation_conditions": ["BP closes below 470p"],
+    "allowed_actions": ["store_event", "monitor", "review_later", "prepare_research"],
+    "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+    "review_after": ["1_day", "1_week", "1_month"],
+    "setup_family": "COMMODITY_LINKED_EQUITY_DISLOCATION",
+    "scores": {
+      "clarity_score": 0.78,
+      "edge_score": 0.72,
+      "conflict_score": 0.20,
+      "risk_score": 0.35,
+      "confirmation_score": 0.40,
+      "timing_score": 0.65
+    }
+  },
+  "asset": "BP",
+  "setup_family": "COMMODITY_LINKED_EQUITY_DISLOCATION",
+  "proposed_entry": 500,
+  "proposed_stop": 470,
+  "proposed_target": 575,
+  "risk_reward_ratio": 2.5,
+  "account_mode": "paper",
+  "portfolio": {
+    "account_equity": 100000,
+    "cash_available": 60000,
+    "max_risk_per_trade_pct": 0.01,
+    "as_of": "2026-06-24T12:00:00Z"
+  },
+  "current_exposure": { "percent_of_equity": 0.10 },
+  "sector_exposure": { "name": "energy", "percent_of_equity": 0.18 },
+  "correlated_exposure": { "name": "oil-linked equities", "percent_of_equity": 0.20 },
+  "expected_risk_decision": "PASS",
+  "expected_final_decision": "WATCH",
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_required_actions": ["human_approval_required"],
+  "expected_requires_human_approval": true,
+  "expected_paper_only": true,
+  "expected_live_trading_blocked": true
+}
