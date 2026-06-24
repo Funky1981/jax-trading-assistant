@@ -1,0 +1,32 @@
+{
+  "name": "WATCH cannot be upgraded",
+  "input": {
+    "event": {"event_id": "evt_watch_cannot_upgrade", "received_at": "2026-06-24T12:00:00Z", "headline": "Setup lacks confirmation", "summary": "Candidate needs volume confirmation.", "affected_assets": ["SHEL"]},
+    "market_context": {"market_regime": "risk_neutral"},
+    "portfolio_context": {"account_equity": 100000, "cash_available": 50000, "max_risk_per_trade_pct": 0.01, "as_of": "2026-06-24T12:00:00Z"},
+    "account_mode": "paper",
+    "current_time": "2026-06-24T12:00:00Z",
+    "decision_scores": {"clarity_score": 0.72, "edge_score": 0.62, "conflict_score": 0.2, "risk_score": 0.35},
+    "swing": {
+      "scores": {"clarity_score": 0.72, "edge_score": 0.62, "conflict_score": 0.18, "risk_score": 0.35, "confirmation_score": 0.3, "timing_score": 0.6},
+      "catalyst": "Potential commodity-linked setup.",
+      "setup_family": "COMMODITY_LINKED_EQUITY_DISLOCATION",
+      "missing_confirmations": ["volume confirmation missing"],
+      "invalidation_conditions": ["daily close below support"],
+      "risk_reward_ratio": 2.6,
+      "asset": "SHEL",
+      "proposed_entry": 2500,
+      "proposed_stop": 2400,
+      "proposed_target": 2760
+    }
+  },
+  "expected_final_status": "WATCH_RECORDED",
+  "expected_final_decision": "WATCH",
+  "expected_paper_ticket": false,
+  "expected_review_schedule": true,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_human_approval": true,
+  "expected_paper_only": true,
+  "expected_live_trading_blocked": true,
+  "never_final_status": ["TRADE_CANDIDATE_READY_FOR_PAPER_REVIEW"]
+}

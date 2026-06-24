@@ -1,0 +1,35 @@
+{
+  "name": "FTSE oil labour conflict full pipeline",
+  "input": {
+    "event": {
+      "event_id": "evt_2026_06_18_ftse_oil_labour",
+      "received_at": "2026-06-24T12:00:00Z",
+      "headline": "FTSE falls as oil slump outweighs strong UK labour data",
+      "summary": "FTSE weakness appears driven by oil weakness while labour data is stronger than expected and the BoE decision is pending.",
+      "primary_drivers": ["oil_price_drop"],
+      "conflicting_drivers": ["strong_uk_labour_data", "boe_policy_uncertainty"],
+      "affected_assets": ["FTSE100", "BP", "SHEL", "GBP", "UK_GILTS"],
+      "uncertainty_notes": ["BoE decision pending"]
+    },
+    "market_context": {"market_regime": "conflicted_macro"},
+    "portfolio_context": {"account_equity": 100000, "cash_available": 50000, "max_risk_per_trade_pct": 0.01, "as_of": "2026-06-24T12:00:00Z"},
+    "account_mode": "paper",
+    "current_time": "2026-06-24T12:00:00Z",
+    "decision_scores": {"clarity_score": 0.45, "edge_score": 0.25, "conflict_score": 0.85, "risk_score": 0.6},
+    "swing": {
+      "scores": {"clarity_score": 0.45, "edge_score": 0.25, "conflict_score": 0.85, "risk_score": 0.6, "confirmation_score": 0.2, "timing_score": 0.4},
+      "catalyst": "Oil drop conflicts with strong labour data and pending BoE policy risk.",
+      "setup_family": "INDEX_HEAVYWEIGHT_DISTORTION_WATCH",
+      "unresolved_event_risk": ["BoE decision pending"]
+    }
+  },
+  "expected_final_status": "NO_TRADE_RECORDED",
+  "expected_final_decision": "NO_TRADE",
+  "expected_paper_ticket": false,
+  "expected_review_schedule": true,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_human_approval": true,
+  "expected_paper_only": true,
+  "expected_live_trading_blocked": true,
+  "never_final_status": ["TRADE_CANDIDATE_READY_FOR_PAPER_REVIEW"]
+}

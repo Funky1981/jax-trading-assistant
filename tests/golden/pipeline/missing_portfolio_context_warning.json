@@ -1,0 +1,53 @@
+{
+  "name": "Missing portfolio context warning",
+  "input": {
+    "event": {"event_id": "evt_missing_portfolio_context", "received_at": "2026-06-24T12:00:00Z", "headline": "Energy stock confirms commodity-linked dislocation", "summary": "Valid candidate has no portfolio context.", "affected_assets": ["SHEL"]},
+    "market_context": {"market_regime": "risk_neutral"},
+    "research_evidence": {
+      "hypothesis_id": "hyp_commodity_dislocation",
+      "setup_family": "COMMODITY_LINKED_EQUITY_DISLOCATION",
+      "dataset_id": "commodity_equity_daily_2018_2025_v1",
+      "dataset_hash": "sha256:phase8",
+      "date_range": {"start": "2018-01-01", "end": "2025-12-31"},
+      "instrument_universe": ["UK_large_cap_energy"],
+      "benchmark": "FTSE100",
+      "assumptions": {"execution": "next_day_open", "position_sizing": "fixed_fractional", "max_risk_per_trade": 0.01},
+      "slippage_model": {"type": "bps", "value": 10},
+      "fees_model": {"commission": "broker_model", "spread_assumption": "included"},
+      "in_sample_period": {"start": "2018-01-01", "end": "2022-12-31"},
+      "out_of_sample_period": {"start": "2023-01-01", "end": "2025-12-31"},
+      "drawdown_metrics": {"max_drawdown": 0.12, "average_drawdown": 0.04},
+      "expectancy": 0.18,
+      "sample_size": 120,
+      "failure_modes": ["commodity reversal", "sector risk-off"],
+      "risk_rules": ["risk/reward >= 2:1", "stop below support"],
+      "promotion_decision": "BACKTESTED_PROMISING"
+    },
+    "account_mode": "paper",
+    "current_time": "2026-06-24T12:00:00Z",
+    "decision_scores": {"clarity_score": 0.82, "edge_score": 0.82, "conflict_score": 0.2, "risk_score": 0.35},
+    "swing": {
+      "scores": {"clarity_score": 0.84, "edge_score": 0.86, "conflict_score": 0.18, "risk_score": 0.35, "confirmation_score": 0.82, "timing_score": 0.78},
+      "catalyst": "Confirmed commodity move with lagging equity response.",
+      "setup_family": "COMMODITY_LINKED_EQUITY_DISLOCATION",
+      "required_confirmations": ["commodity move remains confirmed", "equity holds support"],
+      "present_confirmations": ["commodity move remains confirmed", "equity holds support"],
+      "invalidation_conditions": ["daily close below support"],
+      "risk_reward_ratio": 2.6,
+      "asset": "SHEL",
+      "proposed_entry": 2500,
+      "proposed_entry_high": 2530,
+      "proposed_stop": 2400,
+      "proposed_target": 2760
+    }
+  },
+  "expected_final_status": "PAPER_REVIEW_BLOCKED",
+  "expected_final_decision": "WATCH",
+  "expected_paper_ticket": false,
+  "expected_review_schedule": true,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_warnings_contain": ["portfolio context is missing"],
+  "expected_human_approval": true,
+  "expected_paper_only": true,
+  "expected_live_trading_blocked": true
+}

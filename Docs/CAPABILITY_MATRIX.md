@@ -44,6 +44,7 @@
 | Decision memory logging | TESTED | Memory/Review | Decision log + default review schedule tests | `internal/decisioning/review` | `internal/decisioning/review/review_test.go`, `tests/golden/review_runner_test.go` | Every decision can be logged with 1d/1w/1m review schedule |
 | No-trade outcome review | TESTED | Memory/Review | No-trade review golden cases | `internal/decisioning/review` | `internal/decisioning/review/review_test.go`, `tests/golden/review_runner_test.go` | Correct no-trades and missed opportunities are reviewable without changing rules automatically |
 | Paper-trade outcome review | TESTED | Memory/Review | Paper outcome review golden cases | `internal/decisioning/review` | `internal/decisioning/review/review_test.go`, `tests/golden/review_runner_test.go` | Approved paper outcomes can record worked/failed lessons; live promotion remains blocked |
+| Pipeline Integration | TESTED | Decision Pipeline | Unit tests + golden pipeline cases | `internal/decisioning/pipeline` | `internal/decisioning/pipeline/pipeline_test.go`, `tests/golden/pipeline_runner_test.go`, `tests/golden/pipeline` | Deterministic end-to-end non-execution pipeline connects Event Intelligence, Decision Core, Swing Brain, Risk Veto, Research Evidence, Paper Approval preparation, and Review scheduling; paper tickets stop at `PENDING_REVIEW`; live trading remains blocked |
 | Live trading | NOT_PLANNED | Execution | Explicitly excluded | N/A | N/A | Do not implement live orders, auto execution, or broker order placement |
 
 ## Matrix rule

@@ -1,0 +1,34 @@
+{
+  "name": "Risk rejected candidate",
+  "input": {
+    "event": {"event_id": "evt_risk_rejected_candidate", "received_at": "2026-06-24T12:00:00Z", "headline": "Energy stock confirms but liquidity is poor", "summary": "Candidate setup has poor liquidity.", "affected_assets": ["SHEL"]},
+    "market_context": {"market_regime": "risk_neutral"},
+    "portfolio_context": {"account_equity": 100000, "cash_available": 50000, "max_risk_per_trade_pct": 0.01, "as_of": "2026-06-24T12:00:00Z"},
+    "account_mode": "paper",
+    "current_time": "2026-06-24T12:00:00Z",
+    "decision_scores": {"clarity_score": 0.82, "edge_score": 0.82, "conflict_score": 0.2, "risk_score": 0.35},
+    "swing": {
+      "scores": {"clarity_score": 0.84, "edge_score": 0.86, "conflict_score": 0.18, "risk_score": 0.35, "confirmation_score": 0.82, "timing_score": 0.78},
+      "catalyst": "Confirmed commodity move with lagging equity response.",
+      "setup_family": "COMMODITY_LINKED_EQUITY_DISLOCATION",
+      "required_confirmations": ["commodity move remains confirmed", "equity holds support"],
+      "present_confirmations": ["commodity move remains confirmed", "equity holds support"],
+      "invalidation_conditions": ["daily close below support"],
+      "risk_reward_ratio": 2.6,
+      "asset": "SHEL",
+      "proposed_entry": 2500,
+      "proposed_entry_high": 2530,
+      "proposed_stop": 2400,
+      "proposed_target": 2760,
+      "liquidity_spread_notes": ["poor liquidity and wide spread"]
+    }
+  },
+  "expected_final_status": "TRADE_CANDIDATE_REJECTED_BY_RISK",
+  "expected_final_decision": "REJECTED_BY_RISK",
+  "expected_paper_ticket": false,
+  "expected_review_schedule": true,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_human_approval": true,
+  "expected_paper_only": true,
+  "expected_live_trading_blocked": true
+}

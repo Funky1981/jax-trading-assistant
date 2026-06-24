@@ -8,25 +8,25 @@
 - **Product truth**: Jax is an event-driven trading research assistant. See `Docs/JAX_PRODUCT_CHARTER.md`.
 - **Capability truth**: current capability status lives in `Docs/CAPABILITY_MATRIX.md`.
 
-## Phase 7 Status
+## Phase 8 Status
 
-- **Current completed phase**: Phase 7 Post Decision Review.
-- **Phase source**: `Docs/PHASE_CONTRACTS/07_POST_DECISION_REVIEW.md`.
+- **Current completed phase**: Phase 8 Decision Pipeline Integration and Hardening.
+- **Phase source**: attached Phase 8 implementation brief; Phase 7 source remains `Docs/PHASE_CONTRACTS/07_POST_DECISION_REVIEW.md`.
 - **Default decision**: `NO_TRADE`.
-- **Implemented**: deterministic decision log, review schedule, outcome review, lesson, and validation models under `internal/decisioning/review`.
-- **Tested**: `NO_TRADE`, `WATCH`, `SETUP_FORMING`, `TRADE_CANDIDATE`, `REJECTED_BY_RISK`, and `APPROVED_FOR_PAPER` decisions schedule reviews; correct no-trades, missed opportunities, avoided losses, risk-veto strictness, and paper worked/failed outcomes can be recorded; lesson suggestions require human approval and `LIVE_READY` promotion is blocked.
-- **Next focus**: integration and hardening of the decision pipeline.
+- **Implemented**: deterministic end-to-end non-execution decision pipeline under `internal/decisioning/pipeline`.
+- **Tested**: pipeline golden cases cover FTSE/oil/labour no-trade, missing research evidence, promising research paper-review readiness, risk rejection, WATCH and NO_TRADE non-upgradeability, live account blocking, and missing portfolio warnings.
+- **Next focus**: persistence and observability hardening for decision records, pipeline results, and review scheduling without adding broker execution or live trading.
 
 ## Explicit Exclusions
 
 - Day trading is `NOT_PLANNED`.
 - Live trading is `NOT_PLANNED`.
 - Auto execution, broker order placement, unattended trading, and live capital are outside the current roadmap.
-- Phase 7 does not implement paper execution, broker execution, frontend UI, live trading, auto execution, options trading, day trading, live order creation, or automatic strategy/scoring/risk rule changes.
+- Phase 8 does not implement paper execution, broker execution, frontend UI, live trading, auto execution, options trading, day trading, live order creation, or automatic strategy/scoring/risk rule changes.
 
 ## Next Focus
 
 - **Roadmap**: `Docs/ROADMAP.md`.
-- **Next target**: integration and hardening of the decision pipeline.
-- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`, `tests/golden/research/`, `tests/golden/paper/`, `tests/golden/review/`.
+- **Next target**: persistence and observability hardening for pipeline and review records.
+- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`, `tests/golden/research/`, `tests/golden/paper/`, `tests/golden/review/`, `tests/golden/pipeline/`.
 - **Project-management process**: `Docs/PROJECT_MANAGEMENT/`.

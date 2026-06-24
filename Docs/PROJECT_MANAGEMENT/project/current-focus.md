@@ -4,17 +4,18 @@ This file tells humans and AI assistants what matters right now.
 
 ## Current Objective
 
-Integrate and harden the deterministic decision pipeline after Phase 7 Post Decision Review.
+Persist and observe deterministic decision pipeline results after Phase 8 integration.
 
 ## Active Phase
 
-Integration and Hardening - Decision Pipeline
+Persistence and Observability Hardening - Decision Pipeline Results
 
 ## Active Work Items
 
-- Wire deterministic decision outputs, research evidence, paper approval, and post-decision review into a cohesive pipeline.
+- Persist deterministic pipeline results, decision records, and review schedules.
+- Add observability for pipeline status, validation warnings, and blocked gates.
 - Preserve `NO_TRADE` as the default outcome.
-- Keep integration and hardening separate from broker execution and live trading.
+- Keep persistence and observability separate from broker execution and live trading.
 
 ## Do Not Work On
 
@@ -38,19 +39,20 @@ Summarise recent decisions. Full details go in `/project/decisions.md`.
 - Phase 5 Research/Backtest Evidence is implemented and tested.
 - Phase 6 Paper Approval Loop is implemented and tested.
 - Phase 7 Post Decision Review is implemented and tested.
+- Phase 8 Decision Pipeline Integration is implemented and tested.
 
 ## Current Risks
 
 Summarise current risks. Full details go in `/project/risks.md`.
 
-- Integration work could accidentally bypass phase gates; keep Decision Core, Risk Veto, Research Evidence, Paper Approval, and Review boundaries explicit.
+- Persistence work could accidentally treat stored pipeline output as execution authority; keep Decision Core, Risk Veto, Research Evidence, Paper Approval, and Review boundaries explicit.
 - Golden coverage must protect every deterministic decision gate from execution, live-order, and auto-approval drift.
 
 ## Next 3 Actions
 
-1. Map the deterministic pipeline from Decision Core through Review without adding execution paths.
-2. Add integration tests that preserve no-trade, risk-veto, research, paper-approval, and review gates.
-3. Harden persistence/observability for decision records and reviews while preserving live-trading exclusions.
+1. Design persistence records for pipeline results and review schedules without adding execution authority.
+2. Add tests that prove persisted records preserve no-trade, risk-veto, research, paper-approval, and review gates.
+3. Add observability for blocked gates and validation warnings while preserving live-trading exclusions.
 
 ## Last Updated
 
