@@ -1,0 +1,19 @@
+{
+  "name": "risk veto too strict becomes high priority triage item",
+  "input": {
+    "suggestion_id": "suggestion_risk_strict",
+    "source_lesson_ids": ["lesson_risk_strict"],
+    "suggestion_type": "RISK_THRESHOLD_REVIEW",
+    "target_module": "risk",
+    "target_setup_family": "earnings_revision",
+    "summary": "risk veto too strict",
+    "rationale": "Veto blocked a setup that later met evidence.",
+    "evidence_refs": ["review:rev_risk"]
+  },
+  "expected_source_type": "RISK_VETO_TOO_STRICT",
+  "expected_status": "OPEN",
+  "expected_priority": "HIGH",
+  "expected_requires_human_approval": true,
+  "expected_auto_apply_allowed": false,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "missed opportunity becomes human triage item",
+  "input": {
+    "suggestion_id": "suggestion_missed",
+    "source_lesson_ids": ["lesson_missed"],
+    "suggestion_type": "NO_TRADE_RULE_REVIEW",
+    "target_module": "review",
+    "target_setup_family": "commodity_equity",
+    "target_event_type": "commodity",
+    "summary": "missed opportunity after no-trade",
+    "rationale": "Clean setup formed after initial rejection.",
+    "evidence_refs": ["review:rev_missed"],
+    "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+  },
+  "expected_source_type": "MISSED_OPPORTUNITY",
+  "expected_status": "OPEN",
+  "expected_priority": "HIGH",
+  "expected_requires_human_approval": true,
+  "expected_auto_apply_allowed": false,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+}

@@ -4,17 +4,17 @@ This file tells humans and AI assistants what matters right now.
 
 ## Current Objective
 
-Prepare review-operations workflow for due reviews and human triage of replay feedback suggestions after Phase 10.
+Prepare persistence and reporting hardening for review-operation queues and follow-up action outcomes after Phase 11.
 
 ## Active Phase
 
-Review Operations and Human Feedback Triage
+Review Operations Persistence and Reporting
 
 ## Active Work Items
 
-- Define due-review queue and feedback suggestion triage workflow.
+- Define how triage queues, human feedback decisions, and follow-up action outcomes should be persisted and reported.
 - Preserve human approval before any strategy, scoring, confirmation, or risk rule change.
-- Prioritize research gaps and setup-family follow-up from deterministic feedback reports.
+- Keep research gaps and setup-family follow-up operationally visible without changing rules automatically.
 - Preserve `NO_TRADE` as the default outcome.
 - Keep review operations separate from broker execution, live trading, and automatic rule changes.
 
@@ -48,14 +48,14 @@ Summarise recent decisions. Full details go in `/project/decisions.md`.
 
 Summarise current risks. Full details go in `/project/risks.md`.
 
-- Review operations work could accidentally treat feedback suggestions as execution or rule-change authority; keep Decision Core, Risk Veto, Research Evidence, Paper Approval, and Review boundaries explicit.
+- Review operations persistence work could accidentally treat feedback suggestions as execution or rule-change authority; keep Decision Core, Risk Veto, Research Evidence, Paper Approval, and Review boundaries explicit.
 - Golden coverage must protect every deterministic decision gate from execution, live-order, and auto-approval drift.
 
 ## Next 3 Actions
 
-1. Design due-review queue and feedback triage workflow without adding execution authority.
-2. Add tests that prove triage preserves no-trade, risk-veto, research, paper-approval, and review gates.
-3. Add human-review handoff for feedback suggestions without automatic strategy/scoring/risk rule changes.
+1. Design persistence records for triage items, human decisions, and follow-up action outcomes without adding execution authority.
+2. Add tests that prove persisted review operations preserve no-trade, risk-veto, research, paper-approval, and review gates.
+3. Add operational reporting for queue status and follow-up action outcomes without automatic strategy/scoring/risk rule changes.
 
 ## Last Updated
 

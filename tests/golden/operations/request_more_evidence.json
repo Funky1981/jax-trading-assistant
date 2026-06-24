@@ -1,0 +1,35 @@
+{
+  "name": "request more evidence",
+  "item": {
+    "triage_item_id": "triage_more_evidence",
+    "source_type": "DATA_QUALITY_REVIEW",
+    "source_id": "suggestion_data_quality",
+    "setup_family": "rates_fx",
+    "event_type": "macro",
+    "priority": "HIGH",
+    "status": "OPEN",
+    "reason": "Data quality needs review.",
+    "evidence_refs": ["data:source_a"],
+    "suggested_action": "Review data quality before any decision change.",
+    "allowed_follow_up_actions": ["REVIEW_DATA_QUALITY"],
+    "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+    "requires_human_approval": true,
+    "auto_apply_allowed": false,
+    "created_at": "2026-06-24T12:00:00Z",
+    "updated_at": "2026-06-24T12:00:00Z",
+    "due_at": "2026-06-24T12:00:00Z"
+  },
+  "decision": {
+    "FeedbackDecisionID": "feedback_more_evidence",
+    "Decision": "REQUEST_MORE_EVIDENCE",
+    "HumanReviewer": "reviewer@example.com",
+    "Rationale": "Need cleaner source evidence.",
+    "RequiredEvidence": ["validated data source", "replay comparison"],
+    "CreatedAt": "2026-06-24T12:00:00Z"
+  },
+  "expected_status": "NEEDS_MORE_EVIDENCE",
+  "expected_action_types": ["REVIEW_DATA_QUALITY"],
+  "expected_requires_human_approval": true,
+  "expected_auto_apply_allowed": false,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+}

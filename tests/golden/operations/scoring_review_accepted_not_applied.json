@@ -1,0 +1,35 @@
+{
+  "name": "scoring review accepted but not applied",
+  "item": {
+    "triage_item_id": "triage_scoring_review",
+    "source_type": "SCORING_REVIEW",
+    "source_id": "suggestion_scoring",
+    "asset": "SHEL",
+    "setup_family": "earnings_revision",
+    "event_type": "earnings",
+    "priority": "MEDIUM",
+    "status": "OPEN",
+    "reason": "Scoring review suggested by feedback.",
+    "evidence_refs": ["review:rev_scoring"],
+    "suggested_action": "Review scoring rule; do not apply changes automatically.",
+    "allowed_follow_up_actions": ["REVIEW_SCORING_RULE"],
+    "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+    "requires_human_approval": true,
+    "auto_apply_allowed": false,
+    "created_at": "2026-06-24T12:00:00Z",
+    "updated_at": "2026-06-24T12:00:00Z",
+    "due_at": "2026-06-24T12:00:00Z"
+  },
+  "decision": {
+    "FeedbackDecisionID": "feedback_scoring",
+    "Decision": "ACCEPT_SUGGESTION",
+    "HumanReviewer": "reviewer@example.com",
+    "Rationale": "Review scoring manually without applying.",
+    "CreatedAt": "2026-06-24T12:00:00Z"
+  },
+  "expected_status": "ACCEPTED",
+  "expected_action_types": ["REVIEW_SCORING_RULE"],
+  "expected_requires_human_approval": true,
+  "expected_auto_apply_allowed": false,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+}

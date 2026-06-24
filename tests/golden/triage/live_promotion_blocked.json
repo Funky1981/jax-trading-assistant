@@ -1,0 +1,15 @@
+{
+  "name": "live promotion blocked",
+  "input": {
+    "suggestion_id": "suggestion_live_ready",
+    "source_lesson_ids": ["lesson_live_ready"],
+    "suggestion_type": "SCORING_REVIEW",
+    "target_module": "scoring",
+    "target_setup_family": "macro_breakout",
+    "summary": "promote setup to LIVE_READY",
+    "rationale": "Attempt live trading approval from feedback.",
+    "evidence_refs": ["review:rev_live"],
+    "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+  },
+  "expected_error_contains": "live-ready promotion"
+}

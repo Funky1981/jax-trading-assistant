@@ -8,28 +8,30 @@
 - **Product truth**: Jax is an event-driven trading research assistant. See `Docs/JAX_PRODUCT_CHARTER.md`.
 - **Capability truth**: current capability status lives in `Docs/CAPABILITY_MATRIX.md`.
 
-## Phase 10 Status
+## Phase 11 Status
 
-- **Current completed phase**: Phase 10 Replay and Memory Feedback Reporting.
-- **Phase source**: attached Phase 10 implementation brief; Phase 9 source was the Persistence and Observability Hardening brief.
+- **Current completed phase**: Phase 11 Review Operations and Human Feedback Triage.
+- **Phase source**: attached Phase 11 Review Operations and Human Feedback Triage brief; Phase 10 source was the Replay and Memory Feedback Reporting brief.
 - **Default decision**: `NO_TRADE`.
 - **Implemented**: deterministic end-to-end non-execution decision pipeline under `internal/decisioning/pipeline`.
 - **Implemented in Phase 9**: persistence models, repository interface, deterministic in-memory repository, audit records, trace records, and structured observability summaries under `internal/decisioning/persistence` and `internal/decisioning/observability`.
 - **Tested**: persistence tests cover saving/retrieving no-trade, risk-rejected, and paper-review-ready pipeline records, decision logs, review schedules, outcome reviews, audit records, pending review listing, and non-upgradeability. Observability tests cover no-trade and paper-review-ready summaries, warning/error counts, trace fields, and hidden-reasoning exclusion.
 - **Implemented in Phase 10**: deterministic replay and memory feedback reporting under `internal/decisioning/replay` and `internal/decisioning/feedback` over supplied persisted-style decision, review, risk, research, paper, and pipeline records.
 - **Tested in Phase 10**: replay and feedback unit tests plus golden reporting cases cover no-trades, missed opportunities, avoided losses, risk veto helped/too strict, paper setup worked/failed, weak or missing research evidence, human-only suggestions, blocked live promotion, and preserved forbidden actions.
-- **Next focus**: review-operations workflow for due review queues and human triage of feedback suggestions without adding broker execution or live trading.
+- **Implemented in Phase 11**: deterministic triage items, priority/status validation, human feedback decisions, review operation results, and follow-up action records under `internal/decisioning/triage` and `internal/decisioning/operations`.
+- **Tested in Phase 11**: unit and golden triage/operations cases cover missed opportunities, risk-veto-too-strict findings, failed paper setups, research gaps, scoring reviews, rejected suggestions, more-evidence requests, critical priority no-auto-apply behavior, live-ready promotion blocking, and close-with-no-action decisions.
+- **Next focus**: persist and report review-operation queues and follow-up action outcomes without adding broker execution, live trading, automatic rule changes, or frontend UI.
 
 ## Explicit Exclusions
 
 - Day trading is `NOT_PLANNED`.
 - Live trading is `NOT_PLANNED`.
 - Auto execution, broker order placement, unattended trading, and live capital are outside the current roadmap.
-- Phase 10 does not implement paper execution, broker execution, frontend UI, live trading, auto execution, options trading, day trading, live order creation, or automatic strategy/scoring/risk rule changes.
+- Phase 11 does not implement paper execution, broker execution, frontend UI, live trading, auto execution, options trading, day trading, live order creation, or automatic strategy/scoring/risk rule changes.
 
 ## Next Focus
 
 - **Roadmap**: `Docs/ROADMAP.md`.
-- **Next target**: review-operations workflow for due review queues and human triage of feedback suggestions.
-- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`, `tests/golden/research/`, `tests/golden/paper/`, `tests/golden/review/`, `tests/golden/pipeline/`, `tests/golden/replay/`, `tests/golden/feedback/`.
+- **Next target**: persistence/reporting hardening for review-operation queues and follow-up action outcomes.
+- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`, `tests/golden/research/`, `tests/golden/paper/`, `tests/golden/review/`, `tests/golden/pipeline/`, `tests/golden/replay/`, `tests/golden/feedback/`, `tests/golden/triage/`, `tests/golden/operations/`.
 - **Project-management process**: `Docs/PROJECT_MANAGEMENT/`.

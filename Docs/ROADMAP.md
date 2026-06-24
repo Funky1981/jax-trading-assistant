@@ -48,8 +48,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Status: implemented and tested.
    - Goal: report on persisted decisions, due reviews, and replay outcomes so Jax can learn from no-trades and paper-review candidates without automatic rule changes or execution authority.
 12. **Review Operations and Human Feedback Triage**
-   - Status: recommended next focus.
+   - Status: implemented and tested.
    - Goal: help humans inspect due reviews and feedback suggestions, prioritize research actions, and decide whether to open rule-review work without changing rules automatically.
+13. **Review Operations Persistence and Reporting**
+   - Status: recommended next focus.
+   - Goal: persist triage queues, human feedback decisions, and follow-up action outcomes for operational reporting while preserving human approval and all execution exclusions.
 
 ## Explicitly Not Planned
 
@@ -59,5 +62,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Review operations and human feedback triage is the recommended next focus after Phase 10 Replay and Memory Feedback Reporting. This is not a live-trading phase.
+- Review operations persistence and reporting is the recommended next focus after Phase 11 Review Operations and Human Feedback Triage. This is not a live-trading phase.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.

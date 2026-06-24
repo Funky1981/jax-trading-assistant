@@ -1,0 +1,19 @@
+{
+  "name": "paper setup failed becomes high priority triage item",
+  "input": {
+    "suggestion_id": "suggestion_paper_failed",
+    "source_lesson_ids": ["lesson_paper_failed"],
+    "suggestion_type": "SETUP_FAMILY_RESEARCH",
+    "target_module": "research",
+    "target_setup_family": "macro_breakout",
+    "summary": "paper setup failed",
+    "rationale": "Paper setup hit invalidation quickly.",
+    "evidence_refs": ["paper:pt_failed"]
+  },
+  "expected_source_type": "PAPER_SETUP_FAILED",
+  "expected_status": "OPEN",
+  "expected_priority": "HIGH",
+  "expected_requires_human_approval": true,
+  "expected_auto_apply_allowed": false,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+}
