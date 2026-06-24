@@ -41,9 +41,9 @@
 | Dataset integrity check | TESTED | Research | Dataset id/hash/date range/universe validation | `internal/decisioning/research/dataset_integrity.go` | `internal/decisioning/research/research_test.go`, `tests/golden/research_runner_test.go` | Dataset identity is required before promotion |
 | Slippage/cost modelling | TESTED | Research | Backtest assumptions required | `internal/decisioning/research/backtest_evidence.go` | `internal/decisioning/research/research_test.go`, `tests/golden/research_runner_test.go` | Missing slippage or fees caps evidence at `BACKTESTED_WEAK` |
 | Out-of-sample validation | TESTED | Research | OOS evidence required | `internal/decisioning/research/validation.go` | `internal/decisioning/research/research_test.go`, `tests/golden/research_runner_test.go` | Missing OOS validation caps evidence at `BACKTESTED_WEAK` unless explicitly limited |
-| Decision memory logging | PLANNED | Memory/Review | Decision records persisted | `internal/decisioning/review` | `review_test.go` | Every decision logged |
-| No-trade outcome review | PLANNED | Memory/Review | 1d/1w/1m review records | `internal/decisioning/review` | `review_test.go` | Must review rejected trades |
-| Paper-trade outcome review | PLANNED | Memory/Review | Outcome review | `internal/decisioning/review` | `review_test.go` | Learn from paper trades |
+| Decision memory logging | TESTED | Memory/Review | Decision log + default review schedule tests | `internal/decisioning/review` | `internal/decisioning/review/review_test.go`, `tests/golden/review_runner_test.go` | Every decision can be logged with 1d/1w/1m review schedule |
+| No-trade outcome review | TESTED | Memory/Review | No-trade review golden cases | `internal/decisioning/review` | `internal/decisioning/review/review_test.go`, `tests/golden/review_runner_test.go` | Correct no-trades and missed opportunities are reviewable without changing rules automatically |
+| Paper-trade outcome review | TESTED | Memory/Review | Paper outcome review golden cases | `internal/decisioning/review` | `internal/decisioning/review/review_test.go`, `tests/golden/review_runner_test.go` | Approved paper outcomes can record worked/failed lessons; live promotion remains blocked |
 | Live trading | NOT_PLANNED | Execution | Explicitly excluded | N/A | N/A | Do not implement live orders, auto execution, or broker order placement |
 
 ## Matrix rule

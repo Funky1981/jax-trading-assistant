@@ -8,25 +8,25 @@
 - **Product truth**: Jax is an event-driven trading research assistant. See `Docs/JAX_PRODUCT_CHARTER.md`.
 - **Capability truth**: current capability status lives in `Docs/CAPABILITY_MATRIX.md`.
 
-## Phase 6 Status
+## Phase 7 Status
 
-- **Current completed phase**: Phase 6 Paper Approval Loop.
-- **Phase source**: `Docs/PHASE_CONTRACTS/06_PAPER_APPROVAL_LOOP.md`.
+- **Current completed phase**: Phase 7 Post Decision Review.
+- **Phase source**: `Docs/PHASE_CONTRACTS/07_POST_DECISION_REVIEW.md`.
 - **Default decision**: `NO_TRADE`.
-- **Implemented**: deterministic paper ticket, approval status, lifecycle, ticket validation, and explicit human approval models under `internal/decisioning/paper`.
-- **Tested**: valid risk-approved trade candidate creates a pending paper ticket; `NO_TRADE`, `WATCH`, risk-rejected candidates, missing invalidation, and poor risk/reward cannot create tickets; expired, rejected, deferred, and auto approvals cannot approve; valid pending tickets can be approved for paper.
-- **Next implementation phase**: Phase 7 Post Decision Review.
+- **Implemented**: deterministic decision log, review schedule, outcome review, lesson, and validation models under `internal/decisioning/review`.
+- **Tested**: `NO_TRADE`, `WATCH`, `SETUP_FORMING`, `TRADE_CANDIDATE`, `REJECTED_BY_RISK`, and `APPROVED_FOR_PAPER` decisions schedule reviews; correct no-trades, missed opportunities, avoided losses, risk-veto strictness, and paper worked/failed outcomes can be recorded; lesson suggestions require human approval and `LIVE_READY` promotion is blocked.
+- **Next focus**: integration and hardening of the decision pipeline.
 
 ## Explicit Exclusions
 
 - Day trading is `NOT_PLANNED`.
 - Live trading is `NOT_PLANNED`.
 - Auto execution, broker order placement, unattended trading, and live capital are outside the current roadmap.
-- Phase 6 does not implement paper execution, broker execution, frontend UI, live trading, auto execution, options trading, day trading, or live order creation.
+- Phase 7 does not implement paper execution, broker execution, frontend UI, live trading, auto execution, options trading, day trading, live order creation, or automatic strategy/scoring/risk rule changes.
 
 ## Next Focus
 
 - **Roadmap**: `Docs/ROADMAP.md`.
-- **Phase 7 target**: Post Decision Review.
-- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`, `tests/golden/research/`, `tests/golden/paper/`.
+- **Next target**: integration and hardening of the decision pipeline.
+- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`, `tests/golden/research/`, `tests/golden/paper/`, `tests/golden/review/`.
 - **Project-management process**: `Docs/PROJECT_MANAGEMENT/`.

@@ -1,0 +1,32 @@
+{
+  "name": "Approved paper setup failed",
+  "mode": "outcome",
+  "outcome_input": {
+    "review_id": "rev_paper_failed",
+    "decision_id": "dec_paper_approved",
+    "event_id": "evt_paper_approved",
+    "review_window": "1_week",
+    "original_decision": "TRADE_CANDIDATE",
+    "final_decision": "APPROVED_FOR_PAPER",
+    "asset_outcome": { "summary": "Paper setup hit invalidation.", "direction": "down", "return_pct": -0.04, "hit_invalidation": true },
+    "market_outcome": { "summary": "Market regime turned hostile." },
+    "was_decision_correct": false,
+    "missed_opportunity": false,
+    "avoided_loss": false,
+    "lesson_summary": "Approved paper setup failed and should remain under review.",
+    "memory_tags": ["paper", "setup_failed"],
+    "created_at": "2026-06-24T12:00:00Z"
+  },
+  "expected_valid": true,
+  "expected_can_schedule_review": false,
+  "expected_can_complete_review": true,
+  "expected_lesson_type": "PAPER_SETUP_FAILED",
+  "expected_was_decision_correct": false,
+  "expected_missed_opportunity": false,
+  "expected_avoided_loss": false,
+  "expected_requires_human_review": false,
+  "expected_lesson_requires_human_approval": false,
+  "expected_promotion_blocked": false,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_errors_contain": []
+}

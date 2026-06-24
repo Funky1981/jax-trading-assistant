@@ -1,0 +1,32 @@
+{
+  "name": "Correct NO_TRADE review",
+  "mode": "outcome",
+  "outcome_input": {
+    "review_id": "rev_correct_no_trade",
+    "decision_id": "dec_review_no_trade",
+    "event_id": "evt_review_no_trade",
+    "review_window": "1_week",
+    "original_decision": "NO_TRADE",
+    "final_decision": "NO_TRADE",
+    "asset_outcome": { "summary": "No clean asset-specific setup formed." },
+    "market_outcome": { "summary": "Conflicting macro drivers persisted." },
+    "was_decision_correct": true,
+    "missed_opportunity": false,
+    "avoided_loss": false,
+    "lesson_summary": "NO_TRADE was correct because no clean opportunity formed.",
+    "memory_tags": ["no_trade", "correct_rejection"],
+    "created_at": "2026-06-24T12:00:00Z"
+  },
+  "expected_valid": true,
+  "expected_can_schedule_review": false,
+  "expected_can_complete_review": true,
+  "expected_lesson_type": "CORRECT_NO_TRADE",
+  "expected_was_decision_correct": true,
+  "expected_missed_opportunity": false,
+  "expected_avoided_loss": false,
+  "expected_requires_human_review": false,
+  "expected_lesson_requires_human_approval": false,
+  "expected_promotion_blocked": false,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_errors_contain": []
+}

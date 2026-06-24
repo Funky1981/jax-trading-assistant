@@ -1,0 +1,26 @@
+{
+  "name": "WATCH schedules reviews",
+  "mode": "schedule",
+  "log_input": {
+    "decision": {
+      "decision_id": "dec_review_watch",
+      "event_id": "evt_review_watch",
+      "brain": "SWING_BRAIN_V1",
+      "decision": "WATCH",
+      "primary_reason": "Required confirmations are missing.",
+      "required_confirmations": ["price holds support", "sector confirms"],
+      "allowed_actions": ["store_event", "monitor", "prepare_research"],
+      "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+      "review_after": ["1_day", "1_week", "1_month"]
+    },
+    "created_at": "2026-06-24T12:00:00Z",
+    "memory_tags": ["watch", "missing_confirmation"]
+  },
+  "expected_valid": true,
+  "expected_can_schedule_review": true,
+  "expected_can_complete_review": false,
+  "expected_review_windows": ["1_day", "1_week", "1_month"],
+  "expected_promotion_blocked": false,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_errors_contain": []
+}

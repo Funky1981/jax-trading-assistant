@@ -4,17 +4,17 @@ This file tells humans and AI assistants what matters right now.
 
 ## Current Objective
 
-Implement Phase 7 Post Decision Review after Phase 6 Paper Approval Loop.
+Integrate and harden the deterministic decision pipeline after Phase 7 Post Decision Review.
 
 ## Active Phase
 
-Phase 7 - Post Decision Review
+Integration and Hardening - Decision Pipeline
 
 ## Active Work Items
 
-- Define deterministic outcome review requirements for decisions, no-trades, and paper approvals.
+- Wire deterministic decision outputs, research evidence, paper approval, and post-decision review into a cohesive pipeline.
 - Preserve `NO_TRADE` as the default outcome.
-- Keep review and learning separate from broker execution and live trading.
+- Keep integration and hardening separate from broker execution and live trading.
 
 ## Do Not Work On
 
@@ -37,19 +37,20 @@ Summarise recent decisions. Full details go in `/project/decisions.md`.
 - Phase 4 Risk Veto is implemented and tested in `internal/decisioning/risk`.
 - Phase 5 Research/Backtest Evidence is implemented and tested.
 - Phase 6 Paper Approval Loop is implemented and tested.
+- Phase 7 Post Decision Review is implemented and tested.
 
 ## Current Risks
 
 Summarise current risks. Full details go in `/project/risks.md`.
 
-- Post-decision review could accidentally imply strategy promotion without enough outcomes; keep review evidence-only until promotion rules are satisfied.
-- Golden coverage must protect Research Evidence, Swing Brain, Risk Veto, and Paper Approval outputs from bypassing review requirements.
+- Integration work could accidentally bypass phase gates; keep Decision Core, Risk Veto, Research Evidence, Paper Approval, and Review boundaries explicit.
+- Golden coverage must protect every deterministic decision gate from execution, live-order, and auto-approval drift.
 
 ## Next 3 Actions
 
-1. Read the Phase 7 Post Decision Review contract.
-2. Define deterministic review inputs and outputs on top of Decision Core, Research Evidence, Risk Veto, and Paper Approval results.
-3. Add golden review cases for no-trades, rejected candidates, approved paper tickets, and prohibited live-execution promotion.
+1. Map the deterministic pipeline from Decision Core through Review without adding execution paths.
+2. Add integration tests that preserve no-trade, risk-veto, research, paper-approval, and review gates.
+3. Harden persistence/observability for decision records and reviews while preserving live-trading exclusions.
 
 ## Last Updated
 

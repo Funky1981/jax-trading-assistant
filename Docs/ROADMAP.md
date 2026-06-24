@@ -36,8 +36,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Status: implemented and tested.
    - Goal: require human approval before any paper-trading workflow can be prepared.
 8. **Phase 7: Post Decision Review**
-   - Status: next implementation phase.
+   - Status: implemented and tested.
    - Goal: record and review outcomes for decisions, including no-trades and paper approvals.
+9. **Integration and Hardening**
+   - Status: recommended next focus.
+   - Goal: wire the deterministic decision pipeline end-to-end, harden persistence and observability, and preserve all live-trading exclusions.
 
 ## Explicitly Not Planned
 
@@ -47,5 +50,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Post Decision Review is the next planned supporting phase after Paper Approval Loop.
+- Integration and hardening of the decision pipeline is the recommended next focus after Post Decision Review. This is not a live-trading phase.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.
