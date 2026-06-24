@@ -31,6 +31,7 @@ NO_TRADE
 | INDEX_COMPOSITION | Index move driven by heavyweight names | Index, heavy constituents | Not broad market move |
 | COMPANY_SPECIFIC | Management, product, M&A, debt | Single stock | Financial impact unclear |
 | MARKET_STRUCTURE | Liquidity, flows, technical breaks | Indices, ETFs, liquid assets | False breakouts |
+| MACRO_COMMODITY_INDEX_MOVE | Index move explained by commodity pressure and macro context | Index, commodity producers, FX, rates | Composition-driven move, central bank timing |
 | UNKNOWN | Unclear event | Unknown | Default reject |
 
 ## Driver categories
@@ -53,6 +54,7 @@ technical_breakdown
 valuation
 sector_rotation
 index_composition
+central_bank
 ```
 
 ## Conflict examples

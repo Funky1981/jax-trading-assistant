@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"jax-trading-assistant/internal/decisioning/classify"
 	"jax-trading-assistant/internal/decisioning/core"
 )
 
@@ -28,6 +29,16 @@ func TestDecisionRunnerFTSEOilLabourConflictReturnsNoTrade(t *testing.T) {
 
 	var expected expectedDecisionCase
 	readJSON(t, filepath.Join("events", "ftse_oil_labour_conflict.expected.json"), &expected)
+
+	intelligence := classify.EnrichEvent(event)
+	event = intelligence.Event
+	if intelligence.ClassifiedType != classify.EventTypeMacroCommodityIndexMove {
+		t.Fatalf("classified type = %s, want %s", intelligence.ClassifiedType, classify.EventTypeMacroCommodityIndexMove)
+	}
+	assertContainsAll(t, event.PrimaryDrivers, []string{"oil"})
+	assertContainsAll(t, event.ConflictingDrivers, []string{"labour_data", "central_bank", "rates"})
+	assertContainsAll(t, event.AffectedAssets, []string{"FTSE100", "BP", "SHEL", "GBP", "UK_GILTS"})
+	assertContainsAny(t, intelligence.DecisionPressure, []string{classify.PressureSupportsNoTrade, classify.PressureNeedsMoreContext})
 
 	bundle := core.Evaluate(core.EvaluationInput{
 		Event: event,
@@ -62,6 +73,20 @@ func TestDecisionRunnerFTSEOilLabourConflictReturnsNoTrade(t *testing.T) {
 	if decision.IsError() {
 		t.Fatal("NO_TRADE golden case must be a successful decision, not an error")
 	}
+}
+
+func assertContainsAny(t *testing.T, got []string, want []string) {
+	t.Helper()
+	seen := map[string]bool{}
+	for _, item := range got {
+		seen[item] = true
+	}
+	for _, item := range want {
+		if seen[item] {
+			return
+		}
+	}
+	t.Fatalf("missing any of %v in %v", want, got)
 }
 
 func readJSON(t *testing.T, path string, out any) {

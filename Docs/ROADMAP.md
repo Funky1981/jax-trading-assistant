@@ -18,12 +18,12 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Goal: define structured Event, Decision, EvidenceBundle, decision enum, deterministic evaluator v1, and golden decision runner.
    - Default: `NO_TRADE`.
 3. **Phase 2: Event Intelligence**
-   - Status: next implementation phase.
+   - Status: implemented and tested.
    - Source: `Docs/PHASE_CONTRACTS/02_EVENT_INTELLIGENCE.md`.
    - Goal: classify events, extract drivers, detect conflicts, and map affected assets.
    - Constraint: use Decision Core outputs; do not add trading execution or Swing Brain logic.
-4. **Swing Brain v1**
-   - Status: first active strategy brain after Decision Core.
+4. **Phase 3: Swing Brain v1**
+   - Status: next implementation phase.
    - Source: `Docs/STRATEGIES/SWING_TRADING/` and `Docs/PHASE_CONTRACTS/03_SWING_BRAIN_V1.md`.
    - Goal: evaluate swing setups only after Decision Core and Event Intelligence exist.
 
