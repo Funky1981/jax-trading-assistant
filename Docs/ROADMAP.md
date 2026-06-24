@@ -41,9 +41,12 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 9. **Phase 8: Decision Pipeline Integration and Hardening**
    - Status: implemented and tested.
    - Goal: wire the deterministic decision pipeline end-to-end while preserving risk veto, research evidence, human approval, paper-only, review scheduling, and live-trading exclusions.
-10. **Persistence and Observability Hardening**
-   - Status: recommended next focus.
+10. **Phase 9: Persistence and Observability Hardening**
+   - Status: implemented and tested.
    - Goal: persist pipeline results and review schedules, add operational visibility for deterministic decisions, and preserve all live-trading exclusions.
+11. **Deterministic Replay and Memory Feedback Reporting**
+   - Status: recommended next focus.
+   - Goal: report on persisted decisions, due reviews, and replay outcomes so Jax can learn from no-trades and paper-review candidates without automatic rule changes or execution authority.
 
 ## Explicitly Not Planned
 
@@ -53,5 +56,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Persistence and observability hardening is the recommended next focus after Phase 8 Decision Pipeline Integration. This is not a live-trading phase.
+- Deterministic replay and memory feedback reporting is the recommended next focus after Phase 9 Persistence and Observability Hardening. This is not a live-trading phase.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.

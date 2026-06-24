@@ -8,25 +8,26 @@
 - **Product truth**: Jax is an event-driven trading research assistant. See `Docs/JAX_PRODUCT_CHARTER.md`.
 - **Capability truth**: current capability status lives in `Docs/CAPABILITY_MATRIX.md`.
 
-## Phase 8 Status
+## Phase 9 Status
 
-- **Current completed phase**: Phase 8 Decision Pipeline Integration and Hardening.
-- **Phase source**: attached Phase 8 implementation brief; Phase 7 source remains `Docs/PHASE_CONTRACTS/07_POST_DECISION_REVIEW.md`.
+- **Current completed phase**: Phase 9 Persistence and Observability Hardening.
+- **Phase source**: attached Phase 9 implementation brief; Phase 8 source was the Decision Pipeline Integration and Hardening brief.
 - **Default decision**: `NO_TRADE`.
 - **Implemented**: deterministic end-to-end non-execution decision pipeline under `internal/decisioning/pipeline`.
-- **Tested**: pipeline golden cases cover FTSE/oil/labour no-trade, missing research evidence, promising research paper-review readiness, risk rejection, WATCH and NO_TRADE non-upgradeability, live account blocking, and missing portfolio warnings.
-- **Next focus**: persistence and observability hardening for decision records, pipeline results, and review scheduling without adding broker execution or live trading.
+- **Implemented in Phase 9**: persistence models, repository interface, deterministic in-memory repository, audit records, trace records, and structured observability summaries under `internal/decisioning/persistence` and `internal/decisioning/observability`.
+- **Tested**: persistence tests cover saving/retrieving no-trade, risk-rejected, and paper-review-ready pipeline records, decision logs, review schedules, outcome reviews, audit records, pending review listing, and non-upgradeability. Observability tests cover no-trade and paper-review-ready summaries, warning/error counts, trace fields, and hidden-reasoning exclusion.
+- **Next focus**: deterministic replay and memory feedback reporting for persisted decision/review records without adding broker execution or live trading.
 
 ## Explicit Exclusions
 
 - Day trading is `NOT_PLANNED`.
 - Live trading is `NOT_PLANNED`.
 - Auto execution, broker order placement, unattended trading, and live capital are outside the current roadmap.
-- Phase 8 does not implement paper execution, broker execution, frontend UI, live trading, auto execution, options trading, day trading, live order creation, or automatic strategy/scoring/risk rule changes.
+- Phase 9 does not implement paper execution, broker execution, frontend UI, live trading, auto execution, options trading, day trading, live order creation, or automatic strategy/scoring/risk rule changes.
 
 ## Next Focus
 
 - **Roadmap**: `Docs/ROADMAP.md`.
-- **Next target**: persistence and observability hardening for pipeline and review records.
+- **Next target**: deterministic replay and memory feedback reporting over persisted pipeline and review records.
 - **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`, `tests/golden/research/`, `tests/golden/paper/`, `tests/golden/review/`, `tests/golden/pipeline/`.
 - **Project-management process**: `Docs/PROJECT_MANAGEMENT/`.
