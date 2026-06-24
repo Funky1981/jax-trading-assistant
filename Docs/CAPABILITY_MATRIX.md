@@ -37,10 +37,10 @@
 | Risk veto | TESTED | Risk | Unit tests + golden risk cases | `internal/decisioning/risk` | `internal/decisioning/risk/risk_test.go`, `tests/golden/risk` | Deterministic mandatory veto layer can pass, downgrade, or reject Swing Brain decisions before any paper approval workflow; live trading remains blocked |
 | Human approval | PARTIAL | Trader/API | Approval workflow test | Existing approval routes | Existing tests | Must carry decision evidence |
 | Paper trade ticket | PLANNED | Paper Trading | Ticket schema + tests | `internal/decisioning/core/paper_ticket.go` | `paper_ticket_test.go` | Candidate→paper approval |
-| Backtest evidence bundle | PLANNED | Research | Evidence validation | `internal/decisioning/core/backtest_evidence.go` | `backtest_evidence_test.go` | Uses existing research runtime |
-| Dataset integrity check | PARTIAL | Research | Dataset hash validation | `cmd/research/backtest.go` | Existing/new tests | Existing foundation present |
-| Slippage/cost modelling | PLANNED | Research | Backtest assumptions required | Research/backtest layer | Evidence tests | Required before PAPER_READY |
-| Out-of-sample validation | PLANNED | Research | OOS evidence required | Research/backtest layer | Evidence tests | Required before promotion |
+| Backtest evidence bundle | TESTED | Research | Evidence validation + golden research cases | `internal/decisioning/research` | `internal/decisioning/research/research_test.go`, `tests/golden/research_runner_test.go` | Phase 5 deterministic evidence validation implemented; no backtest engine rewrite |
+| Dataset integrity check | TESTED | Research | Dataset id/hash/date range/universe validation | `internal/decisioning/research/dataset_integrity.go` | `internal/decisioning/research/research_test.go`, `tests/golden/research_runner_test.go` | Dataset identity is required before promotion |
+| Slippage/cost modelling | TESTED | Research | Backtest assumptions required | `internal/decisioning/research/backtest_evidence.go` | `internal/decisioning/research/research_test.go`, `tests/golden/research_runner_test.go` | Missing slippage or fees caps evidence at `BACKTESTED_WEAK` |
+| Out-of-sample validation | TESTED | Research | OOS evidence required | `internal/decisioning/research/validation.go` | `internal/decisioning/research/research_test.go`, `tests/golden/research_runner_test.go` | Missing OOS validation caps evidence at `BACKTESTED_WEAK` unless explicitly limited |
 | Decision memory logging | PLANNED | Memory/Review | Decision records persisted | `internal/decisioning/review` | `review_test.go` | Every decision logged |
 | No-trade outcome review | PLANNED | Memory/Review | 1d/1w/1m review records | `internal/decisioning/review` | `review_test.go` | Must review rejected trades |
 | Paper-trade outcome review | PLANNED | Memory/Review | Outcome review | `internal/decisioning/review` | `review_test.go` | Learn from paper trades |

@@ -8,25 +8,25 @@
 - **Product truth**: Jax is an event-driven trading research assistant. See `Docs/JAX_PRODUCT_CHARTER.md`.
 - **Capability truth**: current capability status lives in `Docs/CAPABILITY_MATRIX.md`.
 
-## Phase 4 Status
+## Phase 5 Status
 
-- **Current completed phase**: Phase 4 Risk Veto.
-- **Phase source**: `Docs/PHASE_CONTRACTS/04_RISK_VETO.md`.
+- **Current completed phase**: Phase 5 Research/Backtest Evidence.
+- **Phase source**: `Docs/PHASE_CONTRACTS/05_RESEARCH_BACKTEST_EVIDENCE.md`.
 - **Default decision**: `NO_TRADE`.
-- **Implemented**: deterministic Risk Veto layer for Swing Brain decisions, including structured risk assessment output, portfolio context, exposure thresholds, risk/reward and invalidation checks, paper-only/human-approval requirements, live account rejection, and mandatory forbidden execution actions.
-- **Tested**: valid Swing candidate can pass risk; poor risk/reward, missing stop/invalidation, and live account mode are rejected; high sector and correlated exposure downgrade to `WATCH`; existing `WATCH` and `NO_TRADE` decisions cannot be upgraded.
-- **Next implementation phase**: Phase 5 Research/Backtest Evidence.
+- **Implemented**: deterministic research hypothesis, backtest evidence, dataset integrity, validation result, and promotion-cap models under `internal/decisioning/research`.
+- **Tested**: missing dataset hash, missing slippage/costs, missing out-of-sample evidence, weak sample size, missing failure modes, promising evidence, paper-ready evidence, and attempted `LIVE_READY` promotion.
+- **Next implementation phase**: Phase 6 Paper Approval Loop.
 
 ## Explicit Exclusions
 
 - Day trading is `NOT_PLANNED`.
 - Live trading is `NOT_PLANNED`.
 - Auto execution, broker order placement, unattended trading, and live capital are outside the current roadmap.
-- Phase 4 does not implement paper trading, broker execution, frontend UI, paper ticket creation, live trading, auto execution, options trading, day trading, or strategy promotion from backtest evidence.
+- Phase 5 does not implement paper ticket creation, broker execution, frontend UI, live trading, auto execution, options trading, day trading, or a full backtest engine.
 
 ## Next Focus
 
 - **Roadmap**: `Docs/ROADMAP.md`.
-- **Phase 5 target**: Research/Backtest Evidence.
-- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`.
+- **Phase 6 target**: Paper Approval Loop.
+- **Golden fixtures**: `tests/golden/events/`, `tests/golden/swing/`, `tests/golden/risk/`, `tests/golden/research/`.
 - **Project-management process**: `Docs/PROJECT_MANAGEMENT/`.

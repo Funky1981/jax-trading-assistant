@@ -30,8 +30,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Status: implemented and tested.
    - Goal: reject or downgrade swing candidates when risk constraints fail before any paper ticket or approval workflow exists.
 6. **Phase 5: Research/Backtest Evidence**
-   - Status: next implementation phase.
+   - Status: implemented and tested.
    - Goal: attach structured research and backtest evidence before any setup family can progress toward paper approval.
+7. **Phase 6: Paper Approval Loop**
+   - Status: next implementation phase.
+   - Goal: require human approval before any paper-trading workflow can be prepared.
 
 ## Explicitly Not Planned
 
@@ -41,5 +44,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Paper approval and memory/review remain planned supporting phases after Research/Backtest Evidence.
+- Paper approval is the next planned supporting phase after Research/Backtest Evidence; memory/review remains planned after approval flow.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.

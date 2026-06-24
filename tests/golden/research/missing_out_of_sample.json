@@ -1,0 +1,30 @@
+{
+  "name": "missing out of sample evidence",
+  "evidence": {
+    "hypothesis_id": "hyp_swing_001",
+    "setup_family": "post_earnings_drift_continuation",
+    "dataset_id": "earnings_daily_2018_2025_v1",
+    "dataset_hash": "sha256:1234567890abcdef",
+    "date_range": { "start": "2018-01-01", "end": "2025-12-31" },
+    "instrument_universe": ["US_large_cap", "UK_large_cap"],
+    "benchmark": "SPY",
+    "assumptions": { "execution": "next_day_open", "position_sizing": "fixed_fractional", "max_risk_per_trade": 0.01 },
+    "slippage_model": { "type": "bps", "value": 10 },
+    "fees_model": { "commission": "fixed", "spread_assumption": "included" },
+    "in_sample_period": { "start": "2018-01-01", "end": "2022-12-31" },
+    "out_of_sample_period": {},
+    "performance_metrics": { "total_return": 0.3, "annualised_return": 0.08, "sharpe": 1.2, "sortino": 1.5, "profit_factor": 1.6 },
+    "drawdown_metrics": { "max_drawdown": -0.12, "average_drawdown": -0.04 },
+    "win_rate": 0.56,
+    "average_win_loss": 1.4,
+    "expectancy": 0.08,
+    "sample_size": 84,
+    "failure_modes": ["overfitting", "macro regime change"],
+    "promotion_decision": "BACKTESTED_PROMISING"
+  },
+  "expected_valid": false,
+  "expected_max_promotion_state": "BACKTESTED_WEAK",
+  "expected_promotion_decision": "BACKTESTED_WEAK",
+  "expected_errors_contain": ["out_of_sample"],
+  "expected_warnings_contain": []
+}
