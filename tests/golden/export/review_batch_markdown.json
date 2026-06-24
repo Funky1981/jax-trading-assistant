@@ -1,0 +1,44 @@
+{
+  "name": "review batch Markdown export includes operator packet and safety boundaries",
+  "batch_id": "golden_export_batch",
+  "generated_at": "2026-06-24T12:00:00Z",
+  "as_of": "2026-06-24T12:00:00Z",
+  "export_id": "golden_export_markdown",
+  "export_type": "REVIEW_BATCH",
+  "format": "MARKDOWN",
+  "items": [
+    {
+      "triage_item_id": "triage_export_markdown",
+      "source_type": "PAPER_SETUP_FAILED",
+      "source_id": "source_export_markdown",
+      "source_decision_id": "decision_export_markdown",
+      "event_id": "event_export_markdown",
+      "asset": "SHEL",
+      "setup_family": "macro_breakout",
+      "event_type": "macro",
+      "priority": "HIGH",
+      "status": "NEEDS_MORE_EVIDENCE",
+      "reason": "manual review required",
+      "evidence_refs": ["review:markdown"],
+      "suggested_action": "manual follow-up only",
+      "allowed_follow_up_actions": ["CREATE_RESEARCH_TASK"],
+      "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+      "requires_human_approval": true,
+      "auto_apply_allowed": false,
+      "created_at": "2026-06-24T12:00:00Z",
+      "updated_at": "2026-06-24T12:00:00Z",
+      "due_at": "2026-06-24T12:00:00Z"
+    }
+  ],
+  "expected_content_contains": [
+    "# Review Batch golden_export_batch",
+    "- Priority: HIGH",
+    "- Reason: manual review required",
+    "- Suggested action: manual follow-up only",
+    "- Due at: 2026-06-24T12:00:00Z",
+    "- Read only: true",
+    "- Auto apply allowed: false",
+    "- Forbidden actions: execute_trade, create_live_order, auto_approve"
+  ],
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+}

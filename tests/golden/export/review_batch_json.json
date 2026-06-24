@@ -1,0 +1,41 @@
+{
+  "name": "review batch JSON export is deterministic and read-only",
+  "batch_id": "golden_export_batch",
+  "generated_at": "2026-06-24T12:00:00Z",
+  "as_of": "2026-06-24T12:00:00Z",
+  "export_id": "golden_export_json",
+  "export_type": "REVIEW_BATCH",
+  "format": "JSON",
+  "items": [
+    {
+      "triage_item_id": "triage_export_json",
+      "source_type": "RESEARCH_GAP",
+      "source_id": "source_export_json",
+      "source_decision_id": "decision_export_json",
+      "event_id": "event_export_json",
+      "asset": "SHEL",
+      "setup_family": "macro_breakout",
+      "event_type": "macro",
+      "priority": "CRITICAL",
+      "status": "OPEN",
+      "reason": "manual review required",
+      "evidence_refs": ["review:json"],
+      "suggested_action": "manual follow-up only",
+      "allowed_follow_up_actions": ["CREATE_RESEARCH_TASK"],
+      "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+      "requires_human_approval": true,
+      "auto_apply_allowed": false,
+      "created_at": "2026-06-24T12:00:00Z",
+      "updated_at": "2026-06-24T12:00:00Z",
+      "due_at": "2026-06-24T12:00:00Z"
+    }
+  ],
+  "expected_content_contains": [
+    "\"export_id\": \"golden_export_json\"",
+    "\"read_only\": true",
+    "\"auto_apply_allowed\": false",
+    "\"triage_item_id\": \"triage_export_json\"",
+    "\"forbidden_actions\": ["
+  ],
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+}

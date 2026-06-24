@@ -54,8 +54,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Status: implemented and tested.
    - Goal: persist triage queues, human feedback decisions, and follow-up action outcomes for operational reporting while preserving human approval and all execution exclusions.
 14. **Review Operations Workflow and Export Integration**
-   - Status: recommended next focus.
+   - Status: implemented and tested.
    - Goal: expose persisted review-operation queues and deterministic reports to backend operator workflows and export contracts without frontend UI, broker execution, live trading, paper execution, or automatic rule changes.
+15. **Review Operations Operator Access and Read Models**
+   - Status: recommended next focus.
+   - Goal: expose review workflow/export outputs through backend operator-facing read models or API contracts while preserving read-only behavior, human approval, and all execution exclusions.
 
 ## Explicitly Not Planned
 
@@ -65,5 +68,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Review operations workflow and export integration is the recommended next focus after Phase 12 Review Operations Persistence and Reporting. This is not a live-trading phase.
+- Review operations operator access and read-model integration is the recommended next focus after Phase 13 Review Operations Workflow and Export Integration. This is not a live-trading phase.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.

@@ -4,16 +4,16 @@ This file tells humans and AI assistants what matters right now.
 
 ## Current Objective
 
-Prepare backend workflow and export integration for persisted review-operation queues and deterministic reports after Phase 12.
+Prepare backend operator access/read-model integration for review workflow and export outputs after Phase 13.
 
 ## Active Phase
 
-Review Operations Workflow and Export Integration
+Review Operations Operator Access and Read Models
 
 ## Active Work Items
 
-- Define how persisted review-operation queues and reports should be exposed to backend operator workflows.
-- Define deterministic export contracts for review operations reports.
+- Define backend operator-facing read models or API contracts for review workflow batches, packets, exports, and follow-up action lists.
+- Preserve deterministic export contracts for review operations reports.
 - Preserve human approval before any strategy, scoring, confirmation, or risk rule change.
 - Keep research gaps and setup-family follow-up operationally visible without changing rules automatically.
 - Preserve `NO_TRADE` as the default outcome.
@@ -46,18 +46,19 @@ Summarise recent decisions. Full details go in `/project/decisions.md`.
 - Phase 10 Replay and Memory Feedback Reporting is implemented and tested.
 - Phase 11 Review Operations and Human Feedback Triage is implemented and tested.
 - Phase 12 Review Operations Persistence and Reporting is implemented and tested.
+- Phase 13 Review Operations Workflow and Export Integration is implemented and tested.
 
 ## Current Risks
 
 Summarise current risks. Full details go in `/project/risks.md`.
 
-- Review operations workflow/export work could accidentally treat feedback suggestions as execution or rule-change authority; keep Decision Core, Risk Veto, Research Evidence, Paper Approval, and Review boundaries explicit.
+- Operator access/read-model work could accidentally treat feedback suggestions as execution or rule-change authority; keep Decision Core, Risk Veto, Research Evidence, Paper Approval, and Review boundaries explicit.
 - Golden coverage must protect every deterministic decision gate from execution, live-order, and auto-approval drift.
 
 ## Next 3 Actions
 
-1. Design backend workflow/export contracts for persisted review-operation queues and reports without adding execution authority.
-2. Add tests that prove exported review operations preserve no-trade, risk-veto, research, paper-approval, and review gates.
+1. Design backend operator-facing read models or API contracts for review workflow/export outputs without adding execution authority.
+2. Add tests that prove operator access preserves no-trade, risk-veto, research, paper-approval, and review gates.
 3. Keep any operator workflow read-only or manual-action-only until a later phase explicitly changes scope.
 
 ## Last Updated
