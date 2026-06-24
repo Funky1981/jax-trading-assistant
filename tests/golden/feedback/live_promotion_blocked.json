@@ -1,0 +1,22 @@
+{
+  "name": "Phase 10 feedback blocks live promotion",
+  "input": {
+    "report_id": "feedback_live_blocked_golden",
+    "created_at": "2026-06-24T12:00:00Z",
+    "replay_result": {
+      "replay_id": "replay_live_blocked_golden",
+      "records_processed": 1,
+      "created_at": "2026-06-24T12:00:00Z"
+    },
+    "attempted_promotion": "LIVE_READY",
+    "attempted_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"]
+  },
+  "expected_no_trade_findings_contain": [],
+  "expected_risk_veto_findings_contain": [],
+  "expected_paper_outcome_findings_contain": [],
+  "expected_research_gaps_contain": [],
+  "expected_suggestion_types": [],
+  "expected_requires_human_approval": true,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_errors_contain": ["LIVE_READY"]
+}

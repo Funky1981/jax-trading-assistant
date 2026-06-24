@@ -1,0 +1,84 @@
+{
+  "name": "Phase 10 feedback report summarizes replay lessons with human-only suggestions",
+  "input": {
+    "report_id": "feedback_phase_10_golden",
+    "created_at": "2026-06-24T12:00:00Z",
+    "replay_result": {
+      "replay_id": "replay_phase_10_golden",
+      "records_processed": 6,
+      "no_trade_count": 1,
+      "rejected_by_risk_count": 2,
+      "paper_approved_count": 2,
+      "correct_no_trade_count": 1,
+      "missed_opportunity_count": 1,
+      "avoided_loss_count": 1,
+      "risk_veto_helped_count": 1,
+      "risk_veto_too_strict_count": 1,
+      "paper_setup_worked_count": 1,
+      "paper_setup_failed_count": 1,
+      "lessons_generated": 8,
+      "created_at": "2026-06-24T12:00:00Z"
+    },
+    "lessons": [
+      {
+        "lesson_id": "lesson_correct_no_trade",
+        "lesson_type": "CORRECT_NO_TRADE",
+        "applies_to_setup_family": "macro_conflict",
+        "applies_to_event_type": "macro"
+      },
+      {
+        "lesson_id": "lesson_missed",
+        "lesson_type": "MISSED_OPPORTUNITY",
+        "applies_to_setup_family": "commodity_equity",
+        "applies_to_event_type": "commodity"
+      },
+      {
+        "lesson_id": "lesson_risk_helped",
+        "lesson_type": "RISK_VETO_HELPED",
+        "applies_to_setup_family": "commodity_equity"
+      },
+      {
+        "lesson_id": "lesson_risk_strict",
+        "lesson_type": "RISK_VETO_TOO_STRICT",
+        "applies_to_setup_family": "earnings_revision"
+      },
+      {
+        "lesson_id": "lesson_paper_worked",
+        "lesson_type": "PAPER_SETUP_WORKED",
+        "applies_to_setup_family": "earnings_revision"
+      },
+      {
+        "lesson_id": "lesson_paper_failed",
+        "lesson_type": "PAPER_SETUP_FAILED",
+        "applies_to_setup_family": "macro_breakout"
+      },
+      {
+        "lesson_id": "lesson_research_weak",
+        "lesson_type": "RESEARCH_EVIDENCE_INSUFFICIENT",
+        "applies_to_setup_family": "macro_breakout"
+      }
+    ],
+    "research_evidence": [
+      {
+        "evidence_id": "evidence_weak",
+        "setup_family": "macro_breakout",
+        "status": "BACKTESTED_WEAK",
+        "summary": "Only weak evidence exists."
+      },
+      {
+        "evidence_id": "evidence_missing",
+        "setup_family": "rates_fx",
+        "status": "",
+        "summary": "Evidence missing."
+      }
+    ]
+  },
+  "expected_no_trade_findings_contain": ["helped", "missed opportunity"],
+  "expected_risk_veto_findings_contain": ["avoided bad setup", "too strict"],
+  "expected_paper_outcome_findings_contain": ["promising", "weakness"],
+  "expected_research_gaps_contain": ["weak", "missing"],
+  "expected_suggestion_types": ["NO_TRADE_RULE_REVIEW", "RISK_THRESHOLD_REVIEW", "SETUP_FAMILY_RESEARCH"],
+  "expected_requires_human_approval": true,
+  "expected_forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+  "expected_errors_contain": []
+}

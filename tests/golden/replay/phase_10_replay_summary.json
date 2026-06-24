@@ -1,0 +1,110 @@
+{
+  "name": "Phase 10 replay summary includes no-trades, risk rejections, and paper outcomes",
+  "input": {
+    "replay_id": "replay_phase_10_golden",
+    "include_no_trades": true,
+    "include_watch": true,
+    "include_rejected_by_risk": true,
+    "include_paper_outcomes": true,
+    "include_lessons": true,
+    "created_at": "2026-06-24T12:00:00Z",
+    "records": [
+      {
+        "record_id": "rec_no_trade",
+        "decision_id": "dec_no_trade",
+        "event_id": "evt_macro",
+        "asset": "FTSE",
+        "event_type": "macro",
+        "setup_family": "macro_conflict",
+        "final_decision": "NO_TRADE",
+        "lessons": [
+          { "lesson_id": "lesson_correct_no_trade", "lesson_type": "CORRECT_NO_TRADE" },
+          { "lesson_id": "lesson_missed", "lesson_type": "MISSED_OPPORTUNITY" },
+          { "lesson_id": "lesson_avoided_loss", "lesson_type": "AVOIDED_LOSS" }
+        ],
+        "created_at": "2026-06-24T12:00:00Z"
+      },
+      {
+        "record_id": "rec_watch",
+        "decision_id": "dec_watch",
+        "event_id": "evt_watch",
+        "asset": "GBP",
+        "event_type": "central_bank",
+        "setup_family": "rates_fx",
+        "final_decision": "WATCH",
+        "created_at": "2026-06-24T12:00:00Z"
+      },
+      {
+        "record_id": "rec_risk_helped",
+        "decision_id": "dec_risk_helped",
+        "event_id": "evt_oil",
+        "asset": "SHEL",
+        "event_type": "commodity",
+        "setup_family": "commodity_equity",
+        "final_decision": "REJECTED_BY_RISK",
+        "rejected_by_risk": true,
+        "lessons": [
+          { "lesson_id": "lesson_risk_helped", "lesson_type": "RISK_VETO_HELPED" }
+        ],
+        "created_at": "2026-06-24T12:00:00Z"
+      },
+      {
+        "record_id": "rec_risk_strict",
+        "decision_id": "dec_risk_strict",
+        "event_id": "evt_earnings",
+        "asset": "AAPL",
+        "event_type": "earnings",
+        "setup_family": "earnings_revision",
+        "final_decision": "REJECTED_BY_RISK",
+        "rejected_by_risk": true,
+        "lessons": [
+          { "lesson_id": "lesson_risk_strict", "lesson_type": "RISK_VETO_TOO_STRICT" }
+        ],
+        "created_at": "2026-06-24T12:00:00Z"
+      },
+      {
+        "record_id": "rec_paper_worked",
+        "decision_id": "dec_paper_worked",
+        "event_id": "evt_paper_worked",
+        "asset": "MSFT",
+        "event_type": "earnings",
+        "setup_family": "earnings_revision",
+        "final_decision": "TRADE_CANDIDATE",
+        "paper_approved": true,
+        "paper_outcome": "WORKED",
+        "lessons": [
+          { "lesson_id": "lesson_paper_worked", "lesson_type": "PAPER_SETUP_WORKED" }
+        ],
+        "created_at": "2026-06-24T12:00:00Z"
+      },
+      {
+        "record_id": "rec_paper_failed",
+        "decision_id": "dec_paper_failed",
+        "event_id": "evt_paper_failed",
+        "asset": "BP",
+        "event_type": "commodity",
+        "setup_family": "commodity_equity",
+        "final_decision": "TRADE_CANDIDATE",
+        "paper_approved": true,
+        "paper_outcome": "FAILED",
+        "lessons": [
+          { "lesson_id": "lesson_paper_failed", "lesson_type": "PAPER_SETUP_FAILED" }
+        ],
+        "created_at": "2026-06-24T12:00:00Z"
+      }
+    ]
+  },
+  "expected_records_processed": 6,
+  "expected_no_trade_count": 1,
+  "expected_watch_count": 1,
+  "expected_rejected_by_risk_count": 2,
+  "expected_paper_approved_count": 2,
+  "expected_correct_no_trade_count": 1,
+  "expected_missed_opportunity_count": 1,
+  "expected_avoided_loss_count": 1,
+  "expected_risk_veto_helped_count": 1,
+  "expected_risk_veto_too_strict_count": 1,
+  "expected_paper_setup_worked_count": 1,
+  "expected_paper_setup_failed_count": 1,
+  "expected_lessons_generated": 7
+}

@@ -4,18 +4,19 @@ This file tells humans and AI assistants what matters right now.
 
 ## Current Objective
 
-Build deterministic replay and memory feedback reporting over persisted decision pipeline results after Phase 9.
+Prepare review-operations workflow for due reviews and human triage of replay feedback suggestions after Phase 10.
 
 ## Active Phase
 
-Deterministic Replay and Memory Feedback Reporting
+Review Operations and Human Feedback Triage
 
 ## Active Work Items
 
-- Report on persisted pipeline results, decision records, and review schedules.
-- Add deterministic replay/reporting views for due reviews, no-trades, and paper-review candidates.
+- Define due-review queue and feedback suggestion triage workflow.
+- Preserve human approval before any strategy, scoring, confirmation, or risk rule change.
+- Prioritize research gaps and setup-family follow-up from deterministic feedback reports.
 - Preserve `NO_TRADE` as the default outcome.
-- Keep replay and memory feedback separate from broker execution, live trading, and automatic rule changes.
+- Keep review operations separate from broker execution, live trading, and automatic rule changes.
 
 ## Do Not Work On
 
@@ -41,19 +42,20 @@ Summarise recent decisions. Full details go in `/project/decisions.md`.
 - Phase 7 Post Decision Review is implemented and tested.
 - Phase 8 Decision Pipeline Integration is implemented and tested.
 - Phase 9 Persistence and Observability Hardening is implemented and tested.
+- Phase 10 Replay and Memory Feedback Reporting is implemented and tested.
 
 ## Current Risks
 
 Summarise current risks. Full details go in `/project/risks.md`.
 
-- Replay/reporting work could accidentally treat stored pipeline output as execution authority; keep Decision Core, Risk Veto, Research Evidence, Paper Approval, and Review boundaries explicit.
+- Review operations work could accidentally treat feedback suggestions as execution or rule-change authority; keep Decision Core, Risk Veto, Research Evidence, Paper Approval, and Review boundaries explicit.
 - Golden coverage must protect every deterministic decision gate from execution, live-order, and auto-approval drift.
 
 ## Next 3 Actions
 
-1. Design deterministic reports for due reviews and persisted decision outcomes without adding execution authority.
-2. Add tests that prove replay/reporting preserves no-trade, risk-veto, research, paper-approval, and review gates.
-3. Add memory feedback summaries for lessons and missed opportunities without automatic strategy/scoring/risk rule changes.
+1. Design due-review queue and feedback triage workflow without adding execution authority.
+2. Add tests that prove triage preserves no-trade, risk-veto, research, paper-approval, and review gates.
+3. Add human-review handoff for feedback suggestions without automatic strategy/scoring/risk rule changes.
 
 ## Last Updated
 

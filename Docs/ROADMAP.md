@@ -45,8 +45,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Status: implemented and tested.
    - Goal: persist pipeline results and review schedules, add operational visibility for deterministic decisions, and preserve all live-trading exclusions.
 11. **Deterministic Replay and Memory Feedback Reporting**
-   - Status: recommended next focus.
+   - Status: implemented and tested.
    - Goal: report on persisted decisions, due reviews, and replay outcomes so Jax can learn from no-trades and paper-review candidates without automatic rule changes or execution authority.
+12. **Review Operations and Human Feedback Triage**
+   - Status: recommended next focus.
+   - Goal: help humans inspect due reviews and feedback suggestions, prioritize research actions, and decide whether to open rule-review work without changing rules automatically.
 
 ## Explicitly Not Planned
 
@@ -56,5 +59,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Deterministic replay and memory feedback reporting is the recommended next focus after Phase 9 Persistence and Observability Hardening. This is not a live-trading phase.
+- Review operations and human feedback triage is the recommended next focus after Phase 10 Replay and Memory Feedback Reporting. This is not a live-trading phase.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.
