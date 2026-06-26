@@ -60,8 +60,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Status: implemented and tested.
    - Goal: expose review workflow/export outputs through backend operator-facing read models and safe service methods while preserving read-only behavior, human approval, and all execution exclusions.
 16. **Review Operations Internal Access Wiring**
+   - Status: implemented and tested.
+   - Goal: connect operator read models and record-only manual actions through a deterministic internal application service, without adding frontend UI, broker execution, live trading, paper execution, or automatic rule changes.
+17. **Review Operations Internal Adapter**
    - Status: recommended next focus.
-   - Goal: connect operator read models and record-only manual actions to existing backend internal access conventions if explicitly approved, without adding frontend UI, broker execution, live trading, paper execution, or automatic rule changes.
+   - Goal: decide whether to add a narrow internal CLI or handler adapter around the Phase 15 app service, preserving read-only queries, record-only manual state transitions, human approval, and all execution exclusions.
 
 ## Explicitly Not Planned
 
@@ -71,5 +74,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Review operations internal access wiring is the recommended next focus after Phase 14 Review Operations Operator Access and Read Models. This is not a live-trading phase.
+- A narrow internal adapter around the Phase 15 app service is the recommended next focus after Review Operations Internal Access Wiring. This is not a live-trading phase.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.
