@@ -57,8 +57,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
    - Status: implemented and tested.
    - Goal: expose persisted review-operation queues and deterministic reports to backend operator workflows and export contracts without frontend UI, broker execution, live trading, paper execution, or automatic rule changes.
 15. **Review Operations Operator Access and Read Models**
+   - Status: implemented and tested.
+   - Goal: expose review workflow/export outputs through backend operator-facing read models and safe service methods while preserving read-only behavior, human approval, and all execution exclusions.
+16. **Review Operations Internal Access Wiring**
    - Status: recommended next focus.
-   - Goal: expose review workflow/export outputs through backend operator-facing read models or API contracts while preserving read-only behavior, human approval, and all execution exclusions.
+   - Goal: connect operator read models and record-only manual actions to existing backend internal access conventions if explicitly approved, without adding frontend UI, broker execution, live trading, paper execution, or automatic rule changes.
 
 ## Explicitly Not Planned
 
@@ -68,5 +71,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- Review operations operator access and read-model integration is the recommended next focus after Phase 13 Review Operations Workflow and Export Integration. This is not a live-trading phase.
+- Review operations internal access wiring is the recommended next focus after Phase 14 Review Operations Operator Access and Read Models. This is not a live-trading phase.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.

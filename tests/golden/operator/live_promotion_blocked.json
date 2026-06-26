@@ -1,0 +1,38 @@
+{
+  "name": "live promotion attempt is blocked without mutation",
+  "item": {
+    "triage_item_id": "triage_operator_live_block",
+    "source_type": "RESEARCH_GAP",
+    "source_id": "source_live",
+    "source_decision_id": "decision_live",
+    "event_id": "event_live",
+    "asset": "SHEL",
+    "setup_family": "macro_breakout",
+    "event_type": "macro",
+    "priority": "HIGH",
+    "status": "OPEN",
+    "reason": "manual review required",
+    "evidence_refs": ["evidence_live"],
+    "suggested_action": "manual research follow-up only",
+    "allowed_follow_up_actions": ["CREATE_RESEARCH_TASK"],
+    "forbidden_actions": ["execute_trade", "create_live_order", "auto_approve"],
+    "requires_human_approval": true,
+    "auto_apply_allowed": false,
+    "created_at": "2026-06-25T10:00:00Z",
+    "updated_at": "2026-06-25T10:00:00Z",
+    "due_at": "2026-06-25T10:00:00Z"
+  },
+  "action": "ACCEPT_SUGGESTION",
+  "request": {
+    "TriageItemID": "triage_operator_live_block",
+    "FeedbackDecisionID": "feedback_operator_live_block",
+    "HumanReviewer": "reviewer@example.com",
+    "Rationale": "Attempt LIVE_READY promotion.",
+    "AttemptedActions": ["create_live_order", "execute_trade"],
+    "CreatedAt": "2026-06-25T10:00:00Z"
+  },
+  "expected_status": "OPEN",
+  "expected_follow_up_count": 0,
+  "expected_validation_text": "blocked",
+  "expected_auto_apply_allowed": false
+}
