@@ -119,7 +119,7 @@ func DefaultPolicy() *Policy {
 		Position: PositionLimits{
 			MaxRiskPerTrade: 0.02,
 			MinRiskPerTrade: 0.005,
-			MaxLeverage:     2.0,
+			MaxLeverage:     1.0,
 			MinStopDistance: 0.01,
 			MaxStopDistance: 0.10,
 		},

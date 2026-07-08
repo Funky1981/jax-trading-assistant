@@ -49,6 +49,25 @@ func TestEvaluateRejectsExcludedAndLiveETFs(t *testing.T) {
 	}
 }
 
+func TestEvaluateRejectsUnsafeETFProducts(t *testing.T) {
+	catalog, err := LoadCatalog(filepath.Join("..", "..", "..", "config", "etf-instruments.json"))
+	if err != nil {
+		t.Fatalf("load catalog: %v", err)
+	}
+
+	for _, symbol := range []string{"TQQQ", "SQQQ", "UVXY", "VXX"} {
+		t.Run(symbol, func(t *testing.T) {
+			result := catalog.Evaluate(symbol, "paper")
+			if result.Allowed {
+				t.Fatalf("expected %s to be rejected, got %#v", symbol, result)
+			}
+			if result.ReasonCode != ReasonExcludedClass {
+				t.Fatalf("expected excluded class reason for %s, got %q", symbol, result.ReasonCode)
+			}
+		})
+	}
+}
+
 func TestEvaluateRejectsQuoteAndSessionFailures(t *testing.T) {
 	catalog, err := LoadCatalog(filepath.Join("..", "..", "..", "config", "etf-instruments.json"))
 	if err != nil {

@@ -11,7 +11,7 @@
   "position_limits": {
     "max_risk_per_trade": 0.02,
     "min_risk_per_trade": 0.005,
-    "max_leverage": 2.0,
+    "max_leverage": 1.0,
     "min_stop_distance": 0.01,
     "max_stop_distance": 0.10
   },

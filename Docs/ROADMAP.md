@@ -1,5 +1,11 @@
 # Roadmap
 
+## Controlling Roadmap Notice
+
+`Docs/plans/jax-trading-roadmap-pack` is the controlling roadmap for the current Jax trading-assistant implementation sequence.
+
+Archived, autonomous, live-trading, and broker-execution planning documents are historical only unless a later explicit roadmap gate reactivates them. During the current safety-baseline phase, no live trading, leverage, automatic order placement, or broker-execution expansion is allowed.
+
 ## Product Direction
 
 Jax is an event-driven trading research assistant. The active product truth is `Docs/JAX_PRODUCT_CHARTER.md`, and capability status is tracked in `Docs/CAPABILITY_MATRIX.md`.
@@ -69,8 +75,8 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 ## Explicitly Not Planned
 
 - Day trading is `NOT_PLANNED`.
-- Live trading is `NOT_PLANNED`.
-- Auto execution, broker order placement, unattended trading, and live capital are outside the current roadmap.
+- Live trading is not allowed in the current phase. Tiny live activation is only a later roadmap gate under `Docs/plans/jax-trading-roadmap-pack`, and requires explicit approval before any implementation.
+- Auto execution, unattended broker order placement, leverage, and live capital are outside the current phase.
 
 ## Supporting Work
 

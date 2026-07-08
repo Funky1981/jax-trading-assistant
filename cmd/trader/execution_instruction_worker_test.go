@@ -110,3 +110,60 @@ func TestExecutionInstructionWorkerSafetyEnabled(t *testing.T) {
 		t.Fatal("expected non-paper runtime to disable worker")
 	}
 }
+
+func TestExecutionInstructionWorkerSafetyFailsClosed(t *testing.T) {
+	tests := []struct {
+		name string
+		env  map[string]string
+	}{
+		{
+			name: "missing all env",
+			env:  map[string]string{},
+		},
+		{
+			name: "paper mode missing IB paper flag",
+			env: map[string]string{
+				"JAX_RUNTIME_MODE": "paper",
+			},
+		},
+		{
+			name: "IB paper without runtime mode",
+			env: map[string]string{
+				"IB_PAPER_TRADING": "true",
+			},
+		},
+		{
+			name: "live flag defaults unsafe even in paper",
+			env: map[string]string{
+				"JAX_RUNTIME_MODE":        "paper",
+				"IB_PAPER_TRADING":        "true",
+				"ALLOW_LIVE_TRADING":      "true",
+				"JAX_TRADER_RUNTIME_MODE": "",
+			},
+		},
+		{
+			name: "research mode is closed",
+			env: map[string]string{
+				"JAX_RUNTIME_MODE":   "research",
+				"IB_PAPER_TRADING":   "true",
+				"ALLOW_LIVE_TRADING": "false",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("JAX_RUNTIME_MODE", "")
+			t.Setenv("JAX_TRADER_RUNTIME_MODE", "")
+			t.Setenv("IB_PAPER_TRADING", "")
+			t.Setenv("ALLOW_LIVE_TRADING", "")
+			for key, value := range tt.env {
+				t.Setenv(key, value)
+			}
+			if executionInstructionWorkerSafetyEnabled() {
+				t.Fatalf("worker enabled for unsafe env %#v", tt.env)
+			}
+		})
+	}
+}

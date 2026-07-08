@@ -68,6 +68,7 @@ func (s *Service) Propose(ctx context.Context, req ProposalRequest) (*Candidate,
 		SessionDate:        today,
 		DataProvenance:     req.DataProvenance,
 	}
+	applyStructuredProposalFields(c, req.StructuredCandidateFields)
 	if parsed := parseOptionalUUID(req.SignalID); parsed != nil {
 		c.SignalID = parsed
 	}
@@ -117,6 +118,17 @@ func (s *Service) Qualify(ctx context.Context, id uuid.UUID) error {
 			})
 		}
 	}
+	structural := ValidateStructuralCompleteness(*candidate)
+	if !structural.GateReady {
+		return s.store.UpdateStatus(ctx, id, StatusBlocked, map[string]any{
+			"blockReason":       "Candidate is not ready for approval under the structured trade candidate baseline.",
+			"blockedReasonCode": "structured_candidate_not_gate_ready",
+			"missingFields":     structural.MissingFields,
+			"rejectReasons":     structural.RejectReasons,
+			"gateStatus":        structural.GateStatus,
+			"riskStatus":        structural.RiskStatus,
+		})
+	}
 	if err := s.store.UpdateStatus(ctx, id, StatusQualified, nil); err != nil {
 		return err
 	}
@@ -162,16 +174,17 @@ type ProposalRequest struct {
 	ArtifactID         string
 	Symbol             string
 	SignalType         string
-	EntryPrice         *float64
-	StopLoss           *float64
-	TakeProfit         *float64
-	Confidence         *float64
-	Reasoning          *string
-	DataProvenance     string
-	TTL                time.Duration
-	HorizonPolicy      *tradingmodes.CandidateHorizonPolicy
-	PaperOnly          bool
-	ApprovalRequired   bool
+	StructuredCandidateFields
+	EntryPrice       *float64
+	StopLoss         *float64
+	TakeProfit       *float64
+	Confidence       *float64
+	Reasoning        *string
+	DataProvenance   string
+	TTL              time.Duration
+	HorizonPolicy    *tradingmodes.CandidateHorizonPolicy
+	PaperOnly        bool
+	ApprovalRequired bool
 }
 
 type BlockRequest struct {
@@ -181,18 +194,19 @@ type BlockRequest struct {
 	ArtifactID         string
 	Symbol             string
 	SignalType         string
-	EntryPrice         *float64
-	StopLoss           *float64
-	TakeProfit         *float64
-	Confidence         *float64
-	Reasoning          *string
-	DataProvenance     string
-	ReasonCode         string
-	Reason             string
-	TTL                time.Duration
-	HorizonPolicy      *tradingmodes.CandidateHorizonPolicy
-	PaperOnly          bool
-	ApprovalRequired   bool
+	StructuredCandidateFields
+	EntryPrice       *float64
+	StopLoss         *float64
+	TakeProfit       *float64
+	Confidence       *float64
+	Reasoning        *string
+	DataProvenance   string
+	ReasonCode       string
+	Reason           string
+	TTL              time.Duration
+	HorizonPolicy    *tradingmodes.CandidateHorizonPolicy
+	PaperOnly        bool
+	ApprovalRequired bool
 }
 
 func (s *Service) CreateBlocked(ctx context.Context, req BlockRequest) (*Candidate, error) {
@@ -209,6 +223,7 @@ func (s *Service) CreateBlocked(ctx context.Context, req BlockRequest) (*Candida
 		SessionDate:        time.Now().UTC().Format("2006-01-02"),
 		DataProvenance:     req.DataProvenance,
 	}
+	applyStructuredProposalFields(candidate, req.StructuredCandidateFields)
 	if req.SignalID != "" {
 		candidate.SignalID = parseOptionalUUID(req.SignalID)
 	}

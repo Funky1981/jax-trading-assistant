@@ -28,6 +28,23 @@ func TestDefaultPolicyIsValid(t *testing.T) {
 	}
 }
 
+func TestSafetyBaselineDefaultPolicyDisablesLeverage(t *testing.T) {
+	p := risk.DefaultPolicy()
+	if p.Position.MaxLeverage > 1.0 {
+		t.Fatalf("default max leverage = %.2f, want <= 1.0 during safety baseline", p.Position.MaxLeverage)
+	}
+}
+
+func TestSafetyBaselineRepoRiskConfigDisablesLeverage(t *testing.T) {
+	p, err := risk.LoadPolicy(filepath.Join("..", "..", "config", "risk-constraints.json"))
+	if err != nil {
+		t.Fatalf("LoadPolicy repo config: %v", err)
+	}
+	if p.Position.MaxLeverage > 1.0 {
+		t.Fatalf("repo max leverage = %.2f, want <= 1.0 during safety baseline", p.Position.MaxLeverage)
+	}
+}
+
 func TestLoadPolicyFromFile(t *testing.T) {
 	doc := map[string]interface{}{
 		"portfolio_constraints": map[string]interface{}{
