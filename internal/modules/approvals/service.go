@@ -58,7 +58,7 @@ type ApprovalRequest struct {
 	SnoozeHours int
 }
 
-// Decide records an approval decision and, if approved, creates an execution instruction.
+// Decide records an approval decision and, if approved, marks the candidate paper-ticket-ready without creating execution instructions.
 // Returns ErrAlreadyDecided if a final decision was already made.
 // Returns ErrCandidateExpired if the candidate has passed its expiry.
 func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, error) {
@@ -134,17 +134,24 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 		}
 	}
 
-	// If approved, build an execution instruction.
 	if req.Decision == DecisionApproved {
-		if err := s.buildInstruction(ctx, approval); err != nil {
-			return nil, fmt.Errorf("approvals.Service.Decide: build instruction: %w", err)
+		if _, err := s.pool.Exec(ctx,
+			`UPDATE candidate_trades
+			    SET approval_status = $2,
+			        updated_at = NOW()
+			  WHERE id = $1`,
+			req.CandidateID,
+			candidatesmod.ApprovalStatusPaperTicketReady,
+		); err != nil {
+			return nil, fmt.Errorf("approvals.Service.Decide: mark paper ticket ready: %w", err)
 		}
 	}
 
 	return approval, nil
 }
 
-// buildInstruction creates an execution_instruction row from an approved candidate.
+// buildInstruction is the legacy execution-instruction bridge. The current
+// roadmap approval path must not call it directly after human approval.
 func (s *Service) buildInstruction(ctx context.Context, approval *Approval) error {
 	var (
 		symbol, signalType string

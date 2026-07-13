@@ -39,12 +39,10 @@ func TestSentinelErrors_AreDistinct(t *testing.T) {
 	}
 }
 
-// TestRejectedDecision_NoExecution documents that the Decide function only
-// calls buildInstruction when decision == DecisionApproved (not rejected).
-// We verify this invariant via the decision constant values.
+// TestRejectedDecision_NoExecution documents that rejected decisions remain
+// distinct from approvals and cannot enter later approval-only boundaries.
 func TestRejectedDecision_NoExecution(t *testing.T) {
-	// A rejected decision must never be equal to the approved constant —
-	// buildInstruction is only triggered on DecisionApproved.
+	// A rejected decision must never be equal to the approved constant.
 	if DecisionRejected == DecisionApproved {
 		t.Error("rejected and approved must be distinct decision values; " +
 			"otherwise rejected candidates would trigger execution instructions")

@@ -113,15 +113,19 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	}
 
 	var approvedStatus string
+	var approvalStatus string
 	if err := pool.QueryRow(ctx, `
-		SELECT status
+		SELECT status, approval_status
 		FROM candidate_trades
 		WHERE id = $1::uuid
-	`, response.CandidateID).Scan(&approvedStatus); err != nil {
+	`, response.CandidateID).Scan(&approvedStatus, &approvalStatus); err != nil {
 		t.Fatalf("query approved candidate: %v", err)
 	}
 	if approvedStatus != "approved" {
 		t.Fatalf("candidate status after approval = %q, want approved", approvedStatus)
+	}
+	if approvalStatus != "paper_ticket_ready" {
+		t.Fatalf("approval status after approval = %q, want paper_ticket_ready", approvalStatus)
 	}
 	if err := pool.QueryRow(ctx, `
 		SELECT COUNT(*)
@@ -130,8 +134,8 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	`, response.CandidateID, approval.ID).Scan(&executionCount); err != nil {
 		t.Fatalf("query execution instructions after approval: %v", err)
 	}
-	if executionCount != 1 {
-		t.Fatalf("execution instruction count after approval = %d, want 1", executionCount)
+	if executionCount != 0 {
+		t.Fatalf("execution instruction count after approval = %d, want 0", executionCount)
 	}
 }
 

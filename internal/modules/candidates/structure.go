@@ -15,6 +15,7 @@ const (
 	ApprovalStatusGateNotReady        = "gate_not_ready"
 	ApprovalStatusRiskNotReady        = "risk_not_ready"
 	ApprovalStatusApprovalReviewReady = "approval_review_ready"
+	ApprovalStatusPaperTicketReady    = "paper_ticket_ready"
 	ApprovalStatusHumanApprovedPaper  = "human_approved_paper"
 	ApprovalStatusHumanRejected       = "human_rejected"
 	ApprovalStatusHumanSnoozed        = "human_snoozed"
