@@ -28,3 +28,16 @@ A skill is a set of local instructions to follow that is stored in a `SKILL.md` 
 - In this repository, automatically select and use the appropriate skill(s) for every task unless the user explicitly asks not to use skills.
 - Announce chosen skill(s) in one short line before doing substantive work.
 - At the end of every work-completion response, include a clear `What's Left` section. List remaining required work, skipped checks, optional broader validation, deployment/migration steps, and known risks. If nothing remains, explicitly say so.
+
+## Phase completion contract
+
+For every completed implementation phase in this repository:
+
+- Verify the scoped work before final response.
+- Commit the scoped changes before final response.
+- Do not leave completed phase work uncommitted unless committing is impossible or the user explicitly says not to commit.
+- If committing is impossible, say why and list the exact uncommitted files.
+- Final response must include a copy-block handover summary.
+- The handover summary must include: phase, commit, branch, files changed, what changed, migrations, tests/verification run, known risks, recommended next phase, and `What's Left`.
+
+Use `Docs/plans/HANDOFF_TEMPLATE.md` as the default handover format.
