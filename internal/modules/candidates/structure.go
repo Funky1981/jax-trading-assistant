@@ -10,9 +10,17 @@ const (
 
 	ApprovalStatusNotReady = "not_ready"
 
-	GateStatusNotEvaluated = "not_evaluated"
-	GateStatusBlocked      = "blocked"
-	GateStatusReady        = "ready"
+	GateStatusNotEvaluated       = "not_evaluated"
+	GateStatusBlocked            = "blocked"
+	GateStatusIncomplete         = "incomplete"
+	GateStatusEvidenceMissing    = "evidence_missing"
+	GateStatusEvidenceWeak       = "evidence_weak"
+	GateStatusEvidenceMixed      = "evidence_mixed"
+	GateStatusEvidenceStale      = "evidence_stale"
+	GateStatusRiskPending        = "risk_pending"
+	GateStatusApprovalPending    = "approval_pending"
+	GateStatusReady              = "ready"
+	GateStatusReadyForRiskReview = "ready_for_risk_review"
 )
 
 type StructuredCandidateFields struct {
