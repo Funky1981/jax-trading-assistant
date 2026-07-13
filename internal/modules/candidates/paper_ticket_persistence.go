@@ -68,6 +68,7 @@ type PaperTicketReview struct {
 	PaperOnly               bool      `json:"paperOnly"`
 	RejectReasons           []string  `json:"rejectReasons,omitempty"`
 	WarningReasons          []string  `json:"warningReasons,omitempty"`
+	ReviewNotes             string    `json:"reviewNotes,omitempty"`
 }
 
 func NewPersistedPaperTicket(candidate Candidate, evidence EvidenceScoreSummary, eligibility ApprovalEligibilityResult, result PaperTicketResult) (PaperTicket, error) {
@@ -206,7 +207,7 @@ func (s *Store) GetPaperTicketReviewByCandidateID(ctx context.Context, candidate
 		       stop_loss_price::float8, target_price::float8, position_size::float8,
 		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
 		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
-		       approval_status, paper_only, reject_reasons, warning_reasons
+		       approval_status, paper_only, reject_reasons, warning_reasons, COALESCE(review_notes, '')
 		FROM candidate_paper_tickets
 		WHERE candidate_id = $1
 		ORDER BY created_at DESC
@@ -255,7 +256,7 @@ func (s *Store) ListPaperTicketReviews(ctx context.Context, limit int) ([]PaperT
 		       stop_loss_price::float8, target_price::float8, position_size::float8,
 		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
 		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
-		       approval_status, paper_only, reject_reasons, warning_reasons
+		       approval_status, paper_only, reject_reasons, warning_reasons, COALESCE(review_notes, '')
 		FROM candidate_paper_tickets
 		ORDER BY created_at DESC
 		LIMIT $1
@@ -302,7 +303,7 @@ func (s *Store) AddPaperTicketReviewNote(ctx context.Context, paperTicketID, not
 		       stop_loss_price::float8, target_price::float8, position_size::float8,
 		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
 		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
-		       approval_status, paper_only, reject_reasons, warning_reasons
+		       approval_status, paper_only, reject_reasons, warning_reasons, COALESCE(review_notes, '')
 	`, paperTicketID, note)
 	review, err := scanPaperTicketReview(row.Scan)
 	if err != nil {
@@ -327,7 +328,7 @@ func (s *Store) updatePaperTicketReview(ctx context.Context, paperTicketID, note
 		       stop_loss_price::float8, target_price::float8, position_size::float8,
 		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
 		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
-		       approval_status, paper_only, reject_reasons, warning_reasons
+		       approval_status, paper_only, reject_reasons, warning_reasons, COALESCE(review_notes, '')
 	`, paperTicketID, nextStatus, allowedStatuses[0], allowedStatuses[1], note)
 	review, err := scanPaperTicketReview(row.Scan)
 	if err != nil {
@@ -364,6 +365,7 @@ func scanPaperTicketReview(scan paperTicketReviewScanner) (PaperTicketReview, er
 		&review.PaperOnly,
 		&review.RejectReasons,
 		&review.WarningReasons,
+		&review.ReviewNotes,
 	)
 	return review, err
 }

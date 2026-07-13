@@ -94,6 +94,7 @@ export interface PaperTicketReview {
   paperOnly: true;
   rejectReasons?: string[];
   warningReasons?: string[];
+  reviewNotes?: string;
 }
 
 export interface CandidateApprovalDetail {
@@ -144,7 +145,9 @@ function buildQuery(params: Record<string, string | number | undefined>) {
 
 export const candidatesService = {
   list(params: { status?: string; symbol?: string; limit?: number } = {}) {
-    return apiClient.get<CandidateTrade[]>(`/api/v1/candidates${buildQuery(params as Record<string, string | number | undefined>)}`);
+    return apiClient.get<CandidateTrade[]>(
+      `/api/v1/candidates${buildQuery(params as Record<string, string | number | undefined>)}`,
+    );
   },
 
   get(id: string) {
@@ -170,35 +173,62 @@ export const approvalsService = {
   },
 
   markPaperTicketReviewed(paperTicketId: string, note?: string) {
-    return apiClient.post<PaperTicketReview>(`/api/v1/paper-tickets/${paperTicketId}/mark-reviewed`, { note });
+    return apiClient.post<PaperTicketReview>(
+      `/api/v1/paper-tickets/${paperTicketId}/mark-reviewed`,
+      { note },
+    );
   },
 
   cancelPaperTicket(paperTicketId: string, note?: string) {
-    return apiClient.post<PaperTicketReview>(`/api/v1/paper-tickets/${paperTicketId}/cancel`, { note });
+    return apiClient.post<PaperTicketReview>(`/api/v1/paper-tickets/${paperTicketId}/cancel`, {
+      note,
+    });
   },
 
   addPaperTicketNote(paperTicketId: string, note: string) {
-    return apiClient.post<PaperTicketReview>(`/api/v1/paper-tickets/${paperTicketId}/notes`, { note });
+    return apiClient.post<PaperTicketReview>(`/api/v1/paper-tickets/${paperTicketId}/notes`, {
+      note,
+    });
   },
 
   approve(candidateId: string, notes?: string, overrideReason?: ApprovalOverrideReasonInput) {
-    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/approve`, { notes, overrideReason });
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/approve`, {
+      notes,
+      overrideReason,
+    });
   },
 
   reject(candidateId: string, notes?: string, overrideReason?: ApprovalOverrideReasonInput) {
-    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/reject`, { notes, overrideReason });
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/reject`, {
+      notes,
+      overrideReason,
+    });
   },
 
-  snooze(candidateId: string, snoozeHours = 4, notes?: string, overrideReason?: ApprovalOverrideReasonInput) {
-    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/snooze`, { snoozeHours, notes, overrideReason });
+  snooze(
+    candidateId: string,
+    snoozeHours = 4,
+    notes?: string,
+    overrideReason?: ApprovalOverrideReasonInput,
+  ) {
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/snooze`, {
+      snoozeHours,
+      notes,
+      overrideReason,
+    });
   },
 
   reanalyze(candidateId: string, notes?: string) {
-    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/reanalyze`, { notes });
+    return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/reanalyze`, {
+      notes,
+    });
   },
 
   submitTelegramDecision(payload: MobileTelegramApprovalRequest) {
-    return apiClient.post<MobileTelegramApprovalResponse>('/api/v1/mobile/telegram/webhook', payload);
+    return apiClient.post<MobileTelegramApprovalResponse>(
+      '/api/v1/mobile/telegram/webhook',
+      payload,
+    );
   },
 };
 

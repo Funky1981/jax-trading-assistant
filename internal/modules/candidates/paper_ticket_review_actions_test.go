@@ -100,8 +100,11 @@ func TestPaperTicketReviewAddNoteDoesNotExposeOrCreateExecutionControls(t *testi
 	if err != nil {
 		t.Fatalf("marshal review after note: %v", err)
 	}
-	if jsonContainsKey(payload, "reviewNotes") {
-		t.Fatalf("safe review model exposed review notes unexpectedly: %s", string(payload))
+	if review.ReviewNotes != "needs tomorrow morning review" {
+		t.Fatalf("review notes = %q, want saved internal note", review.ReviewNotes)
+	}
+	if !jsonContainsKey(payload, "reviewNotes") {
+		t.Fatalf("safe review model omitted internal review notes: %s", string(payload))
 	}
 	assertPaperTicketSafetyFlags(t, ctx, pool, ticket.CandidateID)
 	assertNoExecutionInstruction(t, ctx, pool, ticket.CandidateID)
