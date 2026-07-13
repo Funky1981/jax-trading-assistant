@@ -82,6 +82,9 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 		return nil, ErrCandidateMissingSignal
 	}
 	if req.Decision == DecisionApproved {
+		if _, err := s.ensureApprovalReviewEligible(ctx, req.CandidateID); err != nil {
+			return nil, err
+		}
 		if err := s.checkETFApprovalGate(ctx, req.CandidateID); err != nil {
 			return nil, err
 		}
@@ -320,11 +323,101 @@ func mobileRiskLabel(entryPrice, stopLoss float64) string {
 // ── Sentinel errors ───────────────────────────────────────────────────────────
 
 var (
-	ErrCandidateExpired       = fmt.Errorf("candidate has expired and cannot be approved")
-	ErrNotAwaitingApproval    = fmt.Errorf("candidate is not in awaiting_approval state")
-	ErrCandidateMissingSignal = fmt.Errorf("candidate is missing signal linkage required for paper execution")
-	ErrInstrumentPolicy       = errors.New("instrument policy rejected approval")
+	ErrCandidateExpired             = fmt.Errorf("candidate has expired and cannot be approved")
+	ErrNotAwaitingApproval          = fmt.Errorf("candidate is not in awaiting_approval state")
+	ErrCandidateMissingSignal       = fmt.Errorf("candidate is missing signal linkage required for paper execution")
+	ErrCandidateNotApprovalEligible = fmt.Errorf("candidate is not eligible for approval review")
+	ErrInstrumentPolicy             = errors.New("instrument policy rejected approval")
 )
+
+func (s *Service) ensureApprovalReviewEligible(ctx context.Context, candidateID uuid.UUID) (candidatesmod.ApprovalEligibilityResult, error) {
+	candidate, err := s.candidateStore.GetByID(ctx, candidateID)
+	if err != nil {
+		return candidatesmod.ApprovalEligibilityResult{}, fmt.Errorf("approvals.Service.ensureApprovalReviewEligible: candidate lookup: %w", err)
+	}
+
+	evidence, err := s.latestEvidenceScore(ctx, candidateID)
+	if err != nil {
+		return candidatesmod.ApprovalEligibilityResult{}, err
+	}
+
+	gate := candidatesmod.GateResult{
+		CandidateID:                 candidateID,
+		GateStatus:                  candidate.GateStatus,
+		GateReady:                   candidate.GateStatus == candidatesmod.GateStatusReadyForRiskReview,
+		NextRequiredPhase:           candidatesmod.NextPhaseRiskReview,
+		BrokerExecutionAllowed:      false,
+		ExecutionInstructionCreated: false,
+		ApprovalGranted:             false,
+	}
+	risk := candidatesmod.RiskReviewResult{
+		CandidateID:                 candidateID.String(),
+		RiskStatus:                  candidatesmod.RiskStatus(candidate.RiskStatus),
+		RiskReady:                   candidatesmod.RiskStatus(candidate.RiskStatus) == candidatesmod.RiskStatusReadyForApprovalReview,
+		MaxSlippageAdjustedLoss:     floatPtrValue(candidate.MaxSlippageAdjustedLoss),
+		NextRequiredPhase:           candidatesmod.NextPhaseApprovalReview,
+		BrokerExecutionAllowed:      false,
+		ExecutionInstructionCreated: false,
+		ApprovalGranted:             false,
+	}
+
+	eligibility := candidatesmod.EvaluateApprovalEligibility(*candidate, evidence, gate, risk, time.Now().UTC())
+	if !eligibility.ApprovalEligible {
+		return eligibility, fmt.Errorf("%w: status=%s reject_reasons=%v warning_reasons=%v",
+			ErrCandidateNotApprovalEligible,
+			eligibility.ApprovalStatus,
+			eligibility.RejectReasons,
+			eligibility.WarningReasons,
+		)
+	}
+	return eligibility, nil
+}
+
+func (s *Service) latestEvidenceScore(ctx context.Context, candidateID uuid.UUID) (candidatesmod.EvidenceScoreSummary, error) {
+	row := s.pool.QueryRow(ctx, `
+		SELECT support_score::float8, contradiction_score::float8, quality_score::float8,
+		       freshness_score::float8, overall_evidence_score::float8,
+		       evidence_item_count, supporting_item_count, contradictory_item_count, stale_item_count,
+		       evidence_status, evidence_ready, evidence_gate_ready,
+		       approval_granted, broker_execution_allowed, execution_instruction_created
+		FROM candidate_evidence_scores
+		WHERE candidate_id = $1
+		ORDER BY scored_at DESC
+		LIMIT 1
+	`, candidateID)
+
+	score := candidatesmod.EvidenceScoreSummary{CandidateID: candidateID}
+	if err := row.Scan(
+		&score.SupportScore,
+		&score.ContradictionScore,
+		&score.QualityScore,
+		&score.FreshnessScore,
+		&score.OverallEvidenceScore,
+		&score.EvidenceItemCount,
+		&score.SupportingItemCount,
+		&score.ContradictoryItemCount,
+		&score.StaleItemCount,
+		&score.EvidenceStatus,
+		&score.EvidenceReady,
+		&score.EvidenceGateReady,
+		&score.ApprovalGranted,
+		&score.BrokerExecutionAllowed,
+		&score.ExecutionInstructionCreated,
+	); err != nil {
+		if isNoRows(err) {
+			return score, fmt.Errorf("%w: evidence_score_missing", ErrCandidateNotApprovalEligible)
+		}
+		return score, fmt.Errorf("approvals.Service.latestEvidenceScore: %w", err)
+	}
+	return score, nil
+}
+
+func floatPtrValue(value *float64) float64 {
+	if value == nil {
+		return 0
+	}
+	return *value
+}
 
 func (s *Service) checkETFApprovalGate(ctx context.Context, candidateID uuid.UUID) error {
 	if s.instrumentGate == nil {

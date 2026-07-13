@@ -8,7 +8,16 @@ import (
 const (
 	RiskStatusPending = "pending"
 
-	ApprovalStatusNotReady = "not_ready"
+	ApprovalStatusNotReady            = "not_ready"
+	ApprovalStatusBlocked             = "blocked"
+	ApprovalStatusStructureIncomplete = "structure_incomplete"
+	ApprovalStatusEvidenceNotReady    = "evidence_not_ready"
+	ApprovalStatusGateNotReady        = "gate_not_ready"
+	ApprovalStatusRiskNotReady        = "risk_not_ready"
+	ApprovalStatusApprovalReviewReady = "approval_review_ready"
+	ApprovalStatusHumanApprovedPaper  = "human_approved_paper"
+	ApprovalStatusHumanRejected       = "human_rejected"
+	ApprovalStatusHumanSnoozed        = "human_snoozed"
 
 	GateStatusNotEvaluated       = "not_evaluated"
 	GateStatusBlocked            = "blocked"

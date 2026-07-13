@@ -113,7 +113,32 @@ func (s *Store) ListQueue(ctx context.Context, limit int) ([]map[string]any, err
 		       ct.detected_at, ct.expires_at, si.name AS instance_name, ct.metadata
 		FROM candidate_trades ct
 		LEFT JOIN strategy_instances si ON si.id = ct.strategy_instance_id
+		JOIN LATERAL (
+			SELECT evidence_status, evidence_ready, evidence_gate_ready,
+			       broker_execution_allowed, execution_instruction_created, approval_granted
+			FROM candidate_evidence_scores
+			WHERE candidate_id = ct.id
+			ORDER BY scored_at DESC
+			LIMIT 1
+		) es ON TRUE
 		WHERE ct.status = 'awaiting_approval'
+		  AND ct.gate_status = 'ready_for_risk_review'
+		  AND ct.risk_status = 'ready_for_approval_review'
+		  AND ct.approval_status IN ('not_ready', 'approval_review_ready')
+		  AND ct.human_approval_required = TRUE
+		  AND es.evidence_status = 'sufficient'
+		  AND es.evidence_ready = TRUE
+		  AND es.evidence_gate_ready = TRUE
+		  AND es.broker_execution_allowed = FALSE
+		  AND es.execution_instruction_created = FALSE
+		  AND es.approval_granted = FALSE
+		  AND NOT EXISTS (
+			SELECT 1 FROM execution_instructions ei WHERE ei.candidate_id = ct.id
+		  )
+		  AND NOT EXISTS (
+			SELECT 1 FROM candidate_approvals ca
+			WHERE ca.candidate_id = ct.id AND ca.decision = 'approved'
+		  )
 		ORDER BY ct.detected_at ASC
 		LIMIT $1`, limit)
 	if err != nil {
