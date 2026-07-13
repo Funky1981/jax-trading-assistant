@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	approvalsmod "jax-trading-assistant/internal/modules/approvals"
+	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 )
 
 // registerApprovalRoutes registers all human-approval-flow endpoints on mux.
@@ -24,6 +25,13 @@ func registerApprovalRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 
 	// GET  /api/v1/approvals/queue
 	mux.HandleFunc("/api/v1/approvals/queue", protect(approvalQueueHandler(svc)))
+
+	// GET  /api/v1/paper-tickets
+	// POST /api/v1/paper-tickets/{paperTicketId}/mark-reviewed
+	// POST /api/v1/paper-tickets/{paperTicketId}/cancel
+	// POST /api/v1/paper-tickets/{paperTicketId}/notes
+	mux.HandleFunc("/api/v1/paper-tickets", protect(paperTicketQueueHandler(svc)))
+	mux.HandleFunc("/api/v1/paper-tickets/", protect(paperTicketReviewRouter(svc)))
 
 	// GET  /api/v1/approvals/{candidateId}
 	// POST /api/v1/approvals/{candidateId}/approve
@@ -159,6 +167,73 @@ func approvalQueueHandler(svc *approvalsmod.Service) http.HandlerFunc {
 	}
 }
 
+func paperTicketQueueHandler(svc *approvalsmod.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		limit := 50
+		if l := r.URL.Query().Get("limit"); l != "" {
+			if v, err := strconv.Atoi(l); err == nil && v > 0 && v <= 200 {
+				limit = v
+			}
+		}
+		queue, err := svc.GetPaperTicketQueue(r.Context(), limit)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("paper ticket queue: %v", err), http.StatusInternalServerError)
+			return
+		}
+		if queue == nil {
+			queue = []candidatesmod.PaperTicketReview{}
+		}
+		jsonOK(w, queue)
+	}
+}
+
+func paperTicketReviewRouter(svc *approvalsmod.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tail := strings.TrimPrefix(r.URL.Path, "/api/v1/paper-tickets/")
+		parts := strings.SplitN(tail, "/", 2)
+		if len(parts) != 2 || parts[0] == "" {
+			http.NotFound(w, r)
+			return
+		}
+		paperTicketID := parts[0]
+		action := parts[1]
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var body paperTicketReviewActionBody
+		if r.ContentLength > 0 {
+			_ = json.NewDecoder(r.Body).Decode(&body)
+		}
+
+		var (
+			review *candidatesmod.PaperTicketReview
+			err    error
+		)
+		switch action {
+		case "mark-reviewed":
+			review, err = svc.MarkPaperTicketReviewed(r.Context(), paperTicketID, body.Note)
+		case "cancel":
+			review, err = svc.CancelPaperTicketReview(r.Context(), paperTicketID, body.Note)
+		case "notes":
+			review, err = svc.AddPaperTicketReviewNote(r.Context(), paperTicketID, body.Note)
+		default:
+			http.NotFound(w, r)
+			return
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		jsonOK(w, review)
+	}
+}
+
 // Router for /api/v1/approvals/{candidateId}[/action]
 func approvalDetailRouter(svc *approvalsmod.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -270,6 +345,10 @@ func handleApprovalDecision(w http.ResponseWriter, r *http.Request, svc *approva
 type snoozeBody struct {
 	Notes       *string `json:"notes"`
 	SnoozeHours int     `json:"snoozeHours"`
+}
+
+type paperTicketReviewActionBody struct {
+	Note string `json:"note"`
 }
 
 func handleApprovalSnooze(w http.ResponseWriter, r *http.Request, svc *approvalsmod.Service, candidateID uuid.UUID) {

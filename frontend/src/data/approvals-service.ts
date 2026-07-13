@@ -165,6 +165,22 @@ export const approvalsService = {
     return apiClient.get<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}`);
   },
 
+  getPaperTicketQueue(limit = 50) {
+    return apiClient.get<PaperTicketReview[]>(`/api/v1/paper-tickets?limit=${limit}`);
+  },
+
+  markPaperTicketReviewed(paperTicketId: string, note?: string) {
+    return apiClient.post<PaperTicketReview>(`/api/v1/paper-tickets/${paperTicketId}/mark-reviewed`, { note });
+  },
+
+  cancelPaperTicket(paperTicketId: string, note?: string) {
+    return apiClient.post<PaperTicketReview>(`/api/v1/paper-tickets/${paperTicketId}/cancel`, { note });
+  },
+
+  addPaperTicketNote(paperTicketId: string, note: string) {
+    return apiClient.post<PaperTicketReview>(`/api/v1/paper-tickets/${paperTicketId}/notes`, { note });
+  },
+
   approve(candidateId: string, notes?: string, overrideReason?: ApprovalOverrideReasonInput) {
     return apiClient.post<CandidateApprovalDetail>(`/api/v1/approvals/${candidateId}/approve`, { notes, overrideReason });
   },

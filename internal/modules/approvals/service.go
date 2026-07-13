@@ -233,6 +233,25 @@ func (s *Service) GetByCandidate(ctx context.Context, candidateID uuid.UUID) (*A
 	return s.store.GetDetailByCandidateID(ctx, candidateID)
 }
 
+func (s *Service) GetPaperTicketQueue(ctx context.Context, limit int) ([]candidatesmod.PaperTicketReview, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	return s.candidateStore.ListPaperTicketReviews(ctx, limit)
+}
+
+func (s *Service) MarkPaperTicketReviewed(ctx context.Context, paperTicketID, note string) (*candidatesmod.PaperTicketReview, error) {
+	return s.candidateStore.MarkPaperTicketReviewed(ctx, paperTicketID, note)
+}
+
+func (s *Service) CancelPaperTicketReview(ctx context.Context, paperTicketID, note string) (*candidatesmod.PaperTicketReview, error) {
+	return s.candidateStore.CancelPaperTicketReview(ctx, paperTicketID, note)
+}
+
+func (s *Service) AddPaperTicketReviewNote(ctx context.Context, paperTicketID, note string) (*candidatesmod.PaperTicketReview, error) {
+	return s.candidateStore.AddPaperTicketReviewNote(ctx, paperTicketID, note)
+}
+
 // QueueMobileApprovalNotification ensures a candidate awaiting approval has a
 // one-time token and queued Telegram notification. Calls are idempotent.
 func (s *Service) QueueMobileApprovalNotification(ctx context.Context, candidateID uuid.UUID) error {

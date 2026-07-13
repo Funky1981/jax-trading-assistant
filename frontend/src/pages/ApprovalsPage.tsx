@@ -8,6 +8,7 @@ import {
   type ApprovalQueueItem,
   type CandidateApprovalDetail,
   type CandidateTrade,
+  type PaperTicketReview,
 } from '@/data/approvals-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -331,6 +332,68 @@ function ExecutionActivityRow({ item }: { item: CandidateTrade }) {
   );
 }
 
+function PaperTicketReviewRow({
+  item,
+  pending,
+  onAction,
+}: {
+  item: PaperTicketReview;
+  pending: boolean;
+  onAction: (paperTicketId: string, action: 'mark_reviewed' | 'cancel') => void;
+}) {
+  return (
+    <div className="rounded-md border border-border p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline">Paper only</Badge>
+        <span className="font-semibold">{item.symbol}</span>
+        <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
+        <span className="ml-auto text-xs text-muted-foreground">Updated {fmtDate(item.updatedAt)}</span>
+      </div>
+      <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+        <div className="space-y-2">
+          <CandidateMeta label="Paper ticket" value={item.paperTicketId} />
+          <CandidateMeta label="Candidate" value={item.candidateId} />
+          <CandidateMeta label="Setup" value={item.setupType} />
+          <CandidateMeta label="Direction" value={item.direction} />
+        </div>
+        <div className="space-y-2">
+          <CandidateMeta label="Entry" value={item.entryPrice.toFixed(2)} />
+          <CandidateMeta label="Stop" value={item.stopLossPrice.toFixed(2)} />
+          <CandidateMeta label="Target" value={item.targetPrice.toFixed(2)} />
+          <CandidateMeta label="Reward/risk" value={item.rewardRiskRatio.toFixed(2)} />
+        </div>
+      </div>
+      <p className="mt-3 text-sm text-muted-foreground">{item.catalystSummary}</p>
+      <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+        <span>Evidence: {statusLabel(item.evidenceStatus)}</span>
+        <span>Gate: {statusLabel(item.gateStatus)}</span>
+        <span>Risk: {statusLabel(item.riskStatus)}</span>
+        <span>Approval: {statusLabel(item.approvalStatus)}</span>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={pending || item.status === 'paper_ticket_reviewed' || item.status === 'paper_ticket_cancelled'}
+          onClick={() => onAction(item.paperTicketId, 'mark_reviewed')}
+        >
+          <CheckCircle className="mr-1 h-4 w-4" /> Mark reviewed
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={pending || item.status === 'paper_ticket_cancelled'}
+          onClick={() => onAction(item.paperTicketId, 'cancel')}
+        >
+          <XCircle className="mr-1 h-4 w-4" /> Cancel paper ticket
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function BlockedCandidateRow({
   item,
   onRefresh,
@@ -397,6 +460,7 @@ export function ApprovalsPage() {
   const [notification, setNotification] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingRefreshId, setPendingRefreshId] = useState<string | null>(null);
+  const [pendingPaperTicketId, setPendingPaperTicketId] = useState<string | null>(null);
 
   useEffect(() => {
     emitAnalyticsEvent('page_viewed', { source_surface: 'approvals' });
@@ -428,6 +492,11 @@ export function ApprovalsPage() {
         })
         .slice(0, 8);
     },
+    refetchInterval: 30_000,
+  });
+  const { data: paperTicketQueue = [] } = useQuery({
+    queryKey: ['paper-ticket-review-queue'],
+    queryFn: () => approvalsService.getPaperTicketQueue(),
     refetchInterval: 30_000,
   });
 
@@ -498,6 +567,27 @@ export function ApprovalsPage() {
     },
   });
 
+  const paperTicketMutation = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: 'mark_reviewed' | 'cancel' }) => {
+      if (action === 'mark_reviewed') {
+        return approvalsService.markPaperTicketReviewed(id, 'marked reviewed from approvals page');
+      }
+      return approvalsService.cancelPaperTicket(id, 'cancelled from approvals page');
+    },
+    onMutate: ({ id }) => setPendingPaperTicketId(id),
+    onSuccess: (_data, { action }) => {
+      qc.invalidateQueries({ queryKey: ['paper-ticket-review-queue'] });
+      setPendingPaperTicketId(null);
+      setNotification(action === 'mark_reviewed' ? 'Paper ticket marked reviewed.' : 'Paper ticket cancelled.');
+      setTimeout(() => setNotification(null), 3000);
+    },
+    onError: (err: Error) => {
+      setPendingPaperTicketId(null);
+      setNotification(`Error: ${err.message}`);
+      setTimeout(() => setNotification(null), 5000);
+    },
+  });
+
   const handleDecision = (
     id: string,
     action: 'approve' | 'reject' | 'snooze' | 'reanalyze',
@@ -508,6 +598,10 @@ export function ApprovalsPage() {
 
   const handleRefreshCandidate = (id: string) => {
     refreshMutation.mutate(id);
+  };
+
+  const handlePaperTicketAction = (id: string, action: 'mark_reviewed' | 'cancel') => {
+    paperTicketMutation.mutate({ id, action });
   };
 
   const handleEvidenceOpen = (item: ApprovalQueueItem | CandidateTrade) => {
@@ -544,8 +638,9 @@ export function ApprovalsPage() {
         <div className="mb-4 rounded-md bg-accent px-4 py-2 text-sm text-accent-foreground">{notification}</div>
       )}
 
-      <div className="mb-6 grid gap-3 md:grid-cols-3">
+      <div className="mb-6 grid gap-3 md:grid-cols-4">
         <SummaryCard label="Pending approvals" value={queue.length} hint="Candidates waiting for a human decision." />
+        <SummaryCard label="Paper review" value={paperTicketQueue.length} hint="Persisted paper tickets awaiting review." />
         <SummaryCard
           label="Recent execution chain"
           value={executionActivity.length}
@@ -572,6 +667,27 @@ export function ApprovalsPage() {
           onEvidenceOpen={handleEvidenceOpen}
         />
       ))}
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Paper Ticket Review Queue</CardTitle>
+          <p className="text-sm text-muted-foreground">Persisted paper-only tickets for review actions.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {paperTicketQueue.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No paper tickets waiting for review.</p>
+          ) : (
+            paperTicketQueue.map((item) => (
+              <PaperTicketReviewRow
+                key={item.paperTicketId}
+                item={item}
+                pending={pendingPaperTicketId === item.paperTicketId}
+                onAction={handlePaperTicketAction}
+              />
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="mt-6">
         <CardHeader>

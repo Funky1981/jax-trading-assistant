@@ -244,3 +244,126 @@ func (s *Store) GetPaperTicketReviewByCandidateID(ctx context.Context, candidate
 	}
 	return &review, nil
 }
+
+func (s *Store) ListPaperTicketReviews(ctx context.Context, limit int) ([]PaperTicketReview, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT paper_ticket_id, candidate_id, created_at, updated_at, status,
+		       symbol, direction, setup_type, catalyst_summary, entry_price::float8,
+		       stop_loss_price::float8, target_price::float8, position_size::float8,
+		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
+		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
+		       approval_status, paper_only, reject_reasons, warning_reasons
+		FROM candidate_paper_tickets
+		ORDER BY created_at DESC
+		LIMIT $1
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("candidates.Store.ListPaperTicketReviews: %w", err)
+	}
+	defer rows.Close()
+
+	var reviews []PaperTicketReview
+	for rows.Next() {
+		review, err := scanPaperTicketReview(rows.Scan)
+		if err != nil {
+			return nil, fmt.Errorf("candidates.Store.ListPaperTicketReviews: %w", err)
+		}
+		reviews = append(reviews, review)
+	}
+	return reviews, rows.Err()
+}
+
+func (s *Store) MarkPaperTicketReviewed(ctx context.Context, paperTicketID, note string) (*PaperTicketReview, error) {
+	return s.updatePaperTicketReview(ctx, paperTicketID, note, PaperTicketStatusPaperTicketReviewed, []string{
+		PaperTicketStatusPaperTicketCreated,
+		PaperTicketStatusPaperTicketReady,
+	})
+}
+
+func (s *Store) CancelPaperTicketReview(ctx context.Context, paperTicketID, note string) (*PaperTicketReview, error) {
+	return s.updatePaperTicketReview(ctx, paperTicketID, note, PaperTicketStatusPaperTicketCancelled, []string{
+		PaperTicketStatusPaperTicketCreated,
+		PaperTicketStatusPaperTicketReady,
+	})
+}
+
+func (s *Store) AddPaperTicketReviewNote(ctx context.Context, paperTicketID, note string) (*PaperTicketReview, error) {
+	row := s.pool.QueryRow(ctx, `
+		UPDATE candidate_paper_tickets
+		SET updated_at = NOW(),
+		    review_notes = append_review_note(review_notes, $2)
+		WHERE paper_ticket_id = $1
+		  AND status <> 'paper_ticket_cancelled'
+		RETURNING paper_ticket_id, candidate_id, created_at, updated_at, status,
+		       symbol, direction, setup_type, catalyst_summary, entry_price::float8,
+		       stop_loss_price::float8, target_price::float8, position_size::float8,
+		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
+		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
+		       approval_status, paper_only, reject_reasons, warning_reasons
+	`, paperTicketID, note)
+	review, err := scanPaperTicketReview(row.Scan)
+	if err != nil {
+		return nil, fmt.Errorf("candidates.Store.AddPaperTicketReviewNote: %w", err)
+	}
+	return &review, nil
+}
+
+func (s *Store) updatePaperTicketReview(ctx context.Context, paperTicketID, note, nextStatus string, allowedStatuses []string) (*PaperTicketReview, error) {
+	if len(allowedStatuses) != 2 {
+		return nil, fmt.Errorf("candidates.Store.updatePaperTicketReview: exactly two allowed statuses required")
+	}
+	row := s.pool.QueryRow(ctx, `
+		UPDATE candidate_paper_tickets
+		SET status = $2,
+		    updated_at = NOW(),
+		    review_notes = append_review_note(review_notes, $5)
+		WHERE paper_ticket_id = $1
+		  AND status IN ($3, $4)
+		RETURNING paper_ticket_id, candidate_id, created_at, updated_at, status,
+		       symbol, direction, setup_type, catalyst_summary, entry_price::float8,
+		       stop_loss_price::float8, target_price::float8, position_size::float8,
+		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
+		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
+		       approval_status, paper_only, reject_reasons, warning_reasons
+	`, paperTicketID, nextStatus, allowedStatuses[0], allowedStatuses[1], note)
+	review, err := scanPaperTicketReview(row.Scan)
+	if err != nil {
+		return nil, fmt.Errorf("candidates.Store.updatePaperTicketReview: %w", err)
+	}
+	return &review, nil
+}
+
+type paperTicketReviewScanner func(dest ...any) error
+
+func scanPaperTicketReview(scan paperTicketReviewScanner) (PaperTicketReview, error) {
+	var review PaperTicketReview
+	err := scan(
+		&review.PaperTicketID,
+		&review.CandidateID,
+		&review.CreatedAt,
+		&review.UpdatedAt,
+		&review.Status,
+		&review.Symbol,
+		&review.Direction,
+		&review.SetupType,
+		&review.CatalystSummary,
+		&review.EntryPrice,
+		&review.StopLossPrice,
+		&review.TargetPrice,
+		&review.PositionSize,
+		&review.MaxNormalLoss,
+		&review.MaxSlippageAdjustedLoss,
+		&review.RewardRiskRatio,
+		&review.EvidenceStatus,
+		&review.GateStatus,
+		&review.RiskStatus,
+		&review.ApprovalStatus,
+		&review.PaperOnly,
+		&review.RejectReasons,
+		&review.WarningReasons,
+	)
+	return review, err
+}

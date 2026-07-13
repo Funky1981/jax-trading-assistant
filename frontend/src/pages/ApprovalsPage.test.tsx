@@ -13,6 +13,10 @@ vi.mock('@/data/approvals-service', () => ({
     reject: vi.fn(),
     snooze: vi.fn(),
     reanalyze: vi.fn(),
+    getPaperTicketQueue: vi.fn(),
+    markPaperTicketReviewed: vi.fn(),
+    cancelPaperTicket: vi.fn(),
+    addPaperTicketNote: vi.fn(),
   },
   candidatesService: {
     list: vi.fn(),
@@ -62,6 +66,7 @@ describe('ApprovalsPage', () => {
         },
       },
     ]);
+    vi.mocked(approvalsService.getPaperTicketQueue).mockResolvedValue([]);
     vi.mocked(candidatesService.list)
       .mockResolvedValueOnce([
         {
@@ -123,6 +128,7 @@ describe('ApprovalsPage', () => {
   it('wires blocked refresh action to candidate refresh and mobile queue producer path', async () => {
     vi.mocked(emitAnalyticsEvent).mockClear();
     vi.mocked(approvalsService.getQueue).mockResolvedValue([]);
+    vi.mocked(approvalsService.getPaperTicketQueue).mockResolvedValue([]);
     vi.mocked(candidatesService.list)
       .mockResolvedValue([] as never)
       .mockResolvedValueOnce([
@@ -172,6 +178,78 @@ describe('ApprovalsPage', () => {
 
     await waitFor(() => {
       expect(candidatesService.refresh).toHaveBeenCalledWith('candidate-blocked-2');
+    });
+  });
+
+  it('shows paper ticket review queue with safe review actions only', async () => {
+    vi.mocked(emitAnalyticsEvent).mockClear();
+    vi.mocked(approvalsService.getQueue).mockResolvedValue([]);
+    vi.mocked(approvalsService.getPaperTicketQueue).mockResolvedValue([
+      {
+        paperTicketId: 'pt_candidate_1',
+        candidateId: 'candidate-paper-1',
+        createdAt: '2026-07-13T08:00:00Z',
+        updatedAt: '2026-07-13T08:05:00Z',
+        status: 'paper_ticket_created',
+        symbol: 'SPY',
+        direction: 'long',
+        setupType: 'pullback_continuation',
+        catalystSummary: 'Broad-market ETF holding above support.',
+        entryPrice: 101.25,
+        stopLossPrice: 98.75,
+        targetPrice: 107,
+        positionSize: 4,
+        maxNormalLoss: 10,
+        maxSlippageAdjustedLoss: 12,
+        rewardRiskRatio: 2.3,
+        evidenceStatus: 'sufficient',
+        gateStatus: 'ready_for_risk_review',
+        riskStatus: 'ready_for_approval_review',
+        approvalStatus: 'paper_ticket_ready',
+        paperOnly: true,
+        rejectReasons: [],
+        warningReasons: [],
+      },
+    ]);
+    vi.mocked(approvalsService.markPaperTicketReviewed).mockResolvedValue({
+      paperTicketId: 'pt_candidate_1',
+      candidateId: 'candidate-paper-1',
+      createdAt: '2026-07-13T08:00:00Z',
+      updatedAt: '2026-07-13T08:06:00Z',
+      status: 'paper_ticket_reviewed',
+      symbol: 'SPY',
+      direction: 'long',
+      setupType: 'pullback_continuation',
+      catalystSummary: 'Broad-market ETF holding above support.',
+      entryPrice: 101.25,
+      stopLossPrice: 98.75,
+      targetPrice: 107,
+      positionSize: 4,
+      maxNormalLoss: 10,
+      maxSlippageAdjustedLoss: 12,
+      rewardRiskRatio: 2.3,
+      evidenceStatus: 'sufficient',
+      gateStatus: 'ready_for_risk_review',
+      riskStatus: 'ready_for_approval_review',
+      approvalStatus: 'paper_ticket_ready',
+      paperOnly: true,
+    });
+    vi.mocked(candidatesService.list).mockResolvedValue([] as never);
+
+    renderPage();
+
+    expect(await screen.findByText('Paper Ticket Review Queue')).toBeInTheDocument();
+    expect(await screen.findByText('Paper only')).toBeInTheDocument();
+    expect(await screen.findByText('Broad-market ETF holding above support.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /execute/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Mark reviewed/i }));
+
+    await waitFor(() => {
+      expect(approvalsService.markPaperTicketReviewed).toHaveBeenCalledWith(
+        'pt_candidate_1',
+        'marked reviewed from approvals page'
+      );
     });
   });
 });

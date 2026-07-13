@@ -36,3 +36,21 @@ func TestCandidatePaperTicketsMigrationCreatesPaperOnlyReviewTable(t *testing.T)
 		}
 	}
 }
+
+func TestCandidatePaperTicketReviewActionsMigrationAddsInternalNotesOnly(t *testing.T) {
+	data, err := os.ReadFile("000046_candidate_paper_ticket_review_actions.up.sql")
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	migration := string(data)
+
+	requiredFragments := []string{
+		"ADD COLUMN IF NOT EXISTS review_notes TEXT",
+		"CREATE OR REPLACE FUNCTION append_review_note",
+	}
+	for _, fragment := range requiredFragments {
+		if !strings.Contains(migration, fragment) {
+			t.Fatalf("migration missing %q", fragment)
+		}
+	}
+}

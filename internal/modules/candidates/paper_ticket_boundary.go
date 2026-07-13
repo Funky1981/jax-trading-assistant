@@ -13,6 +13,7 @@ const (
 	PaperTicketStatusApprovalRequired     = "approval_required"
 	PaperTicketStatusPaperTicketReady     = "paper_ticket_ready"
 	PaperTicketStatusPaperTicketCreated   = "paper_ticket_created"
+	PaperTicketStatusPaperTicketReviewed  = "paper_ticket_reviewed"
 	PaperTicketStatusPaperTicketCancelled = "paper_ticket_cancelled"
 )
 
