@@ -65,6 +65,7 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cleanupCancel()
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM candidate_paper_tickets WHERE candidate_id = $1::uuid`, response.CandidateID)
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM execution_instructions WHERE candidate_id = $1::uuid`, response.CandidateID)
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM candidate_approvals WHERE candidate_id = $1::uuid`, response.CandidateID)
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM candidate_trades WHERE id = $1::uuid`, response.CandidateID)
@@ -136,6 +137,26 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	}
 	if executionCount != 0 {
 		t.Fatalf("execution instruction count after approval = %d, want 0", executionCount)
+	}
+
+	var ticketCount int
+	var paperOnly, brokerAllowed, instructionCreated, liveAllowed, leverageAllowed bool
+	var ticketStatus string
+	if err := pool.QueryRow(ctx, `
+		SELECT COUNT(*), bool_and(paper_only), bool_or(broker_execution_allowed),
+		       bool_or(execution_instruction_created), bool_or(live_trading_allowed),
+		       bool_or(leverage_allowed), max(status)
+		FROM candidate_paper_tickets
+		WHERE candidate_id = $1::uuid AND source_approval_id = $2
+	`, response.CandidateID, approval.ID).Scan(&ticketCount, &paperOnly, &brokerAllowed, &instructionCreated, &liveAllowed, &leverageAllowed, &ticketStatus); err != nil {
+		t.Fatalf("query candidate paper tickets after approval: %v", err)
+	}
+	if ticketCount != 1 {
+		t.Fatalf("candidate paper ticket count = %d, want 1", ticketCount)
+	}
+	if ticketStatus != "paper_ticket_created" || !paperOnly || brokerAllowed || instructionCreated || liveAllowed || leverageAllowed {
+		t.Fatalf("persisted paper ticket is not review-only: status=%q paperOnly=%v broker=%v instruction=%v live=%v leverage=%v",
+			ticketStatus, paperOnly, brokerAllowed, instructionCreated, liveAllowed, leverageAllowed)
 	}
 }
 

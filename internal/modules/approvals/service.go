@@ -66,6 +66,7 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 	var status string
 	var expiresAt *time.Time
 	var signalID *uuid.UUID
+	var approvalEligibility candidatesmod.ApprovalEligibilityResult
 	err := s.pool.QueryRow(ctx,
 		`SELECT status, expires_at, signal_id FROM candidate_trades WHERE id = $1`, req.CandidateID,
 	).Scan(&status, &expiresAt, &signalID)
@@ -82,7 +83,8 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 		return nil, ErrCandidateMissingSignal
 	}
 	if req.Decision == DecisionApproved {
-		if _, err := s.ensureApprovalReviewEligible(ctx, req.CandidateID); err != nil {
+		approvalEligibility, err = s.ensureApprovalReviewEligible(ctx, req.CandidateID)
+		if err != nil {
 			return nil, err
 		}
 		if err := s.checkETFApprovalGate(ctx, req.CandidateID); err != nil {
@@ -145,6 +147,9 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 		); err != nil {
 			return nil, fmt.Errorf("approvals.Service.Decide: mark paper ticket ready: %w", err)
 		}
+		if err := s.persistPaperTicket(ctx, approval, approvalEligibility); err != nil {
+			return nil, err
+		}
 	}
 
 	return approval, nil
@@ -181,6 +186,38 @@ func (s *Service) buildInstruction(ctx context.Context, approval *Approval) erro
 	}
 	_, err = s.store.CreateExecutionInstruction(ctx, inst)
 	return err
+}
+
+func (s *Service) persistPaperTicket(ctx context.Context, approval *Approval, eligibility candidatesmod.ApprovalEligibilityResult) error {
+	candidate, err := s.candidateStore.GetByID(ctx, approval.CandidateID)
+	if err != nil {
+		return fmt.Errorf("approvals.Service.persistPaperTicket: candidate lookup: %w", err)
+	}
+	candidate.ApprovalStatus = candidatesmod.ApprovalStatusPaperTicketReady
+
+	evidence, err := s.latestEvidenceScore(ctx, approval.CandidateID)
+	if err != nil {
+		return fmt.Errorf("approvals.Service.persistPaperTicket: evidence lookup: %w", err)
+	}
+	result := candidatesmod.CreatePaperTicket(candidatesmod.PaperTicketRequest{
+		Candidate:            *candidate,
+		Eligibility:          eligibility,
+		HumanApprovalGranted: true,
+		ApprovalDecisionRef:  approval.ID.String(),
+		SourceApprovalID:     approval.ID,
+		CreatedAt:            approval.DecidedAt,
+	})
+	if !result.CanCreateTicket {
+		return fmt.Errorf("approvals.Service.persistPaperTicket: boundary blocked status=%s reject_reasons=%v", result.Status, result.RejectReasons)
+	}
+	ticket, err := candidatesmod.NewPersistedPaperTicket(*candidate, evidence, eligibility, result)
+	if err != nil {
+		return fmt.Errorf("approvals.Service.persistPaperTicket: build ticket: %w", err)
+	}
+	if _, err := s.candidateStore.CreatePaperTicket(ctx, ticket); err != nil {
+		return fmt.Errorf("approvals.Service.persistPaperTicket: persist ticket: %w", err)
+	}
+	return nil
 }
 
 // GetQueue returns candidates awaiting_approval.

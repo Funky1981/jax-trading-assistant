@@ -10,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 )
 
 // Decision values for a candidate approval.
@@ -57,9 +59,10 @@ type ExecutionInstruction struct {
 }
 
 type ApprovalDetail struct {
-	CandidateID    uuid.UUID             `json:"candidateId"`
-	LatestApproval *Approval             `json:"latestApproval,omitempty"`
-	Execution      *ExecutionInstruction `json:"execution,omitempty"`
+	CandidateID    uuid.UUID                        `json:"candidateId"`
+	LatestApproval *Approval                        `json:"latestApproval,omitempty"`
+	PaperTicket    *candidatesmod.PaperTicketReview `json:"paperTicket,omitempty"`
+	Execution      *ExecutionInstruction            `json:"execution,omitempty"`
 }
 
 // Store handles DB persistence for approvals and execution instructions.
@@ -236,7 +239,13 @@ func (s *Store) GetDetailByCandidateID(ctx context.Context, candidateID uuid.UUI
 	} else if !isNoRows(err) {
 		return nil, err
 	}
-	if detail.LatestApproval == nil && detail.Execution == nil {
+	paperTicket, err := candidatesmod.NewStore(s.pool).GetPaperTicketReviewByCandidateID(ctx, candidateID)
+	if err == nil {
+		detail.PaperTicket = paperTicket
+	} else if !isNoRows(err) {
+		return nil, err
+	}
+	if detail.LatestApproval == nil && detail.PaperTicket == nil && detail.Execution == nil {
 		return nil, fmt.Errorf("approval detail not found")
 	}
 	return detail, nil

@@ -70,9 +70,36 @@ export interface ExecutionSummary {
   updatedAt: string;
 }
 
+export interface PaperTicketReview {
+  paperTicketId: string;
+  candidateId: string;
+  createdAt: string;
+  updatedAt: string;
+  status: string;
+  symbol: string;
+  direction: string;
+  setupType: string;
+  catalystSummary: string;
+  entryPrice: number;
+  stopLossPrice: number;
+  targetPrice: number;
+  positionSize: number;
+  maxNormalLoss: number;
+  maxSlippageAdjustedLoss: number;
+  rewardRiskRatio: number;
+  evidenceStatus: string;
+  gateStatus: string;
+  riskStatus: string;
+  approvalStatus: string;
+  paperOnly: true;
+  rejectReasons?: string[];
+  warningReasons?: string[];
+}
+
 export interface CandidateApprovalDetail {
   candidateId: string;
   latestApproval?: CandidateApproval;
+  paperTicket?: PaperTicketReview;
   execution?: ExecutionSummary;
 }
 
