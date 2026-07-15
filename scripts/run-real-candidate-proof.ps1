@@ -26,7 +26,15 @@ function Get-ConfigValue([string]$Name) {
 }
 
 function Invoke-SqlJson([string]$Sql) {
-  $raw = & psql $DatabaseUrl --no-psqlrc -X -t -A -v ON_ERROR_STOP=1 -c $Sql 2>&1
+  if (Get-Command psql -ErrorAction SilentlyContinue) {
+    $raw = & psql $DatabaseUrl --no-psqlrc -X -t -A -v ON_ERROR_STOP=1 -c $Sql 2>&1
+  } else {
+    $postgresUser = Get-ConfigValue "POSTGRES_USER"
+    $postgresDb = Get-ConfigValue "POSTGRES_DB"
+    if ([string]::IsNullOrWhiteSpace($postgresUser)) { $postgresUser = "jax" }
+    if ([string]::IsNullOrWhiteSpace($postgresDb)) { $postgresDb = "jax" }
+    $raw = & docker compose exec -T postgres psql -U $postgresUser -d $postgresDb --no-psqlrc -X -t -A -v ON_ERROR_STOP=1 -c $Sql 2>&1
+  }
   if ($LASTEXITCODE -ne 0) { throw ($raw -join [Environment]::NewLine) }
   $text = ($raw -join "").Trim()
   if ([string]::IsNullOrWhiteSpace($text)) { return $null }
@@ -49,8 +57,10 @@ function Initialize-Auth {
 }
 
 if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) { $DatabaseUrl = Get-ConfigValue "DATABASE_URL" }
-if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) { throw "DATABASE_URL is required" }
-if (-not (Get-Command psql -ErrorAction SilentlyContinue)) { throw "psql is required on PATH" }
+if (-not (Get-Command psql -ErrorAction SilentlyContinue) -and -not (Get-Command docker -ErrorAction SilentlyContinue)) {
+  throw "psql on PATH or Docker Compose is required"
+}
+if ((Get-Command psql -ErrorAction SilentlyContinue) -and [string]::IsNullOrWhiteSpace($DatabaseUrl)) { throw "DATABASE_URL is required when using host psql" }
 
 try {
   $db = Invoke-SqlJson "SELECT json_build_object('reachable', true, 'migrationVersion', version, 'dirty', dirty) FROM schema_migrations ORDER BY version DESC LIMIT 1;"
@@ -124,6 +134,8 @@ FROM (
          ct.approval_status,
          COALESCE(pt.status, 'not_created') AS paper_ticket_status,
          ct.status AS candidate_status,
+         COALESCE(ce.detail->'missingFields', '[]'::jsonb) AS missing_fields,
+         COALESCE(ce.detail->'rejectReasons', '[]'::jsonb) AS validation_reject_reasons,
          COALESCE(ct.reject_reasons, '{}') || CASE WHEN NULLIF(ct.block_reason,'') IS NULL THEN '{}'::text[] ELSE ARRAY[ct.block_reason] END AS reject_reasons,
          COALESCE(pt.warning_reasons, '{}') AS warning_reasons,
          COALESCE(pt.paper_only, true) AS paper_only,
@@ -136,6 +148,9 @@ FROM (
     SELECT evidence_status FROM candidate_evidence_scores WHERE candidate_id=ct.id ORDER BY scored_at DESC LIMIT 1
   ) es ON true
   LEFT JOIN candidate_paper_tickets pt ON pt.candidate_id=ct.id
+  LEFT JOIN LATERAL (
+    SELECT detail FROM candidate_events WHERE candidate_id=ct.id AND to_status='blocked' ORDER BY occurred_at DESC LIMIT 1
+  ) ce ON true
   WHERE $candidateFilter
 ) report;
 "@
@@ -186,7 +201,7 @@ if (@($candidates).Count -eq 0) { $lines += "No candidates were created." }
 foreach ($candidate in @($candidates)) {
   $lines += "### $($candidate.symbol) - $($candidate.candidate_id)"
   $lines += ""
-  foreach ($field in @("input_source","catalyst_summary","entry","stop","target","evidence_status","gate_status","risk_status","approval_status","paper_ticket_status","candidate_status","reject_reasons","warning_reasons")) {
+  foreach ($field in @("input_source","catalyst_summary","entry","stop","target","evidence_status","gate_status","risk_status","approval_status","paper_ticket_status","candidate_status","missing_fields","validation_reject_reasons","reject_reasons","warning_reasons")) {
     $value = $candidate.$field
     if ($value -is [array]) { $value = $value -join "; " }
     $lines += "- ${field}: $value"
@@ -205,6 +220,8 @@ foreach ($outcome in @($promotion.outcomes)) {
 }
 foreach ($candidate in @($candidates)) {
   Write-Host ("{0}: candidate={1}; evidence={2}; gate={3}; risk={4}; approval={5}; ticket={6}" -f $candidate.symbol, $candidate.candidate_status, $candidate.evidence_status, $candidate.gate_status, $candidate.risk_status, $candidate.approval_status, $candidate.paper_ticket_status)
+  Write-Host ("  missing fields: {0}" -f (@($candidate.missing_fields) -join "; "))
+  Write-Host ("  validation rejects: {0}" -f (@($candidate.validation_reject_reasons) -join "; "))
   Write-Host ("  rejects: {0}" -f (@($candidate.reject_reasons) -join "; "))
   Write-Host ("  warnings: {0}" -f (@($candidate.warning_reasons) -join "; "))
 }

@@ -17,6 +17,14 @@ IB Bridge is an input adapter only in this proof. Broker execution services are 
 
 ## Run
 
+Create one fresh QQQ-only proof row through the authenticated World Monitor ingestion API. This uses the real validation, normalization, `event_raw`, `event_normalized`, and `world_monitor_research_inbox` schema path; it does not insert SQL fixtures or create a candidate directly:
+
+```powershell
+./scripts/seed-real-qqq-world-monitor-proof.ps1
+```
+
+The command returns the inbox ID and normalized event ID and requires a `new` receipt. Each run uses a unique source event ID. Then run the proof:
+
 ```powershell
 $env:DATABASE_URL="postgres://jax:jax@localhost:5432/jax?sslmode=disable"
 ./scripts/migrate.ps1 version
@@ -29,7 +37,7 @@ If the API is elsewhere:
 ./scripts/run-real-candidate-proof.ps1 -ApiBase http://localhost:8081 -OutputDir Docs/runs/real-candidate-proof
 ```
 
-The script requires `psql` on `PATH`. When API authentication is enabled it reads `AUTH_BOOTSTRAP_USERNAME` and `AUTH_BOOTSTRAP_PASSWORD` from the environment or `.env`.
+The proof script uses `psql` on `PATH` when available, or the Compose `postgres` container as a local fallback. When API authentication is enabled, both scripts read `AUTH_BOOTSTRAP_USERNAME` and `AUTH_BOOTSTRAP_PASSWORD` from the environment or `.env`.
 
 ## Successful output
 

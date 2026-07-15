@@ -1,0 +1,157 @@
+{
+    "status":  "no_candidate",
+    "generatedAt":  "2026-07-15T16:29:52.7067674Z",
+    "startedAt":  "2026-07-15T16:29:48.5456987Z",
+    "inputs":  {
+                   "quotes":  13,
+                   "candles":  8166,
+                   "promotableInboxRows":  2,
+                   "promotableSymbols":  [
+                                             "GLD",
+                                             "QQQ",
+                                             "SPY",
+                                             "XLE"
+                                         ]
+               },
+    "promotion":  {
+                      "promoted":  [
+                                       {
+                                           "inboxId":  "e5c99b70-1935-4db0-9da4-a6e6fbeb7141",
+                                           "eventId":  "365a3aaf-d4cd-4479-962e-58fe194f40cd",
+                                           "signalId":  "89c13227-f395-4582-a9fe-a9353278a606",
+                                           "candidateId":  "055ff17a-a3a2-4e25-a44a-5b39ec35053c",
+                                           "symbol":  "QQQ",
+                                           "route":  "blocked"
+                                       }
+                                   ],
+                      "promotedCount":  1,
+                      "blockedSkippedCount":  4,
+                      "skipped":  4,
+                      "outcomes":  [
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "XLE",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for XLE."
+                                       },
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "SPY",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for SPY."
+                                       },
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "GLD",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for GLD."
+                                       },
+                                       {
+                                           "inboxId":  "e5c99b70-1935-4db0-9da4-a6e6fbeb7141",
+                                           "eventId":  "365a3aaf-d4cd-4479-962e-58fe194f40cd",
+                                           "symbol":  "QQQ",
+                                           "status":  "blocked",
+                                           "reasonCode":  "candidate_validation_failed",
+                                           "reason":  "Candidate is not ready for approval under the structured trade candidate baseline.",
+                                           "candidateId":  "055ff17a-a3a2-4e25-a44a-5b39ec35053c"
+                                       }
+                                   ]
+                  },
+    "summary":  {
+                    "candidatesCreated":  1,
+                    "reviewableCandidates":  0,
+                    "blockedCandidates":  1,
+                    "skippedCandidates":  4,
+                    "paperTicketsCreated":  0
+                },
+    "candidates":  [
+                       {
+                           "created_at":  "2026-07-15T16:29:50.974224+00:00",
+                           "candidate_id":  "055ff17a-a3a2-4e25-a44a-5b39ec35053c",
+                           "input_source":  "world-monitor",
+                           "symbol":  "QQQ",
+                           "catalyst_summary":  "Operator-generated local proof input for the real World Monitor normalization and paper-candidate pipeline.",
+                           "entry":  500,
+                           "stop":  490,
+                           "target":  520,
+                           "evidence_status":  "missing",
+                           "gate_status":  "not_evaluated",
+                           "risk_status":  "pending",
+                           "approval_status":  "not_ready",
+                           "paper_ticket_status":  "not_created",
+                           "candidate_status":  "blocked",
+                           "missing_fields":  [
+                                                  "setup_type",
+                                                  "catalyst_summary",
+                                                  "invalidation_reason"
+                                              ],
+                           "validation_reject_reasons":  [
+                                                             "structural_fields_missing"
+                                                         ],
+                           "reject_reasons":  [
+                                                  "Candidate is not ready for approval under the structured trade candidate baseline."
+                                              ],
+                           "warning_reasons":  [
+
+                                               ],
+                           "paper_only":  true,
+                           "broker_execution_allowed":  false,
+                           "execution_instruction_created":  false,
+                           "live_trading_allowed":  false,
+                           "leverage_allowed":  false
+                       }
+                   ],
+    "safety":  {
+                   "executionInstructions":  0,
+                   "unsafeTickets":  0,
+                   "leveragedCandidates":  0
+               },
+    "checks":  [
+                   {
+                       "name":  "postgres",
+                       "status":  "PASS",
+                       "detail":  "reachable"
+                   },
+                   {
+                       "name":  "migrations",
+                       "status":  "PASS",
+                       "detail":  "schema version 46 is clean"
+                   },
+                   {
+                       "name":  "quotes",
+                       "status":  "PASS",
+                       "detail":  "13 usable rows"
+                   },
+                   {
+                       "name":  "candles",
+                       "status":  "PASS",
+                       "detail":  "8166 rows"
+                   },
+                   {
+                       "name":  "world-monitor-inbox",
+                       "status":  "PASS",
+                       "detail":  "2 promotable rows"
+                   },
+                   {
+                       "name":  "api-auth",
+                       "status":  "PASS",
+                       "detail":  "bootstrap login succeeded"
+                   },
+                   {
+                       "name":  "promotion",
+                       "status":  "PASS",
+                       "detail":  "1 candidates created; 4 blocked/skipped; XLE:no_enabled_strategy_instance; SPY:no_enabled_strategy_instance; GLD:no_enabled_strategy_instance; QQQ:candidate_validation_failed"
+                   },
+                   {
+                       "name":  "safety-paper-only",
+                       "status":  "PASS",
+                       "detail":  "execution instructions=0, unsafe tickets=0, leveraged candidates=0"
+                   }
+               ]
+}
