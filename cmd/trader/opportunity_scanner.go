@@ -86,7 +86,8 @@ func (s *opportunityScanner) ScanOnce(ctx context.Context) (opportunityScannerRe
 			result.Skipped++
 			continue
 		}
-		if _, err := promoter.promoteRow(ctx, row); err != nil {
+		promoted, _, err := promoter.promoteRow(ctx, row)
+		if err != nil || promoted == nil {
 			result.Skipped++
 			continue
 		}

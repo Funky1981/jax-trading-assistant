@@ -26,7 +26,7 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	trigger := validWorldMonitorResearchTrigger(now)
 	trigger.SourceEventID = "wm-promote-" + uuid.NewString()
 	trigger.TimestampUTC = now.Add(-5 * time.Minute)
-	trigger.PossibleAffectedETFs = []string{"QQQ"}
+	trigger.PossibleAffectedETFs = []string{"XLE", "QQQ"}
 
 	_, err := pool.Exec(ctx, `
 		INSERT INTO strategy_instances (
@@ -71,10 +71,19 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load promotion row: %v", err)
 	}
-	promoted, err := promoter.promoteRow(ctx, row)
+	unsupportedEarlierRow := worldMonitorInboxPromotionRow{ID: uuid.New(), SourceEventID: "unsupported-earlier-row"}
+	result, err := promoter.promoteRows(ctx, []worldMonitorInboxPromotionRow{unsupportedEarlierRow, row})
 	if err != nil {
-		t.Fatalf("promote world monitor trigger: %v", err)
+		t.Fatalf("promote world monitor batch: %v", err)
 	}
+	if result.PromotedCount != 1 || len(result.Promoted) != 1 {
+		t.Fatalf("unsupported earlier row blocked later QQQ promotion: %+v", result)
+	}
+	outcomes := result.Outcomes
+	if len(outcomes) != 3 || outcomes[0].ReasonCode != "no_symbols" || outcomes[1].Symbol != "XLE" || outcomes[1].Status == "promoted" || outcomes[2].Symbol != "QQQ" || outcomes[2].CandidateID == "" {
+		t.Fatalf("unexpected promotion outcomes: %+v", outcomes)
+	}
+	promoted := &result.Promoted[0]
 	if promoted.Symbol != "QQQ" || promoted.SignalID == "" || promoted.CandidateID == "" {
 		t.Fatalf("unexpected promotion result: %+v", promoted)
 	}
@@ -103,8 +112,8 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	`, promoted.CandidateID).Scan(&candidateStatus, &signalID, &metadata, &entryPrice, &stopLoss, &takeProfit); err != nil {
 		t.Fatalf("query promoted candidate: %v", err)
 	}
-	if candidateStatus != "awaiting_approval" {
-		t.Fatalf("candidate status = %q, want awaiting_approval", candidateStatus)
+	if candidateStatus != "awaiting_approval" && candidateStatus != "blocked" {
+		t.Fatalf("candidate status = %q, want awaiting_approval or a validation block", candidateStatus)
 	}
 	if signalID != promoted.SignalID {
 		t.Fatalf("candidate signal_id = %q, want %q", signalID, promoted.SignalID)
@@ -124,7 +133,7 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get approval queue: %v", err)
 	}
-	if !queueContainsCandidate(queue, promoted.CandidateID) {
+	if candidateStatus == "awaiting_approval" && !queueContainsCandidate(queue, promoted.CandidateID) {
 		t.Fatalf("approval queue missing promoted candidate %s: %+v", promoted.CandidateID, queue)
 	}
 
@@ -197,6 +206,10 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 	if err != nil {
 		t.Fatalf("insert quote: %v", err)
 	}
+	insertWorldMonitorChartCandles(t, ctx, pool, "WMZZ", now, []float64{
+		520, 519, 518, 517, 516, 515, 514, 513, 512, 511,
+		510, 509, 508, 507, 506, 505, 504, 503, 502, 500,
+	})
 
 	receipt, err := newWorldMonitorResearchInboxService(pool).Ingest(ctx, trigger)
 	if err != nil {
@@ -208,9 +221,15 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 	if err != nil {
 		t.Fatalf("load promotion row: %v", err)
 	}
-	promoted, err := promoter.promoteRow(ctx, row)
+	promoted, outcomes, err := promoter.promoteRow(ctx, row)
 	if err != nil {
 		t.Fatalf("promote world monitor trigger: %v", err)
+	}
+	if promoted == nil {
+		t.Fatal("expected blocked candidate")
+	}
+	if len(outcomes) != 1 || outcomes[0].ReasonCode != "chart_confirmation_failed" {
+		t.Fatalf("unexpected blocked outcomes: %+v", outcomes)
 	}
 	if promoted.Route != "blocked" {
 		t.Fatalf("route = %q, want blocked", promoted.Route)

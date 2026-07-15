@@ -86,14 +86,17 @@ Add-Check "quotes" $(if ($inputs.quotes -gt 0) { "PASS" } else { "FAIL" }) "$($i
 Add-Check "candles" $(if ($inputs.candles -gt 0) { "PASS" } else { "FAIL" }) "$($inputs.candles) rows"
 Add-Check "world-monitor-inbox" $(if ($inputs.promotableInboxRows -gt 0) { "PASS" } else { "FAIL" }) "$($inputs.promotableInboxRows) promotable rows"
 
-$promotion = [pscustomobject]@{ promoted = @(); skipped = 0; error = $null }
+$promotion = [pscustomobject]@{ promoted = @(); promotedCount = 0; blockedSkippedCount = 0; skipped = 0; outcomes = @(); error = $null }
 if (@($checks | Where-Object status -eq "FAIL").Count -eq 0) {
   Initialize-Auth
   try {
     $promotion = Invoke-RestMethod -Method POST -Uri "$ApiBase/api/v1/research/events/world-monitor/promote" -Headers $headers -ContentType "application/json" -Body "{}" -TimeoutSec 60
-    Add-Check "promotion" "PASS" "$(@($promotion.promoted).Count) candidates created; $($promotion.skipped) skipped"
+    $reasonSummary = @($promotion.outcomes | Where-Object status -ne "promoted" | ForEach-Object { "$($_.symbol):$($_.reasonCode)" }) -join "; "
+    $detail = "$($promotion.promotedCount) candidates created; $($promotion.blockedSkippedCount) blocked/skipped"
+    if (-not [string]::IsNullOrWhiteSpace($reasonSummary)) { $detail += "; $reasonSummary" }
+    Add-Check "promotion" "PASS" $detail
   } catch {
-    $promotion = [pscustomobject]@{ promoted = @(); skipped = 0; error = $_.Exception.Message }
+    $promotion = [pscustomobject]@{ promoted = @(); promotedCount = 0; blockedSkippedCount = 0; skipped = 0; outcomes = @(); error = $_.Exception.Message }
     Add-Check "promotion" "FAIL" $_.Exception.Message
   }
 } else {
@@ -171,7 +174,14 @@ $jsonPath = Join-Path $OutputDir "real_candidate_proof_$stamp.json"
 $mdPath = Join-Path $OutputDir "real_candidate_proof_$stamp.md"
 $report | ConvertTo-Json -Depth 12 | Set-Content $jsonPath
 
-$lines = @("# Real Candidate Proof", "", "- Status: $status", "- Generated: $($report.generatedAt)", "- Candidates created: $($report.summary.candidatesCreated)", "- Blocked: $blockedCount", "- Skipped: $($report.summary.skippedCandidates)", "- Paper tickets created: $ticketCount", "", "## Candidates", "")
+$lines = @("# Real Candidate Proof", "", "- Status: $status", "- Generated: $($report.generatedAt)", "- Candidates created: $($report.summary.candidatesCreated)", "- Blocked: $blockedCount", "- Skipped: $($report.summary.skippedCandidates)", "- Paper tickets created: $ticketCount", "", "## Promotion outcomes", "")
+if (@($promotion.outcomes).Count -eq 0) { $lines += "No promotion outcomes were returned." }
+foreach ($outcome in @($promotion.outcomes)) {
+  $symbol = if ([string]::IsNullOrWhiteSpace($outcome.symbol)) { "(no symbol)" } else { $outcome.symbol }
+  $candidate = if ([string]::IsNullOrWhiteSpace($outcome.candidateId)) { "none" } else { $outcome.candidateId }
+  $lines += "- ${symbol}: $($outcome.status) / $($outcome.reasonCode) - $($outcome.reason) (candidate: $candidate)"
+}
+$lines += @("", "## Candidates", "")
 if (@($candidates).Count -eq 0) { $lines += "No candidates were created." }
 foreach ($candidate in @($candidates)) {
   $lines += "### $($candidate.symbol) - $($candidate.candidate_id)"
@@ -190,6 +200,9 @@ Write-Host ""
 Write-Host "Proof result: $status" -ForegroundColor Cyan
 Write-Host "Report: $mdPath"
 Write-Host "JSON:   $jsonPath"
+foreach ($outcome in @($promotion.outcomes)) {
+  Write-Host ("promotion: inbox={0}; symbol={1}; status={2}; reason={3}; candidate={4}" -f $outcome.inboxId, $outcome.symbol, $outcome.status, $outcome.reasonCode, $outcome.candidateId)
+}
 foreach ($candidate in @($candidates)) {
   Write-Host ("{0}: candidate={1}; evidence={2}; gate={3}; risk={4}; approval={5}; ticket={6}" -f $candidate.symbol, $candidate.candidate_status, $candidate.evidence_status, $candidate.gate_status, $candidate.risk_status, $candidate.approval_status, $candidate.paper_ticket_status)
   Write-Host ("  rejects: {0}" -f (@($candidate.reject_reasons) -join "; "))

@@ -148,6 +148,9 @@ func TestWorldMonitorOpportunityPromoteHandler_RunsPromoter(t *testing.T) {
 	candidateID := "00000000-0000-0000-0000-0000000000aa"
 	fake := &fakeWorldMonitorPromoteService{
 		result: worldMonitorPromotionResult{
+			PromotedCount:       1,
+			BlockedSkippedCount: 1,
+			Skipped:             1,
 			Promoted: []worldMonitorPromotedOpportunity{{
 				InboxID:     "inbox-1",
 				SignalID:    "00000000-0000-0000-0000-0000000000bb",
@@ -155,6 +158,10 @@ func TestWorldMonitorOpportunityPromoteHandler_RunsPromoter(t *testing.T) {
 				Symbol:      "QQQ",
 				Route:       "approval_required",
 			}},
+			Outcomes: []worldMonitorPromotionOutcome{
+				{InboxID: "inbox-0", Symbol: "XLE", Status: "skipped", ReasonCode: "no_enabled_strategy_instance", Reason: "No compatible enabled ETF strategy instance is configured for XLE."},
+				{InboxID: "inbox-1", Symbol: "QQQ", Status: "promoted", ReasonCode: "candidate_created", CandidateID: candidateID},
+			},
 		},
 	}
 	restore := replaceWorldMonitorPromoteServiceFactory(fake)
@@ -173,6 +180,9 @@ func TestWorldMonitorOpportunityPromoteHandler_RunsPromoter(t *testing.T) {
 	}
 	if !strings.Contains(res.Body.String(), candidateID) {
 		t.Fatalf("response missing candidate id: %s", res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), `"promotedCount":1`) || !strings.Contains(res.Body.String(), "no_enabled_strategy_instance") {
+		t.Fatalf("response missing structured counts/reason: %s", res.Body.String())
 	}
 }
 
