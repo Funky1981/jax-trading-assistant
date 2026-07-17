@@ -370,9 +370,20 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 	if err != nil {
 		return nil, worldMonitorPromotionOutcome{}, false, err
 	}
-	route := "approval_required"
+	route := "evidence_review"
 	if qualified.Status == candidatesmod.StatusBlocked {
 		route = "blocked"
+	}
+	var evidence candidatesmod.EvidenceScoreSummary
+	var gate candidatesmod.GateResult
+	if route != "blocked" {
+		evidence, gate, err = p.scoreAndPersistEvidence(ctx, *qualified, row, chart)
+		if err != nil {
+			return nil, worldMonitorPromotionOutcome{}, false, err
+		}
+		if gate.GateReady && gate.NextRequiredPhase == candidatesmod.NextPhaseRiskReview {
+			route = "risk_review"
+		}
 	}
 	if err := p.attachCandidateMetadata(ctx, candidate.ID, row, signalID, symbol, strategyID, route, chart, entry, stop, target); err != nil {
 		return nil, worldMonitorPromotionOutcome{}, false, err
@@ -400,7 +411,82 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 		}
 		return promoted, promotionOutcome(row, symbol, "blocked", "candidate_validation_failed", reason, candidate.ID.String()), true, nil
 	}
-	return promoted, promotionOutcome(row, symbol, "promoted", "candidate_created", "Candidate created for paper-only approval review.", candidate.ID.String()), true, nil
+	if route != "risk_review" {
+		reasonCode := "evidence_" + string(evidence.EvidenceStatus)
+		reason := fmt.Sprintf("Candidate evidence scored %s (overall %.3f); trust gate requires %s.", evidence.EvidenceStatus, evidence.OverallEvidenceScore, gate.NextRequiredPhase)
+		return promoted, promotionOutcome(row, symbol, "blocked", reasonCode, reason, candidate.ID.String()), true, nil
+	}
+	return promoted, promotionOutcome(row, symbol, "promoted", "ready_for_risk_review", "Genuine World Monitor and market evidence passed the trust gate; candidate is ready for risk review.", candidate.ID.String()), true, nil
+}
+
+func (p *worldMonitorOpportunityPromoter) scoreAndPersistEvidence(ctx context.Context, candidate candidatesmod.Candidate, row worldMonitorInboxPromotionRow, chart worldMonitorChartConfirmation) (candidatesmod.EvidenceScoreSummary, candidatesmod.GateResult, error) {
+	items := worldMonitorEvidenceItems(candidate.ID, candidate.Symbol, row, chart, p.now())
+	score := candidatesmod.ScoreEvidenceForCandidate(candidate, items, p.now())
+	gate := candidatesmod.EvaluateCandidateGate(candidate, score, p.now())
+	if err := candidatesmod.NewStore(p.pool).PersistEvidenceEvaluation(ctx, items, score, gate); err != nil {
+		return candidatesmod.EvidenceScoreSummary{}, candidatesmod.GateResult{}, err
+	}
+	return score, gate, nil
+}
+
+func worldMonitorEvidenceItems(candidateID uuid.UUID, symbol string, row worldMonitorInboxPromotionRow, chart worldMonitorChartConfirmation, now time.Time) []candidatesmod.EvidenceItem {
+	monitorRef := "world_monitor_research_inbox:" + row.ID.String()
+	if row.NormalizedEventID != nil {
+		monitorRef = "event_normalized:" + row.NormalizedEventID.String()
+	}
+	monitorSummary := strings.TrimSpace(row.NormalizedSummary)
+	if monitorSummary == "" {
+		monitorSummary = strings.TrimSpace(row.Summary)
+	}
+	monitorObservedAt := row.EventTime
+	monitorFreshness := worldMonitorEvidenceFreshness(monitorObservedAt, now)
+	monitorQuality := math.Min(0.95, 0.60+float64(row.SourceCount)*0.10)
+	if row.SourceCount <= 0 {
+		monitorQuality = 0.50
+	}
+	items := []candidatesmod.EvidenceItem{{
+		EvidenceID:        uuid.New(),
+		CandidateID:       candidateID,
+		SourceType:        "world_monitor",
+		SourceRef:         monitorRef,
+		ObservedAt:        monitorObservedAt,
+		Summary:           monitorSummary,
+		EvidenceKind:      "normalized_market_event",
+		SupportsCandidate: true,
+		Confidence:        row.Confidence,
+		ImpactScore:       0.80,
+		QualityScore:      monitorQuality,
+		FreshnessStatus:   monitorFreshness,
+	}}
+	items = append(items, candidatesmod.EvidenceItem{
+		EvidenceID:        uuid.New(),
+		CandidateID:       candidateID,
+		SourceType:        "market_candles",
+		SourceRef:         fmt.Sprintf("candles:%s:%s", strings.ToUpper(strings.TrimSpace(symbol)), chart.CheckedAt.UTC().Format(time.RFC3339Nano)),
+		ObservedAt:        chart.CheckedAt,
+		Summary:           chart.Reason,
+		EvidenceKind:      "chart_confirmation",
+		SupportsCandidate: chart.Confirmed,
+		Confidence:        0.90,
+		ImpactScore:       0.80,
+		QualityScore:      0.90,
+		FreshnessStatus:   candidatesmod.FreshnessStatusFresh,
+	})
+	return items
+}
+
+func worldMonitorEvidenceFreshness(observedAt, now time.Time) candidatesmod.FreshnessStatus {
+	if observedAt.IsZero() {
+		return candidatesmod.FreshnessStatusStale
+	}
+	age := now.Sub(observedAt)
+	if age <= 24*time.Hour {
+		return candidatesmod.FreshnessStatusFresh
+	}
+	if age <= 48*time.Hour {
+		return candidatesmod.FreshnessStatusStale
+	}
+	return candidatesmod.FreshnessStatusCriticalStale
 }
 
 func (p *worldMonitorOpportunityPromoter) strategyTypeID(ctx context.Context, instanceID uuid.UUID) (string, error) {

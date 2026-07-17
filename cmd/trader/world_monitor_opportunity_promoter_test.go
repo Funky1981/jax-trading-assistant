@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -146,6 +148,29 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	}
 	assertSwingPaperMetadata(t, metadata)
 
+	var evidenceItemCount int
+	var evidenceStatus, gateStatus string
+	var evidenceReady, evidenceGateReady bool
+	if err := pool.QueryRow(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM candidate_evidence_items WHERE candidate_id = $1::uuid),
+			es.evidence_status, es.evidence_ready, es.evidence_gate_ready, ct.gate_status
+		FROM candidate_trades ct
+		JOIN LATERAL (
+			SELECT evidence_status, evidence_ready, evidence_gate_ready
+			FROM candidate_evidence_scores
+			WHERE candidate_id = ct.id
+			ORDER BY scored_at DESC
+			LIMIT 1
+		) es ON TRUE
+		WHERE ct.id = $1::uuid
+	`, promoted.CandidateID).Scan(&evidenceItemCount, &evidenceStatus, &evidenceReady, &evidenceGateReady, &gateStatus); err != nil {
+		t.Fatalf("query persisted evidence evaluation: %v", err)
+	}
+	if evidenceItemCount != 2 || evidenceStatus != "sufficient" || !evidenceReady || !evidenceGateReady || gateStatus != "ready_for_risk_review" {
+		t.Fatalf("unexpected evidence/gate result: items=%d evidence=%s ready=%v gateReady=%v gate=%s", evidenceItemCount, evidenceStatus, evidenceReady, evidenceGateReady, gateStatus)
+	}
+
 	var inboxStatus string
 	var inboxCandidateID string
 	if err := pool.QueryRow(ctx, `
@@ -169,6 +194,75 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	}
 	if executionCount != 0 {
 		t.Fatalf("execution instruction count = %d, want 0 before approval", executionCount)
+	}
+
+	t.Run("missing evidence remains approval ineligible at every boundary", func(t *testing.T) {
+		if _, err := pool.Exec(ctx, `DELETE FROM candidate_evidence_scores WHERE candidate_id = $1::uuid`, promoted.CandidateID); err != nil {
+			t.Fatalf("remove sufficient evidence score: %v", err)
+		}
+		if _, err := pool.Exec(ctx, `DELETE FROM candidate_evidence_items WHERE candidate_id = $1::uuid`, promoted.CandidateID); err != nil {
+			t.Fatalf("remove evidence items: %v", err)
+		}
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO candidate_evidence_scores (
+				candidate_id, support_score, contradiction_score, quality_score, freshness_score,
+				overall_evidence_score, evidence_item_count, supporting_item_count,
+				contradictory_item_count, stale_item_count, evidence_status, evidence_ready,
+				evidence_gate_ready, broker_execution_allowed, execution_instruction_created,
+				approval_granted
+			) VALUES ($1::uuid, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'missing', false, false, false, false, false)
+		`, promoted.CandidateID); err != nil {
+			t.Fatalf("persist missing evidence score: %v", err)
+		}
+		if _, err := pool.Exec(ctx, `
+			UPDATE candidate_trades
+			SET status = 'awaiting_approval', gate_status = 'evidence_missing',
+				risk_status = 'ready_for_approval_review', approval_status = 'approval_review_ready'
+			WHERE id = $1::uuid
+		`, promoted.CandidateID); err != nil {
+			t.Fatalf("arrange missing evidence state: %v", err)
+		}
+
+		queue, err := approvalsmod.NewService(pool).GetQueue(ctx, 25)
+		if err != nil {
+			t.Fatalf("get approval queue: %v", err)
+		}
+		if queueContainsCandidate(queue, promoted.CandidateID) {
+			t.Fatalf("missing-evidence candidate %s appeared in approval queue", promoted.CandidateID)
+		}
+
+		candidateID := uuid.MustParse(promoted.CandidateID)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/approvals/"+promoted.CandidateID+"/approve", nil)
+		req.Header.Set("X-User-ID", "safety-regression")
+		res := httptest.NewRecorder()
+		handleApprovalDecision(res, req, approvalsmod.NewService(pool), candidateID, approvalsmod.DecisionApproved)
+		if res.Code >= 200 && res.Code < 300 {
+			t.Fatalf("approval endpoint accepted missing evidence: status=%d body=%s", res.Code, res.Body.String())
+		}
+
+		var approvalsCount, paperTicketCount, instructionCount int
+		if err := pool.QueryRow(ctx, `
+			SELECT
+				(SELECT COUNT(*) FROM candidate_approvals WHERE candidate_id = $1::uuid),
+				(SELECT COUNT(*) FROM candidate_paper_tickets WHERE candidate_id = $1::uuid),
+				(SELECT COUNT(*) FROM execution_instructions WHERE candidate_id = $1::uuid)
+		`, promoted.CandidateID).Scan(&approvalsCount, &paperTicketCount, &instructionCount); err != nil {
+			t.Fatalf("query approval safety boundaries: %v", err)
+		}
+		if approvalsCount != 0 || paperTicketCount != 0 || instructionCount != 0 {
+			t.Fatalf("missing evidence crossed a safety boundary: approvals=%d tickets=%d instructions=%d", approvalsCount, paperTicketCount, instructionCount)
+		}
+	})
+
+	if _, err := pool.Exec(ctx, `UPDATE candidate_trades SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = $1::uuid`, promoted.CandidateID); err != nil {
+		t.Fatalf("expire candidate for dedup regression: %v", err)
+	}
+	open, err := candidatesmod.NewStore(pool).HasOpenForInstanceSymbol(ctx, instanceID, "QQQ", now.Format("2006-01-02"))
+	if err != nil {
+		t.Fatalf("check open candidate dedup: %v", err)
+	}
+	if open {
+		t.Fatal("expired awaiting_approval candidate must not block a fresh proof candidate")
 	}
 }
 

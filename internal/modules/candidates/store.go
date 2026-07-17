@@ -138,6 +138,9 @@ func (s *Store) createWithStatus(ctx context.Context, c *Candidate, initialStatu
 	if c.GateStatus == "" {
 		c.GateStatus = GateStatusNotEvaluated
 	}
+	if c.RejectReasons == nil {
+		c.RejectReasons = []string{}
+	}
 	c.HumanApprovalRequired = true
 	now := time.Now().UTC()
 	c.DetectedAt = now
@@ -287,7 +290,8 @@ func (s *Store) HasOpenForInstanceSymbol(ctx context.Context, instanceID uuid.UU
 	err := s.pool.QueryRow(ctx, `
 		SELECT COUNT(*) FROM candidate_trades
 		WHERE strategy_instance_id = $1 AND symbol = $2 AND session_date = $3
-		  AND status IN ('detected','qualified','awaiting_approval','approved')`,
+		  AND status IN ('detected','qualified','awaiting_approval','approved')
+		  AND (status = 'approved' OR expires_at IS NULL OR expires_at >= NOW())`,
 		instanceID, symbol, sessionDate,
 	).Scan(&count)
 	return count > 0, err
