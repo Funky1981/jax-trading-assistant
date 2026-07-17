@@ -170,6 +170,87 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	if evidenceItemCount != 2 || evidenceStatus != "sufficient" || !evidenceReady || !evidenceGateReady || gateStatus != "ready_for_risk_review" {
 		t.Fatalf("unexpected evidence/gate result: items=%d evidence=%s ready=%v gateReady=%v gate=%s", evidenceItemCount, evidenceStatus, evidenceReady, evidenceGateReady, gateStatus)
 	}
+	if outcomes[2].RiskReview == nil || !outcomes[2].RiskReview.Result.RiskReady || outcomes[2].RiskReview.Result.RiskStatus != candidatesmod.RiskStatusReadyForApprovalReview {
+		t.Fatalf("gate-ready candidate did not enter real risk path: %+v", outcomes[2])
+	}
+	if !outcomes[2].RiskReview.ApprovalEligibility.ApprovalEligible || outcomes[2].RiskReview.Result.ApprovalGranted || outcomes[2].RiskReview.Result.BrokerExecutionAllowed || outcomes[2].RiskReview.Result.ExecutionInstructionCreated {
+		t.Fatalf("risk review crossed or failed approval safety boundary: %+v", outcomes[2].RiskReview)
+	}
+	var persistedRiskStatus, persistedApprovalStatus string
+	var persistedPosition, persistedLoss float64
+	var riskMetadata []byte
+	if err := pool.QueryRow(ctx, `
+		SELECT risk_status, approval_status, position_size::float8,
+		       max_slippage_adjusted_loss::float8, metadata->'riskReview'
+		FROM candidate_trades WHERE id=$1::uuid
+	`, promoted.CandidateID).Scan(&persistedRiskStatus, &persistedApprovalStatus, &persistedPosition, &persistedLoss, &riskMetadata); err != nil {
+		t.Fatalf("query persisted risk review: %v", err)
+	}
+	if persistedRiskStatus != "ready_for_approval_review" || persistedApprovalStatus != "approval_review_ready" || persistedPosition != 10 || persistedLoss != 100 || !json.Valid(riskMetadata) {
+		t.Fatalf("risk result not persisted: status=%s approval=%s position=%f loss=%f metadata=%s", persistedRiskStatus, persistedApprovalStatus, persistedPosition, persistedLoss, riskMetadata)
+	}
+	firstMaterialResult := outcomes[2].RiskReview.Result
+	reprocessed, _, err := promoter.reviewCandidateRisk(ctx, uuid.MustParse(promoted.CandidateID), row.ID, uuid.NullUUID{UUID: *row.NormalizedEventID, Valid: true})
+	if err != nil || reprocessed == nil {
+		t.Fatalf("reprocess identical risk inputs: promoted=%+v err=%v", reprocessed, err)
+	}
+	var secondMetadata []byte
+	if err := pool.QueryRow(ctx, `SELECT metadata->'riskReview'->'result' FROM candidate_trades WHERE id=$1::uuid`, promoted.CandidateID).Scan(&secondMetadata); err != nil {
+		t.Fatalf("query reprocessed risk result: %v", err)
+	}
+	var secondResult candidatesmod.RiskReviewResult
+	if err := json.Unmarshal(secondMetadata, &secondResult); err != nil {
+		t.Fatalf("decode reprocessed risk result: %v", err)
+	}
+	if secondResult.RiskStatus != firstMaterialResult.RiskStatus || secondResult.PositionSize != firstMaterialResult.PositionSize || secondResult.MaxSlippageAdjustedLoss != firstMaterialResult.MaxSlippageAdjustedLoss || secondResult.RewardRiskRatio != firstMaterialResult.RewardRiskRatio {
+		t.Fatalf("risk reprocessing changed material result: first=%+v second=%+v", firstMaterialResult, secondResult)
+	}
+
+	t.Run("failed risk review remains outside approval and execution boundaries", func(t *testing.T) {
+		if _, err := pool.Exec(ctx, `UPDATE candidate_trades SET take_profit=510 WHERE id=$1::uuid`, promoted.CandidateID); err != nil {
+			t.Fatalf("arrange low reward risk target: %v", err)
+		}
+		_, outcome, err := promoter.reviewCandidateRisk(ctx, uuid.MustParse(promoted.CandidateID), row.ID, uuid.NullUUID{UUID: *row.NormalizedEventID, Valid: true})
+		if err != nil {
+			t.Fatalf("expected blocked risk input returned error: %v", err)
+		}
+		if outcome.Status != "blocked" || outcome.ReasonCode != string(candidatesmod.RiskStatusRewardRiskTooLow) || outcome.RiskReview == nil || outcome.RiskReview.Result.RiskReady {
+			t.Fatalf("unexpected low reward/risk outcome: %+v", outcome)
+		}
+		queue, err := approvalsmod.NewService(pool).GetQueue(ctx, 25)
+		if err != nil {
+			t.Fatalf("get approval queue after failed risk: %v", err)
+		}
+		if queueContainsCandidate(queue, promoted.CandidateID) {
+			t.Fatalf("failed-risk candidate %s appeared in approval queue", promoted.CandidateID)
+		}
+		candidateID := uuid.MustParse(promoted.CandidateID)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/approvals/"+promoted.CandidateID+"/approve", nil)
+		req.Header.Set("X-User-ID", "risk-safety-regression")
+		res := httptest.NewRecorder()
+		handleApprovalDecision(res, req, approvalsmod.NewService(pool), candidateID, approvalsmod.DecisionApproved)
+		if res.Code >= 200 && res.Code < 300 {
+			t.Fatalf("approval endpoint accepted failed risk: status=%d body=%s", res.Code, res.Body.String())
+		}
+		var approvalsCount, ticketCount, instructionCount int
+		if err := pool.QueryRow(ctx, `SELECT
+			(SELECT COUNT(*) FROM candidate_approvals WHERE candidate_id=$1::uuid),
+			(SELECT COUNT(*) FROM candidate_paper_tickets WHERE candidate_id=$1::uuid),
+			(SELECT COUNT(*) FROM execution_instructions WHERE candidate_id=$1::uuid)
+		`, promoted.CandidateID).Scan(&approvalsCount, &ticketCount, &instructionCount); err != nil {
+			t.Fatalf("query failed-risk safety counts: %v", err)
+		}
+		if approvalsCount != 0 || ticketCount != 0 || instructionCount != 0 {
+			t.Fatalf("failed risk crossed safety boundary: approvals=%d tickets=%d instructions=%d", approvalsCount, ticketCount, instructionCount)
+		}
+		if _, err := pool.Exec(ctx, `UPDATE candidate_trades SET take_profit=520 WHERE id=$1::uuid`, promoted.CandidateID); err != nil {
+			t.Fatalf("restore target: %v", err)
+		}
+		_, restored, err := promoter.reviewCandidateRisk(ctx, candidateID, row.ID, uuid.NullUUID{UUID: *row.NormalizedEventID, Valid: true})
+		if err != nil || restored.RiskReview == nil || !restored.RiskReview.Result.RiskReady {
+			t.Fatalf("restore ready risk result: outcome=%+v err=%v", restored, err)
+		}
+	})
 
 	var inboxStatus string
 	var inboxCandidateID string

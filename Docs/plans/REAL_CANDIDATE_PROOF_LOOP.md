@@ -48,6 +48,25 @@ Success is a report with `status: candidate_produced`, one or more real World Mo
 
 Safety must show zero execution instructions, zero unsafe tickets, and zero leveraged candidates. Reports are written as timestamped Markdown and JSON under `Docs/runs/real-candidate-proof/`.
 
+The promotion run also resumes unexpired World Monitor candidates already at
+`ready_for_risk_review`. It loads their latest persisted evidence score,
+reconstructs the trust gate, calls the existing `ReviewCandidateRisk`, persists
+the current result in the candidate risk columns and `metadata.riskReview`, and
+recalculates computed approval eligibility. Reprocessing replaces that current
+snapshot and is materially idempotent; it does not create an approval decision,
+paper ticket, or execution instruction.
+
+When no paper portfolio/account balance or explicit candidate slippage is
+available, the report labels the existing risk-engine behavior precisely:
+
+- account equity `10000` is a `proof risk-model assumption`, not real capital or a broker balance;
+- absent slippage is interpreted as zero by the existing risk engine, not described as observed market slippage;
+- the unchanged default maximum risk is 1%, minimum reward/risk is 2.0, and maximum/requested leverage is 1.0.
+
+The theoretical position size and notional are review calculations only. The
+current risk engine does not enforce cash affordability generally; that remains
+a separate risk-model gap and must not be addressed by enabling leverage.
+
 For World Monitor candidates, the structured baseline fields are derived without relaxing validation:
 
 - `catalyst_summary`: the normalized event summary, falling back only to the accepted inbox summary when the normalized summary is empty; an absent legitimate summary remains missing.
@@ -92,6 +111,7 @@ For each horizon record timestamp, market-data source, observed price, return fr
 - Profitability, statistical edge, execution quality, or live readiness.
 - That every event becomes a candidate.
 - Broker connectivity for orders, order placement, fills, or portfolio accounting.
+- A genuine paper-account equity balance or observed slippage estimate when the report identifies the existing fallbacks above.
 - That human approval may be skipped.
 - That a paper ticket should exist before evidence, gates, risk review, and explicit human approval pass.
 - Any support for live trading, leverage, or automatic execution.

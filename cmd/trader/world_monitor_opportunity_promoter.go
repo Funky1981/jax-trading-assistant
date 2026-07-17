@@ -40,13 +40,14 @@ type worldMonitorPromotionResult struct {
 }
 
 type worldMonitorPromotionOutcome struct {
-	InboxID     string `json:"inboxId"`
-	EventID     string `json:"eventId,omitempty"`
-	Symbol      string `json:"symbol,omitempty"`
-	Status      string `json:"status"`
-	ReasonCode  string `json:"reasonCode,omitempty"`
-	Reason      string `json:"reason,omitempty"`
-	CandidateID string `json:"candidateId,omitempty"`
+	InboxID     string                               `json:"inboxId"`
+	EventID     string                               `json:"eventId,omitempty"`
+	Symbol      string                               `json:"symbol,omitempty"`
+	Status      string                               `json:"status"`
+	ReasonCode  string                               `json:"reasonCode,omitempty"`
+	Reason      string                               `json:"reason,omitempty"`
+	CandidateID string                               `json:"candidateId,omitempty"`
+	RiskReview  *candidatesmod.RiskReviewPersistence `json:"riskReview,omitempty"`
 }
 
 type worldMonitorPromotedOpportunity struct {
@@ -108,11 +109,112 @@ func (p *worldMonitorOpportunityPromoter) PromotePending(ctx context.Context, li
 		limit = worldMonitorPromoterMaxLimit
 	}
 
+	result, err := p.reviewPendingRiskCandidates(ctx, limit)
+	if err != nil {
+		return worldMonitorPromotionResult{}, err
+	}
 	rows, err := p.loadPromotionRows(ctx, limit)
 	if err != nil {
 		return worldMonitorPromotionResult{}, err
 	}
-	return p.promoteRows(ctx, rows)
+	promoted, err := p.promoteRows(ctx, rows)
+	if err != nil {
+		return result, err
+	}
+	result.Promoted = append(result.Promoted, promoted.Promoted...)
+	result.Outcomes = append(result.Outcomes, promoted.Outcomes...)
+	result.PromotedCount += promoted.PromotedCount
+	result.BlockedSkippedCount += promoted.BlockedSkippedCount
+	result.Skipped = result.BlockedSkippedCount
+	return result, nil
+}
+
+func (p *worldMonitorOpportunityPromoter) reviewPendingRiskCandidates(ctx context.Context, limit int) (worldMonitorPromotionResult, error) {
+	result := worldMonitorPromotionResult{Promoted: []worldMonitorPromotedOpportunity{}, Outcomes: []worldMonitorPromotionOutcome{}}
+	rows, err := p.pool.Query(ctx, `
+		SELECT ct.id, w.id, w.normalized_event_id
+		FROM candidate_trades ct JOIN world_monitor_research_inbox w ON w.candidate_id=ct.id
+		WHERE ct.source='world-monitor' AND ct.status='awaiting_approval'
+		  AND ct.gate_status=$1
+		  AND (ct.expires_at IS NULL OR ct.expires_at >= NOW())
+		ORDER BY ct.created_at LIMIT $2
+	`, candidatesmod.GateStatusReadyForRiskReview, limit)
+	if err != nil {
+		return result, fmt.Errorf("load pending World Monitor risk candidates: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var candidateID, inboxID uuid.UUID
+		var eventID uuid.NullUUID
+		if err := rows.Scan(&candidateID, &inboxID, &eventID); err != nil {
+			return result, err
+		}
+		promoted, outcome, err := p.reviewCandidateRisk(ctx, candidateID, inboxID, eventID)
+		if err != nil {
+			return result, err
+		}
+		result.Outcomes = append(result.Outcomes, outcome)
+		if promoted != nil {
+			result.Promoted = append(result.Promoted, *promoted)
+			result.PromotedCount++
+		}
+		if outcome.Status != "promoted" {
+			result.BlockedSkippedCount++
+		}
+	}
+	result.Skipped = result.BlockedSkippedCount
+	return result, rows.Err()
+}
+
+func (p *worldMonitorOpportunityPromoter) reviewCandidateRisk(ctx context.Context, candidateID, inboxID uuid.UUID, eventID uuid.NullUUID) (*worldMonitorPromotedOpportunity, worldMonitorPromotionOutcome, error) {
+	store := candidatesmod.NewStore(p.pool)
+	candidate, err := store.GetByID(ctx, candidateID)
+	if err != nil {
+		return nil, worldMonitorPromotionOutcome{}, fmt.Errorf("load risk candidate: %w", err)
+	}
+	evidence, err := store.LatestEvidenceScore(ctx, candidateID)
+	if err != nil {
+		return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "latest_evidence_score_missing", err.Error(), candidateID.String(), nil), nil
+	}
+	gate := candidatesmod.EvaluateCandidateGate(*candidate, evidence, p.now())
+	if !gate.GateReady || gate.GateStatus != candidatesmod.GateStatusReadyForRiskReview {
+		return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "gate_not_ready", fmt.Sprintf("Trust gate is %s and requires %s.", gate.GateStatus, gate.NextRequiredPhase), candidateID.String(), nil), nil
+	}
+	cfg := candidatesmod.RiskReviewConfig{}
+	risk := candidatesmod.ReviewCandidateRisk(*candidate, gate, cfg)
+	eligibility := candidatesmod.EvaluateApprovalEligibility(*candidate, evidence, gate, risk, p.now())
+	slippageSource := "absent_interpreted_as_zero_by_existing_risk_engine"
+	if candidate.SlippageAllowance != nil {
+		slippageSource = "candidate_persisted"
+	}
+	persistence := candidatesmod.RiskReviewPersistence{
+		Result: risk, ApprovalEligibility: eligibility,
+		AccountEquitySource: "proof risk-model assumption",
+		SlippageSource:      slippageSource, RiskPolicySource: "existing RiskReviewConfig defaults",
+		PositionNotional: roundPrice(risk.PositionSize * risk.EntryPrice),
+	}
+	if err := store.PersistRiskReview(ctx, *candidate, persistence); err != nil {
+		return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "risk_result_persistence_failed", err.Error(), candidateID.String(), &persistence), nil
+	}
+	reason := fmt.Sprintf("Risk review returned %s; next phase is %s.", risk.RiskStatus, risk.NextRequiredPhase)
+	status := "blocked"
+	if risk.RiskReady {
+		status = "promoted"
+	}
+	outcome := promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, status, string(risk.RiskStatus), reason, candidateID.String(), &persistence)
+	promoted := &worldMonitorPromotedOpportunity{InboxID: inboxID.String(), CandidateID: candidateID.String(), Symbol: candidate.Symbol, Route: risk.NextRequiredPhase}
+	if eventID.Valid {
+		promoted.EventID = eventID.UUID.String()
+	}
+	return promoted, outcome, nil
+}
+
+func promotionOutcomeIDs(inboxID uuid.UUID, eventID uuid.NullUUID, symbol, status, reasonCode, reason, candidateID string, risk *candidatesmod.RiskReviewPersistence) worldMonitorPromotionOutcome {
+	out := worldMonitorPromotionOutcome{InboxID: inboxID.String(), Symbol: symbol, Status: status, ReasonCode: reasonCode, Reason: reason, CandidateID: candidateID, RiskReview: risk}
+	if eventID.Valid {
+		out.EventID = eventID.UUID.String()
+	}
+	return out
 }
 
 func (p *worldMonitorOpportunityPromoter) promoteRows(ctx context.Context, rows []worldMonitorInboxPromotionRow) (worldMonitorPromotionResult, error) {
@@ -416,7 +518,18 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 		reason := fmt.Sprintf("Candidate evidence scored %s (overall %.3f); trust gate requires %s.", evidence.EvidenceStatus, evidence.OverallEvidenceScore, gate.NextRequiredPhase)
 		return promoted, promotionOutcome(row, symbol, "blocked", reasonCode, reason, candidate.ID.String()), true, nil
 	}
-	return promoted, promotionOutcome(row, symbol, "promoted", "ready_for_risk_review", "Genuine World Monitor and market evidence passed the trust gate; candidate is ready for risk review.", candidate.ID.String()), true, nil
+	normalizedEventID := uuid.NullUUID{}
+	if row.NormalizedEventID != nil {
+		normalizedEventID = uuid.NullUUID{UUID: *row.NormalizedEventID, Valid: true}
+	}
+	riskPromoted, riskOutcome, err := p.reviewCandidateRisk(ctx, candidate.ID, row.ID, normalizedEventID)
+	if err != nil {
+		return nil, worldMonitorPromotionOutcome{}, false, err
+	}
+	if riskPromoted != nil {
+		promoted.Route = riskPromoted.Route
+	}
+	return promoted, riskOutcome, true, nil
 }
 
 func (p *worldMonitorOpportunityPromoter) scoreAndPersistEvidence(ctx context.Context, candidate candidatesmod.Candidate, row worldMonitorInboxPromotionRow, chart worldMonitorChartConfirmation) (candidatesmod.EvidenceScoreSummary, candidatesmod.GateResult, error) {

@@ -51,6 +51,14 @@ func TestReviewCandidateRiskRejectsInvalidTradePlanInputs(t *testing.T) {
 			wantReason: "missing_stop_loss_price",
 		},
 		{
+			name: "missing target",
+			mutate: func(c *Candidate) {
+				c.TakeProfit = nil
+			},
+			wantStatus: RiskStatusInvalidTradePlan,
+			wantReason: "missing_target_price",
+		},
+		{
 			name: "invalid long stop",
 			mutate: func(c *Candidate) {
 				entry := 100.0

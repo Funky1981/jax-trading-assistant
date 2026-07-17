@@ -122,6 +122,8 @@ SELECT COALESCE(json_agg(row_to_json(report) ORDER BY report.created_at), '[]'::
 FROM (
   SELECT ct.created_at,
          ct.id::text AS candidate_id,
+		 w.id::text AS inbox_row_id,
+		 w.normalized_event_id::text AS normalized_event_id,
          COALESCE(NULLIF(ct.source,''), ct.data_provenance) AS input_source,
          ct.symbol,
          COALESCE(NULLIF(ct.catalyst_summary,''), ct.metadata->'worldMonitor'->>'summary', ct.metadata->'worldMonitor'->>'headline', ct.reasoning, '') AS catalyst_summary,
@@ -135,10 +137,42 @@ FROM (
          ct.entry_price::float8 AS entry,
          ct.stop_loss::float8 AS stop,
          ct.take_profit::float8 AS target,
+		 ct.direction,
          COALESCE(es.evidence_status, 'missing') AS evidence_status,
+		 COALESCE(es.overall_evidence_score, 0)::float8 AS overall_evidence_score,
+		 COALESCE(es.evidence_gate_ready, false) AS trust_gate_ready,
          ct.gate_status,
+		 CASE WHEN ct.gate_status='ready_for_risk_review' THEN 'risk_review' ELSE 'evidence_review' END AS trust_gate_next_phase,
          ct.risk_status,
+		 (ct.metadata->'riskReview'->'result' IS NOT NULL) AS risk_review_attempted,
+		 ct.metadata->'riskReview'->'result'->>'evaluatedAt' AS risk_evaluated_at,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'riskReady')::boolean, false) AS risk_ready,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'entryPrice')::numeric, ct.entry_price)::float8 AS risk_entry_price,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'stopLossPrice')::numeric, ct.stop_loss)::float8 AS risk_stop_loss_price,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'targetPrice')::numeric, ct.take_profit)::float8 AS risk_target_price,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'stopDistance')::numeric, 0)::float8 AS stop_distance,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'slippageAllowance')::numeric, 0)::float8 AS slippage_allowance,
+		 COALESCE(ct.metadata->'riskReview'->>'slippageSource', 'not_evaluated') AS slippage_source,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'slippageAdjustedStopDistance')::numeric, 0)::float8 AS slippage_adjusted_stop_distance,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'accountEquity')::numeric, 0)::float8 AS account_equity,
+		 COALESCE(ct.metadata->'riskReview'->>'accountEquitySource', 'not_evaluated') AS account_equity_source,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'maxRiskPercent')::numeric, 0)::float8 AS maximum_risk_percentage,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'maxAllowedLoss')::numeric, 0)::float8 AS maximum_allowed_loss,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'positionSize')::numeric, 0)::float8 AS position_size,
+		 COALESCE((ct.metadata->'riskReview'->>'positionNotional')::numeric, 0)::float8 AS position_notional,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'maxNormalLoss')::numeric, 0)::float8 AS maximum_normal_loss,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'maxSlippageAdjustedLoss')::numeric, 0)::float8 AS maximum_slippage_adjusted_loss,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'rewardAmount')::numeric, 0)::float8 AS reward_amount,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'rewardRiskRatio')::numeric, 0)::float8 AS reward_risk_ratio,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'minRewardRiskRatio')::numeric, 0)::float8 AS minimum_required_reward_risk,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'requestedLeverage')::numeric, 1)::float8 AS requested_leverage,
+		 COALESCE((ct.metadata->'riskReview'->'result'->>'maxLeverage')::numeric, 1)::float8 AS maximum_leverage,
+		 COALESCE(ct.metadata->'riskReview'->'result'->'rejectReasons', '[]'::jsonb) AS risk_reject_reasons,
+		 COALESCE(ct.metadata->'riskReview'->'result'->'warningReasons', '[]'::jsonb) AS risk_warning_reasons,
+		 COALESCE(ct.metadata->'riskReview'->'result'->>'nextRequiredPhase', 'risk_review') AS risk_next_required_phase,
+		 COALESCE((ct.metadata->'riskReview'->'approvalEligibility'->>'approvalEligible')::boolean, false) AS approval_eligibility,
          ct.approval_status,
+		 COALESCE((SELECT COUNT(*) FROM candidate_approvals ca WHERE ca.candidate_id=ct.id),0) AS human_approval_decision_count,
          COALESCE(pt.status, 'not_created') AS paper_ticket_status,
          ct.status AS candidate_status,
          COALESCE(ce.detail->'missingFields', '[]'::jsonb) AS missing_fields,
@@ -151,8 +185,9 @@ FROM (
          COALESCE(pt.live_trading_allowed, false) AS live_trading_allowed,
          COALESCE(pt.leverage_allowed, false) AS leverage_allowed
   FROM candidate_trades ct
+	LEFT JOIN world_monitor_research_inbox w ON w.candidate_id=ct.id
   LEFT JOIN LATERAL (
-    SELECT evidence_status FROM candidate_evidence_scores WHERE candidate_id=ct.id ORDER BY scored_at DESC LIMIT 1
+	SELECT evidence_status, overall_evidence_score, evidence_gate_ready FROM candidate_evidence_scores WHERE candidate_id=ct.id ORDER BY scored_at DESC LIMIT 1
   ) es ON true
   LEFT JOIN candidate_paper_tickets pt ON pt.candidate_id=ct.id
   LEFT JOIN LATERAL (
@@ -173,6 +208,22 @@ SELECT json_build_object(
 $safe = ($safety.executionInstructions -eq 0 -and $safety.unsafeTickets -eq 0 -and $safety.leveragedCandidates -eq 0)
 Add-Check "safety-paper-only" $(if ($safe) { "PASS" } else { "FAIL" }) "execution instructions=$($safety.executionInstructions), unsafe tickets=$($safety.unsafeTickets), leveraged candidates=$($safety.leveragedCandidates)"
 
+$runtime = [pscustomobject]@{ mode = "unknown"; allowLiveTrading = $null; executionWorkerEnabled = $null }
+try {
+  $containerEnv = @(docker inspect jax-trading-assistant-jax-trader-1 --format '{{range .Config.Env}}{{println .}}{{end}}')
+  function Get-ContainerEnv([string]$Name) {
+    $match = $containerEnv | Where-Object { $_ -like "$Name=*" } | Select-Object -First 1
+    if ($null -eq $match) { return $null }
+    return ($match -split '=', 2)[1]
+  }
+  $mode = Get-ContainerEnv "JAX_RUNTIME_MODE"
+  $allowLive = (Get-ContainerEnv "ALLOW_LIVE_TRADING") -eq "true"
+  $ibPaper = (Get-ContainerEnv "IB_PAPER_TRADING") -eq "true"
+  $runtime = [pscustomobject]@{ mode = $mode; allowLiveTrading = $allowLive; executionWorkerEnabled = ($mode -eq "paper" -and $ibPaper -and -not $allowLive) }
+} catch { Add-Check "runtime-state" "WARN" "could not inspect trader container: $($_.Exception.Message)" }
+$runtimeSafe = ($runtime.mode -eq "paper" -and -not $runtime.allowLiveTrading)
+Add-Check "runtime-paper-only" $(if ($runtimeSafe) { "PASS" } else { "FAIL" }) "mode=$($runtime.mode), allow live trading=$($runtime.allowLiveTrading), execution worker enabled=$($runtime.executionWorkerEnabled)"
+
 $ticketCount = @($candidates | Where-Object paper_ticket_status -ne "not_created").Count
 $blockedCount = @($candidates | Where-Object candidate_status -eq "blocked").Count
 $reviewableCount = @($candidates | Where-Object { $_.candidate_status -eq "awaiting_approval" -or $_.paper_ticket_status -ne "not_created" }).Count
@@ -187,6 +238,7 @@ $report = [pscustomobject]@{
   summary = [pscustomobject]@{ candidatesCreated = $candidateIds.Count; reviewableCandidates = $reviewableCount; blockedCandidates = $blockedCount; skippedCandidates = [int]$promotion.skipped; paperTicketsCreated = $ticketCount }
   candidates = @($candidates)
   safety = $safety
+	  runtime = $runtime
   checks = $checks
 }
 
@@ -208,14 +260,15 @@ if (@($candidates).Count -eq 0) { $lines += "No candidates were created." }
 foreach ($candidate in @($candidates)) {
   $lines += "### $($candidate.symbol) - $($candidate.candidate_id)"
   $lines += ""
-  foreach ($field in @("input_source","setup_type","catalyst_summary","invalidation_reason","strategy_instance_id","strategy_id","raw_source_ref","source_payload_ref","decision_log_ref","entry","stop","target","evidence_status","gate_status","risk_status","approval_status","paper_ticket_status","candidate_status","missing_fields","validation_reject_reasons","reject_reasons","warning_reasons")) {
+  foreach ($field in @("inbox_row_id","normalized_event_id","input_source","setup_type","catalyst_summary","invalidation_reason","strategy_instance_id","strategy_id","raw_source_ref","source_payload_ref","decision_log_ref","entry","stop","target","direction","candidate_status","evidence_status","overall_evidence_score","gate_status","trust_gate_ready","trust_gate_next_phase","risk_review_attempted","risk_status","risk_ready","risk_evaluated_at","risk_entry_price","risk_stop_loss_price","risk_target_price","stop_distance","slippage_allowance","slippage_source","slippage_adjusted_stop_distance","account_equity","account_equity_source","maximum_risk_percentage","maximum_allowed_loss","position_size","position_notional","maximum_normal_loss","maximum_slippage_adjusted_loss","reward_amount","reward_risk_ratio","minimum_required_reward_risk","requested_leverage","maximum_leverage","risk_reject_reasons","risk_warning_reasons","risk_next_required_phase","approval_eligibility","approval_status","human_approval_decision_count","paper_ticket_status","missing_fields","validation_reject_reasons","reject_reasons","warning_reasons")) {
     $value = $candidate.$field
     if ($value -is [array]) { $value = $value -join "; " }
+	if ($null -eq $value -or [string]::IsNullOrWhiteSpace([string]$value)) { $value = "(none)" }
     $lines += "- ${field}: $value"
   }
   $lines += ""
 }
-$lines += @("## Safety", "", "- Execution instructions created: $($safety.executionInstructions)", "- Unsafe paper tickets: $($safety.unsafeTickets)", "- Leveraged candidates: $($safety.leveragedCandidates)")
+$lines += @("## Safety", "", "- Execution instructions created: $($safety.executionInstructions)", "- Unsafe paper tickets: $($safety.unsafeTickets)", "- Leveraged candidates: $($safety.leveragedCandidates)", "- Runtime mode: $($runtime.mode)", "- Allow live trading: $($runtime.allowLiveTrading)", "- Execution worker enabled: $($runtime.executionWorkerEnabled)")
 $lines | Set-Content $mdPath
 
 Write-Host ""

@@ -53,6 +53,9 @@ type RiskReviewResult struct {
 	AccountEquity                float64    `json:"accountEquity"`
 	MaxRiskPercent               float64    `json:"maxRiskPercent"`
 	MaxAllowedLoss               float64    `json:"maxAllowedLoss"`
+	MinRewardRiskRatio           float64    `json:"minRewardRiskRatio"`
+	MaxLeverage                  float64    `json:"maxLeverage"`
+	RequestedLeverage            float64    `json:"requestedLeverage"`
 	RejectReasons                []string   `json:"rejectReasons"`
 	WarningReasons               []string   `json:"warningReasons"`
 	NextRequiredPhase            string     `json:"nextRequiredPhase"`
@@ -74,6 +77,9 @@ func ReviewCandidateRisk(candidate Candidate, gate GateResult, cfg RiskReviewCon
 		RiskStatus:                  RiskStatusBlocked,
 		AccountEquity:               roundFloat(cfg.AccountEquity),
 		MaxRiskPercent:              roundFloat(cfg.MaxRiskPercentPerTrade),
+		MinRewardRiskRatio:          roundFloat(cfg.MinRewardRiskRatio),
+		MaxLeverage:                 roundFloat(cfg.MaxLeverage),
+		RequestedLeverage:           roundFloat(cfg.RequestedLeverage),
 		NextRequiredPhase:           NextPhaseRiskReview,
 		BrokerExecutionAllowed:      false,
 		ExecutionInstructionCreated: false,

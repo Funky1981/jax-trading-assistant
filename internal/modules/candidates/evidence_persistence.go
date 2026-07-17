@@ -2,8 +2,68 @@ package candidates
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/google/uuid"
 )
+
+type RiskReviewPersistence struct {
+	Result              RiskReviewResult          `json:"result"`
+	ApprovalEligibility ApprovalEligibilityResult `json:"approvalEligibility"`
+	AccountEquitySource string                    `json:"accountEquitySource"`
+	SlippageSource      string                    `json:"slippageSource"`
+	RiskPolicySource    string                    `json:"riskPolicySource"`
+	PositionNotional    float64                   `json:"positionNotional"`
+}
+
+func (s *Store) LatestEvidenceScore(ctx context.Context, candidateID uuid.UUID) (EvidenceScoreSummary, error) {
+	score := EvidenceScoreSummary{CandidateID: candidateID}
+	err := s.pool.QueryRow(ctx, `
+		SELECT support_score::float8, contradiction_score::float8, quality_score::float8,
+		       freshness_score::float8, overall_evidence_score::float8,
+		       evidence_item_count, supporting_item_count, contradictory_item_count, stale_item_count,
+		       evidence_status, evidence_ready, evidence_gate_ready,
+		       approval_granted, broker_execution_allowed, execution_instruction_created
+		FROM candidate_evidence_scores WHERE candidate_id=$1 ORDER BY scored_at DESC LIMIT 1
+	`, candidateID).Scan(&score.SupportScore, &score.ContradictionScore, &score.QualityScore,
+		&score.FreshnessScore, &score.OverallEvidenceScore, &score.EvidenceItemCount,
+		&score.SupportingItemCount, &score.ContradictoryItemCount, &score.StaleItemCount,
+		&score.EvidenceStatus, &score.EvidenceReady, &score.EvidenceGateReady,
+		&score.ApprovalGranted, &score.BrokerExecutionAllowed, &score.ExecutionInstructionCreated)
+	if err != nil {
+		return score, fmt.Errorf("candidates.Store.LatestEvidenceScore: %w", err)
+	}
+	return score, nil
+}
+
+// PersistRiskReview stores the current deterministic risk result without
+// changing lifecycle status or creating approvals, tickets, or instructions.
+func (s *Store) PersistRiskReview(ctx context.Context, candidate Candidate, persistence RiskReviewPersistence) error {
+	payload, err := json.Marshal(persistence)
+	if err != nil {
+		return fmt.Errorf("candidates.Store.PersistRiskReview marshal: %w", err)
+	}
+	rejectReasons := append([]string{}, persistence.Result.RejectReasons...)
+	rejectReasons = appendUnique(rejectReasons, persistence.ApprovalEligibility.RejectReasons...)
+	_, err = s.pool.Exec(ctx, `
+		UPDATE candidate_trades SET
+			expected_reward_risk_ratio=$2, max_normal_loss=$3,
+			max_slippage_adjusted_loss=$4, position_size=$5, risk_status=$6,
+			approval_status=$7, reject_reasons=$8,
+			metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb), '{riskReview}', $9::jsonb, true),
+			updated_at=$10
+		WHERE id=$1
+	`, candidate.ID, persistence.Result.RewardRiskRatio, persistence.Result.MaxNormalLoss,
+		persistence.Result.MaxSlippageAdjustedLoss, persistence.Result.PositionSize,
+		persistence.Result.RiskStatus, persistence.ApprovalEligibility.ApprovalStatus,
+		rejectReasons, payload, time.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("candidates.Store.PersistRiskReview: %w", err)
+	}
+	return nil
+}
 
 // PersistEvidenceEvaluation stores the genuine evidence inputs, their computed
 // score, and the resulting trust-gate decision without changing candidate
