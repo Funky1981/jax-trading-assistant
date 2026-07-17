@@ -31,6 +31,7 @@ if ($authStatus.enabled) {
 $sourceEventId = "real-qqq-proof-$([Guid]::NewGuid().ToString('N'))"
 $trigger = @{
   source = "world-monitor-local-proof"
+  is_synthetic = $true
   source_event_id = $sourceEventId
   event_type = "macro_rates"
   headline = "Local proof event: softer inflation supports QQQ research review"

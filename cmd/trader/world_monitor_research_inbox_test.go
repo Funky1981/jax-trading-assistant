@@ -65,6 +65,63 @@ func TestWorldMonitorResearchInbox_LowSeverityIsIgnoredAndNotPersisted(t *testin
 	}
 }
 
+func TestWorldMonitorResearchInbox_ExplicitSyntheticProvenancePropagatesToEventInput(t *testing.T) {
+	trigger := validWorldMonitorResearchTrigger(time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC))
+	trigger.IsSynthetic = boolPointer(true)
+	trigger = normalizeWorldMonitorResearchTrigger(trigger)
+
+	input := newWorldMonitorResearchInboxService(nil).toPersistEventInput(trigger)
+	if !input.IsSynthetic || input.DataSourceType != "synthetic" {
+		t.Fatalf("provenance = synthetic:%t type:%q, want true/synthetic", input.IsSynthetic, input.DataSourceType)
+	}
+	if input.SyntheticReason != "explicit World Monitor API is_synthetic=true" {
+		t.Fatalf("SyntheticReason = %q", input.SyntheticReason)
+	}
+}
+
+func TestWorldMonitorResearchInbox_LocalProofMetadataClassifiesSynthetic(t *testing.T) {
+	trigger := validWorldMonitorResearchTrigger(time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC))
+	trigger.RawPayload = map[string]any{"localProof": true, "proofVersion": "v1"}
+	trigger = normalizeWorldMonitorResearchTrigger(trigger)
+
+	if trigger.IsSynthetic == nil || !*trigger.IsSynthetic || trigger.SyntheticReason != "trusted raw_payload.localProof=true" {
+		t.Fatalf("classification = %v/%q, want synthetic localProof reason", trigger.IsSynthetic, trigger.SyntheticReason)
+	}
+}
+
+func TestWorldMonitorResearchInbox_ExactProofSourceClassifiesSynthetic(t *testing.T) {
+	trigger := validWorldMonitorResearchTrigger(time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC))
+	trigger.Source = "world-monitor-local-proof"
+	trigger = normalizeWorldMonitorResearchTrigger(trigger)
+
+	if trigger.IsSynthetic == nil || !*trigger.IsSynthetic {
+		t.Fatal("exact local-proof source must classify the trigger as synthetic")
+	}
+}
+
+func TestWorldMonitorResearchInbox_LiveAndGenericProofNamedSourcesRemainReal(t *testing.T) {
+	for _, source := range []string{"world-monitor", "world-monitor-local", "world-monitor-proof-feed", "test-world-monitor"} {
+		trigger := validWorldMonitorResearchTrigger(time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC))
+		trigger.Source = source
+		trigger = normalizeWorldMonitorResearchTrigger(trigger)
+		if trigger.IsSynthetic == nil || *trigger.IsSynthetic {
+			t.Fatalf("source %q classified synthetic; want real", source)
+		}
+	}
+}
+
+func TestWorldMonitorResearchInbox_ExplicitValueTakesPrecedenceOverFallbacks(t *testing.T) {
+	trigger := validWorldMonitorResearchTrigger(time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC))
+	trigger.Source = "world-monitor-local-proof"
+	trigger.RawPayload = map[string]any{"localProof": true}
+	trigger.IsSynthetic = boolPointer(false)
+	trigger = normalizeWorldMonitorResearchTrigger(trigger)
+
+	if trigger.IsSynthetic == nil || *trigger.IsSynthetic {
+		t.Fatal("explicit is_synthetic=false must take precedence")
+	}
+}
+
 func TestWorldMonitorResearchInbox_InvalidTriggerReturnsRejectedReceipt(t *testing.T) {
 	now := time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC)
 	trigger := validWorldMonitorResearchTrigger(now)

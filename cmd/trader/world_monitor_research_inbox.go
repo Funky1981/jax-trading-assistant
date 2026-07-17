@@ -149,6 +149,8 @@ func (s *worldMonitorResearchInboxService) toPersistEventInput(trigger worldMoni
 		"confidence_reasons":     trigger.ConfidenceReasons,
 		"reason":                 trigger.Reason,
 		"raw_payload":            trigger.RawPayload,
+		"is_synthetic":           trigger.IsSynthetic != nil && *trigger.IsSynthetic,
+		"synthetic_reason":       trigger.SyntheticReason,
 	}
 	attrs := map[string]any{
 		"eventType":           trigger.EventType,
@@ -160,22 +162,32 @@ func (s *worldMonitorResearchInboxService) toPersistEventInput(trigger worldMoni
 		"mappingReason":       trigger.Reason,
 		"region":              trigger.Region,
 		"sourceTier":          trigger.SourceTier,
+		"isSynthetic":         trigger.IsSynthetic != nil && *trigger.IsSynthetic,
+		"syntheticReason":     trigger.SyntheticReason,
+	}
+	isSynthetic := trigger.IsSynthetic != nil && *trigger.IsSynthetic
+	dataSourceType := "real"
+	if isSynthetic {
+		dataSourceType = "synthetic"
 	}
 	return persistEventInput{
-		SourceID:      "world-monitor",
-		SourceName:    "World Monitor",
-		ProviderType:  "external",
-		SourceEventID: trigger.SourceEventID,
-		EventKind:     "research_trigger",
-		EventTime:     trigger.TimestampUTC.UTC(),
-		PrimarySymbol: primary,
-		Title:         strings.TrimSpace(trigger.Headline),
-		Summary:       strings.TrimSpace(trigger.Summary),
-		Severity:      strings.ToLower(strings.TrimSpace(trigger.Severity)),
-		Confidence:    trigger.Confidence,
-		Payload:       payload,
-		Attributes:    attrs,
-		Symbols:       symbols,
+		SourceID:        "world-monitor",
+		SourceName:      "World Monitor",
+		ProviderType:    "external",
+		SourceEventID:   trigger.SourceEventID,
+		EventKind:       "research_trigger",
+		EventTime:       trigger.TimestampUTC.UTC(),
+		PrimarySymbol:   primary,
+		Title:           strings.TrimSpace(trigger.Headline),
+		Summary:         strings.TrimSpace(trigger.Summary),
+		Severity:        strings.ToLower(strings.TrimSpace(trigger.Severity)),
+		Confidence:      trigger.Confidence,
+		Payload:         payload,
+		Attributes:      attrs,
+		Symbols:         symbols,
+		DataSourceType:  dataSourceType,
+		IsSynthetic:     isSynthetic,
+		SyntheticReason: trigger.SyntheticReason,
 	}
 }
 

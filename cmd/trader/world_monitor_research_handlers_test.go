@@ -88,6 +88,23 @@ func TestWorldMonitorResearchHandler_ReturnsDuplicateAsOK(t *testing.T) {
 	}
 }
 
+func TestWorldMonitorResearchHandler_AcceptsExplicitSyntheticField(t *testing.T) {
+	now := time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC)
+	fake := &fakeWorldMonitorIngestService{receipt: worldMonitorResearchReceipt{Status: "new"}}
+	restore := replaceWorldMonitorIngestServiceFactory(fake)
+	defer restore()
+	trigger := validWorldMonitorResearchTrigger(now)
+	trigger.IsSynthetic = boolPointer(true)
+
+	res := performWorldMonitorResearchRequest(t, http.MethodPost, trigger)
+	if res.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d; body=%s", res.Code, http.StatusAccepted, res.Body.String())
+	}
+	if fake.seen.IsSynthetic == nil || !*fake.seen.IsSynthetic {
+		t.Fatal("handler did not decode is_synthetic=true")
+	}
+}
+
 func TestWorldMonitorResearchHandler_ReturnsRejectedAsUnprocessable(t *testing.T) {
 	now := time.Date(2026, 6, 5, 12, 0, 0, 0, time.UTC)
 	fake := &fakeWorldMonitorIngestService{

@@ -58,15 +58,20 @@ func TestWorldMonitorResearch_NoTradeCreated(t *testing.T) {
 	}
 
 	var normalizedCount int
+	var rawSynthetic, normalizedSynthetic bool
 	if err := pool.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM event_normalized
-		WHERE id = $1::uuid AND event_kind = 'research_trigger' AND source_id = 'world-monitor'
-	`, receipt.EventID).Scan(&normalizedCount); err != nil {
+		SELECT COUNT(*)::int, BOOL_OR(r.is_synthetic), BOOL_OR(n.is_synthetic)
+		FROM event_normalized n
+		JOIN event_raw r ON r.id = n.raw_event_id
+		WHERE n.id = $1::uuid AND n.event_kind = 'research_trigger' AND n.source_id = 'world-monitor'
+	`, receipt.EventID).Scan(&normalizedCount, &rawSynthetic, &normalizedSynthetic); err != nil {
 		t.Fatalf("query normalized event: %v", err)
 	}
 	if normalizedCount != 1 {
 		t.Fatalf("normalized rows = %d, want 1", normalizedCount)
+	}
+	if rawSynthetic || normalizedSynthetic {
+		t.Fatalf("ordinary live input classified synthetic: raw=%t normalized=%t", rawSynthetic, normalizedSynthetic)
 	}
 
 	for _, symbol := range []string{"QQQ", "SPY", "TLT"} {
@@ -94,6 +99,56 @@ func TestWorldMonitorResearch_NoTradeCreated(t *testing.T) {
 	if got := countRows(t, pool, "execution_instructions"); got != beforeExecutions {
 		t.Fatalf("execution_instructions count changed from %d to %d", beforeExecutions, got)
 	}
+}
+
+func TestWorldMonitorResearch_SyntheticProvenancePersistsAndDuplicateIsStable(t *testing.T) {
+	pool := testFrontendAPIPool(t)
+	requireWorldMonitorSmokeSchema(t, pool)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	trigger := validWorldMonitorResearchTrigger(time.Now().UTC())
+	trigger.Source = "world-monitor-local-proof"
+	trigger.SourceEventID = "wm-synthetic-" + uuid.NewString()
+	trigger.IsSynthetic = boolPointer(true)
+
+	receipt, err := newWorldMonitorResearchInboxService(pool).Ingest(ctx, trigger)
+	if err != nil {
+		t.Fatalf("ingest explicit synthetic trigger: %v", err)
+	}
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cleanupCancel()
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM world_monitor_research_inbox WHERE source_event_id = $1`, trigger.SourceEventID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM event_normalized WHERE id = $1::uuid`, receipt.EventID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM event_raw WHERE source_id = 'world-monitor' AND source_event_id = $1`, trigger.SourceEventID)
+	})
+
+	assertSynthetic := func() {
+		var rawSynthetic, normalizedSynthetic bool
+		var rawType, normalizedType, rawReason, normalizedReason string
+		if err := pool.QueryRow(ctx, `
+			SELECT r.is_synthetic, n.is_synthetic, r.data_source_type, n.data_source_type,
+			       COALESCE(r.synthetic_reason, ''), COALESCE(n.synthetic_reason, '')
+			FROM event_normalized n JOIN event_raw r ON r.id=n.raw_event_id
+			WHERE n.id=$1::uuid
+		`, receipt.EventID).Scan(&rawSynthetic, &normalizedSynthetic, &rawType, &normalizedType, &rawReason, &normalizedReason); err != nil {
+			t.Fatalf("query synthetic provenance: %v", err)
+		}
+		if !rawSynthetic || !normalizedSynthetic || rawType != "synthetic" || normalizedType != "synthetic" || rawReason == "" || normalizedReason == "" {
+			t.Fatalf("synthetic provenance not retained: raw=%t/%s/%q normalized=%t/%s/%q", rawSynthetic, rawType, rawReason, normalizedSynthetic, normalizedType, normalizedReason)
+		}
+	}
+	assertSynthetic()
+
+	duplicate, err := newWorldMonitorResearchInboxService(pool).Ingest(ctx, trigger)
+	if err != nil {
+		t.Fatalf("repost synthetic trigger: %v", err)
+	}
+	if !duplicate.Duplicate || duplicate.EventID != receipt.EventID {
+		t.Fatalf("duplicate receipt = %+v, want same event %s", duplicate, receipt.EventID)
+	}
+	assertSynthetic()
 }
 
 func requireWorldMonitorSmokeSchema(t *testing.T, pool *pgxpool.Pool) {

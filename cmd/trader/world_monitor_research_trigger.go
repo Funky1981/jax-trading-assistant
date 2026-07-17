@@ -29,6 +29,8 @@ type worldMonitorResearchTrigger struct {
 	ConfidenceReasons    []string       `json:"confidence_reasons"`
 	Reason               string         `json:"reason"`
 	RawPayload           map[string]any `json:"raw_payload"`
+	IsSynthetic          *bool          `json:"is_synthetic,omitempty"`
+	SyntheticReason      string         `json:"-"`
 }
 
 type worldMonitorResearchReceipt struct {
@@ -106,6 +108,7 @@ func validateWorldMonitorResearchTrigger(trigger worldMonitorResearchTrigger, no
 }
 
 func normalizeWorldMonitorResearchTrigger(trigger worldMonitorResearchTrigger) worldMonitorResearchTrigger {
+	trigger.IsSynthetic, trigger.SyntheticReason = classifyWorldMonitorSyntheticProvenance(trigger)
 	if strings.TrimSpace(trigger.Severity) == "" {
 		trigger.Severity = rawWorldMonitorString(trigger.RawPayload, "threat_level")
 	}
@@ -136,6 +139,27 @@ func normalizeWorldMonitorResearchTrigger(trigger worldMonitorResearchTrigger) w
 	}
 
 	return trigger
+}
+
+func classifyWorldMonitorSyntheticProvenance(trigger worldMonitorResearchTrigger) (*bool, string) {
+	if trigger.IsSynthetic != nil {
+		value := *trigger.IsSynthetic
+		if value {
+			return &value, "explicit World Monitor API is_synthetic=true"
+		}
+		return &value, "explicit World Monitor API is_synthetic=false"
+	}
+	if value, ok := trigger.RawPayload["localProof"].(bool); ok && value {
+		return boolPointer(true), "trusted raw_payload.localProof=true"
+	}
+	if strings.EqualFold(strings.TrimSpace(trigger.Source), "world-monitor-local-proof") {
+		return boolPointer(true), "exact local-proof source world-monitor-local-proof"
+	}
+	return boolPointer(false), "ordinary World Monitor input"
+}
+
+func boolPointer(value bool) *bool {
+	return &value
 }
 
 func rawWorldMonitorString(payload map[string]any, key string) string {

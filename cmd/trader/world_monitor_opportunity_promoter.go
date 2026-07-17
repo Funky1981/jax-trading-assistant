@@ -76,6 +76,8 @@ type worldMonitorInboxPromotionRow struct {
 	ConfidenceReasons    []string
 	MappingReason        string
 	EventTime            time.Time
+	IsSynthetic          bool
+	SyntheticReason      string
 }
 
 type worldMonitorChartConfirmation struct {
@@ -260,7 +262,9 @@ func (p *worldMonitorOpportunityPromoter) loadPromotionRows(ctx context.Context,
 			w.confidence,
 			w.confidence_reasons,
 			w.mapping_reason,
-			w.event_time
+			w.event_time,
+			e.is_synthetic,
+			COALESCE(e.synthetic_reason, '')
 		FROM world_monitor_research_inbox w
 		JOIN event_normalized e ON e.id = w.normalized_event_id
 		WHERE w.status = $1
@@ -298,6 +302,8 @@ func (p *worldMonitorOpportunityPromoter) loadPromotionRows(ctx context.Context,
 			&confidenceReasonsRaw,
 			&row.MappingReason,
 			&row.EventTime,
+			&row.IsSynthetic,
+			&row.SyntheticReason,
 		); err != nil {
 			return nil, fmt.Errorf("scan world monitor promotion row: %w", err)
 		}
@@ -832,6 +838,8 @@ func (p *worldMonitorOpportunityPromoter) attachCandidateMetadata(ctx context.Co
 		"strategyId":        strategyID,
 		"signalId":          signalIDValue,
 		"route":             route,
+		"isSynthetic":       row.IsSynthetic,
+		"syntheticReason":   row.SyntheticReason,
 	}
 	payload, _ := json.Marshal(map[string]any{
 		"worldMonitor":      metadata,

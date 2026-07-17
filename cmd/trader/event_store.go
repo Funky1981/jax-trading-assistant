@@ -29,20 +29,23 @@ type persistedEventRef struct {
 }
 
 type persistEventInput struct {
-	SourceID      string
-	SourceName    string
-	ProviderType  string
-	SourceEventID string
-	EventKind     string
-	EventTime     time.Time
-	PrimarySymbol string
-	Title         string
-	Summary       string
-	Severity      string
-	Confidence    float64
-	Payload       map[string]any
-	Attributes    map[string]any
-	Symbols       []string
+	SourceID        string
+	SourceName      string
+	ProviderType    string
+	SourceEventID   string
+	EventKind       string
+	EventTime       time.Time
+	PrimarySymbol   string
+	Title           string
+	Summary         string
+	Severity        string
+	Confidence      float64
+	Payload         map[string]any
+	Attributes      map[string]any
+	Symbols         []string
+	DataSourceType  string
+	IsSynthetic     bool
+	SyntheticReason string
 }
 
 func newEventStore(pool *pgxpool.Pool) *eventStore {
@@ -215,6 +218,9 @@ func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInp
 	if in.Attributes == nil {
 		in.Attributes = map[string]any{}
 	}
+	if strings.TrimSpace(in.DataSourceType) == "" {
+		in.DataSourceType = "real"
+	}
 	classification := classifyEvent(eventClassificationInput{
 		Kind:       in.EventKind,
 		Title:      in.Title,
@@ -270,7 +276,7 @@ func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInp
 		)
 		VALUES (
 			$1, $2, $3, $4, NULLIF($5,''), $6::jsonb, $7,
-			NULLIF($8,''), 'real', $9, FALSE, '', NOW()
+			NULLIF($8,''), $9, $10, $11, NULLIF($12,''), NOW()
 		)
 		ON CONFLICT (source_id, source_event_id)
 		DO UPDATE SET
@@ -288,7 +294,7 @@ func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInp
 			received_at = NOW()
 		RETURNING id::text
 	`, in.SourceID, in.SourceEventID, in.EventKind, in.EventTime.UTC(), strings.TrimSpace(in.PrimarySymbol), string(payloadJSON), contentHash,
-		flowID, in.SourceID).Scan(&rawID)
+		flowID, in.DataSourceType, in.SourceID, in.IsSynthetic, in.SyntheticReason).Scan(&rawID)
 	if err != nil {
 		return persistedEventRef{}, fmt.Errorf("upsert event_raw: %w", err)
 	}
@@ -302,8 +308,8 @@ func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInp
 		)
 		VALUES (
 			$1::uuid, $2, $3, $4, NULLIF($5,''), $6, $7, $8,
-			NULLIF($9,''), $10, $11::jsonb, 'real', $12,
-			FALSE, '', NOW()
+			NULLIF($9,''), $10, $11::jsonb, $12, $13,
+			$14, NULLIF($15,''), NOW()
 		)
 		ON CONFLICT (canonical_key)
 		DO UPDATE SET
@@ -324,7 +330,8 @@ func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInp
 			provenance_verified_at = EXCLUDED.provenance_verified_at
 		RETURNING id::text
 	`, rawID, canonicalKey, in.EventKind, in.Title, strings.TrimSpace(in.Summary), in.Severity, in.EventTime.UTC(), in.SourceID,
-		strings.TrimSpace(in.PrimarySymbol), in.Confidence, string(attrJSON), in.SourceID).Scan(&normalizedID)
+		strings.TrimSpace(in.PrimarySymbol), in.Confidence, string(attrJSON), in.DataSourceType, in.SourceID,
+		in.IsSynthetic, in.SyntheticReason).Scan(&normalizedID)
 	if err != nil {
 		return persistedEventRef{}, fmt.Errorf("upsert event_normalized: %w", err)
 	}
