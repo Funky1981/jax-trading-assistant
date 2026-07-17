@@ -62,6 +62,8 @@ type worldMonitorInboxPromotionRow struct {
 	ID                   uuid.UUID
 	SourceEventID        string
 	NormalizedEventID    *uuid.UUID
+	RawEventID           *uuid.UUID
+	NormalizedSummary    string
 	EventType            string
 	Headline             string
 	Summary              string
@@ -141,26 +143,29 @@ func (p *worldMonitorOpportunityPromoter) promoteRows(ctx context.Context, rows 
 func (p *worldMonitorOpportunityPromoter) loadPromotionRows(ctx context.Context, limit int) ([]worldMonitorInboxPromotionRow, error) {
 	rows, err := p.pool.Query(ctx, `
 		SELECT
-			id,
-			source_event_id,
-			normalized_event_id,
-			event_type,
-			headline,
-			COALESCE(summary, ''),
-			COALESCE(source_urls, '[]'::jsonb),
-			source_count,
-			possible_affected_etfs,
-			asset_themes,
-			confidence,
-			confidence_reasons,
-			mapping_reason,
-			event_time
-		FROM world_monitor_research_inbox
-		WHERE status = $1
-		  AND candidate_id IS NULL
-		  AND normalized_event_id IS NOT NULL
-		  AND confidence >= $2
-		ORDER BY received_at ASC
+			w.id,
+			w.source_event_id,
+			w.normalized_event_id,
+			e.raw_event_id,
+			COALESCE(e.summary, ''),
+			w.event_type,
+			w.headline,
+			COALESCE(w.summary, ''),
+			COALESCE(w.source_urls, '[]'::jsonb),
+			w.source_count,
+			w.possible_affected_etfs,
+			w.asset_themes,
+			w.confidence,
+			w.confidence_reasons,
+			w.mapping_reason,
+			w.event_time
+		FROM world_monitor_research_inbox w
+		JOIN event_normalized e ON e.id = w.normalized_event_id
+		WHERE w.status = $1
+		  AND w.candidate_id IS NULL
+		  AND w.normalized_event_id IS NOT NULL
+		  AND w.confidence >= $2
+		ORDER BY w.received_at ASC
 		LIMIT $3
 	`, worldMonitorInboxStatusNew, worldMonitorPromoterMinConfidence, limit)
 	if err != nil {
@@ -173,10 +178,13 @@ func (p *worldMonitorOpportunityPromoter) loadPromotionRows(ctx context.Context,
 		var row worldMonitorInboxPromotionRow
 		var sourceURLsRaw, etfsRaw, themesRaw, confidenceReasonsRaw []byte
 		var normalizedEventID uuid.NullUUID
+		var rawEventID uuid.NullUUID
 		if err := rows.Scan(
 			&row.ID,
 			&row.SourceEventID,
 			&normalizedEventID,
+			&rawEventID,
+			&row.NormalizedSummary,
 			&row.EventType,
 			&row.Headline,
 			&row.Summary,
@@ -194,6 +202,10 @@ func (p *worldMonitorOpportunityPromoter) loadPromotionRows(ctx context.Context,
 		if normalizedEventID.Valid {
 			v := normalizedEventID.UUID
 			row.NormalizedEventID = &v
+		}
+		if rawEventID.Valid {
+			v := rawEventID.UUID
+			row.RawEventID = &v
 		}
 		_ = json.Unmarshal(sourceURLsRaw, &row.SourceURLs)
 		_ = json.Unmarshal(etfsRaw, &row.PossibleAffectedETFs)
@@ -271,27 +283,30 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 
 	candidateSvc := candidatesmod.NewService(candidatesmod.NewStore(p.pool))
 	horizonPolicy := tradingmodes.SwingHorizonPolicy(3, 10)
+	strategyTypeID, err := p.strategyTypeID(ctx, instanceID)
+	if err != nil {
+		return nil, worldMonitorPromotionOutcome{}, false, err
+	}
+	structuredFields := worldMonitorStructuredCandidateFields(row, symbol, strategyTypeID, stop, chart)
 	if !chart.Confirmed {
 		candidate, err := candidateSvc.CreateBlocked(ctx, candidatesmod.BlockRequest{
-			StrategyInstanceID: instanceID,
-			StructuredCandidateFields: candidatesmod.StructuredCandidateFields{
-				RejectReasons: []string{},
-			},
-			StrategyID:       strategyID,
-			Symbol:           symbol,
-			SignalType:       "BUY",
-			EntryPrice:       &entry,
-			StopLoss:         &stop,
-			TakeProfit:       &target,
-			Confidence:       &confidence,
-			Reasoning:        &reasoning,
-			DataProvenance:   "world-monitor",
-			ReasonCode:       chart.ReasonCode,
-			Reason:           chart.Reason,
-			TTL:              worldMonitorCandidateTTL,
-			HorizonPolicy:    &horizonPolicy,
-			PaperOnly:        true,
-			ApprovalRequired: true,
+			StrategyInstanceID:        instanceID,
+			StructuredCandidateFields: structuredFields,
+			StrategyID:                strategyID,
+			Symbol:                    symbol,
+			SignalType:                "BUY",
+			EntryPrice:                &entry,
+			StopLoss:                  &stop,
+			TakeProfit:                &target,
+			Confidence:                &confidence,
+			Reasoning:                 &reasoning,
+			DataProvenance:            "world-monitor",
+			ReasonCode:                chart.ReasonCode,
+			Reason:                    chart.Reason,
+			TTL:                       worldMonitorCandidateTTL,
+			HorizonPolicy:             &horizonPolicy,
+			PaperOnly:                 true,
+			ApprovalRequired:          true,
 		})
 		if err != nil {
 			if errors.Is(err, candidatesmod.ErrDuplicateCandidate) || errors.Is(err, candidatesmod.ErrInstrumentPolicy) {
@@ -325,24 +340,22 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 	}
 
 	candidate, err := candidateSvc.Propose(ctx, candidatesmod.ProposalRequest{
-		StrategyInstanceID: instanceID,
-		StructuredCandidateFields: candidatesmod.StructuredCandidateFields{
-			RejectReasons: []string{},
-		},
-		SignalID:         signalID.String(),
-		StrategyID:       strategyID,
-		Symbol:           symbol,
-		SignalType:       "BUY",
-		EntryPrice:       &entry,
-		StopLoss:         &stop,
-		TakeProfit:       &target,
-		Confidence:       &confidence,
-		Reasoning:        &reasoning,
-		DataProvenance:   "world-monitor",
-		TTL:              worldMonitorCandidateTTL,
-		HorizonPolicy:    &horizonPolicy,
-		PaperOnly:        true,
-		ApprovalRequired: true,
+		StrategyInstanceID:        instanceID,
+		StructuredCandidateFields: structuredFields,
+		SignalID:                  signalID.String(),
+		StrategyID:                strategyID,
+		Symbol:                    symbol,
+		SignalType:                "BUY",
+		EntryPrice:                &entry,
+		StopLoss:                  &stop,
+		TakeProfit:                &target,
+		Confidence:                &confidence,
+		Reasoning:                 &reasoning,
+		DataProvenance:            "world-monitor",
+		TTL:                       worldMonitorCandidateTTL,
+		HorizonPolicy:             &horizonPolicy,
+		PaperOnly:                 true,
+		ApprovalRequired:          true,
 	})
 	if err != nil {
 		if errors.Is(err, candidatesmod.ErrDuplicateCandidate) || errors.Is(err, candidatesmod.ErrInstrumentPolicy) {
@@ -388,6 +401,71 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 		return promoted, promotionOutcome(row, symbol, "blocked", "candidate_validation_failed", reason, candidate.ID.String()), true, nil
 	}
 	return promoted, promotionOutcome(row, symbol, "promoted", "candidate_created", "Candidate created for paper-only approval review.", candidate.ID.String()), true, nil
+}
+
+func (p *worldMonitorOpportunityPromoter) strategyTypeID(ctx context.Context, instanceID uuid.UUID) (string, error) {
+	var strategyTypeID string
+	if err := p.pool.QueryRow(ctx, `SELECT strategy_type_id FROM strategy_instances WHERE id = $1`, instanceID).Scan(&strategyTypeID); err != nil {
+		return "", fmt.Errorf("load strategy type for world monitor promotion: %w", err)
+	}
+	return strings.TrimSpace(strategyTypeID), nil
+}
+
+func worldMonitorStructuredCandidateFields(row worldMonitorInboxPromotionRow, symbol, strategyTypeID string, stop float64, chart worldMonitorChartConfirmation) candidatesmod.StructuredCandidateFields {
+	catalystSummary := strings.TrimSpace(row.NormalizedSummary)
+	if catalystSummary == "" {
+		catalystSummary = strings.TrimSpace(row.Summary)
+	}
+	setupType := worldMonitorSetupType(strategyTypeID)
+	invalidationReason := ""
+	if setupType != "" && chart.Confirmed && stop > 0 {
+		invalidationReason = fmt.Sprintf("%s trades at or below the candidate stop level %.2f, invalidating the confirmed sector-news momentum setup.", symbol, stop)
+	}
+	catalystType := strings.TrimSpace(row.EventType)
+	catalystSource := "world-monitor"
+	strategyFamily := strings.TrimSpace(strategyTypeID)
+	rawSourceRef := ""
+	if row.RawEventID != nil {
+		rawSourceRef = "event_raw:" + row.RawEventID.String()
+	}
+	sourcePayloadRef := "world_monitor_research_inbox:" + row.ID.String()
+	decisionLogRef := ""
+	if row.NormalizedEventID != nil {
+		decisionLogRef = "event_normalized:" + row.NormalizedEventID.String()
+	}
+	return candidatesmod.StructuredCandidateFields{
+		Source:              "world-monitor",
+		InstrumentType:      "etf",
+		SetupType:           setupType,
+		TimeHorizon:         "swing",
+		StrategyFamily:      optionalWorldMonitorString(strategyFamily),
+		CatalystType:        optionalWorldMonitorString(catalystType),
+		CatalystSummary:     catalystSummary,
+		CatalystSource:      &catalystSource,
+		CatalystTimestamp:   &row.EventTime,
+		CatalystConfidence:  &row.Confidence,
+		EvidenceSourceCount: &row.SourceCount,
+		InvalidationReason:  invalidationReason,
+		RawSourceRef:        optionalWorldMonitorString(rawSourceRef),
+		SourcePayloadRef:    &sourcePayloadRef,
+		DecisionLogRef:      optionalWorldMonitorString(decisionLogRef),
+		RejectReasons:       []string{},
+	}
+}
+
+func worldMonitorSetupType(strategyTypeID string) string {
+	if strings.EqualFold(strings.TrimSpace(strategyTypeID), "etf_news_sector_momentum_v1") {
+		return "sector_news_momentum"
+	}
+	return ""
+}
+
+func optionalWorldMonitorString(value string) *string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	return &value
 }
 
 func promotionOutcome(row worldMonitorInboxPromotionRow, symbol, status, reasonCode, reason, candidateID string) worldMonitorPromotionOutcome {

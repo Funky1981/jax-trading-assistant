@@ -1,0 +1,162 @@
+{
+    "status":  "candidate_produced",
+    "generatedAt":  "2026-07-17T09:14:10.2698666Z",
+    "startedAt":  "2026-07-17T09:14:09.4253220Z",
+    "inputs":  {
+                   "quotes":  13,
+                   "candles":  8260,
+                   "promotableInboxRows":  2,
+                   "promotableSymbols":  [
+                                             "GLD",
+                                             "QQQ",
+                                             "SPY",
+                                             "XLE"
+                                         ]
+               },
+    "promotion":  {
+                      "promoted":  [
+                                       {
+                                           "inboxId":  "53ed8e3b-544a-495d-9ec7-dcd67ae282c6",
+                                           "eventId":  "bcce90a1-19cf-45a8-85b3-0b47920a7b61",
+                                           "signalId":  "b02422d4-cb3d-4f9e-b370-d804c20417fe",
+                                           "candidateId":  "8cb860d2-49c9-4b83-a2ac-986c320d79cb",
+                                           "symbol":  "QQQ",
+                                           "route":  "approval_required"
+                                       }
+                                   ],
+                      "promotedCount":  1,
+                      "blockedSkippedCount":  3,
+                      "skipped":  3,
+                      "outcomes":  [
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "XLE",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for XLE."
+                                       },
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "SPY",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for SPY."
+                                       },
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "GLD",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for GLD."
+                                       },
+                                       {
+                                           "inboxId":  "53ed8e3b-544a-495d-9ec7-dcd67ae282c6",
+                                           "eventId":  "bcce90a1-19cf-45a8-85b3-0b47920a7b61",
+                                           "symbol":  "QQQ",
+                                           "status":  "promoted",
+                                           "reasonCode":  "candidate_created",
+                                           "reason":  "Candidate created for paper-only approval review.",
+                                           "candidateId":  "8cb860d2-49c9-4b83-a2ac-986c320d79cb"
+                                       }
+                                   ]
+                  },
+    "summary":  {
+                    "candidatesCreated":  1,
+                    "reviewableCandidates":  1,
+                    "blockedCandidates":  0,
+                    "skippedCandidates":  3,
+                    "paperTicketsCreated":  0
+                },
+    "candidates":  [
+                       {
+                           "created_at":  "2026-07-17T09:14:10.096838+00:00",
+                           "candidate_id":  "8cb860d2-49c9-4b83-a2ac-986c320d79cb",
+                           "input_source":  "world-monitor",
+                           "symbol":  "QQQ",
+                           "setup_type":  "sector_news_momentum",
+                           "catalyst_summary":  "Operator-generated local proof input for the real World Monitor normalization and paper-candidate pipeline.",
+                           "invalidation_reason":  "QQQ trades at or below the candidate stop level 490.00, invalidating the confirmed sector-news momentum setup.",
+                           "strategy_instance_id":  "91f58544-82bc-430d-87f6-4248b8ecefa8",
+                           "strategy_id":  "etf_news_sector_momentum_v1",
+                           "raw_source_ref":  "event_raw:33e9cae6-ee28-4ef2-a718-3e04ea210eab",
+                           "source_payload_ref":  "world_monitor_research_inbox:53ed8e3b-544a-495d-9ec7-dcd67ae282c6",
+                           "decision_log_ref":  "event_normalized:bcce90a1-19cf-45a8-85b3-0b47920a7b61",
+                           "entry":  500,
+                           "stop":  490,
+                           "target":  520,
+                           "evidence_status":  "missing",
+                           "gate_status":  "not_evaluated",
+                           "risk_status":  "pending",
+                           "approval_status":  "not_ready",
+                           "paper_ticket_status":  "not_created",
+                           "candidate_status":  "awaiting_approval",
+                           "missing_fields":  [
+
+                                              ],
+                           "validation_reject_reasons":  [
+
+                                                         ],
+                           "reject_reasons":  [
+
+                                              ],
+                           "warning_reasons":  [
+
+                                               ],
+                           "paper_only":  true,
+                           "broker_execution_allowed":  false,
+                           "execution_instruction_created":  false,
+                           "live_trading_allowed":  false,
+                           "leverage_allowed":  false
+                       }
+                   ],
+    "safety":  {
+                   "executionInstructions":  0,
+                   "unsafeTickets":  0,
+                   "leveragedCandidates":  0
+               },
+    "checks":  [
+                   {
+                       "name":  "postgres",
+                       "status":  "PASS",
+                       "detail":  "reachable"
+                   },
+                   {
+                       "name":  "migrations",
+                       "status":  "PASS",
+                       "detail":  "schema version 46 is clean"
+                   },
+                   {
+                       "name":  "quotes",
+                       "status":  "PASS",
+                       "detail":  "13 usable rows"
+                   },
+                   {
+                       "name":  "candles",
+                       "status":  "PASS",
+                       "detail":  "8260 rows"
+                   },
+                   {
+                       "name":  "world-monitor-inbox",
+                       "status":  "PASS",
+                       "detail":  "2 promotable rows"
+                   },
+                   {
+                       "name":  "api-auth",
+                       "status":  "PASS",
+                       "detail":  "bootstrap login succeeded"
+                   },
+                   {
+                       "name":  "promotion",
+                       "status":  "PASS",
+                       "detail":  "1 candidates created; 3 blocked/skipped; XLE:no_enabled_strategy_instance; SPY:no_enabled_strategy_instance; GLD:no_enabled_strategy_instance"
+                   },
+                   {
+                       "name":  "safety-paper-only",
+                       "status":  "PASS",
+                       "detail":  "execution instructions=0, unsafe tickets=0, leveraged candidates=0"
+                   }
+               ]
+}

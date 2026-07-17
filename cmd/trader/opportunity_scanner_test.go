@@ -19,6 +19,7 @@ func TestOpportunityScannerPromotesEligibleWorldMonitorTrigger(t *testing.T) {
 	defer cancel()
 
 	now := time.Now().UTC()
+	_, _ = pool.Exec(ctx, `DELETE FROM world_monitor_research_inbox WHERE source_event_id LIKE 'wm-scanner-%' AND status = 'new' AND candidate_id IS NULL`)
 	instanceID := uuid.New()
 	instanceName := "wm-scanner-test-" + uuid.NewString()
 	trigger := validWorldMonitorResearchTrigger(now)

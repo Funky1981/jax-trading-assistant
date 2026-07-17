@@ -125,6 +125,13 @@ FROM (
          COALESCE(NULLIF(ct.source,''), ct.data_provenance) AS input_source,
          ct.symbol,
          COALESCE(NULLIF(ct.catalyst_summary,''), ct.metadata->'worldMonitor'->>'summary', ct.metadata->'worldMonitor'->>'headline', ct.reasoning, '') AS catalyst_summary,
+         ct.setup_type,
+         ct.invalidation_reason,
+         ct.strategy_instance_id::text AS strategy_instance_id,
+         COALESCE(ct.strategy_id, '') AS strategy_id,
+         COALESCE(ct.raw_source_ref, '') AS raw_source_ref,
+         COALESCE(ct.source_payload_ref, '') AS source_payload_ref,
+         COALESCE(ct.decision_log_ref, '') AS decision_log_ref,
          ct.entry_price::float8 AS entry,
          ct.stop_loss::float8 AS stop,
          ct.take_profit::float8 AS target,
@@ -201,7 +208,7 @@ if (@($candidates).Count -eq 0) { $lines += "No candidates were created." }
 foreach ($candidate in @($candidates)) {
   $lines += "### $($candidate.symbol) - $($candidate.candidate_id)"
   $lines += ""
-  foreach ($field in @("input_source","catalyst_summary","entry","stop","target","evidence_status","gate_status","risk_status","approval_status","paper_ticket_status","candidate_status","missing_fields","validation_reject_reasons","reject_reasons","warning_reasons")) {
+  foreach ($field in @("input_source","setup_type","catalyst_summary","invalidation_reason","strategy_instance_id","strategy_id","raw_source_ref","source_payload_ref","decision_log_ref","entry","stop","target","evidence_status","gate_status","risk_status","approval_status","paper_ticket_status","candidate_status","missing_fields","validation_reject_reasons","reject_reasons","warning_reasons")) {
     $value = $candidate.$field
     if ($value -is [array]) { $value = $value -join "; " }
     $lines += "- ${field}: $value"

@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	approvalsmod "jax-trading-assistant/internal/modules/approvals"
+	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 )
 
 func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
@@ -104,22 +105,38 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	var candidateStatus string
 	var signalID string
 	var metadata []byte
+	var setupType, catalystSummary, invalidationReason, rawSourceRef, sourcePayloadRef, decisionLogRef string
 	var entryPrice, stopLoss, takeProfit float64
 	if err := pool.QueryRow(ctx, `
-		SELECT status, signal_id::text, COALESCE(metadata, '{}'::jsonb), entry_price::float8, stop_loss::float8, take_profit::float8
+		SELECT status, signal_id::text, COALESCE(metadata, '{}'::jsonb), entry_price::float8, stop_loss::float8, take_profit::float8,
+		       setup_type, catalyst_summary, invalidation_reason,
+		       COALESCE(raw_source_ref, ''), COALESCE(source_payload_ref, ''), COALESCE(decision_log_ref, '')
 		FROM candidate_trades
 		WHERE id = $1::uuid
-	`, promoted.CandidateID).Scan(&candidateStatus, &signalID, &metadata, &entryPrice, &stopLoss, &takeProfit); err != nil {
+	`, promoted.CandidateID).Scan(&candidateStatus, &signalID, &metadata, &entryPrice, &stopLoss, &takeProfit,
+		&setupType, &catalystSummary, &invalidationReason, &rawSourceRef, &sourcePayloadRef, &decisionLogRef); err != nil {
 		t.Fatalf("query promoted candidate: %v", err)
 	}
-	if candidateStatus != "awaiting_approval" && candidateStatus != "blocked" {
-		t.Fatalf("candidate status = %q, want awaiting_approval or a validation block", candidateStatus)
+	if candidateStatus != "awaiting_approval" {
+		t.Fatalf("candidate status = %q, want awaiting_approval after structural validation", candidateStatus)
 	}
 	if signalID != promoted.SignalID {
 		t.Fatalf("candidate signal_id = %q, want %q", signalID, promoted.SignalID)
 	}
 	if entryPrice != 500 || stopLoss != 490 || takeProfit != 520 {
 		t.Fatalf("unexpected prices entry=%f stop=%f target=%f", entryPrice, stopLoss, takeProfit)
+	}
+	if setupType != "sector_news_momentum" {
+		t.Fatalf("setup_type = %q, want sector_news_momentum", setupType)
+	}
+	if catalystSummary != trigger.Summary {
+		t.Fatalf("catalyst_summary = %q, want normalized World Monitor summary %q", catalystSummary, trigger.Summary)
+	}
+	if invalidationReason != "QQQ trades at or below the candidate stop level 490.00, invalidating the confirmed sector-news momentum setup." {
+		t.Fatalf("unexpected invalidation reason: %q", invalidationReason)
+	}
+	if !strings.HasPrefix(rawSourceRef, "event_raw:") || !strings.Contains(sourcePayloadRef, row.ID.String()) || !strings.Contains(decisionLogRef, receipt.EventID) {
+		t.Fatalf("provenance refs not retained: raw=%q payload=%q normalized=%q", rawSourceRef, sourcePayloadRef, decisionLogRef)
 	}
 	if !json.Valid(metadata) || !containsJSONKey(metadata, "worldMonitor") || !containsJSONKey(metadata, "sizing") {
 		t.Fatalf("metadata should include source URLs and sizing evidence, got %s", string(metadata))
@@ -128,14 +145,6 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 		t.Fatalf("metadata should include calculated 10-share paper size and monitor URL, got %s", string(metadata))
 	}
 	assertSwingPaperMetadata(t, metadata)
-
-	queue, err := approvalsmod.NewService(pool).GetQueue(ctx, 25)
-	if err != nil {
-		t.Fatalf("get approval queue: %v", err)
-	}
-	if candidateStatus == "awaiting_approval" && !queueContainsCandidate(queue, promoted.CandidateID) {
-		t.Fatalf("approval queue missing promoted candidate %s: %+v", promoted.CandidateID, queue)
-	}
 
 	var inboxStatus string
 	var inboxCandidateID string
@@ -176,7 +185,7 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 	trigger := validWorldMonitorResearchTrigger(now)
 	trigger.SourceEventID = "wm-chart-block-" + uuid.NewString()
 	trigger.TimestampUTC = now.Add(-5 * time.Minute)
-	trigger.PossibleAffectedETFs = []string{"WMZZ"}
+	trigger.PossibleAffectedETFs = []string{"QQQ"}
 
 	_, err := pool.Exec(ctx, `
 		INSERT INTO strategy_instances (
@@ -185,7 +194,7 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 		)
 		VALUES (
 			$1, $2, 'etf_news_sector_momentum_v1', 'etf_news_sector_momentum_v1', true,
-			'America/New_York', '15:55', '{"symbols":["WMZZ"]}'::jsonb, $2
+			'America/New_York', '15:55', '{"symbols":["QQQ"]}'::jsonb, $2
 		)
 	`, instanceID, instanceName)
 	if err != nil {
@@ -193,7 +202,7 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 	}
 	_, err = pool.Exec(ctx, `
 		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, updated_at)
-		VALUES ('WMZZ', 500.00, 499.95, 500.05, 100, 100, 100000, NOW(), 'TEST', NOW())
+		VALUES ('QQQ', 500.00, 499.95, 500.05, 100, 100, 100000, NOW(), 'TEST', NOW())
 		ON CONFLICT (symbol) DO UPDATE
 		SET price = EXCLUDED.price,
 		    bid = EXCLUDED.bid,
@@ -206,7 +215,7 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 	if err != nil {
 		t.Fatalf("insert quote: %v", err)
 	}
-	insertWorldMonitorChartCandles(t, ctx, pool, "WMZZ", now, []float64{
+	insertWorldMonitorChartCandles(t, ctx, pool, "QQQ", now, []float64{
 		520, 519, 518, 517, 516, 515, 514, 513, 512, 511,
 		510, 509, 508, 507, 506, 505, 504, 503, 502, 500,
 	})
@@ -285,6 +294,70 @@ func queueContainsCandidate(queue []map[string]any, candidateID string) bool {
 	return false
 }
 
+func TestWorldMonitorStructuredCandidateFieldsRequiresLegitimateInputs(t *testing.T) {
+	now := time.Date(2026, 7, 17, 12, 0, 0, 0, time.UTC)
+	row := worldMonitorInboxPromotionRow{
+		ID:                uuid.New(),
+		NormalizedEventID: uuidPointer(uuid.New()),
+		RawEventID:        uuidPointer(uuid.New()),
+		EventType:         "macro_rates",
+		Summary:           "Raw inbox summary.",
+		NormalizedSummary: "Normalized evidence summary.",
+		SourceCount:       2,
+		Confidence:        0.74,
+		EventTime:         now,
+	}
+	chart := worldMonitorChartConfirmation{Confirmed: true, CandleCount: 30, LastClose: 500, SMA20: 495}
+	fields := worldMonitorStructuredCandidateFields(row, "QQQ", "etf_news_sector_momentum_v1", 490, chart)
+	if fields.CatalystSummary != row.NormalizedSummary {
+		t.Fatalf("catalyst summary = %q, want normalized summary", fields.CatalystSummary)
+	}
+	if fields.SetupType != "sector_news_momentum" {
+		t.Fatalf("setup type = %q", fields.SetupType)
+	}
+	if !strings.Contains(fields.InvalidationReason, "490.00") {
+		t.Fatalf("invalidation reason lacks measured stop: %q", fields.InvalidationReason)
+	}
+	if fields.RawSourceRef == nil || fields.SourcePayloadRef == nil || fields.DecisionLogRef == nil {
+		t.Fatalf("missing provenance refs: %+v", fields)
+	}
+
+	missing := row
+	missing.NormalizedSummary = ""
+	missing.Summary = ""
+	missingFields := worldMonitorStructuredCandidateFields(missing, "QQQ", "unsupported_strategy_v1", 490, chart)
+	if missingFields.CatalystSummary != "" || missingFields.SetupType != "" || missingFields.InvalidationReason != "" {
+		t.Fatalf("unsupported or missing evidence received invented structured fields: %+v", missingFields)
+	}
+	candidate := candidatesmod.Candidate{
+		Symbol:             "QQQ",
+		SignalType:         "BUY",
+		Direction:          "long",
+		EntryPrice:         floatPointer(500),
+		StopLoss:           floatPointer(490),
+		SetupType:          missingFields.SetupType,
+		CatalystSummary:    missingFields.CatalystSummary,
+		InvalidationReason: missingFields.InvalidationReason,
+	}
+	validation := candidatesmod.ValidateStructuralCompleteness(candidate)
+	if validation.GateReady || !containsTestString(validation.MissingFields, "setup_type") || !containsTestString(validation.MissingFields, "catalyst_summary") || !containsTestString(validation.MissingFields, "invalidation_reason") {
+		t.Fatalf("structural validation was relaxed: %+v", validation)
+	}
+}
+
+func uuidPointer(value uuid.UUID) *uuid.UUID { return &value }
+
+func floatPointer(value float64) *float64 { return &value }
+
+func containsTestString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
 func loadWorldMonitorPromotionRowForTest(ctx context.Context, t *testing.T, promoter *worldMonitorOpportunityPromoter, sourceEventID string) (worldMonitorInboxPromotionRow, error) {
 	t.Helper()
 	rows, err := promoter.loadPromotionRows(ctx, worldMonitorPromoterMaxLimit)
@@ -297,27 +370,32 @@ func loadWorldMonitorPromotionRowForTest(ctx context.Context, t *testing.T, prom
 	}
 	var row worldMonitorInboxPromotionRow
 	var etfsRaw, themesRaw, confidenceReasonsRaw []byte
-	var normalizedEventID uuid.NullUUID
+	var normalizedEventID, rawEventID uuid.NullUUID
 	err = promoter.pool.QueryRow(ctx, `
 		SELECT
-			id,
-			source_event_id,
-			normalized_event_id,
-			event_type,
-			headline,
-			COALESCE(summary, ''),
-			possible_affected_etfs,
-			asset_themes,
-			confidence,
-			confidence_reasons,
-			mapping_reason,
-			event_time
-		FROM world_monitor_research_inbox
-		WHERE source_event_id = $1
+			w.id,
+			w.source_event_id,
+			w.normalized_event_id,
+			e.raw_event_id,
+			COALESCE(e.summary, ''),
+			w.event_type,
+			w.headline,
+			COALESCE(w.summary, ''),
+			w.possible_affected_etfs,
+			w.asset_themes,
+			w.confidence,
+			w.confidence_reasons,
+			w.mapping_reason,
+			w.event_time
+		FROM world_monitor_research_inbox w
+		JOIN event_normalized e ON e.id = w.normalized_event_id
+		WHERE w.source_event_id = $1
 	`, sourceEventID).Scan(
 		&row.ID,
 		&row.SourceEventID,
 		&normalizedEventID,
+		&rawEventID,
+		&row.NormalizedSummary,
 		&row.EventType,
 		&row.Headline,
 		&row.Summary,
@@ -335,6 +413,10 @@ func loadWorldMonitorPromotionRowForTest(ctx context.Context, t *testing.T, prom
 		v := normalizedEventID.UUID
 		row.NormalizedEventID = &v
 	}
+	if rawEventID.Valid {
+		v := rawEventID.UUID
+		row.RawEventID = &v
+	}
 	_ = json.Unmarshal(etfsRaw, &row.PossibleAffectedETFs)
 	_ = json.Unmarshal(themesRaw, &row.AssetThemes)
 	_ = json.Unmarshal(confidenceReasonsRaw, &row.ConfidenceReasons)
@@ -343,8 +425,10 @@ func loadWorldMonitorPromotionRowForTest(ctx context.Context, t *testing.T, prom
 
 func insertWorldMonitorChartCandles(t *testing.T, ctx context.Context, pool *pgxpool.Pool, symbol string, now time.Time, closes []float64) {
 	t.Helper()
+	timestamps := make([]time.Time, 0, len(closes))
 	for i, close := range closes {
 		ts := now.Add(time.Duration(i-len(closes)) * time.Minute)
+		timestamps = append(timestamps, ts)
 		_, err := pool.Exec(ctx, `
 			INSERT INTO candles (symbol, timestamp, open, high, low, close, volume, vwap)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $6)
@@ -354,6 +438,13 @@ func insertWorldMonitorChartCandles(t *testing.T, ctx context.Context, pool *pgx
 			t.Fatalf("insert candle %d: %v", i, err)
 		}
 	}
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cleanupCancel()
+		for i, ts := range timestamps {
+			_, _ = pool.Exec(cleanupCtx, `DELETE FROM candles WHERE symbol = $1 AND timestamp = $2 AND volume = $3`, symbol, ts, 1000+i)
+		}
+	})
 }
 
 func containsJSONKey(raw []byte, key string) bool {

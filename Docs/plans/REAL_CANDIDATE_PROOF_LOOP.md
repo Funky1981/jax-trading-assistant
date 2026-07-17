@@ -48,6 +48,14 @@ Success is a report with `status: candidate_produced`, one or more real World Mo
 
 Safety must show zero execution instructions, zero unsafe tickets, and zero leveraged candidates. Reports are written as timestamped Markdown and JSON under `Docs/runs/real-candidate-proof/`.
 
+For World Monitor candidates, the structured baseline fields are derived without relaxing validation:
+
+- `catalyst_summary`: the normalized event summary, falling back only to the accepted inbox summary when the normalized summary is empty; an absent legitimate summary remains missing.
+- `setup_type`: `sector_news_momentum` only when the compatible enabled strategy type is exactly `etf_news_sector_momentum_v1`; unsupported strategy types remain unmapped.
+- `invalidation_reason`: a candidate-specific breach of the stored stop level, and only when chart confirmation succeeded and the stop is positive.
+
+Candidate audit references retain the raw event, normalized event, inbox row, strategy instance, and strategy ID. These mappings establish structural completeness only; evidence scoring, trust gates, risk review, human approval, and paper-ticket boundaries remain independent.
+
 ## Expected failure output
 
 The script exits non-zero with `status: blocked` when Postgres is unreachable, migration version 46 is not clean, quotes/candles are empty, no inbox row is promotable, the API promotion fails, or a safety invariant fails. It exits non-zero with `status: no_candidate` when processing completes but nothing reviewable is produced. A promoted row can legitimately produce `candidate_status: blocked`; its reject reason explains missing chart confirmation or structural/gate readiness. `paper_ticket_status: not_created` is expected before human approval and must not be bypassed by this harness.
