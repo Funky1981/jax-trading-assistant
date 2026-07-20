@@ -14,11 +14,13 @@ import (
 
 	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
+	paperoutcomesmod "jax-trading-assistant/internal/modules/paperoutcomes"
 )
 
 // registerApprovalRoutes registers all human-approval-flow endpoints on mux.
 func registerApprovalRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool) {
 	svc := approvalsmod.NewService(pool)
+	outcomeTracker := paperoutcomesmod.New(pool)
 
 	// POST /api/v1/mobile/telegram/webhook
 	mux.HandleFunc("/api/v1/mobile/telegram/webhook", mobileTelegramWebhookHandler(svc))
@@ -31,7 +33,7 @@ func registerApprovalRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) h
 	// POST /api/v1/paper-tickets/{paperTicketId}/cancel
 	// POST /api/v1/paper-tickets/{paperTicketId}/notes
 	mux.HandleFunc("/api/v1/paper-tickets", protect(paperTicketQueueHandler(svc)))
-	mux.HandleFunc("/api/v1/paper-tickets/", protect(paperTicketReviewRouter(svc)))
+	mux.HandleFunc("/api/v1/paper-tickets/", protect(paperTicketReviewRouter(svc, outcomeTracker)))
 
 	// GET  /api/v1/approvals/{candidateId}
 	// POST /api/v1/approvals/{candidateId}/approve
@@ -191,7 +193,7 @@ func paperTicketQueueHandler(svc *approvalsmod.Service) http.HandlerFunc {
 	}
 }
 
-func paperTicketReviewRouter(svc *approvalsmod.Service) http.HandlerFunc {
+func paperTicketReviewRouter(svc *approvalsmod.Service, outcomeTracker *paperoutcomesmod.Tracker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tail := strings.TrimPrefix(r.URL.Path, "/api/v1/paper-tickets/")
 		parts := strings.SplitN(tail, "/", 2)
@@ -201,6 +203,31 @@ func paperTicketReviewRouter(svc *approvalsmod.Service) http.HandlerFunc {
 		}
 		paperTicketID := parts[0]
 		action := parts[1]
+		if action == "outcomes/track" {
+			if r.Method != http.MethodPost {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			result, err := outcomeTracker.Track(r.Context(), paperTicketID)
+			if errors.Is(err, paperoutcomesmod.ErrTicketNotFound) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			if errors.Is(err, paperoutcomesmod.ErrExecutionLinkedState) {
+				http.Error(w, err.Error(), http.StatusConflict)
+				return
+			}
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if result.ExecutionInstructions != 0 || result.OrderIntents != 0 || result.BrokerOrders != 0 || result.Trades != 0 {
+				http.Error(w, "paper outcome safety verification failed: execution-linked state exists", http.StatusConflict)
+				return
+			}
+			jsonOK(w, result)
+			return
+		}
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return

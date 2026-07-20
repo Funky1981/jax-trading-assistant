@@ -1,0 +1,45 @@
+CREATE TABLE IF NOT EXISTS paper_ticket_outcome_checkpoints (
+	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	paper_ticket_id TEXT NOT NULL REFERENCES candidate_paper_tickets(paper_ticket_id) ON DELETE CASCADE,
+	checkpoint_name TEXT NOT NULL,
+	tracking_started_at TIMESTAMPTZ NOT NULL,
+	tracking_start_source TEXT NOT NULL,
+	scheduled_at TIMESTAMPTZ NOT NULL,
+	observation_at TIMESTAMPTZ,
+	observation_delay_seconds BIGINT,
+	hypothetical_entry_price NUMERIC(18,6) NOT NULL,
+	checkpoint_price NUMERIC(18,6),
+	price_change NUMERIC(18,6),
+	percentage_return NUMERIC(18,6),
+	hypothetical_pnl NUMERIC(18,6),
+	highest_observed_price NUMERIC(18,6),
+	lowest_observed_price NUMERIC(18,6),
+	maximum_favourable_excursion NUMERIC(18,6),
+	maximum_adverse_excursion NUMERIC(18,6),
+	target_touched BOOLEAN NOT NULL DEFAULT FALSE,
+	stop_touched BOOLEAN NOT NULL DEFAULT FALSE,
+	first_target_touch_at TIMESTAMPTZ,
+	first_stop_touch_at TIMESTAMPTZ,
+	checkpoint_status TEXT NOT NULL,
+	data_quality_status TEXT NOT NULL,
+	market_data_source TEXT,
+	market_data_classification TEXT,
+	candle_interval TEXT,
+	observation_count INTEGER NOT NULL DEFAULT 0,
+	earliest_observation_at TIMESTAMPTZ,
+	latest_observation_at TIMESTAMPTZ,
+	calculation_inputs JSONB NOT NULL DEFAULT '{}'::jsonb,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	CONSTRAINT uq_paper_ticket_outcome_checkpoint UNIQUE (paper_ticket_id, checkpoint_name),
+	CONSTRAINT chk_paper_ticket_outcome_checkpoint_name CHECK (checkpoint_name IN ('1h', '1d', '1w')),
+	CONSTRAINT chk_paper_ticket_outcome_status CHECK (checkpoint_status IN (
+		'pending_not_due', 'pending_market_data', 'completed', 'stop_touched',
+		'target_touched', 'ambiguous_same_candle', 'insufficient_data',
+		'invalid_ticket', 'cancelled'
+	)),
+	CONSTRAINT chk_paper_ticket_outcome_hypothetical_entry CHECK (hypothetical_entry_price > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_paper_ticket_outcomes_due
+	ON paper_ticket_outcome_checkpoints(checkpoint_status, scheduled_at);
