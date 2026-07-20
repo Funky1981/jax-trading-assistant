@@ -51,6 +51,32 @@ func TestPaperTicketReviewQueueReturnsPersistedTicketsAndOmitsExecutionControlFi
 	}
 }
 
+func TestGetPaperTicketReviewByCandidateIDScansAuthoritativeShapeAndNullableNotes(t *testing.T) {
+	ctx := context.Background()
+	pool := testCandidatePaperTicketPool(t)
+	store := NewStore(pool)
+	ticket := createPersistedPaperTicketForReview(t, ctx, store)
+
+	review, err := store.GetPaperTicketReviewByCandidateID(ctx, ticket.CandidateID)
+	if err != nil {
+		t.Fatalf("get paper ticket review: %v", err)
+	}
+	if review.PaperTicketID != ticket.PaperTicketID || review.ReviewNotes != "" {
+		t.Fatalf("unexpected paper ticket review: %+v", review)
+	}
+
+	destinationCount := 0
+	if _, err := scanPaperTicketReview(func(dest ...any) error {
+		destinationCount = len(dest)
+		return nil
+	}); err != nil {
+		t.Fatalf("scan authoritative paper ticket shape: %v", err)
+	}
+	if destinationCount != 24 {
+		t.Fatalf("paper ticket scan destinations = %d, want 24", destinationCount)
+	}
+}
+
 func TestPaperTicketReviewActionsOnlyChangeReviewStatusAndNeverCreateExecution(t *testing.T) {
 	ctx := context.Background()
 	pool := testCandidatePaperTicketPool(t)
@@ -166,16 +192,25 @@ func createPersistedPaperTicketForReview(t *testing.T, ctx context.Context, stor
 	t.Cleanup(func() {
 		_, _ = store.pool.Exec(context.Background(), `DELETE FROM candidate_paper_tickets WHERE candidate_id = $1`, candidate.ID)
 		_, _ = store.pool.Exec(context.Background(), `DELETE FROM execution_instructions WHERE candidate_id = $1`, candidate.ID)
+		_, _ = store.pool.Exec(context.Background(), `DELETE FROM candidate_approvals WHERE candidate_id = $1`, candidate.ID)
 		_, _ = store.pool.Exec(context.Background(), `DELETE FROM candidate_trades WHERE id = $1`, candidate.ID)
 	})
+	approvalID := uuid.New()
+	if _, err := store.pool.Exec(ctx, `
+		INSERT INTO candidate_approvals
+			(id, candidate_id, decision, approved_by, notes, reanalysis_requested, decided_at, created_at)
+		VALUES ($1, $2, 'approved', 'paper-ticket-test', 'fixture approval', false, NOW(), NOW())
+	`, approvalID, candidate.ID); err != nil {
+		t.Fatalf("create fixture approval: %v", err)
+	}
 
 	eligibility := EvaluateApprovalEligibility(candidate, sufficientEvidenceScore(candidate.ID), readyRiskGate(candidate.ID), readyRiskReview(candidate), fixedApprovalReviewTime())
 	result := CreatePaperTicket(PaperTicketRequest{
 		Candidate:            candidate,
 		Eligibility:          eligibility,
 		HumanApprovalGranted: true,
-		ApprovalDecisionRef:  uuid.NewString(),
-		SourceApprovalID:     uuid.New(),
+		ApprovalDecisionRef:  approvalID.String(),
+		SourceApprovalID:     approvalID,
 		CreatedAt:            fixedApprovalReviewTime(),
 	})
 	ticket, err := NewPersistedPaperTicket(candidate, sufficientEvidenceScore(candidate.ID), eligibility, result)

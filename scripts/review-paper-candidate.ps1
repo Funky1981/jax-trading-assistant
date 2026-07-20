@@ -214,6 +214,25 @@ function Assert-NoExecution([object]$Candidate, [object]$Detail) {
     }
 }
 
+function Write-PersistedResult([object]$Detail) {
+    Write-Host ""
+    Write-Host "Persisted decision" -ForegroundColor Green
+    Write-Host "  Verification state: $($Detail.state)"
+    Write-Host "  Decision: $($Detail.latestApproval.decision)"
+    Write-Host "  Operator: $($Detail.latestApproval.approvedBy)"
+    Write-Host "  Reason: $($Detail.latestApproval.notes)"
+    Write-Host "  Decided at: $($Detail.latestApproval.decidedAt)"
+    if ($null -ne $Detail.paperTicket) {
+        Write-Host "  Paper ticket: $($Detail.paperTicket.paperTicketId)"
+        Write-Host "  Paper-ticket state: $($Detail.paperTicket.status)"
+        Write-Host "  Paper only: $($Detail.paperTicket.paperOnly)"
+    } else {
+        Write-Host "  Paper ticket: not created"
+    }
+    Write-Host "  Execution instruction: not created" -ForegroundColor Green
+    Write-Host "  Broker order: not created" -ForegroundColor Green
+}
+
 Initialize-ApiAuth
 $candidate = Get-Candidate
 if ([string]$candidate.id -ne $CandidateId) {
@@ -226,6 +245,12 @@ Write-Review $candidate $facts
 $existingDetail = Get-ApprovalDetail
 Assert-NoExecution $candidate $existingDetail
 Write-Host "Initial safety check: no execution instruction or broker order is associated with this candidate." -ForegroundColor Green
+
+if ($null -ne $existingDetail -and $null -ne $existingDetail.latestApproval) {
+    Write-PersistedResult $existingDetail
+    Write-Host "An existing decision is already persisted. No new decision will be requested or submitted." -ForegroundColor Cyan
+    return
+}
 
 if ($ReviewOnly) {
     Write-Host "Review-only mode: no decision was submitted." -ForegroundColor Cyan
@@ -250,24 +275,21 @@ if ($confirmation -cne "$decision $CandidateId") {
     throw "Confirmation did not match. No decision was submitted."
 }
 
-$null = Submit-Decision $decision $notes
-$persistedCandidate = Get-Candidate
-$persistedDetail = Get-ApprovalDetail
+$immediateResponse = Submit-Decision $decision $notes
+Write-Host "Immediate decision API response" -ForegroundColor Cyan
+$immediateResponse | ConvertTo-Json -Depth 30 | Write-Host
 $expectedDecision = if ($decision -eq "APPROVE") { "approved" } else { "rejected" }
-Assert-PersistedDecision $expectedDecision $persistedCandidate $persistedDetail
-Assert-NoExecution $persistedCandidate $persistedDetail
-
-Write-Host ""
-Write-Host "Decision persisted and verified" -ForegroundColor Green
-Write-Host "  Decision: $($persistedDetail.latestApproval.decision)"
-Write-Host "  Operator: $($persistedDetail.latestApproval.approvedBy)"
-Write-Host "  Decided at: $($persistedDetail.latestApproval.decidedAt)"
-if ($null -ne $persistedDetail.paperTicket) {
-    Write-Host "  Paper ticket: $($persistedDetail.paperTicket.paperTicketId)"
-    Write-Host "  Paper-ticket state: $($persistedDetail.paperTicket.status)"
-    Write-Host "  Paper only: $($persistedDetail.paperTicket.paperOnly)"
-} else {
-    Write-Host "  Paper ticket: not created (expected for rejection)"
+try {
+    $persistedCandidate = Get-Candidate
+    $persistedDetail = Get-ApprovalDetail
+    Assert-PersistedDecision $expectedDecision $persistedCandidate $persistedDetail
+    Assert-NoExecution $persistedCandidate $persistedDetail
+} catch {
+    Write-Host "The decision request may already have succeeded. Do not submit it again." -ForegroundColor Red
+    Write-Host "Candidate diagnostic identifier: $CandidateId" -ForegroundColor Yellow
+    Write-Host "Read-only diagnostic command: .\scripts\review-paper-candidate.ps1 -CandidateId `"$CandidateId`" -ReviewOnly" -ForegroundColor Yellow
+    throw "Post-decision verification failed after the API accepted the request: $($_.Exception.Message)"
 }
-Write-Host "  Execution instruction: not created" -ForegroundColor Green
-Write-Host "  Broker order: not created" -ForegroundColor Green
+
+Write-Host "Decision persisted and verified" -ForegroundColor Green
+Write-PersistedResult $persistedDetail

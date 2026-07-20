@@ -71,6 +71,15 @@ type PaperTicketReview struct {
 	ReviewNotes             string    `json:"reviewNotes,omitempty"`
 }
 
+// paperTicketReviewColumns is the authoritative field order for every query
+// scanned into PaperTicketReview. Keep it aligned with scanPaperTicketReview.
+const paperTicketReviewColumns = `paper_ticket_id, candidate_id, created_at, updated_at, status,
+	symbol, direction, setup_type, catalyst_summary, entry_price::float8,
+	stop_loss_price::float8, target_price::float8, position_size::float8,
+	max_normal_loss::float8, max_slippage_adjusted_loss::float8,
+	reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
+	approval_status, paper_only, reject_reasons, warning_reasons, COALESCE(review_notes, '')`
+
 func NewPersistedPaperTicket(candidate Candidate, evidence EvidenceScoreSummary, eligibility ApprovalEligibilityResult, result PaperTicketResult) (PaperTicket, error) {
 	if !result.CanCreateTicket {
 		return PaperTicket{}, fmt.Errorf("%w: status=%s reject_reasons=%v", ErrPaperTicketNotPersistable, result.Status, result.RejectReasons)
@@ -201,45 +210,14 @@ func (s *Store) CreatePaperTicket(ctx context.Context, ticket PaperTicket) (*Pap
 }
 
 func (s *Store) GetPaperTicketReviewByCandidateID(ctx context.Context, candidateID uuid.UUID) (*PaperTicketReview, error) {
-	row := s.pool.QueryRow(ctx, `
-		SELECT paper_ticket_id, candidate_id, created_at, updated_at, status,
-		       symbol, direction, setup_type, catalyst_summary, entry_price::float8,
-		       stop_loss_price::float8, target_price::float8, position_size::float8,
-		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
-		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
-		       approval_status, paper_only, reject_reasons, warning_reasons, COALESCE(review_notes, '')
+	row := s.pool.QueryRow(ctx, `SELECT `+paperTicketReviewColumns+`
 		FROM candidate_paper_tickets
 		WHERE candidate_id = $1
 		ORDER BY created_at DESC
 		LIMIT 1
 	`, candidateID)
 
-	var review PaperTicketReview
-	err := row.Scan(
-		&review.PaperTicketID,
-		&review.CandidateID,
-		&review.CreatedAt,
-		&review.UpdatedAt,
-		&review.Status,
-		&review.Symbol,
-		&review.Direction,
-		&review.SetupType,
-		&review.CatalystSummary,
-		&review.EntryPrice,
-		&review.StopLossPrice,
-		&review.TargetPrice,
-		&review.PositionSize,
-		&review.MaxNormalLoss,
-		&review.MaxSlippageAdjustedLoss,
-		&review.RewardRiskRatio,
-		&review.EvidenceStatus,
-		&review.GateStatus,
-		&review.RiskStatus,
-		&review.ApprovalStatus,
-		&review.PaperOnly,
-		&review.RejectReasons,
-		&review.WarningReasons,
-	)
+	review, err := scanPaperTicketReview(row.Scan)
 	if err != nil {
 		return nil, fmt.Errorf("candidates.Store.GetPaperTicketReviewByCandidateID: %w", err)
 	}
@@ -250,13 +228,7 @@ func (s *Store) ListPaperTicketReviews(ctx context.Context, limit int) ([]PaperT
 	if limit <= 0 {
 		limit = 50
 	}
-	rows, err := s.pool.Query(ctx, `
-		SELECT paper_ticket_id, candidate_id, created_at, updated_at, status,
-		       symbol, direction, setup_type, catalyst_summary, entry_price::float8,
-		       stop_loss_price::float8, target_price::float8, position_size::float8,
-		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
-		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
-		       approval_status, paper_only, reject_reasons, warning_reasons, COALESCE(review_notes, '')
+	rows, err := s.pool.Query(ctx, `SELECT `+paperTicketReviewColumns+`
 		FROM candidate_paper_tickets
 		ORDER BY created_at DESC
 		LIMIT $1
@@ -298,12 +270,7 @@ func (s *Store) AddPaperTicketReviewNote(ctx context.Context, paperTicketID, not
 		    review_notes = append_review_note(review_notes, $2)
 		WHERE paper_ticket_id = $1
 		  AND status <> 'paper_ticket_cancelled'
-		RETURNING paper_ticket_id, candidate_id, created_at, updated_at, status,
-		       symbol, direction, setup_type, catalyst_summary, entry_price::float8,
-		       stop_loss_price::float8, target_price::float8, position_size::float8,
-		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
-		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
-		       approval_status, paper_only, reject_reasons, warning_reasons, COALESCE(review_notes, '')
+		RETURNING `+paperTicketReviewColumns+`
 	`, paperTicketID, note)
 	review, err := scanPaperTicketReview(row.Scan)
 	if err != nil {
@@ -323,12 +290,7 @@ func (s *Store) updatePaperTicketReview(ctx context.Context, paperTicketID, note
 		    review_notes = append_review_note(review_notes, $5)
 		WHERE paper_ticket_id = $1
 		  AND status IN ($3, $4)
-		RETURNING paper_ticket_id, candidate_id, created_at, updated_at, status,
-		       symbol, direction, setup_type, catalyst_summary, entry_price::float8,
-		       stop_loss_price::float8, target_price::float8, position_size::float8,
-		       max_normal_loss::float8, max_slippage_adjusted_loss::float8,
-		       reward_risk_ratio::float8, evidence_status, gate_status, risk_status,
-		       approval_status, paper_only, reject_reasons, warning_reasons, COALESCE(review_notes, '')
+		RETURNING `+paperTicketReviewColumns+`
 	`, paperTicketID, nextStatus, allowedStatuses[0], allowedStatuses[1], note)
 	review, err := scanPaperTicketReview(row.Scan)
 	if err != nil {

@@ -60,6 +60,7 @@ type ExecutionInstruction struct {
 
 type ApprovalDetail struct {
 	CandidateID    uuid.UUID                        `json:"candidateId"`
+	State          string                           `json:"state"`
 	LatestApproval *Approval                        `json:"latestApproval,omitempty"`
 	PaperTicket    *candidatesmod.PaperTicketReview `json:"paperTicket,omitempty"`
 	Execution      *ExecutionInstruction            `json:"execution,omitempty"`
@@ -227,6 +228,13 @@ func (s *Store) GetLatestExecutionByCandidateID(ctx context.Context, candidateID
 
 func (s *Store) GetDetailByCandidateID(ctx context.Context, candidateID uuid.UUID) (*ApprovalDetail, error) {
 	detail := &ApprovalDetail{CandidateID: candidateID}
+	var candidateExists bool
+	if err := s.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM candidate_trades WHERE id = $1)`, candidateID).Scan(&candidateExists); err != nil {
+		return nil, fmt.Errorf("approvals.Store.GetDetailByCandidateID: candidate lookup: %w", err)
+	}
+	if !candidateExists {
+		return nil, fmt.Errorf("approval detail not found")
+	}
 	approval, err := s.GetByCandidateID(ctx, candidateID)
 	if err == nil {
 		detail.LatestApproval = approval
@@ -245,8 +253,17 @@ func (s *Store) GetDetailByCandidateID(ctx context.Context, candidateID uuid.UUI
 	} else if !isNoRows(err) {
 		return nil, err
 	}
-	if detail.LatestApproval == nil && detail.PaperTicket == nil && detail.Execution == nil {
-		return nil, fmt.Errorf("approval detail not found")
+	switch {
+	case detail.LatestApproval == nil && detail.PaperTicket == nil && detail.Execution == nil:
+		detail.State = "no_decision"
+	case detail.LatestApproval != nil && detail.LatestApproval.Decision == DecisionRejected && detail.PaperTicket == nil && detail.Execution == nil:
+		detail.State = "rejected"
+	case detail.LatestApproval != nil && detail.LatestApproval.Decision == DecisionApproved && detail.PaperTicket == nil && detail.Execution == nil:
+		detail.State = "approval_persisted_ticket_missing"
+	case detail.LatestApproval != nil && detail.LatestApproval.Decision == DecisionApproved && detail.PaperTicket != nil && detail.Execution == nil:
+		detail.State = "approval_and_ticket_persisted"
+	default:
+		detail.State = "partial_or_inconsistent_state"
 	}
 	return detail, nil
 }
