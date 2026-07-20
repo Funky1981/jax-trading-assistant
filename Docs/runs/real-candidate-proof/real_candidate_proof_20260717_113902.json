@@ -1,0 +1,106 @@
+{
+    "status":  "no_candidate",
+    "generatedAt":  "2026-07-17T10:39:02.4476230Z",
+    "startedAt":  "2026-07-17T10:39:01.6740208Z",
+    "inputs":  {
+                   "quotes":  13,
+                   "candles":  8260,
+                   "promotableInboxRows":  1,
+                   "promotableSymbols":  [
+                                             "GLD",
+                                             "SPY",
+                                             "XLE"
+                                         ]
+               },
+    "promotion":  {
+                      "promoted":  [
+
+                                   ],
+                      "promotedCount":  0,
+                      "blockedSkippedCount":  3,
+                      "skipped":  3,
+                      "outcomes":  [
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "XLE",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for XLE."
+                                       },
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "SPY",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for SPY."
+                                       },
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "GLD",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for GLD."
+                                       }
+                                   ]
+                  },
+    "summary":  {
+                    "candidatesCreated":  0,
+                    "reviewableCandidates":  0,
+                    "blockedCandidates":  0,
+                    "skippedCandidates":  3,
+                    "paperTicketsCreated":  0
+                },
+    "candidates":  [
+
+                   ],
+    "safety":  {
+                   "executionInstructions":  0,
+                   "unsafeTickets":  0,
+                   "leveragedCandidates":  0
+               },
+    "checks":  [
+                   {
+                       "name":  "postgres",
+                       "status":  "PASS",
+                       "detail":  "reachable"
+                   },
+                   {
+                       "name":  "migrations",
+                       "status":  "PASS",
+                       "detail":  "schema version 46 is clean"
+                   },
+                   {
+                       "name":  "quotes",
+                       "status":  "PASS",
+                       "detail":  "13 usable rows"
+                   },
+                   {
+                       "name":  "candles",
+                       "status":  "PASS",
+                       "detail":  "8260 rows"
+                   },
+                   {
+                       "name":  "world-monitor-inbox",
+                       "status":  "PASS",
+                       "detail":  "1 promotable rows"
+                   },
+                   {
+                       "name":  "api-auth",
+                       "status":  "PASS",
+                       "detail":  "bootstrap login succeeded"
+                   },
+                   {
+                       "name":  "promotion",
+                       "status":  "PASS",
+                       "detail":  "0 candidates created; 3 blocked/skipped; XLE:no_enabled_strategy_instance; SPY:no_enabled_strategy_instance; GLD:no_enabled_strategy_instance"
+                   },
+                   {
+                       "name":  "safety-paper-only",
+                       "status":  "PASS",
+                       "detail":  "execution instructions=0, unsafe tickets=0, leveraged candidates=0"
+                   }
+               ]
+}

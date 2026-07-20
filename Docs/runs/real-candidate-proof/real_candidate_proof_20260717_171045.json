@@ -1,0 +1,251 @@
+{
+    "status":  "candidate_produced",
+    "generatedAt":  "2026-07-17T16:10:45.1757538Z",
+    "startedAt":  "2026-07-17T16:10:44.6717678Z",
+    "inputs":  {
+                   "quotes":  13,
+                   "candles":  8270,
+                   "promotableInboxRows":  2,
+                   "promotableSymbols":  [
+                                             "GLD",
+                                             "QQQ",
+                                             "SPY",
+                                             "XLE"
+                                         ]
+               },
+    "promotion":  {
+                      "promoted":  [
+                                       {
+                                           "inboxId":  "f66beaca-9c21-49ad-a4dc-a06d02252cef",
+                                           "eventId":  "f377ddae-de8b-495b-9be2-bfd77e3d0c1b",
+                                           "signalId":  "91f31797-c9e3-4ba4-96f6-aeb584e2da64",
+                                           "candidateId":  "39cb350a-d796-4f7e-8c05-d746acb6b1d6",
+                                           "symbol":  "QQQ",
+                                           "route":  "approval_review"
+                                       }
+                                   ],
+                      "promotedCount":  1,
+                      "blockedSkippedCount":  3,
+                      "skipped":  3,
+                      "outcomes":  [
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "XLE",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for XLE."
+                                       },
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "SPY",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for SPY."
+                                       },
+                                       {
+                                           "inboxId":  "6e127745-c39c-4713-abdc-c2c397f35260",
+                                           "eventId":  "c63ee2d1-c0d3-4e89-bf52-2c03200f478d",
+                                           "symbol":  "GLD",
+                                           "status":  "skipped",
+                                           "reasonCode":  "no_enabled_strategy_instance",
+                                           "reason":  "No compatible enabled ETF strategy instance is configured for GLD."
+                                       },
+                                       {
+                                           "inboxId":  "f66beaca-9c21-49ad-a4dc-a06d02252cef",
+                                           "eventId":  "f377ddae-de8b-495b-9be2-bfd77e3d0c1b",
+                                           "symbol":  "QQQ",
+                                           "status":  "promoted",
+                                           "reasonCode":  "ready_for_approval_review",
+                                           "reason":  "Risk review returned ready_for_approval_review; next phase is approval_review.",
+                                           "candidateId":  "39cb350a-d796-4f7e-8c05-d746acb6b1d6",
+                                           "riskReview":  {
+                                                              "result":  {
+                                                                             "candidateId":  "39cb350a-d796-4f7e-8c05-d746acb6b1d6",
+                                                                             "evaluatedAt":  "2026-07-17T16:10:44.986871766Z",
+                                                                             "riskStatus":  "ready_for_approval_review",
+                                                                             "riskReady":  true,
+                                                                             "positionSize":  10,
+                                                                             "entryPrice":  500,
+                                                                             "stopLossPrice":  490,
+                                                                             "targetPrice":  520,
+                                                                             "stopDistance":  10,
+                                                                             "slippageAllowance":  0,
+                                                                             "slippageAdjustedStopDistance":  10,
+                                                                             "maxNormalLoss":  100,
+                                                                             "maxSlippageAdjustedLoss":  100,
+                                                                             "rewardAmount":  200,
+                                                                             "rewardRiskRatio":  2,
+                                                                             "accountEquity":  10000,
+                                                                             "maxRiskPercent":  0.01,
+                                                                             "maxAllowedLoss":  100,
+                                                                             "minRewardRiskRatio":  2,
+                                                                             "maxLeverage":  1,
+                                                                             "requestedLeverage":  1,
+                                                                             "rejectReasons":  null,
+                                                                             "warningReasons":  null,
+                                                                             "nextRequiredPhase":  "approval_review",
+                                                                             "brokerExecutionAllowed":  false,
+                                                                             "executionInstructionCreated":  false,
+                                                                             "approvalGranted":  false
+                                                                         },
+                                                              "approvalEligibility":  {
+                                                                                          "candidateId":  "39cb350a-d796-4f7e-8c05-d746acb6b1d6",
+                                                                                          "evaluatedAt":  "2026-07-17T16:10:44.986935768Z",
+                                                                                          "approvalEligible":  true,
+                                                                                          "approvalStatus":  "approval_review_ready",
+                                                                                          "nextRequiredPhase":  "approval_review",
+                                                                                          "brokerExecutionAllowed":  false,
+                                                                                          "executionInstructionCreated":  false,
+                                                                                          "liveTradingAllowed":  false
+                                                                                      },
+                                                              "accountEquitySource":  "proof risk-model assumption",
+                                                              "slippageSource":  "absent_interpreted_as_zero_by_existing_risk_engine",
+                                                              "riskPolicySource":  "existing RiskReviewConfig defaults",
+                                                              "positionNotional":  5000
+                                                          }
+                                       }
+                                   ]
+                  },
+    "summary":  {
+                    "candidatesCreated":  1,
+                    "reviewableCandidates":  1,
+                    "blockedCandidates":  0,
+                    "skippedCandidates":  3,
+                    "paperTicketsCreated":  0
+                },
+    "candidates":  [
+                       {
+                           "created_at":  "2026-07-17T16:10:44.964328+00:00",
+                           "candidate_id":  "39cb350a-d796-4f7e-8c05-d746acb6b1d6",
+                           "inbox_row_id":  "f66beaca-9c21-49ad-a4dc-a06d02252cef",
+                           "normalized_event_id":  "f377ddae-de8b-495b-9be2-bfd77e3d0c1b",
+                           "input_source":  "world-monitor",
+                           "symbol":  "QQQ",
+                           "catalyst_summary":  "Operator-generated local proof input for the real World Monitor normalization and paper-candidate pipeline.",
+                           "setup_type":  "sector_news_momentum",
+                           "invalidation_reason":  "QQQ trades at or below the candidate stop level 490.00, invalidating the confirmed sector-news momentum setup.",
+                           "strategy_instance_id":  "91f58544-82bc-430d-87f6-4248b8ecefa8",
+                           "strategy_id":  "etf_news_sector_momentum_v1",
+                           "raw_source_ref":  "event_raw:31144065-6a97-4867-ac76-72eda5ea3f34",
+                           "source_payload_ref":  "world_monitor_research_inbox:f66beaca-9c21-49ad-a4dc-a06d02252cef",
+                           "decision_log_ref":  "event_normalized:f377ddae-de8b-495b-9be2-bfd77e3d0c1b",
+                           "entry":  500,
+                           "stop":  490,
+                           "target":  520,
+                           "direction":  "long",
+                           "evidence_status":  "sufficient",
+                           "overall_evidence_score":  0.85,
+                           "trust_gate_ready":  true,
+                           "gate_status":  "ready_for_risk_review",
+                           "trust_gate_next_phase":  "risk_review",
+                           "risk_status":  "ready_for_approval_review",
+                           "risk_review_attempted":  true,
+                           "risk_evaluated_at":  "2026-07-17T16:10:44.986871766Z",
+                           "risk_ready":  true,
+                           "risk_entry_price":  500,
+                           "risk_stop_loss_price":  490,
+                           "risk_target_price":  520,
+                           "stop_distance":  10,
+                           "slippage_allowance":  0,
+                           "slippage_source":  "absent_interpreted_as_zero_by_existing_risk_engine",
+                           "slippage_adjusted_stop_distance":  10,
+                           "account_equity":  10000,
+                           "account_equity_source":  "proof risk-model assumption",
+                           "maximum_risk_percentage":  0.01,
+                           "maximum_allowed_loss":  100,
+                           "position_size":  10,
+                           "position_notional":  5000,
+                           "maximum_normal_loss":  100,
+                           "maximum_slippage_adjusted_loss":  100,
+                           "reward_amount":  200,
+                           "reward_risk_ratio":  2,
+                           "minimum_required_reward_risk":  2,
+                           "requested_leverage":  1,
+                           "maximum_leverage":  1,
+                           "risk_reject_reasons":  null,
+                           "risk_warning_reasons":  null,
+                           "risk_next_required_phase":  "approval_review",
+                           "approval_eligibility":  true,
+                           "approval_status":  "approval_review_ready",
+                           "human_approval_decision_count":  0,
+                           "paper_ticket_status":  "not_created",
+                           "candidate_status":  "awaiting_approval",
+                           "missing_fields":  [
+
+                                              ],
+                           "validation_reject_reasons":  [
+
+                                                         ],
+                           "reject_reasons":  [
+
+                                              ],
+                           "warning_reasons":  [
+
+                                               ],
+                           "paper_only":  true,
+                           "broker_execution_allowed":  false,
+                           "execution_instruction_created":  false,
+                           "live_trading_allowed":  false,
+                           "leverage_allowed":  false
+                       }
+                   ],
+    "safety":  {
+                   "executionInstructions":  0,
+                   "unsafeTickets":  0,
+                   "leveragedCandidates":  0
+               },
+    "runtime":  {
+                    "mode":  "paper",
+                    "allowLiveTrading":  false,
+                    "executionWorkerEnabled":  false
+                },
+    "checks":  [
+                   {
+                       "name":  "postgres",
+                       "status":  "PASS",
+                       "detail":  "reachable"
+                   },
+                   {
+                       "name":  "migrations",
+                       "status":  "PASS",
+                       "detail":  "schema version 46 is clean"
+                   },
+                   {
+                       "name":  "quotes",
+                       "status":  "PASS",
+                       "detail":  "13 usable rows"
+                   },
+                   {
+                       "name":  "candles",
+                       "status":  "PASS",
+                       "detail":  "8270 rows"
+                   },
+                   {
+                       "name":  "world-monitor-inbox",
+                       "status":  "PASS",
+                       "detail":  "2 promotable rows"
+                   },
+                   {
+                       "name":  "api-auth",
+                       "status":  "PASS",
+                       "detail":  "bootstrap login succeeded"
+                   },
+                   {
+                       "name":  "promotion",
+                       "status":  "PASS",
+                       "detail":  "1 candidates created; 3 blocked/skipped; XLE:no_enabled_strategy_instance; SPY:no_enabled_strategy_instance; GLD:no_enabled_strategy_instance"
+                   },
+                   {
+                       "name":  "safety-paper-only",
+                       "status":  "PASS",
+                       "detail":  "execution instructions=0, unsafe tickets=0, leveraged candidates=0"
+                   },
+                   {
+                       "name":  "runtime-paper-only",
+                       "status":  "PASS",
+                       "detail":  "mode=paper, allow live trading=False, execution worker enabled=False"
+                   }
+               ]
+}

@@ -1,0 +1,80 @@
+{
+    "status":  "blocked",
+    "generatedAt":  "2026-07-15T14:40:18.7872140Z",
+    "startedAt":  "2026-07-15T14:40:17.9499802Z",
+    "inputs":  {
+                   "quotes":  13,
+                   "candles":  7736,
+                   "promotableInboxRows":  6,
+                   "promotableSymbols":  [
+                                             "GLD",
+                                             "QQQ",
+                                             "SPY",
+                                             "XLE"
+                                         ]
+               },
+    "promotion":  {
+                      "promoted":  [
+
+                                   ],
+                      "skipped":  0,
+                      "error":  "The remote server returned an error: (500) Internal Server Error."
+                  },
+    "summary":  {
+                    "candidatesCreated":  0,
+                    "reviewableCandidates":  0,
+                    "blockedCandidates":  0,
+                    "skippedCandidates":  0,
+                    "paperTicketsCreated":  0
+                },
+    "candidates":  [
+
+                   ],
+    "safety":  {
+                   "executionInstructions":  0,
+                   "unsafeTickets":  0,
+                   "leveragedCandidates":  0
+               },
+    "checks":  [
+                   {
+                       "name":  "postgres",
+                       "status":  "PASS",
+                       "detail":  "reachable"
+                   },
+                   {
+                       "name":  "migrations",
+                       "status":  "PASS",
+                       "detail":  "schema version 46 is clean"
+                   },
+                   {
+                       "name":  "quotes",
+                       "status":  "PASS",
+                       "detail":  "13 usable rows"
+                   },
+                   {
+                       "name":  "candles",
+                       "status":  "PASS",
+                       "detail":  "7736 rows"
+                   },
+                   {
+                       "name":  "world-monitor-inbox",
+                       "status":  "PASS",
+                       "detail":  "6 promotable rows"
+                   },
+                   {
+                       "name":  "api-auth",
+                       "status":  "PASS",
+                       "detail":  "bootstrap login succeeded"
+                   },
+                   {
+                       "name":  "promotion",
+                       "status":  "FAIL",
+                       "detail":  "The remote server returned an error: (500) Internal Server Error."
+                   },
+                   {
+                       "name":  "safety-paper-only",
+                       "status":  "PASS",
+                       "detail":  "execution instructions=0, unsafe tickets=0, leveraged candidates=0"
+                   }
+               ]
+}
