@@ -157,6 +157,26 @@ func (c *Client) GetCandles(ctx context.Context, symbol string, timeframe Timefr
 	return nil, ErrNoProviderAvailable
 }
 
+// GetCandlesWithSource fetches directly from configured providers and returns
+// the provider that supplied the observations. It deliberately bypasses the
+// cache because cached candles do not retain provider provenance.
+func (c *Client) GetCandlesWithSource(ctx context.Context, symbol string, timeframe Timeframe, limit int) ([]Candle, string, error) {
+	var lastErr error
+	for _, provider := range c.providers {
+		candles, err := provider.GetCandles(ctx, symbol, timeframe, limit)
+		if err == nil && len(candles) > 0 {
+			return candles, provider.Name(), nil
+		}
+		lastErr = err
+		log.Printf("%s provider failed for %s candles: %v", provider.Name(), symbol, err)
+		logProviderFailure(ctx, provider.Name(), "candles", symbol, string(timeframe), err)
+	}
+	if lastErr != nil {
+		return nil, "", fmt.Errorf("%w: %v", ErrNoProviderAvailable, lastErr)
+	}
+	return nil, "", ErrNoProviderAvailable
+}
+
 // GetEarnings fetches earnings data with provider fallback
 func (c *Client) GetEarnings(ctx context.Context, symbol string, limit int) ([]Earnings, error) {
 	var lastErr error

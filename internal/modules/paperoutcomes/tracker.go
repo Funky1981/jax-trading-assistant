@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -101,11 +100,10 @@ func (t *Tracker) Track(ctx context.Context, paperTicketID string) (Result, erro
 	}
 	start, source := trackingStart(ticket)
 	now := t.now()
-	observations, interval, err := t.loadCandles(ctx, ticket.Symbol, start, now)
+	observations, dataSource, classification, interval, err := t.loadCandles(ctx, ticket.Symbol, start, now)
 	if err != nil {
 		return Result{}, err
 	}
-	dataSource, classification := "persisted_candles", "unknown"
 	if len(observations) == 0 {
 		if quote, quoteErr := t.loadQuote(ctx, ticket.Symbol, start, now); quoteErr != nil {
 			return Result{}, quoteErr
@@ -279,33 +277,35 @@ func (t *Tracker) loadTicket(ctx context.Context, id string) (ticket, error) {
 	return v, nil
 }
 
-func (t *Tracker) loadCandles(ctx context.Context, symbol string, start, end time.Time) ([]observation, string, error) {
-	rows, err := t.pool.Query(ctx, `SELECT timestamp,high,low,close FROM candles WHERE symbol=$1 AND timestamp >= $2 AND timestamp <= $3 ORDER BY timestamp`, symbol, start, end)
+func (t *Tracker) loadCandles(ctx context.Context, symbol string, start, end time.Time) ([]observation, string, string, string, error) {
+	rows, err := t.pool.Query(ctx, `WITH selected AS (
+		SELECT source,timeframe FROM candles
+		WHERE symbol=$1 AND timestamp >= $2 AND timestamp <= $3
+		  AND source <> 'unknown' AND UPPER(source) NOT IN ('TEST','SYNTHETIC','FIXTURE')
+		ORDER BY timestamp DESC LIMIT 1
+	) SELECT c.timestamp,c.high::float8,c.low::float8,c.close::float8,c.source,c.timeframe,c.market_data_classification
+		FROM candles c JOIN selected s ON s.source=c.source AND s.timeframe=c.timeframe
+		WHERE c.symbol=$1 AND c.timestamp >= $2 AND c.timestamp <= $3 ORDER BY c.timestamp`, symbol, start, end)
 	if err != nil {
-		return nil, "", fmt.Errorf("load persisted candles: %w", err)
+		return nil, "", "", "", fmt.Errorf("load persisted candles: %w", err)
 	}
 	defer rows.Close()
 	var out []observation
+	var source, timeframe, classification string
 	for rows.Next() {
 		var o observation
-		if err := rows.Scan(&o.At, &o.High, &o.Low, &o.Close); err != nil {
-			return nil, "", err
+		if err := rows.Scan(&o.At, &o.High, &o.Low, &o.Close, &source, &timeframe, &classification); err != nil {
+			return nil, "", "", "", err
 		}
 		out = append(out, o)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, "", err
+		return nil, "", "", "", err
 	}
-	interval := "unknown"
-	if len(out) > 1 {
-		deltas := make([]time.Duration, 0, len(out)-1)
-		for i := 1; i < len(out); i++ {
-			deltas = append(deltas, out[i].At.Sub(out[i-1].At))
-		}
-		sort.Slice(deltas, func(i, j int) bool { return deltas[i] < deltas[j] })
-		interval = deltas[len(deltas)/2].String() + " (inferred)"
+	if len(out) == 0 {
+		return out, "persisted_candles_and_quotes_checked", "unknown", "unavailable", nil
 	}
-	return out, interval, nil
+	return out, "persisted_candles:" + source, classification, timeframe, nil
 }
 func (t *Tracker) loadQuote(ctx context.Context, symbol string, start, end time.Time) (*observation, error) {
 	var o observation

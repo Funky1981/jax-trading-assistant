@@ -32,7 +32,7 @@ type ingesterConfig struct {
 }
 
 func loadIngesterConfig() ingesterConfig {
-	symbols := []string{"AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "AMD", "NFLX", "SPY"}
+	symbols := []string{"AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "AMD", "NFLX", "SPY", "QQQ"}
 	if raw := os.Getenv("MARKET_SYMBOLS"); raw != "" {
 		parts := strings.Split(raw, ",")
 		symbols = symbols[:0]
@@ -178,34 +178,51 @@ func ingestCandles(ctx context.Context, pool *pgxpool.Pool, client *marketdata.C
 		return nil
 	}
 
-	candles, err := client.GetCandles(ctx, symbol, marketdata.Timeframe1Day, limit)
+	candles, source, err := client.GetCandlesWithSource(ctx, strings.ToUpper(strings.TrimSpace(symbol)), marketdata.Timeframe1Day, limit)
 	if err != nil {
 		return fmt.Errorf("get candles: %w", err)
+	}
+	source = strings.ToLower(strings.TrimSpace(source))
+	if !genuineProvider(source) {
+		return fmt.Errorf("rejected non-genuine candle source %q", source)
 	}
 	if len(candles) == 0 {
 		return nil
 	}
 
-	for _, c := range candles {
+	semantics, regularHours := providerCandleSemantics(source)
+	for _, c := range prepareGenuineCandles(strings.ToUpper(strings.TrimSpace(symbol)), time.Time{}, time.Now().UTC(), candles) {
 		if _, err := pool.Exec(ctx, `
-			INSERT INTO candles (symbol, timestamp, open, high, low, close, volume, vwap)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			INSERT INTO candles (symbol, timestamp, open, high, low, close, volume, vwap,
+				timeframe, source, timestamp_semantics, regular_trading_hours, market_data_classification, ingested_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '1d', $9, $10, $11, 'unknown', NOW())
 			ON CONFLICT (symbol, timestamp) DO UPDATE SET
 				open   = EXCLUDED.open,
 				high   = EXCLUDED.high,
 				low    = EXCLUDED.low,
 				close  = EXCLUDED.close,
 				volume = EXCLUDED.volume,
-				vwap   = EXCLUDED.vwap`,
+				vwap   = EXCLUDED.vwap,
+				timeframe = EXCLUDED.timeframe,
+				source = EXCLUDED.source,
+				timestamp_semantics = EXCLUDED.timestamp_semantics,
+				regular_trading_hours = EXCLUDED.regular_trading_hours,
+				market_data_classification = EXCLUDED.market_data_classification,
+				ingested_at = NOW()
+			WHERE (candles.source = EXCLUDED.source AND candles.timeframe = EXCLUDED.timeframe)
+			   OR candles.source = 'unknown'`,
 			c.Symbol, c.Timestamp, c.Open, c.High, c.Low, c.Close, c.Volume, c.VWAP,
+			source, semantics, regularHours,
 		); err != nil {
 			return fmt.Errorf("upsert candle %s@%s: %w", symbol, c.Timestamp.Format("2006-01-02"), err)
 		}
 	}
 
 	observability.LogEvent(ctx, "info", "candles.ingested", map[string]any{
-		"symbol": symbol,
-		"count":  len(candles),
+		"symbol":    symbol,
+		"count":     len(candles),
+		"source":    source,
+		"timeframe": "1d",
 	})
 	return nil
 }
