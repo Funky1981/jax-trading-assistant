@@ -37,8 +37,24 @@ func NewInstructionBuilder(pool *pgxpool.Pool) *InstructionBuilder {
 	return &InstructionBuilder{pool: pool}
 }
 
-// NextPending returns the oldest pending execution instruction (if any).
-func (b *InstructionBuilder) NextPending(ctx context.Context) (*ApprovedInstruction, error) {
+// QuarantinePendingThrough cancels pending instructions that existed before the
+// current worker instance started. This prevents a newly enabled or restarted
+// worker from replaying an unbounded historical backlog.
+func (b *InstructionBuilder) QuarantinePendingThrough(ctx context.Context, cutoff time.Time, reason string) (int64, error) {
+	result, err := b.pool.Exec(ctx, `
+		UPDATE execution_instructions
+		   SET status = 'cancelled', error_message = $2, updated_at = NOW()
+		 WHERE status = 'pending'
+		   AND created_at <= $1`, cutoff, reason)
+	if err != nil {
+		return 0, fmt.Errorf("InstructionBuilder.QuarantinePendingThrough: %w", err)
+	}
+	return result.RowsAffected(), nil
+}
+
+// NextPending returns the oldest eligible pending execution instruction created
+// after the current worker instance started (if any).
+func (b *InstructionBuilder) NextPending(ctx context.Context, workerStartedAt time.Time) (*ApprovedInstruction, error) {
 	row := b.pool.QueryRow(ctx, `
 		SELECT ei.id, ei.approval_id, ei.candidate_id, ct.signal_id,
 		       ei.symbol, ei.signal_type, ei.entry_price, ei.stop_loss, ei.take_profit,
@@ -47,8 +63,13 @@ func (b *InstructionBuilder) NextPending(ctx context.Context) (*ApprovedInstruct
 		JOIN candidate_approvals ca ON ca.id = ei.approval_id
 		JOIN candidate_trades ct ON ct.id = ei.candidate_id
 		WHERE ei.status = 'pending'
+		  AND ei.created_at > $1
+		  AND ca.decision = 'approved'
+		  AND (ca.expiry_at IS NULL OR ca.expiry_at > NOW())
+		  AND ct.status = 'approved'
+		  AND (ct.expires_at IS NULL OR ct.expires_at > NOW())
 		ORDER BY ei.created_at ASC LIMIT 1
-		FOR UPDATE SKIP LOCKED`)
+		FOR UPDATE SKIP LOCKED`, workerStartedAt)
 
 	var inst ApprovedInstruction
 	err := row.Scan(

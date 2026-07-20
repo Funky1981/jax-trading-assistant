@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"jax-trading-assistant/internal/modules/execution"
 )
 
 func insertCandidateForExecutionGuardTest(t *testing.T, pool *pgxpool.Pool, status string) uuid.UUID {
@@ -165,5 +167,71 @@ func TestExecutionInstructionWorkerSafetyFailsClosed(t *testing.T) {
 				t.Fatalf("worker enabled for unsafe env %#v", tt.env)
 			}
 		})
+	}
+}
+
+func TestHistoricalPendingInstructionIsQuarantinedBeforePickup(t *testing.T) {
+	// Regression proof for historical pending instruction
+	// 0f98a45b-5c64-4964-8cf7-b6e6f2aaaf68. Use an isolated test UUID so
+	// the test can never mutate the operator's persisted instruction.
+	pool := testFrontendAPIPool(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	candidateID := insertCandidateForExecutionGuardTest(t, pool, "approved")
+	approvalID := uuid.New()
+	instructionID := uuid.New()
+	historicalCreatedAt := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	workerStartedAt := historicalCreatedAt.Add(time.Hour)
+
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO candidate_approvals
+			(id, candidate_id, decision, approved_by, decided_at, created_at)
+		VALUES ($1, $2, 'approved', 'test:historical-instruction-guard', $3, $3)
+	`, approvalID, candidateID, historicalCreatedAt); err != nil {
+		t.Fatalf("insert approval: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO execution_instructions
+			(id, approval_id, candidate_id, symbol, signal_type, status, created_at, updated_at)
+		VALUES ($1, $2, $3, 'AAPL', 'BUY', 'pending', $4, $4)
+	`, instructionID, approvalID, candidateID, historicalCreatedAt); err != nil {
+		t.Fatalf("insert historical instruction: %v", err)
+	}
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cleanupCancel()
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM execution_instructions WHERE id = $1`, instructionID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM candidate_approvals WHERE id = $1`, approvalID)
+	})
+
+	builder := execution.NewInstructionBuilder(pool)
+	quarantined, err := builder.QuarantinePendingThrough(ctx, workerStartedAt, "test: historical pending instruction")
+	if err != nil {
+		t.Fatalf("quarantine historical instructions: %v", err)
+	}
+	if quarantined < 1 {
+		t.Fatalf("quarantined rows = %d, want at least 1", quarantined)
+	}
+
+	var status string
+	var errorMessage *string
+	var brokerOrderID *string
+	var tradeID *string
+	if err := pool.QueryRow(ctx, `
+		SELECT status, error_message, broker_order_id, trade_id
+		FROM execution_instructions
+		WHERE id = $1
+	`, instructionID).Scan(&status, &errorMessage, &brokerOrderID, &tradeID); err != nil {
+		t.Fatalf("read quarantined instruction: %v", err)
+	}
+	if status != "cancelled" {
+		t.Fatalf("instruction status = %q, want cancelled", status)
+	}
+	if errorMessage == nil || !strings.Contains(*errorMessage, "historical pending instruction") {
+		t.Fatalf("instruction error message = %v, want quarantine reason", errorMessage)
+	}
+	if brokerOrderID != nil || tradeID != nil {
+		t.Fatalf("quarantined instruction gained execution linkage: brokerOrderID=%v tradeID=%v", brokerOrderID, tradeID)
 	}
 }

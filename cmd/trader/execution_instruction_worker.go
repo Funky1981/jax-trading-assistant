@@ -26,6 +26,15 @@ func startExecutionInstructionWorker(ctx context.Context, pool *pgxpool.Pool, ex
 
 	builder := execution.NewInstructionBuilder(pool)
 	candidateStore := candidatesmod.NewStore(pool)
+	workerStartedAt := time.Now().UTC()
+	quarantined, err := builder.QuarantinePendingThrough(ctx, workerStartedAt, "quarantined at worker startup: historical pending instructions require explicit operator review")
+	if err != nil {
+		log.Printf("execution worker disabled: could not quarantine historical pending instructions: %v", err)
+		return
+	}
+	if quarantined > 0 {
+		log.Printf("execution worker: quarantined %d historical pending instruction(s)", quarantined)
+	}
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -35,7 +44,7 @@ func startExecutionInstructionWorker(ctx context.Context, pool *pgxpool.Pool, ex
 			return
 		case <-ticker.C:
 			syncSubmittedInstructions(ctx, pool, builder, candidateStore)
-			processNextInstruction(ctx, builder, candidateStore, execService)
+			processNextInstruction(ctx, builder, candidateStore, execService, workerStartedAt)
 		}
 	}
 }
@@ -55,8 +64,8 @@ func executionInstructionWorkerSafetyEnabled() bool {
 	return mode == "paper"
 }
 
-func processNextInstruction(ctx context.Context, builder *execution.InstructionBuilder, candidateStore *candidatesmod.Store, execService *execution.Service) {
-	inst, err := builder.NextPending(ctx)
+func processNextInstruction(ctx context.Context, builder *execution.InstructionBuilder, candidateStore *candidatesmod.Store, execService *execution.Service, workerStartedAt time.Time) {
+	inst, err := builder.NextPending(ctx, workerStartedAt)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "no rows") {
 			return
