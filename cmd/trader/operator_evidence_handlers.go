@@ -132,6 +132,9 @@ type operatorCandidateEvidence struct {
 	PlannedRisk               *float64             `json:"plannedRisk,omitempty"`
 	PlannedReward             *float64             `json:"plannedReward,omitempty"`
 	RewardRisk                *float64             `json:"rewardRisk,omitempty"`
+	Notional                  *float64             `json:"notional,omitempty"`
+	AccountEquityAssumption   *float64             `json:"accountEquityAssumption,omitempty"`
+	Leverage                  *float64             `json:"leverage,omitempty"`
 	Checkpoints               []operatorCheckpoint `json:"checkpoints"`
 	SelectedExecutionCounts   map[string]int       `json:"selectedExecutionCounts"`
 	HistoricalExecutionCounts map[string]int       `json:"historicalExecutionCounts"`
@@ -154,11 +157,12 @@ func operatorCandidateEvidenceHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		err = pool.QueryRow(r.Context(), `SELECT ces.overall_evidence_score::float8, COALESCE(ces.evidence_status,'missing'), ct.gate_status, ct.risk_status,
 			COALESCE(ca.id::text,''), COALESCE(ca.decision,''), COALESCE(ca.approved_by,''), COALESCE(ca.notes,''), ca.decided_at,
 			COALESCE(pt.paper_ticket_id,''), COALESCE(pt.status,''), pt.entry_price::float8, pt.stop_loss_price::float8, pt.target_price::float8, pt.position_size::float8,
-			pt.max_normal_loss::float8, (pt.target_price-pt.entry_price)*pt.position_size, pt.reward_risk_ratio::float8
+			pt.max_normal_loss::float8, (pt.target_price-pt.entry_price)*pt.position_size, pt.reward_risk_ratio::float8,
+			(pt.entry_price*pt.position_size)::float8
 			FROM candidate_trades ct
 			LEFT JOIN LATERAL (SELECT * FROM candidate_evidence_scores WHERE candidate_id=ct.id ORDER BY scored_at DESC LIMIT 1) ces ON true
 			LEFT JOIN LATERAL (SELECT * FROM candidate_approvals WHERE candidate_id=ct.id ORDER BY decided_at DESC LIMIT 1) ca ON true
-			LEFT JOIN candidate_paper_tickets pt ON pt.candidate_id=ct.id WHERE ct.id=$1`, id).Scan(&score, &out.EvidenceStatus, &out.GateStatus, &out.RiskStatus, &out.ApprovalID, &out.ApprovalDecision, &out.ApprovedBy, &out.ApprovalReason, &out.ApprovalAt, &out.PaperTicketID, &out.PaperTicketStatus, &out.Entry, &out.Stop, &out.Target, &out.Quantity, &out.PlannedRisk, &out.PlannedReward, &out.RewardRisk)
+			LEFT JOIN candidate_paper_tickets pt ON pt.candidate_id=ct.id WHERE ct.id=$1`, id).Scan(&score, &out.EvidenceStatus, &out.GateStatus, &out.RiskStatus, &out.ApprovalID, &out.ApprovalDecision, &out.ApprovedBy, &out.ApprovalReason, &out.ApprovalAt, &out.PaperTicketID, &out.PaperTicketStatus, &out.Entry, &out.Stop, &out.Target, &out.Quantity, &out.PlannedRisk, &out.PlannedReward, &out.RewardRisk, &out.Notional)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				http.Error(w, "not found", http.StatusNotFound)
@@ -187,12 +191,24 @@ func operatorCandidateEvidenceHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			}
 		}
 		var selectedInstructions, selectedIntents, selectedBrokerOrders, selectedTrades, selectedFills int
-		_ = pool.QueryRow(r.Context(), `SELECT COUNT(*)::int, COUNT(DISTINCT broker_order_id) FILTER (WHERE broker_order_id IS NOT NULL AND broker_order_id<>'')::int, COUNT(DISTINCT trade_id) FILTER (WHERE trade_id IS NOT NULL)::int FROM execution_instructions WHERE candidate_id=$1`, id).Scan(&selectedInstructions, &selectedBrokerOrders, &selectedTrades)
-		_ = pool.QueryRow(r.Context(), `SELECT COUNT(*)::int FROM order_intents WHERE metadata->>'candidateId'=$1 OR metadata->>'candidate_id'=$1`, id.String()).Scan(&selectedIntents)
-		_ = pool.QueryRow(r.Context(), `SELECT COUNT(*)::int FROM fills f WHERE EXISTS (SELECT 1 FROM execution_instructions ei WHERE ei.candidate_id=$1 AND (ei.trade_id=f.trade_id OR ei.broker_order_id=f.broker_order_id))`, id).Scan(&selectedFills)
+		if err := pool.QueryRow(r.Context(), `SELECT COUNT(*)::int, COUNT(DISTINCT broker_order_id) FILTER (WHERE broker_order_id IS NOT NULL AND broker_order_id<>'')::int, COUNT(DISTINCT trade_id) FILTER (WHERE trade_id IS NOT NULL)::int FROM execution_instructions WHERE candidate_id=$1`, id).Scan(&selectedInstructions, &selectedBrokerOrders, &selectedTrades); err != nil {
+			http.Error(w, fmt.Sprintf("selected execution evidence: %v", err), http.StatusInternalServerError)
+			return
+		}
+		if err := pool.QueryRow(r.Context(), `SELECT COUNT(*)::int FROM order_intents WHERE metadata->>'candidateId'=$1 OR metadata->>'candidate_id'=$1`, id.String()).Scan(&selectedIntents); err != nil {
+			http.Error(w, fmt.Sprintf("selected order-intent evidence: %v", err), http.StatusInternalServerError)
+			return
+		}
+		if err := pool.QueryRow(r.Context(), `SELECT COUNT(*)::int FROM fills f WHERE EXISTS (SELECT 1 FROM execution_instructions ei WHERE ei.candidate_id=$1 AND (ei.trade_id=f.trade_id OR ei.broker_order_id=f.broker_order_id))`, id).Scan(&selectedFills); err != nil {
+			http.Error(w, fmt.Sprintf("selected fill evidence: %v", err), http.StatusInternalServerError)
+			return
+		}
 		out.SelectedExecutionCounts = map[string]int{"executionInstructions": selectedInstructions, "orderIntents": selectedIntents, "brokerOrders": selectedBrokerOrders, "trades": selectedTrades, "fills": selectedFills}
 		var historicalInstructions, historicalIntents, historicalBrokerOrders, historicalTrades, historicalFills int
-		_ = pool.QueryRow(r.Context(), `SELECT (SELECT COUNT(*)::int FROM execution_instructions), (SELECT COUNT(*)::int FROM order_intents), (SELECT COUNT(DISTINCT broker_order_id)::int FROM execution_instructions WHERE broker_order_id IS NOT NULL AND broker_order_id<>''), (SELECT COUNT(*)::int FROM trades), (SELECT COUNT(*)::int FROM fills)`).Scan(&historicalInstructions, &historicalIntents, &historicalBrokerOrders, &historicalTrades, &historicalFills)
+		if err := pool.QueryRow(r.Context(), `SELECT (SELECT COUNT(*)::int FROM execution_instructions), (SELECT COUNT(*)::int FROM order_intents), (SELECT COUNT(DISTINCT broker_order_id)::int FROM execution_instructions WHERE broker_order_id IS NOT NULL AND broker_order_id<>''), (SELECT COUNT(*)::int FROM trades), (SELECT COUNT(*)::int FROM fills)`).Scan(&historicalInstructions, &historicalIntents, &historicalBrokerOrders, &historicalTrades, &historicalFills); err != nil {
+			http.Error(w, fmt.Sprintf("historical execution evidence: %v", err), http.StatusInternalServerError)
+			return
+		}
 		out.HistoricalExecutionCounts = map[string]int{"executionInstructions": historicalInstructions, "orderIntents": historicalIntents, "brokerOrders": historicalBrokerOrders, "trades": historicalTrades, "fills": historicalFills}
 		jsonOK(w, out)
 	}

@@ -240,7 +240,13 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			CASE WHEN COALESCE(er.payload->>'analysis_provider', er.payload->>'ai_provider', '')<>'' THEN COALESCE(er.payload->>'analysis_model', er.payload->>'ai_model', '') ELSE '' END
 		FROM world_monitor_research_inbox w
 		LEFT JOIN event_normalized en ON en.id=w.normalized_event_id
-		LEFT JOIN event_raw er ON er.id=en.raw_event_id
+		LEFT JOIN LATERAL (
+			SELECT candidate.* FROM event_raw candidate
+			WHERE candidate.id=en.raw_event_id
+			   OR (candidate.source_event_id=w.source_event_id AND candidate.source_id=w.source)
+			ORDER BY (candidate.id=en.raw_event_id) DESC, candidate.received_at DESC
+			LIMIT 1
+		) er ON true
 		%s
 		ORDER BY w.received_at DESC
 		LIMIT $%d

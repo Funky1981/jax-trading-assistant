@@ -31,7 +31,7 @@ function formatTime(value?: string): string {
 }
 
 function pct(value?: number): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+  if (typeof value !== 'number' || Number.isNaN(value)) return 'Not supplied';
   return `${Math.round(value * 100)}%`;
 }
 
@@ -242,7 +242,7 @@ export function MonitorInboxPage() {
                         <TableCell>{pct(item.confidence)}</TableCell>
                         <TableCell>
                           <p className="max-w-[280px] truncate text-sm text-muted-foreground">
-                            {item.rejectionReason || item.mappingReason || '-'}
+                            {item.rejectionReason || item.mappingReason || 'Not supplied'}
                           </p>
                         </TableCell>
                       </TableRow>
@@ -286,7 +286,7 @@ export function MonitorInboxPage() {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Metric label="Source event" value={selected.sourceEventId} />
-                    <Metric label="Received" value={formatTime(selected.receivedAt)} />
+                    <Metric label="Source" value={selected.source || 'Not supplied'} />
                     <Metric label="Published/event time (UTC retained)" value={formatTime(selected.eventTime)} />
                     <Metric label="Collected (UTC retained)" value={formatTime(selected.collectedAt)} />
                     <Metric label="Jax received (UTC retained)" value={formatTime(selected.receivedAt)} />
@@ -298,6 +298,9 @@ export function MonitorInboxPage() {
                     <Metric label="Analysis identity" value={selected.analysisIdentity || 'No model used'} />
                     <Metric label="AI provider" value={selected.aiProvider || 'No model used'} />
                     <Metric label="AI model" value={selected.aiModel || 'No model used'} />
+                    <Metric label="Disposition" value={selected.status || 'Awaiting processing'} />
+                    <Metric label="Rejection reason" value={selected.rejectionReason || 'Not applicable'} />
+                    <Metric label="Deduplication" value={isDeduplicated(selected) ? 'DEDUPLICATED' : 'No persisted deduplication outcome'} />
                   </div>
 
                   <div className="rounded-md border border-border p-3">
@@ -305,10 +308,15 @@ export function MonitorInboxPage() {
                     <ol className="mt-2 space-y-2 text-sm">
                       <Journey label="Discovered" state={selected.discoveryMethod ? 'Persisted' : 'Missing persisted evidence'} timestamp={selected.eventTime} source={selected.sourceEventId} />
                       <Journey label="Collected" state={selected.collectedAt ? 'Persisted' : 'Missing persisted evidence'} timestamp={selected.collectedAt} source={selected.rawEventId} />
-                      <Journey label="Received and validated" state="Persisted" timestamp={selected.receivedAt} source={selected.id} />
-                      <Journey label="Normalised" state={selected.normalizedEventId ? 'Persisted' : 'Not run'} timestamp={selected.receivedAt} source={selected.normalizedEventId} />
-                      <Journey label="Decision processed" state={selected.status || 'Awaiting processing'} timestamp={selected.receivedAt} source={selected.id} />
-                      <Journey label="Candidate created" state={selected.candidateId ? 'Persisted' : 'No candidate created'} timestamp={selected.candidateId ? selected.receivedAt : undefined} source={selected.candidateId} />
+                      <Journey label="Delivered" state="Persisted by Jax inbox" timestamp={selected.receivedAt} source={selected.id} provenance={selected.source} />
+                      <Journey label="Received" state="Persisted" timestamp={selected.receivedAt} source={selected.id} provenance="Jax World Monitor inbox" />
+                      <Journey label="Validated" state={selected.status === 'rejected' ? 'Rejected' : 'Accepted'} timestamp={selected.receivedAt} source={selected.id} provenance={selected.rejectionReason || selected.mappingReason || 'No persisted reason'} />
+                      <Journey label="Normalised" state={selected.normalizedEventId ? 'Persisted' : 'Not run'} source={selected.normalizedEventId} provenance={selected.rawEventId || 'Missing persisted evidence'} />
+                      <Journey label="Decision processed" state={selected.status || 'Awaiting processing'} source={selected.id} provenance={selected.operatorReason || selected.rejectionReason || 'No persisted explanation'} />
+                      <Journey label="Candidate created" state={selected.candidateId ? 'Persisted' : 'No candidate created'} source={selected.candidateId} provenance={selected.candidateId ? 'Persisted inbox relationship' : 'Not applicable'} />
+                      <Journey label="Approval recorded" state={selected.candidateId ? 'Open candidate evidence for persisted state' : 'Not applicable'} provenance="Not inferred from event data" />
+                      <Journey label="Paper ticket created" state={selected.candidateId ? 'Open candidate evidence for persisted state' : 'Not applicable'} provenance="Not inferred from event data" />
+                      <Journey label="Outcome checkpoints" state={selected.candidateId ? 'Open candidate evidence for persisted state' : 'Not applicable'} provenance="Not inferred from event data" />
                     </ol>
                   </div>
 
@@ -385,6 +393,11 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Journey({label,state,timestamp,source}:{label:string;state:string;timestamp?:string;source?:string}) {
+function Journey({label,state,timestamp,source,provenance}:{label:string;state:string;timestamp?:string;source?:string;provenance?:string}) {
+  if (provenance) state = `${state} — ${provenance}`;
   return <li className="grid gap-1 rounded border p-2 sm:grid-cols-[150px_1fr]"><strong>{label}</strong><span><Badge variant="outline">{state}</Badge> · {formatTime(timestamp)} · {source || 'Not applicable'}</span></li>;
+}
+
+function isDeduplicated(item: WorldMonitorInboxItem) {
+  return item.status === 'ignored' && /dedup/i.test(item.rejectionReason || item.operatorReason || '');
 }

@@ -96,6 +96,7 @@ describe('CandidateEvidencePage', () => {
       evidenceScore: 0.81, evidenceStatus: 'sufficient', gateStatus: 'passed', riskStatus: 'passed',
       approvalId: 'approval-1', approvalDecision: 'approved', approvedBy: 'operator', approvalReason: 'Paper evidence accepted', approvalAt: '2026-06-12T10:40:00Z',
       paperTicketId: 'paper-1', paperTicketStatus: 'paper_ticket_created', entry: 530, stop: 527.5, target: 536, quantity: 40, plannedRisk: 100, plannedReward: 240, rewardRisk: 2.4,
+      notional: 21200,
       checkpoints: [{ name: '1h', trackingStartedAt: '2026-06-12T10:40:00Z', trackingStartSource: 'approval', dueAt: '2026-06-12T11:40:00Z', entryPrice: 530, status: 'pending_not_due', dataQualityStatus: 'not_due', targetTouched: false, stopTouched: false, createdAt: '2026-06-12T10:40:00Z', updatedAt: '2026-06-12T10:40:00Z' }],
       selectedExecutionCounts: { executionInstructions: 0, orderIntents: 0, brokerOrders: 0, trades: 0, fills: 0 }, historicalExecutionCounts: { executionInstructions: 3 },
     });

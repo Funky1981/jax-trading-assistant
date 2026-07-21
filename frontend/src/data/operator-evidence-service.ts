@@ -20,7 +20,8 @@ export interface OperatorCandidateEvidence {
   evidenceScore?: number; evidenceStatus: string; gateStatus: string; riskStatus: string;
   approvalId?: string; approvalDecision?: string; approvedBy?: string; approvalReason?: string; approvalAt?: string;
   paperTicketId?: string; paperTicketStatus?: string; entry?: number; stop?: number; target?: number; quantity?: number;
-  plannedRisk?: number; plannedReward?: number; rewardRisk?: number; checkpoints: OutcomeCheckpoint[];
+  plannedRisk?: number; plannedReward?: number; rewardRisk?: number; notional?: number;
+  accountEquityAssumption?: number; leverage?: number; checkpoints: OutcomeCheckpoint[];
   selectedExecutionCounts: Record<string, number>; historicalExecutionCounts: Record<string, number>;
 }
 

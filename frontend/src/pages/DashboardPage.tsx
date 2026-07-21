@@ -155,7 +155,7 @@ export function DashboardPage() {
   );
 }
 
-function OperatorSummary({ data, loading, failed }: { data?: Awaited<ReturnType<typeof operatorEvidenceService.overview>>; loading: boolean; failed: boolean }) {
+export function OperatorSummary({ data, loading, failed }: { data?: Awaited<ReturnType<typeof operatorEvidenceService.overview>>; loading: boolean; failed: boolean }) {
   if (loading) return <Card><CardContent className="p-4 text-sm text-muted-foreground">Loading persisted operator evidence…</CardContent></Card>;
   if (failed || !data) return <Card><CardContent className="p-4 text-sm text-destructive">Operator evidence is unavailable. Runtime safety must not be assumed.</CardContent></Card>;
   const safe = data.runtimeMode === 'paper' && !data.allowLiveTrading && !data.executionEnabled && !data.executionWorkerEnabled && !data.brokerExecutionAllowed && data.maximumLeverage <= 1;

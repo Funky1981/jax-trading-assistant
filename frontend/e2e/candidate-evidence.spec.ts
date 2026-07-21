@@ -79,6 +79,44 @@ test('candidate evidence page shows monitor news, chart evidence, sentiment, and
     }),
   );
 
+  await page.route('**/api/v1/operator-evidence/candidates/candidate-evidence-1', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        evidenceScore: 0.85,
+        evidenceStatus: 'sufficient',
+        gateStatus: 'ready_for_risk_review',
+        riskStatus: 'ready_for_approval_review',
+        approvalId: 'approval-1',
+        approvalDecision: 'approved',
+        approvedBy: 'operator',
+        approvalReason: 'Approved for retrospective paper evidence.',
+        approvalAt: '2026-06-12T10:40:00Z',
+        paperTicketId: 'paper-1',
+        paperTicketStatus: 'paper_ticket_created',
+        entry: 530,
+        stop: 527.5,
+        target: 536,
+        quantity: 40,
+        notional: 21200,
+        plannedRisk: 100,
+        plannedReward: 240,
+        rewardRisk: 2.4,
+        checkpoints: [{
+          name: '1h', trackingStartedAt: '2026-06-12T10:40:00Z', trackingStartSource: 'paper_ticket_created_at',
+          dueAt: '2026-06-12T11:40:00Z', observationAt: '2026-06-12T11:45:00Z', entryPrice: 530,
+          checkpointPrice: 532, percentageReturn: 0.377, hypotheticalPnl: 80, maximumFavourableExcursion: 3,
+          maximumAdverseExcursion: 1, targetTouched: false, stopTouched: false, status: 'completed',
+          dataQualityStatus: 'complete_candle_window', marketDataSource: 'persisted_candles:test_fixture',
+          createdAt: '2026-06-12T10:40:00Z', updatedAt: '2026-06-12T11:45:00Z',
+        }],
+        selectedExecutionCounts: { executionInstructions: 0, orderIntents: 0, brokerOrders: 0, trades: 0, fills: 0 },
+        historicalExecutionCounts: { executionInstructions: 2, orderIntents: 1, brokerOrders: 0, trades: 0, fills: 0 },
+      }),
+    }),
+  );
+
   await page.goto('/candidates/candidate-evidence-1/evidence', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: 'SPY trade setup' })).toBeVisible();
@@ -90,8 +128,12 @@ test('candidate evidence page shows monitor news, chart evidence, sentiment, and
   await expect(page.getByText(/held above the 20-period moving average/i)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Sentiment and source' })).toBeVisible();
   await expect(page.getByText('News tone is positive for broad US equity exposure.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Suggested paper trade amount' })).toBeVisible();
-  await expect(page.getByText('40 shares')).toBeVisible();
-  await expect(page.getByText('$21,200.00 estimated notional')).toBeVisible();
-  await expect(page.getByText('2.40R')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Persisted paper sizing evidence' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Paper ticket — hypothetical only' })).toBeVisible();
+  await expect(page.getByText('$21,200.00', { exact: true })).toBeVisible();
+  await expect(page.getByText('HYPOTHETICAL — NOT A FILL', { exact: true })).toBeVisible();
+  await expect(page.getByText('persisted_candles:test_fixture')).toBeVisible();
+  await expect(page.getByText('NO FILL OCCURRED', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Historical execution instructions elsewhere: 2/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /approve|reject|create|submit|execute/i })).toHaveCount(0);
 });
