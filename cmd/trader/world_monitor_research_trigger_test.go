@@ -160,6 +160,31 @@ func TestWorldMonitorResearchTrigger_RejectsRuntimeOverridePayload(t *testing.T)
 	requireWorldMonitorRejection(t, result, "runtime")
 }
 
+func TestWorldMonitorResearchTrigger_AcceptsUnknownAssetMapping(t *testing.T) {
+	now := time.Now().UTC()
+	trigger := validWorldMonitorResearchTrigger(now)
+	trigger.PossibleAffectedETFs = nil
+	trigger.AssetThemes = nil
+	result := validateWorldMonitorResearchTrigger(trigger, now)
+	if !result.Valid {
+		t.Fatalf("truthful unknown asset mapping rejected: %s", result.Reason)
+	}
+}
+
+func TestWorldMonitorResearchTrigger_RejectsEmbeddedAuthorityInstructions(t *testing.T) {
+	for _, key := range []string{"approval_instruction", "execution_instruction", "order_intent", "broker_order", "allow_live_trading"} {
+		t.Run(key, func(t *testing.T) {
+			now := time.Now().UTC()
+			trigger := validWorldMonitorResearchTrigger(now)
+			trigger.RawPayload = map[string]any{"nested": map[string]any{key: true}}
+			result := validateWorldMonitorResearchTrigger(trigger, now)
+			if result.Valid {
+				t.Fatalf("embedded authority field %q was accepted", key)
+			}
+		})
+	}
+}
+
 func requireWorldMonitorRejection(t *testing.T, result worldMonitorValidationResult, want string) {
 	t.Helper()
 	if result.Valid {

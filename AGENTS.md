@@ -38,6 +38,7 @@ For every completed implementation phase in this repository:
 - Do not leave completed phase work uncommitted unless committing is impossible or the user explicitly says not to commit.
 - If committing is impossible, say why and list the exact uncommitted files.
 - Final response must include a copy-block handover summary.
+- Put the handover summary in a fenced plain-text code block so the user can copy and paste it directly. Do this for every work-completion response, including incomplete or blocked phases; never provide the handover only as ordinary prose.
 - The handover summary must include: phase, commit, branch, files changed, what changed, migrations, tests/verification run, known risks, recommended next phase, and `What's Left`.
 
 Use `Docs/plans/HANDOFF_TEMPLATE.md` as the default handover format.

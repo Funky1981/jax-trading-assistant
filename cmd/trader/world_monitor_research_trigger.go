@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -12,25 +13,30 @@ import (
 const worldMonitorFreshnessWindow = 24 * time.Hour
 
 type worldMonitorResearchTrigger struct {
-	Source               string         `json:"source"`
-	SourceEventID        string         `json:"source_event_id"`
-	EventType            string         `json:"event_type"`
-	Headline             string         `json:"headline"`
-	Summary              string         `json:"summary"`
-	SourceURLs           []string       `json:"source_urls"`
-	SourceCount          int            `json:"source_count"`
-	TimestampUTC         time.Time      `json:"timestamp_utc"`
-	Region               string         `json:"region"`
-	PossibleAffectedETFs []string       `json:"possible_affected_etfs"`
-	AssetThemes          []string       `json:"asset_themes"`
-	Severity             string         `json:"severity"`
-	SourceTier           string         `json:"source_tier"`
-	Confidence           float64        `json:"confidence"`
-	ConfidenceReasons    []string       `json:"confidence_reasons"`
-	Reason               string         `json:"reason"`
-	RawPayload           map[string]any `json:"raw_payload"`
-	IsSynthetic          *bool          `json:"is_synthetic,omitempty"`
-	SyntheticReason      string         `json:"-"`
+	Source                string         `json:"source"`
+	SourceEventID         string         `json:"source_event_id"`
+	EventType             string         `json:"event_type"`
+	Headline              string         `json:"headline"`
+	Summary               string         `json:"summary"`
+	SourceURLs            []string       `json:"source_urls"`
+	SourceCount           int            `json:"source_count"`
+	TimestampUTC          time.Time      `json:"timestamp_utc"`
+	Region                string         `json:"region"`
+	PossibleAffectedETFs  []string       `json:"possible_affected_etfs"`
+	AssetThemes           []string       `json:"asset_themes"`
+	Severity              string         `json:"severity"`
+	SourceTier            string         `json:"source_tier"`
+	Confidence            float64        `json:"confidence"`
+	ConfidenceReasons     []string       `json:"confidence_reasons"`
+	Reason                string         `json:"reason"`
+	RawPayload            map[string]any `json:"raw_payload"`
+	IsSynthetic           *bool          `json:"is_synthetic,omitempty"`
+	CollectionTimestamp   *time.Time     `json:"collection_timestamp_utc,omitempty"`
+	DiscoveryMethod       string         `json:"discovery_method,omitempty"`
+	AnalysisProvider      string         `json:"analysis_provider,omitempty"`
+	AnalysisModel         string         `json:"analysis_model,omitempty"`
+	DeterministicAnalysis string         `json:"deterministic_analysis,omitempty"`
+	SyntheticReason       string         `json:"-"`
 }
 
 type worldMonitorResearchReceipt struct {
@@ -62,6 +68,12 @@ func validateWorldMonitorResearchTrigger(trigger worldMonitorResearchTrigger, no
 	if len(nonEmptyWorldMonitorStrings(trigger.SourceURLs)) == 0 {
 		return rejectWorldMonitorTrigger("source_urls are required")
 	}
+	for _, rawURL := range nonEmptyWorldMonitorStrings(trigger.SourceURLs) {
+		parsed, err := url.ParseRequestURI(rawURL)
+		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+			return rejectWorldMonitorTrigger("source_urls must contain absolute HTTP(S) URLs")
+		}
+	}
 	if trigger.TimestampUTC.IsZero() {
 		return rejectWorldMonitorTrigger("timestamp_utc is required")
 	}
@@ -70,9 +82,6 @@ func validateWorldMonitorResearchTrigger(trigger worldMonitorResearchTrigger, no
 	}
 	if trigger.TimestampUTC.UTC().Before(now.UTC().Add(-worldMonitorFreshnessWindow)) {
 		return rejectWorldMonitorTrigger("stale event exceeds freshness window")
-	}
-	if len(nonEmptyWorldMonitorStrings(trigger.PossibleAffectedETFs)) == 0 {
-		return rejectWorldMonitorTrigger("possible_affected_etfs are required")
 	}
 	if strings.TrimSpace(trigger.Reason) == "" {
 		return rejectWorldMonitorTrigger("reason is required")
@@ -234,9 +243,13 @@ func containsWorldMonitorTradeInstruction(trigger worldMonitorResearchTrigger) b
 
 func containsWorldMonitorRuntimeOverride(payload map[string]any) bool {
 	for _, key := range flattenedPayloadKeys(payload, "") {
-		switch strings.ToLower(key) {
-		case "runtime_mode", "execution_enabled", "broker_order", "order", "position_size", "risk_override":
-			return true
+		for _, segment := range strings.Split(strings.ToLower(key), ".") {
+			switch segment {
+			case "runtime_mode", "allow_live_trading", "execution_enabled", "execution_worker_enabled",
+				"approval", "approval_instruction", "broker", "broker_order", "execution", "execution_instruction",
+				"order", "order_intent", "position_size", "risk_override":
+				return true
+			}
 		}
 	}
 	return false
