@@ -11,6 +11,9 @@ import {
   SignalsQueuePanel,
 } from '@/components/dashboard';
 import { HelpHint } from '@/components/ui/help-hint';
+import { useQuery } from '@tanstack/react-query';
+import { operatorEvidenceService } from '@/data/operator-evidence-service';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const PANEL_IDS = ['health', 'watchlist', 'positions', 'risk', 'signalsQueue', 'aiAssistant'] as const;
 type PanelId = (typeof PANEL_IDS)[number];
@@ -38,6 +41,7 @@ function savePanelState(state: Record<PanelId, boolean>) {
 }
 
 export function DashboardPage() {
+  const evidence = useQuery({ queryKey: ['operator-evidence-overview'], queryFn: operatorEvidenceService.overview, refetchInterval: 30_000 });
   const [panelStates, setPanelStates] = useState<Record<PanelId, boolean>>(loadPanelState);
 
   useEffect(() => {
@@ -102,6 +106,8 @@ export function DashboardPage() {
         </div>
       </div>
 
+      <OperatorSummary data={evidence.data} loading={evidence.isPending} failed={evidence.isError} />
+
       <DashboardGrid>
         <DashboardPanel>
           <HealthPanel
@@ -148,3 +154,23 @@ export function DashboardPage() {
     </div>
   );
 }
+
+function OperatorSummary({ data, loading, failed }: { data?: Awaited<ReturnType<typeof operatorEvidenceService.overview>>; loading: boolean; failed: boolean }) {
+  if (loading) return <Card><CardContent className="p-4 text-sm text-muted-foreground">Loading persisted operator evidence…</CardContent></Card>;
+  if (failed || !data) return <Card><CardContent className="p-4 text-sm text-destructive">Operator evidence is unavailable. Runtime safety must not be assumed.</CardContent></Card>;
+  const safe = data.runtimeMode === 'paper' && !data.allowLiveTrading && !data.executionEnabled && !data.executionWorkerEnabled && !data.brokerExecutionAllowed && data.maximumLeverage <= 1;
+  const values = [
+    ['Runtime mode', data.runtimeMode], ['Live trading allowed', yesNo(data.allowLiveTrading)], ['Execution enabled', yesNo(data.executionEnabled)],
+    ['Execution worker enabled', yesNo(data.executionWorkerEnabled)], ['Broker execution allowed', yesNo(data.brokerExecutionAllowed)], ['Maximum leverage', `${data.maximumLeverage}x`],
+    ['Genuine events', data.genuineEvents], ['Synthetic events', data.syntheticEvents], ['Rejected events', data.rejectedEvents], ['Deduplicated events', data.deduplicatedEvents],
+    ['Candidates', data.candidates], ['Approvals', data.approvals], ['Paper tickets', data.paperTickets], ['Pending checkpoints', data.pendingCheckpoints],
+    ['Completed checkpoints', data.completedCheckpoints], ['Missing-data checkpoints', data.missingDataCheckpoints], ['Ambiguous checkpoints', data.ambiguousCheckpoints],
+  ];
+  return <Card className={safe ? 'border-success' : 'border-destructive'}>
+    <CardHeader><CardTitle>{safe ? 'PAPER-SAFE RUNTIME' : 'RUNTIME SAFETY WARNING'}</CardTitle></CardHeader>
+    <CardContent><p className="mb-4 text-sm text-muted-foreground">{safe ? 'Paper mode is active and every execution path reported here is disabled.' : 'One or more paper-safety conditions differ. Review before continuing.'}</p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{values.map(([label, value]) => <div key={label} className="rounded border p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="font-semibold">{value}</div></div>)}</div>
+    </CardContent></Card>;
+}
+
+function yesNo(value: boolean) { return value ? 'Yes' : 'No'; }

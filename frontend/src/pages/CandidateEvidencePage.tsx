@@ -7,6 +7,7 @@ import type { SentimentEvidence } from '@/data/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { operatorEvidenceService, type OutcomeCheckpoint } from '@/data/operator-evidence-service';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -189,22 +190,7 @@ function getSuggestedPaperSize(candidate: CandidateTrade, metadata: AnyRecord | 
     };
   }
 
-  if (!entry || !candidate.stopLoss || entry <= 0 || candidate.stopLoss <= 0) return undefined;
-
-  const riskBudget = 100;
-  const riskPerShare = Math.abs(entry - candidate.stopLoss);
-  if (riskPerShare <= 0) return undefined;
-
-  const shares = Math.max(1, Math.floor(riskBudget / riskPerShare));
-  const rewardPerShare = candidate.takeProfit ? Math.abs(candidate.takeProfit - entry) : undefined;
-  return {
-    shares,
-    notional: shares * entry,
-    riskToStop: shares * riskPerShare,
-    rewardToTarget: rewardPerShare ? shares * rewardPerShare : undefined,
-    riskReward: rewardPerShare ? rewardPerShare / riskPerShare : undefined,
-    source: 'Calculated from a $100 paper risk budget and the attached stop',
-  };
+  return undefined;
 }
 
 function buildEvidence(candidate: CandidateTrade): CandidateEvidence {
@@ -236,6 +222,11 @@ export function CandidateEvidencePage() {
   const candidateQuery = useQuery({
     queryKey: ['candidate', candidateId],
     queryFn: () => candidatesService.get(candidateId ?? ''),
+    enabled: Boolean(candidateId),
+  });
+  const operatorQuery = useQuery({
+    queryKey: ['operator-candidate-evidence', candidateId],
+    queryFn: () => operatorEvidenceService.candidate(candidateId ?? ''),
     enabled: Boolean(candidateId),
   });
 
@@ -294,7 +285,7 @@ export function CandidateEvidencePage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Trade Evidence Review</p>
           <h1 className="text-3xl font-bold">{candidate.symbol} trade setup</h1>
           <p className="mt-2 max-w-4xl text-base text-muted-foreground">
-            Review why Jax offered this trade, what news triggered it, what the chart check found, and the paper size to verify before placing anything in IB/TWS.
+            Review the persisted evidence, human decision, hypothetical paper ticket, outcomes, and execution-safety record. This page cannot place a trade.
           </p>
         </div>
       </header>
@@ -476,8 +467,8 @@ export function CandidateEvidencePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Suggested paper trade amount</CardTitle>
-            <CardDescription>Review this size in IB/TWS. It is not a live execution instruction by itself.</CardDescription>
+            <CardTitle>Persisted paper sizing evidence</CardTitle>
+            <CardDescription>Financial values are shown only when attached to persisted sizing evidence.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {evidence.suggestedSize ? (
@@ -509,19 +500,21 @@ export function CandidateEvidencePage() {
               </>
             ) : (
               <p className="rounded-md border border-warning/50 bg-warning/10 p-3 text-sm">
-                Jax cannot suggest a paper size because entry and stop data are incomplete.
+                No persisted sizing evidence available
               </p>
             )}
           </CardContent>
         </Card>
       </div>
 
+      {operatorQuery.data && <PersistedJourney evidence={operatorQuery.data} />}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" /> Quick review checklist
           </CardTitle>
-          <CardDescription>Only continue when these checks make sense to you.</CardDescription>
+          <CardDescription>Read-only evidence review. No action on this page changes runtime or trading state.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 text-sm md:grid-cols-3">
@@ -535,7 +528,7 @@ export function CandidateEvidencePage() {
             </div>
             <div className="rounded-md border border-border bg-muted/30 p-3">
               <p className="font-semibold">3. Execution</p>
-              <p className="text-muted-foreground">Confirm the same symbol, quantity, and paper account in IB/TWS before submitting.</p>
+              <p className="text-muted-foreground">No fill occurred. Hypothetical paper results are not orders, positions, or realised P&amp;L.</p>
             </div>
           </div>
         </CardContent>
@@ -543,3 +536,28 @@ export function CandidateEvidencePage() {
     </div>
   );
 }
+
+function PersistedJourney({ evidence }: { evidence: Awaited<ReturnType<typeof operatorEvidenceService.candidate>> }) {
+  return <div className="space-y-5">
+    <Card><CardHeader><CardTitle>Decision and human approval</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Fact label="Evidence score" value={evidence.evidenceScore === undefined ? 'Missing persisted evidence' : `${(evidence.evidenceScore * 100).toFixed(1)}%`} />
+      <Fact label="Evidence state" value={evidence.evidenceStatus || 'Not run'} /><Fact label="Trust gate" value={evidence.gateStatus || 'Not run'} /><Fact label="Risk review" value={evidence.riskStatus || 'Not run'} />
+      <Fact label="Human approval" value={evidence.approvalDecision || 'No approval recorded'} /><Fact label="Approver" value={evidence.approvedBy || 'Not applicable'} /><Fact label="Decision reason" value={evidence.approvalReason || 'Not supplied'} /><Fact label="Approval timestamp" value={formatDateTime(evidence.approvalAt)} />
+    </CardContent></Card>
+    <Card><CardHeader><CardTitle>Paper ticket — hypothetical only</CardTitle><CardDescription>HYPOTHETICAL — NOT A FILL. No value below is an order, fill, position, account balance, or realised profit.</CardDescription></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Fact label="Paper-ticket ID" value={evidence.paperTicketId || 'No paper ticket created'} /><Fact label="State" value={evidence.paperTicketStatus || 'Not applicable'} /><Fact label="Hypothetical entry" value={formatCurrency(evidence.entry)} /><Fact label="Stop" value={formatCurrency(evidence.stop)} />
+      <Fact label="Target" value={formatCurrency(evidence.target)} /><Fact label="Quantity" value={evidence.quantity?.toString() || 'Unavailable'} /><Fact label="Notional" value={evidence.entry !== undefined && evidence.quantity !== undefined ? formatCurrency(evidence.entry * evidence.quantity) : 'Unavailable'} /><Fact label="Planned risk" value={formatCurrency(evidence.plannedRisk)} />
+      <Fact label="Planned reward" value={formatCurrency(evidence.plannedReward)} /><Fact label="Reward/risk" value={evidence.rewardRisk === undefined ? 'Unavailable' : `${evidence.rewardRisk.toFixed(2)}R`} /><Fact label="Fill state" value="NO FILL OCCURRED" />
+    </CardContent></Card>
+    <Card><CardHeader><CardTitle>Hypothetical outcome checkpoints</CardTitle></CardHeader><CardContent className="space-y-3">{evidence.checkpoints.length ? evidence.checkpoints.map((c) => <Checkpoint key={c.name} checkpoint={c} />) : <p className="text-sm text-muted-foreground">No outcome checkpoints persisted.</p>}</CardContent></Card>
+    <Card><CardHeader><CardTitle>Execution-side safety evidence</CardTitle><CardDescription>Selected journey counts are separate from unrelated historical database records.</CardDescription></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{Object.entries(evidence.selectedExecutionCounts).map(([key,value]) => <Fact key={key} label={humanize(key)} value={String(value)} />)}<p className="col-span-full text-xs text-muted-foreground">Historical execution instructions elsewhere: {evidence.historicalExecutionCounts.executionInstructions ?? 0}. They are not attributed to this journey.</p></CardContent></Card>
+  </div>;
+}
+
+function Checkpoint({ checkpoint: c }: { checkpoint: OutcomeCheckpoint }) {
+  const label = c.status === 'pending_not_due' ? 'PENDING — NOT DUE' : c.status === 'ambiguous_same_candle' ? 'AMBIGUOUS SAME CANDLE' : ['pending_market_data','insufficient_data'].includes(c.status) ? 'MISSING MARKET DATA' : 'COMPLETED';
+  const facts = [['Tracking start',formatDateTime(c.trackingStartedAt)],['Due',formatDateTime(c.dueAt)],['Status',label],['Checkpoint price',formatCurrency(c.checkpointPrice)],['Observation',formatDateTime(c.observationAt)],['Market-data source',c.marketDataSource || 'Not supplied'],['Hypothetical return',formatPercent(c.percentageReturn)],['Hypothetical P&L',formatCurrency(c.hypotheticalPnl)],['Maximum favourable excursion',formatCurrency(c.maximumFavourableExcursion)],['Maximum adverse excursion',formatCurrency(c.maximumAdverseExcursion)],['Stop touched',c.stopTouched?'Yes':'No'],['Target touched',c.targetTouched?'Yes':'No'],['First stop touch',formatDateTime(c.firstStopTouchAt)],['First target touch',formatDateTime(c.firstTargetTouchAt)],['Created',formatDateTime(c.createdAt)],['Updated',formatDateTime(c.updatedAt)]];
+  return <div className="rounded-md border p-4"><div className="mb-3 flex flex-wrap gap-2"><Badge variant="outline">{c.name}</Badge><Badge variant={label==='COMPLETED'?'success':'warning'}>{label}</Badge><Badge variant="secondary">HYPOTHETICAL — NOT A FILL</Badge></div><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{facts.map(([l,v])=><Fact key={l} label={l} value={v} />)}</div></div>;
+}
+function Fact({label,value}:{label:string;value:string}) { return <div className="rounded border bg-muted/20 p-2"><div className="text-xs text-muted-foreground">{label}</div><div className="break-words text-sm font-semibold">{value}</div></div>; }
+function humanize(value:string){return value.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase());}

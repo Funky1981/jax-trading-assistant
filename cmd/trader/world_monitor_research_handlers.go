@@ -55,6 +55,14 @@ type worldMonitorResearchInboxItem struct {
 	SourceCount          int            `json:"sourceCount"`
 	EventTime            time.Time      `json:"eventTime"`
 	ReceivedAt           time.Time      `json:"receivedAt"`
+	CollectedAt          *time.Time     `json:"collectedAt,omitempty"`
+	RawEventID           string         `json:"rawEventId,omitempty"`
+	IsSynthetic          bool           `json:"isSynthetic"`
+	SyntheticReason      string         `json:"syntheticReason,omitempty"`
+	DiscoveryMethod      string         `json:"discoveryMethod,omitempty"`
+	AnalysisIdentity     string         `json:"analysisIdentity,omitempty"`
+	AIProvider           string         `json:"aiProvider,omitempty"`
+	AIModel              string         `json:"aiModel,omitempty"`
 	Region               string         `json:"region,omitempty"`
 	PossibleAffectedETFs []string       `json:"possibleAffectedEtfs"`
 	AssetThemes          []string       `json:"assetThemes"`
@@ -210,40 +218,31 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 	where := "WHERE 1=1"
 	if filter.Status != "" && filter.Status != "all" {
 		args = append(args, filter.Status)
-		where += fmt.Sprintf(" AND status = $%d", len(args))
+		where += fmt.Sprintf(" AND w.status = $%d", len(args))
 	}
 	args = append(args, filter.Limit)
 	query := fmt.Sprintf(`
 		SELECT
-			id::text,
-			source,
-			source_event_id,
-			world_monitor_event_id,
-			status,
-			COALESCE(rejection_reason, ''),
-			event_type,
-			headline,
-			COALESCE(summary, ''),
-			COALESCE(source_urls, '[]'::jsonb),
-			source_count,
-			event_time,
-			received_at,
-			COALESCE(region, ''),
-			COALESCE(possible_affected_etfs, '[]'::jsonb),
-			COALESCE(asset_themes, '[]'::jsonb),
-			severity,
-			source_tier,
-			confidence,
-			COALESCE(confidence_reasons, '[]'::jsonb),
-			mapping_reason,
-			COALESCE(normalized_event_id::text, ''),
-			COALESCE(candidate_id::text, ''),
-			COALESCE(operator_decision, ''),
-			COALESCE(operator_reason, ''),
-			COALESCE(raw_payload, '{}'::jsonb)
-		FROM world_monitor_research_inbox
+			w.id::text, w.source, w.source_event_id, w.world_monitor_event_id, w.status,
+			COALESCE(w.rejection_reason, ''), w.event_type, w.headline, COALESCE(w.summary, ''),
+			COALESCE(w.source_urls, '[]'::jsonb), w.source_count, w.event_time, w.received_at,
+			COALESCE(w.region, ''), COALESCE(w.possible_affected_etfs, '[]'::jsonb), COALESCE(w.asset_themes, '[]'::jsonb),
+			w.severity, w.source_tier, w.confidence, COALESCE(w.confidence_reasons, '[]'::jsonb), w.mapping_reason,
+			COALESCE(w.normalized_event_id::text, ''), COALESCE(w.candidate_id::text, ''),
+			COALESCE(w.operator_decision, ''), COALESCE(w.operator_reason, ''),
+			COALESCE(w.raw_payload, '{}'::jsonb),
+			NULLIF(COALESCE(er.payload->>'collection_timestamp_utc', er.payload->>'collected_at', er.payload->>'collectedAt', ''), '')::timestamptz,
+			COALESCE(er.id::text, ''), COALESCE(er.is_synthetic, false), COALESCE(er.synthetic_reason, ''),
+			COALESCE(er.payload->>'discovery_method', er.payload->>'discoveryMethod', ''),
+			COALESCE(er.payload->>'deterministic_analysis', er.payload->>'deterministic_analysis_identity', er.payload->>'analysis_identity',
+				CASE WHEN COALESCE(er.payload->>'analysis_provider','')='' THEN er.payload->>'analysis_model' ELSE '' END, ''),
+			COALESCE(er.payload->>'analysis_provider', er.payload->>'ai_provider', ''),
+			CASE WHEN COALESCE(er.payload->>'analysis_provider', er.payload->>'ai_provider', '')<>'' THEN COALESCE(er.payload->>'analysis_model', er.payload->>'ai_model', '') ELSE '' END
+		FROM world_monitor_research_inbox w
+		LEFT JOIN event_normalized en ON en.id=w.normalized_event_id
+		LEFT JOIN event_raw er ON er.id=en.raw_event_id
 		%s
-		ORDER BY received_at DESC
+		ORDER BY w.received_at DESC
 		LIMIT $%d
 	`, where, len(args))
 	rows, err := s.pool.Query(ctx, query, args...)
@@ -282,6 +281,14 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			&item.OperatorDecision,
 			&item.OperatorReason,
 			&rawPayload,
+			&item.CollectedAt,
+			&item.RawEventID,
+			&item.IsSynthetic,
+			&item.SyntheticReason,
+			&item.DiscoveryMethod,
+			&item.AnalysisIdentity,
+			&item.AIProvider,
+			&item.AIModel,
 		); err != nil {
 			return worldMonitorResearchInboxList{}, err
 		}

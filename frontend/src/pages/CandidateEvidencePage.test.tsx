@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { candidatesService } from '@/data/approvals-service';
 import { CandidateEvidencePage } from './CandidateEvidencePage';
+import { operatorEvidenceService } from '@/data/operator-evidence-service';
 
 vi.mock('@/data/approvals-service', async () => {
   const actual = await vi.importActual<typeof import('@/data/approvals-service')>('@/data/approvals-service');
@@ -14,6 +15,7 @@ vi.mock('@/data/approvals-service', async () => {
     },
   };
 });
+vi.mock('@/data/operator-evidence-service', () => ({ operatorEvidenceService: { candidate: vi.fn() } }));
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -90,6 +92,13 @@ describe('CandidateEvidencePage', () => {
         snapshotAt: '2026-06-12T10:32:00Z',
       },
     });
+    vi.mocked(operatorEvidenceService.candidate).mockResolvedValue({
+      evidenceScore: 0.81, evidenceStatus: 'sufficient', gateStatus: 'passed', riskStatus: 'passed',
+      approvalId: 'approval-1', approvalDecision: 'approved', approvedBy: 'operator', approvalReason: 'Paper evidence accepted', approvalAt: '2026-06-12T10:40:00Z',
+      paperTicketId: 'paper-1', paperTicketStatus: 'paper_ticket_created', entry: 530, stop: 527.5, target: 536, quantity: 40, plannedRisk: 100, plannedReward: 240, rewardRisk: 2.4,
+      checkpoints: [{ name: '1h', trackingStartedAt: '2026-06-12T10:40:00Z', trackingStartSource: 'approval', dueAt: '2026-06-12T11:40:00Z', entryPrice: 530, status: 'pending_not_due', dataQualityStatus: 'not_due', targetTouched: false, stopTouched: false, createdAt: '2026-06-12T10:40:00Z', updatedAt: '2026-06-12T10:40:00Z' }],
+      selectedExecutionCounts: { executionInstructions: 0, orderIntents: 0, brokerOrders: 0, trades: 0, fills: 0 }, historicalExecutionCounts: { executionInstructions: 3 },
+    });
   });
 
   it('shows the complete trade evidence needed before approval or manual review', async () => {
@@ -114,10 +123,22 @@ describe('CandidateEvidencePage', () => {
     expect(screen.getByText('Lower yields supported equity risk appetite.')).toBeInTheDocument();
     expect(screen.getByText('Only two trusted sources were available.')).toBeInTheDocument();
 
-    expect(screen.getByRole('heading', { name: 'Suggested paper trade amount' })).toBeInTheDocument();
-    expect(screen.getByText('40 shares')).toBeInTheDocument();
-    expect(screen.getByText('$21,200.00 estimated notional')).toBeInTheDocument();
-    expect(screen.getByText('$100.00')).toBeInTheDocument();
-    expect(screen.getByText('2.40R')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Persisted paper sizing evidence' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Paper ticket — hypothetical only' })).toBeInTheDocument();
+    expect(screen.getByText('No persisted sizing evidence available')).toBeInTheDocument();
+    expect(screen.getByText('$21,200.00')).toBeInTheDocument();
+    expect(screen.getAllByText('$100.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('2.40R').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('PENDING — NOT DUE').length).toBeGreaterThan(0);
+    expect(screen.getByText('NO FILL OCCURRED')).toBeInTheDocument();
+    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(5);
+    expect(screen.queryByText(/Calculated from a \$100 paper risk budget/i)).not.toBeInTheDocument();
+  });
+
+  it('does not invent sizing when no persisted sizing exists', async () => {
+    const candidate = await candidatesService.get('candidate-1');
+    vi.mocked(candidatesService.get).mockResolvedValue({ ...candidate, metadata: { ...candidate.metadata, sizing: undefined } });
+    renderPage();
+    expect(await screen.findByText('No persisted sizing evidence available')).toBeInTheDocument();
   });
 });

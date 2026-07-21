@@ -19,7 +19,7 @@ const STATUS_OPTIONS = [
 ];
 
 function formatTime(value?: string): string {
-  if (!value) return '-';
+  if (!value) return 'Not supplied';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString(undefined, {
@@ -51,7 +51,7 @@ function statusVariant(status: string): 'default' | 'secondary' | 'outline' | 'w
 }
 
 function joinOrDash(values?: string[]): string {
-  return values && values.length > 0 ? values.join(', ') : '-';
+  return values && values.length > 0 ? values.join(', ') : 'Unknown';
 }
 
 function rawPayloadText(item?: WorldMonitorInboxItem): string {
@@ -267,6 +267,10 @@ export function MonitorInboxPage() {
               {selected && (
                 <>
                   <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={selected.isSynthetic ? 'warning' : 'success'}>{selected.isSynthetic ? 'SYNTHETIC TEST' : 'GENUINE'}</Badge>
+                    <Badge variant="outline">{selected.aiProvider || selected.aiModel ? 'AI ANALYSED' : 'NO AI USED'}</Badge>
+                    {selected.analysisIdentity && <Badge variant="outline">DETERMINISTIC</Badge>}
+                    {!selected.possibleAffectedEtfs.length && <Badge variant="secondary">UNKNOWN ASSETS</Badge>}
                     <Badge variant={statusVariant(selected.status)}>{selected.status}</Badge>
                     <Badge variant="outline">{selected.eventType}</Badge>
                     <Badge variant="secondary">{selected.severity}</Badge>
@@ -283,10 +287,29 @@ export function MonitorInboxPage() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Metric label="Source event" value={selected.sourceEventId} />
                     <Metric label="Received" value={formatTime(selected.receivedAt)} />
-                    <Metric label="Event time" value={formatTime(selected.eventTime)} />
+                    <Metric label="Published/event time (UTC retained)" value={formatTime(selected.eventTime)} />
+                    <Metric label="Collected (UTC retained)" value={formatTime(selected.collectedAt)} />
+                    <Metric label="Jax received (UTC retained)" value={formatTime(selected.receivedAt)} />
+                    <Metric label="Discovery method" value={selected.discoveryMethod || 'Not supplied'} />
+                    <Metric label="Raw event ID" value={selected.rawEventId || 'Missing persisted evidence'} />
                     <Metric label="Mapped ETFs" value={joinOrDash(selected.possibleAffectedEtfs)} />
-                    <Metric label="Candidate" value={selected.candidateId || '-'} />
-                    <Metric label="Normalized event" value={selected.normalizedEventId || '-'} />
+                    <Metric label="Candidate" value={selected.candidateId || 'No candidate created'} />
+                    <Metric label="Normalized event" value={selected.normalizedEventId || 'Not run'} />
+                    <Metric label="Analysis identity" value={selected.analysisIdentity || 'No model used'} />
+                    <Metric label="AI provider" value={selected.aiProvider || 'No model used'} />
+                    <Metric label="AI model" value={selected.aiModel || 'No model used'} />
+                  </div>
+
+                  <div className="rounded-md border border-border p-3">
+                    <p className="text-sm font-semibold">Evidence journey</p>
+                    <ol className="mt-2 space-y-2 text-sm">
+                      <Journey label="Discovered" state={selected.discoveryMethod ? 'Persisted' : 'Missing persisted evidence'} timestamp={selected.eventTime} source={selected.sourceEventId} />
+                      <Journey label="Collected" state={selected.collectedAt ? 'Persisted' : 'Missing persisted evidence'} timestamp={selected.collectedAt} source={selected.rawEventId} />
+                      <Journey label="Received and validated" state="Persisted" timestamp={selected.receivedAt} source={selected.id} />
+                      <Journey label="Normalised" state={selected.normalizedEventId ? 'Persisted' : 'Not run'} timestamp={selected.receivedAt} source={selected.normalizedEventId} />
+                      <Journey label="Decision processed" state={selected.status || 'Awaiting processing'} timestamp={selected.receivedAt} source={selected.id} />
+                      <Journey label="Candidate created" state={selected.candidateId ? 'Persisted' : 'No candidate created'} timestamp={selected.candidateId ? selected.receivedAt : undefined} source={selected.candidateId} />
+                    </ol>
                   </div>
 
                   {selected.summary ? (
@@ -360,4 +383,8 @@ function Metric({ label, value }: { label: string; value: string }) {
       <p className="mt-1 break-all text-sm font-semibold">{value}</p>
     </div>
   );
+}
+
+function Journey({label,state,timestamp,source}:{label:string;state:string;timestamp?:string;source?:string}) {
+  return <li className="grid gap-1 rounded border p-2 sm:grid-cols-[150px_1fr]"><strong>{label}</strong><span><Badge variant="outline">{state}</Badge> · {formatTime(timestamp)} · {source || 'Not applicable'}</span></li>;
 }

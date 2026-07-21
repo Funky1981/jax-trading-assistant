@@ -49,6 +49,14 @@ export interface WorldMonitorInboxItem {
   sourceCount: number;
   eventTime: string;
   receivedAt: string;
+  collectedAt?: string;
+  rawEventId?: string;
+  isSynthetic?: boolean;
+  syntheticReason?: string;
+  discoveryMethod?: string;
+  analysisIdentity?: string;
+  aiProvider?: string;
+  aiModel?: string;
   region?: string;
   possibleAffectedEtfs: string[];
   assetThemes: string[];

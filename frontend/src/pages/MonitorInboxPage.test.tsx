@@ -60,6 +60,11 @@ describe('MonitorInboxPage', () => {
           sourceCount: 1,
           eventTime: '2026-06-12T10:30:00Z',
           receivedAt: '2026-06-12T10:31:00Z',
+          collectedAt: '2026-06-12T10:30:30Z',
+          rawEventId: 'raw-1',
+          isSynthetic: false,
+          discoveryMethod: 'rss_poll',
+          analysisIdentity: 'deterministic-v1',
           region: 'US',
           possibleAffectedEtfs: ['QQQ'],
           assetThemes: ['rates'],
@@ -85,6 +90,8 @@ describe('MonitorInboxPage', () => {
           sourceCount: 0,
           eventTime: '2026-06-12T10:20:00Z',
           receivedAt: '2026-06-12T10:21:00Z',
+          isSynthetic: true,
+          syntheticReason: 'labelled fixture',
           possibleAffectedEtfs: [],
           assetThemes: [],
           severity: 'high',
@@ -109,6 +116,10 @@ describe('MonitorInboxPage', () => {
     expect(screen.getAllByText('rejected').length).toBeGreaterThan(0);
     expect(screen.getByText('Mapped to QQQ from rates theme.')).toBeInTheDocument();
     expect(screen.getByText(/monitor_score/)).toBeInTheDocument();
+    expect(screen.getAllByText('GENUINE').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('NO AI USED').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('DETERMINISTIC').length).toBeGreaterThan(0);
+    expect(screen.getByText('rss_poll')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Open candidate evidence/i })).toHaveAttribute(
       'href',
       '/candidates/candidate-1/evidence'
