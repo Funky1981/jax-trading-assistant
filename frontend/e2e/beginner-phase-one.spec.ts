@@ -38,7 +38,13 @@ test.beforeEach(async ({ page }) => {
       contentType: 'application/json',
       body: JSON.stringify({
         items: [],
-        counts: { total: 0, pending: 0, candidatesCreated: 0, rejected: 0, ignored: 0 },
+        counts: {
+          genuine: 0,
+          syntheticTests: 0,
+          candidatesCreated: 0,
+          rejected: 0,
+          duplicates: 0,
+        },
       }),
     }),
   );

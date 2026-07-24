@@ -51,6 +51,7 @@ export interface WorldMonitorInboxItem {
   receivedAt: string;
   collectedAt?: string;
   rawEventId?: string;
+  provenanceAvailable?: boolean;
   isSynthetic?: boolean;
   syntheticReason?: string;
   discoveryMethod?: string;
@@ -66,7 +67,18 @@ export interface WorldMonitorInboxItem {
   confidenceReasons: string[];
   mappingReason: string;
   normalizedEventId?: string;
+  normalizedAt?: string;
   candidateId?: string;
+  candidateSymbol?: string;
+  candidateStatus?: string;
+  candidateCreatedAt?: string;
+  approvalId?: string;
+  approvalDecision?: string;
+  approvalAt?: string;
+  paperTicketId?: string;
+  paperTicketCreatedAt?: string;
+  outcomeCount: number;
+  latestOutcomeAt?: string;
   operatorDecision?: string;
   operatorReason?: string;
   rawPayload: Record<string, unknown>;
@@ -75,7 +87,13 @@ export interface WorldMonitorInboxItem {
 export interface WorldMonitorInboxResponse {
   items: WorldMonitorInboxItem[];
   total: number;
-  counts: WorldMonitorStatus['counts'];
+  counts: {
+    genuine: number;
+    syntheticTests: number;
+    rejected: number;
+    duplicates: number;
+    candidatesCreated: number;
+  };
   checkedAt: string;
 }
 
@@ -104,6 +122,8 @@ export const aiService = {
       query.set('limit', String(params.limit));
     }
     const qs = query.toString();
-    return apiClient.get<WorldMonitorInboxResponse>(`/api/v1/research/events/world-monitor/inbox${qs ? `?${qs}` : ''}`);
+    return apiClient.get<WorldMonitorInboxResponse>(
+      `/api/v1/research/events/world-monitor/inbox${qs ? `?${qs}` : ''}`,
+    );
   },
 };

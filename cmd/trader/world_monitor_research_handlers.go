@@ -35,10 +35,18 @@ type worldMonitorResearchInboxFilter struct {
 }
 
 type worldMonitorResearchInboxList struct {
-	Items     []worldMonitorResearchInboxItem  `json:"items"`
-	Total     int                              `json:"total"`
-	Counts    worldMonitorResearchStatusCounts `json:"counts"`
-	CheckedAt time.Time                        `json:"checkedAt"`
+	Items     []worldMonitorResearchInboxItem `json:"items"`
+	Total     int                             `json:"total"`
+	Counts    worldMonitorEvidenceCounts      `json:"counts"`
+	CheckedAt time.Time                       `json:"checkedAt"`
+}
+
+type worldMonitorEvidenceCounts struct {
+	Genuine           int `json:"genuine"`
+	SyntheticTests    int `json:"syntheticTests"`
+	Rejected          int `json:"rejected"`
+	Duplicates        int `json:"duplicates"`
+	CandidatesCreated int `json:"candidatesCreated"`
 }
 
 type worldMonitorResearchInboxItem struct {
@@ -57,6 +65,7 @@ type worldMonitorResearchInboxItem struct {
 	ReceivedAt           time.Time      `json:"receivedAt"`
 	CollectedAt          *time.Time     `json:"collectedAt,omitempty"`
 	RawEventID           string         `json:"rawEventId,omitempty"`
+	ProvenanceAvailable  bool           `json:"provenanceAvailable"`
 	IsSynthetic          bool           `json:"isSynthetic"`
 	SyntheticReason      string         `json:"syntheticReason,omitempty"`
 	DiscoveryMethod      string         `json:"discoveryMethod,omitempty"`
@@ -72,7 +81,18 @@ type worldMonitorResearchInboxItem struct {
 	ConfidenceReasons    []string       `json:"confidenceReasons"`
 	MappingReason        string         `json:"mappingReason"`
 	NormalizedEventID    string         `json:"normalizedEventId,omitempty"`
+	NormalizedAt         *time.Time     `json:"normalizedAt,omitempty"`
 	CandidateID          string         `json:"candidateId,omitempty"`
+	CandidateSymbol      string         `json:"candidateSymbol,omitempty"`
+	CandidateStatus      string         `json:"candidateStatus,omitempty"`
+	CandidateCreatedAt   *time.Time     `json:"candidateCreatedAt,omitempty"`
+	ApprovalID           string         `json:"approvalId,omitempty"`
+	ApprovalDecision     string         `json:"approvalDecision,omitempty"`
+	ApprovalAt           *time.Time     `json:"approvalAt,omitempty"`
+	PaperTicketID        string         `json:"paperTicketId,omitempty"`
+	PaperTicketCreatedAt *time.Time     `json:"paperTicketCreatedAt,omitempty"`
+	OutcomeCount         int            `json:"outcomeCount"`
+	LatestOutcomeAt      *time.Time     `json:"latestOutcomeAt,omitempty"`
 	OperatorDecision     string         `json:"operatorDecision,omitempty"`
 	OperatorReason       string         `json:"operatorReason,omitempty"`
 	RawPayload           map[string]any `json:"rawPayload"`
@@ -194,25 +214,38 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 		return out, nil
 	}
 
+	var total int
 	err := s.pool.QueryRow(ctx, `
 		SELECT
 			COUNT(*)::int,
-			COUNT(*) FILTER (WHERE status = 'new')::int,
-			COUNT(*) FILTER (WHERE status = 'candidate_created')::int,
-			COUNT(*) FILTER (WHERE status = 'rejected')::int,
-			COUNT(*) FILTER (WHERE status = 'ignored')::int
-		FROM world_monitor_research_inbox
+			COUNT(*) FILTER (WHERE er.id IS NOT NULL AND NOT er.is_synthetic)::int,
+			COUNT(*) FILTER (WHERE er.id IS NOT NULL AND er.is_synthetic)::int,
+			COUNT(*) FILTER (WHERE w.status = 'rejected')::int,
+			COUNT(*) FILTER (WHERE w.status = 'ignored' AND
+				COALESCE(w.rejection_reason, w.operator_reason, '') ILIKE '%dedup%')::int,
+			COUNT(*) FILTER (WHERE w.candidate_id IS NOT NULL)::int
+		FROM world_monitor_research_inbox w
+		LEFT JOIN event_normalized en ON en.id=w.normalized_event_id
+		LEFT JOIN LATERAL (
+			SELECT candidate.id, candidate.is_synthetic
+			FROM event_raw candidate
+			WHERE candidate.id=en.raw_event_id
+			   OR (candidate.source_event_id=w.source_event_id AND candidate.source_id=w.source)
+			ORDER BY (candidate.id=en.raw_event_id) DESC, candidate.received_at DESC
+			LIMIT 1
+		) er ON true
 	`).Scan(
-		&out.Counts.Total,
-		&out.Counts.Pending,
-		&out.Counts.CandidatesCreated,
+		&total,
+		&out.Counts.Genuine,
+		&out.Counts.SyntheticTests,
 		&out.Counts.Rejected,
-		&out.Counts.Ignored,
+		&out.Counts.Duplicates,
+		&out.Counts.CandidatesCreated,
 	)
 	if err != nil {
 		return worldMonitorResearchInboxList{}, fmt.Errorf("world monitor inbox counts: %w", err)
 	}
-	out.Total = out.Counts.Total
+	out.Total = total
 
 	args := []any{}
 	where := "WHERE 1=1"
@@ -232,12 +265,17 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			COALESCE(w.operator_decision, ''), COALESCE(w.operator_reason, ''),
 			COALESCE(w.raw_payload, '{}'::jsonb),
 			NULLIF(COALESCE(er.payload->>'collection_timestamp_utc', er.payload->>'collected_at', er.payload->>'collectedAt', ''), '')::timestamptz,
-			COALESCE(er.id::text, ''), COALESCE(er.is_synthetic, false), COALESCE(er.synthetic_reason, ''),
+			COALESCE(er.id::text, ''), er.id IS NOT NULL, COALESCE(er.is_synthetic, false), COALESCE(er.synthetic_reason, ''),
 			COALESCE(er.payload->>'discovery_method', er.payload->>'discoveryMethod', ''),
 			COALESCE(er.payload->>'deterministic_analysis', er.payload->>'deterministic_analysis_identity', er.payload->>'analysis_identity',
 				CASE WHEN COALESCE(er.payload->>'analysis_provider','')='' THEN er.payload->>'analysis_model' ELSE '' END, ''),
 			COALESCE(er.payload->>'analysis_provider', er.payload->>'ai_provider', ''),
-			CASE WHEN COALESCE(er.payload->>'analysis_provider', er.payload->>'ai_provider', '')<>'' THEN COALESCE(er.payload->>'analysis_model', er.payload->>'ai_model', '') ELSE '' END
+			CASE WHEN COALESCE(er.payload->>'analysis_provider', er.payload->>'ai_provider', '')<>'' THEN COALESCE(er.payload->>'analysis_model', er.payload->>'ai_model', '') ELSE '' END,
+			en.created_at,
+			COALESCE(ct.symbol, ''), COALESCE(ct.status, ''), ct.created_at,
+			COALESCE(ca.id::text, ''), COALESCE(ca.decision, ''), ca.decided_at,
+			COALESCE(pt.paper_ticket_id, ''), pt.created_at,
+			COALESCE(oc.outcome_count, 0), oc.latest_outcome_at
 		FROM world_monitor_research_inbox w
 		LEFT JOIN event_normalized en ON en.id=w.normalized_event_id
 		LEFT JOIN LATERAL (
@@ -247,6 +285,20 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			ORDER BY (candidate.id=en.raw_event_id) DESC, candidate.received_at DESC
 			LIMIT 1
 		) er ON true
+		LEFT JOIN candidate_trades ct ON ct.id=w.candidate_id
+		LEFT JOIN LATERAL (
+			SELECT id, decision, decided_at
+			FROM candidate_approvals
+			WHERE candidate_id=w.candidate_id
+			ORDER BY decided_at DESC
+			LIMIT 1
+		) ca ON true
+		LEFT JOIN candidate_paper_tickets pt ON pt.candidate_id=w.candidate_id
+		LEFT JOIN LATERAL (
+			SELECT COUNT(*)::int AS outcome_count, MAX(updated_at) AS latest_outcome_at
+			FROM paper_ticket_outcome_checkpoints
+			WHERE paper_ticket_id=pt.paper_ticket_id
+		) oc ON true
 		%s
 		ORDER BY w.received_at DESC
 		LIMIT $%d
@@ -289,12 +341,24 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			&rawPayload,
 			&item.CollectedAt,
 			&item.RawEventID,
+			&item.ProvenanceAvailable,
 			&item.IsSynthetic,
 			&item.SyntheticReason,
 			&item.DiscoveryMethod,
 			&item.AnalysisIdentity,
 			&item.AIProvider,
 			&item.AIModel,
+			&item.NormalizedAt,
+			&item.CandidateSymbol,
+			&item.CandidateStatus,
+			&item.CandidateCreatedAt,
+			&item.ApprovalID,
+			&item.ApprovalDecision,
+			&item.ApprovalAt,
+			&item.PaperTicketID,
+			&item.PaperTicketCreatedAt,
+			&item.OutcomeCount,
+			&item.LatestOutcomeAt,
 		); err != nil {
 			return worldMonitorResearchInboxList{}, err
 		}

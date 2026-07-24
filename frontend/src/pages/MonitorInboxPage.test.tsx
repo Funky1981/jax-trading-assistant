@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { axe } from 'vitest-axe';
 import { MonitorInboxPage } from './MonitorInboxPage';
 import { aiService } from '@/data/ai-service';
 import { HttpError } from '@/data/http-client';
-import { emitAnalyticsEvent } from '@/lib/analytics';
 
 vi.mock('@/data/ai-service', () => ({
   aiService: {
@@ -14,8 +14,18 @@ vi.mock('@/data/ai-service', () => ({
   },
 }));
 
-vi.mock('@/lib/analytics', () => ({
-  emitAnalyticsEvent: vi.fn(),
+vi.mock('@/hooks/useOperatorEvidenceOverview', () => ({
+  useOperatorEvidenceOverview: () => ({
+    data: {
+      runtimeMode: 'paper',
+      allowLiveTrading: false,
+      executionEnabled: false,
+      executionWorkerEnabled: false,
+      brokerExecutionAllowed: false,
+      maximumLeverage: 1,
+    },
+    isError: false,
+  }),
 }));
 
 function renderPage() {
@@ -30,20 +40,21 @@ function renderPage() {
       <QueryClientProvider client={queryClient}>
         <MonitorInboxPage />
       </QueryClientProvider>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
 describe('MonitorInboxPage', () => {
   beforeEach(() => {
+    vi.mocked(aiService.getWorldMonitorInbox).mockClear();
     vi.mocked(aiService.getWorldMonitorInbox).mockResolvedValue({
       total: 2,
       counts: {
-        total: 2,
-        pending: 0,
+        genuine: 1,
+        syntheticTests: 1,
         candidatesCreated: 1,
         rejected: 1,
-        ignored: 0,
+        duplicates: 0,
       },
       checkedAt: '2026-06-12T10:45:00Z',
       items: [
@@ -75,6 +86,10 @@ describe('MonitorInboxPage', () => {
           mappingReason: 'Mapped to QQQ from rates theme.',
           normalizedEventId: 'event-1',
           candidateId: 'candidate-1',
+          candidateSymbol: 'QQQ',
+          candidateStatus: 'awaiting_approval',
+          candidateCreatedAt: '2026-06-12T10:32:00Z',
+          outcomeCount: 0,
           rawPayload: { fixture: true, monitor_score: 0.82 },
         },
         {
@@ -90,6 +105,7 @@ describe('MonitorInboxPage', () => {
           sourceCount: 0,
           eventTime: '2026-06-12T10:20:00Z',
           receivedAt: '2026-06-12T10:21:00Z',
+          provenanceAvailable: true,
           isSynthetic: true,
           syntheticReason: 'labelled fixture',
           possibleAffectedEtfs: [],
@@ -99,64 +115,86 @@ describe('MonitorInboxPage', () => {
           confidence: 0.7,
           confidenceReasons: [],
           mappingReason: 'Rejected before mapping.',
+          outcomeCount: 0,
           rawPayload: { bad: true },
         },
       ],
     });
-    vi.mocked(emitAnalyticsEvent).mockClear();
   });
 
-  it('renders accepted and rejected monitor payloads with raw audit detail', async () => {
+  it('renders the beginner Evidence Inbox and opens human-readable detail', async () => {
+    const user = userEvent.setup();
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'Monitor Inbox' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Evidence Inbox' })).toBeInTheDocument();
     expect((await screen.findAllByText('Accepted monitor item')).length).toBeGreaterThan(0);
     expect(screen.getByText('Rejected monitor item')).toBeInTheDocument();
-    expect(screen.getAllByText('candidate_created').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('rejected').length).toBeGreaterThan(0);
-    expect(screen.getByText('Mapped to QQQ from rates theme.')).toBeInTheDocument();
-    expect(screen.getByText(/monitor_score/)).toBeInTheDocument();
     expect(screen.getAllByText('GENUINE').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('NO AI USED').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('DETERMINISTIC').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('SYNTHETIC TEST').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: /Accepted monitor item/i }));
+
+    expect(screen.getByText('Mapped to QQQ from rates theme.')).toBeInTheDocument();
+    expect(screen.getByText('No AI used')).toBeInTheDocument();
+    expect(screen.getByText('DETERMINISTIC ANALYSIS')).toBeInTheDocument();
     expect(screen.getByText('rss_poll')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Open candidate evidence/i })).toHaveAttribute(
+    expect(screen.queryByText('Unknown assets')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open Candidate Review/i })).toHaveAttribute(
       'href',
-      '/candidates/candidate-1/evidence'
+      '/candidates/candidate-1/evidence',
     );
+    expect(screen.getByText('Audit details')).toBeInTheDocument();
+    expect(screen.getByText(/monitor_score/)).not.toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: /approve|execute|trade/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it('filters by rejected status and shows the rejection reason detail', async () => {
+  it('filters without mutating records and shows rejection and unknown-assets states', async () => {
     const user = userEvent.setup();
     renderPage();
 
     await screen.findAllByText('Accepted monitor item');
-    await user.selectOptions(screen.getByLabelText('Monitor inbox status'), 'rejected');
+    await user.click(screen.getByRole('button', { name: 'Rejected' }));
+    await user.click(screen.getByRole('button', { name: /Rejected monitor item/i }));
 
-    expect(aiService.getWorldMonitorInbox).toHaveBeenLastCalledWith({ status: 'rejected', limit: 100 });
-    expect(await screen.findByText('source_urls are required')).toBeInTheDocument();
+    expect((await screen.findAllByText('source_urls are required')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Unknown assets')).toBeInTheDocument();
+    expect(aiService.getWorldMonitorInbox).toHaveBeenLastCalledWith({ limit: 100 });
   });
 
   it('distinguishes a stale or missing Monitor API route from an empty inbox', async () => {
     vi.mocked(aiService.getWorldMonitorInbox).mockRejectedValue(
-      new HttpError('Request failed: 404', 404, '404 page not found')
+      new HttpError('Request failed: 404', 404, '404 page not found'),
     );
 
     renderPage();
 
-    expect(await screen.findByText(/Monitor inbox API route was not found/i)).toBeInTheDocument();
-    expect(screen.getByText(/rebuild and restart jax-trader/i)).toBeInTheDocument();
-    expect(screen.queryByText(/No Monitor payloads match this filter yet/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(/Evidence Inbox unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your data has not been changed/i)).toBeInTheDocument();
   });
 
   it('shows an entitlement message when the Monitor inbox is protected by auth', async () => {
     vi.mocked(aiService.getWorldMonitorInbox).mockRejectedValue(
-      new HttpError('Request failed: 401', 401, 'missing authorization token')
+      new HttpError('Request failed: 401', 401, 'missing authorization token'),
     );
 
     renderPage();
 
-    expect(await screen.findByText(/Sign in to view Monitor payloads/i)).toBeInTheDocument();
-    expect(screen.getByText(/missing authorization token/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Sign in to view evidence/i)).toBeInTheDocument();
+    expect(screen.getByText(/protected evidence/i)).toBeInTheDocument();
+  });
+
+  it('has no detectable accessibility violations in the open evidence detail', async () => {
+    const user = userEvent.setup();
+    const { container } = renderPage();
+    await user.click(
+      await screen.findByRole('button', {
+        name: /Accepted monitor item/i,
+      }),
+    );
+
+    const results = await axe(container);
+    expect(results.violations).toHaveLength(0);
   });
 });

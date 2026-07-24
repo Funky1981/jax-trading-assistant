@@ -15,6 +15,18 @@ The current primary workflow is:
 
 Hypothetical paper outcomes are not orders, fills or realised profit and loss.
 
+### Review evidence
+
+1. Open `Evidence Inbox`.
+2. Use `Genuine`, `Synthetic tests`, `Rejected`, or `Candidate created` to narrow the list.
+3. Open an evidence card to read the source, published time, collected time, and Jax receipt time separately.
+4. Check `How was it analysed?`. Deterministic rules are not described as AI; an AI provider or model appears only when persisted metadata proves it.
+5. Read `What did Jax do next?` and the event journey. `Awaiting processing`, `Research only`, `Rejected`, `Duplicate ignored`, and `Candidate created` are distinct outcomes.
+6. If a candidate exists, use `Open Candidate Review`. The Evidence Inbox itself cannot approve or place a trade.
+7. Open `Audit details` only when technical IDs, provenance, or the collapsed raw payload are needed.
+
+`Unknown assets` means no truthful persisted asset mapping exists. Jax does not insert a fallback symbol. A missing candidate is not automatically an error; check whether the evidence is awaiting a persisted decision or has a completed research-only outcome.
+
 ## Running A Backtest (UI)
 
 1. Start the stack so `jax-trader` and `jax-research` are healthy.

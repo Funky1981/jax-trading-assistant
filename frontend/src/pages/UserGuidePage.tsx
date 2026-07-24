@@ -144,6 +144,24 @@ export function UserGuidePage() {
           </Button>
         </CardContent>
       </Card>
+      <Card id="evidence-inbox" className="scroll-mt-4">
+        <CardHeader>
+          <CardTitle>How to review the Evidence Inbox</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            Filter the list, open one item, then read its source, three separate timestamps,
+            analysis method and event journey. Opening evidence is read-only.
+          </p>
+          <p>
+            Awaiting processing is different from research only. Unknown assets means Jax has no
+            truthful persisted mapping; it does not insert a fallback symbol.
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/monitor/inbox">Open Evidence Inbox</Link>
+          </Button>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Key terms</CardTitle>

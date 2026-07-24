@@ -237,3 +237,17 @@ The operator should be able to open one event and explain:
 ## Exit criteria
 
 Phase 2 is complete when the Evidence Inbox is understandable without direct SQL, PowerShell output or raw JSON.
+
+## Implementation and acceptance record
+
+Status: **PROVEN — 2026-07-24**
+
+- The compatible `/monitor/inbox` route now presents responsive evidence cards and a detail experience instead of a forced 980 px table.
+- Summary counts, provenance, timestamps, analysis identity, candidate linkage, and journey stages come from authenticated persisted read models.
+- The runtime contained 30 Inbox rows: 25 provenance-confirmed genuine, 2 synthetic, and 3 older rejected rows without enough linked raw provenance to classify. Those three display `Provenance unavailable` rather than being fabricated as genuine.
+- Seven genuine records persisted as `new` are labelled `Awaiting processing`; the UI does not misstate them as completed research-only decisions.
+- Persisted deterministic analysis is explicitly separated from AI analysis. Empty asset mappings display `Unknown assets`.
+- Interactive Playwright checks against the existing runtime passed at 320, 768 and 1280 px with no document-level horizontal overflow.
+- The previous baseline remains at `images/monitor-inbox.png`. Accepted after screenshots are stored under `images/acceptance/phase2-evidence-inbox-{320,768,1280}.png`.
+- Phase 1 Home-to-Evidence-Inbox acceptance was repeated at the three viewports and the prior horizontal-scroll failure is resolved.
+- No evidence, candidate, approval, paper-ticket, execution, order, trade, fill, or runtime-setting mutation was introduced.

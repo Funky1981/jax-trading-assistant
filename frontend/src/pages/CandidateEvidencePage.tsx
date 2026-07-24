@@ -267,7 +267,7 @@ export function CandidateEvidencePage() {
         </Button>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link to="/monitor/inbox">Monitor inbox</Link>
+            <Link to="/monitor/inbox">Evidence Inbox</Link>
           </Button>
           <Button asChild variant="outline" size="sm">
             <Link to="/approvals">Approvals</Link>

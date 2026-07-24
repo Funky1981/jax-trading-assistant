@@ -28,7 +28,11 @@ func TestOperatorEvidenceOverviewReportsSafePaperRuntimeWithoutInventedActivity(
 }
 
 func TestOperatorEvidenceEndpointsAreReadOnly(t *testing.T) {
-	for _, handler := range []http.HandlerFunc{operatorEvidenceOverviewHandler(nil), operatorCandidateEvidenceHandler(nil)} {
+	for _, handler := range []http.HandlerFunc{
+		operatorEvidenceOverviewHandler(nil),
+		operatorCandidateEvidenceHandler(nil),
+		worldMonitorResearchInboxHandler(nil),
+	} {
 		res := httptest.NewRecorder()
 		handler(res, httptest.NewRequest(http.MethodPost, "/api/v1/operator-evidence/candidates/00000000-0000-0000-0000-000000000000", nil))
 		if res.Code != http.StatusMethodNotAllowed {
