@@ -1,5 +1,20 @@
 # JAX Trading Assistant - User Guide
 
+## Beginner operator navigation
+
+The current primary workflow is:
+
+`Home → Guide → Evidence Inbox → Candidates → Outcomes → System Safety`
+
+- `Home` uses the authenticated operator-evidence overview to show runtime safety and persisted activity.
+- `Evidence Inbox` keeps its existing `/monitor/inbox` route.
+- `Candidates` uses the existing `/etf/approvals` list because it is the safest existing candidate-oriented list route. Phase 1 adds no approval action.
+- `Outcomes` uses `/outcomes`, a read-only summary of persisted hypothetical checkpoint counts. Individual candidate checkpoints remain available through candidate review deep links.
+- `System Safety` keeps its existing `/system` route.
+- All other existing destinations and deep links remain available under the collapsed `Review` section. Review pages are explicitly marked as not yet redesigned.
+
+Hypothetical paper outcomes are not orders, fills or realised profit and loss.
+
 ## Running A Backtest (UI)
 
 1. Start the stack so `jax-trader` and `jax-research` are healthy.

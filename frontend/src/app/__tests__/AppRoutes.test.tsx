@@ -42,15 +42,18 @@ describe('AppRoutes', () => {
             }}
           />
         </AuthProvider>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
-    expect(await screen.findByRole('heading', { name: 'Start Here' })).toBeInTheDocument();
-    expect(screen.getByText('Jax is a paper-trading assistant. It helps you find ideas, check evidence, and keep every action behind safety steps.')).toBeInTheDocument();
-    expect(screen.getByText('How The App Fits Together')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Find AI opportunities/i })).toHaveAttribute('href', '/ai-trading');
-    expect(screen.getByRole('link', { name: /Place a manual trade/i })).toHaveAttribute('href', '/manual-trading');
-    expect(screen.getByRole('link', { name: /Test a strategy/i })).toHaveAttribute('href', '/research');
+    expect(await screen.findByRole('heading', { name: 'Jax overview' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Start the guide/i })).toHaveAttribute(
+      'href',
+      '/guide',
+    );
+    expect(screen.getAllByRole('link', { name: /Open Evidence Inbox/i })[0]).toHaveAttribute(
+      'href',
+      '/monitor/inbox',
+    );
   });
 
   it('renders the blotter page for /blotter', async () => {
@@ -82,7 +85,7 @@ describe('AppRoutes', () => {
             }}
           />
         </AuthProvider>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     expect(await screen.findByText('Review recent orders and their status.')).toBeInTheDocument();
@@ -128,7 +131,7 @@ describe('AppRoutes', () => {
             }}
           />
         </AuthProvider>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
 
     expect(await screen.findByRole('heading', { name: 'Notification Centre' })).toBeInTheDocument();
@@ -144,6 +147,7 @@ describe('AppRoutes', () => {
     expect(childPaths).toContain('notifications');
     expect(childPaths).toContain('macro/events');
     expect(childPaths).toContain('monitor/inbox');
+    expect(childPaths).toContain('outcomes');
     expect(childPaths).toContain('candidates/:candidateId/evidence');
     expect(childPaths).toContain('etf/candidates/:candidateId/evidence');
     expect(childPaths).toContain('equity-alpha/candidates/:candidateId/evidence');

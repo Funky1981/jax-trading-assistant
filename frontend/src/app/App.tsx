@@ -32,6 +32,7 @@ import { MobileApprovalHarnessPage } from '@/pages/MobileApprovalHarnessPage';
 import { NotificationCentrePage } from '@/pages/NotificationCentrePage';
 import { MacroEventsPage } from '@/pages/MacroEventsPage';
 import { MonitorInboxPage } from '@/pages/MonitorInboxPage';
+import { OutcomesPage } from '@/pages/OutcomesPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, authRequired } = useAuth();
@@ -75,6 +76,7 @@ export const routes = [
       { path: 'notifications', element: <NotificationCentrePage /> },
       { path: 'macro/events', element: <MacroEventsPage /> },
       { path: 'monitor/inbox', element: <MonitorInboxPage /> },
+      { path: 'outcomes', element: <OutcomesPage /> },
       { path: 'modules', element: <TradingModulesPage /> },
 
       { path: 'trading', element: <Navigate to="/equity-alpha/trading" replace /> },
@@ -86,7 +88,10 @@ export const routes = [
       { path: 'trading-modes', element: <Navigate to="/etf/trading-modes" replace /> },
 
       { path: 'legacy/trading', element: <Navigate to="/equity-alpha/trading" replace /> },
-      { path: 'legacy/order-ticket', element: <Navigate to="/equity-alpha/order-ticket" replace /> },
+      {
+        path: 'legacy/order-ticket',
+        element: <Navigate to="/equity-alpha/order-ticket" replace />,
+      },
       { path: 'legacy/guide', element: <Navigate to="/equity-alpha/guide" replace /> },
 
       { path: 'equity-alpha/trading', element: <TradingPage /> },
@@ -142,4 +147,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

@@ -1,133 +1,210 @@
-import { BookOpen, CheckCircle2, ListChecks, Wrench } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { HelpHint } from '@/components/ui/help-hint';
-import { PilotStatusBanner } from '@/components/ui/PilotStatusBanner';
-import { useTradingPilotStatus } from '@/hooks/useTradingPilotStatus';
+import { Link } from 'react-router-dom';
+import { AlertTriangle, ArrowRight, CheckCircle2, Circle, Clock } from 'lucide-react';
+import { useOperatorEvidenceOverview } from '@/hooks/useOperatorEvidenceOverview';
+import { isPaperSafe } from '@/lib/operator-safety';
+import { beginnerGlossary } from '@/data/beginner-glossary';
+import { PageIntro, SafetyBanner, TechnicalDetailsDisclosure } from '@/components/ui/beginner-help';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+type Task = { label: string; status: string; path: string };
 
 export function UserGuidePage() {
-  const { data: pilotStatus } = useTradingPilotStatus();
+  const overview = useOperatorEvidenceOverview();
+  const safe = isPaperSafe(overview.data);
+  const tasks: Task[] = overview.data
+    ? [
+        {
+          label: 'Confirm paper-safe mode',
+          status: safe ? 'Done' : 'Needs attention',
+          path: '/system',
+        },
+        {
+          label: 'Review new evidence',
+          status: overview.data.genuineEvents > 0 ? 'Ready' : 'No data yet',
+          path: '/monitor/inbox',
+        },
+        {
+          label: 'Review a candidate when one exists',
+          status: overview.data.candidates > 0 ? 'Ready' : 'Waiting',
+          path: '/etf/approvals',
+        },
+        {
+          label: 'Review hypothetical outcomes',
+          status:
+            overview.data.completedCheckpoints > 0 || overview.data.pendingCheckpoints > 0
+              ? 'Ready'
+              : 'No data yet',
+          path: '/outcomes',
+        },
+        {
+          label: 'Check System Safety if anything looks wrong',
+          status: safe ? 'Ready' : 'Needs attention',
+          path: '/system',
+        },
+      ]
+    : [
+        {
+          label: 'Confirm paper-safe mode',
+          status: overview.isPending ? 'Waiting' : 'Needs attention',
+          path: '/system',
+        },
+        { label: 'Review new evidence', status: 'No data yet', path: '/monitor/inbox' },
+        {
+          label: 'Review a candidate when one exists',
+          status: 'No data yet',
+          path: '/etf/approvals',
+        },
+        { label: 'Review hypothetical outcomes', status: 'No data yet', path: '/outcomes' },
+        { label: 'Check System Safety if anything looks wrong', status: 'Ready', path: '/system' },
+      ];
+  const next = !safe
+    ? { label: 'Open System Safety', path: '/system' }
+    : overview.data && overview.data.genuineEvents > 0
+      ? { label: 'Open Evidence Inbox', path: '/monitor/inbox' }
+      : overview.data && overview.data.candidates > 0
+        ? { label: 'Open Candidates', path: '/etf/approvals' }
+        : overview.data &&
+            (overview.data.completedCheckpoints > 0 || overview.data.pendingCheckpoints > 0)
+          ? { label: 'Open Outcomes', path: '/outcomes' }
+          : { label: 'Open Evidence Inbox', path: '/monitor/inbox' };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-primary">Getting started</p>
-        <h1 className="flex items-center gap-2 text-2xl font-bold md:text-3xl">
-          User Guide
-          <HelpHint text="A practical first-run workflow for research, AI review, and paper trading." />
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Use this to prove the local stack is healthy before trusting any research result or paper-trading workflow.
-        </p>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageIntro
+        eyebrow="Guide"
+        title="Start with the current Jax workflow"
+        description="Jax reviews evidence and tracks hypothetical paper plans. It is not a live trading terminal."
+      />
+      <SafetyBanner safe={safe} loading={overview.isPending} />
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>What Jax does today</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>Collect genuine news evidence and store its provenance.</li>
+              <li>Review events and create structured candidates when evidence supports one.</li>
+              <li>Require human approval before a candidate can progress.</li>
+              <li>Track hypothetical paper outcomes.</li>
+              <li>Show the current runtime safety state.</li>
+            </ul>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>What Jax cannot do</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>Trade live, place broker orders or fill positions in this workflow.</li>
+              <li>Guarantee profit or automatically approve candidates.</li>
+              <li>Use leverage above the configured safety limit.</li>
+              <li>Treat hypothetical outcomes as real returns.</li>
+            </ul>
+          </CardContent>
+        </Card>
       </div>
-
-      {pilotStatus ? (
-        <PilotStatusBanner
-          title="Pilot trading policy"
-          readOnly={pilotStatus.readOnly}
-          reasons={pilotStatus.reasons}
-          checklist={pilotStatus.checklist}
-        />
-      ) : null}
-
       <Card>
-        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <ListChecks className="h-5 w-5" />
-          <div>
-            <CardTitle>First-Run Checklist</CardTitle>
-            <CardDescription>Run these checks in order. Stop at the first failed check and use the linked diagnostic page.</CardDescription>
-          </div>
+        <CardHeader>
+          <CardTitle>Your current workflow</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <ol className="list-decimal space-y-1 pl-5 text-foreground">
-            <li>Start the stack with `.\start.ps1`. It applies migrations, syncs dataset snapshots, and rebuilds stale service images.</li>
-            <li>Confirm services: open `System` and check runtime, providers, market data, and dataset snapshots.</li>
-            <li>Confirm Monitor ingestion: open `Monitor Inbox`. Empty means no payload has arrived; route/auth/schema errors are shown separately.</li>
-            <li>Run one dataset-backed research check from `Research`. A dataset ID and hash must be visible before running.</li>
-            <li>Open the completed run in `Analysis` and verify the dataset hash, source provider, and trade table are present.</li>
-            <li>Only after those checks pass, use `Manual Trading` for a tiny non-ETF paper order. ETF entries must come from a real candidate approval.</li>
+        <CardContent className="space-y-3">
+          <ol className="space-y-2">
+            {tasks.map((task, index) => (
+              <li
+                key={task.label}
+                className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center"
+              >
+                <span className="flex flex-1 items-center gap-3">
+                  {task.status === 'Done' ? (
+                    <CheckCircle2 className="h-5 w-5 text-success" />
+                  ) : task.status === 'Needs attention' ? (
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                  ) : task.status === 'Waiting' ? (
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-primary" />
+                  )}
+                  <span>
+                    <span className="mr-2 text-muted-foreground">{index + 1}.</span>
+                    {task.label}
+                  </span>
+                </span>
+                <span className="text-sm font-medium">{task.status}</span>
+              </li>
+            ))}
           </ol>
-          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-            Troubleshooting: use `System` for service health, `Monitor Inbox` for payload diagnostics, `Testing` for gate checks, and `Docs/DEBUGGING.md` for container logs.
-          </div>
+          <Button asChild>
+            <Link to={next.path}>
+              {next.label}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </CardContent>
       </Card>
-
       <Card>
-        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <BookOpen className="h-5 w-5" />
-          <div>
-            <CardTitle>What Each Main Page Does</CardTitle>
-            <CardDescription>Use these pages in order while learning the app.</CardDescription>
-          </div>
+        <CardHeader>
+          <CardTitle>Key terms</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <ul className="list-disc space-y-1 pl-5 text-foreground">
-            <li>`Research` runs dataset-backed backtests. It does not place trades.</li>
-            <li>`AI Trading` shows queued opportunities and can ask the local AI for a symbol view.</li>
-            <li>`Manual Trading` is where protected paper orders are submitted and managed.</li>
-            <li>`Approvals` is for approval-required ETF ideas; manual ETF entries are blocked by policy.</li>
-            <li>`Macro Events` shows ingested research events, including World Monitor triggers.</li>
-            <li>`Analysis` opens completed backtests so you can inspect results and provenance.</li>
-            <li>`System` shows runtime health, datasets, and diagnostics.</li>
-          </ul>
+        <CardContent>
+          <dl className="grid gap-4 sm:grid-cols-2">
+            {Object.entries(beginnerGlossary).map(([term, definition]) => (
+              <div key={term}>
+                <dt className="font-semibold">{term}</dt>
+                <dd className="text-sm text-muted-foreground">{definition}</dd>
+              </div>
+            ))}
+          </dl>
         </CardContent>
       </Card>
-
       <Card>
-        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <CheckCircle2 className="h-5 w-5" />
-          <div>
-            <CardTitle>Dataset Snapshots</CardTitle>
-            <CardDescription>Backtests run from registered CSV snapshots, not from whatever file happens to exist.</CardDescription>
-          </div>
+        <CardHeader>
+          <CardTitle>Troubleshooting</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <ol className="list-decimal space-y-1 pl-5 text-foreground">
-            <li>Datasets live in `data/datasets` and are listed in `data/datasets/catalog.json`.</li>
-            <li>`.\start.ps1` syncs that catalog into Postgres after migrations.</li>
-            <li>`jax-research` loads the catalog on startup, so restart it after adding new dataset files by hand.</li>
-            <li>For the beginner research path, use the SPY 1-minute snapshot because opening-range strategies need intraday candles.</li>
-          </ol>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            If safety is unknown or warns, open System Safety before relying on any other
+            information.
+          </p>
+          <p>
+            If Evidence Inbox is empty, Jax may be waiting for a genuine event. An API error is
+            different from an empty inbox and should be investigated.
+          </p>
+          <nav aria-label="Guide destinations" className="flex flex-wrap gap-2 pt-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/monitor/inbox">Evidence Inbox</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/etf/approvals">Candidates</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/outcomes">Outcomes</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/system">System Safety</Link>
+            </Button>
+          </nav>
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <BookOpen className="h-5 w-5" />
-          <div>
-            <CardTitle>Paper Orders</CardTitle>
-            <CardDescription>Paper trading is still a broker mutation, so keep every test tiny.</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <ol className="list-decimal space-y-1 pl-5 text-foreground">
-            <li>Use `Manual Trading` for non-ETF manual paper orders such as AAPL.</li>
-            <li>Start with quantity `1`, add `Stop Loss`, and add optional `Take Profit`.</li>
-            <li>Confirm the IB/TWS checkbox before submitting.</li>
-            <li>Use `Trade Blotter` to inspect or cancel working stop/target orders.</li>
-            <li>Use `Positions` to close or protect open exposure after a fill.</li>
-          </ol>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center">
-          <Wrench className="h-5 w-5" />
-          <div>
-            <CardTitle>News Monitor Flow</CardTitle>
-            <CardDescription>World Monitor input is research context, not an order instruction.</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <ul className="list-disc space-y-1 pl-5 text-foreground">
-            <li>The Jax endpoint is `POST /api/v1/research/events/world-monitor`.</li>
-            <li>Accepted payloads become Monitor Inbox rows and normalized research events with original source URLs retained.</li>
-            <li>Promotion to a candidate is a separate step and requires evidence, mapping, and chart confirmation.</li>
-            <li>Payload receipt must not create broker orders or execution instructions directly.</li>
-            <li>Use `Monitor Inbox` for raw payload provenance and `Macro Events` for normalized event context.</li>
-          </ul>
-        </CardContent>
-      </Card>
+      <TechnicalDetailsDisclosure>
+        <div className="space-y-3">
+          <p>
+            The operator-evidence overview is the source for the workflow statuses above. Unknown
+            data never becomes a completed status.
+          </p>
+          <p>
+            Dataset-backed research, diagnostics, manual trading, specialist guides and testing
+            tools remain available in Review. Those areas have not yet been redesigned for the
+            current operator workflow.
+          </p>
+          <p>
+            World Monitor input is research context, not an order instruction. Candidate promotion
+            remains a separate evidence-gated process.
+          </p>
+        </div>
+      </TechnicalDetailsDisclosure>
     </div>
   );
 }

@@ -25,6 +25,11 @@ All other pages remain available but move into a collapsed **Review** section un
 
 Complete, test and review one phase before starting the next.
 
+## Implementation status
+
+- Phase 1 — Navigation, Home and Guide: implemented on 2026-07-21; runtime browser proof and viewport screenshots are required before promotion from IMPLEMENTED to PROVEN.
+- Phases 2–4: not started by the Phase 1 implementation.
+
 Do not attempt a whole-application visual rewrite. Existing routes should continue to resolve while the operator-facing workflow is simplified incrementally.
 
 ## Current design problem
