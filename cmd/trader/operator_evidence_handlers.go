@@ -113,6 +113,126 @@ type operatorCheckpoint struct {
 	UpdatedAt           time.Time  `json:"updatedAt"`
 }
 
+type operatorCandidateSummary struct {
+	CandidateID          string     `json:"candidateId"`
+	Symbol               string     `json:"symbol"`
+	SetupType            string     `json:"setupType"`
+	CandidateStatus      string     `json:"candidateStatus"`
+	HumanDecision        string     `json:"humanDecision"`
+	DecisionProvenance   string     `json:"decisionProvenance"`
+	PaperTicketID        string     `json:"paperTicketId,omitempty"`
+	PaperTicketStatus    string     `json:"paperTicketStatus,omitempty"`
+	LatestOutcomeStatus  string     `json:"latestOutcomeStatus,omitempty"`
+	CompletedCheckpoints int        `json:"completedCheckpoints"`
+	PendingCheckpoints   int        `json:"pendingCheckpoints"`
+	MissingCheckpoints   int        `json:"missingCheckpoints"`
+	AmbiguousCheckpoints int        `json:"ambiguousCheckpoints"`
+	Reason               string     `json:"reason"`
+	BlockReason          string     `json:"blockReason,omitempty"`
+	CreatedAt            time.Time  `json:"createdAt"`
+	ExpiresAt            *time.Time `json:"expiresAt,omitempty"`
+}
+
+func operatorCandidatesHandler(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if pool == nil {
+			jsonOK(w, []operatorCandidateSummary{})
+			return
+		}
+		rows, err := pool.Query(r.Context(), `SELECT
+			ct.id::text,
+			ct.symbol,
+			COALESCE(NULLIF(ct.setup_type,''), NULLIF(ct.strategy_id,''), 'Not supplied'),
+			ct.status,
+			COALESCE(ca.decision, ''),
+			CASE
+				WHEN ca.id IS NULL THEN 'none'
+				WHEN lower(COALESCE(ca.approved_by,'')) IN ('system','automation','auto','jax') THEN 'non_human'
+				ELSE 'human'
+			END,
+			COALESCE(pt.paper_ticket_id,''),
+			COALESCE(pt.status,''),
+			COALESCE(latest.checkpoint_status,''),
+			COALESCE(outcomes.completed,0)::int,
+			COALESCE(outcomes.pending,0)::int,
+			COALESCE(outcomes.missing,0)::int,
+			COALESCE(outcomes.ambiguous,0)::int,
+			COALESCE(NULLIF(ct.candidate_reason_summary,''), NULLIF(ct.reasoning,''), NULLIF(ct.catalyst_summary,''), 'No plain-language reason was persisted.'),
+			COALESCE(ct.block_reason,''),
+			ct.detected_at,
+			ct.expires_at
+			FROM candidate_trades ct
+			LEFT JOIN LATERAL (
+				SELECT id, decision, approved_by
+				FROM candidate_approvals
+				WHERE candidate_id=ct.id
+				ORDER BY decided_at DESC
+				LIMIT 1
+			) ca ON true
+			LEFT JOIN candidate_paper_tickets pt ON pt.candidate_id=ct.id
+			LEFT JOIN LATERAL (
+				SELECT
+					COUNT(*) FILTER (WHERE checkpoint_status IN ('completed','stop_touched','target_touched','ambiguous_same_candle')) AS completed,
+					COUNT(*) FILTER (WHERE checkpoint_status='pending_not_due') AS pending,
+					COUNT(*) FILTER (WHERE checkpoint_status IN ('pending_market_data','insufficient_data')) AS missing,
+					COUNT(*) FILTER (WHERE checkpoint_status='ambiguous_same_candle') AS ambiguous
+				FROM paper_ticket_outcome_checkpoints
+				WHERE paper_ticket_id=pt.paper_ticket_id
+			) outcomes ON true
+			LEFT JOIN LATERAL (
+				SELECT checkpoint_status
+				FROM paper_ticket_outcome_checkpoints
+				WHERE paper_ticket_id=pt.paper_ticket_id
+				ORDER BY scheduled_at DESC
+				LIMIT 1
+			) latest ON true
+			ORDER BY ct.detected_at DESC
+			LIMIT 100`)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("operator candidates: %v", err), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		out := make([]operatorCandidateSummary, 0)
+		for rows.Next() {
+			var candidate operatorCandidateSummary
+			if err := rows.Scan(
+				&candidate.CandidateID,
+				&candidate.Symbol,
+				&candidate.SetupType,
+				&candidate.CandidateStatus,
+				&candidate.HumanDecision,
+				&candidate.DecisionProvenance,
+				&candidate.PaperTicketID,
+				&candidate.PaperTicketStatus,
+				&candidate.LatestOutcomeStatus,
+				&candidate.CompletedCheckpoints,
+				&candidate.PendingCheckpoints,
+				&candidate.MissingCheckpoints,
+				&candidate.AmbiguousCheckpoints,
+				&candidate.Reason,
+				&candidate.BlockReason,
+				&candidate.CreatedAt,
+				&candidate.ExpiresAt,
+			); err != nil {
+				http.Error(w, fmt.Sprintf("operator candidate row: %v", err), http.StatusInternalServerError)
+				return
+			}
+			out = append(out, candidate)
+		}
+		if err := rows.Err(); err != nil {
+			http.Error(w, fmt.Sprintf("operator candidates rows: %v", err), http.StatusInternalServerError)
+			return
+		}
+		jsonOK(w, out)
+	}
+}
+
 type operatorCandidateEvidence struct {
 	EvidenceScore             *float64             `json:"evidenceScore,omitempty"`
 	EvidenceStatus            string               `json:"evidenceStatus"`
@@ -120,6 +240,7 @@ type operatorCandidateEvidence struct {
 	RiskStatus                string               `json:"riskStatus"`
 	ApprovalID                string               `json:"approvalId,omitempty"`
 	ApprovalDecision          string               `json:"approvalDecision,omitempty"`
+	DecisionProvenance        string               `json:"decisionProvenance"`
 	ApprovedBy                string               `json:"approvedBy,omitempty"`
 	ApprovalReason            string               `json:"approvalReason,omitempty"`
 	ApprovalAt                *time.Time           `json:"approvalAt,omitempty"`
@@ -155,14 +276,16 @@ func operatorCandidateEvidenceHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		out := operatorCandidateEvidence{Checkpoints: []operatorCheckpoint{}, SelectedExecutionCounts: map[string]int{}, HistoricalExecutionCounts: map[string]int{}}
 		var score sql.NullFloat64
 		err = pool.QueryRow(r.Context(), `SELECT ces.overall_evidence_score::float8, COALESCE(ces.evidence_status,'missing'), ct.gate_status, ct.risk_status,
-			COALESCE(ca.id::text,''), COALESCE(ca.decision,''), COALESCE(ca.approved_by,''), COALESCE(ca.notes,''), ca.decided_at,
+			COALESCE(ca.id::text,''), COALESCE(ca.decision,''),
+			CASE WHEN ca.id IS NULL THEN 'none' WHEN lower(COALESCE(ca.approved_by,'')) IN ('system','automation','auto','jax') THEN 'non_human' ELSE 'human' END,
+			COALESCE(ca.approved_by,''), COALESCE(ca.notes,''), ca.decided_at,
 			COALESCE(pt.paper_ticket_id,''), COALESCE(pt.status,''), pt.entry_price::float8, pt.stop_loss_price::float8, pt.target_price::float8, pt.position_size::float8,
 			pt.max_normal_loss::float8, (pt.target_price-pt.entry_price)*pt.position_size, pt.reward_risk_ratio::float8,
 			(pt.entry_price*pt.position_size)::float8
 			FROM candidate_trades ct
 			LEFT JOIN LATERAL (SELECT * FROM candidate_evidence_scores WHERE candidate_id=ct.id ORDER BY scored_at DESC LIMIT 1) ces ON true
 			LEFT JOIN LATERAL (SELECT * FROM candidate_approvals WHERE candidate_id=ct.id ORDER BY decided_at DESC LIMIT 1) ca ON true
-			LEFT JOIN candidate_paper_tickets pt ON pt.candidate_id=ct.id WHERE ct.id=$1`, id).Scan(&score, &out.EvidenceStatus, &out.GateStatus, &out.RiskStatus, &out.ApprovalID, &out.ApprovalDecision, &out.ApprovedBy, &out.ApprovalReason, &out.ApprovalAt, &out.PaperTicketID, &out.PaperTicketStatus, &out.Entry, &out.Stop, &out.Target, &out.Quantity, &out.PlannedRisk, &out.PlannedReward, &out.RewardRisk, &out.Notional)
+			LEFT JOIN candidate_paper_tickets pt ON pt.candidate_id=ct.id WHERE ct.id=$1`, id).Scan(&score, &out.EvidenceStatus, &out.GateStatus, &out.RiskStatus, &out.ApprovalID, &out.ApprovalDecision, &out.DecisionProvenance, &out.ApprovedBy, &out.ApprovalReason, &out.ApprovalAt, &out.PaperTicketID, &out.PaperTicketStatus, &out.Entry, &out.Stop, &out.Target, &out.Quantity, &out.PlannedRisk, &out.PlannedReward, &out.RewardRisk, &out.Notional)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				http.Error(w, "not found", http.StatusNotFound)

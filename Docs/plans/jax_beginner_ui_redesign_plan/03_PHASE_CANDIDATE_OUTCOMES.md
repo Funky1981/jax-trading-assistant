@@ -1,5 +1,11 @@
 # Phase 3 — Candidate Review and Hypothetical Outcomes
 
+## Implementation note — 2026-07-24
+
+The compatible `/etf/approvals` route now serves a read-only Candidates page. The former approval queue remains at `/review/approvals` for compatibility and is not part of the beginner primary path. Candidate Review and `/outcomes` use authenticated operator-evidence projections and contain no approval, paper-ticket, checkpoint or execution mutations.
+
+Automated implementation checks are complete. Do not mark this phase or its capabilities PROVEN until the existing persisted QQQ journey is exercised in the browser at 320, 768 and 1280 px and acceptance screenshots are captured.
+
 ## Goal
 
 Make the existing candidate, approval, paper-ticket and checkpoint records understandable without implying a real trade occurred.

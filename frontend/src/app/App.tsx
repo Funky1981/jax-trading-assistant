@@ -15,6 +15,7 @@ import { OrderTicketPage } from '@/pages/OrderTicketPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { UserGuidePage } from '@/pages/UserGuidePage';
 import { ApprovalsPage } from '@/pages/ApprovalsPage';
+import { CandidatesPage } from '@/pages/CandidatesPage';
 import { AssistantPage } from '@/pages/AssistantPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -104,7 +105,8 @@ export const routes = [
 
       { path: 'etf/trading', element: <TradingPage /> },
       { path: 'etf/guide', element: <ETFGuidePage /> },
-      { path: 'etf/approvals', element: <ApprovalsPage /> },
+      { path: 'etf/approvals', element: <CandidatesPage /> },
+      { path: 'review/approvals', element: <ApprovalsPage /> },
       { path: 'etf/universe', element: <ETFUniversePage /> },
       { path: 'etf/strategies', element: <StrategyCardsPage /> },
       { path: 'etf/timeline', element: <ResearchTimelinePage /> },

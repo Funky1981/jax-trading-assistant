@@ -30,6 +30,7 @@ func TestOperatorEvidenceOverviewReportsSafePaperRuntimeWithoutInventedActivity(
 func TestOperatorEvidenceEndpointsAreReadOnly(t *testing.T) {
 	for _, handler := range []http.HandlerFunc{
 		operatorEvidenceOverviewHandler(nil),
+		operatorCandidatesHandler(nil),
 		operatorCandidateEvidenceHandler(nil),
 		worldMonitorResearchInboxHandler(nil),
 	} {
@@ -38,5 +39,17 @@ func TestOperatorEvidenceEndpointsAreReadOnly(t *testing.T) {
 		if res.Code != http.StatusMethodNotAllowed {
 			t.Fatalf("status=%d, want 405", res.Code)
 		}
+	}
+}
+
+func TestOperatorCandidatesReturnsEmptyPersistedListWithoutDatabase(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/operator-evidence/candidates", nil)
+	res := httptest.NewRecorder()
+	operatorCandidatesHandler(nil)(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", res.Code, res.Body.String())
+	}
+	if strings.TrimSpace(res.Body.String()) != "[]" {
+		t.Fatalf("body=%s, want []", res.Body.String())
 	}
 }

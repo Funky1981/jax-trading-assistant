@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { stubBase } from './helpers';
 
-test('candidate evidence page shows monitor news, chart evidence, sentiment, and sizing', async ({ page }) => {
+test('candidate evidence page shows monitor news, chart evidence, sentiment, and sizing', async ({
+  page,
+}) => {
   await stubBase(page);
 
   await page.route('**/api/v1/candidates/candidate-evidence-1', (route) =>
@@ -20,7 +22,8 @@ test('candidate evidence page shows monitor news, chart evidence, sentiment, and
         stopLoss: 527.5,
         takeProfit: 536,
         confidence: 0.84,
-        reasoning: 'Softer inflation news supports a tactical SPY paper long while price holds above trend.',
+        reasoning:
+          'Softer inflation news supports a tactical SPY paper long while price holds above trend.',
         sessionDate: '2026-06-12',
         detectedAt: '2026-06-12T10:30:00Z',
         expiresAt: '2026-06-12T11:00:00Z',
@@ -36,13 +39,15 @@ test('candidate evidence page shows monitor news, chart evidence, sentiment, and
             sourceCount: 2,
             assetThemes: ['rates', 'growth'],
             confidenceReasons: ['trusted macro source', 'mapped to SPY'],
-            mappingReason: 'SPY was selected because broad US equities often react to lower-rate surprises.',
+            mappingReason:
+              'SPY was selected because broad US equities often react to lower-rate surprises.',
             route: 'approval_required',
           },
           chartConfirmation: {
             confirmed: true,
             reasonCode: 'above_sma20',
-            reason: 'SPY held above the 20-period moving average and the last five candles were positive.',
+            reason:
+              'SPY held above the 20-period moving average and the last five candles were positive.',
             candleCount: 30,
             lastClose: 531.25,
             sma20: 528.1,
@@ -52,7 +57,6 @@ test('candidate evidence page shows monitor news, chart evidence, sentiment, and
           sizing: {
             model: 'paper_fixed_risk_v1',
             status: 'available',
-            riskBudget: 100,
             shares: 40,
             quantity: 40,
             notional: 21200,
@@ -103,37 +107,83 @@ test('candidate evidence page shows monitor news, chart evidence, sentiment, and
         plannedRisk: 100,
         plannedReward: 240,
         rewardRisk: 2.4,
-        checkpoints: [{
-          name: '1h', trackingStartedAt: '2026-06-12T10:40:00Z', trackingStartSource: 'paper_ticket_created_at',
-          dueAt: '2026-06-12T11:40:00Z', observationAt: '2026-06-12T11:45:00Z', entryPrice: 530,
-          checkpointPrice: 532, percentageReturn: 0.377, hypotheticalPnl: 80, maximumFavourableExcursion: 3,
-          maximumAdverseExcursion: 1, targetTouched: false, stopTouched: false, status: 'completed',
-          dataQualityStatus: 'complete_candle_window', marketDataSource: 'persisted_candles:test_fixture',
-          createdAt: '2026-06-12T10:40:00Z', updatedAt: '2026-06-12T11:45:00Z',
-        }],
-        selectedExecutionCounts: { executionInstructions: 0, orderIntents: 0, brokerOrders: 0, trades: 0, fills: 0 },
-        historicalExecutionCounts: { executionInstructions: 2, orderIntents: 1, brokerOrders: 0, trades: 0, fills: 0 },
+        checkpoints: [
+          {
+            name: '1h',
+            trackingStartedAt: '2026-06-12T10:40:00Z',
+            trackingStartSource: 'paper_ticket_created_at',
+            dueAt: '2026-06-12T11:40:00Z',
+            observationAt: '2026-06-12T11:45:00Z',
+            entryPrice: 530,
+            checkpointPrice: 532,
+            percentageReturn: 0.377,
+            hypotheticalPnl: 80,
+            maximumFavourableExcursion: 3,
+            maximumAdverseExcursion: 1,
+            targetTouched: false,
+            stopTouched: false,
+            status: 'completed',
+            dataQualityStatus: 'complete_candle_window',
+            marketDataSource: 'persisted_candles:test_fixture',
+            createdAt: '2026-06-12T10:40:00Z',
+            updatedAt: '2026-06-12T11:45:00Z',
+          },
+        ],
+        selectedExecutionCounts: {
+          executionInstructions: 0,
+          orderIntents: 0,
+          brokerOrders: 0,
+          trades: 0,
+          fills: 0,
+        },
+        historicalExecutionCounts: {
+          executionInstructions: 2,
+          orderIntents: 1,
+          brokerOrders: 0,
+          trades: 0,
+          fills: 0,
+        },
       }),
     }),
   );
 
   await page.goto('/candidates/candidate-evidence-1/evidence', { waitUntil: 'domcontentloaded' });
 
-  await expect(page.getByRole('heading', { name: 'SPY trade setup' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Overview of the trade and why/i })).toBeVisible();
-  await expect(page.getByText('Inflation cools more than expected')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Candidate Review' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Plain-English overview/i })).toBeVisible();
+  await expect(page.getByText('Inflation cools more than expected', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /example.com\/inflation/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: /What the charts are saying/i })).toBeVisible();
   await expect(page.getByText('Chart confirmed')).toBeVisible();
-  await expect(page.getByText(/held above the 20-period moving average/i)).toBeVisible();
+  await expect(
+    page.getByText(/held above the 20-period moving average/i).first(),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Sentiment and source' })).toBeVisible();
   await expect(page.getByText('News tone is positive for broad US equity exposure.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Persisted paper sizing evidence' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Paper ticket — hypothetical only' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Persisted paper sizing evidence' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Hypothetical paper plan' }),
+  ).toBeVisible();
   await expect(page.getByText('$21,200.00', { exact: true })).toBeVisible();
   await expect(page.getByText('HYPOTHETICAL — NOT A FILL', { exact: true })).toBeVisible();
   await expect(page.getByText('persisted_candles:test_fixture')).toBeVisible();
   await expect(page.getByText('NO FILL OCCURRED', { exact: true })).toBeVisible();
-  await expect(page.getByText(/Historical execution instructions elsewhere: 2/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /approve|reject|create|submit|execute/i })).toHaveCount(0);
+  await expect(page.getByText(/Historical database records exist but are unrelated/i)).toBeVisible();
+  await expect(page.getByText('Audit details')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /approve|reject|create|submit|execute/i }),
+  ).toHaveCount(0);
+  for (const width of [320, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(
+      page.getByText(/Review only — this page cannot place an order or create a fill/i),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  }
 });
