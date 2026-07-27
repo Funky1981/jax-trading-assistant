@@ -15,6 +15,16 @@ The current primary workflow is:
 
 Hypothetical paper outcomes are not orders, fills or realised profit and loss.
 
+### Confirm system safety
+
+1. Open `System Safety` and read the overall banner first. Safe means paper mode, live trading off, execution disabled, the execution worker stopped, broker execution not allowed, and maximum leverage no greater than `1x`.
+   Local paper runtime requires `BROKER_EXECUTION_ALLOWED=false` and `MAX_LEVERAGE=1` in its ignored `.env`; the committed `.env.example` documents these non-secret values.
+2. Treat every `Unknown` value as unconfirmed. Missing configuration is not shown as safe, false, or zero.
+3. When arriving from Candidate Review or Outcomes, read `This journey` for execution instructions, order intents, broker orders, trades, and fills linked to that candidate.
+4. Read `Historical records` separately. These database-wide totals may be unrelated to the selected journey; a historical execution instruction does not prove the selected candidate created one.
+5. Open `Technical diagnostics` only when internal configuration names, health, datasets, metrics, logs, IDs, timestamps, or the raw read-only response are required.
+6. Use `What does this mean?` or the Guide link for plain-language definitions. System Safety contains no controls that alter runtime or persisted evidence.
+
 ### Review evidence
 
 1. Open `Evidence Inbox`.

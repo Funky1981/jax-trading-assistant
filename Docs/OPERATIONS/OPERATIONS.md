@@ -19,7 +19,14 @@ Always set runtime mode explicitly outside local development:
 ```powershell
 $env:JAX_RUNTIME_MODE="paper"   # or live/research
 $env:JAX_REQUIRE_EXPLICIT_RUNTIME_MODE="true"
+$env:BROKER_EXECUTION_ALLOWED="false"
+$env:MAX_LEVERAGE="1"
 ```
+
+`BROKER_EXECUTION_ALLOWED` and `MAX_LEVERAGE` are read-only safety evidence for
+the operator UI. Configure both explicitly for a confirmed paper-safe state.
+When either is absent or invalid, System Safety must show `Unknown`; neither the
+frontend nor backend substitutes a safe value.
 
 For `live` mode, execution must be intentionally enabled:
 

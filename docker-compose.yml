@@ -91,6 +91,10 @@ services:
       JAX_RUNTIME_MODE: ${JAX_TRADER_RUNTIME_MODE:-paper}
       JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-false}
       ALLOW_LIVE_TRADING: ${ALLOW_LIVE_TRADING:-false}
+      # Preserve absence as an empty value so the read-only safety projection
+      # can fail closed as Unknown outside explicitly configured environments.
+      BROKER_EXECUTION_ALLOWED: ${BROKER_EXECUTION_ALLOWED:-}
+      MAX_LEVERAGE: ${MAX_LEVERAGE:-}
       IB_BRIDGE_URL: ${IB_BRIDGE_URL:-http://ib-bridge:8092}
       PORT: "8100"
       # ADR-0012 Phase 6: frontend API (replaces jax-api on port 8081)

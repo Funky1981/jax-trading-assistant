@@ -1,114 +1,102 @@
-/**
- * E2E: System page — datasets and events tables (/system)
- *
- * User stories covered:
- *  US-SYS-1  Dataset snapshots table shows stubbed snapshot entries.
- *  US-SYS-2  System events table shows stubbed event entries.
- *  US-SYS-3  ETF workflow readiness is shown separately from pilot trading health.
- *
- * Note: Pilot-status and health checks on the system page are already covered
- * in trading.spec.ts via installTradingStubs. These tests focus on the
- * datasets and events panels that are not yet tested.
- */
-import { expect, test } from '@playwright/test';
-import { stubBase, stubPilotStatus } from './helpers';
+import { expect, test, type Page } from '@playwright/test';
+import { stubBase } from './helpers';
 
-async function stubSystemRoutes(page: Parameters<typeof stubBase>[0]) {
+const safeOverview = {
+  runtimeMode: 'paper',
+  allowLiveTrading: false,
+  executionEnabled: false,
+  executionWorkerEnabled: false,
+  brokerExecutionAllowed: false,
+  maximumLeverage: 1,
+  genuineEvents: 1,
+  syntheticEvents: 0,
+  rejectedEvents: 0,
+  deduplicatedEvents: 0,
+  candidates: 1,
+  approvals: 1,
+  paperTickets: 1,
+  pendingCheckpoints: 1,
+  completedCheckpoints: 2,
+  missingDataCheckpoints: 0,
+  ambiguousCheckpoints: 0,
+  historicalExecutionInstructions: 1,
+  historicalOrderIntents: 0,
+  historicalBrokerOrders: 0,
+  historicalTrades: 0,
+  historicalFills: 0,
+  checkedAt: '2026-07-27T12:00:00Z',
+};
+
+async function stubSystem(page: Page) {
   await stubBase(page);
-  await stubPilotStatus(page);
-
-  await page.route('**/api/v1/system/market-data-status', (route) =>
+  await page.route('**/api/v1/operator-evidence/overview', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(safeOverview),
+    }),
+  );
+  await page.route('**/api/v1/operator-evidence/candidates/qqq-proof', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        connected: true,
-        marketDataMode: 'delayed',
-        paperTrading: true,
-        checkedAt: '2026-03-06T13:15:00Z',
+        selectedExecutionCounts: {
+          executionInstructions: 0,
+          orderIntents: 0,
+          brokerOrders: 0,
+          trades: 0,
+          fills: 0,
+        },
       }),
     }),
   );
-
-  await page.route('**/api/v1/datasets**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        datasets: [
-          {
-            datasetId: 'ds-001',
-            name: 'SPY 15m sample',
-            symbol: 'SPY',
-            datasetHash: 'abc123',
-          },
-        ],
-        total: 1,
-      }),
-    }),
-  );
-
   await page.route('**/api/v1/events**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        events: [
-          {
-            id: 'evt-1',
-            kind: 'market_news',
-            primarySymbol: 'SPY',
-            title: 'Fed holds rates steady',
-            eventTime: '2026-03-06T14:00:00Z',
-          },
-        ],
-        total: 1,
-      }),
+      body: JSON.stringify({ events: [] }),
     }),
   );
-
-  await page.route('**/api/v1/metrics**', (route) =>
+  await page.route('**/api/v1/datasets**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ metrics: [], total: 0 }),
+      body: JSON.stringify({ datasets: [] }),
     }),
   );
 }
 
-// ---------------------------------------------------------------------------
-// US-SYS-1: Dataset snapshots table
-// ---------------------------------------------------------------------------
-test('system page: dataset snapshots table shows stub entry', async ({ page }) => {
-  await stubSystemRoutes(page);
-
-  await page.goto('/system', { waitUntil: 'domcontentloaded' });
-
-  await expect(page.getByRole('heading', { level: 1, name: /System/i })).toBeVisible();
-  await expect(page.getByText('SPY 15m sample')).toBeVisible();
-});
-
-// ---------------------------------------------------------------------------
-// US-SYS-2: System events table
-// ---------------------------------------------------------------------------
-test('system page: events table shows stub event title', async ({ page }) => {
-  await stubSystemRoutes(page);
-
-  await page.goto('/system', { waitUntil: 'domcontentloaded' });
-
-  await expect(page.getByText('Fed holds rates steady')).toBeVisible();
-});
-
-// ---------------------------------------------------------------------------
-// US-SYS-3: ETF workflow readiness
-// ---------------------------------------------------------------------------
-test('system page: ETF approval workflow readiness is visible', async ({ page }) => {
-  await stubSystemRoutes(page);
-
-  await page.goto('/system', { waitUntil: 'domcontentloaded' });
-
-  await expect(page.getByText('ETF Workflow')).toBeVisible();
-  await expect(page.getByText('Candidate Approval Only')).toBeVisible();
-  await expect(page.getByText('Policy phase1-2026-05-13')).toBeVisible();
-  await expect(page.getByText('ETF entries must originate from approved candidates')).toBeVisible();
-});
+for (const width of [320, 768, 1280]) {
+  test(`System Safety is paper-safe and responsive at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await stubSystem(page);
+    await page.goto('/system?candidateId=qqq-proof');
+    await expect(page.getByRole('heading', { level: 1, name: 'System Safety' })).toBeVisible();
+    await expect(
+      page.getByText(
+        'Paper-safe mode is on. Live trading, execution and broker activity are disabled.',
+      ),
+    ).toBeVisible();
+    await expect(page.getByText('Paper', { exact: true })).toBeVisible();
+    await expect(page.getByText('Off', { exact: true })).toBeVisible();
+    await expect(page.getByText('Disabled', { exact: true })).toBeVisible();
+    await expect(page.getByText('Stopped', { exact: true })).toBeVisible();
+    await expect(page.getByText('Not allowed', { exact: true })).toBeVisible();
+    await expect(page.getByText('1x', { exact: true })).toBeVisible();
+    await expect(page.getByText('This journey created no execution records.')).toBeVisible();
+    await expect(page.getByText('Technical diagnostics').locator('..')).not.toHaveAttribute(
+      'open',
+      '',
+    );
+    await expect(
+      page.getByRole('button', { name: /enable|disable|start|stop|delete|clear|restart/i }),
+    ).toHaveCount(0);
+    const overflow = await page.evaluate(() => ({
+      document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      body: document.body.scrollWidth - document.body.clientWidth,
+    }));
+    expect(overflow.document).toBeLessThanOrEqual(1);
+    expect(overflow.body).toBeLessThanOrEqual(1);
+  });
+}

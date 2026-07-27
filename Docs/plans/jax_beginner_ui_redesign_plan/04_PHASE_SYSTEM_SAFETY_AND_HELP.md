@@ -1,5 +1,17 @@
 # Phase 4 — System Safety and Contextual Help
 
+## Implementation status
+
+Implemented and PROVEN on the `capability-reset` branch. The existing `/system` route now leads with a read-only safety banner, six plain-language safety cards, selected-journey execution evidence, separate database-wide historical totals, contextual glossary help, and collapsed technical diagnostics. Missing runtime configuration is represented as unknown instead of false or `1x`.
+
+Candidate Review and Outcomes can pass `candidateId` to System Safety without changing route compatibility. The local paper runtime now explicitly sets `BROKER_EXECUTION_ALLOWED=false` and `MAX_LEVERAGE=1`; other environments remain Unknown if either value is absent or invalid.
+
+## Persisted-runtime acceptance — 2026-07-27
+
+Authenticated read-only browser checks passed at 320, 768, and 1280 px with no primary horizontal overflow. The selected persisted QQQ journey has zero execution instructions, order intents, broker orders, trades, and fills. Global history retains two approvals, one paper ticket, and one unrelated execution instruction; global order intents, broker orders, trades, and fills are zero.
+
+Six default/diagnostic screenshots were captured under `images/acceptance/phase4-system-safety-*`. Visual review confirms the default hierarchy and responsive stacking. The running local paper environment explicitly reports `BROKER_EXECUTION_ALLOWED=false` and `MAX_LEVERAGE=1`, so System Safety is confirmed paper-safe: paper mode, live trading off, execution disabled, worker stopped, broker execution not allowed, and leverage limited to 1x. The selected QQQ journey remains zero across every execution-side record type, while the unrelated global execution instruction remains separate.
+
 ## Goal
 
 Make safety state unmistakable and ensure help is available at the point of need throughout the primary workflow.

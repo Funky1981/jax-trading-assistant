@@ -1,12 +1,12 @@
 import { apiClient } from './http-client';
 
 export interface OperatorEvidenceOverview {
-  runtimeMode: string;
-  allowLiveTrading: boolean;
-  executionEnabled: boolean;
-  executionWorkerEnabled: boolean;
-  brokerExecutionAllowed: boolean;
-  maximumLeverage: number;
+  runtimeMode: string | null;
+  allowLiveTrading: boolean | null;
+  executionEnabled: boolean | null;
+  executionWorkerEnabled: boolean | null;
+  brokerExecutionAllowed: boolean | null;
+  maximumLeverage: number | null;
   genuineEvents: number;
   syntheticEvents: number;
   rejectedEvents: number;
@@ -18,6 +18,11 @@ export interface OperatorEvidenceOverview {
   completedCheckpoints: number;
   missingDataCheckpoints: number;
   ambiguousCheckpoints: number;
+  historicalExecutionInstructions?: number | null;
+  historicalOrderIntents?: number | null;
+  historicalBrokerOrders?: number | null;
+  historicalTrades?: number | null;
+  historicalFills?: number | null;
   checkedAt: string;
 }
 

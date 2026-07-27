@@ -514,6 +514,9 @@ export function CandidateEvidencePage() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Candidates
         </Link>
       </Button>
+      <Button asChild variant="link" size="sm" className="self-start p-0">
+        <Link to={`/system?candidateId=${candidateId}`}>Open System Safety for this journey</Link>
+      </Button>
       <header>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {candidate.symbol} candidate

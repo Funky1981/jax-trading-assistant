@@ -16,24 +16,29 @@ import (
 )
 
 type operatorEvidenceOverview struct {
-	RuntimeMode            string    `json:"runtimeMode"`
-	AllowLiveTrading       bool      `json:"allowLiveTrading"`
-	ExecutionEnabled       bool      `json:"executionEnabled"`
-	ExecutionWorkerEnabled bool      `json:"executionWorkerEnabled"`
-	BrokerExecutionAllowed bool      `json:"brokerExecutionAllowed"`
-	MaximumLeverage        float64   `json:"maximumLeverage"`
-	GenuineEvents          int       `json:"genuineEvents"`
-	SyntheticEvents        int       `json:"syntheticEvents"`
-	RejectedEvents         int       `json:"rejectedEvents"`
-	DeduplicatedEvents     int       `json:"deduplicatedEvents"`
-	Candidates             int       `json:"candidates"`
-	Approvals              int       `json:"approvals"`
-	PaperTickets           int       `json:"paperTickets"`
-	PendingCheckpoints     int       `json:"pendingCheckpoints"`
-	CompletedCheckpoints   int       `json:"completedCheckpoints"`
-	MissingDataCheckpoints int       `json:"missingDataCheckpoints"`
-	AmbiguousCheckpoints   int       `json:"ambiguousCheckpoints"`
-	CheckedAt              time.Time `json:"checkedAt"`
+	RuntimeMode                     *string   `json:"runtimeMode"`
+	AllowLiveTrading                *bool     `json:"allowLiveTrading"`
+	ExecutionEnabled                *bool     `json:"executionEnabled"`
+	ExecutionWorkerEnabled          *bool     `json:"executionWorkerEnabled"`
+	BrokerExecutionAllowed          *bool     `json:"brokerExecutionAllowed"`
+	MaximumLeverage                 *float64  `json:"maximumLeverage"`
+	GenuineEvents                   int       `json:"genuineEvents"`
+	SyntheticEvents                 int       `json:"syntheticEvents"`
+	RejectedEvents                  int       `json:"rejectedEvents"`
+	DeduplicatedEvents              int       `json:"deduplicatedEvents"`
+	Candidates                      int       `json:"candidates"`
+	Approvals                       int       `json:"approvals"`
+	PaperTickets                    int       `json:"paperTickets"`
+	PendingCheckpoints              int       `json:"pendingCheckpoints"`
+	CompletedCheckpoints            int       `json:"completedCheckpoints"`
+	MissingDataCheckpoints          int       `json:"missingDataCheckpoints"`
+	AmbiguousCheckpoints            int       `json:"ambiguousCheckpoints"`
+	HistoricalExecutionInstructions *int      `json:"historicalExecutionInstructions"`
+	HistoricalOrderIntents          *int      `json:"historicalOrderIntents"`
+	HistoricalBrokerOrders          *int      `json:"historicalBrokerOrders"`
+	HistoricalTrades                *int      `json:"historicalTrades"`
+	HistoricalFills                 *int      `json:"historicalFills"`
+	CheckedAt                       time.Time `json:"checkedAt"`
 }
 
 func operatorEvidenceOverviewHandler(pool *pgxpool.Pool) http.HandlerFunc {
@@ -42,19 +47,26 @@ func operatorEvidenceOverviewHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		mode := runtimepolicy.CurrentMode()
+		mode, explicitMode, modeErr := runtimepolicy.ResolveModeFromEnv()
+		var runtimeMode *string
+		if explicitMode && modeErr == nil {
+			value := mode.String()
+			runtimeMode = &value
+		}
 		out := operatorEvidenceOverview{
-			RuntimeMode:            mode.String(),
-			AllowLiveTrading:       strings.EqualFold(os.Getenv("ALLOW_LIVE_TRADING"), "true"),
-			ExecutionEnabled:       strings.EqualFold(os.Getenv("EXECUTION_ENABLED"), "true"),
-			ExecutionWorkerEnabled: strings.EqualFold(os.Getenv("EXECUTION_INSTRUCTION_WORKER_ENABLED"), "true"),
-			BrokerExecutionAllowed: strings.EqualFold(os.Getenv("BROKER_EXECUTION_ALLOWED"), "true"),
-			MaximumLeverage:        envFloat("MAX_LEVERAGE", 1), CheckedAt: time.Now().UTC(),
+			RuntimeMode:            runtimeMode,
+			AllowLiveTrading:       envBool("ALLOW_LIVE_TRADING"),
+			ExecutionEnabled:       envBool("EXECUTION_ENABLED"),
+			ExecutionWorkerEnabled: envBool("EXECUTION_INSTRUCTION_WORKER_ENABLED"),
+			BrokerExecutionAllowed: envBool("BROKER_EXECUTION_ALLOWED"),
+			MaximumLeverage:        envFloat("MAX_LEVERAGE"), CheckedAt: time.Now().UTC(),
 		}
 		if pool == nil {
 			jsonOK(w, out)
 			return
 		}
+		observedWorkerRunning := executionInstructionWorkerSafetyEnabled()
+		out.ExecutionWorkerEnabled = &observedWorkerRunning
 		if err := pool.QueryRow(r.Context(), `SELECT
 			COUNT(*) FILTER (WHERE NOT COALESCE(er.is_synthetic, false))::int,
 			COUNT(*) FILTER (WHERE COALESCE(er.is_synthetic, false))::int,
@@ -78,16 +90,48 @@ func operatorEvidenceOverviewHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			http.Error(w, fmt.Sprintf("operator activity counts: %v", err), http.StatusInternalServerError)
 			return
 		}
+		var historicalInstructions, historicalIntents, historicalBrokerOrders, historicalTrades, historicalFills int
+		if err := pool.QueryRow(r.Context(), `SELECT
+			(SELECT COUNT(*)::int FROM execution_instructions),
+			(SELECT COUNT(*)::int FROM order_intents),
+			(SELECT COUNT(DISTINCT broker_order_id)::int FROM execution_instructions WHERE broker_order_id IS NOT NULL AND broker_order_id<>''),
+			(SELECT COUNT(*)::int FROM trades),
+			(SELECT COUNT(*)::int FROM fills)`).Scan(&historicalInstructions, &historicalIntents, &historicalBrokerOrders, &historicalTrades, &historicalFills); err != nil {
+			http.Error(w, fmt.Sprintf("historical execution evidence: %v", err), http.StatusInternalServerError)
+			return
+		}
+		out.HistoricalExecutionInstructions = &historicalInstructions
+		out.HistoricalOrderIntents = &historicalIntents
+		out.HistoricalBrokerOrders = &historicalBrokerOrders
+		out.HistoricalTrades = &historicalTrades
+		out.HistoricalFills = &historicalFills
 		jsonOK(w, out)
 	}
 }
 
-func envFloat(key string, fallback float64) float64 {
+func envBool(key string) *bool {
+	raw, ok := os.LookupEnv(key)
+	if !ok {
+		return nil
+	}
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "true":
+		value := true
+		return &value
+	case "false":
+		value := false
+		return &value
+	default:
+		return nil
+	}
+}
+
+func envFloat(key string) *float64 {
 	var value float64
 	if _, err := fmt.Sscan(strings.TrimSpace(os.Getenv(key)), &value); err == nil && value > 0 {
-		return value
+		return &value
 	}
-	return fallback
+	return nil
 }
 
 type operatorCheckpoint struct {

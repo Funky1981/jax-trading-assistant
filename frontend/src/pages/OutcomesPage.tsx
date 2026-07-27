@@ -266,7 +266,7 @@ function OutcomeViewer({
           </Link>
         </Button>
         <Button asChild variant="outline">
-          <Link to="/system">
+          <Link to={`/system?candidateId=${candidate.candidateId}`}>
             Open System Safety
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>

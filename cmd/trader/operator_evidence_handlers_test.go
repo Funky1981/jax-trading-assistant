@@ -27,6 +27,22 @@ func TestOperatorEvidenceOverviewReportsSafePaperRuntimeWithoutInventedActivity(
 	}
 }
 
+func TestOperatorEvidenceOverviewReportsMissingRuntimeValuesAsUnknown(t *testing.T) {
+	for _, key := range []string{"JAX_RUNTIME_MODE", "APP_RUNTIME_MODE", "APP_ENV", "ENV", "ALLOW_LIVE_TRADING", "EXECUTION_ENABLED", "EXECUTION_INSTRUCTION_WORKER_ENABLED", "BROKER_EXECUTION_ALLOWED", "MAX_LEVERAGE"} {
+		t.Setenv(key, "")
+	}
+	res := httptest.NewRecorder()
+	operatorEvidenceOverviewHandler(nil)(res, httptest.NewRequest(http.MethodGet, "/api/v1/operator-evidence/overview", nil))
+	if res.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", res.Code, res.Body.String())
+	}
+	for _, want := range []string{`"runtimeMode":null`, `"allowLiveTrading":null`, `"executionEnabled":null`, `"executionWorkerEnabled":null`, `"brokerExecutionAllowed":null`, `"maximumLeverage":null`} {
+		if !strings.Contains(res.Body.String(), want) {
+			t.Fatalf("body missing %s: %s", want, res.Body.String())
+		}
+	}
+}
+
 func TestOperatorEvidenceEndpointsAreReadOnly(t *testing.T) {
 	for _, handler := range []http.HandlerFunc{
 		operatorEvidenceOverviewHandler(nil),
