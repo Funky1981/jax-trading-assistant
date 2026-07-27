@@ -50,6 +50,10 @@ func startExecutionInstructionWorker(ctx context.Context, pool *pgxpool.Pool, ex
 }
 
 func executionInstructionWorkerSafetyEnabled() bool {
+	workerSetting, workerSettingPresent := os.LookupEnv("EXECUTION_INSTRUCTION_WORKER_ENABLED")
+	if workerSettingPresent && !strings.EqualFold(strings.TrimSpace(workerSetting), "true") {
+		return false
+	}
 	liveAllowed := strings.EqualFold(strings.TrimSpace(os.Getenv("ALLOW_LIVE_TRADING")), "true")
 	if liveAllowed {
 		return false
