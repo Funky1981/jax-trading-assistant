@@ -42,60 +42,90 @@ type worldMonitorResearchInboxList struct {
 }
 
 type worldMonitorEvidenceCounts struct {
-	Genuine           int `json:"genuine"`
-	SyntheticTests    int `json:"syntheticTests"`
-	Rejected          int `json:"rejected"`
-	Duplicates        int `json:"duplicates"`
-	CandidatesCreated int `json:"candidatesCreated"`
+	Genuine            int `json:"genuine"`
+	SyntheticTests     int `json:"syntheticTests"`
+	Rejected           int `json:"rejected"`
+	Duplicates         int `json:"duplicates"`
+	CandidatesCreated  int `json:"candidatesCreated"`
+	NoTrade            int `json:"noTrade"`
+	Watch              int `json:"watch"`
+	Candidate          int `json:"candidate"`
+	AwaitingProcessing int `json:"awaitingProcessing"`
+}
+
+type worldMonitorEventDecision struct {
+	DecisionID             string         `json:"decisionId"`
+	Decision               string         `json:"decision"`
+	DecisionVersion        int            `json:"decisionVersion"`
+	RulesetVersion         string         `json:"rulesetVersion"`
+	ProcessorIdentity      string         `json:"processorIdentity"`
+	ProcessingMode         string         `json:"processingMode"`
+	DecisionAt             time.Time      `json:"decisionAt"`
+	EvidenceScore          float64        `json:"evidenceScore"`
+	EvidenceScoreSource    string         `json:"evidenceScoreSource"`
+	AffectedAssets         []string       `json:"affectedAssets"`
+	UnknownAssets          bool           `json:"unknownAssets"`
+	AssetMappingProvenance map[string]any `json:"assetMappingProvenance"`
+	Reasons                []string       `json:"reasons"`
+	BlockingReasons        []string       `json:"blockingReasons"`
+	MissingEvidence        []string       `json:"missingEvidence"`
+	TrustGateState         string         `json:"trustGateState"`
+	RiskReviewState        string         `json:"riskReviewState"`
+	CandidateID            string         `json:"candidateId,omitempty"`
+	ReplayIdentity         string         `json:"replayIdentity"`
+	CreatedAt              time.Time      `json:"createdAt"`
+	UpdatedAt              time.Time      `json:"updatedAt"`
 }
 
 type worldMonitorResearchInboxItem struct {
-	ID                   string         `json:"id"`
-	Source               string         `json:"source"`
-	SourceEventID        string         `json:"sourceEventId"`
-	WorldMonitorEventID  string         `json:"worldMonitorEventId"`
-	Status               string         `json:"status"`
-	RejectionReason      string         `json:"rejectionReason,omitempty"`
-	EventType            string         `json:"eventType"`
-	Headline             string         `json:"headline"`
-	Summary              string         `json:"summary,omitempty"`
-	SourceURLs           []string       `json:"sourceUrls"`
-	SourceCount          int            `json:"sourceCount"`
-	EventTime            time.Time      `json:"eventTime"`
-	ReceivedAt           time.Time      `json:"receivedAt"`
-	CollectedAt          *time.Time     `json:"collectedAt,omitempty"`
-	RawEventID           string         `json:"rawEventId,omitempty"`
-	ProvenanceAvailable  bool           `json:"provenanceAvailable"`
-	IsSynthetic          bool           `json:"isSynthetic"`
-	SyntheticReason      string         `json:"syntheticReason,omitempty"`
-	DiscoveryMethod      string         `json:"discoveryMethod,omitempty"`
-	AnalysisIdentity     string         `json:"analysisIdentity,omitempty"`
-	AIProvider           string         `json:"aiProvider,omitempty"`
-	AIModel              string         `json:"aiModel,omitempty"`
-	Region               string         `json:"region,omitempty"`
-	PossibleAffectedETFs []string       `json:"possibleAffectedEtfs"`
-	AssetThemes          []string       `json:"assetThemes"`
-	Severity             string         `json:"severity"`
-	SourceTier           string         `json:"sourceTier"`
-	Confidence           float64        `json:"confidence"`
-	ConfidenceReasons    []string       `json:"confidenceReasons"`
-	MappingReason        string         `json:"mappingReason"`
-	NormalizedEventID    string         `json:"normalizedEventId,omitempty"`
-	NormalizedAt         *time.Time     `json:"normalizedAt,omitempty"`
-	CandidateID          string         `json:"candidateId,omitempty"`
-	CandidateSymbol      string         `json:"candidateSymbol,omitempty"`
-	CandidateStatus      string         `json:"candidateStatus,omitempty"`
-	CandidateCreatedAt   *time.Time     `json:"candidateCreatedAt,omitempty"`
-	ApprovalID           string         `json:"approvalId,omitempty"`
-	ApprovalDecision     string         `json:"approvalDecision,omitempty"`
-	ApprovalAt           *time.Time     `json:"approvalAt,omitempty"`
-	PaperTicketID        string         `json:"paperTicketId,omitempty"`
-	PaperTicketCreatedAt *time.Time     `json:"paperTicketCreatedAt,omitempty"`
-	OutcomeCount         int            `json:"outcomeCount"`
-	LatestOutcomeAt      *time.Time     `json:"latestOutcomeAt,omitempty"`
-	OperatorDecision     string         `json:"operatorDecision,omitempty"`
-	OperatorReason       string         `json:"operatorReason,omitempty"`
-	RawPayload           map[string]any `json:"rawPayload"`
+	ID                   string                      `json:"id"`
+	Source               string                      `json:"source"`
+	SourceEventID        string                      `json:"sourceEventId"`
+	WorldMonitorEventID  string                      `json:"worldMonitorEventId"`
+	Status               string                      `json:"status"`
+	RejectionReason      string                      `json:"rejectionReason,omitempty"`
+	EventType            string                      `json:"eventType"`
+	Headline             string                      `json:"headline"`
+	Summary              string                      `json:"summary,omitempty"`
+	SourceURLs           []string                    `json:"sourceUrls"`
+	SourceCount          int                         `json:"sourceCount"`
+	EventTime            time.Time                   `json:"eventTime"`
+	ReceivedAt           time.Time                   `json:"receivedAt"`
+	CollectedAt          *time.Time                  `json:"collectedAt,omitempty"`
+	RawEventID           string                      `json:"rawEventId,omitempty"`
+	ProvenanceAvailable  bool                        `json:"provenanceAvailable"`
+	IsSynthetic          bool                        `json:"isSynthetic"`
+	SyntheticReason      string                      `json:"syntheticReason,omitempty"`
+	DiscoveryMethod      string                      `json:"discoveryMethod,omitempty"`
+	AnalysisIdentity     string                      `json:"analysisIdentity,omitempty"`
+	AIProvider           string                      `json:"aiProvider,omitempty"`
+	AIModel              string                      `json:"aiModel,omitempty"`
+	Region               string                      `json:"region,omitempty"`
+	PossibleAffectedETFs []string                    `json:"possibleAffectedEtfs"`
+	AssetThemes          []string                    `json:"assetThemes"`
+	Severity             string                      `json:"severity"`
+	SourceTier           string                      `json:"sourceTier"`
+	Confidence           float64                     `json:"confidence"`
+	ConfidenceReasons    []string                    `json:"confidenceReasons"`
+	MappingReason        string                      `json:"mappingReason"`
+	NormalizedEventID    string                      `json:"normalizedEventId,omitempty"`
+	NormalizedAt         *time.Time                  `json:"normalizedAt,omitempty"`
+	CandidateID          string                      `json:"candidateId,omitempty"`
+	CandidateSymbol      string                      `json:"candidateSymbol,omitempty"`
+	CandidateStatus      string                      `json:"candidateStatus,omitempty"`
+	CandidateCreatedAt   *time.Time                  `json:"candidateCreatedAt,omitempty"`
+	ApprovalID           string                      `json:"approvalId,omitempty"`
+	ApprovalDecision     string                      `json:"approvalDecision,omitempty"`
+	ApprovalAt           *time.Time                  `json:"approvalAt,omitempty"`
+	PaperTicketID        string                      `json:"paperTicketId,omitempty"`
+	PaperTicketCreatedAt *time.Time                  `json:"paperTicketCreatedAt,omitempty"`
+	OutcomeCount         int                         `json:"outcomeCount"`
+	LatestOutcomeAt      *time.Time                  `json:"latestOutcomeAt,omitempty"`
+	OperatorDecision     string                      `json:"operatorDecision,omitempty"`
+	OperatorReason       string                      `json:"operatorReason,omitempty"`
+	Decision             *worldMonitorEventDecision  `json:"decision,omitempty"`
+	DecisionHistory      []worldMonitorEventDecision `json:"decisionHistory"`
+	RawPayload           map[string]any              `json:"rawPayload"`
 }
 
 type worldMonitorResearchStatus struct {
@@ -223,7 +253,11 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			COUNT(*) FILTER (WHERE w.status = 'rejected')::int,
 			COUNT(*) FILTER (WHERE w.status = 'ignored' AND
 				COALESCE(w.rejection_reason, w.operator_reason, '') ILIKE '%dedup%')::int,
-			COUNT(*) FILTER (WHERE w.candidate_id IS NOT NULL)::int
+			COUNT(*) FILTER (WHERE w.candidate_id IS NOT NULL)::int,
+			COUNT(*) FILTER (WHERE gd.decision='NO_TRADE')::int,
+			COUNT(*) FILTER (WHERE gd.decision='WATCH')::int,
+			COUNT(*) FILTER (WHERE gd.decision='CANDIDATE')::int,
+			COUNT(*) FILTER (WHERE er.id IS NOT NULL AND NOT er.is_synthetic AND w.status<>'rejected' AND gd.id IS NULL)::int
 		FROM world_monitor_research_inbox w
 		LEFT JOIN event_normalized en ON en.id=w.normalized_event_id
 		LEFT JOIN LATERAL (
@@ -234,6 +268,13 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			ORDER BY (candidate.id=en.raw_event_id) DESC, candidate.received_at DESC
 			LIMIT 1
 		) er ON true
+		LEFT JOIN LATERAL (
+			SELECT current_decision.id,current_decision.decision
+			FROM genuine_event_decisions current_decision
+			WHERE current_decision.source_inbox_event_id=w.id AND current_decision.is_current
+			ORDER BY current_decision.decision_at DESC,current_decision.decision_version DESC
+			LIMIT 1
+		) gd ON true
 	`).Scan(
 		&total,
 		&out.Counts.Genuine,
@@ -241,6 +282,10 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 		&out.Counts.Rejected,
 		&out.Counts.Duplicates,
 		&out.Counts.CandidatesCreated,
+		&out.Counts.NoTrade,
+		&out.Counts.Watch,
+		&out.Counts.Candidate,
+		&out.Counts.AwaitingProcessing,
 	)
 	if err != nil {
 		return worldMonitorResearchInboxList{}, fmt.Errorf("world monitor inbox counts: %w", err)
@@ -275,7 +320,8 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			COALESCE(ct.symbol, ''), COALESCE(ct.status, ''), ct.created_at,
 			COALESCE(ca.id::text, ''), COALESCE(ca.decision, ''), ca.decided_at,
 			COALESCE(pt.paper_ticket_id, ''), pt.created_at,
-			COALESCE(oc.outcome_count, 0), oc.latest_outcome_at
+			COALESCE(oc.outcome_count, 0), oc.latest_outcome_at,
+			decision_current.payload, COALESCE(decision_history.payload,'[]'::jsonb)
 		FROM world_monitor_research_inbox w
 		LEFT JOIN event_normalized en ON en.id=w.normalized_event_id
 		LEFT JOIN LATERAL (
@@ -299,6 +345,32 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			FROM paper_ticket_outcome_checkpoints
 			WHERE paper_ticket_id=pt.paper_ticket_id
 		) oc ON true
+		LEFT JOIN LATERAL (
+			SELECT jsonb_build_object(
+				'decisionId',d.id,'decision',d.decision,'decisionVersion',d.decision_version,
+				'rulesetVersion',d.ruleset_version,'processorIdentity',d.processor_identity,'processingMode',d.processing_mode,
+				'decisionAt',d.decision_at,'evidenceScore',d.evidence_score,'evidenceScoreSource',d.evidence_score_source,
+				'affectedAssets',d.affected_assets,'unknownAssets',d.unknown_assets,'assetMappingProvenance',d.asset_mapping_provenance,
+				'reasons',d.reasons,'blockingReasons',d.blocking_reasons,'missingEvidence',d.missing_evidence,
+				'trustGateState',d.trust_gate_state,'riskReviewState',d.risk_review_state,'candidateId',d.candidate_id,
+				'replayIdentity',d.replay_identity,'createdAt',d.created_at,'updatedAt',d.updated_at
+			) AS payload
+			FROM genuine_event_decisions d
+			WHERE d.source_inbox_event_id=w.id AND d.is_current
+			ORDER BY d.decision_at DESC,d.decision_version DESC LIMIT 1
+		) decision_current ON true
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(jsonb_build_object(
+				'decisionId',d.id,'decision',d.decision,'decisionVersion',d.decision_version,
+				'rulesetVersion',d.ruleset_version,'processorIdentity',d.processor_identity,'processingMode',d.processing_mode,
+				'decisionAt',d.decision_at,'evidenceScore',d.evidence_score,'evidenceScoreSource',d.evidence_score_source,
+				'affectedAssets',d.affected_assets,'unknownAssets',d.unknown_assets,'assetMappingProvenance',d.asset_mapping_provenance,
+				'reasons',d.reasons,'blockingReasons',d.blocking_reasons,'missingEvidence',d.missing_evidence,
+				'trustGateState',d.trust_gate_state,'riskReviewState',d.risk_review_state,'candidateId',d.candidate_id,
+				'replayIdentity',d.replay_identity,'createdAt',d.created_at,'updatedAt',d.updated_at
+			) ORDER BY d.decision_at DESC,d.decision_version DESC) AS payload
+			FROM genuine_event_decisions d WHERE d.source_inbox_event_id=w.id
+		) decision_history ON true
 		%s
 		ORDER BY w.received_at DESC
 		LIMIT $%d
@@ -311,7 +383,7 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 
 	for rows.Next() {
 		var item worldMonitorResearchInboxItem
-		var sourceURLsRaw, etfsRaw, themesRaw, confidenceReasonsRaw, rawPayload []byte
+		var sourceURLsRaw, etfsRaw, themesRaw, confidenceReasonsRaw, rawPayload, decisionRaw, decisionHistoryRaw []byte
 		if err := rows.Scan(
 			&item.ID,
 			&item.Source,
@@ -359,6 +431,8 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			&item.PaperTicketCreatedAt,
 			&item.OutcomeCount,
 			&item.LatestOutcomeAt,
+			&decisionRaw,
+			&decisionHistoryRaw,
 		); err != nil {
 			return worldMonitorResearchInboxList{}, err
 		}
@@ -367,6 +441,11 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 		_ = json.Unmarshal(themesRaw, &item.AssetThemes)
 		_ = json.Unmarshal(confidenceReasonsRaw, &item.ConfidenceReasons)
 		_ = json.Unmarshal(rawPayload, &item.RawPayload)
+		if len(decisionRaw) > 0 {
+			item.Decision = &worldMonitorEventDecision{}
+			_ = json.Unmarshal(decisionRaw, item.Decision)
+		}
+		_ = json.Unmarshal(decisionHistoryRaw, &item.DecisionHistory)
 		if item.SourceURLs == nil {
 			item.SourceURLs = []string{}
 		}
@@ -381,6 +460,9 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 		}
 		if item.RawPayload == nil {
 			item.RawPayload = map[string]any{}
+		}
+		if item.DecisionHistory == nil {
+			item.DecisionHistory = []worldMonitorEventDecision{}
 		}
 		out.Items = append(out.Items, item)
 	}

@@ -27,6 +27,10 @@ type operatorEvidenceOverview struct {
 	RejectedEvents                  int       `json:"rejectedEvents"`
 	DeduplicatedEvents              int       `json:"deduplicatedEvents"`
 	Candidates                      int       `json:"candidates"`
+	NoTradeDecisions                int       `json:"noTradeDecisions"`
+	WatchDecisions                  int       `json:"watchDecisions"`
+	CandidateDecisions              int       `json:"candidateDecisions"`
+	AwaitingProcessing              int       `json:"awaitingProcessing"`
 	Approvals                       int       `json:"approvals"`
 	PaperTickets                    int       `json:"paperTickets"`
 	PendingCheckpoints              int       `json:"pendingCheckpoints"`
@@ -72,10 +76,20 @@ func operatorEvidenceOverviewHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			COUNT(*) FILTER (WHERE COALESCE(er.is_synthetic, false))::int,
 			COUNT(*) FILTER (WHERE w.status='rejected')::int,
 			COUNT(*) FILTER (WHERE w.status='ignored' AND COALESCE(w.rejection_reason,'') ILIKE '%dedup%')::int,
-			COUNT(*) FILTER (WHERE w.candidate_id IS NOT NULL)::int
+			COUNT(*) FILTER (WHERE w.candidate_id IS NOT NULL)::int,
+			COUNT(*) FILTER (WHERE gd.decision='NO_TRADE')::int,
+			COUNT(*) FILTER (WHERE gd.decision='WATCH')::int,
+			COUNT(*) FILTER (WHERE gd.decision='CANDIDATE')::int,
+			COUNT(*) FILTER (WHERE er.id IS NOT NULL AND NOT er.is_synthetic AND w.status<>'rejected' AND gd.id IS NULL)::int
 			FROM world_monitor_research_inbox w
 			LEFT JOIN event_normalized en ON en.id=w.normalized_event_id
-			LEFT JOIN event_raw er ON er.id=en.raw_event_id`).Scan(&out.GenuineEvents, &out.SyntheticEvents, &out.RejectedEvents, &out.DeduplicatedEvents, &out.Candidates); err != nil {
+			LEFT JOIN event_raw er ON er.id=en.raw_event_id
+			LEFT JOIN LATERAL (
+				SELECT d.id,d.decision FROM genuine_event_decisions d
+				WHERE d.source_inbox_event_id=w.id AND d.is_current
+				ORDER BY d.decision_at DESC,d.decision_version DESC LIMIT 1
+			) gd ON true`).Scan(&out.GenuineEvents, &out.SyntheticEvents, &out.RejectedEvents, &out.DeduplicatedEvents, &out.Candidates,
+			&out.NoTradeDecisions, &out.WatchDecisions, &out.CandidateDecisions, &out.AwaitingProcessing); err != nil {
 			http.Error(w, fmt.Sprintf("operator event counts: %v", err), http.StatusInternalServerError)
 			return
 		}

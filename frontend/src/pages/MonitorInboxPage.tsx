@@ -11,14 +11,23 @@ import { HttpError } from '@/data/http-client';
 import { useOperatorEvidenceOverview } from '@/hooks/useOperatorEvidenceOverview';
 import { isPaperSafe } from '@/lib/operator-safety';
 
-type BeginnerFilter = 'all' | 'genuine' | 'synthetic' | 'rejected' | 'candidate';
+type BeginnerFilter =
+  | 'all'
+  | 'genuine'
+  | 'synthetic'
+  | 'rejected'
+  | 'no_trade'
+  | 'watch'
+  | 'candidate';
 
 const FILTERS: Array<{ value: BeginnerFilter; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'genuine', label: 'Genuine' },
   { value: 'synthetic', label: 'Synthetic tests' },
   { value: 'rejected', label: 'Rejected' },
-  { value: 'candidate', label: 'Candidate created' },
+  { value: 'no_trade', label: 'NO_TRADE' },
+  { value: 'watch', label: 'WATCH' },
+  { value: 'candidate', label: 'CANDIDATE' },
 ];
 
 function formatTime(value?: string) {
@@ -54,7 +63,7 @@ function isDuplicate(item: WorldMonitorInboxItem) {
 }
 
 function disposition(item: WorldMonitorInboxItem) {
-  if (item.candidateId) return 'Candidate created';
+  if (item.decision) return item.decision.decision;
   if (item.status === 'rejected') return 'Rejected';
   if (isDuplicate(item)) return 'Duplicate ignored';
   if (item.status === 'new') return 'Awaiting processing';
@@ -63,7 +72,8 @@ function disposition(item: WorldMonitorInboxItem) {
 }
 
 function shortExplanation(item: WorldMonitorInboxItem) {
-  if (item.candidateId) return 'Jax created a candidate for separate human review.';
+  if (item.decision)
+    return item.decision.reasons.slice(0, 2).join(' ') || 'Jax persisted a deterministic decision.';
   if (item.status === 'rejected')
     return item.rejectionReason || 'Jax rejected this evidence during validation.';
   if (isDuplicate(item)) return 'Jax recognised evidence it had already received.';
@@ -77,7 +87,7 @@ function shortExplanation(item: WorldMonitorInboxItem) {
 function journeySummary(item: WorldMonitorInboxItem) {
   if (isDuplicate(item)) return 'Duplicate ignored';
   if (item.status === 'rejected') return 'Received → Rejected';
-  if (item.candidateId) return 'Received → Normalised → Candidate created';
+  if (item.decision) return `Received → Normalised → ${item.decision.decision}`;
   if (item.normalizedEventId) return 'Received → Normalised → Research only';
   return 'Awaiting processing';
 }
@@ -87,7 +97,9 @@ function matchesFilter(item: WorldMonitorInboxItem, filter: BeginnerFilter) {
   if (filter === 'synthetic')
     return item.provenanceAvailable !== false && item.isSynthetic === true;
   if (filter === 'rejected') return item.status === 'rejected';
-  if (filter === 'candidate') return Boolean(item.candidateId);
+  if (filter === 'no_trade') return item.decision?.decision === 'NO_TRADE';
+  if (filter === 'watch') return item.decision?.decision === 'WATCH';
+  if (filter === 'candidate') return item.decision?.decision === 'CANDIDATE';
   return true;
 }
 
@@ -95,6 +107,8 @@ function emptyMessage(filter: BeginnerFilter) {
   if (filter === 'genuine') return 'No genuine evidence matches this filter.';
   if (filter === 'synthetic') return 'No synthetic test evidence matches this filter.';
   if (filter === 'rejected') return 'No rejected evidence matches this filter.';
+  if (filter === 'no_trade') return 'No evidence in this view has a persisted NO_TRADE decision.';
+  if (filter === 'watch') return 'No evidence in this view has a persisted WATCH decision.';
   if (filter === 'candidate') return 'No evidence in this view created a candidate.';
   return 'No evidence has arrived yet. Genuine and controlled test events will appear here after Jax receives them.';
 }
@@ -110,11 +124,11 @@ function EvidenceBadge({ item }: { item: WorldMonitorInboxItem }) {
 function DispositionBadge({ item }: { item: WorldMonitorInboxItem }) {
   const label = disposition(item);
   const variant =
-    label === 'Candidate created'
+    label === 'CANDIDATE'
       ? 'success'
       : label === 'Rejected'
         ? 'destructive'
-        : label === 'Awaiting processing'
+        : label === 'Awaiting processing' || label === 'WATCH'
           ? 'warning'
           : 'secondary';
   return <Badge variant={variant}>{label}</Badge>;
@@ -206,16 +220,19 @@ export function MonitorInboxPage() {
             <h2 id="evidence-summary-heading" className="sr-only">
               Evidence summary
             </h2>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-              <SummaryMetric label="Genuine" value={inbox.data?.counts.genuine} />
-              <SummaryMetric label="Synthetic tests" value={inbox.data?.counts.syntheticTests} />
-              <SummaryMetric label="Rejected" value={inbox.data?.counts.rejected} />
-              <SummaryMetric label="Duplicates" value={inbox.data?.counts.duplicates} />
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <SummaryMetric label="NO_TRADE" value={inbox.data?.counts.noTrade} />
+              <SummaryMetric label="WATCH" value={inbox.data?.counts.watch} />
+              <SummaryMetric label="CANDIDATE" value={inbox.data?.counts.candidate} />
               <SummaryMetric
-                label="Candidates created"
-                value={inbox.data?.counts.candidatesCreated}
+                label="Awaiting processing"
+                value={inbox.data?.counts.awaitingProcessing}
               />
             </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Most evidence should be rejected or watched. Candidates are created only when the full
+              deterministic ruleset passes.
+            </p>
           </section>
 
           <section aria-labelledby="evidence-list-heading" className="min-w-0 space-y-3">
@@ -429,10 +446,12 @@ function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
         </div>
         <div className="rounded-md border bg-muted/20 p-3 text-sm">
           <p className="font-semibold">{disposition(item)}</p>
-          <p className="mt-1 text-muted-foreground">{shortExplanation(item)}</p>
-          {item.candidateId ? (
+          <p className="mt-1 break-all text-muted-foreground">{shortExplanation(item)}</p>
+          {item.decision?.decision === 'CANDIDATE' && item.decision.candidateId ? (
             <Button asChild variant="outline" size="sm" className="mt-2">
-              <Link to={`/candidates/${item.candidateId}/evidence`}>Open Candidate Review</Link>
+              <Link to={`/candidates/${item.decision.candidateId}/evidence`}>
+                Open Candidate Review
+              </Link>
             </Button>
           ) : (
             <p className="mt-2 font-medium">No candidate was created. This is a valid outcome.</p>
@@ -445,6 +464,11 @@ function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
         <Definition label="Jax receipt time" value={formatTime(item.receivedAt)} />
       </div>
       <p className="text-sm text-muted-foreground">{provenanceExplanation(item)}</p>
+      {item.decision ? (
+        <Disclosure title={`Decision — ${item.decision.decision}`}>
+          <DecisionDetail item={item} />
+        </Disclosure>
+      ) : null}
       <Disclosure title="Source and provenance">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Definition label="Source" value={sourceName(item)} />
@@ -564,8 +588,55 @@ function Analysis({ item }: { item: WorldMonitorInboxItem }) {
   );
 }
 
+function DecisionDetail({ item }: { item: WorldMonitorInboxItem }) {
+  const decision = item.decision;
+  if (!decision) return null;
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Definition label="Current decision" value={decision.decision} />
+        <Definition label="Decision time" value={formatTime(decision.decisionAt)} />
+        <Definition label="Ruleset version" value={decision.rulesetVersion} />
+        <Definition label="Processing mode" value={decision.processingMode} />
+        <Definition label="Deterministic processor" value={decision.processorIdentity} />
+        <Definition
+          label="Affected assets"
+          value={decision.unknownAssets ? 'Unknown assets' : decision.affectedAssets.join(', ')}
+        />
+        <Definition label="Trust state" value={decision.trustGateState} />
+        <Definition label="Risk state" value={decision.riskReviewState} />
+        <Definition
+          label="Candidate linkage"
+          value={decision.candidateId || 'No candidate linked'}
+        />
+      </div>
+      <Definition label="Reasons" value={decision.reasons.join(' ') || 'None persisted'} />
+      <Definition
+        label="Blockers"
+        value={decision.blockingReasons.join(', ') || 'None persisted'}
+      />
+      <Definition
+        label="Missing evidence"
+        value={decision.missingEvidence.join(', ') || 'None persisted'}
+      />
+      {(item.decisionHistory?.length ?? 0) > 1 ? (
+        <Disclosure title={`Decision history — ${item.decisionHistory?.length ?? 0} versions`}>
+          <ol className="space-y-2">
+            {item.decisionHistory?.map((history) => (
+              <li key={history.decisionId} className="rounded border p-2">
+                <strong>{history.decision}</strong> — {history.rulesetVersion}, version{' '}
+                {history.decisionVersion}, {formatTime(history.decisionAt)}
+              </li>
+            ))}
+          </ol>
+        </Disclosure>
+      ) : null}
+    </div>
+  );
+}
+
 function Journey({ item }: { item: WorldMonitorInboxItem }) {
-  const candidate = Boolean(item.candidateId);
+  const candidate = item.decision?.decision === 'CANDIDATE' && Boolean(item.decision.candidateId);
   const stages = [
     ['Discovered', item.eventTime ? 'Complete' : 'Missing persisted evidence'],
     ['Collected', item.collectedAt ? 'Complete' : 'Missing persisted evidence'],
@@ -585,15 +656,17 @@ function Journey({ item }: { item: WorldMonitorInboxItem }) {
     ],
     [
       'Decision processed',
-      item.status === 'new'
-        ? 'Awaiting processing'
-        : item.status === 'rejected'
-          ? 'Rejected'
-          : isDuplicate(item)
-            ? 'Duplicate ignored'
-            : item.operatorDecision || item.status
-              ? 'Complete'
-              : 'Missing persisted evidence',
+      item.decision
+        ? item.decision.decision
+        : item.status === 'new'
+          ? 'Awaiting processing'
+          : item.status === 'rejected'
+            ? 'Rejected'
+            : isDuplicate(item)
+              ? 'Duplicate ignored'
+              : item.operatorDecision || item.status
+                ? 'Complete'
+                : 'Missing persisted evidence',
     ],
     ['Candidate created', candidate ? 'Complete' : 'No candidate created'],
     [

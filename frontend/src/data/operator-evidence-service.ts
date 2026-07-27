@@ -12,6 +12,10 @@ export interface OperatorEvidenceOverview {
   rejectedEvents: number;
   deduplicatedEvents: number;
   candidates: number;
+  noTradeDecisions?: number;
+  watchDecisions?: number;
+  candidateDecisions?: number;
+  awaitingProcessing?: number;
   approvals: number;
   paperTickets: number;
   pendingCheckpoints: number;

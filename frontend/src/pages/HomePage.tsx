@@ -62,6 +62,27 @@ export function HomePage() {
           Operator evidence is unavailable. Counts and safety cannot be confirmed.
         </p>
       )}
+      <section aria-label="Persisted evidence decisions" className="space-y-2">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            ['NO_TRADE', overview.data?.noTradeDecisions],
+            ['WATCH', overview.data?.watchDecisions],
+            ['CANDIDATE', overview.data?.candidateDecisions],
+            ['Awaiting processing', overview.data?.awaitingProcessing],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-md border bg-card p-3">
+              <p className="text-xs font-medium text-muted-foreground">{label}</p>
+              <p className="text-2xl font-bold">
+                {value ?? (overview.isError ? 'Unavailable' : 'Checking')}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Most evidence should be rejected or watched. Candidates are created only when the full
+          deterministic ruleset passes.
+        </p>
+      </section>
       <section aria-label="Current activity" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
           <Card key={card.title} className="flex flex-col">

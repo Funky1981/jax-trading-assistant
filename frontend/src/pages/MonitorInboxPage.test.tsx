@@ -54,6 +54,30 @@ const accepted: WorldMonitorInboxItem = {
   candidateSymbol: 'QQQ',
   candidateStatus: 'awaiting_approval',
   candidateCreatedAt: '2026-06-12T10:32:00Z',
+  decision: {
+    decisionId: 'decision-1',
+    decision: 'CANDIDATE',
+    decisionVersion: 1,
+    rulesetVersion: 'genuine-event-decision-v1',
+    processorIdentity: 'jax-genuine-event-decision-processor',
+    processingMode: 'deterministic',
+    decisionAt: '2026-07-27T12:00:00Z',
+    evidenceScore: 0.82,
+    evidenceScoreSource: 'candidate_evidence_scores',
+    affectedAssets: ['QQQ'],
+    unknownAssets: false,
+    assetMappingProvenance: { mappingMethod: 'provider_symbol' },
+    reasons: ['Existing candidate passed the complete persisted contract.'],
+    blockingReasons: [],
+    missingEvidence: [],
+    trustGateState: 'ready_for_risk_review',
+    riskReviewState: 'ready_for_approval_review',
+    candidateId: 'candidate-1',
+    replayIdentity: 'gedr_1',
+    createdAt: '2026-07-27T12:00:00Z',
+    updatedAt: '2026-07-27T12:00:00Z',
+  },
+  decisionHistory: [],
   outcomeCount: 0,
   rawPayload: { fixture: true, monitor_score: 0.82 },
 };
@@ -85,6 +109,8 @@ const rejected: WorldMonitorInboxItem = {
   candidateSymbol: undefined,
   candidateStatus: undefined,
   candidateCreatedAt: undefined,
+  decision: undefined,
+  decisionHistory: [],
   rawPayload: { bad: true },
 };
 
@@ -112,6 +138,11 @@ function response(
       candidatesCreated: items.filter((entry) => entry.candidateId).length,
       rejected: items.filter((entry) => entry.status === 'rejected').length,
       duplicates: 0,
+      noTrade: items.filter((entry) => entry.decision?.decision === 'NO_TRADE').length,
+      watch: items.filter((entry) => entry.decision?.decision === 'WATCH').length,
+      candidate: items.filter((entry) => entry.decision?.decision === 'CANDIDATE').length,
+      awaitingProcessing: items.filter((entry) => !entry.decision && entry.status !== 'rejected')
+        .length,
     },
     checkedAt: '2026-06-12T10:45:00Z',
     items,
@@ -224,7 +255,7 @@ describe('MonitorInboxPage', () => {
     await user.click(screen.getByText('Analysis'));
     expect(screen.getByText('DETERMINISTIC ANALYSIS')).toBeVisible();
     expect(screen.getByText('No AI used')).toBeVisible();
-    expect(screen.getByText('QQQ')).toBeVisible();
+    expect(screen.getAllByText('QQQ').length).toBeGreaterThan(0);
     await user.click(screen.getByText('Audit'));
     expect(screen.getByText('Source-event ID')).toBeVisible();
     expect(screen.getByText('Show raw payload').closest('details')).not.toHaveAttribute('open');
@@ -245,6 +276,53 @@ describe('MonitorInboxPage', () => {
     expect(screen.getByText('Unknown assets')).toBeVisible();
     expect(screen.getByText(/none was fabricated/i)).toBeVisible();
     expect(screen.getAllByText('SYNTHETIC TEST').length).toBeGreaterThan(0);
+  });
+
+  it('shows persisted decision outcomes and only links candidates for CANDIDATE', async () => {
+    const user = userEvent.setup();
+    const noTrade: WorldMonitorInboxItem = {
+      ...accepted,
+      id: 'no-trade',
+      headline: 'Persisted no-trade event',
+      decision: {
+        ...accepted.decision!,
+        decisionId: 'decision-no-trade',
+        decision: 'NO_TRADE',
+        candidateId: undefined,
+        reasons: ['Persisted evidence was below the stronger-decision contract.'],
+        blockingReasons: ['candidate_evidence_missing'],
+        missingEvidence: ['candidate_evidence_score'],
+      },
+      decisionHistory: [{ ...accepted.decision!, decisionId: 'decision-no-trade-history' }],
+    };
+    const watch: WorldMonitorInboxItem = {
+      ...accepted,
+      id: 'watch',
+      headline: 'Persisted watch event',
+      candidateId: undefined,
+      possibleAffectedEtfs: [],
+      decision: {
+        ...accepted.decision!,
+        decisionId: 'decision-watch',
+        decision: 'WATCH',
+        candidateId: undefined,
+        affectedAssets: [],
+        unknownAssets: true,
+        missingEvidence: ['truthful_asset_mapping'],
+      },
+      decisionHistory: [],
+    };
+    vi.mocked(aiService.getWorldMonitorInbox).mockResolvedValue(response([noTrade, watch]));
+    renderPage();
+    expect((await screen.findAllByText('NO_TRADE')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('WATCH').length).toBeGreaterThan(0);
+    await user.click(itemButtons()[0]);
+    expect(screen.queryByRole('link', { name: 'Open Candidate Review' })).not.toBeInTheDocument();
+    await user.click(screen.getByText('Decision — NO_TRADE'));
+    expect(screen.getByText('candidate_evidence_missing')).toBeVisible();
+    expect(screen.getByText('candidate_evidence_score')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'WATCH' }));
+    expect(screen.getByText('1–1 of 1')).toBeInTheDocument();
   });
 
   it('operates the accordion by keyboard and has accessible pagination', async () => {

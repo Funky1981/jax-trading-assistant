@@ -157,6 +157,12 @@ export function UserGuidePage() {
             Awaiting processing is different from research only. Unknown assets means Jax has no
             truthful persisted mapping; it does not insert a fallback symbol.
           </p>
+          <p>
+            A deterministic decision finishes as NO_TRADE when evidence does not justify continued
+            review, WATCH when a material event still needs evidence or a truthful asset mapping,
+            and CANDIDATE only when the complete persisted candidate, evidence, trust and risk
+            contract passes. These outcomes do not approve or execute a trade.
+          </p>
           <Button asChild variant="outline" size="sm">
             <Link to="/monitor/inbox">Open Evidence Inbox</Link>
           </Button>

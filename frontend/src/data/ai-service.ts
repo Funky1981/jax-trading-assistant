@@ -81,7 +81,33 @@ export interface WorldMonitorInboxItem {
   latestOutcomeAt?: string;
   operatorDecision?: string;
   operatorReason?: string;
+  decision?: WorldMonitorEventDecision;
+  decisionHistory?: WorldMonitorEventDecision[];
   rawPayload: Record<string, unknown>;
+}
+
+export interface WorldMonitorEventDecision {
+  decisionId: string;
+  decision: 'NO_TRADE' | 'WATCH' | 'CANDIDATE';
+  decisionVersion: number;
+  rulesetVersion: string;
+  processorIdentity: string;
+  processingMode: 'deterministic';
+  decisionAt: string;
+  evidenceScore: number;
+  evidenceScoreSource: string;
+  affectedAssets: string[];
+  unknownAssets: boolean;
+  assetMappingProvenance: Record<string, unknown>;
+  reasons: string[];
+  blockingReasons: string[];
+  missingEvidence: string[];
+  trustGateState: string;
+  riskReviewState: string;
+  candidateId?: string;
+  replayIdentity: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface WorldMonitorInboxResponse {
@@ -93,6 +119,10 @@ export interface WorldMonitorInboxResponse {
     rejected: number;
     duplicates: number;
     candidatesCreated: number;
+    noTrade?: number;
+    watch?: number;
+    candidate?: number;
+    awaitingProcessing?: number;
   };
   checkedAt: string;
 }
