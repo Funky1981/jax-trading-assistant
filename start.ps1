@@ -107,6 +107,9 @@ if (-not $env:IB_PAPER_TRADING) {
 if (-not $env:ALLOW_LIVE_TRADING) {
     $env:ALLOW_LIVE_TRADING = "false"
 }
+# Docker Compose v5 enables an interactive helper menu for attached `up` commands.
+# Startup must remain unattended, including the one-shot migration service.
+$env:COMPOSE_MENU = "false"
 if ($Build.IsPresent) {
     $env:JAX_BUILD = "true"
 }
@@ -179,7 +182,7 @@ for ($i = 1; $i -le 10; $i++) {
 # Run any pending migrations via the db-migrate service so schema_migrations stays correct.
 Write-Host "  Applying database migrations..." -ForegroundColor Gray
 docker compose rm -f db-migrate 2>$null | Out-Null
-docker compose up --no-build db-migrate 2>$null
+docker compose up --no-build --abort-on-container-exit --exit-code-from db-migrate db-migrate 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  Migration step failed." -ForegroundColor Red
     exit $LASTEXITCODE
