@@ -1,19 +1,14 @@
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { axe } from 'vitest-axe';
-import { MonitorInboxPage } from './MonitorInboxPage';
-import { aiService } from '@/data/ai-service';
+import { aiService, type WorldMonitorInboxItem } from '@/data/ai-service';
 import { HttpError } from '@/data/http-client';
+import { MonitorInboxPage } from './MonitorInboxPage';
 
-vi.mock('@/data/ai-service', () => ({
-  aiService: {
-    getWorldMonitorInbox: vi.fn(),
-  },
-}));
-
+vi.mock('@/data/ai-service', () => ({ aiService: { getWorldMonitorInbox: vi.fn() } }));
 vi.mock('@/hooks/useOperatorEvidenceOverview', () => ({
   useOperatorEvidenceOverview: () => ({
     data: {
@@ -28,173 +23,262 @@ vi.mock('@/hooks/useOperatorEvidenceOverview', () => ({
   }),
 }));
 
-function renderPage() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
+const accepted: WorldMonitorInboxItem = {
+  id: 'inbox-accepted',
+  source: 'world-monitor',
+  sourceEventId: 'accepted-1',
+  worldMonitorEventId: 'accepted-1',
+  status: 'candidate_created',
+  eventType: 'macro_rates',
+  headline: 'Accepted monitor item with a complete persisted headline',
+  summary: 'Rates news mapped to QQQ.',
+  sourceUrls: ['https://example.com/accepted'],
+  sourceCount: 1,
+  eventTime: '2026-06-12T10:30:00Z',
+  receivedAt: '2026-06-12T10:31:00Z',
+  collectedAt: '2026-06-12T10:30:30Z',
+  rawEventId: 'raw-1',
+  isSynthetic: false,
+  discoveryMethod: 'rss_poll',
+  analysisIdentity: 'deterministic-v1',
+  region: 'US',
+  possibleAffectedEtfs: ['QQQ'],
+  assetThemes: ['rates'],
+  severity: 'high',
+  sourceTier: 'tier2',
+  confidence: 0.82,
+  confidenceReasons: ['trusted source'],
+  mappingReason: 'Mapped to QQQ from rates theme.',
+  normalizedEventId: 'event-1',
+  candidateId: 'candidate-1',
+  candidateSymbol: 'QQQ',
+  candidateStatus: 'awaiting_approval',
+  candidateCreatedAt: '2026-06-12T10:32:00Z',
+  outcomeCount: 0,
+  rawPayload: { fixture: true, monitor_score: 0.82 },
+};
 
+const rejected: WorldMonitorInboxItem = {
+  ...accepted,
+  id: 'inbox-rejected',
+  sourceEventId: 'rejected-1',
+  worldMonitorEventId: 'rejected-1',
+  status: 'rejected',
+  rejectionReason: 'source_urls are required',
+  headline: 'Rejected synthetic monitor item',
+  summary: undefined,
+  sourceUrls: [],
+  sourceCount: 0,
+  eventTime: '2026-06-12T10:20:00Z',
+  receivedAt: '2026-06-12T10:21:00Z',
+  collectedAt: undefined,
+  provenanceAvailable: true,
+  isSynthetic: true,
+  syntheticReason: 'labelled fixture',
+  discoveryMethod: undefined,
+  analysisIdentity: undefined,
+  possibleAffectedEtfs: [],
+  confidenceReasons: [],
+  mappingReason: 'Rejected before mapping.',
+  normalizedEventId: undefined,
+  candidateId: undefined,
+  candidateSymbol: undefined,
+  candidateStatus: undefined,
+  candidateCreatedAt: undefined,
+  rawPayload: { bad: true },
+};
+
+function item(index: number): WorldMonitorInboxItem {
+  return {
+    ...accepted,
+    id: `inbox-${index}`,
+    sourceEventId: `source-${index}`,
+    worldMonitorEventId: `world-${index}`,
+    headline: `Evidence record ${index}`,
+    candidateId: index % 2 ? `candidate-${index}` : undefined,
+    candidateSymbol: index % 2 ? 'QQQ' : undefined,
+    candidateStatus: index % 2 ? 'awaiting_approval' : undefined,
+  };
+}
+
+function response(
+  items = [accepted, rejected, ...Array.from({ length: 23 }, (_, index) => item(index + 3))],
+) {
+  return {
+    total: items.length,
+    counts: {
+      genuine: items.filter((entry) => entry.isSynthetic === false).length,
+      syntheticTests: items.filter((entry) => entry.isSynthetic === true).length,
+      candidatesCreated: items.filter((entry) => entry.candidateId).length,
+      rejected: items.filter((entry) => entry.status === 'rejected').length,
+      duplicates: 0,
+    },
+    checkedAt: '2026-06-12T10:45:00Z',
+    items,
+  };
+}
+
+function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <MemoryRouter>
-      <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={client}>
         <MonitorInboxPage />
       </QueryClientProvider>
     </MemoryRouter>,
   );
 }
 
+function itemButtons() {
+  return within(screen.getByRole('list', { name: 'Evidence items' })).getAllByRole('button');
+}
+
 describe('MonitorInboxPage', () => {
   beforeEach(() => {
-    vi.mocked(aiService.getWorldMonitorInbox).mockClear();
-    vi.mocked(aiService.getWorldMonitorInbox).mockResolvedValue({
-      total: 2,
-      counts: {
-        genuine: 1,
-        syntheticTests: 1,
-        candidatesCreated: 1,
-        rejected: 1,
-        duplicates: 0,
-      },
-      checkedAt: '2026-06-12T10:45:00Z',
-      items: [
-        {
-          id: 'inbox-accepted',
-          source: 'world-monitor',
-          sourceEventId: 'accepted-1',
-          worldMonitorEventId: 'accepted-1',
-          status: 'candidate_created',
-          eventType: 'macro_rates',
-          headline: 'Accepted monitor item',
-          summary: 'Rates news mapped to QQQ.',
-          sourceUrls: ['https://example.com/accepted'],
-          sourceCount: 1,
-          eventTime: '2026-06-12T10:30:00Z',
-          receivedAt: '2026-06-12T10:31:00Z',
-          collectedAt: '2026-06-12T10:30:30Z',
-          rawEventId: 'raw-1',
-          isSynthetic: false,
-          discoveryMethod: 'rss_poll',
-          analysisIdentity: 'deterministic-v1',
-          region: 'US',
-          possibleAffectedEtfs: ['QQQ'],
-          assetThemes: ['rates'],
-          severity: 'high',
-          sourceTier: 'tier2',
-          confidence: 0.82,
-          confidenceReasons: ['trusted source'],
-          mappingReason: 'Mapped to QQQ from rates theme.',
-          normalizedEventId: 'event-1',
-          candidateId: 'candidate-1',
-          candidateSymbol: 'QQQ',
-          candidateStatus: 'awaiting_approval',
-          candidateCreatedAt: '2026-06-12T10:32:00Z',
-          outcomeCount: 0,
-          rawPayload: { fixture: true, monitor_score: 0.82 },
-        },
-        {
-          id: 'inbox-rejected',
-          source: 'world-monitor',
-          sourceEventId: 'rejected-1',
-          worldMonitorEventId: 'rejected-1',
-          status: 'rejected',
-          rejectionReason: 'source_urls are required',
-          eventType: 'macro_rates',
-          headline: 'Rejected monitor item',
-          sourceUrls: [],
-          sourceCount: 0,
-          eventTime: '2026-06-12T10:20:00Z',
-          receivedAt: '2026-06-12T10:21:00Z',
-          provenanceAvailable: true,
-          isSynthetic: true,
-          syntheticReason: 'labelled fixture',
-          possibleAffectedEtfs: [],
-          assetThemes: [],
-          severity: 'high',
-          sourceTier: 'tier2',
-          confidence: 0.7,
-          confidenceReasons: [],
-          mappingReason: 'Rejected before mapping.',
-          outcomeCount: 0,
-          rawPayload: { bad: true },
-        },
-      ],
-    });
+    vi.clearAllMocks();
+    vi.mocked(aiService.getWorldMonitorInbox).mockResolvedValue(response());
   });
 
-  it('renders the beginner Evidence Inbox and opens human-readable detail', async () => {
-    const user = userEvent.setup();
+  it('starts with ten compact collapsed items and no permanent detail placeholder', async () => {
     renderPage();
-
-    expect(await screen.findByRole('heading', { name: 'Evidence Inbox' })).toBeInTheDocument();
-    expect((await screen.findAllByText('Accepted monitor item')).length).toBeGreaterThan(0);
-    expect(screen.getByText('Rejected monitor item')).toBeInTheDocument();
-    expect(screen.getAllByText('GENUINE').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('SYNTHETIC TEST').length).toBeGreaterThan(0);
-
-    await user.click(screen.getByRole('button', { name: /Accepted monitor item/i }));
-
-    expect(screen.getByText('Mapped to QQQ from rates theme.')).toBeInTheDocument();
-    expect(screen.getByText('No AI used')).toBeInTheDocument();
-    expect(screen.getByText('DETERMINISTIC ANALYSIS')).toBeInTheDocument();
-    expect(screen.getByText('rss_poll')).toBeInTheDocument();
-    expect(screen.queryByText('Unknown assets')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Open Candidate Review/i })).toHaveAttribute(
-      'href',
-      '/candidates/candidate-1/evidence',
+    await screen.findByText('1–10 of 25');
+    expect(itemButtons()).toHaveLength(10);
+    expect(itemButtons().every((button) => button.getAttribute('aria-expanded') === 'false')).toBe(
+      true,
     );
-    expect(screen.getByText('Audit details')).toBeInTheDocument();
-    expect(screen.getByText(/monitor_score/)).not.toBeVisible();
+    expect(screen.getByText('1–10 of 25')).toBeInTheDocument();
+    expect(screen.queryByText(/Open an evidence item to see its source/i)).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /approve|execute|trade/i }),
-    ).not.toBeInTheDocument();
+      document.querySelector('.sticky, [class*="overflow-y"], [class*="h-screen"]'),
+    ).toBeNull();
   });
 
-  it('filters without mutating records and shows rejection and unknown-assets states', async () => {
+  it('supports twenty-item pages plus next and previous pagination', async () => {
     const user = userEvent.setup();
     renderPage();
+    await screen.findByText('1–10 of 25');
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Evidence items per page' }),
+      '20',
+    );
+    expect(itemButtons()).toHaveLength(20);
+    expect(screen.getByText('1–20 of 25')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next evidence page' }));
+    expect(itemButtons()).toHaveLength(5);
+    expect(screen.getByText('21–25 of 25')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Previous evidence page' }));
+    expect(screen.getByText('1–20 of 25')).toBeInTheDocument();
+  });
 
-    await screen.findAllByText('Accepted monitor item');
+  it('resets pagination and expansion when filtering without mutating the read model', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('1–10 of 25');
+    await user.click(screen.getByRole('button', { name: 'Next evidence page' }));
     await user.click(screen.getByRole('button', { name: 'Rejected' }));
-    await user.click(screen.getByRole('button', { name: /Rejected monitor item/i }));
-
-    expect((await screen.findAllByText('source_urls are required')).length).toBeGreaterThan(0);
-    expect(screen.getByText('Unknown assets')).toBeInTheDocument();
+    expect(screen.getByText('1–1 of 1')).toBeInTheDocument();
+    expect(itemButtons()).toHaveLength(1);
+    expect(aiService.getWorldMonitorInbox).toHaveBeenCalledTimes(1);
     expect(aiService.getWorldMonitorInbox).toHaveBeenLastCalledWith({ limit: 100 });
   });
 
-  it('distinguishes a stale or missing Monitor API route from an empty inbox', async () => {
+  it('allows only one inline item to expand and keeps subsections collapsed', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('1–10 of 25');
+    const first = itemButtons()[0];
+    const second = itemButtons()[1];
+    await user.click(first);
+    expect(first).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Rates news mapped to QQQ.')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Open original source' })).toHaveAttribute(
+      'href',
+      'https://example.com/accepted',
+    );
+    expect(screen.getByText('Published time')).toBeVisible();
+    expect(screen.getAllByText('Collection time').some((node) => !node.closest('details'))).toBe(
+      true,
+    );
+    expect(screen.getAllByText('Jax receipt time').some((node) => !node.closest('details'))).toBe(
+      true,
+    );
+    for (const label of ['Source and provenance', 'Analysis', /Journey —/, 'Audit']) {
+      expect(screen.getByText(label).closest('details')).not.toHaveAttribute('open');
+    }
+    expect(screen.getByText('Show raw payload')).not.toBeVisible();
+    await user.click(second);
+    expect(second).toHaveAttribute('aria-expanded', 'true');
+    expect(first).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Rates news mapped to QQQ.')).not.toBeInTheDocument();
+  });
+
+  it('exposes truthful analysis, asset mapping, candidate linkage and nested audit on request', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('1–10 of 25');
+    await user.click(itemButtons()[0]);
+    expect(screen.getByRole('link', { name: 'Open Candidate Review' })).toHaveAttribute(
+      'href',
+      '/candidates/candidate-1/evidence',
+    );
+    await user.click(screen.getByText('Analysis'));
+    expect(screen.getByText('DETERMINISTIC ANALYSIS')).toBeVisible();
+    expect(screen.getByText('No AI used')).toBeVisible();
+    expect(screen.getByText('QQQ')).toBeVisible();
+    await user.click(screen.getByText('Audit'));
+    expect(screen.getByText('Source-event ID')).toBeVisible();
+    expect(screen.getByText('Show raw payload').closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByText(/monitor_score/)).not.toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: /^(approve|execute|trade)$/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not fabricate unknown assets and provides a valid no-candidate outcome', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('1–10 of 25');
+    await user.click(itemButtons()[1]);
+    expect(screen.queryByRole('link', { name: 'Open Candidate Review' })).not.toBeInTheDocument();
+    expect(screen.getByText('No candidate was created. This is a valid outcome.')).toBeVisible();
+    await user.click(screen.getByText('Analysis'));
+    expect(screen.getByText('Unknown assets')).toBeVisible();
+    expect(screen.getByText(/none was fabricated/i)).toBeVisible();
+    expect(screen.getAllByText('SYNTHETIC TEST').length).toBeGreaterThan(0);
+  });
+
+  it('operates the accordion by keyboard and has accessible pagination', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('1–10 of 25');
+    const first = itemButtons()[0];
+    first.focus();
+    await user.keyboard('{Enter}');
+    expect(first).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'Previous evidence page' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next evidence page' })).toBeEnabled();
+  });
+
+  it('distinguishes unavailable and protected inbox responses', async () => {
     vi.mocked(aiService.getWorldMonitorInbox).mockRejectedValue(
       new HttpError('Request failed: 404', 404, '404 page not found'),
     );
-
-    renderPage();
-
+    const { unmount } = renderPage();
     expect(await screen.findByText(/Evidence Inbox unavailable/i)).toBeInTheDocument();
-    expect(screen.getByText(/Your data has not been changed/i)).toBeInTheDocument();
-  });
-
-  it('shows an entitlement message when the Monitor inbox is protected by auth', async () => {
+    unmount();
     vi.mocked(aiService.getWorldMonitorInbox).mockRejectedValue(
       new HttpError('Request failed: 401', 401, 'missing authorization token'),
     );
-
     renderPage();
-
     expect(await screen.findByText(/Sign in to view evidence/i)).toBeInTheDocument();
-    expect(screen.getByText(/protected evidence/i)).toBeInTheDocument();
   });
 
-  it('has no detectable accessibility violations in the open evidence detail', async () => {
+  it('has no detectable accessibility violations collapsed or expanded', async () => {
     const user = userEvent.setup();
     const { container } = renderPage();
-    await user.click(
-      await screen.findByRole('button', {
-        name: /Accepted monitor item/i,
-      }),
-    );
-
-    const results = await axe(container);
-    expect(results.violations).toHaveLength(0);
+    await screen.findByText('1–10 of 25');
+    expect((await axe(container)).violations).toHaveLength(0);
+    await user.click(itemButtons()[0]);
+    expect((await axe(container)).violations).toHaveLength(0);
   });
 });

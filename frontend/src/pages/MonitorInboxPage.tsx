@@ -1,20 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ExternalLink, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageIntro } from '@/components/ui/beginner-help';
 import { aiService, type WorldMonitorInboxItem } from '@/data/ai-service';
 import { HttpError } from '@/data/http-client';
 import { useOperatorEvidenceOverview } from '@/hooks/useOperatorEvidenceOverview';
 import { isPaperSafe } from '@/lib/operator-safety';
-import { PageIntro } from '@/components/ui/beginner-help';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 
 type BeginnerFilter = 'all' | 'genuine' | 'synthetic' | 'rejected' | 'candidate';
 
-const FILTERS: { value: BeginnerFilter; label: string }[] = [
+const FILTERS: Array<{ value: BeginnerFilter; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'genuine', label: 'Genuine' },
   { value: 'synthetic', label: 'Synthetic tests' },
@@ -22,7 +21,7 @@ const FILTERS: { value: BeginnerFilter; label: string }[] = [
   { value: 'candidate', label: 'Candidate created' },
 ];
 
-function formatTime(value?: string): string {
+function formatTime(value?: string) {
   if (!value) return 'Not supplied';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Unavailable';
@@ -35,36 +34,35 @@ function formatTime(value?: string): string {
   });
 }
 
-function sourceName(item: WorldMonitorInboxItem): string {
+function sourceName(item: WorldMonitorInboxItem) {
   const firstUrl = item.sourceUrls?.[0];
   if (firstUrl) {
     try {
       return new URL(firstUrl).hostname.replace(/^www\./, '');
     } catch {
-      // Fall back to the persisted source label.
+      // Use the persisted source label below.
     }
   }
   return item.source || 'Source unavailable';
 }
 
-function isDuplicate(item: WorldMonitorInboxItem): boolean {
+function isDuplicate(item: WorldMonitorInboxItem) {
   return (
     item.status === 'ignored' &&
     /dedup|duplicate/i.test(item.rejectionReason || item.operatorReason || '')
   );
 }
 
-function disposition(item: WorldMonitorInboxItem): string {
+function disposition(item: WorldMonitorInboxItem) {
   if (item.candidateId) return 'Candidate created';
   if (item.status === 'rejected') return 'Rejected';
   if (isDuplicate(item)) return 'Duplicate ignored';
   if (item.status === 'new') return 'Awaiting processing';
-  if (item.status === 'researching') return 'Research only';
-  if (item.status === 'ignored') return 'Research only';
+  if (['researching', 'ignored'].includes(item.status)) return 'Research only';
   return 'Unknown';
 }
 
-function shortExplanation(item: WorldMonitorInboxItem): string {
+function shortExplanation(item: WorldMonitorInboxItem) {
   if (item.candidateId) return 'Jax created a candidate for separate human review.';
   if (item.status === 'rejected')
     return item.rejectionReason || 'Jax rejected this evidence during validation.';
@@ -73,12 +71,19 @@ function shortExplanation(item: WorldMonitorInboxItem): string {
     return 'No candidate has been created. Jax is awaiting a persisted processing decision.';
   if (item.normalizedEventId)
     return 'No candidate was created. This is a valid research-only outcome.';
-  return item.operatorReason || 'No further action is recorded.';
+  return item.operatorReason || 'No candidate was created. This is a valid outcome.';
 }
 
-function matchesFilter(item: WorldMonitorInboxItem, filter: BeginnerFilter): boolean {
-  if (filter === 'genuine')
-    return item.provenanceAvailable !== false && item.isSynthetic === false;
+function journeySummary(item: WorldMonitorInboxItem) {
+  if (isDuplicate(item)) return 'Duplicate ignored';
+  if (item.status === 'rejected') return 'Received → Rejected';
+  if (item.candidateId) return 'Received → Normalised → Candidate created';
+  if (item.normalizedEventId) return 'Received → Normalised → Research only';
+  return 'Awaiting processing';
+}
+
+function matchesFilter(item: WorldMonitorInboxItem, filter: BeginnerFilter) {
+  if (filter === 'genuine') return item.provenanceAvailable !== false && item.isSynthetic === false;
   if (filter === 'synthetic')
     return item.provenanceAvailable !== false && item.isSynthetic === true;
   if (filter === 'rejected') return item.status === 'rejected';
@@ -86,11 +91,11 @@ function matchesFilter(item: WorldMonitorInboxItem, filter: BeginnerFilter): boo
   return true;
 }
 
-function emptyMessage(filter: BeginnerFilter): string {
+function emptyMessage(filter: BeginnerFilter) {
   if (filter === 'genuine') return 'No genuine evidence matches this filter.';
+  if (filter === 'synthetic') return 'No synthetic test evidence matches this filter.';
   if (filter === 'rejected') return 'No rejected evidence matches this filter.';
   if (filter === 'candidate') return 'No evidence in this view created a candidate.';
-  if (filter === 'synthetic') return 'No synthetic test evidence matches this filter.';
   return 'No evidence has arrived yet. Genuine and controlled test events will appear here after Jax receives them.';
 }
 
@@ -117,43 +122,43 @@ function DispositionBadge({ item }: { item: WorldMonitorInboxItem }) {
 
 export function MonitorInboxPage() {
   const [filter, setFilter] = useState<BeginnerFilter>('all');
-  const [selectedID, setSelectedID] = useState<string>();
-  const detailRef = useRef<HTMLDivElement>(null);
+  const [expandedID, setExpandedID] = useState<string>();
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
   const safety = useOperatorEvidenceOverview();
   const inbox = useQuery({
     queryKey: ['world-monitor-inbox', 'beginner'],
     queryFn: () => aiService.getWorldMonitorInbox({ limit: 100 }),
   });
-
-  const visibleItems = useMemo(
-    () => (inbox.data?.items ?? []).filter((item) => matchesFilter(item, filter)),
-    [filter, inbox.data?.items],
+  const items = useMemo(() => inbox.data?.items ?? [], [inbox.data?.items]);
+  const filtered = useMemo(
+    () => items.filter((item) => matchesFilter(item, filter)),
+    [filter, items],
   );
-
-  useEffect(() => {
-    if (!visibleItems.some((item) => item.id === selectedID)) {
-      setSelectedID(undefined);
-    }
-  }, [selectedID, visibleItems]);
-
-  useEffect(() => {
-    if (selectedID && window.matchMedia?.('(max-width: 1023px)').matches) {
-      detailRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-    }
-  }, [selectedID]);
-
-  const selected = visibleItems.find((item) => item.id === selectedID);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const start = (safePage - 1) * pageSize;
+  const visible = filtered.slice(start, start + pageSize);
   const authError = inbox.error instanceof HttpError && [401, 403].includes(inbox.error.status);
 
+  const resetView = () => {
+    setPage(1);
+    setExpandedID(undefined);
+  };
+  const selectFilter = (value: BeginnerFilter) => {
+    setFilter(value);
+    resetView();
+  };
+
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="min-w-0 space-y-4">
       <PageIntro
         eyebrow="Review evidence"
         title="Evidence Inbox"
         description="Review genuine and controlled test evidence received by Jax. Opening an item does not approve or place a trade."
       >
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span>Choose a filter, open an item, then read what Jax did next.</span>
+          <span>Filter the inbox, then expand one item when you need its persisted detail.</span>
           <Link className="font-medium text-primary underline" to="/guide#evidence-inbox">
             Read the Evidence Inbox guide
           </Link>
@@ -163,9 +168,9 @@ export function MonitorInboxPage() {
       {safety.isError || (safety.data && !isPaperSafe(safety.data)) ? (
         <section
           role="status"
-          className="rounded-lg border border-warning/60 bg-warning/5 p-4 text-sm"
+          className="rounded-lg border border-warning/60 bg-warning/5 p-3 text-sm"
         >
-          Jax cannot confirm runtime safety. Evidence remains read-only, but check{' '}
+          Jax cannot confirm runtime safety. Evidence remains read-only; check{' '}
           <Link className="font-medium text-primary underline" to="/system">
             System Safety
           </Link>{' '}
@@ -201,7 +206,7 @@ export function MonitorInboxPage() {
             <h2 id="evidence-summary-heading" className="sr-only">
               Evidence summary
             </h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
               <SummaryMetric label="Genuine" value={inbox.data?.counts.genuine} />
               <SummaryMetric label="Synthetic tests" value={inbox.data?.counts.syntheticTests} />
               <SummaryMetric label="Rejected" value={inbox.data?.counts.rejected} />
@@ -213,14 +218,14 @@ export function MonitorInboxPage() {
             </div>
           </section>
 
-          <section aria-labelledby="evidence-list-heading" className="min-w-0 space-y-4">
+          <section aria-labelledby="evidence-list-heading" className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 id="evidence-list-heading" className="text-xl font-semibold">
                   Evidence received
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Technical IDs and raw payloads remain inside Audit details.
+                  Ten compact records per page. Technical fields stay collapsed.
                 </p>
               </div>
               <Button
@@ -233,83 +238,94 @@ export function MonitorInboxPage() {
               </Button>
             </div>
 
-            <div aria-label="Evidence filters" className="flex max-w-full flex-wrap gap-2">
-              {FILTERS.map((option) => (
-                <Button
-                  key={option.value}
-                  size="sm"
-                  variant={filter === option.value ? 'default' : 'outline'}
-                  aria-pressed={filter === option.value}
-                  onClick={() => setFilter(option.value)}
+            <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 md:flex-row md:items-center md:justify-between">
+              <div aria-label="Evidence filters" className="flex max-w-full flex-wrap gap-2">
+                {FILTERS.map((option) => (
+                  <Button
+                    key={option.value}
+                    size="sm"
+                    variant={filter === option.value ? 'default' : 'outline'}
+                    aria-pressed={filter === option.value}
+                    onClick={() => selectFilter(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                Per page
+                <select
+                  aria-label="Evidence items per page"
+                  className="h-9 rounded-md border bg-background px-2"
+                  value={pageSize}
+                  onChange={(event) => {
+                    setPageSize(Number(event.target.value));
+                    resetView();
+                  }}
                 >
-                  {option.label}
-                </Button>
-              ))}
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                </select>
+              </label>
             </div>
 
-            {visibleItems.length === 0 ? (
+            {filtered.length === 0 ? (
               <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
                 {emptyMessage(filter)}
               </div>
             ) : (
-              <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                <ul className="min-w-0 space-y-3" aria-label="Evidence items">
-                  {visibleItems.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        aria-expanded={selectedID === item.id}
-                        onClick={() => setSelectedID(item.id)}
-                        className={cn(
-                          'w-full min-w-0 rounded-lg border bg-card p-4 text-left transition-colors',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                          selectedID === item.id
-                            ? 'border-primary ring-1 ring-primary'
-                            : 'hover:bg-accent/40',
-                        )}
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <EvidenceBadge item={item} />
-                          <DispositionBadge item={item} />
-                        </div>
-                        <h3 className="mt-3 break-words font-semibold leading-snug">
-                          {item.headline}
-                        </h3>
-                        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                          <div>
-                            <dt className="text-xs text-muted-foreground">Source</dt>
-                            <dd className="break-words">{sourceName(item)}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-xs text-muted-foreground">Published</dt>
-                            <dd>{formatTime(item.eventTime)}</dd>
-                          </div>
-                        </dl>
-                        <p className="mt-3 text-sm text-muted-foreground">
-                          {shortExplanation(item)}
-                        </p>
-                        <span className="mt-3 inline-block text-sm font-medium text-primary">
-                          {selectedID === item.id ? 'Details open' : 'Open details'}
-                        </span>
-                      </button>
-                    </li>
+              <>
+                <ul className="min-w-0 space-y-2" aria-label="Evidence items">
+                  {visible.map((item) => (
+                    <EvidenceItem
+                      key={item.id}
+                      item={item}
+                      expanded={expandedID === item.id}
+                      onToggle={() =>
+                        setExpandedID((current) => (current === item.id ? undefined : item.id))
+                      }
+                    />
                   ))}
                 </ul>
-
-                <div
-                  ref={detailRef}
-                  className="order-first min-w-0 scroll-mt-4 lg:order-none lg:sticky lg:top-4 lg:self-start"
+                <nav
+                  aria-label="Evidence pages"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-3"
                 >
-                  {selected ? (
-                    <EvidenceDetail item={selected} />
-                  ) : (
-                    <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                      Open an evidence item to see its source, timestamps, analysis, journey and
-                      audit details.
-                    </div>
-                  )}
-                </div>
-              </div>
+                  <p className="text-sm text-muted-foreground">
+                    {start + 1}–{Math.min(start + pageSize, filtered.length)} of {filtered.length}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      aria-label="Previous evidence page"
+                      disabled={safePage === 1}
+                      onClick={() => {
+                        setPage((value) => Math.max(1, value - 1));
+                        setExpandedID(undefined);
+                      }}
+                    >
+                      <ChevronLeft className="mr-1 h-4 w-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      aria-label="Next evidence page"
+                      disabled={safePage === pageCount}
+                      onClick={() => {
+                        setPage((value) => Math.min(pageCount, value + 1));
+                        setExpandedID(undefined);
+                      }}
+                    >
+                      Next
+                      <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                </nav>
+              </>
             )}
           </section>
         </>
@@ -320,201 +336,327 @@ export function MonitorInboxPage() {
 
 function SummaryMetric({ label, value }: { label: string; value: number | undefined }) {
   return (
-    <div className="min-w-0 rounded-lg border bg-card p-4">
+    <div className="min-w-0 rounded-md border bg-card px-3 py-2">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value === undefined ? 'Unavailable' : value}</p>
+      <p className="text-xl font-bold">{value === undefined ? 'Unavailable' : value}</p>
     </div>
   );
 }
 
-function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
-  const aiUsed = Boolean(item.aiProvider || item.aiModel);
+function EvidenceItem({
+  item,
+  expanded,
+  onToggle,
+}: {
+  item: WorldMonitorInboxItem;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const panelID = `evidence-panel-${item.id}`;
   return (
-    <article className="min-w-0 space-y-4" aria-labelledby={`evidence-detail-${item.id}`}>
-      <Card className="min-w-0">
-        <CardHeader>
-          <div className="flex flex-wrap gap-2">
-            <EvidenceBadge item={item} />
-            <DispositionBadge item={item} />
-          </div>
-          <CardTitle id={`evidence-detail-${item.id}`} className="break-words text-xl">
-            {item.headline}
-          </CardTitle>
-          <CardDescription>{shortExplanation(item)}</CardDescription>
-        </CardHeader>
-        <CardContent className="min-w-0 space-y-6">
-          <DetailSection title="What happened">
-            <p>{item.summary || 'No summary was supplied.'}</p>
-            <Definition label="Source" value={sourceName(item)} />
-            {item.sourceUrls.length > 0 ? (
-              <ul className="space-y-2">
-                {item.sourceUrls.map((url, index) => (
-                  <li key={url}>
-                    <a
-                      className="inline-flex max-w-full items-start gap-1 break-all text-primary underline"
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open original article {index + 1}
-                      <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">Original article link unavailable.</p>
-            )}
-          </DetailSection>
-
-          <DetailSection title="Is this genuine?">
-            <EvidenceBadge item={item} />
-            <p className="text-sm text-muted-foreground">
-              {item.provenanceAvailable === false
-                ? 'Jax does not have enough linked raw provenance to classify this evidence.'
-                : item.isSynthetic === true
-                ? `This is controlled test evidence, not live news.${item.syntheticReason ? ` ${item.syntheticReason}` : ''}`
-                : item.isSynthetic === false
-                  ? 'This evidence was collected from a real external source.'
-                  : 'Jax does not have enough persisted provenance to classify this evidence.'}
-            </p>
-            <Definition label="Discovery method" value={item.discoveryMethod || 'Unavailable'} />
-          </DetailSection>
-
-          <DetailSection title="When did it happen?">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Definition label="Published time" value={formatTime(item.eventTime)} />
-              <Definition label="Collected time" value={formatTime(item.collectedAt)} />
-              <Definition label="Received by Jax" value={formatTime(item.receivedAt)} />
+    <li className="min-w-0 rounded-lg border bg-card">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={panelID}
+        onClick={onToggle}
+        className="w-full min-w-0 p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:p-4"
+      >
+        <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(8rem,0.7fr)_minmax(9rem,0.8fr)_auto] md:items-center">
+          <div className="min-w-0">
+            <div className="flex flex-wrap gap-2">
+              <EvidenceBadge item={item} />
+              <DispositionBadge item={item} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Times are displayed in your local timezone. Jax retains the persisted values in UTC.
-            </p>
-          </DetailSection>
-
-          <DetailSection title="How was it analysed?">
-            {aiUsed ? (
-              <>
-                <Badge>AI ANALYSED</Badge>
-                <Definition label="AI provider" value={item.aiProvider || 'Unavailable'} />
-                <Definition label="AI model" value={item.aiModel || 'Unavailable'} />
-              </>
-            ) : item.analysisIdentity ? (
-              <>
-                <Badge variant="secondary">DETERMINISTIC ANALYSIS</Badge>
-                <p className="text-sm text-muted-foreground">
-                  Rules or configured logic were used. This was not an AI model call.
-                </p>
-                <Definition label="Analysis identity" value={item.analysisIdentity} />
-                <strong className="text-sm">No AI used</strong>
-              </>
-            ) : (
-              <>
-                <Badge variant="outline">NO ANALYSIS METADATA</Badge>
-                <strong className="text-sm">No AI used</strong>
-              </>
-            )}
-          </DetailSection>
-
-          <DetailSection title="What did Jax recognise?">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Definition label="Event type" value={item.eventType || 'Unavailable'} />
-              <Definition label="Severity" value={item.severity || 'Unavailable'} />
-              <Definition
-                label="Confidence"
-                value={
-                  Number.isFinite(item.confidence)
-                    ? `${Math.round(item.confidence * 100)}%`
-                    : 'Unavailable'
-                }
-              />
-              <Definition
-                label="Affected assets"
-                value={
-                  item.possibleAffectedEtfs.length > 0
-                    ? item.possibleAffectedEtfs.join(', ')
-                    : 'Unknown assets'
-                }
-              />
-            </div>
-            <Definition
-              label="Confidence reasons"
-              value={
-                item.confidenceReasons.length > 0
-                  ? item.confidenceReasons.join(' ')
-                  : 'Not supplied'
+            <h3
+              className={
+                expanded
+                  ? 'mt-2 break-words font-semibold leading-snug'
+                  : 'mt-2 line-clamp-2 break-words font-semibold leading-snug'
               }
-            />
-            <Definition label="Mapping reason" value={item.mappingReason || 'Not supplied'} />
-          </DetailSection>
-
-          <DetailSection title="What did Jax do next?">
-            <DispositionBadge item={item} />
-            <p>{shortExplanation(item)}</p>
-            {item.status === 'rejected' ? (
-              <Definition
-                label="Rejection reason"
-                value={item.rejectionReason || 'Reason unavailable'}
-              />
-            ) : null}
-            {item.candidateId ? (
-              <div className="rounded-lg border bg-muted/20 p-3">
-                <p className="font-medium">
-                  {item.candidateSymbol || 'Symbol unavailable'} ·{' '}
-                  {item.candidateStatus || 'Status unavailable'}
-                </p>
-                <Button asChild className="mt-3" variant="outline">
-                  <Link to={`/candidates/${item.candidateId}/evidence`}>Open Candidate Review</Link>
-                </Button>
-              </div>
-            ) : null}
-          </DetailSection>
-        </CardContent>
-      </Card>
-
-      <Journey item={item} />
-
-      <details className="min-w-0 rounded-lg border bg-card">
-        <summary className="cursor-pointer px-4 py-3 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          Audit details
-        </summary>
-        <div className="min-w-0 space-y-4 border-t p-4 text-sm">
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-            <Definition label="Source-event ID" value={item.sourceEventId || 'Unavailable'} />
-            <Definition
-              label="World Monitor event ID"
-              value={item.worldMonitorEventId || 'Unavailable'}
-            />
-            <Definition label="Inbox ID" value={item.id || 'Unavailable'} />
-            <Definition label="Raw event ID" value={item.rawEventId || 'Unavailable'} />
-            <Definition
-              label="Normalised event ID"
-              value={item.normalizedEventId || 'Unavailable'}
-            />
-            <Definition label="Candidate ID" value={item.candidateId || 'Not applicable'} />
-            <Definition label="Original status" value={item.status || 'Unavailable'} />
-            <Definition label="Provenance" value={item.source || 'Unavailable'} />
+            >
+              {item.headline}
+            </h3>
+            <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+              {shortExplanation(item)}
+            </p>
           </div>
-          <details className="min-w-0 rounded border">
-            <summary className="cursor-pointer p-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              Raw payload
-            </summary>
-            <pre className="max-h-96 max-w-full overflow-auto border-t p-3 text-xs">
-              {JSON.stringify(item.rawPayload ?? {}, null, 2)}
-            </pre>
-          </details>
+          <div className="min-w-0 text-sm">
+            <p className="text-xs text-muted-foreground">Source</p>
+            <p className="truncate font-medium" title={sourceName(item)}>
+              {sourceName(item)}
+            </p>
+          </div>
+          <div className="text-sm">
+            <p className="text-xs text-muted-foreground">Published</p>
+            <p className="font-medium">{formatTime(item.eventTime)}</p>
+          </div>
+          <span className="min-h-9 whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium text-primary">
+            {expanded ? 'Collapse details' : 'Expand details'}
+          </span>
         </div>
-      </details>
+      </button>
+      {expanded ? (
+        <div id={panelID} className="border-t p-3 sm:p-4">
+          <EvidenceDetail item={item} />
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
+  return (
+    <article className="min-w-0 space-y-3" aria-label={`${item.headline} details`}>
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
+        <div>
+          <h4 className="font-semibold">{item.headline}</h4>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {item.summary || 'No concise summary was supplied.'}
+          </p>
+          {item.sourceUrls.length ? (
+            <a
+              className="mt-2 inline-flex max-w-full items-center gap-1 break-all text-sm font-medium text-primary underline"
+              href={item.sourceUrls[0]}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open original source <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
+            </a>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">Original source link unavailable.</p>
+          )}
+        </div>
+        <div className="rounded-md border bg-muted/20 p-3 text-sm">
+          <p className="font-semibold">{disposition(item)}</p>
+          <p className="mt-1 text-muted-foreground">{shortExplanation(item)}</p>
+          {item.candidateId ? (
+            <Button asChild variant="outline" size="sm" className="mt-2">
+              <Link to={`/candidates/${item.candidateId}/evidence`}>Open Candidate Review</Link>
+            </Button>
+          ) : (
+            <p className="mt-2 font-medium">No candidate was created. This is a valid outcome.</p>
+          )}
+        </div>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Definition label="Published time" value={formatTime(item.eventTime)} />
+        <Definition label="Collection time" value={formatTime(item.collectedAt)} />
+        <Definition label="Jax receipt time" value={formatTime(item.receivedAt)} />
+      </div>
+      <p className="text-sm text-muted-foreground">{provenanceExplanation(item)}</p>
+      <Disclosure title="Source and provenance">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Definition label="Source" value={sourceName(item)} />
+          <Definition label="Original URL" value={item.sourceUrls[0] || 'Not supplied'} />
+          <Definition label="Discovery method" value={item.discoveryMethod || 'Not supplied'} />
+          <Definition label="Publication/event time" value={formatTime(item.eventTime)} />
+          <Definition label="Collection time" value={formatTime(item.collectedAt)} />
+          <Definition label="Jax receipt time" value={formatTime(item.receivedAt)} />
+          <Definition
+            label="Provenance availability"
+            value={item.provenanceAvailable === false ? 'Unavailable' : 'Persisted'}
+          />
+        </div>
+      </Disclosure>
+      <Disclosure title="Analysis">
+        <Analysis item={item} />
+      </Disclosure>
+      <Disclosure title={`Journey — ${journeySummary(item)}`}>
+        <Journey item={item} />
+      </Disclosure>
+      <Disclosure title="Audit">
+        <Audit item={item} />
+      </Disclosure>
     </article>
   );
 }
 
-function DetailSection({ title, children }: { title: string; children: ReactNode }) {
+function provenanceExplanation(item: WorldMonitorInboxItem) {
+  if (item.provenanceAvailable === false)
+    return 'Jax does not have enough linked raw provenance to classify this evidence.';
+  if (item.isSynthetic === true)
+    return `Controlled test evidence, not live news.${item.syntheticReason ? ` ${item.syntheticReason}` : ''}`;
+  if (item.isSynthetic === false)
+    return 'Genuine evidence collected from a persisted external source.';
+  return 'Persisted provenance is unavailable, so Jax does not infer genuine or synthetic status.';
+}
+
+function Disclosure({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="min-w-0 space-y-3 border-t pt-5 first:border-0 first:pt-0">
-      <h3 className="font-semibold">{title}</h3>
-      {children}
-    </section>
+    <details className="min-w-0 rounded-md border">
+      <summary className="cursor-pointer px-3 py-2 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        {title}
+      </summary>
+      <div className="min-w-0 space-y-3 border-t p-3 text-sm">{children}</div>
+    </details>
+  );
+}
+
+function Analysis({ item }: { item: WorldMonitorInboxItem }) {
+  const aiUsed = Boolean(item.aiProvider || item.aiModel);
+  const missing = [
+    !item.analysisIdentity && !aiUsed && 'analysis identity',
+    !item.eventType && 'event type',
+    item.confidenceReasons.length === 0 && 'confidence reasons',
+  ].filter(Boolean) as string[];
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        {aiUsed ? (
+          <Badge>AI ANALYSED</Badge>
+        ) : item.analysisIdentity ? (
+          <Badge variant="secondary">DETERMINISTIC ANALYSIS</Badge>
+        ) : (
+          <Badge variant="outline">ANALYSIS METADATA UNAVAILABLE</Badge>
+        )}
+      </div>
+      {aiUsed ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Definition label="AI provider" value={item.aiProvider || 'Not supplied'} />
+          <Definition label="AI model" value={item.aiModel || 'Not supplied'} />
+        </div>
+      ) : (
+        <>
+          <p>Rules or configured logic were used. This was not an AI model call.</p>
+          <Definition
+            label="Deterministic identity"
+            value={item.analysisIdentity || 'Not supplied'}
+          />
+          <strong>No AI used</strong>
+        </>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Definition label="Event type" value={item.eventType || 'Not supplied'} />
+        <Definition
+          label="Confidence"
+          value={
+            Number.isFinite(item.confidence)
+              ? `${Math.round(item.confidence * 100)}%`
+              : 'Not supplied'
+          }
+        />
+        <Definition
+          label="Affected assets"
+          value={
+            item.possibleAffectedEtfs.length
+              ? item.possibleAffectedEtfs.join(', ')
+              : 'Unknown assets'
+          }
+        />
+        <Definition
+          label="Confidence reasons"
+          value={item.confidenceReasons.join(' ') || 'Not supplied'}
+        />
+        <Definition label="Mapping reason" value={item.mappingReason || 'Not supplied'} />
+      </div>
+      {item.possibleAffectedEtfs.length === 0 ? (
+        <p className="text-muted-foreground">
+          Unknown assets means no truthful persisted asset mapping exists; none was fabricated.
+        </p>
+      ) : null}
+      {missing.length ? (
+        <p className="text-muted-foreground">
+          Additional analysis information not recorded: {missing.join(', ')}.
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function Journey({ item }: { item: WorldMonitorInboxItem }) {
+  const candidate = Boolean(item.candidateId);
+  const stages = [
+    ['Discovered', item.eventTime ? 'Complete' : 'Missing persisted evidence'],
+    ['Collected', item.collectedAt ? 'Complete' : 'Missing persisted evidence'],
+    ['Delivered', 'Missing persisted evidence'],
+    ['Received by Jax', item.receivedAt ? 'Complete' : 'Missing persisted evidence'],
+    [
+      'Validated',
+      item.status === 'rejected' ? 'Rejected' : item.status ? 'Complete' : 'Awaiting processing',
+    ],
+    [
+      'Normalised',
+      item.normalizedEventId
+        ? 'Complete'
+        : item.status === 'rejected'
+          ? 'Not applicable'
+          : 'Not run',
+    ],
+    [
+      'Decision processed',
+      item.status === 'new'
+        ? 'Awaiting processing'
+        : item.status === 'rejected'
+          ? 'Rejected'
+          : isDuplicate(item)
+            ? 'Duplicate ignored'
+            : item.operatorDecision || item.status
+              ? 'Complete'
+              : 'Missing persisted evidence',
+    ],
+    ['Candidate created', candidate ? 'Complete' : 'No candidate created'],
+    [
+      'Human approval',
+      !candidate
+        ? 'Not applicable'
+        : item.approvalId
+          ? item.approvalDecision || 'Complete'
+          : 'Not run',
+    ],
+    ['Paper ticket', !candidate ? 'Not applicable' : item.paperTicketId ? 'Complete' : 'Not run'],
+    [
+      'Outcomes',
+      !candidate || !item.paperTicketId
+        ? 'Not applicable'
+        : item.outcomeCount > 0
+          ? 'Complete'
+          : 'Not run',
+    ],
+  ];
+  return (
+    <ol className="grid gap-2 md:grid-cols-2">
+      {stages.map(([label, state], index) => (
+        <li key={label} className="flex min-w-0 items-start gap-2 rounded border p-2">
+          <span
+            aria-hidden="true"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold"
+          >
+            {index + 1}
+          </span>
+          <div className="min-w-0">
+            <strong className="text-sm">{label}</strong>
+            <p className="break-words text-xs text-muted-foreground">{state}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function Audit({ item }: { item: WorldMonitorInboxItem }) {
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Definition label="Inbox ID" value={item.id} />
+        <Definition label="Source-event ID" value={item.sourceEventId || 'Not supplied'} />
+        <Definition
+          label="Normalised-event ID"
+          value={item.normalizedEventId || 'Not applicable'}
+        />
+        <Definition label="Candidate ID" value={item.candidateId || 'Not applicable'} />
+        <Definition label="Original status" value={item.status || 'Not supplied'} />
+        <Definition label="Complete provenance" value={item.source || 'Not supplied'} />
+        {item.rejectionReason ? (
+          <Definition label="Technical rejection data" value={item.rejectionReason} />
+        ) : null}
+      </div>
+      <Disclosure title="Show raw payload">
+        <pre className="max-w-full overflow-auto whitespace-pre-wrap break-all text-xs">
+          {JSON.stringify(item.rawPayload ?? {}, null, 2)}
+        </pre>
+      </Disclosure>
+    </>
   );
 }
 
@@ -524,148 +666,5 @@ function Definition({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="break-words">{value}</p>
     </div>
-  );
-}
-
-function Journey({ item }: { item: WorldMonitorInboxItem }) {
-  const candidate = Boolean(item.candidateId);
-  const stages = [
-    {
-      label: 'Discovered',
-      state: item.eventTime ? 'Complete' : 'Missing persisted evidence',
-      time: item.eventTime,
-      explanation: 'The source published or identified the event.',
-    },
-    {
-      label: 'Collected',
-      state: item.collectedAt ? 'Complete' : 'Missing persisted evidence',
-      time: item.collectedAt,
-      explanation: 'The source collector retained the evidence.',
-    },
-    {
-      label: 'Delivered',
-      state: 'Missing persisted evidence',
-      explanation: 'A separate delivery timestamp is not retained.',
-    },
-    {
-      label: 'Received by Jax',
-      state: item.receivedAt ? 'Complete' : 'Missing persisted evidence',
-      time: item.receivedAt,
-      explanation: 'Jax persisted the Inbox record.',
-    },
-    {
-      label: 'Validated',
-      state:
-        item.status === 'rejected' ? 'Rejected' : item.status ? 'Complete' : 'Awaiting processing',
-      time: item.receivedAt,
-      explanation:
-        item.status === 'rejected'
-          ? item.rejectionReason || 'Validation rejected the evidence.'
-          : 'The persisted Inbox status records a validation result.',
-    },
-    {
-      label: 'Normalised',
-      state: item.normalizedEventId
-        ? 'Complete'
-        : item.status === 'rejected'
-          ? 'Not applicable'
-          : 'Not run',
-      time: item.normalizedAt,
-      explanation: item.normalizedEventId
-        ? 'Jax created a normalised research event.'
-        : 'No normalised record is linked.',
-    },
-    {
-      label: 'Decision processed',
-      state:
-        item.status === 'new'
-          ? 'Awaiting processing'
-          : item.status === 'rejected'
-            ? 'Rejected'
-            : isDuplicate(item)
-              ? 'Duplicate ignored'
-              : item.operatorDecision || item.status
-                ? 'Complete'
-                : 'Missing persisted evidence',
-      time: item.candidateCreatedAt,
-      explanation: shortExplanation(item),
-    },
-    {
-      label: 'Candidate created',
-      state: candidate ? 'Complete' : 'No candidate created',
-      time: item.candidateCreatedAt,
-      explanation: candidate
-        ? 'A separate candidate is available for human review.'
-        : 'Research-only evidence does not need to create a candidate.',
-    },
-    {
-      label: 'Human approval',
-      state: !candidate
-        ? 'Not applicable'
-        : item.approvalId
-          ? item.approvalDecision || 'Complete'
-          : 'Not run',
-      time: item.approvalAt,
-      explanation: item.approvalId
-        ? 'A persisted human decision is linked.'
-        : 'No linked human approval record exists.',
-    },
-    {
-      label: 'Paper ticket',
-      state: !candidate ? 'Not applicable' : item.paperTicketId ? 'Complete' : 'Not run',
-      time: item.paperTicketCreatedAt,
-      explanation: item.paperTicketId
-        ? 'A hypothetical paper ticket is linked. It is not an order.'
-        : 'No paper ticket is linked.',
-    },
-    {
-      label: 'Outcomes',
-      state:
-        !candidate || !item.paperTicketId
-          ? 'Not applicable'
-          : item.outcomeCount > 0
-            ? 'Complete'
-            : 'Not run',
-      time: item.latestOutcomeAt,
-      explanation:
-        item.outcomeCount > 0
-          ? `${item.outcomeCount} hypothetical outcome checkpoint${item.outcomeCount === 1 ? '' : 's'} linked.`
-          : 'No hypothetical outcome checkpoints are linked.',
-    },
-  ];
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Event journey</CardTitle>
-        <CardDescription>
-          Persisted stages are shown in order. Missing evidence is not guessed.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ol className="space-y-3">
-          {stages.map((stage, index) => (
-            <li key={stage.label} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
-              <span
-                aria-hidden="true"
-                className="flex h-8 w-8 items-center justify-center rounded-full border font-semibold"
-              >
-                {index + 1}
-              </span>
-              <div className="min-w-0 rounded-lg border p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <strong>{stage.label}</strong>
-                  <Badge variant="outline">{stage.state}</Badge>
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{stage.explanation}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {stage.time ? formatTime(stage.time) : 'No timestamp retained'}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </CardContent>
-    </Card>
   );
 }

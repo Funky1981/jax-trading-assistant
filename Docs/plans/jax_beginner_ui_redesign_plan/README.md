@@ -28,7 +28,7 @@ Complete, test and review one phase before starting the next.
 ## Implementation status
 
 - Phase 1 — Navigation, Home and Guide: PROVEN on 2026-07-24 after the Phase 2 responsive fix and persisted-data Home-to-Evidence-Inbox checks at 320, 768 and 1280 px.
-- Phase 2 — Evidence Inbox and Event Journey: PROVEN on 2026-07-24 with authenticated persisted-data browser checks and inspected responsive screenshots at 320, 768 and 1280 px.
+- Phase 2 — Evidence Inbox and Event Journey: PROVEN on 2026-07-24 with authenticated persisted-data browser checks and inspected responsive screenshots at 320, 768 and 1280 px. A later usability refinement replaced the permanent detail pane with compact pagination and single-item inline progressive disclosure; operator-supplied desktop and mobile persisted-runtime screenshots were accepted and automated responsive checks passed at all three widths. Codex did not independently capture the full six-screenshot refinement inventory.
 - Phase 3 — Candidate Review and Hypothetical Outcomes: implemented; automated verification complete, persisted runtime browser proof and responsive acceptance screenshots pending.
 - Phase 4: not started.
 

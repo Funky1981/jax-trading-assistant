@@ -251,3 +251,13 @@ Status: **PROVEN — 2026-07-24**
 - The previous baseline remains at `images/monitor-inbox.png`. Accepted after screenshots are stored under `images/acceptance/phase2-evidence-inbox-{320,768,1280}.png`.
 - Phase 1 Home-to-Evidence-Inbox acceptance was repeated at the three viewports and the prior horizontal-scroll failure is resolved.
 - No evidence, candidate, approval, paper-ticket, execution, order, trade, fill, or runtime-setting mutation was introduced.
+
+### Accepted compact-list usability refinement
+
+The original Phase 2 capability and persisted-data proof remain **PROVEN**. A later focused usability refinement removed the permanent detail pane and sticky empty placeholder, allowed evidence summaries to use the full page width, and added compact pagination with ten records by default and an optional twenty-record page size.
+
+One record can be expanded inline at a time. Source and provenance, Analysis, Journey, and Audit remain collapsed until requested, with raw payload nested and collapsed inside Audit. Complete persisted technical evidence remains accessible through these disclosures. Genuine and synthetic provenance, deterministic versus AI analysis, unknown assets, candidate linkage, and valid no-candidate outcomes remain truthfully represented.
+
+The operator supplied desktop and mobile persisted-runtime screenshots and accepted the compact-list direction. Automated responsive and scrolling checks passed at 320, 768 and 1280 px. Codex did not independently capture the full set of six originally proposed refinement screenshots, and no such screenshot files are claimed here.
+
+The refinement is read-only. It added no approval, trading, execution, record mutation, or runtime-setting control. Phase 4 was not started as part of this work.

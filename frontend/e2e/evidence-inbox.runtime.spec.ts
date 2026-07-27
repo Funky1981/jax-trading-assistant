@@ -21,25 +21,35 @@ for (const width of [320, 768, 1280]) {
     await expect(page).toHaveURL(/\/monitor\/inbox$/);
     await expect(page.getByRole('heading', { name: 'Evidence Inbox' })).toBeVisible();
     await expect(page.getByText(/Houthi allies/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/Open an evidence item to see its source, timestamps/i),
+    ).toHaveCount(0);
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: `../images/acceptance/evidence-inbox-refinement-collapsed-${width}.png`,
+      fullPage: true,
+    });
 
     await page.getByRole('button', { name: 'Genuine', exact: true }).click();
     await page.getByLabel('Evidence items').getByRole('button').first().click();
 
     await expect(page.getByText('GENUINE').first()).toBeVisible();
     await expect(page.getByText('Published time')).toBeVisible();
-    await expect(page.getByText('Collected time')).toBeVisible();
-    await expect(page.getByText('Received by Jax').first()).toBeVisible();
+    await expect(page.getByText('Collection time').first()).toBeVisible();
+    await expect(page.getByText('Jax receipt time').first()).toBeVisible();
+    await page.getByText('Analysis', { exact: true }).click();
     await expect(page.getByText('DETERMINISTIC ANALYSIS')).toBeVisible();
     await expect(page.getByText('No AI used')).toBeVisible();
-    await expect(page.getByText('Unknown assets')).toBeVisible();
+    await expect(page.getByText('Unknown assets', { exact: true })).toBeVisible();
     await expect(page.getByText(/awaiting a persisted processing decision/i).first()).toBeVisible();
     await expect(
       page.getByRole('link', { name: /Open original article/i }).first(),
     ).toHaveAttribute('href', /^https:\/\//);
 
-    await page.getByText('Audit details', { exact: true }).click();
+    await page.getByText('Audit', { exact: true }).click();
     await expect(page.getByText('Source-event ID')).toBeVisible();
-    await expect(page.getByText('Raw payload', { exact: true })).toBeVisible();
+    await expect(page.getByText('Show raw payload', { exact: true })).toBeVisible();
     await expect(
       page.getByRole('button', {
         name: /^(approve|reject candidate|execute|place trade|create order|submit order)$/i,
@@ -52,10 +62,20 @@ for (const width of [320, 768, 1280]) {
     }));
     expect(overflow.document).toBeLessThanOrEqual(1);
     expect(overflow.body).toBeLessThanOrEqual(1);
+    const evidenceSection = page
+      .getByRole('heading', { name: 'Evidence received' })
+      .locator('..')
+      .locator('..');
+    expect(
+      await evidenceSection
+        .locator('[class*="sticky"], [class*="overflow-y"], [class*="h-screen"]')
+        .count(),
+    ).toBe(0);
 
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
-      path: `../images/acceptance/phase2-evidence-inbox-${width}.png`,
+      path: `../images/acceptance/evidence-inbox-refinement-expanded-${width}.png`,
+      fullPage: true,
     });
   });
 }

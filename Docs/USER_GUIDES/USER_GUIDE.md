@@ -18,16 +18,20 @@ Hypothetical paper outcomes are not orders, fills or realised profit and loss.
 ### Review evidence
 
 1. Open `Evidence Inbox`.
-2. Use `Genuine`, `Synthetic tests`, `Rejected`, or `Candidate created` to narrow the list.
-3. Open an evidence card to read the source, published time, collected time, and Jax receipt time separately.
-4. Check `How was it analysed?`. Deterministic rules are not described as AI; an AI provider or model appears only when persisted metadata proves it.
-5. Read `What did Jax do next?` and the event journey. `Awaiting processing`, `Research only`, `Rejected`, `Duplicate ignored`, and `Candidate created` are distinct outcomes.
-6. If a candidate exists, use `Open Candidate Review`. The Evidence Inbox itself cannot approve or place a trade.
-7. On `Candidate Review`, read the human decision, persisted paper-plan assumptions and selected-journey no-fill counts. Open `Audit details` only when record IDs or raw metadata are needed.
-8. Open `Hypothetical Outcomes` to review checkpoint status, market-data provenance, hypothetical return and hypothetical P&L. Pending and missing-data states are not zero returns.
-7. Open `Audit details` only when technical IDs, provenance, or the collapsed raw payload are needed.
+2. Review ten compact records per page by default, or select twenty. Use `Previous` and `Next` to move between accurate result ranges; changing a filter safely returns to the first page.
+3. Use `Genuine`, `Synthetic tests`, `Rejected`, or `Candidate created` to narrow the list.
+4. Expand one evidence record inline. Opening another record closes the first.
+5. Read the complete headline and primary summary, then open `Source and provenance` for the source, published time, collected time, and Jax receipt time.
+6. Open `Analysis`. Deterministic rules are not described as AI; an AI provider or model appears only when persisted metadata proves it.
+7. Open `Journey` to see what Jax did next. `Awaiting processing`, `Research only`, `Rejected`, `Duplicate ignored`, and `Candidate created` are distinct outcomes.
+8. If a persisted candidate exists, use `Open Candidate Review`. Otherwise the record explains why no candidate link is available. The Evidence Inbox itself cannot approve or place a trade.
+9. On `Candidate Review`, read the human decision, persisted paper-plan assumptions and selected-journey no-fill counts. Open `Audit details` only when record IDs or raw metadata are needed.
+10. Open `Hypothetical Outcomes` to review checkpoint status, market-data provenance, hypothetical return and hypothetical P&L. Pending and missing-data states are not zero returns.
+11. Open `Audit` only when technical IDs, provenance, or the nested collapsed raw payload are needed.
 
 `Unknown assets` means no truthful persisted asset mapping exists. Jax does not insert a fallback symbol. A missing candidate is not automatically an error; check whether the evidence is awaiting a persisted decision or has a completed research-only outcome.
+
+The compact Evidence Inbox refinement was manually accepted from operator-supplied desktop and mobile persisted-runtime screenshots. Automated responsive checks passed at 320, 768 and 1280 px. Codex did not independently capture the full six-screenshot refinement inventory. This refinement changed presentation only: all persisted technical evidence remains available through collapsed disclosures, and no mutation capability was added.
 
 ## Running A Backtest (UI)
 
