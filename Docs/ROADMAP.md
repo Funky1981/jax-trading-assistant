@@ -71,6 +71,11 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 17. **Review Operations Internal Adapter**
    - Status: recommended next focus.
    - Goal: decide whether to add a narrow internal CLI or handler adapter around the Phase 15 app service, preserving read-only queries, record-only manual state transitions, human approval, and all execution exclusions.
+18. **Genuine Event Decision Processing and Replay**
+   - Status: proven on 2026-07-27.
+   - Source: `Docs/plans/GENUINE_EVENT_DECISION_PROCESSING_AND_REPLAY.md`.
+   - Outcome: 25 existing eligible genuine events produced 18 `NO_TRADE`, 7 `WATCH`, and zero `CANDIDATE` decisions under a versioned deterministic ruleset. An identical replay reused every decision, the beginner UI displayed persisted results, and all approval and execution-side counts remained unchanged.
+   - Constraint: this proves replay mechanics and safety, not threshold validity, predictive quality, profitability, Shadow Mode, AI analysis, or broker execution.
 
 ## Explicitly Not Planned
 
@@ -80,5 +85,5 @@ The default decision is `NO_TRADE`. Jax upgrades from `NO_TRADE` only when struc
 
 ## Supporting Work
 
-- A narrow internal adapter around the Phase 15 app service is the recommended next focus after Review Operations Internal Access Wiring. This is not a live-trading phase.
+- Run the Strategy Validation Gauntlet against the persisted decision sample before considering threshold changes or Shadow Mode. This is not a live-trading phase.
 - Historical plans and reports are preserved in `Docs/plans/` and `Docs/archive/`; they are not the active source of truth.
