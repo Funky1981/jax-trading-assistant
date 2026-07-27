@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { GlossaryTerm, PageIntro } from '@/components/ui/beginner-help';
 import {
   operatorEvidenceService,
@@ -302,7 +302,7 @@ export function OutcomesPage() {
         description="Review one persisted checkpoint at a time. These calculations are not trades or realised profit and loss."
       >
         <p className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm font-semibold">
-          Hypothetical â€” no order, fill or position exists.
+          Hypothetical — no order, fill or position exists.
         </p>
       </PageIntro>
       <details className="rounded-lg border bg-card">
@@ -319,7 +319,7 @@ export function OutcomesPage() {
         </div>
       </details>
       {candidates.isPending ? (
-        <p className="text-muted-foreground">Loading persisted paper plansâ€¦</p>
+        <p className="text-muted-foreground">Loading persisted paper plans…</p>
       ) : candidates.isError ? (
         <p role="alert" className="text-destructive">
           Jax could not load this evidence. Your data has not been changed.
@@ -348,7 +348,7 @@ export function OutcomesPage() {
             </div>
           )}
           {details[safePlan]?.isPending ? (
-            <p className="text-muted-foreground">Loading persisted checkpointsâ€¦</p>
+            <p className="text-muted-foreground">Loading persisted checkpoints…</p>
           ) : details[safePlan]?.isError || !details[safePlan]?.data ? (
             <p role="alert" className="text-destructive">
               Jax could not load this evidence. Your data has not been changed.

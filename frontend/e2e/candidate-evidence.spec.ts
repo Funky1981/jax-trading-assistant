@@ -149,37 +149,48 @@ test('candidate evidence page shows monitor news, chart evidence, sentiment, and
 
   await page.goto('/candidates/candidate-evidence-1/evidence', { waitUntil: 'domcontentloaded' });
 
-  await expect(page.getByRole('heading', { name: 'Candidate Review' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Plain-English overview/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Candidate Review', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.getByText('Review only — no order or fill exists.')).toBeVisible();
+  await expect(page.getByText('Why Jax created it')).toBeVisible();
+  await expect(page.getByText('Inflation cools more than expected', { exact: true })).toHaveCount(
+    0,
+  );
+
+  await page.getByRole('tab', { name: 'Evidence' }).click();
   await expect(page.getByText('Inflation cools more than expected', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /example.com\/inflation/i })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /What the charts are saying/i })).toBeVisible();
-  await expect(page.getByText('Chart confirmed')).toBeVisible();
-  await expect(
-    page.getByText(/held above the 20-period moving average/i).first(),
-  ).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Sentiment and source' })).toBeVisible();
+  await expect(page.getByText(/Chart evidence: confirmed/i)).toBeVisible();
   await expect(page.getByText('News tone is positive for broad US equity exposure.')).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: 'Persisted paper sizing evidence' }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: 'Hypothetical paper plan' }),
-  ).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Paper Plan' }).click();
+  await expect(page.getByText('HYPOTHETICAL PAPER PLAN — NOT AN ORDER OR FILL')).toBeVisible();
+  await expect(page.getByText('$530.00', { exact: true })).toBeVisible();
+  await expect(page.getByText('Show all paper-plan details')).toBeVisible();
+  await expect(page.getByText('$21,200.00', { exact: true })).not.toBeVisible();
+  await page.getByText('Show all paper-plan details').click();
   await expect(page.getByText('$21,200.00', { exact: true })).toBeVisible();
-  await expect(page.getByText('HYPOTHETICAL — NOT A FILL', { exact: true })).toBeVisible();
-  await expect(page.getByText('persisted_candles:test_fixture')).toBeVisible();
-  await expect(page.getByText('NO FILL OCCURRED', { exact: true })).toBeVisible();
-  await expect(page.getByText(/Historical database records exist but are unrelated/i)).toBeVisible();
-  await expect(page.getByText('Audit details')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Outcomes' }).click();
+  await expect(page.getByRole('link', { name: 'Open Hypothetical Outcomes' })).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Audit' }).click();
+  await expect(page.getByText('approval-1', { exact: true })).toBeVisible();
+  await expect(page.getByText('Selected-journey execution counts')).toBeVisible();
+  await expect(page.getByText(/Global historical execution counts/i)).toBeVisible();
+  await expect(page.getByText('Show raw metadata')).toBeVisible();
   await expect(
     page.getByRole('button', { name: /approve|reject|create|submit|execute/i }),
   ).toHaveCount(0);
   for (const width of [320, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    await expect(
-      page.getByText(/Review only — this page cannot place an order or create a fill/i),
-    ).toBeVisible();
+    await page.getByRole('tab', { name: 'Overview' }).click();
+    await expect(page.getByText('Review only — no order or fill exists.')).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,

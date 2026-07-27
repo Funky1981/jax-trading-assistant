@@ -144,7 +144,7 @@ export function CandidatesPage() {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
 
-  const candidates = query.data ?? [];
+  const candidates = useMemo(() => query.data ?? [], [query.data]);
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return candidates.filter(
@@ -202,6 +202,7 @@ export function CandidatesPage() {
           <label className="flex items-center gap-2 text-sm">
             Per page
             <select
+              aria-label="Candidates per page"
               className="h-9 rounded-md border bg-background px-2"
               value={pageSize}
               onChange={(event) => {
@@ -234,7 +235,7 @@ export function CandidatesPage() {
         </div>
       </section>
       {query.isPending ? (
-        <p className="text-muted-foreground">Loading persisted candidatesâ€¦</p>
+        <p className="text-muted-foreground">Loading persisted candidates…</p>
       ) : query.isError ? (
         <p role="alert" className="text-destructive">
           Jax could not load this evidence. Your data has not been changed.
@@ -262,7 +263,7 @@ export function CandidatesPage() {
             className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-3"
           >
             <p className="text-sm text-muted-foreground">
-              {start + 1}â€“{Math.min(start + pageSize, filtered.length)} of {filtered.length}
+              {start + 1}–{Math.min(start + pageSize, filtered.length)} of {filtered.length}
             </p>
             <div className="flex gap-2">
               <Button
@@ -270,6 +271,7 @@ export function CandidatesPage() {
                 size="sm"
                 variant="outline"
                 disabled={safePage === 1}
+                aria-label="Previous candidate page"
                 onClick={() => setPage((value) => Math.max(1, value - 1))}
               >
                 <ChevronLeft className="mr-1 h-4 w-4" />
@@ -280,6 +282,7 @@ export function CandidatesPage() {
                 size="sm"
                 variant="outline"
                 disabled={safePage === pageCount}
+                aria-label="Next candidate page"
                 onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
               >
                 Next
