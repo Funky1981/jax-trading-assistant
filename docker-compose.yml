@@ -120,7 +120,7 @@ services:
       CANDLE_BACKFILL: ${CANDLE_BACKFILL:-250}
       EXECUTION_ENABLED: ${EXECUTION_ENABLED:-false}
       EXECUTION_INSTRUCTION_WORKER_ENABLED: ${EXECUTION_INSTRUCTION_WORKER_ENABLED:-false}
-      WORLD_MONITOR_PULL_ENABLED: ${WORLD_MONITOR_PULL_ENABLED:-false}
+      WORLD_MONITOR_PULL_ENABLED: ${WORLD_MONITOR_PULL_ENABLED:-true}
       WORLD_MONITOR_EVENTS_URL: ${WORLD_MONITOR_EVENTS_URL:-http://worldmonitor-events:8082/api/v1/jax/events}
       WORLD_MONITOR_PULL_INTERVAL_SECONDS: ${WORLD_MONITOR_PULL_INTERVAL_SECONDS:-30}
       WORLD_MONITOR_PULL_TIMEOUT_SECONDS: ${WORLD_MONITOR_PULL_TIMEOUT_SECONDS:-10}
@@ -157,6 +157,8 @@ services:
       postgres:
         condition: service_healthy
       ib-bridge:
+        condition: service_started
+      worldmonitor-events:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8100/ready || exit 1"]
@@ -264,5 +266,46 @@ services:
       - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
 
+  worldmonitor-events:
+    build:
+      context: ../Jax-World-News-Monitor
+      dockerfile: Dockerfile.jax-integration
+    image: worldmonitor-jax-integration:latest
+    environment:
+      WORLD_MONITOR_DATABASE_URL: postgresql://worldmonitor:worldmonitor@worldmonitor-postgres:5432/worldmonitor
+      WORLD_MONITOR_INTEGRATION_PORT: "8082"
+      WORLD_MONITOR_COLLECT_INTERVAL_MS: ${WORLD_MONITOR_COLLECT_INTERVAL_MS:-300000}
+      WORLD_MONITOR_FEED_TIMEOUT_MS: ${WORLD_MONITOR_FEED_TIMEOUT_MS:-10000}
+      WORLD_MONITOR_FEEDS_JSON: ${WORLD_MONITOR_FEEDS_JSON:-}
+    ports:
+      - "8082:8082"
+    depends_on:
+      worldmonitor-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+
+  worldmonitor-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: worldmonitor
+      POSTGRES_PASSWORD: worldmonitor
+      POSTGRES_DB: worldmonitor
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - worldmonitor-events-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U worldmonitor -d worldmonitor"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   jax-postgres:
+  worldmonitor-events-data:
