@@ -208,6 +208,7 @@ func main() {
 		go startExecutionInstructionWorker(ctx, dbPool, execService)
 	}
 	go startMobileNotificationDispatcher(ctx, dbPool)
+	go startWorldMonitorPullWorker(ctx, dbPool)
 
 	// Health check endpoint
 	mux.HandleFunc("/health", handleHealth(sigGen))

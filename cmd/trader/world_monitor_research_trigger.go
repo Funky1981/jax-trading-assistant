@@ -37,6 +37,7 @@ type worldMonitorResearchTrigger struct {
 	AnalysisModel         string         `json:"analysis_model,omitempty"`
 	DeterministicAnalysis string         `json:"deterministic_analysis,omitempty"`
 	SyntheticReason       string         `json:"-"`
+	AllowStalePublication bool           `json:"-"`
 }
 
 type worldMonitorResearchReceipt struct {
@@ -80,7 +81,7 @@ func validateWorldMonitorResearchTrigger(trigger worldMonitorResearchTrigger, no
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
-	if trigger.TimestampUTC.UTC().Before(now.UTC().Add(-worldMonitorFreshnessWindow)) {
+	if !trigger.AllowStalePublication && trigger.TimestampUTC.UTC().Before(now.UTC().Add(-worldMonitorFreshnessWindow)) {
 		return rejectWorldMonitorTrigger("stale event exceeds freshness window")
 	}
 	if strings.TrimSpace(trigger.Reason) == "" {

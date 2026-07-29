@@ -16,11 +16,13 @@ import (
 	"jax-trading-assistant/libs/utcp"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type eventStore struct {
 	pool *pgxpool.Pool
+	tx   pgx.Tx
 }
 
 type persistedEventRef struct {
@@ -50,6 +52,10 @@ type persistEventInput struct {
 
 func newEventStore(pool *pgxpool.Pool) *eventStore {
 	return &eventStore{pool: pool}
+}
+
+func newEventStoreTx(tx pgx.Tx) *eventStore {
+	return &eventStore{tx: tx}
 }
 
 func (s *eventStore) SaveEarnings(ctx context.Context, symbol, sourceID string, events []utcp.EarningsEntry) error {
@@ -194,6 +200,26 @@ func (s *eventStore) persistEvent(ctx context.Context, in persistEventInput) err
 }
 
 func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInput) (persistedEventRef, error) {
+	var tx pgx.Tx
+	ownedTransaction := false
+	if s.tx != nil {
+		tx = s.tx
+	} else {
+		if s.pool == nil {
+			return persistedEventRef{}, fmt.Errorf("event store requires a database")
+		}
+		var err error
+		tx, err = s.pool.Begin(ctx)
+		if err != nil {
+			return persistedEventRef{}, fmt.Errorf("begin event tx: %w", err)
+		}
+		ownedTransaction = true
+		defer func() {
+			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && rollbackErr.Error() != "tx is closed" {
+				log.Printf("event store rollback: %v", rollbackErr)
+			}
+		}()
+	}
 	if in.EventTime.IsZero() {
 		in.EventTime = time.Now().UTC()
 	}
@@ -242,7 +268,7 @@ func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInp
 		in.Attributes["tags"] = classification.Tags
 	}
 
-	if err := s.ensureSource(ctx, in.SourceID, in.SourceName, in.ProviderType); err != nil {
+	if err := ensureEventSource(ctx, tx, in.SourceID, in.SourceName, in.ProviderType); err != nil {
 		return persistedEventRef{}, err
 	}
 
@@ -257,16 +283,6 @@ func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInp
 	contentHash := hashBytes(payloadJSON)
 	canonicalKey := deterministicEventID(in.EventKind, strings.ToUpper(strings.TrimSpace(in.PrimarySymbol)), in.Title, in.EventTime.UTC().Format(time.RFC3339))
 	flowID := observability.FlowIDFromContext(ctx)
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return persistedEventRef{}, fmt.Errorf("begin event tx: %w", err)
-	}
-	defer func() {
-		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && rollbackErr.Error() != "tx is closed" {
-			log.Printf("event store rollback: %v", rollbackErr)
-		}
-	}()
 
 	var rawID string
 	err = tx.QueryRow(ctx, `
@@ -368,11 +384,35 @@ func (s *eventStore) persistEventWithRef(ctx context.Context, in persistEventInp
 		}
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return persistedEventRef{}, fmt.Errorf("commit event tx: %w", err)
+	if ownedTransaction {
+		if err := tx.Commit(ctx); err != nil {
+			return persistedEventRef{}, fmt.Errorf("commit event tx: %w", err)
+		}
+		s.logAudit(ctx, flowID, normalizedID, in)
 	}
-	s.logAudit(ctx, flowID, normalizedID, in)
 	return persistedEventRef{RawID: rawID, NormalizedID: normalizedID}, nil
+}
+
+func ensureEventSource(ctx context.Context, db pgx.Tx, sourceID, sourceName, providerType string) error {
+	if strings.TrimSpace(sourceName) == "" {
+		sourceName = strings.ToUpper(strings.TrimSpace(sourceID))
+	}
+	if strings.TrimSpace(providerType) == "" {
+		providerType = "external"
+	}
+	_, err := db.Exec(ctx, `
+		INSERT INTO event_sources (id, display_name, provider_type, enabled, priority, metadata)
+		VALUES ($1, $2, $3, TRUE, 100, '{}'::jsonb)
+		ON CONFLICT (id)
+		DO UPDATE SET
+			display_name = EXCLUDED.display_name,
+			provider_type = EXCLUDED.provider_type,
+			updated_at = NOW()
+	`, sourceID, sourceName, providerType)
+	if err != nil {
+		return fmt.Errorf("upsert event source %q: %w", sourceID, err)
+	}
+	return nil
 }
 
 func (s *eventStore) ensureSource(ctx context.Context, sourceID, sourceName, providerType string) error {

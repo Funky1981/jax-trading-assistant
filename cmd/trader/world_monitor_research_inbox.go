@@ -26,6 +26,11 @@ type worldMonitorResearchInboxService struct {
 	now  func() time.Time
 }
 
+type worldMonitorInboxDB interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
 func newWorldMonitorResearchInboxService(pool *pgxpool.Pool) *worldMonitorResearchInboxService {
 	return &worldMonitorResearchInboxService{
 		pool: pool,
@@ -40,6 +45,25 @@ func (s *worldMonitorResearchInboxService) Validate(trigger worldMonitorResearch
 }
 
 func (s *worldMonitorResearchInboxService) Ingest(ctx context.Context, trigger worldMonitorResearchTrigger) (worldMonitorResearchReceipt, error) {
+	if s.pool == nil {
+		trigger = normalizeWorldMonitorResearchTrigger(trigger)
+		validation := s.Validate(trigger, s.now())
+		if !validation.Valid {
+			return worldMonitorResearchReceipt{Status: worldMonitorInboxStatusRejected, RejectionReason: validation.Reason}, nil
+		}
+		return worldMonitorResearchReceipt{Status: s.statusForAcceptedTrigger(trigger)}, nil
+	}
+	return s.ingestWith(ctx, s.pool, newEventStore(s.pool), trigger)
+}
+
+func (s *worldMonitorResearchInboxService) IngestTx(ctx context.Context, tx pgx.Tx, trigger worldMonitorResearchTrigger) (worldMonitorResearchReceipt, error) {
+	if tx == nil {
+		return worldMonitorResearchReceipt{}, fmt.Errorf("transactional World Monitor ingestion requires a transaction")
+	}
+	return s.ingestWith(ctx, tx, newEventStoreTx(tx), trigger)
+}
+
+func (s *worldMonitorResearchInboxService) ingestWith(ctx context.Context, db worldMonitorInboxDB, events *eventStore, trigger worldMonitorResearchTrigger) (worldMonitorResearchReceipt, error) {
 	trigger = normalizeWorldMonitorResearchTrigger(trigger)
 	validation := s.Validate(trigger, s.now())
 	if !validation.Valid {
@@ -47,10 +71,7 @@ func (s *worldMonitorResearchInboxService) Ingest(ctx context.Context, trigger w
 			Status:          worldMonitorInboxStatusRejected,
 			RejectionReason: validation.Reason,
 		}
-		if s.pool == nil {
-			return receipt, nil
-		}
-		inboxID, err := s.insertInboxRow(ctx, trigger, worldMonitorInboxStatusRejected, validation.Reason, "")
+		inboxID, err := s.insertInboxRowWith(ctx, db, trigger, worldMonitorInboxStatusRejected, validation.Reason, "")
 		if err != nil {
 			return worldMonitorResearchReceipt{}, err
 		}
@@ -58,11 +79,7 @@ func (s *worldMonitorResearchInboxService) Ingest(ctx context.Context, trigger w
 		return receipt, nil
 	}
 
-	if s.pool == nil {
-		return worldMonitorResearchReceipt{Status: s.statusForAcceptedTrigger(trigger)}, nil
-	}
-
-	existing, found, err := s.findExistingReceipt(ctx, trigger)
+	existing, found, err := s.findExistingReceiptWith(ctx, db, trigger)
 	if err != nil {
 		return worldMonitorResearchReceipt{}, err
 	}
@@ -74,17 +91,17 @@ func (s *worldMonitorResearchInboxService) Ingest(ctx context.Context, trigger w
 	status := s.statusForAcceptedTrigger(trigger)
 	var eventID string
 	if s.shouldPersistAcceptedTrigger(trigger) {
-		ref, err := newEventStore(s.pool).persistEventWithRef(ctx, s.toPersistEventInput(trigger))
+		ref, err := events.persistEventWithRef(ctx, s.toPersistEventInput(trigger))
 		if err != nil {
 			return worldMonitorResearchReceipt{}, err
 		}
 		eventID = ref.NormalizedID
 	}
 
-	inboxID, err := s.insertInboxRow(ctx, trigger, status, "", eventID)
+	inboxID, err := s.insertInboxRowWith(ctx, db, trigger, status, "", eventID)
 	if err != nil {
 		if isUniqueViolation(err) {
-			existing, found, lookupErr := s.findExistingReceipt(ctx, trigger)
+			existing, found, lookupErr := s.findExistingReceiptWith(ctx, db, trigger)
 			if lookupErr != nil {
 				return worldMonitorResearchReceipt{}, lookupErr
 			}
@@ -197,8 +214,12 @@ func (s *worldMonitorResearchInboxService) toPersistEventInput(trigger worldMoni
 }
 
 func (s *worldMonitorResearchInboxService) findExistingReceipt(ctx context.Context, trigger worldMonitorResearchTrigger) (worldMonitorResearchReceipt, bool, error) {
+	return s.findExistingReceiptWith(ctx, s.pool, trigger)
+}
+
+func (s *worldMonitorResearchInboxService) findExistingReceiptWith(ctx context.Context, db worldMonitorInboxDB, trigger worldMonitorResearchTrigger) (worldMonitorResearchReceipt, bool, error) {
 	var receipt worldMonitorResearchReceipt
-	err := s.pool.QueryRow(ctx, `
+	err := db.QueryRow(ctx, `
 		SELECT id::text, COALESCE(normalized_event_id::text, ''), status, COALESCE(rejection_reason, '')
 		FROM world_monitor_research_inbox
 		WHERE source = $1 AND (source_event_id = $2 OR dedupe_key = $3)
@@ -220,6 +241,10 @@ func (s *worldMonitorResearchInboxService) findExistingReceipt(ctx context.Conte
 }
 
 func (s *worldMonitorResearchInboxService) insertInboxRow(ctx context.Context, trigger worldMonitorResearchTrigger, status, rejectionReason, normalizedEventID string) (string, error) {
+	return s.insertInboxRowWith(ctx, s.pool, trigger, status, rejectionReason, normalizedEventID)
+}
+
+func (s *worldMonitorResearchInboxService) insertInboxRowWith(ctx context.Context, db worldMonitorInboxDB, trigger worldMonitorResearchTrigger, status, rejectionReason, normalizedEventID string) (string, error) {
 	sourceURLs, _ := json.Marshal(trigger.SourceURLs)
 	etfs, _ := json.Marshal(trigger.PossibleAffectedETFs)
 	themes, _ := json.Marshal(trigger.AssetThemes)
@@ -231,7 +256,7 @@ func (s *worldMonitorResearchInboxService) insertInboxRow(ctx context.Context, t
 	rawPayloadJSON, _ := json.Marshal(rawPayload)
 
 	inboxID := uuid.NewString()
-	_, err := s.pool.Exec(ctx, `
+	_, err := db.Exec(ctx, `
 		INSERT INTO world_monitor_research_inbox (
 			id, source, world_monitor_event_id, source_event_id, status, rejection_reason,
 			event_type, headline, summary, source_urls, source_count, event_time, region,

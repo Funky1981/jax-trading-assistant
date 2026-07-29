@@ -19,6 +19,10 @@ type Store struct {
 	pool *pgxpool.Pool
 }
 
+type eventQueryer interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}
+
 func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
@@ -27,6 +31,17 @@ func (s *Store) LoadSelectedEvents(ctx context.Context, eventIdentity string, li
 	if s.pool == nil {
 		return nil, fmt.Errorf("event decision store requires a database")
 	}
+	return loadSelectedEvents(ctx, s.pool, eventIdentity, limit)
+}
+
+func (s *Store) LoadSelectedEventsTx(ctx context.Context, tx pgx.Tx, eventIdentity string, limit int) ([]Event, error) {
+	if tx == nil {
+		return nil, fmt.Errorf("transactional event load requires a transaction")
+	}
+	return loadSelectedEvents(ctx, tx, eventIdentity, limit)
+}
+
+func loadSelectedEvents(ctx context.Context, db eventQueryer, eventIdentity string, limit int) ([]Event, error) {
 	if limit <= 0 || limit > 250 {
 		return nil, fmt.Errorf("bounded replay limit must be between 1 and 250")
 	}
@@ -87,7 +102,7 @@ func (s *Store) LoadSelectedEvents(ctx context.Context, eventIdentity string, li
 		%s
 		ORDER BY w.received_at,w.id
 		LIMIT $%d`, where, len(args))
-	rows, err := s.pool.Query(ctx, query, args...)
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("load selected genuine events: %w", err)
 	}
