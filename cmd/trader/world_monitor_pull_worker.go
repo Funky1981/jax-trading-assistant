@@ -368,6 +368,6 @@ func worldMonitorPullTrigger(item worldMonitorPullEvent) (worldMonitorResearchTr
 		Confidence: 0.5, ConfidenceReasons: []string{"Persisted by the continuous World Monitor RSS/Atom collector"},
 		Reason:     "Deterministic World Monitor pull ingestion; asset mapping remains unknown unless supplied by genuine evidence.",
 		RawPayload: raw, IsSynthetic: &isSynthetic, CollectionTimestamp: &collected, DiscoveryMethod: "rss",
-		DeterministicAnalysis: "world-monitor-pull-v1", AllowStalePublication: true,
+		DeterministicAnalysis: "world-monitor-pull-v1", AllowStalePublication: true, AllowNewsTradeLanguage: true,
 	}, nil
 }

@@ -97,6 +97,31 @@ func TestWorldMonitorPullTriggerPreservesOldPublicationAndHonestMissingPublicati
 	}
 }
 
+func TestWorldMonitorPullTriggerAllowsNewsTradeWordsOnlyOnTrustedPath(t *testing.T) {
+	now := time.Date(2026, 7, 29, 12, 0, 0, 0, time.UTC)
+	article := "https://example.com/markets"
+	item := worldMonitorPullEvent{
+		EventID: "wm_trade_words", PersistenceSeq: "33", SourceID: "source", SourceName: "Source",
+		FeedURL: "https://example.com/feed", ArticleURL: &article, Title: "What investors buy and sell after the announcement",
+		PublicationTime: &now, CollectedAt: now, FirstSeenAt: now, LastSeenAt: now, SchemaVersion: 1,
+		Provenance: map[string]any{"event_type": "unknown"},
+	}
+	trigger, err := worldMonitorPullTrigger(item)
+	if err != nil {
+		t.Fatalf("worldMonitorPullTrigger() error = %v", err)
+	}
+	if !trigger.AllowNewsTradeLanguage {
+		t.Fatal("trusted pull trigger did not enable news-language exemption")
+	}
+	if result := validateWorldMonitorResearchTrigger(trigger, now); !result.Valid {
+		t.Fatalf("trusted pull trigger rejected ordinary news language: %+v", result)
+	}
+	trigger.AllowNewsTradeLanguage = false
+	if result := validateWorldMonitorResearchTrigger(trigger, now); result.Valid || !strings.Contains(result.Reason, "trade instruction") {
+		t.Fatalf("external-equivalent trigger was not rejected: %+v", result)
+	}
+}
+
 func TestWorldMonitorPullWorkerAtomicCommitReplayAndRollback(t *testing.T) {
 	pool := testFrontendAPIPool(t)
 	requireWorldMonitorPullSchema(t, pool)

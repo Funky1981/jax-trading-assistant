@@ -13,31 +13,32 @@ import (
 const worldMonitorFreshnessWindow = 24 * time.Hour
 
 type worldMonitorResearchTrigger struct {
-	Source                string         `json:"source"`
-	SourceEventID         string         `json:"source_event_id"`
-	EventType             string         `json:"event_type"`
-	Headline              string         `json:"headline"`
-	Summary               string         `json:"summary"`
-	SourceURLs            []string       `json:"source_urls"`
-	SourceCount           int            `json:"source_count"`
-	TimestampUTC          time.Time      `json:"timestamp_utc"`
-	Region                string         `json:"region"`
-	PossibleAffectedETFs  []string       `json:"possible_affected_etfs"`
-	AssetThemes           []string       `json:"asset_themes"`
-	Severity              string         `json:"severity"`
-	SourceTier            string         `json:"source_tier"`
-	Confidence            float64        `json:"confidence"`
-	ConfidenceReasons     []string       `json:"confidence_reasons"`
-	Reason                string         `json:"reason"`
-	RawPayload            map[string]any `json:"raw_payload"`
-	IsSynthetic           *bool          `json:"is_synthetic,omitempty"`
-	CollectionTimestamp   *time.Time     `json:"collection_timestamp_utc,omitempty"`
-	DiscoveryMethod       string         `json:"discovery_method,omitempty"`
-	AnalysisProvider      string         `json:"analysis_provider,omitempty"`
-	AnalysisModel         string         `json:"analysis_model,omitempty"`
-	DeterministicAnalysis string         `json:"deterministic_analysis,omitempty"`
-	SyntheticReason       string         `json:"-"`
-	AllowStalePublication bool           `json:"-"`
+	Source                 string         `json:"source"`
+	SourceEventID          string         `json:"source_event_id"`
+	EventType              string         `json:"event_type"`
+	Headline               string         `json:"headline"`
+	Summary                string         `json:"summary"`
+	SourceURLs             []string       `json:"source_urls"`
+	SourceCount            int            `json:"source_count"`
+	TimestampUTC           time.Time      `json:"timestamp_utc"`
+	Region                 string         `json:"region"`
+	PossibleAffectedETFs   []string       `json:"possible_affected_etfs"`
+	AssetThemes            []string       `json:"asset_themes"`
+	Severity               string         `json:"severity"`
+	SourceTier             string         `json:"source_tier"`
+	Confidence             float64        `json:"confidence"`
+	ConfidenceReasons      []string       `json:"confidence_reasons"`
+	Reason                 string         `json:"reason"`
+	RawPayload             map[string]any `json:"raw_payload"`
+	IsSynthetic            *bool          `json:"is_synthetic,omitempty"`
+	CollectionTimestamp    *time.Time     `json:"collection_timestamp_utc,omitempty"`
+	DiscoveryMethod        string         `json:"discovery_method,omitempty"`
+	AnalysisProvider       string         `json:"analysis_provider,omitempty"`
+	AnalysisModel          string         `json:"analysis_model,omitempty"`
+	DeterministicAnalysis  string         `json:"deterministic_analysis,omitempty"`
+	SyntheticReason        string         `json:"-"`
+	AllowStalePublication  bool           `json:"-"`
+	AllowNewsTradeLanguage bool           `json:"-"`
 }
 
 type worldMonitorResearchReceipt struct {
@@ -105,7 +106,7 @@ func validateWorldMonitorResearchTrigger(trigger worldMonitorResearchTrigger, no
 	if strings.EqualFold(strings.TrimSpace(trigger.EventType), "unknown") && trigger.Confidence < 0.5 {
 		return rejectWorldMonitorTrigger("unknown event_type requires higher confidence")
 	}
-	if containsWorldMonitorTradeInstruction(trigger) {
+	if !trigger.AllowNewsTradeLanguage && containsWorldMonitorTradeInstruction(trigger) {
 		return rejectWorldMonitorTrigger("payload contains trade instruction language")
 	}
 	if containsWorldMonitorRuntimeOverride(trigger.RawPayload) {
