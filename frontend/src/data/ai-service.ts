@@ -48,6 +48,7 @@ export interface WorldMonitorInboxItem {
   sourceUrls: string[];
   sourceCount: number;
   eventTime: string;
+  publishedAt?: string;
   receivedAt: string;
   collectedAt?: string;
   rawEventId?: string;

@@ -90,6 +90,7 @@ type worldMonitorResearchInboxItem struct {
 	SourceURLs           []string                    `json:"sourceUrls"`
 	SourceCount          int                         `json:"sourceCount"`
 	EventTime            time.Time                   `json:"eventTime"`
+	PublishedAt          *time.Time                  `json:"publishedAt,omitempty"`
 	ReceivedAt           time.Time                   `json:"receivedAt"`
 	CollectedAt          *time.Time                  `json:"collectedAt,omitempty"`
 	RawEventID           string                      `json:"rawEventId,omitempty"`
@@ -303,7 +304,9 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 		SELECT
 			w.id::text, w.source, w.source_event_id, w.world_monitor_event_id, w.status,
 			COALESCE(w.rejection_reason, ''), w.event_type, w.headline, COALESCE(w.summary, ''),
-			COALESCE(w.source_urls, '[]'::jsonb), w.source_count, w.event_time, w.received_at,
+			COALESCE(w.source_urls, '[]'::jsonb), w.source_count, w.event_time,
+			CASE WHEN COALESCE(er.payload->'raw_payload'->>'publication_time_supplied','true')='false' THEN NULL ELSE w.event_time END,
+			w.received_at,
 			COALESCE(w.region, ''), COALESCE(w.possible_affected_etfs, '[]'::jsonb), COALESCE(w.asset_themes, '[]'::jsonb),
 			w.severity, w.source_tier, w.confidence, COALESCE(w.confidence_reasons, '[]'::jsonb), w.mapping_reason,
 			COALESCE(w.normalized_event_id::text, ''), COALESCE(w.candidate_id::text, ''),
@@ -397,6 +400,7 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			&sourceURLsRaw,
 			&item.SourceCount,
 			&item.EventTime,
+			&item.PublishedAt,
 			&item.ReceivedAt,
 			&item.Region,
 			&etfsRaw,

@@ -406,7 +406,7 @@ function EvidenceItem({
           </div>
           <div className="text-sm">
             <p className="text-xs text-muted-foreground">Published</p>
-            <p className="font-medium">{formatTime(item.eventTime)}</p>
+            <p className="font-medium">{formatTime(item.publishedAt)}</p>
           </div>
           <span className="min-h-9 whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium text-primary">
             {expanded ? 'Collapse details' : 'Expand details'}
@@ -458,10 +458,11 @@ function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
           )}
         </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        <Definition label="Published time" value={formatTime(item.eventTime)} />
-        <Definition label="Collection time" value={formatTime(item.collectedAt)} />
-        <Definition label="Jax receipt time" value={formatTime(item.receivedAt)} />
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <Definition label="Published" value={formatTime(item.publishedAt)} />
+        <Definition label="Collected" value={formatTime(item.collectedAt)} />
+        <Definition label="Received" value={formatTime(item.receivedAt)} />
+        <Definition label="Decided" value={formatTime(item.decision?.decisionAt)} />
       </div>
       <p className="text-sm text-muted-foreground">{provenanceExplanation(item)}</p>
       {item.decision ? (
@@ -474,9 +475,10 @@ function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
           <Definition label="Source" value={sourceName(item)} />
           <Definition label="Original URL" value={item.sourceUrls[0] || 'Not supplied'} />
           <Definition label="Discovery method" value={item.discoveryMethod || 'Not supplied'} />
-          <Definition label="Publication/event time" value={formatTime(item.eventTime)} />
-          <Definition label="Collection time" value={formatTime(item.collectedAt)} />
-          <Definition label="Jax receipt time" value={formatTime(item.receivedAt)} />
+          <Definition label="Published" value={formatTime(item.publishedAt)} />
+          <Definition label="Collected" value={formatTime(item.collectedAt)} />
+          <Definition label="Received" value={formatTime(item.receivedAt)} />
+          <Definition label="Decided" value={formatTime(item.decision?.decisionAt)} />
           <Definition
             label="Provenance availability"
             value={item.provenanceAvailable === false ? 'Unavailable' : 'Persisted'}
@@ -638,7 +640,7 @@ function DecisionDetail({ item }: { item: WorldMonitorInboxItem }) {
 function Journey({ item }: { item: WorldMonitorInboxItem }) {
   const candidate = item.decision?.decision === 'CANDIDATE' && Boolean(item.decision.candidateId);
   const stages = [
-    ['Discovered', item.eventTime ? 'Complete' : 'Missing persisted evidence'],
+    ['Published', item.publishedAt ? 'Complete' : 'Not supplied'],
     ['Collected', item.collectedAt ? 'Complete' : 'Missing persisted evidence'],
     ['Delivered', 'Missing persisted evidence'],
     ['Received by Jax', item.receivedAt ? 'Complete' : 'Missing persisted evidence'],

@@ -35,6 +35,7 @@ const accepted: WorldMonitorInboxItem = {
   sourceUrls: ['https://example.com/accepted'],
   sourceCount: 1,
   eventTime: '2026-06-12T10:30:00Z',
+  publishedAt: '2026-06-12T10:30:00Z',
   receivedAt: '2026-06-12T10:31:00Z',
   collectedAt: '2026-06-12T10:30:30Z',
   rawEventId: 'raw-1',
@@ -94,6 +95,7 @@ const rejected: WorldMonitorInboxItem = {
   sourceUrls: [],
   sourceCount: 0,
   eventTime: '2026-06-12T10:20:00Z',
+  publishedAt: undefined,
   receivedAt: '2026-06-12T10:21:00Z',
   collectedAt: undefined,
   provenanceAvailable: true,
@@ -226,13 +228,14 @@ describe('MonitorInboxPage', () => {
       'href',
       'https://example.com/accepted',
     );
-    expect(screen.getByText('Published time')).toBeVisible();
-    expect(screen.getAllByText('Collection time').some((node) => !node.closest('details'))).toBe(
+    expect(screen.getAllByText('Published').some((node) => !node.closest('details'))).toBe(true);
+    expect(screen.getAllByText('Collected').some((node) => !node.closest('details'))).toBe(
       true,
     );
-    expect(screen.getAllByText('Jax receipt time').some((node) => !node.closest('details'))).toBe(
+    expect(screen.getAllByText('Received').some((node) => !node.closest('details'))).toBe(
       true,
     );
+    expect(screen.getAllByText('Decided').some((node) => !node.closest('details'))).toBe(true);
     for (const label of ['Source and provenance', 'Analysis', /Journey —/, 'Audit']) {
       expect(screen.getByText(label).closest('details')).not.toHaveAttribute('open');
     }
@@ -241,6 +244,8 @@ describe('MonitorInboxPage', () => {
     expect(second).toHaveAttribute('aria-expanded', 'true');
     expect(first).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('Rates news mapped to QQQ.')).not.toBeInTheDocument();
+    const rejectedDetail = screen.getByLabelText('Rejected synthetic monitor item details');
+    expect(within(rejectedDetail).getAllByText('Not supplied').length).toBeGreaterThan(0);
   });
 
   it('exposes truthful analysis, asset mapping, candidate linkage and nested audit on request', async () => {
