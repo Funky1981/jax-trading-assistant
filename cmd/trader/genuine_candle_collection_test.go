@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -60,14 +63,47 @@ func TestPrepareGenuineCandlesDoesNotInventMarketClosedPeriods(t *testing.T) {
 }
 
 func TestGenuineCandleCollectionHasNoExecutionOrRuntimeMutation(t *testing.T) {
-	data, err := os.ReadFile("genuine_candle_collection.go")
-	if err != nil {
-		t.Fatal(err)
+	var source string
+	for _, path := range []string{"genuine_candle_collection.go", "evaluation_market_coverage.go"} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		source += strings.ToLower(string(data))
 	}
-	source := strings.ToLower(string(data))
 	for _, forbidden := range []string{"insert into execution_instructions", "insert into order_intents", "insert into trades", "insert into fills", "broker_order_id", "allow_live_trading=true", "execution_instruction_worker_enabled=true"} {
 		if strings.Contains(source, forbidden) {
 			t.Fatalf("collection path contains forbidden mutation %q", forbidden)
+		}
+	}
+}
+
+func TestEvaluationCoverageRejectsUnboundedSymbolSetBeforeDatabaseAccess(t *testing.T) {
+	handler := evaluationMarketCoverageHandler(nil, nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/market/candles/collect-evaluation", bytes.NewBufferString(`{"maxSymbols":26}`))
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d, want %d", res.Code, http.StatusBadRequest)
+	}
+}
+
+func TestProviderCandleProvenanceDoesNotInventAdjustmentState(t *testing.T) {
+	adjusted, timezone := providerCandleProvenance("alpaca")
+	if adjusted != "unknown" || timezone != "UTC" {
+		t.Fatalf("adjusted=%q timezone=%q", adjusted, timezone)
+	}
+}
+
+func TestEvaluationCoverageHasBoundedRetryAndTimeout(t *testing.T) {
+	data, err := os.ReadFile("evaluation_market_coverage.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(data)
+	for _, required := range []string{"attempt <= 2", "context.WithTimeout", "45*time.Second"} {
+		if !strings.Contains(source, required) {
+			t.Fatalf("bounded coverage missing %q", required)
 		}
 	}
 }

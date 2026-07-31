@@ -37,6 +37,19 @@ func BuildPopulation(events []Event, coverageEnd time.Time, rules Ruleset) ([]Ev
 }
 
 func exclusionReason(event Event, coverageEnd time.Time, rules Ruleset) string {
+	if strings.TrimSpace(rules.DecisionRulesetVersion) != "" {
+		if event.RulesetVersion != rules.DecisionRulesetVersion {
+			return "other_decision_ruleset"
+		}
+		if !event.IsInitial {
+			return "later_decision_projection"
+		}
+		if len(rules.IncludedDecisionOrigins) > 0 && !containsFold(rules.IncludedDecisionOrigins, event.DecisionOrigin) {
+			return "decision_origin_excluded"
+		}
+	} else if !event.IsCurrent && (event.IsInitial || strings.TrimSpace(event.DecisionOrigin) != "") {
+		return "historical_projection"
+	}
 	if event.IsSynthetic {
 		return "synthetic_record"
 	}
@@ -104,6 +117,48 @@ func duplicateIdentity(event Event) string {
 
 func MapEvent(event Event, rules Ruleset) Mapping {
 	base := Mapping{RulesetVersion: rules.Version, Reason: "no conservative deterministic asset mapping was available"}
+	if event.ResolutionStatus != "" {
+		base.MappingType = event.ResolutionMappingType
+		base.Confidence = event.ResolutionConfidence
+		base.Reason = event.ResolutionReason
+		base.RulesetVersion = event.ResolutionRuleset
+		base.KnownAtInitialDecision = event.MappingKnownAtDecision
+		base.KnowableAtAnchor = event.MappingKnowableAtAnchor
+		base.CreatedAt = event.ResolutionCreatedAt
+		if strings.TrimSpace(rules.AssetResolverRulesetVersion) != "" && event.ResolutionRuleset != rules.AssetResolverRulesetVersion {
+			base.Reason = "asset resolution belongs to a different resolver ruleset"
+			return base
+		}
+		if event.ResolutionStatus != "resolved" {
+			if event.AmbiguityReason != "" {
+				base.Reason += ": " + event.AmbiguityReason
+			}
+			if event.RejectionReason != "" {
+				base.Reason += ": " + event.RejectionReason
+			}
+			return base
+		}
+		if !event.MappingKnowableAtAnchor {
+			base.Reason = "asset mapping input was not knowable at the operational anchor"
+			return base
+		}
+		if event.DecisionOrigin == "live_origin" && !event.MappingKnownAtDecision {
+			base.Reason = "asset mapping was created after the live initial decision"
+			return base
+		}
+		symbol := normalizeSymbol(event.ResolutionSymbol)
+		if symbol == "" {
+			base.Reason = "persisted asset resolution has no valid symbol"
+			return base
+		}
+		base.Mapped, base.Symbol = true, symbol
+		base.Direct = event.ResolutionRelationship == "direct"
+		base.Benchmark = normalizeSymbol(event.ResolutionBenchmark)
+		if base.Benchmark != "" {
+			base.BenchmarkReason = "benchmark persisted by the deterministic asset resolver before outcome selection"
+		}
+		return base
+	}
 	if symbol := normalizeSymbol(event.PrimarySymbol); symbol != "" {
 		return withBenchmark(Mapping{Mapped: true, MappingType: "explicit_normalized_primary_symbol", Symbol: symbol, Confidence: "high", Reason: "persisted normalized event primary symbol", Direct: true, RulesetVersion: rules.Version}, rules)
 	}
@@ -118,6 +173,15 @@ func MapEvent(event Event, rules Ruleset) Mapping {
 		}
 	}
 	return base
+}
+
+func containsFold(values []string, want string) bool {
+	for _, value := range values {
+		if strings.EqualFold(strings.TrimSpace(value), strings.TrimSpace(want)) {
+			return true
+		}
+	}
+	return false
 }
 
 func withBenchmark(mapping Mapping, rules Ruleset) Mapping {

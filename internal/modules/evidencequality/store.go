@@ -81,7 +81,14 @@ func loadEvents(ctx context.Context, tx pgx.Tx) ([]Event, error) {
 			COALESCE(subject.subject_id,''),COALESCE(subject.subject_type,''),
 			COALESCE(subject.current_decision,''),COALESCE(subject.event_count,0),
 			COALESCE(subject.source_group_count,0),COALESCE(subject.independent_count,0),
-			COALESCE(subject.primary_count,0),COALESCE(subject.repeated_count,0)
+			COALESCE(subject.primary_count,0),COALESCE(subject.repeated_count,0),
+			d.is_current,d.is_initial,d.decision_origin,d.decision_context,
+			COALESCE(ar.resolution_status,''),COALESCE(ar.resolved_symbol,''),COALESCE(ar.benchmark_symbol,''),
+			COALESCE(ar.mapping_type,''),COALESCE(ar.asset_relationship,''),COALESCE(ar.confidence_class,''),
+			COALESCE(ar.deterministic_reason,''),COALESCE(ar.resolver_ruleset_version,''),ar.created_at,
+			COALESCE(ar.known_at_initial_decision_time,false),COALESCE(ar.knowable_at_operational_anchor,false),
+			COALESCE(ar.ambiguity_reason,''),COALESCE(ar.rejection_reason,''),
+			subject.linked_at,subject.latest_evaluation_at,subject.projection_updated_at
 		FROM genuine_event_decisions d
 		JOIN world_monitor_research_inbox w ON w.id=d.source_inbox_event_id
 		LEFT JOIN event_normalized en ON en.id=d.normalized_event_id
@@ -95,15 +102,16 @@ func loadEvents(ctx context.Context, tx pgx.Tx) ([]Event, error) {
 				COUNT(*)::int AS event_count,COUNT(DISTINCT l2.source_group_key)::int AS source_group_count,
 				COUNT(DISTINCT l2.source_group_key) FILTER (WHERE l2.source_independence IN ('primary','independent'))::int AS independent_count,
 				COUNT(DISTINCT l2.source_group_key) FILTER (WHERE l2.source_independence='primary')::int AS primary_count,
-				COUNT(*) FILTER (WHERE l2.source_independence='not_independent')::int AS repeated_count
+				COUNT(*) FILTER (WHERE l2.source_independence='not_independent')::int AS repeated_count,
+				MIN(own.linked_at) AS linked_at,s.latest_evaluation_at,s.updated_at AS projection_updated_at
 			FROM evidence_subject_events own
 			JOIN evidence_subjects s ON s.id=own.subject_id
 			JOIN evidence_subject_events l2 ON l2.subject_id=s.id
 			WHERE own.genuine_event_id=d.source_inbox_event_id
-			GROUP BY s.public_id,s.subject_type,s.current_decision
+			GROUP BY s.public_id,s.subject_type,s.current_decision,s.latest_evaluation_at,s.updated_at
 		) subject ON true
-		WHERE d.is_current
-		ORDER BY d.event_receipt_at,d.source_event_identity`)
+		LEFT JOIN event_asset_resolutions ar ON ar.decision_id=d.id
+		ORDER BY d.event_receipt_at,d.source_event_identity,d.ruleset_version,d.decision_version`)
 	if err != nil {
 		return nil, fmt.Errorf("load current genuine decisions: %w", err)
 	}
@@ -111,7 +119,7 @@ func loadEvents(ctx context.Context, tx pgx.Tx) ([]Event, error) {
 	result := []Event{}
 	for rows.Next() {
 		var event Event
-		var collection sql.NullTime
+		var collection, resolutionCreated, subjectLinked, subjectEvaluated, projectionUpdated sql.NullTime
 		if err := rows.Scan(
 			&event.DecisionID, &event.InboxID, &event.NormalizedEventID, &event.SourceEventIdentity,
 			&event.Decision, &event.RulesetVersion, &event.DecisionAt, &event.PublicationAt,
@@ -123,12 +131,35 @@ func loadEvents(ctx context.Context, tx pgx.Tx) ([]Event, error) {
 			&event.SyntheticReason, &event.SubjectID, &event.SubjectType, &event.SubjectCurrentDecision,
 			&event.SubjectEventCount, &event.SourceGroupCount, &event.IndependentSourceCount,
 			&event.PrimarySourceCount, &event.RepeatedSourceCount,
+			&event.IsCurrent, &event.IsInitial, &event.DecisionOrigin, &event.DecisionContext,
+			&event.ResolutionStatus, &event.ResolutionSymbol, &event.ResolutionBenchmark,
+			&event.ResolutionMappingType, &event.ResolutionRelationship, &event.ResolutionConfidence,
+			&event.ResolutionReason, &event.ResolutionRuleset, &resolutionCreated,
+			&event.MappingKnownAtDecision, &event.MappingKnowableAtAnchor,
+			&event.AmbiguityReason, &event.RejectionReason,
+			&subjectLinked, &subjectEvaluated, &projectionUpdated,
 		); err != nil {
 			return nil, fmt.Errorf("scan genuine decision for evaluation: %w", err)
 		}
 		if collection.Valid {
 			value := collection.Time
 			event.CollectionAt = &value
+		}
+		if resolutionCreated.Valid {
+			value := resolutionCreated.Time
+			event.ResolutionCreatedAt = &value
+		}
+		if subjectLinked.Valid {
+			value := subjectLinked.Time
+			event.SubjectLinkedAt = &value
+		}
+		if subjectEvaluated.Valid {
+			value := subjectEvaluated.Time
+			event.SubjectEvaluatedAt = &value
+		}
+		if projectionUpdated.Valid {
+			value := projectionUpdated.Time
+			event.ProjectionUpdatedAt = &value
 		}
 		result = append(result, event)
 	}
@@ -141,7 +172,8 @@ func loadEvents(ctx context.Context, tx pgx.Tx) ([]Event, error) {
 func loadCandles(ctx context.Context, tx pgx.Tx) ([]Candle, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT symbol,timestamp,open::float8,high::float8,low::float8,close::float8,
-			timeframe,source,timestamp_semantics,regular_trading_hours,market_data_classification
+			timeframe,source,timestamp_semantics,regular_trading_hours,market_data_classification,
+			adjusted_state,provider_timezone
 		FROM candles
 		WHERE timeframe IN ('1h','1d')
 		  AND source NOT IN ('unknown','TEST','SYNTHETIC','FIXTURE')
@@ -158,7 +190,7 @@ func loadCandles(ctx context.Context, tx pgx.Tx) ([]Candle, error) {
 		var rth sql.NullBool
 		if err := rows.Scan(&candle.Symbol, &candle.Timestamp, &candle.Open, &candle.High, &candle.Low,
 			&candle.Close, &candle.Timeframe, &candle.Source, &candle.TimestampSemantics,
-			&rth, &candle.MarketDataClassification); err != nil {
+			&rth, &candle.MarketDataClassification, &candle.AdjustedState, &candle.ProviderTimezone); err != nil {
 			return nil, fmt.Errorf("scan persisted candle: %w", err)
 		}
 		if rth.Valid {

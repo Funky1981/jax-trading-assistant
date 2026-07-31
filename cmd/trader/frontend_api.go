@@ -338,6 +338,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	mux.HandleFunc("/api/v1/trading/pilot-status", protect(tradingPilotStatusHandler(jwtManager != nil, marketAPI)))
 	mux.HandleFunc("/api/v1/market/candles", protect(marketCandlesHandler(marketAPI)))
 	mux.HandleFunc("/api/v1/market/candles/collect", protect(genuineCandleCollectionHandler(pool, marketAPI.mdClient)))
+	mux.HandleFunc("/api/v1/market/candles/collect-evaluation", protect(evaluationMarketCoverageHandler(pool, marketAPI.mdClient)))
 	mux.HandleFunc("/api/v1/broker/orders", protect(brokerOrdersHandler(jwtManager != nil, marketAPI, auditSvc)))
 	mux.HandleFunc("/api/v1/broker/orders/", protect(brokerOrderDetailHandler(jwtManager != nil, marketAPI, auditSvc)))
 	mux.HandleFunc("/api/v1/broker/positions", protect(brokerPositionsHandler(marketAPI)))

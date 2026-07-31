@@ -37,6 +37,8 @@ type genuineCandleCollectionResult struct {
 	TimestampSemantics       string     `json:"timestampSemantics"`
 	RegularTradingHours      *bool      `json:"regularTradingHours,omitempty"`
 	MarketDataClassification string     `json:"marketDataClassification"`
+	AdjustedState            string     `json:"adjustedState"`
+	ProviderTimezone         string     `json:"providerTimezone"`
 	Historical               bool       `json:"historical"`
 	RequestedFrom            time.Time  `json:"requestedFrom"`
 	Received                 int        `json:"received"`
@@ -96,8 +98,9 @@ func collectGenuineCandles(ctx context.Context, pool *pgxpool.Pool, fetcher sour
 	}
 	prepared := prepareGenuineCandles(symbol, from.UTC(), time.Now().UTC(), candles)
 	semantics, regularHours := providerCandleSemantics(provider)
+	adjustedState, providerTimezone := providerCandleProvenance(provider)
 	result := genuineCandleCollectionResult{Symbol: symbol, Provider: provider, Mode: "paper_read_only", Timeframe: label,
-		TimestampSemantics: semantics, RegularTradingHours: regularHours, MarketDataClassification: "unknown", Historical: true, RequestedFrom: from.UTC(), Received: len(prepared)}
+		TimestampSemantics: semantics, RegularTradingHours: regularHours, MarketDataClassification: "unknown", AdjustedState: adjustedState, ProviderTimezone: providerTimezone, Historical: true, RequestedFrom: from.UTC(), Received: len(prepared)}
 	if len(prepared) == 0 {
 		return result, nil
 	}
@@ -107,11 +110,11 @@ func collectGenuineCandles(ctx context.Context, pool *pgxpool.Pool, fetcher sour
 	}
 	defer tx.Rollback(ctx)
 	for _, c := range prepared {
-		_, err = tx.Exec(ctx, `INSERT INTO candles (symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,regular_trading_hours,market_data_classification,ingested_at)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())
-			ON CONFLICT(symbol,timestamp) DO UPDATE SET open=EXCLUDED.open,high=EXCLUDED.high,low=EXCLUDED.low,close=EXCLUDED.close,volume=EXCLUDED.volume,vwap=EXCLUDED.vwap,timeframe=EXCLUDED.timeframe,source=EXCLUDED.source,timestamp_semantics=EXCLUDED.timestamp_semantics,regular_trading_hours=EXCLUDED.regular_trading_hours,market_data_classification=EXCLUDED.market_data_classification,ingested_at=NOW()
+		_, err = tx.Exec(ctx, `INSERT INTO candles (symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,regular_trading_hours,market_data_classification,adjusted_state,provider_timezone,ingested_at)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())
+			ON CONFLICT(symbol,timestamp) DO UPDATE SET open=EXCLUDED.open,high=EXCLUDED.high,low=EXCLUDED.low,close=EXCLUDED.close,volume=EXCLUDED.volume,vwap=EXCLUDED.vwap,timeframe=EXCLUDED.timeframe,source=EXCLUDED.source,timestamp_semantics=EXCLUDED.timestamp_semantics,regular_trading_hours=EXCLUDED.regular_trading_hours,market_data_classification=EXCLUDED.market_data_classification,adjusted_state=EXCLUDED.adjusted_state,provider_timezone=EXCLUDED.provider_timezone,ingested_at=NOW()
 			WHERE (candles.source=EXCLUDED.source AND candles.timeframe=EXCLUDED.timeframe) OR candles.source='unknown'`,
-			c.Symbol, c.Timestamp, c.Open, c.High, c.Low, c.Close, c.Volume, c.VWAP, label, provider, semantics, regularHours, "unknown")
+			c.Symbol, c.Timestamp, c.Open, c.High, c.Low, c.Close, c.Volume, c.VWAP, label, provider, semantics, regularHours, "unknown", adjustedState, providerTimezone)
 		if err != nil {
 			return result, fmt.Errorf("persist genuine candle %s at %s: %w", symbol, c.Timestamp.Format(time.RFC3339), err)
 		}
@@ -164,4 +167,10 @@ func providerCandleSemantics(provider string) (string, *bool) {
 		return "interval_start", nil
 	}
 	return "provider_timestamp", nil
+}
+
+func providerCandleProvenance(provider string) (string, string) {
+	// The current provider abstraction does not expose an adjustment selector.
+	// Record that honestly instead of inferring split/dividend treatment.
+	return "unknown", "UTC"
 }

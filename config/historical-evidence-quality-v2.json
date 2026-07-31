@@ -1,0 +1,27 @@
+{
+  "version": "historical-evidence-quality-v2",
+  "decision_ruleset_version": "genuine-event-decision-v2",
+  "asset_resolver_ruleset_version": "event-asset-resolution-v1",
+  "included_decision_origins": ["historical_backfill"],
+  "primary_anchor": "receipt",
+  "minimum_comparison_group_size": 5,
+  "bootstrap_iterations": 10000,
+  "permutation_iterations": 10000,
+  "maximum_intraday_anchor_delay_minutes": 1440,
+  "controlled_source_prefixes": ["world-monitor-local-proof"],
+  "controlled_event_id_markers": ["real-qqq-proof-","wm-api-smoke-","wm-codex-smoke-","workflow-smoke-","wm-scanner-","wm-chart-block-","wm-promote-","wm_pull_"],
+  "controlled_headline_markers": ["local proof event:","workflow smoke:"],
+  "test_hosts": ["example.com"],
+  "category_proxies": {},
+  "benchmarks": {
+    "AAPL":{"symbol":"QQQ","reason":"large-cap technology company compared with its growth-technology benchmark"},
+    "AMZN":{"symbol":"QQQ","reason":"large-cap growth company compared with its growth-technology benchmark"},
+    "GOOGL":{"symbol":"QQQ","reason":"large-cap technology company compared with its growth-technology benchmark"},
+    "META":{"symbol":"QQQ","reason":"large-cap technology company compared with its growth-technology benchmark"},
+    "MSFT":{"symbol":"QQQ","reason":"large-cap technology company compared with its growth-technology benchmark"},
+    "NVDA":{"symbol":"SOXX","reason":"semiconductor company compared with its sector ETF"},
+    "TLT":{"symbol":"SPY","reason":"Treasury-duration proxy compared with the broad US equity market"},
+    "XLE":{"symbol":"SPY","reason":"energy-sector ETF compared with the broad US equity market"},
+    "SOXX":{"symbol":"QQQ","reason":"semiconductor-sector ETF compared with the broader growth-technology market"}
+  }
+}

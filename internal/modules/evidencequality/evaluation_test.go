@@ -81,6 +81,62 @@ func TestUnknownAssetHandling(t *testing.T) {
 	}
 }
 
+func TestV2RejectsLiveMappingCreatedAfterInitialDecision(t *testing.T) {
+	event := testEvent("late-live-map")
+	event.ResolutionStatus = "resolved"
+	event.ResolutionSymbol = "AAPL"
+	event.ResolutionRelationship = "direct"
+	event.ResolutionRuleset = "event-asset-resolution-v1"
+	event.MappingKnowableAtAnchor = true
+	event.MappingKnownAtDecision = false
+	event.DecisionOrigin = "live_origin"
+	mapping := MapEvent(event, testRulesV2())
+	if mapping.Mapped || mapping.Reason != "asset mapping was created after the live initial decision" {
+		t.Fatalf("late live mapping accepted: %+v", mapping)
+	}
+}
+
+func TestV2AcceptsDisclosedBackfillMappingKnowableAtAnchor(t *testing.T) {
+	event := testEvent("backfill-map")
+	event.ResolutionStatus = "resolved"
+	event.ResolutionSymbol = "AAPL"
+	event.ResolutionRelationship = "direct"
+	event.ResolutionRuleset = "event-asset-resolution-v1"
+	event.MappingKnowableAtAnchor = true
+	event.DecisionOrigin = "historical_backfill"
+	mapping := MapEvent(event, testRulesV2())
+	if !mapping.Mapped || mapping.Symbol != "AAPL" {
+		t.Fatalf("valid disclosed backfill mapping rejected: %+v", mapping)
+	}
+}
+
+func TestV2RejectsMappingFromDifferentResolverVersion(t *testing.T) {
+	event := testEvent("wrong-resolver")
+	event.ResolutionStatus = "resolved"
+	event.ResolutionSymbol = "AAPL"
+	event.ResolutionRuleset = "event-asset-resolution-v0"
+	event.MappingKnowableAtAnchor = true
+	mapping := MapEvent(event, testRulesV2())
+	if mapping.Mapped || mapping.Reason != "asset resolution belongs to a different resolver ruleset" {
+		t.Fatalf("wrong resolver mapping accepted: %+v", mapping)
+	}
+}
+
+func TestV2SelectsOnlyImmutableInitialBackfill(t *testing.T) {
+	initial := testEvent("initial")
+	initial.RulesetVersion = "genuine-event-decision-v2"
+	initial.IsInitial = true
+	initial.DecisionOrigin = "historical_backfill"
+	later := testEvent("later")
+	later.RulesetVersion = "genuine-event-decision-v2"
+	later.IsInitial = false
+	later.DecisionOrigin = "historical_replay"
+	included, excluded := BuildPopulation([]Event{initial, later}, mustTime("2026-07-30T20:00:00Z"), testRulesV2())
+	if len(included) != 1 || included[0].DecisionID != "initial" || len(excluded) != 1 || excluded[0].Reason != "later_decision_projection" {
+		t.Fatalf("unexpected v2 selection: %+v %+v", included, excluded)
+	}
+}
+
 func TestBenchmarkSelection(t *testing.T) {
 	event := testEvent("benchmark")
 	event.PrimarySymbol = "QQQ"
@@ -122,6 +178,14 @@ func TestMarketSessionBoundaryHandling(t *testing.T) {
 	result, ok = dailyOutcome(series, duringSession, 1)
 	if !ok || result.Start != 110 {
 		t.Fatalf("during-session used look-ahead bar: %+v/%t", result, ok)
+	}
+}
+
+func TestWeekendAnchorUsesNextPersistedSession(t *testing.T) {
+	series := []Candle{daily("QQQ", "2026-07-17T04:00:00Z", 100, 101), daily("QQQ", "2026-07-20T04:00:00Z", 102, 103), daily("QQQ", "2026-07-21T04:00:00Z", 104, 105)}
+	result, ok := dailyOutcome(series, mustTime("2026-07-18T12:00:00Z"), 1)
+	if !ok || !result.EffectiveAnchor.Equal(mustTime("2026-07-20T13:30:00Z")) || result.Start != 102 {
+		t.Fatalf("weekend anchor result=%+v/%t", result, ok)
 	}
 }
 
@@ -195,6 +259,16 @@ func TestDescriptiveAndNonParametricStatistics(t *testing.T) {
 
 func testRules() Ruleset {
 	return Ruleset{Version: "historical-evidence-quality-v1", PrimaryAnchor: "receipt", MinimumComparisonGroupSize: 2, BootstrapIterations: 100, PermutationIterations: 100, MaximumIntradayAnchorDelayMinutes: 1440, ControlledSourcePrefixes: []string{"world-monitor-local-proof"}, ControlledEventIDMarkers: []string{"real-qqq-proof-"}, ControlledHeadlineMarkers: []string{"local proof event:"}, TestHosts: []string{"example.com"}, CategoryProxies: map[string]ProxyRule{"energy_oil": {Symbol: "XLE", Confidence: "medium", Reason: "energy proxy"}}, Benchmarks: map[string]BenchmarkRule{"AAPL": {Symbol: "QQQ", Reason: "technology benchmark"}, "QQQ": {Symbol: "SPY", Reason: "broad benchmark"}, "XLE": {Symbol: "SPY", Reason: "sector benchmark"}}}
+}
+
+func testRulesV2() Ruleset {
+	rules := testRules()
+	rules.Version = "historical-evidence-quality-v2"
+	rules.DecisionRulesetVersion = "genuine-event-decision-v2"
+	rules.AssetResolverRulesetVersion = "event-asset-resolution-v1"
+	rules.IncludedDecisionOrigins = []string{"historical_backfill"}
+	rules.CategoryProxies = map[string]ProxyRule{}
+	return rules
 }
 func testEvent(id string) Event {
 	publication := mustTime("2026-07-20T12:00:00Z")

@@ -32,47 +32,70 @@ type Ruleset struct {
 	TestHosts                         []string                 `json:"test_hosts"`
 	CategoryProxies                   map[string]ProxyRule     `json:"category_proxies"`
 	Benchmarks                        map[string]BenchmarkRule `json:"benchmarks"`
+	DecisionRulesetVersion            string                   `json:"decision_ruleset_version,omitempty"`
+	AssetResolverRulesetVersion       string                   `json:"asset_resolver_ruleset_version,omitempty"`
+	IncludedDecisionOrigins           []string                 `json:"included_decision_origins,omitempty"`
 }
 
 type Event struct {
-	DecisionID             string
-	InboxID                string
-	NormalizedEventID      string
-	SourceEventIdentity    string
-	Decision               string
-	RulesetVersion         string
-	DecisionAt             time.Time
-	PublicationAt          time.Time
-	CollectionAt           *time.Time
-	ReceiptAt              time.Time
-	Source                 string
-	SourceURL              string
-	EventType              string
-	Severity               string
-	Confidence             float64
-	AffectedAssets         []string
-	UnknownAssets          bool
-	Reasons                []string
-	MissingEvidence        []string
-	Headline               string
-	Summary                string
-	PrimarySymbol          string
-	SourceName             string
-	FeedURL                string
-	SourceNativeID         string
-	ContentHash            string
-	DataSourceType         string
-	SourceProvider         string
-	IsSynthetic            bool
-	SyntheticReason        string
-	SubjectID              string
-	SubjectType            string
-	SubjectCurrentDecision string
-	SubjectEventCount      int
-	SourceGroupCount       int
-	IndependentSourceCount int
-	PrimarySourceCount     int
-	RepeatedSourceCount    int
+	DecisionID              string
+	InboxID                 string
+	NormalizedEventID       string
+	SourceEventIdentity     string
+	Decision                string
+	RulesetVersion          string
+	DecisionAt              time.Time
+	PublicationAt           time.Time
+	CollectionAt            *time.Time
+	ReceiptAt               time.Time
+	Source                  string
+	SourceURL               string
+	EventType               string
+	Severity                string
+	Confidence              float64
+	AffectedAssets          []string
+	UnknownAssets           bool
+	Reasons                 []string
+	MissingEvidence         []string
+	Headline                string
+	Summary                 string
+	PrimarySymbol           string
+	SourceName              string
+	FeedURL                 string
+	SourceNativeID          string
+	ContentHash             string
+	DataSourceType          string
+	SourceProvider          string
+	IsSynthetic             bool
+	SyntheticReason         string
+	SubjectID               string
+	SubjectType             string
+	SubjectCurrentDecision  string
+	SubjectEventCount       int
+	SourceGroupCount        int
+	IndependentSourceCount  int
+	PrimarySourceCount      int
+	RepeatedSourceCount     int
+	IsCurrent               bool
+	IsInitial               bool
+	DecisionOrigin          string
+	DecisionContext         string
+	ResolutionStatus        string
+	ResolutionSymbol        string
+	ResolutionBenchmark     string
+	ResolutionMappingType   string
+	ResolutionRelationship  string
+	ResolutionConfidence    string
+	ResolutionReason        string
+	ResolutionRuleset       string
+	ResolutionCreatedAt     *time.Time
+	MappingKnownAtDecision  bool
+	MappingKnowableAtAnchor bool
+	AmbiguityReason         string
+	RejectionReason         string
+	SubjectLinkedAt         *time.Time
+	SubjectEvaluatedAt      *time.Time
+	ProjectionUpdatedAt     *time.Time
 }
 
 type Candle struct {
@@ -87,6 +110,8 @@ type Candle struct {
 	TimestampSemantics       string    `json:"timestampSemantics"`
 	RegularTradingHours      *bool     `json:"regularTradingHours,omitempty"`
 	MarketDataClassification string    `json:"marketDataClassification"`
+	AdjustedState            string    `json:"adjustedState"`
+	ProviderTimezone         string    `json:"providerTimezone"`
 }
 
 type SafetyCounts struct {
@@ -130,21 +155,26 @@ type Exclusion struct {
 }
 
 type Mapping struct {
-	Mapped          bool   `json:"mapped"`
-	MappingType     string `json:"mappingType"`
-	Symbol          string `json:"symbol,omitempty"`
-	Confidence      string `json:"confidence,omitempty"`
-	Reason          string `json:"reason"`
-	Direct          bool   `json:"direct"`
-	RulesetVersion  string `json:"rulesetVersion"`
-	Benchmark       string `json:"benchmark,omitempty"`
-	BenchmarkReason string `json:"benchmarkReason,omitempty"`
+	Mapped                 bool       `json:"mapped"`
+	MappingType            string     `json:"mappingType"`
+	Symbol                 string     `json:"symbol,omitempty"`
+	Confidence             string     `json:"confidence,omitempty"`
+	Reason                 string     `json:"reason"`
+	Direct                 bool       `json:"direct"`
+	RulesetVersion         string     `json:"rulesetVersion"`
+	Benchmark              string     `json:"benchmark,omitempty"`
+	BenchmarkReason        string     `json:"benchmarkReason,omitempty"`
+	KnownAtInitialDecision bool       `json:"knownAtInitialDecision"`
+	KnowableAtAnchor       bool       `json:"knowableAtAnchor"`
+	CreatedAt              *time.Time `json:"createdAt,omitempty"`
 }
 
 type EvaluatedEvent struct {
 	Event               Event      `json:"-"`
 	SourceEventIdentity string     `json:"sourceEventIdentity"`
 	Decision            string     `json:"decision"`
+	DecisionOrigin      string     `json:"decisionOrigin"`
+	DecisionContext     string     `json:"decisionContext"`
 	EventType           string     `json:"eventType"`
 	SourceName          string     `json:"sourceName"`
 	Headline            string     `json:"headline"`
@@ -183,6 +213,8 @@ type Outcome struct {
 	CandleCount                int       `json:"candleCount"`
 	MarketDataSource           string    `json:"marketDataSource"`
 	TimestampSemantics         string    `json:"timestampSemantics"`
+	AdjustedState              string    `json:"adjustedState"`
+	ProviderTimezone           string    `json:"providerTimezone"`
 }
 
 type CoverageRow struct {
@@ -192,6 +224,8 @@ type CoverageRow struct {
 	TimestampSemantics       string    `json:"timestampSemantics"`
 	RegularTradingHours      *bool     `json:"regularTradingHours,omitempty"`
 	MarketDataClassification string    `json:"marketDataClassification"`
+	AdjustedState            string    `json:"adjustedState"`
+	ProviderTimezone         string    `json:"providerTimezone"`
 	Count                    int       `json:"count"`
 	First                    time.Time `json:"first"`
 	Last                     time.Time `json:"last"`
@@ -231,12 +265,16 @@ type Comparison struct {
 
 type LatencySummary struct {
 	Decision                    string   `json:"decision"`
+	DecisionOrigin              string   `json:"decisionOrigin"`
 	Count                       int      `json:"count"`
 	PublicationCollectionMedian *float64 `json:"publicationCollectionMedianSeconds,omitempty"`
 	CollectionReceiptMedian     *float64 `json:"collectionReceiptMedianSeconds,omitempty"`
 	ReceiptDecisionMedian       *float64 `json:"receiptDecisionMedianSeconds,omitempty"`
 	MoveBeforeReceiptMedian     *float64 `json:"moveBeforeReceiptMedian,omitempty"`
 	MoveAfterReceiptMedian      *float64 `json:"moveAfterReceiptMedian,omitempty"`
+	SubjectLinkDelayMedian      *float64 `json:"subjectLinkDelayMedianSeconds,omitempty"`
+	SubjectReevaluationMedian   *float64 `json:"subjectReevaluationDelayMedianSeconds,omitempty"`
+	ProjectionUpdateMedian      *float64 `json:"projectionUpdateDelayMedianSeconds,omitempty"`
 }
 
 type BreakdownRow struct {
@@ -280,6 +318,7 @@ type PopulationSummary struct {
 	CategoryCounts   map[string]int `json:"categoryCounts"`
 	SourceCounts     map[string]int `json:"sourceCounts"`
 	ExclusionCounts  map[string]int `json:"exclusionCounts"`
+	OriginCounts     map[string]int `json:"originCounts"`
 }
 
 type HorizonCoverage struct {

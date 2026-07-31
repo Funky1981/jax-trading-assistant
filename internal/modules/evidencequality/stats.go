@@ -95,33 +95,51 @@ func comparisons(events []EvaluatedEvent, rules Ruleset) []Comparison {
 
 func latencyRows(events []EvaluatedEvent, index marketIndex, rules Ruleset) []LatencySummary {
 	result := []LatencySummary{}
-	for _, decision := range []string{DecisionWatch, DecisionNoTrade, DecisionCandidate} {
-		pubCollection, collectionReceipt, receiptDecision, before, after := []float64{}, []float64{}, []float64{}, []float64{}, []float64{}
-		count := 0
-		for _, event := range events {
-			if event.Decision != decision {
-				continue
-			}
-			count++
-			if event.CollectionAt != nil {
-				pubCollection = append(pubCollection, event.CollectionAt.Sub(event.PublicationAt).Seconds())
-				collectionReceipt = append(collectionReceipt, event.ReceiptAt.Sub(*event.CollectionAt).Seconds())
-			}
-			receiptDecision = append(receiptDecision, event.DecisionAt.Sub(event.ReceiptAt).Seconds())
-			if event.Mapping.Mapped {
-				maxDelay := time.Duration(rules.MaximumIntradayAnchorDelayMinutes) * time.Minute
-				_, pubPrice, pubOK := index.intradayAnchorPrice(event.Mapping.Symbol, event.PublicationAt, maxDelay)
-				_, receiptPrice, receiptOK := index.intradayAnchorPrice(event.Mapping.Symbol, event.ReceiptAt, maxDelay)
-				if pubOK && receiptOK && pubPrice > 0 {
-					before = append(before, math.Abs(receiptPrice/pubPrice-1))
+	for _, origin := range []string{"live_origin", "historical_backfill", "historical_replay", "unknown"} {
+		for _, decision := range []string{DecisionWatch, DecisionNoTrade, DecisionCandidate} {
+			pubCollection, collectionReceipt, receiptDecision, before, after := []float64{}, []float64{}, []float64{}, []float64{}, []float64{}
+			subjectLink, subjectEvaluation, projectionUpdate := []float64{}, []float64{}, []float64{}
+			count := 0
+			for _, event := range events {
+				eventOrigin := event.DecisionOrigin
+				if eventOrigin == "" {
+					eventOrigin = "unknown"
 				}
-				if outcome, ok := index.outcome(event.Mapping.Symbol, event.ReceiptAt, "1h", maxDelay); ok {
-					after = append(after, math.Abs(outcome.RawReturn))
+				if event.Decision != decision || eventOrigin != origin {
+					continue
 				}
+				count++
+				if event.CollectionAt != nil {
+					pubCollection = append(pubCollection, event.CollectionAt.Sub(event.PublicationAt).Seconds())
+					collectionReceipt = append(collectionReceipt, event.ReceiptAt.Sub(*event.CollectionAt).Seconds())
+				}
+				receiptDecision = append(receiptDecision, event.DecisionAt.Sub(event.ReceiptAt).Seconds())
+				if event.Event.SubjectLinkedAt != nil {
+					subjectLink = append(subjectLink, event.Event.SubjectLinkedAt.Sub(event.ReceiptAt).Seconds())
+				}
+				if event.Event.SubjectEvaluatedAt != nil {
+					subjectEvaluation = append(subjectEvaluation, event.Event.SubjectEvaluatedAt.Sub(event.ReceiptAt).Seconds())
+				}
+				if event.Event.ProjectionUpdatedAt != nil {
+					projectionUpdate = append(projectionUpdate, event.Event.ProjectionUpdatedAt.Sub(event.ReceiptAt).Seconds())
+				}
+				if event.Mapping.Mapped {
+					maxDelay := time.Duration(rules.MaximumIntradayAnchorDelayMinutes) * time.Minute
+					_, pubPrice, pubOK := index.intradayAnchorPrice(event.Mapping.Symbol, event.PublicationAt, maxDelay)
+					_, receiptPrice, receiptOK := index.intradayAnchorPrice(event.Mapping.Symbol, event.ReceiptAt, maxDelay)
+					if pubOK && receiptOK && pubPrice > 0 {
+						before = append(before, math.Abs(receiptPrice/pubPrice-1))
+					}
+					if outcome, ok := index.outcome(event.Mapping.Symbol, event.ReceiptAt, "1h", maxDelay); ok {
+						after = append(after, math.Abs(outcome.RawReturn))
+					}
+				}
+			}
+			if count > 0 {
+				row := LatencySummary{Decision: decision, DecisionOrigin: origin, Count: count, PublicationCollectionMedian: medianPointer(pubCollection), CollectionReceiptMedian: medianPointer(collectionReceipt), ReceiptDecisionMedian: medianPointer(receiptDecision), MoveBeforeReceiptMedian: medianPointer(before), MoveAfterReceiptMedian: medianPointer(after), SubjectLinkDelayMedian: medianPointer(subjectLink), SubjectReevaluationMedian: medianPointer(subjectEvaluation), ProjectionUpdateMedian: medianPointer(projectionUpdate)}
+				result = append(result, row)
 			}
 		}
-		row := LatencySummary{Decision: decision, Count: count, PublicationCollectionMedian: medianPointer(pubCollection), CollectionReceiptMedian: medianPointer(collectionReceipt), ReceiptDecisionMedian: medianPointer(receiptDecision), MoveBeforeReceiptMedian: medianPointer(before), MoveAfterReceiptMedian: medianPointer(after)}
-		result = append(result, row)
 	}
 	return result
 }

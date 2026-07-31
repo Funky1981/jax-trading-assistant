@@ -2,7 +2,8 @@
 param(
     [string]$DatabaseURL = "",
     [string]$OutputDirectory = ".runtime/evidence-quality",
-    [string]$RulesetFile = "config/historical-evidence-quality-v1.json"
+    [string]$RulesetFile = "config/historical-evidence-quality-v1.json",
+    [string]$Ruleset = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,7 +43,10 @@ $env:MAX_LEVERAGE = if ($env:MAX_LEVERAGE) { $env:MAX_LEVERAGE } elseif ($dotenv
 
 Push-Location $repo
 try {
-    go run ./cmd/evidence-quality-evaluation --ruleset historical-evidence-quality-v1 --ruleset-file $RulesetFile --output-dir $OutputDirectory
+    if ([string]::IsNullOrWhiteSpace($Ruleset)) {
+        $Ruleset = (Get-Content -Raw -LiteralPath $RulesetFile | ConvertFrom-Json).version
+    }
+    go run ./cmd/evidence-quality-evaluation --ruleset $Ruleset --ruleset-file $RulesetFile --output-dir $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw "evidence quality evaluation failed" }
 }
 finally {

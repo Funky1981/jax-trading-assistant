@@ -23,7 +23,7 @@ func Evaluate(snapshot Snapshot, rules Ruleset, runtime RuntimeSafety) (Report, 
 	for _, event := range population {
 		mapping := MapEvent(event, rules)
 		evaluated = append(evaluated, EvaluatedEvent{
-			Event: event, SourceEventIdentity: event.SourceEventIdentity, Decision: event.Decision,
+			Event: event, SourceEventIdentity: event.SourceEventIdentity, Decision: event.Decision, DecisionOrigin: event.DecisionOrigin, DecisionContext: event.DecisionContext,
 			EventType: emptyAsUnknown(event.EventType), SourceName: emptyAsUnknown(event.SourceName), Headline: event.Headline,
 			PublicationAt: event.PublicationAt, CollectionAt: event.CollectionAt, ReceiptAt: event.ReceiptAt,
 			DecisionAt: event.DecisionAt, Mapping: mapping, SubjectType: emptyAsUnknown(event.SubjectType),
@@ -49,11 +49,11 @@ func Evaluate(snapshot Snapshot, rules Ruleset, runtime RuntimeSafety) (Report, 
 	report.Limitations = reportLimitations(report)
 	report.Conclusion, report.ProductRecommendation, report.Verdict = reportConclusion(report, rules)
 	fingerprintInput := struct {
-		Ruleset string           `json:"ruleset"`
+		Ruleset Ruleset          `json:"ruleset"`
 		Events  []EvaluatedEvent `json:"events"`
 		Candles []CoverageRow    `json:"marketCoverage"`
 		Safety  SafetyCounts     `json:"safety"`
-	}{rules.Version, evaluated, coverage, snapshot.SafetyBefore}
+	}{rules, evaluated, coverage, snapshot.SafetyBefore}
 	raw, err := json.Marshal(fingerprintInput)
 	if err != nil {
 		return Report{}, fmt.Errorf("fingerprint evaluation input: %w", err)
@@ -64,11 +64,12 @@ func Evaluate(snapshot Snapshot, rules Ruleset, runtime RuntimeSafety) (Report, 
 }
 
 func summarizePopulation(considered []Event, events []EvaluatedEvent, exclusions []Exclusion) PopulationSummary {
-	result := PopulationSummary{Considered: len(considered), Included: len(events), Excluded: len(exclusions), DecisionCounts: map[string]int{}, CategoryCounts: map[string]int{}, SourceCounts: map[string]int{}, ExclusionCounts: map[string]int{}}
+	result := PopulationSummary{Considered: len(considered), Included: len(events), Excluded: len(exclusions), DecisionCounts: map[string]int{}, CategoryCounts: map[string]int{}, SourceCounts: map[string]int{}, ExclusionCounts: map[string]int{}, OriginCounts: map[string]int{}}
 	for _, event := range events {
 		result.DecisionCounts[event.Decision]++
 		result.CategoryCounts[event.EventType]++
 		result.SourceCounts[event.SourceName]++
+		result.OriginCounts[event.DecisionOrigin]++
 		if event.Mapping.Mapped {
 			result.Mapped++
 		} else {
@@ -170,6 +171,9 @@ func reportLimitations(report Report) []string {
 		limitations = append(limitations, "existing outcome checkpoints belong to paper tickets and are not joined to this evaluation population")
 	}
 	limitations = append(limitations, "current subject NO_TRADE projections are not used as historical labels because staleness re-evaluation occurred after the outcome windows")
+	if report.Population.OriginCounts["historical_backfill"] > 0 {
+		limitations = append(limitations, "historical backfilled labels are reported separately and were not literally emitted at the event time")
+	}
 	return uniqueStrings(limitations)
 }
 
@@ -182,7 +186,7 @@ func reportConclusion(report Report, rules Ruleset) (string, string, string) {
 	}
 	if !comparisonAvailable {
 		if report.Population.Included > 0 && report.Population.Unmapped*2 > report.Population.Included {
-			return "timing/data quality prevents conclusion", "SOLVE ASSET RESOLUTION FIRST", "PASS WITH LIMITATIONS"
+			return "timing/data quality prevents conclusion", "SOLVE ASSET RESOLUTION FURTHER", "PASS WITH LIMITATIONS"
 		}
 		return "insufficient data", "INSUFFICIENT DATA — COLLECT MORE", "PASS WITH LIMITATIONS"
 	}

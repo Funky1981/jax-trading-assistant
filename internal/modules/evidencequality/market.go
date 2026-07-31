@@ -14,16 +14,18 @@ type marketIndex struct {
 }
 
 type seriesResult struct {
-	EffectiveAnchor time.Time
-	Start           float64
-	End             float64
-	RawReturn       float64
-	Range           float64
-	MFE             float64
-	MAE             float64
-	Count           int
-	Source          string
-	Semantics       string
+	EffectiveAnchor  time.Time
+	Start            float64
+	End              float64
+	RawReturn        float64
+	Range            float64
+	MFE              float64
+	MAE              float64
+	Count            int
+	Source           string
+	Semantics        string
+	AdjustedState    string
+	ProviderTimezone string
 }
 
 func newMarketIndex(candles []Candle) marketIndex {
@@ -169,6 +171,7 @@ func buildSeriesResult(window []Candle, effective time.Time) seriesResult {
 		EffectiveAnchor: effective, Start: start, End: end, RawReturn: end/start - 1,
 		Range: (high - low) / start, MFE: high/start - 1, MAE: low/start - 1,
 		Count: len(window), Source: window[0].Source, Semantics: window[0].TimestampSemantics,
+		AdjustedState: window[0].AdjustedState, ProviderTimezone: window[0].ProviderTimezone,
 	}
 }
 
@@ -240,6 +243,7 @@ func calculateOutcomes(event Event, mapping Mapping, index marketIndex, rules Ru
 				RealisedRange: market.Range, MaximumFavourableExcursion: market.MFE,
 				MaximumAdverseExcursion: market.MAE, CandleCount: market.Count,
 				MarketDataSource: market.Source, TimestampSemantics: market.Semantics,
+				AdjustedState: market.AdjustedState, ProviderTimezone: market.ProviderTimezone,
 			}
 			if mapping.Benchmark != "" {
 				benchmark, found := index.outcome(mapping.Benchmark, *anchor.At, horizon, time.Duration(rules.MaximumIntradayAnchorDelayMinutes)*time.Minute)
@@ -275,7 +279,8 @@ func coverageRows(candles []Candle) []CoverageRow {
 		if !ok {
 			item = &accumulator{row: CoverageRow{Symbol: candle.Symbol, Timeframe: candle.Timeframe, Source: candle.Source,
 				TimestampSemantics: candle.TimestampSemantics, RegularTradingHours: candle.RegularTradingHours,
-				MarketDataClassification: candle.MarketDataClassification, First: candle.Timestamp, Last: candle.Timestamp}}
+				MarketDataClassification: candle.MarketDataClassification, AdjustedState: candle.AdjustedState,
+				ProviderTimezone: candle.ProviderTimezone, First: candle.Timestamp, Last: candle.Timestamp}}
 			values[key] = item
 		}
 		if !item.last.IsZero() {

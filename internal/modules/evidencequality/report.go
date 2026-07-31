@@ -51,7 +51,7 @@ func WriteArtifacts(outputDir string, report Report) (ArtifactPaths, error) {
 func writePopulationCSV(path string, report Report) error {
 	var buffer bytes.Buffer
 	writer := csv.NewWriter(&buffer)
-	_ = writer.Write([]string{"source_event_identity", "decision", "event_type", "source_name", "publication_at", "collection_at", "receipt_at", "decision_at", "mapped", "mapping_type", "symbol", "mapping_confidence", "direct_or_proxy", "benchmark", "subject_type", "subject_event_count", "source_group_count", "independent_source_count", "primary_source_count", "repeated_source_count", "missing_evidence"})
+	_ = writer.Write([]string{"source_event_identity", "decision", "decision_origin", "decision_context", "event_type", "source_name", "publication_at", "collection_at", "receipt_at", "decision_at", "mapped", "mapping_type", "symbol", "mapping_confidence", "direct_or_proxy", "benchmark", "mapping_known_at_initial_decision", "mapping_knowable_at_anchor", "mapping_created_at", "subject_type", "subject_event_count", "source_group_count", "independent_source_count", "primary_source_count", "repeated_source_count", "missing_evidence"})
 	for _, event := range report.Events {
 		collection := ""
 		if event.CollectionAt != nil {
@@ -65,7 +65,11 @@ func writePopulationCSV(path string, report Report) error {
 				direct = "proxy"
 			}
 		}
-		_ = writer.Write([]string{event.SourceEventIdentity, event.Decision, event.EventType, event.SourceName, event.PublicationAt.UTC().Format(time.RFC3339Nano), collection, event.ReceiptAt.UTC().Format(time.RFC3339Nano), event.DecisionAt.UTC().Format(time.RFC3339Nano), strconv.FormatBool(event.Mapping.Mapped), event.Mapping.MappingType, event.Mapping.Symbol, event.Mapping.Confidence, direct, event.Mapping.Benchmark, event.SubjectType, strconv.Itoa(event.SubjectEventCount), strconv.Itoa(event.SourceGroupCount), strconv.Itoa(event.IndependentSources), strconv.Itoa(event.PrimarySources), strconv.Itoa(event.RepeatedSources), strings.Join(event.MissingEvidence, "|")})
+		mappingCreated := ""
+		if event.Mapping.CreatedAt != nil {
+			mappingCreated = event.Mapping.CreatedAt.UTC().Format(time.RFC3339Nano)
+		}
+		_ = writer.Write([]string{event.SourceEventIdentity, event.Decision, event.DecisionOrigin, event.DecisionContext, event.EventType, event.SourceName, event.PublicationAt.UTC().Format(time.RFC3339Nano), collection, event.ReceiptAt.UTC().Format(time.RFC3339Nano), event.DecisionAt.UTC().Format(time.RFC3339Nano), strconv.FormatBool(event.Mapping.Mapped), event.Mapping.MappingType, event.Mapping.Symbol, event.Mapping.Confidence, direct, event.Mapping.Benchmark, strconv.FormatBool(event.Mapping.KnownAtInitialDecision), strconv.FormatBool(event.Mapping.KnowableAtAnchor), mappingCreated, event.SubjectType, strconv.Itoa(event.SubjectEventCount), strconv.Itoa(event.SourceGroupCount), strconv.Itoa(event.IndependentSources), strconv.Itoa(event.PrimarySources), strconv.Itoa(event.RepeatedSources), strings.Join(event.MissingEvidence, "|")})
 	}
 	for _, exclusion := range report.Exclusions {
 		_ = writer.Write([]string{exclusion.SourceEventIdentity, exclusion.Decision, "EXCLUDED", exclusion.Reason})
@@ -83,7 +87,7 @@ func writePopulationCSV(path string, report Report) error {
 func writeOutcomesCSV(path string, report Report) error {
 	var buffer bytes.Buffer
 	writer := csv.NewWriter(&buffer)
-	_ = writer.Write([]string{"source_event_identity", "decision", "anchor", "anchor_at", "effective_anchor_at", "anchor_delay_seconds", "horizon", "symbol", "benchmark", "raw_return", "absolute_raw_return", "abnormal_return", "absolute_abnormal_return", "realised_range", "maximum_favourable_excursion", "maximum_adverse_excursion", "candle_count", "market_data_source", "timestamp_semantics"})
+	_ = writer.Write([]string{"source_event_identity", "decision", "decision_origin", "anchor", "anchor_at", "effective_anchor_at", "anchor_delay_seconds", "horizon", "symbol", "benchmark", "raw_return", "absolute_raw_return", "abnormal_return", "absolute_abnormal_return", "realised_range", "maximum_favourable_excursion", "maximum_adverse_excursion", "candle_count", "market_data_source", "timestamp_semantics", "adjusted_state", "provider_timezone"})
 	for _, event := range report.Events {
 		for _, outcome := range event.Outcomes {
 			abnormal, absoluteAbnormal := "", ""
@@ -93,7 +97,7 @@ func writeOutcomesCSV(path string, report Report) error {
 			if outcome.AbsoluteAbnormalReturn != nil {
 				absoluteAbnormal = formatFloat(*outcome.AbsoluteAbnormalReturn)
 			}
-			_ = writer.Write([]string{event.SourceEventIdentity, event.Decision, outcome.Anchor, outcome.AnchorAt.UTC().Format(time.RFC3339Nano), outcome.EffectiveAnchorAt.UTC().Format(time.RFC3339Nano), formatFloat(outcome.AnchorDelaySeconds), outcome.Horizon, outcome.Symbol, outcome.Benchmark, formatFloat(outcome.RawReturn), formatFloat(outcome.AbsoluteRawReturn), abnormal, absoluteAbnormal, formatFloat(outcome.RealisedRange), formatFloat(outcome.MaximumFavourableExcursion), formatFloat(outcome.MaximumAdverseExcursion), strconv.Itoa(outcome.CandleCount), outcome.MarketDataSource, outcome.TimestampSemantics})
+			_ = writer.Write([]string{event.SourceEventIdentity, event.Decision, event.DecisionOrigin, outcome.Anchor, outcome.AnchorAt.UTC().Format(time.RFC3339Nano), outcome.EffectiveAnchorAt.UTC().Format(time.RFC3339Nano), formatFloat(outcome.AnchorDelaySeconds), outcome.Horizon, outcome.Symbol, outcome.Benchmark, formatFloat(outcome.RawReturn), formatFloat(outcome.AbsoluteRawReturn), abnormal, absoluteAbnormal, formatFloat(outcome.RealisedRange), formatFloat(outcome.MaximumFavourableExcursion), formatFloat(outcome.MaximumAdverseExcursion), strconv.Itoa(outcome.CandleCount), outcome.MarketDataSource, outcome.TimestampSemantics, outcome.AdjustedState, outcome.ProviderTimezone})
 		}
 	}
 	writer.Flush()
@@ -113,14 +117,19 @@ func markdownReport(report Report) string {
 	first, last := reportDateRange(report)
 	b.WriteString("## Population\n\n")
 	b.WriteString(fmt.Sprintf("- Genuine decisions considered: %d\n- Included: %d\n- Excluded: %d\n- Publication range: %s to %s\n- Receipt range: %s to %s\n- Decision range: %s to %s\n- Mapped: %d\n- Unmapped: %d\n- WATCH: %d\n- NO_TRADE: %d\n- CANDIDATE: %d\n\n", report.Population.Considered, report.Population.Included, report.Population.Excluded, formatTime(first), formatTime(last), formatTimePointer(report.Population.FirstReceipt), formatTimePointer(report.Population.LastReceipt), formatTimePointer(report.Population.FirstDecision), formatTimePointer(report.Population.LastDecision), report.Population.Mapped, report.Population.Unmapped, report.Population.Watch, report.Population.NoTrade, report.Population.Candidate))
+	b.WriteString("Decision origins:\n\n")
+	for _, key := range sortedKeys(report.Population.OriginCounts) {
+		b.WriteString(fmt.Sprintf("- %s: %d\n", key, report.Population.OriginCounts[key]))
+	}
+	b.WriteString("\n")
 	b.WriteString("Exclusions:\n\n")
 	for _, key := range sortedKeys(report.Population.ExclusionCounts) {
 		b.WriteString(fmt.Sprintf("- %s: %d\n", key, report.Population.ExclusionCounts[key]))
 	}
 	b.WriteString("\n")
-	b.WriteString("## Market-data coverage\n\n| Symbol | Timeframe | Provider | Candles | First | Last | Gaps | Timestamp semantics |\n|---|---:|---|---:|---|---|---:|---|\n")
+	b.WriteString("## Market-data coverage\n\n| Symbol | Timeframe | Provider | Candles | First | Last | Gaps | Timestamp semantics | Adjusted | Timezone |\n|---|---:|---|---:|---|---|---:|---|---|---|\n")
 	for _, row := range report.MarketCoverage {
-		b.WriteString(fmt.Sprintf("| %s | %s | %s | %d | %s | %s | %d | %s |\n", row.Symbol, row.Timeframe, row.Source, row.Count, formatTime(row.First), formatTime(row.Last), row.GapCount, row.TimestampSemantics))
+		b.WriteString(fmt.Sprintf("| %s | %s | %s | %d | %s | %s | %d | %s | %s | %s |\n", row.Symbol, row.Timeframe, row.Source, row.Count, formatTime(row.First), formatTime(row.Last), row.GapCount, row.TimestampSemantics, row.AdjustedState, row.ProviderTimezone))
 	}
 	b.WriteString("\n")
 	b.WriteString("Horizon sufficiency:\n\n")
@@ -138,8 +147,10 @@ func markdownReport(report Report) string {
 	b.WriteString("\n")
 	b.WriteString("No percentage is interpreted without its displayed count. Bootstrap intervals, Mann–Whitney U, permutation tests, and effect sizes are emitted in `summary.json` only where both sample-size gates pass.\n\n")
 	b.WriteString("## Latency\n\n| Decision | n | Publication → collection median | Collection → receipt median | Receipt → decision median | Move before receipt | Move after receipt |\n|---|---:|---:|---:|---:|---:|---:|\n")
+	b.WriteString("Live-origin rows use receipt-to-initial-decision latency. Historical backfill/replay rows show replay delay; that value is not live decision latency.\n\n")
 	for _, row := range report.Latency {
-		b.WriteString(fmt.Sprintf("| %s | %d | %s | %s | %s | %s | %s |\n", row.Decision, row.Count, formatDurationPointer(row.PublicationCollectionMedian), formatDurationPointer(row.CollectionReceiptMedian), formatDurationPointer(row.ReceiptDecisionMedian), formatPercentPointer(row.MoveBeforeReceiptMedian), formatPercentPointer(row.MoveAfterReceiptMedian)))
+		label := row.Decision + " (" + row.DecisionOrigin + ")"
+		b.WriteString(fmt.Sprintf("| %s | %d | %s | %s | %s | %s | %s |\n", label, row.Count, formatDurationPointer(row.PublicationCollectionMedian), formatDurationPointer(row.CollectionReceiptMedian), formatDurationPointer(row.ReceiptDecisionMedian), formatPercentPointer(row.MoveBeforeReceiptMedian), formatPercentPointer(row.MoveAfterReceiptMedian)))
 	}
 	b.WriteString("\n")
 	b.WriteString("## Category and source analysis\n\n")
@@ -159,7 +170,13 @@ func markdownReport(report Report) string {
 	b.WriteString("## Evidence accumulation\n\n")
 	writeBreakdown(&b, report.EvidenceAccumulation, []string{"subject_event_count", "source_independence"})
 	b.WriteString("Outcome separation cannot be attributed to accumulation when the compared groups lack mapped outcomes. Current subject projections are not backfilled as historical event labels.\n\n")
-	b.WriteString("## Bias controls\n\n- Current event-decision projections only; replay-only historical versions excluded.\n- Synthetic, manual test, controlled QQQ proof, duplicate, invalid-time, and post-coverage rows excluded deterministically.\n- Receipt is the primary operational anchor. Publication and collection anchors are separate diagnostics.\n- The first observable candle at or after an anchor is used; no candle preceding an event is used. Daily events occurring after the session open begin at the next persisted session open.\n- Unknown assets stay unknown. Category proxies are bounded by the versioned ruleset; no universal SPY/QQQ mapping is applied.\n- Direction is not inferred. Absolute raw and abnormal movement is evaluated.\n- Existing paper-ticket outcome checkpoints are reported but not joined to genuine-event decisions.\n\n")
+	b.WriteString("## Bias controls\n\n")
+	if report.RulesetVersion == "historical-evidence-quality-v2" {
+		b.WriteString("- Immutable initial decisions are selected; later event/subject projections are excluded; decision origins are explicit. A live mapping created after its initial decision is rejected. Backfilled mappings must be derivable solely from content available at the receipt anchor and remain disclosed as backfills.\n")
+	} else {
+		b.WriteString("- Current event-decision projections only; replay-only historical versions excluded.\n")
+	}
+	b.WriteString("- Synthetic, manual test, controlled QQQ proof, duplicate, invalid-time, and post-coverage rows excluded deterministically.\n- Receipt is the primary operational anchor. Publication and collection anchors are separate diagnostics.\n- The first observable candle at or after an anchor is used; no candle preceding an event is used. Daily events occurring after the session open begin at the next persisted session open.\n- Unknown assets stay unknown. Category proxies are bounded by the versioned ruleset; no universal SPY/QQQ mapping is applied.\n- Direction is not inferred. Absolute raw and abnormal movement is evaluated.\n- Existing paper-ticket outcome checkpoints are reported but not joined to genuine-event decisions.\n\n")
 	b.WriteString("## Safety\n\n")
 	b.WriteString(fmt.Sprintf("Runtime: paper=%t, live trading=%t, execution=%t, execution worker=%t, broker execution=%t, maximum leverage=%.1fx.\n\n", report.RuntimeSafety.RuntimeMode == "paper", report.RuntimeSafety.AllowLiveTrading, report.RuntimeSafety.ExecutionEnabled, report.RuntimeSafety.ExecutionWorker, report.RuntimeSafety.BrokerExecution, report.RuntimeSafety.MaximumLeverage))
 	b.WriteString(fmt.Sprintf("Prohibited-state before/after: approvals %d/%d; candidate approvals %d/%d; paper tickets %d/%d; execution instructions %d/%d; order intents %d/%d; broker orders %d/%d; trades %d/%d; fills %d/%d. Delta: zero.\n\n", report.SafetyBefore.Approvals, report.SafetyAfter.Approvals, report.SafetyBefore.CandidateApprovals, report.SafetyAfter.CandidateApprovals, report.SafetyBefore.PaperTickets, report.SafetyAfter.PaperTickets, report.SafetyBefore.ExecutionInstructions, report.SafetyAfter.ExecutionInstructions, report.SafetyBefore.OrderIntents, report.SafetyAfter.OrderIntents, report.SafetyBefore.BrokerOrders, report.SafetyAfter.BrokerOrders, report.SafetyBefore.Trades, report.SafetyAfter.Trades, report.SafetyBefore.Fills, report.SafetyAfter.Fills))

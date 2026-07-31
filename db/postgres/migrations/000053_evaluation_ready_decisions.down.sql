@@ -17,4 +17,3 @@ ALTER TABLE genuine_event_decisions
     DROP COLUMN IF EXISTS decision_context,
     DROP COLUMN IF EXISTS decision_origin,
     DROP COLUMN IF EXISTS is_initial;
-
