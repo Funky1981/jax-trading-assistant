@@ -40,5 +40,6 @@ For every completed implementation phase in this repository:
 - Final response must include a copy-block handover summary.
 - Put the handover summary in a fenced plain-text code block so the user can copy and paste it directly. Do this for every work-completion response, including incomplete or blocked phases; never provide the handover only as ordinary prose.
 - The handover summary must include: phase, commit, branch, files changed, what changed, migrations, tests/verification run, known risks, recommended next phase, and `What's Left`.
+- Handover is a final-response gate: before sending any completion response, verify that a fenced `text` block headed `HANDOVER SUMMARY` is present. The block must be the final substantive content of the response; a report, a limitation, or a no-change result never waives this requirement.
 
 Use `Docs/plans/HANDOFF_TEMPLATE.md` as the default handover format.
