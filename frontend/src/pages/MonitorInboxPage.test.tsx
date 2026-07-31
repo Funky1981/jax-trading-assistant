@@ -8,7 +8,9 @@ import { aiService, type WorldMonitorInboxItem } from '@/data/ai-service';
 import { HttpError } from '@/data/http-client';
 import { MonitorInboxPage } from './MonitorInboxPage';
 
-vi.mock('@/data/ai-service', () => ({ aiService: { getWorldMonitorInbox: vi.fn() } }));
+vi.mock('@/data/ai-service', () => ({
+  aiService: { getWorldMonitorInbox: vi.fn(), getWorldMonitorEvidenceSubject: vi.fn() },
+}));
 vi.mock('@/hooks/useOperatorEvidenceOverview', () => ({
   useOperatorEvidenceOverview: () => ({
     data: {
@@ -170,6 +172,50 @@ describe('MonitorInboxPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(aiService.getWorldMonitorInbox).mockResolvedValue(response());
+    vi.mocked(aiService.getWorldMonitorEvidenceSubject).mockResolvedValue({
+      subject: {
+        subjectId: 'es_1234567890abcdef12345678',
+        subjectType: 'macroeconomic_release',
+        canonicalLabel: 'Federal Reserve interest rate decision',
+        currentDecision: 'WATCH',
+        decisionReason: 'The subject still lacks independent primary evidence and a truthful asset mapping.',
+        missingEvidence: ['truthful_asset_mapping', 'independent_source_corroboration'],
+        linkedEventCount: 2,
+        sourceGroupCount: 1,
+        firstObservedAt: '2026-07-27T10:00:00Z',
+        latestEvidenceAt: '2026-07-27T11:00:00Z',
+        latestDecisionAt: '2026-07-27T11:01:00Z',
+        rulesetVersion: 'genuine-watch-evidence-v1',
+        resolvedAssets: [],
+        unknownAssets: true,
+      },
+      evidence: [
+        {
+          sourceEventId: 'wm-fed-1',
+          headline: 'Federal Reserve publishes interest rate decision',
+          source: 'world-monitor',
+          relationshipType: 'originating',
+          associationReason: 'same canonical entity and specific topic anchor',
+          sourceIndependence: 'primary',
+          evidenceContribution: 'direct primary-source evidence',
+          contradictionState: 'corroborates',
+          publicationAt: '2026-07-27T10:00:00Z',
+          receiptAt: '2026-07-27T10:01:00Z',
+          linkedAt: '2026-07-27T10:01:00Z',
+        },
+      ],
+      evaluations: [
+        {
+          previousDecision: 'NO_TRADE',
+          newDecision: 'WATCH',
+          deterministicReason: 'Material evidence warrants continued observation.',
+          missingEvidence: ['truthful_asset_mapping'],
+          rulesetVersion: 'genuine-watch-evidence-v1',
+          evaluatedAt: '2026-07-27T10:01:00Z',
+          triggeringSourceEventId: 'wm-fed-1',
+        },
+      ],
+    });
   });
 
   it('starts with ten compact collapsed items and no permanent detail placeholder', async () => {
@@ -341,6 +387,52 @@ describe('MonitorInboxPage', () => {
     expect(screen.getByText('candidate_evidence_score')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'WATCH' }));
     expect(screen.getByText('1–1 of 1')).toBeInTheDocument();
+  });
+
+  it('shows a collapsed WATCH evidence progression with truthful bounded history', async () => {
+    const user = userEvent.setup();
+    const watch: WorldMonitorInboxItem = {
+      ...accepted,
+      id: 'watch-subject',
+      headline: 'Federal Reserve publishes interest rate decision',
+      candidateId: undefined,
+      decision: { ...accepted.decision!, decision: 'WATCH', candidateId: undefined },
+      subject: {
+        subjectId: 'es_1234567890abcdef12345678',
+        subjectType: 'macroeconomic_release',
+        canonicalLabel: 'Federal Reserve interest rate decision',
+        currentDecision: 'WATCH',
+        decisionReason: 'The subject still lacks independent primary evidence and a truthful asset mapping.',
+        missingEvidence: ['truthful_asset_mapping', 'independent_source_corroboration'],
+        linkedEventCount: 2,
+        sourceGroupCount: 1,
+        firstObservedAt: '2026-07-27T10:00:00Z',
+        latestEvidenceAt: '2026-07-27T11:00:00Z',
+        latestDecisionAt: '2026-07-27T11:01:00Z',
+        rulesetVersion: 'genuine-watch-evidence-v1',
+        resolvedAssets: [],
+        unknownAssets: true,
+      },
+    };
+    vi.mocked(aiService.getWorldMonitorInbox).mockResolvedValue(response([watch]));
+    renderPage();
+    await screen.findByText('Federal Reserve publishes interest rate decision');
+    await user.click(itemButtons()[0]);
+    const progression = screen.getByText('Evidence progression').closest('details');
+    expect(progression).not.toHaveAttribute('open');
+    await user.click(screen.getByText('Evidence progression'));
+    expect(screen.getByText('What Jax is watching')).toBeVisible();
+    expect(screen.getByText('Linked genuine events')).toBeVisible();
+    expect(screen.getByText('Source groups')).toBeVisible();
+    expect(screen.getByText('Unknown assets')).toBeVisible();
+    expect(screen.getByText(/truthful_asset_mapping/)).toBeVisible();
+    expect(await screen.findByText('Linked evidence timeline')).toBeVisible();
+    expect(screen.getByText('source: primary')).toBeVisible();
+    expect(screen.getByText('NO_TRADE â†’ WATCH')).toBeVisible();
+    expect(aiService.getWorldMonitorEvidenceSubject).toHaveBeenCalledWith(
+      'es_1234567890abcdef12345678',
+    );
+    expect(screen.queryByRole('button', { name: /approve|execute/i })).not.toBeInTheDocument();
   });
 
   it('operates the accordion by keyboard and has accessible pagination', async () => {

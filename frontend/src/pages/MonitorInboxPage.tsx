@@ -64,6 +64,7 @@ function isDuplicate(item: WorldMonitorInboxItem) {
 }
 
 function disposition(item: WorldMonitorInboxItem) {
+	if (item.subject) return item.subject.currentDecision;
   if (item.decision) return item.decision.decision;
   if (item.status === 'rejected') return 'Rejected';
   if (isDuplicate(item)) return 'Duplicate ignored';
@@ -73,6 +74,7 @@ function disposition(item: WorldMonitorInboxItem) {
 }
 
 function shortExplanation(item: WorldMonitorInboxItem) {
+	if (item.subject) return item.subject.decisionReason;
   if (item.decision)
     return item.decision.reasons.slice(0, 2).join(' ') || 'Jax persisted a deterministic decision.';
   if (item.status === 'rejected')
@@ -98,9 +100,9 @@ function matchesFilter(item: WorldMonitorInboxItem, filter: BeginnerFilter) {
   if (filter === 'synthetic')
     return item.provenanceAvailable !== false && item.isSynthetic === true;
   if (filter === 'rejected') return item.status === 'rejected';
-  if (filter === 'no_trade') return item.decision?.decision === 'NO_TRADE';
-  if (filter === 'watch') return item.decision?.decision === 'WATCH';
-  if (filter === 'candidate') return item.decision?.decision === 'CANDIDATE';
+  if (filter === 'no_trade') return disposition(item) === 'NO_TRADE';
+  if (filter === 'watch') return disposition(item) === 'WATCH';
+  if (filter === 'candidate') return disposition(item) === 'CANDIDATE';
   return true;
 }
 
@@ -445,6 +447,7 @@ function EvidenceItem({
 }
 
 function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
+	const candidateId = item.subject?.candidateId || item.decision?.candidateId;
   return (
     <article className="min-w-0 space-y-3" aria-label={`${item.headline} details`}>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
@@ -469,9 +472,9 @@ function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
         <div className="rounded-md border bg-muted/20 p-3 text-sm">
           <p className="font-semibold">{disposition(item)}</p>
           <p className="mt-1 break-all text-muted-foreground">{shortExplanation(item)}</p>
-          {item.decision?.decision === 'CANDIDATE' && item.decision.candidateId ? (
+          {disposition(item) === 'CANDIDATE' && candidateId ? (
             <Button asChild variant="outline" size="sm" className="mt-2">
-              <Link to={`/candidates/${item.decision.candidateId}/evidence`}>
+              <Link to={`/candidates/${candidateId}/evidence`}>
                 Open Candidate Review
               </Link>
             </Button>
@@ -492,6 +495,11 @@ function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
           <DecisionDetail item={item} />
         </Disclosure>
       ) : null}
+	  {item.subject ? (
+		<Disclosure title="Evidence progression">
+		  <SubjectProgression item={item} />
+		</Disclosure>
+	  ) : null}
       <Disclosure title="Source and provenance">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Definition label="Source" value={sourceName(item)} />
@@ -518,6 +526,70 @@ function EvidenceDetail({ item }: { item: WorldMonitorInboxItem }) {
       </Disclosure>
     </article>
   );
+}
+
+function SubjectProgression({ item }: { item: WorldMonitorInboxItem }) {
+	const subject = item.subject!;
+	const detail = useQuery({
+		queryKey: ['world-monitor-evidence-subject', subject.subjectId],
+		queryFn: () => aiService.getWorldMonitorEvidenceSubject(subject.subjectId),
+		staleTime: 30_000,
+	});
+	return (
+		<div className="space-y-4">
+		  <div>
+			<p className="text-xs font-medium text-muted-foreground">What Jax is watching</p>
+			<p className="font-semibold">{subject.canonicalLabel}</p>
+			<p className="mt-1 text-muted-foreground">{subject.decisionReason}</p>
+		  </div>
+		  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+			<Definition label="Current subject state" value={subject.currentDecision} />
+			<Definition label="Linked genuine events" value={String(subject.linkedEventCount)} />
+			<Definition label="Source groups" value={String(subject.sourceGroupCount)} />
+			<Definition label="Asset resolution" value={subject.unknownAssets ? 'Unknown assets' : subject.resolvedAssets.join(', ')} />
+			<Definition label="First observed" value={formatTime(subject.firstObservedAt)} />
+			<Definition label="Latest evidence" value={formatTime(subject.latestEvidenceAt)} />
+			<Definition label="Latest decision" value={formatTime(subject.latestDecisionAt)} />
+			<Definition label="Subject ruleset" value={subject.rulesetVersion} />
+		  </div>
+		  <Definition label="Evidence still missing" value={subject.missingEvidence.join(', ') || 'None under the current ruleset'} />
+		  {detail.isLoading ? <p role="status">Loading bounded evidence progressionâ€¦</p> : null}
+		  {detail.isError ? <p className="text-muted-foreground">Detailed progression is temporarily unavailable. The persisted subject summary above remains current.</p> : null}
+		  {detail.data ? (
+			<>
+			  <div>
+				<h5 className="font-semibold">Linked evidence timeline</h5>
+				<ol className="mt-2 space-y-2">
+				  {detail.data.evidence.map((evidence) => (
+					<li key={evidence.sourceEventId} className="rounded border p-2">
+					  <div className="flex flex-wrap gap-2">
+						<Badge variant="outline">{evidence.relationshipType}</Badge>
+						<Badge variant="secondary">source: {evidence.sourceIndependence}</Badge>
+						{evidence.contradictionState === 'contradicts' ? <Badge variant="destructive">contradiction</Badge> : null}
+					  </div>
+					  <p className="mt-1 font-medium">{evidence.headline}</p>
+					  <p className="text-muted-foreground">{evidence.evidenceContribution}</p>
+					  <p className="text-xs text-muted-foreground">Published {formatTime(evidence.publicationAt)} · {evidence.associationReason}</p>
+					</li>
+				  ))}
+				</ol>
+			  </div>
+			  <div>
+				<h5 className="font-semibold">Decision transitions</h5>
+				<ol className="mt-2 space-y-2">
+				  {detail.data.evaluations.map((evaluation, index) => (
+					<li key={`${evaluation.evaluatedAt}-${index}`} className="rounded border p-2">
+					  <strong>{evaluation.previousDecision} â†’ {evaluation.newDecision}</strong>
+					  <p className="text-muted-foreground">{evaluation.deterministicReason}</p>
+					  <p className="text-xs text-muted-foreground">{formatTime(evaluation.evaluatedAt)} · {evaluation.rulesetVersion}</p>
+					</li>
+				  ))}
+				</ol>
+			  </div>
+			</>
+		  ) : null}
+		</div>
+	);
 }
 
 function provenanceExplanation(item: WorldMonitorInboxItem) {

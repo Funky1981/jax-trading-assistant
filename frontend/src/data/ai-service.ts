@@ -84,7 +84,53 @@ export interface WorldMonitorInboxItem {
   operatorReason?: string;
   decision?: WorldMonitorEventDecision;
   decisionHistory?: WorldMonitorEventDecision[];
+  subject?: WorldMonitorEvidenceSubjectSummary;
   rawPayload: Record<string, unknown>;
+}
+
+export interface WorldMonitorEvidenceSubjectSummary {
+  subjectId: string;
+  subjectType: string;
+  canonicalLabel: string;
+  currentDecision: 'NO_TRADE' | 'WATCH' | 'CANDIDATE';
+  decisionReason: string;
+  missingEvidence: string[];
+  linkedEventCount: number;
+  sourceGroupCount: number;
+  firstObservedAt: string;
+  latestEvidenceAt: string;
+  latestDecisionAt: string;
+  rulesetVersion: string;
+  resolvedAssets: string[];
+  unknownAssets: boolean;
+  candidateId?: string;
+}
+
+export interface WorldMonitorEvidenceSubjectDetail {
+  subject: WorldMonitorEvidenceSubjectSummary;
+  evidence: Array<{
+    sourceEventId: string;
+    headline: string;
+    source: string;
+    sourceUrl?: string;
+    relationshipType: 'originating' | 'corroborating' | 'contradicting' | 'duplicate' | 'context';
+    associationReason: string;
+    sourceIndependence: 'primary' | 'independent' | 'not_independent' | 'unknown';
+    evidenceContribution: string;
+    contradictionState: 'corroborates' | 'contradicts' | 'neutral';
+    publicationAt: string;
+    receiptAt: string;
+    linkedAt: string;
+  }>;
+  evaluations: Array<{
+    previousDecision: 'NO_TRADE' | 'WATCH' | 'CANDIDATE';
+    newDecision: 'NO_TRADE' | 'WATCH' | 'CANDIDATE';
+    deterministicReason: string;
+    missingEvidence: string[];
+    rulesetVersion: string;
+    evaluatedAt: string;
+    triggeringSourceEventId: string;
+  }>;
 }
 
 export interface WorldMonitorEventDecision {
@@ -155,6 +201,11 @@ export const aiService = {
     const qs = query.toString();
     return apiClient.get<WorldMonitorInboxResponse>(
       `/api/v1/research/events/world-monitor/inbox${qs ? `?${qs}` : ''}`,
+    );
+  },
+  getWorldMonitorEvidenceSubject(subjectId: string) {
+    return apiClient.get<WorldMonitorEvidenceSubjectDetail>(
+      `/api/v1/research/events/world-monitor/subjects/${encodeURIComponent(subjectId)}`,
     );
   },
 };
