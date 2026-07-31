@@ -46,19 +46,20 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: () => '/health',
       },
-      '/v1/memory': {
-        target: 'http://localhost:8091',
-        changeOrigin: true,
-      },
       '/agent0': {
         target: 'http://localhost:8093',
         changeOrigin: true,
         rewrite: (requestPath) => requestPath.replace(/^\/agent0/, ''),
       },
-      '/research-health': {
+      '/diagnostics/research/health': {
         target: 'http://localhost:8091',
         changeOrigin: true,
         rewrite: () => '/health',
+      },
+      '/diagnostics/research/v1/memory': {
+        target: 'http://localhost:8091',
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/diagnostics\/research/, ''),
       },
     },
   },

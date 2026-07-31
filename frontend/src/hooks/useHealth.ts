@@ -16,7 +16,7 @@ export interface HealthData {
 
 const SERVICES = Object.entries(HEALTH_PROBE_URLS).map(([name, url]) => ({ name, url }));
 
-async function pingService(name: string, url: string): Promise<ServiceHealth> {
+export async function pingService(name: string, url: string): Promise<ServiceHealth> {
   const start = Date.now();
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
@@ -24,8 +24,11 @@ async function pingService(name: string, url: string): Promise<ServiceHealth> {
     if (!res.ok) {
       return { name, status: 'unhealthy', lastCheck: Date.now(), latency, message: `HTTP ${res.status}` };
     }
-    const body = await res.json().catch(() => ({}));
-    const rawStatus = (body.status ?? 'healthy') as string;
+    const body: unknown = await res.json().catch(() => null);
+    if (!isHealthPayload(body)) {
+      return { name, status: 'unhealthy', lastCheck: Date.now(), latency, message: 'Invalid response' };
+    }
+    const rawStatus = body.status;
     const status: ServiceHealth['status'] =
       rawStatus === 'healthy' ? 'healthy'
       : rawStatus === 'degraded' ? 'degraded'
@@ -34,6 +37,16 @@ async function pingService(name: string, url: string): Promise<ServiceHealth> {
   } catch {
     return { name, status: 'unhealthy', lastCheck: Date.now(), message: 'Unreachable' };
   }
+}
+
+function isHealthPayload(value: unknown): value is { status: string; uptime?: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'status' in value &&
+    typeof value.status === 'string' &&
+    (!('uptime' in value) || typeof value.uptime === 'string')
+  );
 }
 
 async function fetchHealth(): Promise<HealthData> {

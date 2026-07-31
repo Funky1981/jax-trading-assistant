@@ -1,3 +1,5 @@
+import { RESEARCH_DIAGNOSTICS_BASE_PATH } from '@/config/api';
+
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface HttpClientOptions {
@@ -17,8 +19,12 @@ export class HttpError extends Error {
 }
 
 export function buildUrl(baseUrl: string, path: string, params?: Record<string, string>) {
-  const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081');
-  const url = new URL(path, base);
+  const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081';
+  const url = new URL(baseUrl || fallbackOrigin, fallbackOrigin);
+  const endpoint = new URL(path, fallbackOrigin);
+  const basePath = url.pathname === '/' ? '' : url.pathname.replace(/\/$/, '');
+  url.pathname = `${basePath}${endpoint.pathname}`;
+  url.search = endpoint.search;
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
@@ -101,12 +107,17 @@ function devProxyBaseUrl(envUrl: string | undefined, productionFallback: string)
   return import.meta.env.DEV ? '' : envUrl || productionFallback;
 }
 
+function sameOriginBaseUrl(path: string) {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081';
+  return new URL(path, origin).toString();
+}
+
 export const apiClient = createHttpClient({
   baseUrl: devProxyBaseUrl(import.meta.env.VITE_JAX_API_URL, 'http://localhost:8081'),
   timeoutMs: 30_000,
 });
 
 export const memoryClient = createHttpClient({
-  baseUrl: devProxyBaseUrl(import.meta.env.VITE_MEMORY_API_URL, 'http://localhost:8091'),
+  baseUrl: sameOriginBaseUrl(RESEARCH_DIAGNOSTICS_BASE_PATH),
   timeoutMs: 15_000,
 });

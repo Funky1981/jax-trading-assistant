@@ -6,10 +6,14 @@ function devProxyBaseUrl(envUrl: string | undefined, productionFallback: string,
   return import.meta.env.DEV ? devProxyPath : envUrl || productionFallback;
 }
 
+// Browser-facing research diagnostics always stay on the frontend origin. Both
+// Vite and nginx route this narrowly scoped path to the internal service.
+export const RESEARCH_DIAGNOSTICS_BASE_PATH = '/diagnostics/research';
+
 export const API_CONFIG = {
   JAX_API: devProxyBaseUrl(import.meta.env.VITE_JAX_API_URL, 'http://localhost:8081'),
-  RESEARCH_SERVICE: devProxyBaseUrl(import.meta.env.VITE_RESEARCH_SERVICE_URL, 'http://localhost:8091'),
-  MEMORY_SERVICE: devProxyBaseUrl(import.meta.env.VITE_MEMORY_API_URL, 'http://localhost:8091'),
+  RESEARCH_SERVICE: RESEARCH_DIAGNOSTICS_BASE_PATH,
+  MEMORY_SERVICE: RESEARCH_DIAGNOSTICS_BASE_PATH,
   IB_BRIDGE: devProxyBaseUrl(import.meta.env.VITE_IB_BRIDGE_URL, 'http://localhost:8092'),
   AGENT0_SERVICE: devProxyBaseUrl(import.meta.env.VITE_AGENT0_SERVICE_URL, 'http://localhost:8093', '/agent0'),
 } as const;
@@ -17,12 +21,12 @@ export const API_CONFIG = {
 export const HEALTH_PROBE_URLS: Record<string, string> = import.meta.env.DEV
   ? {
       'jax-trader': '/health',
-      'jax-research': '/research-health',
+      'jax-research': `${RESEARCH_DIAGNOSTICS_BASE_PATH}/health`,
       'ib-bridge': '/ib-health',
     }
   : {
       'jax-trader': `${import.meta.env.VITE_JAX_API_URL || 'http://localhost:8081'}/health`,
-      'jax-research': `${import.meta.env.VITE_RESEARCH_SERVICE_URL || 'http://localhost:8091'}/health`,
+      'jax-research': `${RESEARCH_DIAGNOSTICS_BASE_PATH}/health`,
       'ib-bridge': `${import.meta.env.VITE_IB_BRIDGE_URL || 'http://localhost:8092'}/health`,
     };
 

@@ -7,6 +7,8 @@ describe('dev API clients', () => {
   });
 
   it('resolves memory calls against the Vite origin in dev mode', () => {
-    expect(memoryClient.buildUrl('/v1/memory/banks')).toBe(`${window.location.origin}/v1/memory/banks`);
+    expect(memoryClient.buildUrl('/v1/memory/banks')).toBe(
+      `${window.location.origin}/diagnostics/research/v1/memory/banks`,
+    );
   });
 });

@@ -43,7 +43,11 @@ export const memoryService = {
    * List all banks
    */
   async listBanks(): Promise<string[]> {
-    return memoryClient.get<string[]>('/v1/memory/banks');
+    const banks = await memoryClient.get<unknown>('/v1/memory/banks');
+    if (!Array.isArray(banks) || !banks.every((bank) => typeof bank === 'string')) {
+      throw new Error('Invalid memory-bank response');
+    }
+    return banks;
   },
 
   /**

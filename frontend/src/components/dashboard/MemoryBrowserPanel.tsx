@@ -19,7 +19,7 @@ interface MemoryBrowserPanelProps {
 }
 
 export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps) {
-  const { data: banks, isLoading: banksLoading } = useMemoryBanks();
+  const { data: banks, isLoading: banksLoading, isError: banksUnavailable } = useMemoryBanks();
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -52,6 +52,11 @@ export function MemoryBrowserPanel({ isOpen, onToggle }: MemoryBrowserPanelProps
       isLoading={banksLoading}
     >
       <div className="space-y-4">
+        {banksUnavailable && (
+          <p role="alert" className="text-sm text-destructive">
+            Memory-bank diagnostics are unavailable.
+          </p>
+        )}
         {/* Bank Selector */}
         <div className="flex gap-2">
           <Select
