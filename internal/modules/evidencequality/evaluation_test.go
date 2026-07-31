@@ -127,13 +127,22 @@ func TestV2SelectsOnlyImmutableInitialBackfill(t *testing.T) {
 	initial.RulesetVersion = "genuine-event-decision-v2"
 	initial.IsInitial = true
 	initial.DecisionOrigin = "historical_backfill"
+	noTrade := testEvent("initial-no-trade")
+	noTrade.Decision = DecisionNoTrade
+	noTrade.RulesetVersion = "genuine-event-decision-v2"
+	noTrade.IsInitial = true
+	noTrade.DecisionOrigin = "historical_backfill"
+	noTrade.SubjectCurrentDecision = DecisionCandidate
 	later := testEvent("later")
 	later.RulesetVersion = "genuine-event-decision-v2"
 	later.IsInitial = false
 	later.DecisionOrigin = "historical_replay"
-	included, excluded := BuildPopulation([]Event{initial, later}, mustTime("2026-07-30T20:00:00Z"), testRulesV2())
-	if len(included) != 1 || included[0].DecisionID != "initial" || len(excluded) != 1 || excluded[0].Reason != "later_decision_projection" {
+	included, excluded := BuildPopulation([]Event{initial, noTrade, later}, mustTime("2026-07-30T20:00:00Z"), testRulesV2())
+	if len(included) != 2 || included[0].Decision != DecisionWatch || included[1].Decision != DecisionNoTrade || len(excluded) != 1 || excluded[0].Reason != "later_decision_projection" {
 		t.Fatalf("unexpected v2 selection: %+v %+v", included, excluded)
+	}
+	if included[1].Decision == included[1].SubjectCurrentDecision {
+		t.Fatal("later subject/candidate projection leaked into the initial event label")
 	}
 }
 
@@ -186,6 +195,30 @@ func TestWeekendAnchorUsesNextPersistedSession(t *testing.T) {
 	result, ok := dailyOutcome(series, mustTime("2026-07-18T12:00:00Z"), 1)
 	if !ok || !result.EffectiveAnchor.Equal(mustTime("2026-07-20T13:30:00Z")) || result.Start != 102 {
 		t.Fatalf("weekend anchor result=%+v/%t", result, ok)
+	}
+}
+
+func TestHolidayAnchorUsesNextPersistedSession(t *testing.T) {
+	series := []Candle{daily("QQQ", "2026-07-02T04:00:00Z", 100, 101), daily("QQQ", "2026-07-06T04:00:00Z", 102, 103), daily("QQQ", "2026-07-07T04:00:00Z", 104, 105)}
+	result, ok := dailyOutcome(series, mustTime("2026-07-03T12:00:00Z"), 1)
+	if !ok || !result.EffectiveAnchor.Equal(mustTime("2026-07-06T13:30:00Z")) || result.Start != 102 {
+		t.Fatalf("holiday anchor result=%+v/%t", result, ok)
+	}
+}
+
+func TestSymbolWithoutBenchmarkHasRawButNoAbnormalOutcome(t *testing.T) {
+	event := testEvent("no-benchmark")
+	event.PrimarySymbol = "IBM"
+	outcomes := calculateOutcomes(event, MapEvent(event, testRules()), newMarketIndex([]Candle{
+		daily("IBM", "2026-07-20T04:00:00Z", 100, 101), daily("IBM", "2026-07-21T04:00:00Z", 102, 103),
+	}), testRules())
+	if len(outcomes) == 0 {
+		t.Fatal("missing raw outcome for symbol without benchmark")
+	}
+	for _, outcome := range outcomes {
+		if outcome.AbnormalReturn != nil {
+			t.Fatalf("invented abnormal return without benchmark: %+v", outcome)
+		}
 	}
 }
 
