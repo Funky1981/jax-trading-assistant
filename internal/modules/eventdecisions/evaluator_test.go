@@ -193,6 +193,7 @@ func testEvaluator(t *testing.T) Evaluator {
 	return Evaluator{Ruleset: Ruleset{
 		Version: "genuine-event-decision-v1", ProcessorIdentity: "test-processor",
 		WatchConfidenceMinimum: 0.5, CandidateEvidenceMinimum: 0.6,
+		SubjectRulesetVersion: "genuine-watch-evidence-v1", SubjectCandidateIndependentMin: 2, SubjectFreshnessHours: 24,
 		AllowedCandidateInstrumentType: "etf", MaximumLeverage: 1,
 		MaterialSeverities: []string{"medium", "high", "critical"},
 	}, Catalog: catalog}

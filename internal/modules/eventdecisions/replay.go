@@ -79,6 +79,14 @@ func (r Replayer) RunTx(ctx context.Context, tx pgx.Tx, events []Event) (Summary
 		if item.result.Decision == DecisionCandidate {
 			summary.CandidatesReused++
 		}
+		subject, err := r.Store.PersistSubjectEvaluation(ctx, tx, item.event, r.Evaluator.Ruleset, decisionAt)
+		if err != nil {
+			summary.Failures = append(summary.Failures, Failure{InboxID: item.event.InboxID, SourceEventID: item.event.SourceEventID, Error: err.Error()})
+			summary.CompletedAt = now().UTC()
+			return summary, fmt.Errorf("transactional subject replay failed: %w", err)
+		}
+		summary.Outcomes[index].Subject = &subject
+		incrementSubjectPersistence(&summary, subject)
 	}
 	summary.CompletedAt = now().UTC()
 	return summary, nil
@@ -152,12 +160,38 @@ func (r Replayer) Run(ctx context.Context, events []Event, dryRun bool) (Summary
 		if item.result.Decision == DecisionCandidate {
 			summary.CandidatesReused++
 		}
+		subject, err := r.Store.PersistSubjectEvaluation(ctx, tx, item.event, r.Evaluator.Ruleset, decisionAt)
+		if err != nil {
+			summary.Failures = append(summary.Failures, Failure{InboxID: item.event.InboxID, SourceEventID: item.event.SourceEventID, Error: err.Error()})
+			summary.CompletedAt = now().UTC()
+			return summary, fmt.Errorf("persisted subject replay rolled back: %w", err)
+		}
+		summary.Outcomes[index].Subject = &subject
+		incrementSubjectPersistence(&summary, subject)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return summary, fmt.Errorf("commit event decision replay: %w", err)
 	}
 	summary.CompletedAt = now().UTC()
 	return summary, nil
+}
+
+func incrementSubjectPersistence(summary *Summary, outcome SubjectPersistenceOutcome) {
+	if outcome.SubjectCreated {
+		summary.SubjectsCreated++
+	} else {
+		summary.SubjectsReused++
+	}
+	if outcome.LinkCreated {
+		summary.LinksCreated++
+	} else {
+		summary.LinksReused++
+	}
+	if outcome.EvaluationCreated {
+		summary.SubjectEvaluationsCreated++
+	} else {
+		summary.SubjectEvaluationsReused++
+	}
 }
 
 func replayIdentity(event Event, rulesetVersion string) (string, string, error) {

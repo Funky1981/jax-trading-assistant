@@ -135,17 +135,27 @@ func TestWorldMonitorPullWorkerAtomicCommitReplayAndRollback(t *testing.T) {
 	}
 	now := time.Now().UTC().Truncate(time.Second)
 	goodID := "wm_pull_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	goodIDTwo := goodID + "_second"
 	rolledBackID := goodID + "_rollback"
 	invalidID := goodID + "_invalid"
 	makeEvent := func(id, sequence, title string) worldMonitorPullEvent {
 		article := "https://example.com/" + id
 		return worldMonitorPullEvent{EventID: id, PersistenceSeq: sequence, SourceID: "integration-proof", SourceName: "Integration Proof", FeedURL: "https://example.com/feed.xml", ArticleURL: &article, Title: title, Summary: "Oil supply update", PublicationTime: &now, CollectedAt: now, FirstSeenAt: now, LastSeenAt: now, ContentHash: id, SchemaVersion: 1, Provenance: map[string]any{"event_type": "energy_oil"}}
 	}
-	goodEvent := makeEvent(goodID, "1", "Genuine pull event")
+	goodEvent := makeEvent(goodID, "1", "Federal Reserve announces interest rate decision")
+	goodEvent.Summary = "The Federal Reserve published its interest rate decision after the policy meeting."
+	goodEvent.Provenance["event_type"] = "macro_rates"
+	firstArticle := "https://www.federalreserve.gov/newsevents/pressreleases/" + goodID + ".htm"
+	goodEvent.ArticleURL = &firstArticle
+	goodEventTwo := makeEvent(goodIDTwo, "2", "Fed publishes interest rate decision after policy meeting")
+	goodEventTwo.Summary = "The Federal Reserve interest rate decision followed the scheduled policy meeting."
+	goodEventTwo.Provenance["event_type"] = "macro_rates"
+	secondArticle := "https://www.sec.gov/newsroom/press-releases/" + goodIDTwo
+	goodEventTwo.ArticleURL = &secondArticle
 	goodServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		after := r.URL.Query().Get("after")
 		if after == "0" {
-			_ = json.NewEncoder(w).Encode(worldMonitorPullPage{Events: []worldMonitorPullEvent{goodEvent}, NextCursor: "1", Count: 1})
+			_ = json.NewEncoder(w).Encode(worldMonitorPullPage{Events: []worldMonitorPullEvent{goodEvent, goodEventTwo}, NextCursor: "2", Count: 2})
 			return
 		}
 		_ = json.NewEncoder(w).Encode(worldMonitorPullPage{Events: []worldMonitorPullEvent{}, NextCursor: after, Count: 0})
@@ -165,16 +175,18 @@ func TestWorldMonitorPullWorkerAtomicCommitReplayAndRollback(t *testing.T) {
 
 	worker := newWorker(goodServer.URL, goodServer.Client())
 	first, err := worker.cycle(ctx)
-	if err != nil || first.Cursor != 1 || first.Ingested != 1 || first.DecisionsCreated != 1 {
+	if err != nil || first.Cursor != 2 || first.Ingested != 2 || first.DecisionsCreated != 2 {
 		t.Fatalf("first cycle = %+v, err=%v", first, err)
 	}
+	assertSubjectPersistenceCounts(t, pool, []string{goodID, goodIDTwo}, 1, 2, 2)
 	if _, err := pool.Exec(ctx, `DELETE FROM world_monitor_pull_cursors WHERE consumer_name=$1 AND source_endpoint_identity=$2`, worldMonitorPullConsumer, goodServer.URL); err != nil {
 		t.Fatalf("rewind cursor: %v", err)
 	}
 	replay, err := worker.cycle(ctx)
-	if err != nil || replay.Cursor != 1 || replay.Duplicates != 1 || replay.DecisionsReused != 1 {
+	if err != nil || replay.Cursor != 2 || replay.Duplicates != 2 || replay.DecisionsReused != 2 {
 		t.Fatalf("replay cycle = %+v, err=%v", replay, err)
 	}
+	assertSubjectPersistenceCounts(t, pool, []string{goodID, goodIDTwo}, 1, 2, 2)
 
 	rollbackServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(worldMonitorPullPage{Events: []worldMonitorPullEvent{makeEvent(rolledBackID, "1", "Must roll back"), makeEvent(invalidID, "2", "")}, NextCursor: "2", Count: 2})
@@ -209,18 +221,35 @@ func TestWorldMonitorPullWorkerAtomicCommitReplayAndRollback(t *testing.T) {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cleanupCancel()
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM world_monitor_pull_cursors WHERE source_endpoint_identity IN ($1,$2,$3)`, goodServer.URL, rollbackServer.URL, unavailable.URL)
-		_, _ = pool.Exec(cleanupCtx, `DELETE FROM genuine_event_decisions WHERE source_event_identity=$1`, "world-monitor:"+goodID)
-		_, _ = pool.Exec(cleanupCtx, `DELETE FROM world_monitor_research_inbox WHERE source_event_id IN ($1,$2,$3)`, goodID, rolledBackID, invalidID)
-		_, _ = pool.Exec(cleanupCtx, `DELETE FROM event_normalized WHERE raw_event_id IN (SELECT id FROM event_raw WHERE source_event_id IN ($1,$2,$3))`, goodID, rolledBackID, invalidID)
-		_, _ = pool.Exec(cleanupCtx, `DELETE FROM event_raw WHERE source_event_id IN ($1,$2,$3)`, goodID, rolledBackID, invalidID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM evidence_subjects WHERE id IN (SELECT l.subject_id FROM evidence_subject_events l JOIN world_monitor_research_inbox w ON w.id=l.genuine_event_id WHERE w.source_event_id=ANY($1))`, []string{goodID, goodIDTwo, rolledBackID, invalidID})
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM genuine_event_decisions WHERE source_event_identity=ANY($1)`, []string{"world-monitor:" + goodID, "world-monitor:" + goodIDTwo})
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM world_monitor_research_inbox WHERE source_event_id=ANY($1)`, []string{goodID, goodIDTwo, rolledBackID, invalidID})
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM event_normalized WHERE raw_event_id IN (SELECT id FROM event_raw WHERE source_event_id=ANY($1))`, []string{goodID, goodIDTwo, rolledBackID, invalidID})
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM event_raw WHERE source_event_id=ANY($1)`, []string{goodID, goodIDTwo, rolledBackID, invalidID})
 	})
+}
+
+func assertSubjectPersistenceCounts(t *testing.T, pool *pgxpool.Pool, sourceEventIDs []string, subjects, links, evaluations int) {
+	t.Helper()
+	var gotSubjects, gotLinks, gotEvaluations int
+	err := pool.QueryRow(t.Context(), `
+		SELECT COUNT(DISTINCT s.id)::int,COUNT(DISTINCT l.id)::int,COUNT(DISTINCT e.id)::int
+		FROM evidence_subjects s
+		JOIN evidence_subject_events l ON l.subject_id=s.id
+		JOIN world_monitor_research_inbox w ON w.id=l.genuine_event_id
+		LEFT JOIN evidence_subject_evaluations e ON e.subject_id=s.id
+		WHERE w.source_event_id=ANY($1)
+	`, sourceEventIDs).Scan(&gotSubjects, &gotLinks, &gotEvaluations)
+	if err != nil || gotSubjects != subjects || gotLinks != links || gotEvaluations != evaluations {
+		t.Fatalf("subject persistence counts=%d/%d/%d want=%d/%d/%d err=%v", gotSubjects, gotLinks, gotEvaluations, subjects, links, evaluations, err)
+	}
 }
 
 func requireWorldMonitorPullSchema(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	for _, table := range []string{"world_monitor_pull_cursors", "world_monitor_research_inbox", "genuine_event_decisions"} {
+	for _, table := range []string{"world_monitor_pull_cursors", "world_monitor_research_inbox", "genuine_event_decisions", "evidence_subjects", "evidence_subject_events", "evidence_subject_evaluations"} {
 		var exists bool
 		if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil {
 			t.Fatalf("check %s: %v", table, err)

@@ -24,6 +24,9 @@ type Ruleset struct {
 	ProcessorIdentity              string   `json:"processor_identity"`
 	WatchConfidenceMinimum         float64  `json:"watch_confidence_minimum"`
 	CandidateEvidenceMinimum       float64  `json:"candidate_evidence_minimum"`
+	SubjectRulesetVersion          string   `json:"subject_ruleset_version"`
+	SubjectCandidateIndependentMin int      `json:"subject_candidate_independent_minimum"`
+	SubjectFreshnessHours          int      `json:"subject_freshness_hours"`
 	AllowedCandidateInstrumentType string   `json:"allowed_candidate_instrument_type"`
 	MaximumLeverage                float64  `json:"maximum_leverage"`
 	MaterialSeverities             []string `json:"material_severities"`
@@ -40,6 +43,13 @@ type Event struct {
 	Headline               string
 	Summary                string
 	SourceURLs             []string
+	ArticleURL             string
+	FeedURL                string
+	SourceNativeID         string
+	SourceName             string
+	ContentHash            string
+	Region                 string
+	AssetThemes            []string
 	SourceCount            int
 	PublicationAt          time.Time
 	CollectionAt           *time.Time
@@ -127,28 +137,35 @@ type Failure struct {
 }
 
 type EventOutcome struct {
-	InboxID       uuid.UUID          `json:"inboxId"`
-	SourceEventID string             `json:"sourceEventId"`
-	Proposed      Result             `json:"proposed"`
-	Persisted     *PersistedDecision `json:"persisted,omitempty"`
-	Reused        bool               `json:"reused"`
+	InboxID       uuid.UUID                  `json:"inboxId"`
+	SourceEventID string                     `json:"sourceEventId"`
+	Proposed      Result                     `json:"proposed"`
+	Persisted     *PersistedDecision         `json:"persisted,omitempty"`
+	Reused        bool                       `json:"reused"`
+	Subject       *SubjectPersistenceOutcome `json:"subject,omitempty"`
 }
 
 type Summary struct {
-	DryRun            bool           `json:"dryRun"`
-	RulesetVersion    string         `json:"rulesetVersion"`
-	Selected          int            `json:"selected"`
-	Eligible          int            `json:"eligible"`
-	NoTrade           int            `json:"noTrade"`
-	Watch             int            `json:"watch"`
-	Candidate         int            `json:"candidate"`
-	Excluded          []Exclusion    `json:"excluded"`
-	Failures          []Failure      `json:"failures"`
-	DecisionsCreated  int            `json:"decisionsCreated"`
-	DecisionsReused   int            `json:"decisionsReused"`
-	CandidatesCreated int            `json:"candidatesCreated"`
-	CandidatesReused  int            `json:"candidatesReused"`
-	Outcomes          []EventOutcome `json:"outcomes"`
-	StartedAt         time.Time      `json:"startedAt"`
-	CompletedAt       time.Time      `json:"completedAt"`
+	DryRun                    bool           `json:"dryRun"`
+	RulesetVersion            string         `json:"rulesetVersion"`
+	Selected                  int            `json:"selected"`
+	Eligible                  int            `json:"eligible"`
+	NoTrade                   int            `json:"noTrade"`
+	Watch                     int            `json:"watch"`
+	Candidate                 int            `json:"candidate"`
+	Excluded                  []Exclusion    `json:"excluded"`
+	Failures                  []Failure      `json:"failures"`
+	DecisionsCreated          int            `json:"decisionsCreated"`
+	DecisionsReused           int            `json:"decisionsReused"`
+	CandidatesCreated         int            `json:"candidatesCreated"`
+	CandidatesReused          int            `json:"candidatesReused"`
+	SubjectsCreated           int            `json:"subjectsCreated"`
+	SubjectsReused            int            `json:"subjectsReused"`
+	LinksCreated              int            `json:"linksCreated"`
+	LinksReused               int            `json:"linksReused"`
+	SubjectEvaluationsCreated int            `json:"subjectEvaluationsCreated"`
+	SubjectEvaluationsReused  int            `json:"subjectEvaluationsReused"`
+	Outcomes                  []EventOutcome `json:"outcomes"`
+	StartedAt                 time.Time      `json:"startedAt"`
+	CompletedAt               time.Time      `json:"completedAt"`
 }

@@ -34,6 +34,15 @@ func (r Ruleset) Validate() error {
 	if r.CandidateEvidenceMinimum <= 0 || r.CandidateEvidenceMinimum > 1 {
 		return fmt.Errorf("candidate evidence minimum must be in (0,1]")
 	}
+	if strings.TrimSpace(r.SubjectRulesetVersion) == "" {
+		return fmt.Errorf("subject ruleset version is required")
+	}
+	if r.SubjectCandidateIndependentMin < 2 {
+		return fmt.Errorf("subject candidate independent minimum must be at least 2")
+	}
+	if r.SubjectFreshnessHours < 1 || r.SubjectFreshnessHours > 168 {
+		return fmt.Errorf("subject freshness hours must be between 1 and 168")
+	}
 	if r.MaximumLeverage <= 0 || r.MaximumLeverage > 1 {
 		return fmt.Errorf("maximum leverage must be in (0,1]")
 	}

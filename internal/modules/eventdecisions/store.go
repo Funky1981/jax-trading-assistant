@@ -59,6 +59,12 @@ func loadSelectedEvents(ctx context.Context, db eventQueryer, eventIdentity stri
 			w.event_time, w.received_at, w.severity, w.source_tier, w.confidence,
 			COALESCE(w.confidence_reasons,'[]'::jsonb), COALESCE(w.possible_affected_etfs,'[]'::jsonb),
 			COALESCE(w.mapping_reason,''), COALESCE(w.raw_payload,'{}'::jsonb),
+			COALESCE(er.payload->'raw_payload'->>'article_url',''),
+			COALESCE(er.payload->'raw_payload'->>'feed_url',''),
+			COALESCE(er.payload->'raw_payload'->>'source_native_id',''),
+			COALESCE(er.payload->'raw_payload'->>'source_name',''),
+			COALESCE(er.payload->'raw_payload'->>'content_hash',''),
+			COALESCE(w.region,''),COALESCE(w.asset_themes,'[]'::jsonb),
 			en.id, er.id, er.id IS NOT NULL, COALESCE(er.is_synthetic,false),
 			COALESCE(er.synthetic_reason,''), COALESCE(er.data_source_type,''), COALESCE(er.source_provider,''),
 			NULLIF(COALESCE(er.payload->>'collection_timestamp_utc',er.payload->>'collected_at',er.payload->>'collectedAt',''),'')::timestamptz,
@@ -123,7 +129,7 @@ func loadSelectedEvents(ctx context.Context, db eventQueryer, eventIdentity stri
 
 func scanEvent(row pgx.Row) (Event, error) {
 	var event Event
-	var sourceURLs, confidenceReasons, assets, rawPayload, mappingMethods []byte
+	var sourceURLs, confidenceReasons, assets, rawPayload, mappingMethods, assetThemes []byte
 	var normalizedID, rawEventID uuid.NullUUID
 	var collectionAt sql.NullTime
 	var candidateRaw, evidenceRaw []byte
@@ -131,6 +137,7 @@ func scanEvent(row pgx.Row) (Event, error) {
 		&event.InboxID, &event.Source, &event.SourceEventID, &event.Status, &event.EventType, &event.Headline,
 		&event.Summary, &sourceURLs, &event.SourceCount, &event.PublicationAt, &event.ReceiptAt, &event.Severity,
 		&event.SourceTier, &event.Confidence, &confidenceReasons, &assets, &event.MappingReason, &rawPayload,
+		&event.ArticleURL, &event.FeedURL, &event.SourceNativeID, &event.SourceName, &event.ContentHash, &event.Region, &assetThemes,
 		&normalizedID, &rawEventID, &event.ProvenanceAvailable, &event.IsSynthetic, &event.SyntheticReason,
 		&event.DataSourceType, &event.SourceProvider, &collectionAt, &event.DeterministicAnalysis, &event.AIAnalysisProvider,
 		&mappingMethods, &candidateRaw, &evidenceRaw,
@@ -161,6 +168,9 @@ func scanEvent(row pgx.Row) (Event, error) {
 	}
 	if err := json.Unmarshal(mappingMethods, &event.MappingMethods); err != nil {
 		return Event{}, fmt.Errorf("decode mapping methods: %w", err)
+	}
+	if err := json.Unmarshal(assetThemes, &event.AssetThemes); err != nil {
+		return Event{}, fmt.Errorf("decode asset themes: %w", err)
 	}
 	if len(candidateRaw) > 0 {
 		var candidate candidates.Candidate
