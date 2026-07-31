@@ -45,7 +45,8 @@ describe('Beginner Phase 1 pages', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('heading', { name: 'Jax overview' })).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Paper-safe mode is on');
+    expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Paper-safe mode is on'))).toBe(true);
+    expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Jax cannot place a real trade'))).toBe(true);
     expect(screen.getAllByRole('link', { name: 'Open Evidence Inbox' })[0]).toHaveAttribute(
       'href',
       '/monitor/inbox',
@@ -79,6 +80,7 @@ describe('Beginner Phase 1 pages', () => {
     );
     expect(screen.getByRole('heading', { name: 'What Jax does today' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'What Jax cannot do' })).toBeInTheDocument();
+    expect(screen.getByText(/Jax cannot trade live/i)).toBeInTheDocument();
     expect(screen.getByText('Review new evidence').closest('li')).toHaveTextContent('Ready');
     const destinations = screen.getByRole('navigation', { name: 'Guide destinations' });
     expect(within(destinations).getByRole('link', { name: 'Outcomes' })).toHaveAttribute(

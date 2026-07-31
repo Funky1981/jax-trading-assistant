@@ -54,6 +54,13 @@ export function HomePage() {
         description="Review what Jax has received, what it decided and what happened to hypothetical paper plans."
       />
       <SafetyBanner safe={safe} loading={overview.isPending} />
+      {safe && (
+        <p role="status" className="rounded-md border border-success/40 bg-success/5 p-3 text-sm">
+          Paper mode is on; live trading is off; execution is disabled; the execution worker is
+          stopped; broker execution is not allowed; and maximum leverage is 1x. Jax cannot place
+          a real trade from this workflow.
+        </p>
+      )}
       {overview.isError && (
         <p
           role="alert"

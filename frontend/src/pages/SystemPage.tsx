@@ -254,7 +254,7 @@ function SafetySummary({ state, unavailable }: { state: SafetyState; unavailable
   const copy = unavailable
     ? 'Jax could not load the current runtime state. Treat safety as unknown.'
     : safe
-      ? 'Paper-safe mode is on. Live trading, execution and broker activity are disabled.'
+      ? 'Paper-safe mode is on. Live trading, execution and broker activity are disabled. Jax cannot place a real trade from this workflow.'
       : state === 'unsafe'
         ? 'Jax is not in a confirmed paper-safe state. Review the settings below before relying on this system.'
         : 'Jax could not confirm every required safety setting. Treat the system state as unknown until the missing values are reviewed.';

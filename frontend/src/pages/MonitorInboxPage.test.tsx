@@ -215,6 +215,19 @@ describe('MonitorInboxPage', () => {
     expect(aiService.getWorldMonitorInbox).toHaveBeenLastCalledWith({ limit: 100 });
   });
 
+  it('searches visible evidence fields and resets pagination when the query changes', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText(`1\u201310 of 25`);
+    await user.click(screen.getByRole('button', { name: 'Next evidence page' }));
+    await user.type(screen.getByRole('textbox', { name: 'Search evidence' }), 'Rejected synthetic');
+    expect(screen.getByText(`1\u20131 of 1`)).toBeInTheDocument();
+    expect(itemButtons()).toHaveLength(1);
+    expect(screen.getByText('Rejected synthetic monitor item')).toBeVisible();
+    await user.clear(screen.getByRole('textbox', { name: 'Search evidence' }));
+    expect(screen.getByText(`1\u201310 of 25`)).toBeInTheDocument();
+  });
+
   it('allows only one inline item to expand and keeps subsections collapsed', async () => {
     const user = userEvent.setup();
     renderPage();

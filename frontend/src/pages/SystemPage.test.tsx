@@ -64,7 +64,7 @@ describe('System Safety', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'System Safety' })).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Paper-safe mode is on. Live trading, execution and broker activity are disabled.',
+        'Paper-safe mode is on. Live trading, execution and broker activity are disabled. Jax cannot place a real trade from this workflow.',
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText('Safe')).toHaveLength(6);

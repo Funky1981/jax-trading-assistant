@@ -1,11 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageIntro } from '@/components/ui/beginner-help';
+import { Input } from '@/components/ui/input';
 import { aiService, type WorldMonitorInboxItem } from '@/data/ai-service';
 import { HttpError } from '@/data/http-client';
 import { useOperatorEvidenceOverview } from '@/hooks/useOperatorEvidenceOverview';
@@ -136,6 +137,7 @@ function DispositionBadge({ item }: { item: WorldMonitorInboxItem }) {
 
 export function MonitorInboxPage() {
   const [filter, setFilter] = useState<BeginnerFilter>('all');
+  const [search, setSearch] = useState('');
   const [expandedID, setExpandedID] = useState<string>();
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -145,10 +147,16 @@ export function MonitorInboxPage() {
     queryFn: () => aiService.getWorldMonitorInbox({ limit: 100 }),
   });
   const items = useMemo(() => inbox.data?.items ?? [], [inbox.data?.items]);
-  const filtered = useMemo(
-    () => items.filter((item) => matchesFilter(item, filter)),
-    [filter, items],
-  );
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return items.filter((item) => {
+      if (!matchesFilter(item, filter)) return false;
+      if (!query) return true;
+      return [item.headline, item.summary, item.source, item.decision?.decision]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(query));
+    });
+  }, [filter, items, search]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount);
   const start = (safePage - 1) * pageSize;
@@ -256,6 +264,20 @@ export function MonitorInboxPage() {
             </div>
 
             <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 md:flex-row md:items-center md:justify-between">
+              <label className="relative min-w-0 md:max-w-sm md:flex-1">
+                <span className="sr-only">Search evidence</span>
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  aria-label="Search evidence"
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    resetView();
+                  }}
+                  placeholder="Search title, source or decision"
+                  className="pl-9"
+                />
+              </label>
               <div aria-label="Evidence filters" className="flex max-w-full flex-wrap gap-2">
                 {FILTERS.map((option) => (
                   <Button

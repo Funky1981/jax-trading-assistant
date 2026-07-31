@@ -98,7 +98,7 @@ export function UserGuidePage() {
           </CardHeader>
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-              <li>Trade live, place broker orders or fill positions in this workflow.</li>
+              <li>Place a real trade: Jax cannot trade live, place broker orders or fill positions in this workflow.</li>
               <li>Guarantee profit or automatically approve candidates.</li>
               <li>Use leverage above the configured safety limit.</li>
               <li>Treat hypothetical outcomes as real returns.</li>
