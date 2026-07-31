@@ -1,0 +1,47 @@
+{
+  "version": "historical-evidence-quality-v1",
+  "primary_anchor": "receipt",
+  "minimum_comparison_group_size": 5,
+  "bootstrap_iterations": 10000,
+  "permutation_iterations": 10000,
+  "maximum_intraday_anchor_delay_minutes": 1440,
+  "controlled_source_prefixes": [
+    "world-monitor-local-proof"
+  ],
+  "controlled_event_id_markers": [
+    "real-qqq-proof-",
+    "wm-api-smoke-",
+    "wm-codex-smoke-",
+    "workflow-smoke-",
+    "wm-scanner-",
+    "wm-chart-block-",
+    "wm-promote-"
+  ],
+  "controlled_headline_markers": [
+    "local proof event:",
+    "workflow smoke:"
+  ],
+  "test_hosts": [
+    "example.com"
+  ],
+  "category_proxies": {
+    "central_bank": {"symbol": "TLT", "confidence": "medium", "reason": "central-bank event mapped to a liquid US rates-sensitive benchmark"},
+    "macro_rates": {"symbol": "TLT", "confidence": "medium", "reason": "rates event mapped to a liquid US rates-sensitive benchmark"},
+    "inflation": {"symbol": "TLT", "confidence": "medium", "reason": "inflation event mapped to a liquid US rates-sensitive benchmark"},
+    "energy_oil": {"symbol": "XLE", "confidence": "medium", "reason": "oil event mapped to a liquid energy-sector ETF"},
+    "semiconductor_ai": {"symbol": "SOXX", "confidence": "medium", "reason": "semiconductor event mapped to a liquid semiconductor-sector ETF"}
+  },
+  "benchmarks": {
+    "AAPL": {"symbol": "QQQ", "reason": "large-cap technology company compared with its growth-technology benchmark"},
+    "AMD": {"symbol": "SOXX", "reason": "semiconductor company compared with its sector ETF"},
+    "AMZN": {"symbol": "QQQ", "reason": "large-cap growth company compared with its growth-technology benchmark"},
+    "GOOGL": {"symbol": "QQQ", "reason": "large-cap technology company compared with its growth-technology benchmark"},
+    "META": {"symbol": "QQQ", "reason": "large-cap technology company compared with its growth-technology benchmark"},
+    "MSFT": {"symbol": "QQQ", "reason": "large-cap technology company compared with its growth-technology benchmark"},
+    "NFLX": {"symbol": "QQQ", "reason": "large-cap growth company compared with its growth-technology benchmark"},
+    "NVDA": {"symbol": "SOXX", "reason": "semiconductor company compared with its sector ETF"},
+    "QQQ": {"symbol": "SPY", "reason": "growth-technology ETF compared with the broad US equity market"},
+    "SOXX": {"symbol": "QQQ", "reason": "semiconductor-sector ETF compared with the broader growth-technology market"},
+    "XLE": {"symbol": "SPY", "reason": "energy-sector ETF compared with the broad US equity market"}
+  }
+}
