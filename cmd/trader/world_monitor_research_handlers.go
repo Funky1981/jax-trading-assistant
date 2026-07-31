@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -77,56 +79,106 @@ type worldMonitorEventDecision struct {
 	UpdatedAt              time.Time      `json:"updatedAt"`
 }
 
+type worldMonitorEvidenceSubjectSummary struct {
+	SubjectID        string    `json:"subjectId"`
+	SubjectType      string    `json:"subjectType"`
+	CanonicalLabel   string    `json:"canonicalLabel"`
+	CurrentDecision  string    `json:"currentDecision"`
+	DecisionReason   string    `json:"decisionReason"`
+	MissingEvidence  []string  `json:"missingEvidence"`
+	LinkedEventCount int       `json:"linkedEventCount"`
+	SourceGroupCount int       `json:"sourceGroupCount"`
+	FirstObservedAt  time.Time `json:"firstObservedAt"`
+	LatestEvidenceAt time.Time `json:"latestEvidenceAt"`
+	LatestDecisionAt time.Time `json:"latestDecisionAt"`
+	RulesetVersion   string    `json:"rulesetVersion"`
+	ResolvedAssets   []string  `json:"resolvedAssets"`
+	UnknownAssets    bool      `json:"unknownAssets"`
+	CandidateID      string    `json:"candidateId,omitempty"`
+}
+
+type worldMonitorSubjectEvidenceItem struct {
+	SourceEventID        string    `json:"sourceEventId"`
+	Headline             string    `json:"headline"`
+	Source               string    `json:"source"`
+	SourceURL            string    `json:"sourceUrl,omitempty"`
+	RelationshipType     string    `json:"relationshipType"`
+	AssociationReason    string    `json:"associationReason"`
+	SourceIndependence   string    `json:"sourceIndependence"`
+	EvidenceContribution string    `json:"evidenceContribution"`
+	ContradictionState   string    `json:"contradictionState"`
+	PublicationAt        time.Time `json:"publicationAt"`
+	ReceiptAt            time.Time `json:"receiptAt"`
+	LinkedAt             time.Time `json:"linkedAt"`
+}
+
+type worldMonitorSubjectEvaluationItem struct {
+	PreviousDecision      string    `json:"previousDecision"`
+	NewDecision           string    `json:"newDecision"`
+	DeterministicReason   string    `json:"deterministicReason"`
+	MissingEvidence       []string  `json:"missingEvidence"`
+	RulesetVersion        string    `json:"rulesetVersion"`
+	EvaluatedAt           time.Time `json:"evaluatedAt"`
+	TriggeringSourceEvent string    `json:"triggeringSourceEventId"`
+}
+
+type worldMonitorEvidenceSubjectDetail struct {
+	Subject     worldMonitorEvidenceSubjectSummary  `json:"subject"`
+	Evidence    []worldMonitorSubjectEvidenceItem   `json:"evidence"`
+	Evaluations []worldMonitorSubjectEvaluationItem `json:"evaluations"`
+}
+
 type worldMonitorResearchInboxItem struct {
-	ID                   string                      `json:"id"`
-	Source               string                      `json:"source"`
-	SourceEventID        string                      `json:"sourceEventId"`
-	WorldMonitorEventID  string                      `json:"worldMonitorEventId"`
-	Status               string                      `json:"status"`
-	RejectionReason      string                      `json:"rejectionReason,omitempty"`
-	EventType            string                      `json:"eventType"`
-	Headline             string                      `json:"headline"`
-	Summary              string                      `json:"summary,omitempty"`
-	SourceURLs           []string                    `json:"sourceUrls"`
-	SourceCount          int                         `json:"sourceCount"`
-	EventTime            time.Time                   `json:"eventTime"`
-	PublishedAt          *time.Time                  `json:"publishedAt,omitempty"`
-	ReceivedAt           time.Time                   `json:"receivedAt"`
-	CollectedAt          *time.Time                  `json:"collectedAt,omitempty"`
-	RawEventID           string                      `json:"rawEventId,omitempty"`
-	ProvenanceAvailable  bool                        `json:"provenanceAvailable"`
-	IsSynthetic          bool                        `json:"isSynthetic"`
-	SyntheticReason      string                      `json:"syntheticReason,omitempty"`
-	DiscoveryMethod      string                      `json:"discoveryMethod,omitempty"`
-	AnalysisIdentity     string                      `json:"analysisIdentity,omitempty"`
-	AIProvider           string                      `json:"aiProvider,omitempty"`
-	AIModel              string                      `json:"aiModel,omitempty"`
-	Region               string                      `json:"region,omitempty"`
-	PossibleAffectedETFs []string                    `json:"possibleAffectedEtfs"`
-	AssetThemes          []string                    `json:"assetThemes"`
-	Severity             string                      `json:"severity"`
-	SourceTier           string                      `json:"sourceTier"`
-	Confidence           float64                     `json:"confidence"`
-	ConfidenceReasons    []string                    `json:"confidenceReasons"`
-	MappingReason        string                      `json:"mappingReason"`
-	NormalizedEventID    string                      `json:"normalizedEventId,omitempty"`
-	NormalizedAt         *time.Time                  `json:"normalizedAt,omitempty"`
-	CandidateID          string                      `json:"candidateId,omitempty"`
-	CandidateSymbol      string                      `json:"candidateSymbol,omitempty"`
-	CandidateStatus      string                      `json:"candidateStatus,omitempty"`
-	CandidateCreatedAt   *time.Time                  `json:"candidateCreatedAt,omitempty"`
-	ApprovalID           string                      `json:"approvalId,omitempty"`
-	ApprovalDecision     string                      `json:"approvalDecision,omitempty"`
-	ApprovalAt           *time.Time                  `json:"approvalAt,omitempty"`
-	PaperTicketID        string                      `json:"paperTicketId,omitempty"`
-	PaperTicketCreatedAt *time.Time                  `json:"paperTicketCreatedAt,omitempty"`
-	OutcomeCount         int                         `json:"outcomeCount"`
-	LatestOutcomeAt      *time.Time                  `json:"latestOutcomeAt,omitempty"`
-	OperatorDecision     string                      `json:"operatorDecision,omitempty"`
-	OperatorReason       string                      `json:"operatorReason,omitempty"`
-	Decision             *worldMonitorEventDecision  `json:"decision,omitempty"`
-	DecisionHistory      []worldMonitorEventDecision `json:"decisionHistory"`
-	RawPayload           map[string]any              `json:"rawPayload"`
+	ID                   string                              `json:"id"`
+	Source               string                              `json:"source"`
+	SourceEventID        string                              `json:"sourceEventId"`
+	WorldMonitorEventID  string                              `json:"worldMonitorEventId"`
+	Status               string                              `json:"status"`
+	RejectionReason      string                              `json:"rejectionReason,omitempty"`
+	EventType            string                              `json:"eventType"`
+	Headline             string                              `json:"headline"`
+	Summary              string                              `json:"summary,omitempty"`
+	SourceURLs           []string                            `json:"sourceUrls"`
+	SourceCount          int                                 `json:"sourceCount"`
+	EventTime            time.Time                           `json:"eventTime"`
+	PublishedAt          *time.Time                          `json:"publishedAt,omitempty"`
+	ReceivedAt           time.Time                           `json:"receivedAt"`
+	CollectedAt          *time.Time                          `json:"collectedAt,omitempty"`
+	RawEventID           string                              `json:"rawEventId,omitempty"`
+	ProvenanceAvailable  bool                                `json:"provenanceAvailable"`
+	IsSynthetic          bool                                `json:"isSynthetic"`
+	SyntheticReason      string                              `json:"syntheticReason,omitempty"`
+	DiscoveryMethod      string                              `json:"discoveryMethod,omitempty"`
+	AnalysisIdentity     string                              `json:"analysisIdentity,omitempty"`
+	AIProvider           string                              `json:"aiProvider,omitempty"`
+	AIModel              string                              `json:"aiModel,omitempty"`
+	Region               string                              `json:"region,omitempty"`
+	PossibleAffectedETFs []string                            `json:"possibleAffectedEtfs"`
+	AssetThemes          []string                            `json:"assetThemes"`
+	Severity             string                              `json:"severity"`
+	SourceTier           string                              `json:"sourceTier"`
+	Confidence           float64                             `json:"confidence"`
+	ConfidenceReasons    []string                            `json:"confidenceReasons"`
+	MappingReason        string                              `json:"mappingReason"`
+	NormalizedEventID    string                              `json:"normalizedEventId,omitempty"`
+	NormalizedAt         *time.Time                          `json:"normalizedAt,omitempty"`
+	CandidateID          string                              `json:"candidateId,omitempty"`
+	CandidateSymbol      string                              `json:"candidateSymbol,omitempty"`
+	CandidateStatus      string                              `json:"candidateStatus,omitempty"`
+	CandidateCreatedAt   *time.Time                          `json:"candidateCreatedAt,omitempty"`
+	ApprovalID           string                              `json:"approvalId,omitempty"`
+	ApprovalDecision     string                              `json:"approvalDecision,omitempty"`
+	ApprovalAt           *time.Time                          `json:"approvalAt,omitempty"`
+	PaperTicketID        string                              `json:"paperTicketId,omitempty"`
+	PaperTicketCreatedAt *time.Time                          `json:"paperTicketCreatedAt,omitempty"`
+	OutcomeCount         int                                 `json:"outcomeCount"`
+	LatestOutcomeAt      *time.Time                          `json:"latestOutcomeAt,omitempty"`
+	OperatorDecision     string                              `json:"operatorDecision,omitempty"`
+	OperatorReason       string                              `json:"operatorReason,omitempty"`
+	Decision             *worldMonitorEventDecision          `json:"decision,omitempty"`
+	DecisionHistory      []worldMonitorEventDecision         `json:"decisionHistory"`
+	Subject              *worldMonitorEvidenceSubjectSummary `json:"subject,omitempty"`
+	RawPayload           map[string]any                      `json:"rawPayload"`
 }
 
 type worldMonitorResearchStatus struct {
@@ -324,7 +376,7 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			COALESCE(ca.id::text, ''), COALESCE(ca.decision, ''), ca.decided_at,
 			COALESCE(pt.paper_ticket_id, ''), pt.created_at,
 			COALESCE(oc.outcome_count, 0), oc.latest_outcome_at,
-			decision_current.payload, COALESCE(decision_history.payload,'[]'::jsonb)
+			decision_current.payload, COALESCE(decision_history.payload,'[]'::jsonb), subject_current.payload
 		FROM world_monitor_research_inbox w
 		LEFT JOIN event_normalized en ON en.id=w.normalized_event_id
 		LEFT JOIN LATERAL (
@@ -374,6 +426,24 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			) ORDER BY d.decision_at DESC,d.decision_version DESC) AS payload
 			FROM genuine_event_decisions d WHERE d.source_inbox_event_id=w.id
 		) decision_history ON true
+		LEFT JOIN LATERAL (
+			SELECT jsonb_build_object(
+				'subjectId',s.public_id,'subjectType',s.subject_type,'canonicalLabel',s.canonical_label,
+				'currentDecision',s.current_decision,'decisionReason',s.current_decision_reason,
+				'missingEvidence',s.current_missing_evidence,'linkedEventCount',counts.linked_event_count,
+				'sourceGroupCount',counts.source_group_count,'firstObservedAt',s.first_observed_at,
+				'latestEvidenceAt',s.latest_evidence_at,'latestDecisionAt',s.latest_evaluation_at,
+				'rulesetVersion',s.ruleset_version,'resolvedAssets',s.resolved_assets,
+				'unknownAssets',s.unknown_assets,'candidateId',s.candidate_id
+			) AS payload
+			FROM evidence_subject_events link
+			JOIN evidence_subjects s ON s.id=link.subject_id
+			JOIN LATERAL (
+				SELECT COUNT(*)::int linked_event_count,COUNT(DISTINCT source_group_key)::int source_group_count
+				FROM evidence_subject_events WHERE subject_id=s.id
+			) counts ON true
+			WHERE link.genuine_event_id=w.id
+		) subject_current ON true
 		%s
 		ORDER BY w.received_at DESC
 		LIMIT $%d
@@ -386,7 +456,7 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 
 	for rows.Next() {
 		var item worldMonitorResearchInboxItem
-		var sourceURLsRaw, etfsRaw, themesRaw, confidenceReasonsRaw, rawPayload, decisionRaw, decisionHistoryRaw []byte
+		var sourceURLsRaw, etfsRaw, themesRaw, confidenceReasonsRaw, rawPayload, decisionRaw, decisionHistoryRaw, subjectRaw []byte
 		if err := rows.Scan(
 			&item.ID,
 			&item.Source,
@@ -437,6 +507,7 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			&item.LatestOutcomeAt,
 			&decisionRaw,
 			&decisionHistoryRaw,
+			&subjectRaw,
 		); err != nil {
 			return worldMonitorResearchInboxList{}, err
 		}
@@ -450,6 +521,10 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 			_ = json.Unmarshal(decisionRaw, item.Decision)
 		}
 		_ = json.Unmarshal(decisionHistoryRaw, &item.DecisionHistory)
+		if len(subjectRaw) > 0 {
+			item.Subject = &worldMonitorEvidenceSubjectSummary{}
+			_ = json.Unmarshal(subjectRaw, item.Subject)
+		}
 		if item.SourceURLs == nil {
 			item.SourceURLs = []string{}
 		}
@@ -474,6 +549,106 @@ func (s *worldMonitorResearchStatusStore) List(ctx context.Context, filter world
 		return worldMonitorResearchInboxList{}, err
 	}
 	return out, nil
+}
+
+func (s *worldMonitorResearchStatusStore) SubjectDetail(ctx context.Context, publicID string, limit int) (worldMonitorEvidenceSubjectDetail, error) {
+	if s.pool == nil {
+		return worldMonitorEvidenceSubjectDetail{}, pgx.ErrNoRows
+	}
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	var detail worldMonitorEvidenceSubjectDetail
+	var missing, assets []string
+	err := s.pool.QueryRow(ctx, `
+		SELECT s.public_id,s.subject_type,s.canonical_label,s.current_decision,s.current_decision_reason,
+			s.current_missing_evidence,counts.linked_event_count,counts.source_group_count,s.first_observed_at,
+			s.latest_evidence_at,s.latest_evaluation_at,s.ruleset_version,s.resolved_assets,s.unknown_assets,
+			COALESCE(s.candidate_id::text,'')
+		FROM evidence_subjects s
+		JOIN LATERAL (
+			SELECT COUNT(*)::int linked_event_count,COUNT(DISTINCT source_group_key)::int source_group_count
+			FROM evidence_subject_events WHERE subject_id=s.id
+		) counts ON true
+		WHERE s.public_id=$1
+	`, publicID).Scan(&detail.Subject.SubjectID, &detail.Subject.SubjectType, &detail.Subject.CanonicalLabel,
+		&detail.Subject.CurrentDecision, &detail.Subject.DecisionReason, &missing, &detail.Subject.LinkedEventCount,
+		&detail.Subject.SourceGroupCount, &detail.Subject.FirstObservedAt, &detail.Subject.LatestEvidenceAt,
+		&detail.Subject.LatestDecisionAt, &detail.Subject.RulesetVersion, &assets, &detail.Subject.UnknownAssets,
+		&detail.Subject.CandidateID)
+	if err != nil {
+		return worldMonitorEvidenceSubjectDetail{}, err
+	}
+	detail.Subject.MissingEvidence = missing
+	detail.Subject.ResolvedAssets = assets
+	detail.Evidence = []worldMonitorSubjectEvidenceItem{}
+	detail.Evaluations = []worldMonitorSubjectEvaluationItem{}
+	rows, err := s.pool.Query(ctx, `
+		SELECT w.source_event_id,w.headline,w.source,COALESCE(w.source_urls->>0,''),l.relationship_type,
+			l.association_reason,l.source_independence,l.evidence_contribution,l.contradiction_state,
+			l.publication_at,l.receipt_at,l.linked_at
+		FROM evidence_subject_events l JOIN evidence_subjects s ON s.id=l.subject_id
+		JOIN world_monitor_research_inbox w ON w.id=l.genuine_event_id
+		WHERE s.public_id=$1 ORDER BY l.publication_at DESC,l.genuine_event_id LIMIT $2
+	`, publicID, limit)
+	if err != nil {
+		return worldMonitorEvidenceSubjectDetail{}, fmt.Errorf("subject evidence detail: %w", err)
+	}
+	for rows.Next() {
+		var item worldMonitorSubjectEvidenceItem
+		if err := rows.Scan(&item.SourceEventID, &item.Headline, &item.Source, &item.SourceURL, &item.RelationshipType,
+			&item.AssociationReason, &item.SourceIndependence, &item.EvidenceContribution, &item.ContradictionState,
+			&item.PublicationAt, &item.ReceiptAt, &item.LinkedAt); err != nil {
+			rows.Close()
+			return worldMonitorEvidenceSubjectDetail{}, err
+		}
+		detail.Evidence = append(detail.Evidence, item)
+	}
+	rows.Close()
+	rows, err = s.pool.Query(ctx, `
+		SELECT e.previous_decision,e.new_decision,e.deterministic_reason,e.missing_evidence,
+			e.ruleset_version,e.evaluated_at,w.source_event_id
+		FROM evidence_subject_evaluations e JOIN evidence_subjects s ON s.id=e.subject_id
+		JOIN world_monitor_research_inbox w ON w.id=e.triggering_event_id
+		WHERE s.public_id=$1 ORDER BY e.evaluated_at DESC,e.id DESC LIMIT $2
+	`, publicID, limit)
+	if err != nil {
+		return worldMonitorEvidenceSubjectDetail{}, fmt.Errorf("subject evaluation detail: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item worldMonitorSubjectEvaluationItem
+		if err := rows.Scan(&item.PreviousDecision, &item.NewDecision, &item.DeterministicReason, &item.MissingEvidence,
+			&item.RulesetVersion, &item.EvaluatedAt, &item.TriggeringSourceEvent); err != nil {
+			return worldMonitorEvidenceSubjectDetail{}, err
+		}
+		detail.Evaluations = append(detail.Evaluations, item)
+	}
+	return detail, rows.Err()
+}
+
+func worldMonitorEvidenceSubjectHandler(pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		publicID := strings.TrimPrefix(r.URL.Path, "/api/v1/research/events/world-monitor/subjects/")
+		if !regexp.MustCompile(`^es_[a-f0-9]{24}$`).MatchString(publicID) {
+			http.Error(w, "invalid evidence subject", http.StatusBadRequest)
+			return
+		}
+		detail, err := (&worldMonitorResearchStatusStore{pool: pool}).SubjectDetail(r.Context(), publicID, 20)
+		if err == pgx.ErrNoRows {
+			http.Error(w, "evidence subject not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			http.Error(w, "failed to load evidence subject", http.StatusInternalServerError)
+			return
+		}
+		jsonOK(w, detail)
+	}
 }
 
 func worldMonitorResearchIngestHandler(pool *pgxpool.Pool) http.HandlerFunc {
