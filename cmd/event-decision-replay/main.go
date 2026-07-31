@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"jax-trading-assistant/internal/modules/assetresolution"
 	"jax-trading-assistant/internal/modules/eventdecisions"
 	"jax-trading-assistant/internal/modules/instruments"
 
@@ -17,12 +18,13 @@ import (
 
 func main() {
 	var (
-		dryRun      = flag.Bool("dry-run", false, "evaluate selected events without database writes")
-		event       = flag.String("event", "", "one inbox UUID or source event ID (optional)")
-		limit       = flag.Int("limit", 25, "bounded maximum number of inbox rows (1-250)")
-		ruleset     = flag.String("ruleset", "", "required explicit ruleset version")
-		rulesetFile = flag.String("ruleset-file", "config/genuine-event-decision-v1.json", "ruleset configuration path")
-		databaseURL = flag.String("database-url", "", "PostgreSQL URL; defaults to DATABASE_URL")
+		dryRun           = flag.Bool("dry-run", false, "evaluate selected events without database writes")
+		event            = flag.String("event", "", "one inbox UUID or source event ID (optional)")
+		limit            = flag.Int("limit", 25, "bounded maximum number of inbox rows (1-250)")
+		ruleset          = flag.String("ruleset", "", "required explicit ruleset version")
+		rulesetFile      = flag.String("ruleset-file", "config/genuine-event-decision-v2.json", "ruleset configuration path")
+		assetRulesetFile = flag.String("asset-ruleset-file", "config/event-asset-resolution-v1.json", "deterministic asset-resolution ruleset path")
+		databaseURL      = flag.String("database-url", "", "PostgreSQL URL; defaults to DATABASE_URL")
 	)
 	flag.Parse()
 	ctx := context.Background()
@@ -59,6 +61,11 @@ func main() {
 	if err != nil {
 		fail(fmt.Errorf("load instrument catalog: %w", err))
 	}
+	assetRules, err := assetresolution.LoadRuleset(*assetRulesetFile)
+	if err != nil {
+		fail(err)
+	}
+	resolver := assetresolution.Resolver{Rules: assetRules}
 	store := eventdecisions.NewStore(pool)
 	events, err := store.LoadSelectedEvents(ctx, *event, *limit)
 	if err != nil {
@@ -70,7 +77,9 @@ func main() {
 			Ruleset: rules,
 			Catalog: catalog,
 		},
-		Now: func() time.Time { return time.Now().UTC() },
+		Resolver: &resolver,
+		Origin:   eventdecisions.DecisionOriginBackfill,
+		Now:      func() time.Time { return time.Now().UTC() },
 	}
 	summary, runErr := replayer.Run(ctx, events, *dryRun)
 	output := struct {

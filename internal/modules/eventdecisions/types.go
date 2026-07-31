@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"jax-trading-assistant/internal/modules/assetresolution"
 	"jax-trading-assistant/internal/modules/candidates"
 
 	"github.com/google/uuid"
@@ -18,6 +19,14 @@ const (
 )
 
 const ProcessingModeDeterministic = "deterministic"
+
+type DecisionOrigin string
+
+const (
+	DecisionOriginLive     DecisionOrigin = "live_origin"
+	DecisionOriginBackfill DecisionOrigin = "historical_backfill"
+	DecisionOriginReplay   DecisionOrigin = "historical_replay"
+)
 
 type Ruleset struct {
 	Version                        string   `json:"version"`
@@ -122,6 +131,9 @@ type PersistedDecision struct {
 	ReplayMetadata      json.RawMessage `json:"replayMetadata"`
 	CreatedAt           time.Time       `json:"createdAt"`
 	UpdatedAt           time.Time       `json:"updatedAt"`
+	IsInitial           bool            `json:"isInitial"`
+	DecisionOrigin      DecisionOrigin  `json:"decisionOrigin"`
+	DecisionContext     string          `json:"decisionContext"`
 }
 
 type Exclusion struct {
@@ -137,12 +149,13 @@ type Failure struct {
 }
 
 type EventOutcome struct {
-	InboxID       uuid.UUID                  `json:"inboxId"`
-	SourceEventID string                     `json:"sourceEventId"`
-	Proposed      Result                     `json:"proposed"`
-	Persisted     *PersistedDecision         `json:"persisted,omitempty"`
-	Reused        bool                       `json:"reused"`
-	Subject       *SubjectPersistenceOutcome `json:"subject,omitempty"`
+	InboxID         uuid.UUID                  `json:"inboxId"`
+	SourceEventID   string                     `json:"sourceEventId"`
+	Proposed        Result                     `json:"proposed"`
+	Persisted       *PersistedDecision         `json:"persisted,omitempty"`
+	Reused          bool                       `json:"reused"`
+	Subject         *SubjectPersistenceOutcome `json:"subject,omitempty"`
+	AssetResolution *assetresolution.Result    `json:"assetResolution,omitempty"`
 }
 
 type Summary struct {

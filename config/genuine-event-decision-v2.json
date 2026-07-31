@@ -1,0 +1,13 @@
+{
+  "version": "genuine-event-decision-v2",
+  "processor_identity": "jax-genuine-event-decision-processor-v2",
+  "watch_confidence_minimum": 0.5,
+  "candidate_evidence_minimum": 0.6,
+  "subject_ruleset_version": "genuine-watch-evidence-v1",
+  "subject_candidate_independent_minimum": 2,
+  "subject_freshness_hours": 24,
+  "allowed_candidate_instrument_type": "etf",
+  "maximum_leverage": 1.0,
+  "material_severities": ["medium", "high", "critical"]
+}
+

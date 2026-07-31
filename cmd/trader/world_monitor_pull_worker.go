@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"jax-trading-assistant/internal/modules/assetresolution"
 	"jax-trading-assistant/internal/modules/eventdecisions"
 	"jax-trading-assistant/internal/modules/instruments"
 
@@ -139,7 +140,7 @@ func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 		log.Printf("world monitor pull worker failed closed: %v", err)
 		return
 	}
-	rules, err := eventdecisions.LoadRuleset("config/genuine-event-decision-v1.json")
+	rules, err := eventdecisions.LoadRuleset("config/genuine-event-decision-v2.json")
 	if err != nil {
 		log.Printf("world monitor pull worker failed closed: %v", err)
 		return
@@ -149,9 +150,15 @@ func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 		log.Printf("world monitor pull worker failed closed: %v", err)
 		return
 	}
+	assetRules, err := assetresolution.LoadRuleset("config/event-asset-resolution-v1.json")
+	if err != nil {
+		log.Printf("world monitor pull worker failed closed: %v", err)
+		return
+	}
+	resolver := assetresolution.Resolver{Rules: assetRules}
 	worker := &worldMonitorPullWorker{
 		pool: pool, config: config, httpClient: &http.Client{Timeout: config.Timeout},
-		replayer: eventdecisions.Replayer{Store: eventdecisions.NewStore(pool), Evaluator: eventdecisions.Evaluator{Ruleset: rules, Catalog: catalog}},
+		replayer: eventdecisions.Replayer{Store: eventdecisions.NewStore(pool), Evaluator: eventdecisions.Evaluator{Ruleset: rules, Catalog: catalog}, Resolver: &resolver, Origin: eventdecisions.DecisionOriginLive},
 		now:      func() time.Time { return time.Now().UTC() },
 	}
 	ticker := time.NewTicker(config.Interval)

@@ -6,7 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
+
+	"jax-trading-assistant/internal/modules/assetresolution"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -14,6 +17,8 @@ import (
 type Replayer struct {
 	Store     *Store
 	Evaluator Evaluator
+	Resolver  *assetresolution.Resolver
+	Origin    DecisionOrigin
 	Now       func() time.Time
 }
 
@@ -33,11 +38,13 @@ func (r Replayer) RunTx(ctx context.Context, tx pgx.Tx, events []Event) (Summary
 	type evaluated struct {
 		event       Event
 		result      Result
+		resolution  *assetresolution.Result
 		fingerprint string
 		replayID    string
 	}
 	ready := []evaluated{}
 	for _, event := range events {
+		event, resolution := r.prepareEvent(event)
 		if ok, reason := Eligible(event); !ok {
 			summary.Excluded = append(summary.Excluded, Exclusion{InboxID: event.InboxID, SourceEventID: event.SourceEventID, Reason: reason})
 			continue
@@ -54,8 +61,8 @@ func (r Replayer) RunTx(ctx context.Context, tx pgx.Tx, events []Event) (Summary
 		}
 		summary.Eligible++
 		incrementDecision(&summary, result.Decision)
-		summary.Outcomes = append(summary.Outcomes, EventOutcome{InboxID: event.InboxID, SourceEventID: event.SourceEventID, Proposed: result})
-		ready = append(ready, evaluated{event: event, result: result, fingerprint: fingerprint, replayID: replayID})
+		summary.Outcomes = append(summary.Outcomes, EventOutcome{InboxID: event.InboxID, SourceEventID: event.SourceEventID, Proposed: result, AssetResolution: resolution})
+		ready = append(ready, evaluated{event: event, result: result, resolution: resolution, fingerprint: fingerprint, replayID: replayID})
 	}
 	if len(summary.Failures) > 0 {
 		summary.CompletedAt = now().UTC()
@@ -63,7 +70,7 @@ func (r Replayer) RunTx(ctx context.Context, tx pgx.Tx, events []Event) (Summary
 	}
 	decisionAt := now().UTC()
 	for index, item := range ready {
-		persisted, reused, err := persistDecision(ctx, tx, item.event, item.result, r.Evaluator.Ruleset, decisionAt, item.fingerprint, item.replayID)
+		persisted, reused, err := persistDecision(ctx, tx, item.event, item.result, r.Evaluator.Ruleset, decisionAt, item.fingerprint, item.replayID, r.decisionOrigin(), r.decisionContext())
 		if err != nil {
 			summary.Failures = append(summary.Failures, Failure{InboxID: item.event.InboxID, SourceEventID: item.event.SourceEventID, Error: err.Error()})
 			summary.CompletedAt = now().UTC()
@@ -71,6 +78,12 @@ func (r Replayer) RunTx(ctx context.Context, tx pgx.Tx, events []Event) (Summary
 		}
 		summary.Outcomes[index].Persisted = &persisted
 		summary.Outcomes[index].Reused = reused
+		if item.resolution != nil {
+			if err := persistAssetResolution(ctx, tx, item.event, persisted, *item.resolution, decisionAt); err != nil {
+				return summary, fmt.Errorf("persist event asset resolution: %w", err)
+			}
+			summary.Outcomes[index].AssetResolution = item.resolution
+		}
 		if reused {
 			summary.DecisionsReused++
 		} else {
@@ -102,11 +115,13 @@ func (r Replayer) Run(ctx context.Context, events []Event, dryRun bool) (Summary
 	type evaluated struct {
 		event       Event
 		result      Result
+		resolution  *assetresolution.Result
 		fingerprint string
 		replayID    string
 	}
 	ready := []evaluated{}
 	for _, event := range events {
+		event, resolution := r.prepareEvent(event)
 		if ok, reason := Eligible(event); !ok {
 			summary.Excluded = append(summary.Excluded, Exclusion{InboxID: event.InboxID, SourceEventID: event.SourceEventID, Reason: reason})
 			continue
@@ -123,8 +138,8 @@ func (r Replayer) Run(ctx context.Context, events []Event, dryRun bool) (Summary
 		}
 		summary.Eligible++
 		incrementDecision(&summary, result.Decision)
-		summary.Outcomes = append(summary.Outcomes, EventOutcome{InboxID: event.InboxID, SourceEventID: event.SourceEventID, Proposed: result})
-		ready = append(ready, evaluated{event: event, result: result, fingerprint: fingerprint, replayID: replayID})
+		summary.Outcomes = append(summary.Outcomes, EventOutcome{InboxID: event.InboxID, SourceEventID: event.SourceEventID, Proposed: result, AssetResolution: resolution})
+		ready = append(ready, evaluated{event: event, result: result, resolution: resolution, fingerprint: fingerprint, replayID: replayID})
 	}
 	if len(summary.Failures) > 0 {
 		summary.CompletedAt = now().UTC()
@@ -144,7 +159,7 @@ func (r Replayer) Run(ctx context.Context, events []Event, dryRun bool) (Summary
 	defer func() { _ = tx.Rollback(ctx) }()
 	decisionAt := now().UTC()
 	for index, item := range ready {
-		persisted, reused, err := persistDecision(ctx, tx, item.event, item.result, r.Evaluator.Ruleset, decisionAt, item.fingerprint, item.replayID)
+		persisted, reused, err := persistDecision(ctx, tx, item.event, item.result, r.Evaluator.Ruleset, decisionAt, item.fingerprint, item.replayID, r.decisionOrigin(), r.decisionContext())
 		if err != nil {
 			summary.Failures = append(summary.Failures, Failure{InboxID: item.event.InboxID, SourceEventID: item.event.SourceEventID, Error: err.Error()})
 			summary.CompletedAt = now().UTC()
@@ -152,6 +167,12 @@ func (r Replayer) Run(ctx context.Context, events []Event, dryRun bool) (Summary
 		}
 		summary.Outcomes[index].Persisted = &persisted
 		summary.Outcomes[index].Reused = reused
+		if item.resolution != nil {
+			if err := persistAssetResolution(ctx, tx, item.event, persisted, *item.resolution, decisionAt); err != nil {
+				return summary, fmt.Errorf("persist event asset resolution: %w", err)
+			}
+			summary.Outcomes[index].AssetResolution = item.resolution
+		}
 		if reused {
 			summary.DecisionsReused++
 		} else {
@@ -174,6 +195,59 @@ func (r Replayer) Run(ctx context.Context, events []Event, dryRun bool) (Summary
 	}
 	summary.CompletedAt = now().UTC()
 	return summary, nil
+}
+
+func (r Replayer) decisionOrigin() DecisionOrigin {
+	if r.Origin == DecisionOriginLive || r.Origin == DecisionOriginBackfill || r.Origin == DecisionOriginReplay {
+		return r.Origin
+	}
+	return DecisionOriginBackfill
+}
+
+func (r Replayer) decisionContext() string {
+	if r.decisionOrigin() == DecisionOriginLive {
+		return "continuous_world_monitor_ingestion"
+	}
+	return "bounded_operator_backfill"
+}
+
+func (r Replayer) prepareEvent(event Event) (Event, *assetresolution.Result) {
+	if r.Resolver == nil {
+		return event, nil
+	}
+	sourceURL := ""
+	if len(event.SourceURLs) > 0 {
+		sourceURL = event.SourceURLs[0]
+	}
+	resolution := r.Resolver.Resolve(assetresolution.Input{
+		EventID: event.InboxID.String(), Headline: event.Headline, Summary: event.Summary,
+		SourceName: event.SourceName, SourceURL: sourceURL, EventType: event.EventType,
+		PublicationAt: event.PublicationAt, ReceiptAt: event.ReceiptAt,
+		ExplicitSymbols: event.AffectedAssets, ExplicitReason: event.MappingReason, ExplicitMethods: event.MappingMethods,
+	})
+	if resolution.Status == assetresolution.StatusResolved {
+		event.AffectedAssets = []string{resolution.Symbol}
+		event.MappingReason = resolution.Reason
+		event.MappingMethods = append([]string{resolution.MappingType, resolution.RulesetVersion}, resolution.SourceFields...)
+	} else {
+		event.AffectedAssets = nil
+		event.MappingReason = resolution.Reason
+		event.MappingMethods = append([]string{resolution.Status, resolution.RulesetVersion}, resolution.SourceFields...)
+	}
+	if strings.EqualFold(r.Evaluator.Ruleset.Version, "genuine-event-decision-v2") {
+		if resolution.MaterialEvent {
+			event.Confidence = 0.7
+			event.ConfidenceReasons = []string{"deterministic material-event term in source content"}
+		} else {
+			event.Confidence = 0.3
+			event.ConfidenceReasons = []string{"no bounded material-event term in source content"}
+		}
+		if strings.EqualFold(event.SourceName, "Federal Reserve") && resolution.MaterialEvent {
+			event.Confidence = 0.75
+			event.ConfidenceReasons = []string{"official Federal Reserve source and bounded monetary-policy term"}
+		}
+	}
+	return event, &resolution
 }
 
 func incrementSubjectPersistence(summary *Summary, outcome SubjectPersistenceOutcome) {
