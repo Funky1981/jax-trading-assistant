@@ -10,9 +10,11 @@ import (
 )
 
 const (
-	ManifestVersion = "ai-shadow-manifest-v1"
-	PromptVersion   = "ai-shadow-prompt-v1"
-	SchemaVersion   = "ai-shadow-output-v1"
+	ManifestVersion     = "ai-shadow-manifest-v1"
+	LegacyPromptVersion = "ai-shadow-prompt-v1"
+	LegacySchemaVersion = "ai-shadow-output-v1"
+	PromptVersion       = "ai-shadow-prompt-v2-flat-mapping"
+	SchemaVersion       = "ai-shadow-output-v2-flat-mapping"
 )
 
 type EventInput struct {
@@ -27,6 +29,21 @@ type EventInput struct {
 }
 
 type StructuredResult struct {
+	MarketRelevance   string   `json:"market_relevance"`
+	MappingStatus     string   `json:"mapping_status"`
+	Ticker            string   `json:"ticker"`
+	MappingConfidence string   `json:"mapping_confidence"`
+	ExpectedHorizon   string   `json:"expected_horizon"`
+	LikelyDirection   string   `json:"likely_direction"`
+	CatalystType      string   `json:"catalyst_type"`
+	Reason            string   `json:"reason"`
+	MissingEvidence   []string `json:"missing_evidence"`
+}
+
+// LegacyStructuredResult preserves the v1 representation for append-only
+// historical result reads. Numeric confidence is intentionally not converted
+// into the categorical v2 mapping confidence.
+type LegacyStructuredResult struct {
 	MarketRelevance  string   `json:"market_relevance"`
 	ResolvedAsset    *string  `json:"resolved_asset"`
 	AssetMappingType string   `json:"asset_mapping_type"`
@@ -36,6 +53,12 @@ type StructuredResult struct {
 	CatalystType     string   `json:"catalyst_type"`
 	Reason           string   `json:"reason"`
 	MissingEvidence  []string `json:"missing_evidence"`
+}
+
+type PersistedStructuredResult struct {
+	SchemaVersion string
+	Current       *StructuredResult
+	Legacy        *LegacyStructuredResult
 }
 
 type Manifest struct {

@@ -104,7 +104,7 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 		Provider: run.Provider, Model: run.Model, PromptVersion: run.PromptVersion, SchemaVersion: run.SchemaVersion,
 		Seed: run.Seed, Temperature: run.Temperature, EventsSelected: len(events), EventsAttempted: len(results),
 		RelevanceDistribution:  map[string]int{"HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNCERTAIN": 0},
-		ConfidenceDistribution: map[string]int{"0-49": 0, "50-69": 0, "70-84": 0, "85-100": 0},
+		ConfidenceDistribution: map[string]int{"HIGH": 0, "MEDIUM": 0, "LOW": 0},
 		SafetyBefore:           before, SafetyAfter: after, Results: results, Events: events,
 	}
 	byID := map[string]BenchmarkEvent{}
@@ -120,9 +120,9 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 		event := byID[result.EventID]
 		detType, detAsset := deterministicMapping(event)
 		switch detType {
-		case "direct":
+		case "DIRECT":
 			directTotal++
-		case "proxy":
+		case "PROXY":
 			proxyTotal++
 		default:
 			unresolvedTotal++
@@ -133,7 +133,7 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 				if strings.Contains(validationError, "ticker") {
 					report.FabricatedInvalidTickers++
 				}
-				if strings.Contains(validationError, "mapping") || strings.Contains(validationError, "confidence") || strings.Contains(validationError, "resolved_asset") {
+				if strings.Contains(validationError, "mapping") || strings.Contains(validationError, "confidence") || strings.Contains(validationError, "ticker") {
 					report.ConsistencyViolations++
 				}
 			}
@@ -142,25 +142,24 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 		report.Accepted++
 		output := *result.Parsed
 		report.RelevanceDistribution[output.MarketRelevance]++
-		report.ConfidenceDistribution[confidenceBucket(output.Confidence)]++
-		aiAsset := ""
-		if output.ResolvedAsset != nil {
-			aiAsset = *output.ResolvedAsset
+		report.ConfidenceDistribution[output.MappingConfidence]++
+		aiAsset := output.Ticker
+		if aiAsset != "" {
 			covered++
 		}
 		if aiAsset != "" && knownTickers != nil && !knownTickers[aiAsset] {
 			report.FabricatedInvalidTickers++
 		}
-		agree := output.AssetMappingType == detType && aiAsset == detAsset
+		agree := output.MappingStatus == detType && aiAsset == detAsset
 		if agree {
 			exact++
 		}
 		switch detType {
-		case "direct":
+		case "DIRECT":
 			if agree {
 				directOK++
 			}
-		case "proxy":
+		case "PROXY":
 			if agree {
 				proxyOK++
 			}
@@ -170,7 +169,7 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 			}
 		}
 		if !agree {
-			report.Disagreements = append(report.Disagreements, ReviewItem{EventID: event.ID, DeterministicMapping: detType, DeterministicAsset: detAsset, AIMap: output.AssetMappingType, AIAsset: aiAsset})
+			report.Disagreements = append(report.Disagreements, ReviewItem{EventID: event.ID, DeterministicMapping: detType, DeterministicAsset: detAsset, AIMap: output.MappingStatus, AIAsset: aiAsset})
 		}
 		if len(report.Examples) < 5 {
 			report.Examples = append(report.Examples, Example{EventID: event.ID, Output: output})
@@ -278,24 +277,12 @@ func newSeparation(high, low []float64) Separation {
 }
 func deterministicMapping(event BenchmarkEvent) (string, string) {
 	if !event.Mapping.Mapped {
-		return "unresolved", ""
+		return "UNRESOLVED", ""
 	}
 	if event.Mapping.Direct {
-		return "direct", event.Mapping.Symbol
+		return "DIRECT", event.Mapping.Symbol
 	}
-	return "proxy", event.Mapping.Symbol
-}
-func confidenceBucket(value int) string {
-	if value < 50 {
-		return "0-49"
-	}
-	if value < 70 {
-		return "50-69"
-	}
-	if value < 85 {
-		return "70-84"
-	}
-	return "85-100"
+	return "PROXY", event.Mapping.Symbol
 }
 func rate(n, d int) float64 {
 	if d == 0 {
@@ -367,7 +354,7 @@ func writeCSV(path string, report Report) error {
 	defer file.Close()
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	_ = writer.Write([]string{"event_id", "validation_status", "retry_count", "latency_ms", "market_relevance", "resolved_asset", "asset_mapping_type", "confidence", "deterministic_decision", "deterministic_mapping", "deterministic_asset", "absolute_1h_move", "absolute_1d_move"})
+	_ = writer.Write([]string{"event_id", "validation_status", "retry_count", "latency_ms", "market_relevance", "ticker", "mapping_status", "mapping_confidence", "deterministic_decision", "deterministic_mapping", "deterministic_asset", "absolute_1h_move", "absolute_1d_move"})
 	byID := map[string]BenchmarkEvent{}
 	for _, e := range report.Events {
 		byID[e.ID] = e
@@ -377,11 +364,9 @@ func writeCSV(path string, report Report) error {
 		relevance, asset, mapping, confidence := "", "", "", ""
 		if r.Parsed != nil {
 			relevance = r.Parsed.MarketRelevance
-			mapping = r.Parsed.AssetMappingType
-			confidence = strconv.Itoa(r.Parsed.Confidence)
-			if r.Parsed.ResolvedAsset != nil {
-				asset = *r.Parsed.ResolvedAsset
-			}
+			mapping = r.Parsed.MappingStatus
+			confidence = r.Parsed.MappingConfidence
+			asset = r.Parsed.Ticker
 		}
 		dt, da := deterministicMapping(e)
 		_ = writer.Write([]string{r.EventID, r.ValidationStatus, strconv.Itoa(r.RetryCount), strconv.FormatInt(r.Duration.Milliseconds(), 10), relevance, asset, mapping, confidence, e.Decision, dt, da, strconv.FormatFloat(e.Outcome1H, 'f', 8, 64), strconv.FormatFloat(e.Outcome1D, 'f', 8, 64)})

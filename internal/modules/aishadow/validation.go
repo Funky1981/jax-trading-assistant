@@ -14,8 +14,8 @@ import (
 var tickerPattern = regexp.MustCompile(`^[A-Z][A-Z0-9.-]{0,9}$`)
 
 var requiredResultFields = []string{
-	"market_relevance", "resolved_asset", "asset_mapping_type", "expected_horizon",
-	"likely_direction", "confidence", "catalyst_type", "reason", "missing_evidence",
+	"market_relevance", "mapping_status", "ticker", "mapping_confidence", "expected_horizon",
+	"likely_direction", "catalyst_type", "reason", "missing_evidence",
 }
 
 func ParseAndValidate(raw string) (*StructuredResult, []string) {
@@ -34,6 +34,9 @@ func ParseAndValidate(raw string) (*StructuredResult, []string) {
 			errors = append(errors, "unknown field: "+field)
 		}
 	}
+	if rawTicker, ok := fields["ticker"]; ok && bytes.Equal(bytes.TrimSpace(rawTicker), []byte("null")) {
+		errors = append(errors, "ticker must be a string, not null")
+	}
 	decoder := json.NewDecoder(bytes.NewBufferString(raw))
 	decoder.DisallowUnknownFields()
 	var result StructuredResult
@@ -47,38 +50,28 @@ func ParseAndValidate(raw string) (*StructuredResult, []string) {
 	if !contains([]string{"HIGH", "MEDIUM", "LOW", "UNCERTAIN"}, result.MarketRelevance) {
 		errors = append(errors, "market_relevance must be HIGH, MEDIUM, LOW, or UNCERTAIN")
 	}
-	if !contains([]string{"direct", "proxy", "unresolved"}, result.AssetMappingType) {
-		errors = append(errors, "asset_mapping_type must be direct, proxy, or unresolved")
+	if !contains([]string{"DIRECT", "PROXY", "UNRESOLVED"}, result.MappingStatus) {
+		errors = append(errors, "mapping_status must be DIRECT, PROXY, or UNRESOLVED")
 	}
-	if !contains([]string{"intraday", "1d", "multi-day", "unclear"}, result.ExpectedHorizon) {
+	if !contains([]string{"HIGH", "MEDIUM", "LOW"}, result.MappingConfidence) {
+		errors = append(errors, "mapping_confidence must be HIGH, MEDIUM, or LOW")
+	}
+	if !contains([]string{"INTRADAY", "ONE_DAY", "MULTI_DAY", "UNCLEAR"}, result.ExpectedHorizon) {
 		errors = append(errors, "expected_horizon has an invalid value")
 	}
-	if !contains([]string{"positive", "negative", "neutral", "unclear"}, result.LikelyDirection) {
+	if !contains([]string{"POSITIVE", "NEGATIVE", "NEUTRAL", "UNCLEAR"}, result.LikelyDirection) {
 		errors = append(errors, "likely_direction has an invalid value")
 	}
-	if result.Confidence < 0 || result.Confidence > 100 {
-		errors = append(errors, "confidence must be between 0 and 100")
-	}
-	asset := ""
-	if result.ResolvedAsset != nil {
-		asset = *result.ResolvedAsset
-	}
-	if result.AssetMappingType == "unresolved" {
-		if result.ResolvedAsset != nil {
-			errors = append(errors, "unresolved mapping requires resolved_asset null")
+	if result.MappingStatus == "UNRESOLVED" {
+		if result.Ticker != "" {
+			errors = append(errors, "UNRESOLVED mapping requires an empty ticker")
 		}
-		if result.Confidence > 49 {
-			errors = append(errors, "unresolved mapping confidence must be 49 or lower")
+	} else if result.MappingStatus == "DIRECT" || result.MappingStatus == "PROXY" {
+		if result.Ticker == "" {
+			errors = append(errors, "DIRECT and PROXY mappings require a non-empty ticker")
+		} else if !tickerPattern.MatchString(result.Ticker) {
+			errors = append(errors, "ticker has an invalid format")
 		}
-	} else if result.AssetMappingType == "direct" || result.AssetMappingType == "proxy" {
-		if result.ResolvedAsset == nil || strings.TrimSpace(asset) == "" {
-			errors = append(errors, "direct and proxy mappings require a non-empty ticker")
-		} else if !tickerPattern.MatchString(asset) {
-			errors = append(errors, "resolved_asset has an invalid ticker format")
-		}
-	}
-	if result.AssetMappingType == "direct" && result.Confidence < 70 {
-		errors = append(errors, "direct mapping confidence must be at least 70")
 	}
 	reasonLength := utf8.RuneCountInString(strings.TrimSpace(result.Reason))
 	if reasonLength < 20 || reasonLength > 400 {
@@ -103,6 +96,27 @@ func ParseAndValidate(raw string) (*StructuredResult, []string) {
 		return nil, uniqueSorted(errors)
 	}
 	return &result, nil
+}
+
+func DecodePersistedResult(schemaVersion string, raw []byte) (PersistedStructuredResult, error) {
+	result := PersistedStructuredResult{SchemaVersion: schemaVersion}
+	switch schemaVersion {
+	case SchemaVersion:
+		var current StructuredResult
+		if err := json.Unmarshal(raw, &current); err != nil {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: %w", schemaVersion, err)
+		}
+		result.Current = &current
+	case LegacySchemaVersion:
+		var legacy LegacyStructuredResult
+		if err := json.Unmarshal(raw, &legacy); err != nil {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: %w", schemaVersion, err)
+		}
+		result.Legacy = &legacy
+	default:
+		return PersistedStructuredResult{}, fmt.Errorf("unsupported AI shadow schema version %q", schemaVersion)
+	}
+	return result, nil
 }
 
 func ensureEOF(decoder *json.Decoder) error {

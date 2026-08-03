@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -67,10 +68,21 @@ func TestInitialPromptContainsOnlyReceiptTimeInput(t *testing.T) {
 			t.Fatalf("leaked forbidden field %s", forbidden)
 		}
 	}
+	for _, forbidden := range []string{"XLE", "TLT", "SPY", "realised return", "realized return", "future candle", "deterministic mapping", "deterministic answer", "Ryanair", "Abu Dhabi"} {
+		if strings.Contains(systemPrompt, forbidden) {
+			t.Fatalf("system prompt contains answer or outcome leakage %q", forbidden)
+		}
+	}
+	if regexp.MustCompile(`(?i)"ticker"\s*:\s*"[A-Z0-9.-]+"`).MatchString(systemPrompt) {
+		t.Fatal("system prompt contains a fixed ticker example")
+	}
+	if strings.Count(systemPrompt, "\n1. ")+strings.Count(systemPrompt, "\n2. ")+strings.Count(systemPrompt, "\n3. ") != 3 || strings.Contains(systemPrompt, "\n4. ") {
+		t.Fatal("system prompt must contain exactly three generic examples")
+	}
 }
 
 func TestParseAndValidateStrictSchema(t *testing.T) {
-	raw := `{"market_relevance":"HIGH","resolved_asset":"NVDA","asset_mapping_type":"direct","expected_horizon":"1d","likely_direction":"positive","confidence":85,"catalyst_type":"earnings","reason":"A concrete company catalyst may move the named equity.","missing_evidence":[]}`
+	raw := `{"market_relevance":"HIGH","mapping_status":"DIRECT","ticker":"NVDA","mapping_confidence":"HIGH","expected_horizon":"ONE_DAY","likely_direction":"POSITIVE","catalyst_type":"earnings","reason":"A concrete company catalyst may move the named equity.","missing_evidence":[]}`
 	result, errs := ParseAndValidate(raw)
 	if len(errs) > 0 || result == nil {
 		t.Fatalf("unexpected errors: %v", errs)
@@ -83,9 +95,12 @@ func TestParseAndValidateStrictSchema(t *testing.T) {
 
 func TestSemanticMappingValidation(t *testing.T) {
 	cases := []struct{ name, raw, want string }{
-		{"unresolved asset", `{"market_relevance":"LOW","resolved_asset":"SPY","asset_mapping_type":"unresolved","expected_horizon":"unclear","likely_direction":"unclear","confidence":20,"catalyst_type":"unclear","reason":"The available event record does not identify an asset.","missing_evidence":[]}`, "requires resolved_asset null"},
-		{"direct confidence", `{"market_relevance":"HIGH","resolved_asset":"SPY","asset_mapping_type":"direct","expected_horizon":"1d","likely_direction":"neutral","confidence":60,"catalyst_type":"macro","reason":"The event directly concerns this specific market asset.","missing_evidence":[]}`, "at least 70"},
-		{"ticker format", `{"market_relevance":"HIGH","resolved_asset":"bad ticker","asset_mapping_type":"proxy","expected_horizon":"1d","likely_direction":"neutral","confidence":60,"catalyst_type":"macro","reason":"The event has a conservative sector-level market proxy.","missing_evidence":[]}`, "invalid ticker"},
+		{"unresolved ticker", `{"market_relevance":"LOW","mapping_status":"UNRESOLVED","ticker":"SPY","mapping_confidence":"LOW","expected_horizon":"UNCLEAR","likely_direction":"UNCLEAR","catalyst_type":"unclear","reason":"The available event record does not identify an asset.","missing_evidence":[]}`, "requires an empty ticker"},
+		{"direct empty ticker", `{"market_relevance":"HIGH","mapping_status":"DIRECT","ticker":"","mapping_confidence":"MEDIUM","expected_horizon":"ONE_DAY","likely_direction":"NEUTRAL","catalyst_type":"company event","reason":"The event directly concerns a specific listed market asset.","missing_evidence":[]}`, "require a non-empty ticker"},
+		{"proxy empty ticker", `{"market_relevance":"HIGH","mapping_status":"PROXY","ticker":"","mapping_confidence":"MEDIUM","expected_horizon":"ONE_DAY","likely_direction":"NEUTRAL","catalyst_type":"macro","reason":"The event has a defensible sector-level market relationship.","missing_evidence":[]}`, "require a non-empty ticker"},
+		{"ticker format", `{"market_relevance":"HIGH","mapping_status":"PROXY","ticker":"bad ticker","mapping_confidence":"MEDIUM","expected_horizon":"ONE_DAY","likely_direction":"NEUTRAL","catalyst_type":"macro","reason":"The event has a conservative sector-level market proxy.","missing_evidence":[]}`, "invalid format"},
+		{"categorical confidence", `{"market_relevance":"HIGH","mapping_status":"PROXY","ticker":"SPY","mapping_confidence":"70","expected_horizon":"ONE_DAY","likely_direction":"NEUTRAL","catalyst_type":"macro","reason":"The event has a conservative sector-level market proxy.","missing_evidence":[]}`, "mapping_confidence must be"},
+		{"null ticker", `{"market_relevance":"LOW","mapping_status":"UNRESOLVED","ticker":null,"mapping_confidence":"LOW","expected_horizon":"UNCLEAR","likely_direction":"UNCLEAR","catalyst_type":"unclear","reason":"The available event record does not identify an asset.","missing_evidence":[]}`, "not null"},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -94,6 +109,43 @@ func TestSemanticMappingValidation(t *testing.T) {
 				t.Fatalf("errors %v do not contain %q", errs, tt.want)
 			}
 		})
+	}
+}
+
+func TestEmptyTickerAcceptedOnlyWithUnresolved(t *testing.T) {
+	valid := `{"market_relevance":"LOW","mapping_status":"UNRESOLVED","ticker":"","mapping_confidence":"LOW","expected_horizon":"UNCLEAR","likely_direction":"UNCLEAR","catalyst_type":"unclear","reason":"The available record cannot support one principal asset mapping.","missing_evidence":["A named asset or principal exposure"]}`
+	if result, errs := ParseAndValidate(valid); result == nil || len(errs) != 0 {
+		t.Fatalf("UNRESOLVED empty ticker should be accepted: %v", errs)
+	}
+	for _, status := range []string{"DIRECT", "PROXY"} {
+		raw := strings.Replace(valid, `"mapping_status":"UNRESOLVED"`, `"mapping_status":"`+status+`"`, 1)
+		if _, errs := ParseAndValidate(raw); !hasError(errs, "non-empty ticker") {
+			t.Fatalf("%s empty ticker should be rejected: %v", status, errs)
+		}
+	}
+}
+
+func TestOutputSchemaHasFlatNonNullableContract(t *testing.T) {
+	schema := OutputSchema()
+	properties := schema["properties"].(map[string]any)
+	if properties["ticker"].(map[string]any)["type"] != "string" {
+		t.Fatal("ticker must have only string type")
+	}
+	for _, removed := range []string{"resolved_asset", "asset_mapping_type", "confidence"} {
+		if _, ok := properties[removed]; ok {
+			t.Fatalf("legacy property %s remains in v2 schema", removed)
+		}
+	}
+}
+
+func TestLegacySchemaResultRemainsReadableWithoutConfidenceCoercion(t *testing.T) {
+	raw := []byte(`{"market_relevance":"HIGH","resolved_asset":"NVDA","asset_mapping_type":"direct","expected_horizon":"1d","likely_direction":"positive","confidence":85,"catalyst_type":"earnings","reason":"A concrete company catalyst may move the named equity.","missing_evidence":[]}`)
+	decoded, err := DecodePersistedResult(LegacySchemaVersion, raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Legacy == nil || decoded.Current != nil || decoded.Legacy.Confidence != 85 {
+		t.Fatalf("legacy numeric confidence was not preserved: %#v", decoded)
 	}
 }
 
@@ -128,7 +180,7 @@ func TestManifestDeterminismAndFingerprintValidation(t *testing.T) {
 }
 
 func TestRunnerAllowsAtMostOneCorrectiveRetryAndPreservesSafety(t *testing.T) {
-	provider := &sequenceProvider{responses: []ProviderResponse{{Content: `{"bad":true}`}, {Content: `{"market_relevance":"LOW","resolved_asset":null,"asset_mapping_type":"unresolved","expected_horizon":"unclear","likely_direction":"unclear","confidence":20,"catalyst_type":"unclear","reason":"The available record does not support a conservative asset mapping.","missing_evidence":[]}`}}}
+	provider := &sequenceProvider{responses: []ProviderResponse{{Content: `{"bad":true}`}, {Content: `{"market_relevance":"LOW","mapping_status":"UNRESOLVED","ticker":"","mapping_confidence":"LOW","expected_horizon":"UNCLEAR","likely_direction":"UNCLEAR","catalyst_type":"unclear","reason":"The available record does not support a conservative asset mapping.","missing_evidence":[]}`}}}
 	repo := &memoryRepository{counts: SafetyCounts{Approvals: 2, PaperTickets: 1}}
 	event := BenchmarkEvent{ID: "00000000-0000-0000-0000-000000000001", Input: EventInput{Title: "x", Entities: []string{}, ReceiptEvidence: []string{}}, InputFingerprint: "fingerprint", Decision: "NO_TRADE", Mapping: evidencequality.Mapping{}, Outcome1H: .01, Outcome1D: .02}
 	manifest, err := NewManifest([]BenchmarkEvent{event}, 1)
@@ -142,6 +194,16 @@ func TestRunnerAllowsAtMostOneCorrectiveRetryAndPreservesSafety(t *testing.T) {
 	}
 	if provider.calls != 2 || len(repo.attempts) != 2 || report.RetryCount != 1 {
 		t.Fatalf("retry was not bounded to one: calls=%d attempts=%d", provider.calls, len(repo.attempts))
+	}
+	if len(provider.requests) != 2 {
+		t.Fatalf("captured requests=%d, want 2", len(provider.requests))
+	}
+	var correction map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(provider.requests[1].User), &correction); err != nil {
+		t.Fatal(err)
+	}
+	if len(correction) != 2 || correction["validation_errors"] == nil || correction["previous_structured_response"] == nil {
+		t.Fatalf("correction payload contains more than previous response and concrete errors: %s", provider.requests[1].User)
 	}
 	if repo.before != repo.after {
 		t.Fatal("safety counts changed")
@@ -185,13 +247,15 @@ func hasError(values []string, want string) bool {
 
 type sequenceProvider struct {
 	responses []ProviderResponse
+	requests  []ProviderRequest
 	calls     int
 }
 
-func (p *sequenceProvider) Complete(ProviderRequest) (ProviderResponse, error) {
+func (p *sequenceProvider) Complete(request ProviderRequest) (ProviderResponse, error) {
 	if p.calls >= len(p.responses) {
 		return ProviderResponse{}, errors.New("unexpected call")
 	}
+	p.requests = append(p.requests, request)
 	response := p.responses[p.calls]
 	p.calls++
 	return response, nil
