@@ -167,6 +167,13 @@ func TestRunnerDoesNotLoopAfterSecondRejection(t *testing.T) {
 	}
 }
 
+func TestPersistenceNormalizesNilValidationErrors(t *testing.T) {
+	values := nonNilStrings(nil)
+	if values == nil || len(values) != 0 {
+		t.Fatalf("nil validation errors were not normalized: %#v", values)
+	}
+}
+
 func hasError(values []string, want string) bool {
 	for _, value := range values {
 		if strings.Contains(value, want) {

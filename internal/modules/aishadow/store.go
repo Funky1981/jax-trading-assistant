@@ -63,7 +63,7 @@ func (s *PGStore) SaveAttempt(attempt Attempt) error {
 		attempt.Provider, attempt.Model, attempt.ModelReportedIdentifier, attempt.PromptVersion,
 		attempt.SchemaVersion, attempt.Seed, attempt.Temperature, attempt.RequestTimestamp,
 		attempt.ResponseTimestamp, attempt.Duration.Milliseconds(), attempt.RawResponseHash,
-		attempt.ValidationStatus, attempt.ValidationErrors, attempt.FailureReason)
+		attempt.ValidationStatus, nonNilStrings(attempt.ValidationErrors), attempt.FailureReason)
 	if err != nil {
 		return fmt.Errorf("persist AI shadow attempt: %w", err)
 	}
@@ -88,11 +88,18 @@ func (s *PGStore) SaveResult(result EventResult) error {
 		result.Provider, result.Model, result.ModelReportedIdentifier, result.PromptVersion,
 		result.SchemaVersion, result.Seed, result.Temperature, result.RequestTimestamp,
 		result.ResponseTimestamp, result.Duration.Milliseconds(), result.RetryCount,
-		result.RawResponseHash, parsed, result.ValidationStatus, result.ValidationErrors, result.FailureReason)
+		result.RawResponseHash, parsed, result.ValidationStatus, nonNilStrings(result.ValidationErrors), result.FailureReason)
 	if err != nil {
 		return fmt.Errorf("persist AI shadow result: %w", err)
 	}
 	return nil
+}
+
+func nonNilStrings(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
 
 func (s *PGStore) FinishRun(finish FinishRecord) error {
