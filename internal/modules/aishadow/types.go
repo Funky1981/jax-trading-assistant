@@ -13,8 +13,11 @@ const (
 	ManifestVersion     = "ai-shadow-manifest-v1"
 	LegacyPromptVersion = "ai-shadow-prompt-v1"
 	LegacySchemaVersion = "ai-shadow-output-v1"
-	PromptVersion       = "ai-shadow-prompt-v2-flat-mapping"
-	SchemaVersion       = "ai-shadow-output-v2-flat-mapping"
+	V2PromptVersion     = "ai-shadow-prompt-v2-flat-mapping"
+	V2SchemaVersion     = "ai-shadow-output-v2-flat-mapping"
+	PromptVersion       = "ai-shadow-prompt-v3-bounded-exposure"
+	SchemaVersion       = "ai-shadow-output-v3-bounded-exposure"
+	NoProxyExposure     = "NONE"
 )
 
 type EventInput struct {
@@ -31,6 +34,21 @@ type EventInput struct {
 type StructuredResult struct {
 	MarketRelevance   string   `json:"market_relevance"`
 	MappingStatus     string   `json:"mapping_status"`
+	DirectTicker      string   `json:"direct_ticker"`
+	ProxyExposure     string   `json:"proxy_exposure"`
+	MappingConfidence string   `json:"mapping_confidence"`
+	ExpectedHorizon   string   `json:"expected_horizon"`
+	LikelyDirection   string   `json:"likely_direction"`
+	CatalystType      string   `json:"catalyst_type"`
+	Reason            string   `json:"reason"`
+	MissingEvidence   []string `json:"missing_evidence"`
+}
+
+// V2StructuredResult preserves the free-form ticker contract. It is decoded
+// only as v2 and is never reinterpreted as a v3 bounded exposure.
+type V2StructuredResult struct {
+	MarketRelevance   string   `json:"market_relevance"`
+	MappingStatus     string   `json:"mapping_status"`
 	Ticker            string   `json:"ticker"`
 	MappingConfidence string   `json:"mapping_confidence"`
 	ExpectedHorizon   string   `json:"expected_horizon"`
@@ -38,6 +56,23 @@ type StructuredResult struct {
 	CatalystType      string   `json:"catalyst_type"`
 	Reason            string   `json:"reason"`
 	MissingEvidence   []string `json:"missing_evidence"`
+}
+
+// PolicyResolution records the deterministic Jax result separately from the
+// model output so policy behaviour is never attributed to AI behaviour.
+type PolicyResolution struct {
+	Status         string `json:"status"`
+	PolicyVersion  string `json:"policy_version"`
+	MatchedRule    string `json:"matched_rule,omitempty"`
+	ResolvedTicker string `json:"resolved_ticker,omitempty"`
+	MappingType    string `json:"mapping_type"`
+	Relationship   string `json:"relationship"`
+	Reason         string `json:"reason"`
+}
+
+type V3PersistedResult struct {
+	ModelOutput             StructuredResult `json:"model_output"`
+	DeterministicResolution PolicyResolution `json:"deterministic_resolution"`
 }
 
 // LegacyStructuredResult preserves the v1 representation for append-only
@@ -57,7 +92,8 @@ type LegacyStructuredResult struct {
 
 type PersistedStructuredResult struct {
 	SchemaVersion string
-	Current       *StructuredResult
+	Current       *V3PersistedResult
+	V2            *V2StructuredResult
 	Legacy        *LegacyStructuredResult
 }
 
@@ -110,6 +146,7 @@ type EventResult struct {
 	ManifestVersion string
 	RetryCount      int
 	Parsed          *StructuredResult
+	Resolution      *PolicyResolution
 }
 
 type RunRecord struct {

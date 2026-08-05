@@ -71,15 +71,11 @@ func (s *PGStore) SaveAttempt(attempt Attempt) error {
 }
 
 func (s *PGStore) SaveResult(result EventResult) error {
-	var parsed any
-	if result.Parsed != nil {
-		raw, err := json.Marshal(result.Parsed)
-		if err != nil {
-			return fmt.Errorf("marshal AI shadow result: %w", err)
-		}
-		parsed = string(raw)
+	parsed, err := persistedResultJSON(result)
+	if err != nil {
+		return err
 	}
-	_, err := s.pool.Exec(context.Background(), `INSERT INTO ai_shadow_benchmark_results (
+	_, err = s.pool.Exec(context.Background(), `INSERT INTO ai_shadow_benchmark_results (
 		run_id,manifest_version,event_id,input_fingerprint,provider,model,model_reported_identifier,
 		prompt_version,schema_version,seed,temperature,request_timestamp,response_timestamp,duration_ms,
 		retry_count,raw_response_hash,parsed_result,validation_status,validation_errors,failure_reason
@@ -93,6 +89,27 @@ func (s *PGStore) SaveResult(result EventResult) error {
 		return fmt.Errorf("persist AI shadow result: %w", err)
 	}
 	return nil
+}
+
+func persistedResultJSON(result EventResult) (any, error) {
+	if result.Parsed == nil {
+		if result.Resolution != nil {
+			return nil, fmt.Errorf("AI shadow result has deterministic resolution without an accepted model output")
+		}
+		return nil, nil
+	}
+	if result.SchemaVersion != SchemaVersion {
+		return nil, fmt.Errorf("cannot persist current AI shadow result using schema %q", result.SchemaVersion)
+	}
+	if result.Resolution == nil || result.Resolution.PolicyVersion == "" {
+		return nil, fmt.Errorf("AI shadow v3 result requires deterministic policy provenance")
+	}
+	payload := V3PersistedResult{ModelOutput: *result.Parsed, DeterministicResolution: *result.Resolution}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal AI shadow result: %w", err)
+	}
+	return string(raw), nil
 }
 
 func nonNilStrings(values []string) []string {

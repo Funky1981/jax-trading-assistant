@@ -5,15 +5,17 @@ import (
 	"path/filepath"
 	"time"
 
+	"jax-trading-assistant/internal/modules/assetresolution"
+
 	"github.com/google/uuid"
 )
 
 type Runner struct {
-	Config       Config
-	Provider     Provider
-	Repository   Repository
-	OutputRoot   string
-	KnownTickers map[string]bool
+	Config        Config
+	Provider      Provider
+	Repository    Repository
+	OutputRoot    string
+	AssetResolver assetresolution.Resolver
 }
 
 func (r Runner) Run(manifest Manifest, events []BenchmarkEvent) (Report, ArtifactPaths, error) {
@@ -22,6 +24,10 @@ func (r Runner) Run(manifest Manifest, events []BenchmarkEvent) (Report, Artifac
 	}
 	if len(events) != r.Config.MaxEvents {
 		return Report{}, ArtifactPaths{}, fmt.Errorf("selected event count %d does not match configured maximum %d", len(events), r.Config.MaxEvents)
+	}
+	proxyExposures, err := r.AssetResolver.ProxyExposures()
+	if err != nil {
+		return Report{}, ArtifactPaths{}, fmt.Errorf("prepare bounded exposure policy: %w", err)
 	}
 	before, err := r.Repository.SafetyCounts()
 	if err != nil {
@@ -45,7 +51,7 @@ func (r Runner) Run(manifest Manifest, events []BenchmarkEvent) (Report, Artifac
 		return Report{}, ArtifactPaths{}, cause
 	}
 	for _, event := range events {
-		result, attempts, err := r.analyse(runID, event)
+		result, attempts, err := r.analyse(runID, event, proxyExposures)
 		if err != nil {
 			return failRun(err)
 		}
@@ -66,7 +72,7 @@ func (r Runner) Run(manifest Manifest, events []BenchmarkEvent) (Report, Artifac
 	if before != after {
 		return failRun(fmt.Errorf("prohibited safety counts changed during AI shadow benchmark"))
 	}
-	report := BuildReport(run, manifest, events, results, before, after, r.KnownTickers)
+	report := BuildReport(run, manifest, events, results, before, after)
 	paths, err := WriteArtifacts(filepath.Join(r.OutputRoot, runID), report, manifest)
 	if err != nil {
 		return failRun(err)
@@ -77,8 +83,8 @@ func (r Runner) Run(manifest Manifest, events []BenchmarkEvent) (Report, Artifac
 	return report, paths, nil
 }
 
-func (r Runner) analyse(runID string, event BenchmarkEvent) (EventResult, []Attempt, error) {
-	request, err := InitialRequest(event.Input)
+func (r Runner) analyse(runID string, event BenchmarkEvent, proxyExposures []string) (EventResult, []Attempt, error) {
+	request, err := InitialRequest(event.Input, proxyExposures)
 	if err != nil {
 		return EventResult{}, nil, err
 	}
@@ -87,6 +93,7 @@ func (r Runner) analyse(runID string, event BenchmarkEvent) (EventResult, []Atte
 	var totalDuration time.Duration
 	var final Attempt
 	var parsed *StructuredResult
+	var resolution *PolicyResolution
 	for number := 1; number <= 2; number++ {
 		requested := time.Now().UTC()
 		if number == 1 {
@@ -102,7 +109,7 @@ func (r Runner) analyse(runID string, event BenchmarkEvent) (EventResult, []Atte
 			failureReason = providerErr.Error()
 			validationErrors = []string{"provider request failed"}
 		} else {
-			parsed, validationErrors = ParseAndValidate(response.Content)
+			parsed, resolution, validationErrors = ParseAndValidate(response.Content, event.Input, r.AssetResolver)
 		}
 		status := "accepted"
 		if len(validationErrors) > 0 {
@@ -121,12 +128,12 @@ func (r Runner) analyse(runID string, event BenchmarkEvent) (EventResult, []Atte
 		if status == "accepted" || providerErr != nil || number == 2 {
 			break
 		}
-		request, err = CorrectiveRequest(validationErrors, response.Content)
+		request, err = CorrectiveRequest(validationErrors, response.Content, proxyExposures)
 		if err != nil {
 			return EventResult{}, attempts, err
 		}
 	}
 	final.RequestTimestamp = firstRequest
 	final.Duration = totalDuration
-	return EventResult{Attempt: final, ManifestVersion: ManifestVersion, RetryCount: len(attempts) - 1, Parsed: parsed}, attempts, nil
+	return EventResult{Attempt: final, ManifestVersion: ManifestVersion, RetryCount: len(attempts) - 1, Parsed: parsed, Resolution: resolution}, attempts, nil
 }

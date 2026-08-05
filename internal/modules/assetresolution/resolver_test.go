@@ -69,3 +69,35 @@ func TestResolverSectorMacroProxyAndDateSensitiveSymbol(t *testing.T) {
 		t.Fatalf("date-invalid META accepted: %+v", got)
 	}
 }
+
+func TestProxyExposuresAndResolutionComeFromRuleset(t *testing.T) {
+	r := testResolver(t)
+	exposures, err := r.ProxyExposures()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"FEDERAL_RESERVE_OFFICIAL", "GOLD_NAMED_MARKET", "OIL_CATEGORY", "SEMICONDUCTOR_GROUP", "SP500_NAMED_INDEX", "US_RATES_CATEGORY"}
+	if !reflect.DeepEqual(exposures, want) {
+		t.Fatalf("exposures=%v, want %v", exposures, want)
+	}
+	got, ok := r.ResolveProxyExposure("OIL_CATEGORY")
+	if !ok || got.Symbol != "XLE" || got.CanonicalEntity != "oil_category" || got.RulesetVersion != "event-asset-resolution-v1" {
+		t.Fatalf("resolved exposure=%+v, ok=%v", got, ok)
+	}
+	if _, ok := r.ResolveProxyExposure("UNKNOWN_CATEGORY"); ok {
+		t.Fatal("unknown exposure should remain unresolved")
+	}
+}
+
+func TestProxyExposuresRejectInvalidPolicyEntries(t *testing.T) {
+	for _, rule := range []ProxyRule{
+		{Key: "NONE", Symbol: "SPY"},
+		{Key: "bad exposure", Symbol: "SPY"},
+		{Key: "VALID_EXPOSURE", Symbol: "bad ticker"},
+	} {
+		resolver := Resolver{Rules: Ruleset{Version: "test", Proxies: []ProxyRule{rule}}}
+		if _, err := resolver.ProxyExposures(); err == nil {
+			t.Fatalf("invalid proxy rule was accepted: %+v", rule)
+		}
+	}
+}

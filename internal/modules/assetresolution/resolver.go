@@ -12,8 +12,66 @@ import (
 )
 
 var symbolPattern = regexp.MustCompile(`^[A-Z][A-Z0-9.-]{0,14}$`)
+var exposurePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]{0,79}$`)
 
 type Resolver struct{ Rules Ruleset }
+
+// ProxyExposures returns the model-facing exposure names derived from the
+// versioned proxy rules. Symbols remain private to the deterministic resolver.
+func (r Resolver) ProxyExposures() ([]string, error) {
+	seen := map[string]bool{}
+	exposures := make([]string, 0, len(r.Rules.Proxies))
+	for _, rule := range r.Rules.Proxies {
+		exposure := strings.ToUpper(strings.TrimSpace(rule.Key))
+		if !exposurePattern.MatchString(exposure) {
+			return nil, fmt.Errorf("asset resolution proxy key %q cannot be used as a bounded exposure", rule.Key)
+		}
+		if exposure == "NONE" {
+			return nil, fmt.Errorf("asset resolution proxy key %q conflicts with the unresolved exposure sentinel", rule.Key)
+		}
+		symbol := strings.ToUpper(strings.TrimSpace(rule.Symbol))
+		if !symbolPattern.MatchString(symbol) {
+			return nil, fmt.Errorf("asset resolution proxy %q has invalid symbol %q", rule.Key, rule.Symbol)
+		}
+		if seen[exposure] {
+			return nil, fmt.Errorf("duplicate asset resolution proxy exposure %q", exposure)
+		}
+		seen[exposure] = true
+		exposures = append(exposures, exposure)
+	}
+	if len(exposures) == 0 {
+		return nil, fmt.Errorf("asset resolution ruleset has no proxy exposures")
+	}
+	sort.Strings(exposures)
+	return exposures, nil
+}
+
+// ResolveProxyExposure maps a bounded exposure through the existing versioned
+// proxy policy. It does not re-run event matching or accept model-supplied
+// symbols.
+func (r Resolver) ResolveProxyExposure(exposure string) (Result, bool) {
+	wanted := strings.ToUpper(strings.TrimSpace(exposure))
+	for _, proxy := range r.Rules.Proxies {
+		if strings.ToUpper(strings.TrimSpace(proxy.Key)) != wanted {
+			continue
+		}
+		return Result{
+			Status:          StatusResolved,
+			Symbol:          strings.ToUpper(proxy.Symbol),
+			Benchmark:       strings.ToUpper(proxy.Benchmark),
+			MappingType:     proxy.MappingType,
+			Relationship:    "proxy",
+			ConfidenceClass: "proxy",
+			Reason:          proxy.Reason,
+			SourceFields:    []string{"model_proxy_exposure"},
+			SourceValues:    map[string]any{"proxy_exposure": wanted},
+			RulesetVersion:  r.Rules.Version,
+			CanonicalEntity: proxy.Key,
+			AssetClass:      proxy.AssetClass,
+		}, true
+	}
+	return Result{}, false
+}
 
 func LoadRuleset(path string) (Ruleset, error) {
 	raw, err := os.ReadFile(path)

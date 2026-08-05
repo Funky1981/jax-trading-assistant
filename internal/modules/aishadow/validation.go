@@ -9,20 +9,22 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf8"
+
+	"jax-trading-assistant/internal/modules/assetresolution"
 )
 
-var tickerPattern = regexp.MustCompile(`^[A-Z][A-Z0-9.-]{0,9}$`)
+var tickerPattern = regexp.MustCompile(`^[A-Z][A-Z0-9.-]{0,14}$`)
 
 var requiredResultFields = []string{
-	"market_relevance", "mapping_status", "ticker", "mapping_confidence", "expected_horizon",
+	"market_relevance", "mapping_status", "direct_ticker", "proxy_exposure", "mapping_confidence", "expected_horizon",
 	"likely_direction", "catalyst_type", "reason", "missing_evidence",
 }
 
-func ParseAndValidate(raw string) (*StructuredResult, []string) {
+func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Resolver) (*StructuredResult, *PolicyResolution, []string) {
 	errors := []string{}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(raw), &fields); err != nil {
-		return nil, []string{"invalid JSON: " + err.Error()}
+		return nil, nil, []string{"invalid JSON: " + err.Error()}
 	}
 	for _, field := range requiredResultFields {
 		if _, ok := fields[field]; !ok {
@@ -34,15 +36,17 @@ func ParseAndValidate(raw string) (*StructuredResult, []string) {
 			errors = append(errors, "unknown field: "+field)
 		}
 	}
-	if rawTicker, ok := fields["ticker"]; ok && bytes.Equal(bytes.TrimSpace(rawTicker), []byte("null")) {
-		errors = append(errors, "ticker must be a string, not null")
+	for _, field := range []string{"direct_ticker", "proxy_exposure"} {
+		if rawValue, ok := fields[field]; ok && bytes.Equal(bytes.TrimSpace(rawValue), []byte("null")) {
+			errors = append(errors, field+" must be a string, not null")
+		}
 	}
 	decoder := json.NewDecoder(bytes.NewBufferString(raw))
 	decoder.DisallowUnknownFields()
 	var result StructuredResult
 	if err := decoder.Decode(&result); err != nil {
 		errors = append(errors, "schema decode: "+err.Error())
-		return nil, uniqueSorted(errors)
+		return nil, nil, uniqueSorted(errors)
 	}
 	if err := ensureEOF(decoder); err != nil {
 		errors = append(errors, err.Error())
@@ -62,16 +66,8 @@ func ParseAndValidate(raw string) (*StructuredResult, []string) {
 	if !contains([]string{"POSITIVE", "NEGATIVE", "NEUTRAL", "UNCLEAR"}, result.LikelyDirection) {
 		errors = append(errors, "likely_direction has an invalid value")
 	}
-	if result.MappingStatus == "UNRESOLVED" {
-		if result.Ticker != "" {
-			errors = append(errors, "UNRESOLVED mapping requires an empty ticker")
-		}
-	} else if result.MappingStatus == "DIRECT" || result.MappingStatus == "PROXY" {
-		if result.Ticker == "" {
-			errors = append(errors, "DIRECT and PROXY mappings require a non-empty ticker")
-		} else if !tickerPattern.MatchString(result.Ticker) {
-			errors = append(errors, "ticker has an invalid format")
-		}
+	if result.DirectTicker != "" && !tickerPattern.MatchString(result.DirectTicker) {
+		errors = append(errors, "direct_ticker has an invalid format")
 	}
 	reasonLength := utf8.RuneCountInString(strings.TrimSpace(result.Reason))
 	if reasonLength < 20 || reasonLength > 400 {
@@ -92,31 +88,122 @@ func ParseAndValidate(raw string) (*StructuredResult, []string) {
 			errors = append(errors, fmt.Sprintf("missing_evidence[%d] must contain 1 to 160 characters", index))
 		}
 	}
-	if len(errors) > 0 {
-		return nil, uniqueSorted(errors)
+	var resolution *PolicyResolution
+	switch result.MappingStatus {
+	case "DIRECT":
+		if result.DirectTicker == "" {
+			errors = append(errors, "DIRECT mapping requires a non-empty direct_ticker")
+		}
+		if result.ProxyExposure != NoProxyExposure {
+			errors = append(errors, "DIRECT mapping requires proxy_exposure NONE")
+		}
+		if result.MappingConfidence == "LOW" {
+			errors = append(errors, "DIRECT mapping requires HIGH or MEDIUM mapping_confidence")
+		}
+		resolved := resolver.Resolve(assetResolutionInput(input))
+		if resolved.Status != assetresolution.StatusResolved || resolved.Relationship != "direct" || resolved.Symbol != result.DirectTicker {
+			errors = append(errors, "direct_ticker was not independently verified by receipt-time Jax policy")
+		} else {
+			value := newPolicyResolution(resolved)
+			resolution = &value
+		}
+	case "PROXY":
+		if result.DirectTicker != "" {
+			errors = append(errors, "PROXY mapping requires an empty direct_ticker")
+		}
+		if result.ProxyExposure == NoProxyExposure {
+			errors = append(errors, "PROXY mapping requires a bounded proxy_exposure")
+		} else if resolved, ok := resolver.ResolveProxyExposure(result.ProxyExposure); !ok {
+			errors = append(errors, "proxy_exposure is not allowlisted by the active Jax policy")
+		} else {
+			value := newPolicyResolution(resolved)
+			resolution = &value
+		}
+	case "UNRESOLVED":
+		if result.DirectTicker != "" {
+			errors = append(errors, "UNRESOLVED mapping requires an empty direct_ticker")
+		}
+		if result.ProxyExposure != NoProxyExposure {
+			errors = append(errors, "UNRESOLVED mapping requires proxy_exposure NONE")
+		}
+		if result.MappingConfidence != "LOW" {
+			errors = append(errors, "UNRESOLVED mapping requires LOW mapping_confidence")
+		}
+		value := PolicyResolution{Status: assetresolution.StatusUnresolved, PolicyVersion: resolver.Rules.Version, MappingType: "none", Relationship: "none", Reason: "model classified the receipt-time asset mapping as unresolved"}
+		resolution = &value
 	}
-	return &result, nil
+	if len(errors) > 0 {
+		return nil, nil, uniqueSorted(errors)
+	}
+	return &result, resolution, nil
+}
+
+func assetResolutionInput(input EventInput) assetresolution.Input {
+	return assetresolution.Input{
+		Headline:      input.Title,
+		Summary:       input.Summary,
+		SourceName:    input.Source,
+		EventType:     input.EventCategory,
+		PublicationAt: input.PublicationTimestamp,
+		ReceiptAt:     input.ReceiptTimestamp,
+	}
+}
+
+func newPolicyResolution(result assetresolution.Result) PolicyResolution {
+	return PolicyResolution{
+		Status:         result.Status,
+		PolicyVersion:  result.RulesetVersion,
+		MatchedRule:    result.CanonicalEntity,
+		ResolvedTicker: result.Symbol,
+		MappingType:    result.MappingType,
+		Relationship:   result.Relationship,
+		Reason:         result.Reason,
+	}
 }
 
 func DecodePersistedResult(schemaVersion string, raw []byte) (PersistedStructuredResult, error) {
 	result := PersistedStructuredResult{SchemaVersion: schemaVersion}
 	switch schemaVersion {
 	case SchemaVersion:
-		var current StructuredResult
-		if err := json.Unmarshal(raw, &current); err != nil {
+		var current V3PersistedResult
+		if err := decodePersistedJSON(raw, &current); err != nil {
 			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: %w", schemaVersion, err)
 		}
+		if current.ModelOutput.MappingStatus == "" || current.DeterministicResolution.PolicyVersion == "" {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: model output or deterministic resolution provenance is missing", schemaVersion)
+		}
 		result.Current = &current
+	case V2SchemaVersion:
+		var v2 V2StructuredResult
+		if err := decodePersistedJSON(raw, &v2); err != nil {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: %w", schemaVersion, err)
+		}
+		if v2.MappingStatus == "" {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: required v2 fields are missing", schemaVersion)
+		}
+		result.V2 = &v2
 	case LegacySchemaVersion:
 		var legacy LegacyStructuredResult
-		if err := json.Unmarshal(raw, &legacy); err != nil {
+		if err := decodePersistedJSON(raw, &legacy); err != nil {
 			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: %w", schemaVersion, err)
+		}
+		if legacy.AssetMappingType == "" {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: required v1 fields are missing", schemaVersion)
 		}
 		result.Legacy = &legacy
 	default:
 		return PersistedStructuredResult{}, fmt.Errorf("unsupported AI shadow schema version %q", schemaVersion)
 	}
 	return result, nil
+}
+
+func decodePersistedJSON(raw []byte, target any) error {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	return ensureEOF(decoder)
 }
 
 func ensureEOF(decoder *json.Decoder) error {

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"jax-trading-assistant/internal/modules/aishadow"
+	"jax-trading-assistant/internal/modules/assetresolution"
 	"jax-trading-assistant/internal/modules/eventdecisions"
 	"jax-trading-assistant/internal/modules/evidencequality"
 
@@ -19,6 +20,7 @@ import (
 func main() {
 	manifestPath := flag.String("manifest", "config/ai-shadow-benchmark-manifest-v1.json", "fixed benchmark manifest path")
 	rulesetPath := flag.String("ruleset-file", "config/historical-evidence-quality-v1.json", "qualified outcome ruleset path")
+	assetRulesetPath := flag.String("asset-ruleset-file", "config/event-asset-resolution-v1.json", "versioned deterministic asset-resolution policy path")
 	outputRoot := flag.String("output-root", ".runtime/ai-shadow", "gitignored benchmark output root")
 	prepareManifest := flag.Bool("prepare-manifest", false, "write the fixed manifest without calling a model")
 	preflight := flag.Bool("preflight", false, "verify configuration, database, manifest, Ollama, and model without inference")
@@ -49,6 +51,14 @@ func main() {
 
 	rules, err := evidencequality.LoadRuleset(*rulesetPath)
 	if err != nil {
+		fail(err)
+	}
+	assetRules, err := assetresolution.LoadRuleset(*assetRulesetPath)
+	if err != nil {
+		fail(err)
+	}
+	assetResolver := assetresolution.Resolver{Rules: assetRules}
+	if _, err := assetResolver.ProxyExposures(); err != nil {
 		fail(err)
 	}
 	snapshot, err := evidencequality.NewStore(pool).LoadSnapshot(ctx)
@@ -102,6 +112,7 @@ func main() {
 		"selected_events": len(events), "provider": config.Provider, "model": config.Model,
 		"base_url": config.BaseURL, "timeout_seconds": int(config.Timeout.Seconds()),
 		"temperature": config.Temperature, "seed": config.Seed, "runtime_mode": safety.RuntimeMode,
+		"asset_resolution_policy_version": assetRules.Version,
 	}
 	if *preflight {
 		if err := aishadow.VerifyOllama(config); err != nil {
@@ -126,13 +137,9 @@ func main() {
 	if err := aishadow.VerifyOllama(config); err != nil {
 		fail(err)
 	}
-	knownTickers := map[string]bool{}
-	for _, candle := range snapshot.Candles {
-		knownTickers[strings.ToUpper(strings.TrimSpace(candle.Symbol))] = true
-	}
 	runner := aishadow.Runner{
 		Config: config, Provider: aishadow.NewOllamaClient(config), Repository: aishadow.NewPGStore(pool),
-		OutputRoot: *outputRoot, KnownTickers: knownTickers,
+		OutputRoot: *outputRoot, AssetResolver: assetResolver,
 	}
 	report, paths, err := runner.Run(manifest, events)
 	if err != nil {

@@ -46,16 +46,21 @@ type Baseline struct {
 }
 
 type ReviewItem struct {
-	EventID              string `json:"event_id"`
-	DeterministicMapping string `json:"deterministic_mapping"`
-	DeterministicAsset   string `json:"deterministic_asset,omitempty"`
-	AIMap                string `json:"ai_mapping"`
-	AIAsset              string `json:"ai_asset,omitempty"`
+	EventID                 string `json:"event_id"`
+	DeterministicMapping    string `json:"deterministic_mapping"`
+	DeterministicAsset      string `json:"deterministic_asset,omitempty"`
+	ModelMapping            string `json:"model_mapping"`
+	ModelDirectTicker       string `json:"model_direct_ticker,omitempty"`
+	ModelProxyExposure      string `json:"model_proxy_exposure"`
+	JaxResolvedTicker       string `json:"jax_resolved_ticker,omitempty"`
+	ResolutionPolicyVersion string `json:"resolution_policy_version"`
+	MatchedRule             string `json:"matched_rule,omitempty"`
 }
 
 type Example struct {
-	EventID string           `json:"event_id"`
-	Output  StructuredResult `json:"output"`
+	EventID                 string           `json:"event_id"`
+	ModelOutput             StructuredResult `json:"model_output"`
+	DeterministicResolution PolicyResolution `json:"deterministic_resolution"`
 }
 
 type Report struct {
@@ -98,7 +103,7 @@ type Report struct {
 	Events                   []BenchmarkEvent `json:"-"`
 }
 
-func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, results []EventResult, before, after SafetyCounts, knownTickers map[string]bool) Report {
+func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, results []EventResult, before, after SafetyCounts) Report {
 	report := Report{
 		RunID: run.ID, ManifestVersion: manifest.Version, ManifestFingerprint: manifest.Fingerprint,
 		Provider: run.Provider, Model: run.Model, PromptVersion: run.PromptVersion, SchemaVersion: run.SchemaVersion,
@@ -127,7 +132,7 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 		default:
 			unresolvedTotal++
 		}
-		if result.ValidationStatus != "accepted" || result.Parsed == nil {
+		if result.ValidationStatus != "accepted" || result.Parsed == nil || result.Resolution == nil {
 			report.Rejected++
 			for _, validationError := range result.ValidationErrors {
 				if strings.Contains(validationError, "ticker") {
@@ -143,14 +148,11 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 		output := *result.Parsed
 		report.RelevanceDistribution[output.MarketRelevance]++
 		report.ConfidenceDistribution[output.MappingConfidence]++
-		aiAsset := output.Ticker
-		if aiAsset != "" {
+		resolvedAsset := result.Resolution.ResolvedTicker
+		if resolvedAsset != "" {
 			covered++
 		}
-		if aiAsset != "" && knownTickers != nil && !knownTickers[aiAsset] {
-			report.FabricatedInvalidTickers++
-		}
-		agree := output.MappingStatus == detType && aiAsset == detAsset
+		agree := output.MappingStatus == detType && resolvedAsset == detAsset
 		if agree {
 			exact++
 		}
@@ -169,10 +171,15 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 			}
 		}
 		if !agree {
-			report.Disagreements = append(report.Disagreements, ReviewItem{EventID: event.ID, DeterministicMapping: detType, DeterministicAsset: detAsset, AIMap: output.MappingStatus, AIAsset: aiAsset})
+			report.Disagreements = append(report.Disagreements, ReviewItem{
+				EventID: event.ID, DeterministicMapping: detType, DeterministicAsset: detAsset,
+				ModelMapping: output.MappingStatus, ModelDirectTicker: output.DirectTicker,
+				ModelProxyExposure: output.ProxyExposure, JaxResolvedTicker: resolvedAsset,
+				ResolutionPolicyVersion: result.Resolution.PolicyVersion, MatchedRule: result.Resolution.MatchedRule,
+			})
 		}
 		if len(report.Examples) < 5 {
-			report.Examples = append(report.Examples, Example{EventID: event.ID, Output: output})
+			report.Examples = append(report.Examples, Example{EventID: event.ID, ModelOutput: output, DeterministicResolution: *result.Resolution})
 		}
 	}
 	report.MedianLatencyMS = percentile(latencies, 0.5)
@@ -354,22 +361,27 @@ func writeCSV(path string, report Report) error {
 	defer file.Close()
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	_ = writer.Write([]string{"event_id", "validation_status", "retry_count", "latency_ms", "market_relevance", "ticker", "mapping_status", "mapping_confidence", "deterministic_decision", "deterministic_mapping", "deterministic_asset", "absolute_1h_move", "absolute_1d_move"})
+	_ = writer.Write([]string{"event_id", "validation_status", "retry_count", "latency_ms", "market_relevance", "mapping_status", "direct_ticker", "proxy_exposure", "mapping_confidence", "jax_resolved_ticker", "resolution_policy_version", "matched_rule", "deterministic_decision", "deterministic_mapping", "deterministic_asset", "absolute_1h_move", "absolute_1d_move"})
 	byID := map[string]BenchmarkEvent{}
 	for _, e := range report.Events {
 		byID[e.ID] = e
 	}
 	for _, r := range report.Results {
 		e := byID[r.EventID]
-		relevance, asset, mapping, confidence := "", "", "", ""
+		relevance, directTicker, proxyExposure, mapping, confidence := "", "", "", "", ""
 		if r.Parsed != nil {
 			relevance = r.Parsed.MarketRelevance
 			mapping = r.Parsed.MappingStatus
 			confidence = r.Parsed.MappingConfidence
-			asset = r.Parsed.Ticker
+			directTicker = r.Parsed.DirectTicker
+			proxyExposure = r.Parsed.ProxyExposure
+		}
+		resolvedTicker, policyVersion, matchedRule := "", "", ""
+		if r.Resolution != nil {
+			resolvedTicker, policyVersion, matchedRule = r.Resolution.ResolvedTicker, r.Resolution.PolicyVersion, r.Resolution.MatchedRule
 		}
 		dt, da := deterministicMapping(e)
-		_ = writer.Write([]string{r.EventID, r.ValidationStatus, strconv.Itoa(r.RetryCount), strconv.FormatInt(r.Duration.Milliseconds(), 10), relevance, asset, mapping, confidence, e.Decision, dt, da, strconv.FormatFloat(e.Outcome1H, 'f', 8, 64), strconv.FormatFloat(e.Outcome1D, 'f', 8, 64)})
+		_ = writer.Write([]string{r.EventID, r.ValidationStatus, strconv.Itoa(r.RetryCount), strconv.FormatInt(r.Duration.Milliseconds(), 10), relevance, mapping, directTicker, proxyExposure, confidence, resolvedTicker, policyVersion, matchedRule, e.Decision, dt, da, strconv.FormatFloat(e.Outcome1H, 'f', 8, 64), strconv.FormatFloat(e.Outcome1D, 'f', 8, 64)})
 	}
 	return writer.Error()
 }
@@ -386,13 +398,13 @@ func markdown(r Report) string {
 	fmt.Fprintf(&b, "| Deterministic | 1h | %d | %d | %s | %s | %s |\n", r.Baseline1H.WatchCount, r.Baseline1H.NoTradeCount, percent(r.Baseline1H.WatchMedian), percent(r.Baseline1H.NoTradeMedian), percent(r.Baseline1H.Difference))
 	fmt.Fprintf(&b, "| Deterministic | 1d | %d | %d | %s | %s | %s |\n\n", r.Baseline1D.WatchCount, r.Baseline1D.NoTradeCount, percent(r.Baseline1D.WatchMedian), percent(r.Baseline1D.NoTradeMedian), percent(r.Baseline1D.Difference))
 	fmt.Fprintf(&b, "Likely direction and expected horizon are exploratory metrics, not proof of predictive power.\n\n## Output distributions\n\nRelevance: `%s`\n\nConfidence: `%s`\n\n", compactJSON(r.RelevanceDistribution), compactJSON(r.ConfidenceDistribution))
-	b.WriteString("## Model output examples\n\n")
+	b.WriteString("## Model classifications and Jax deterministic resolutions\n\n")
 	for _, example := range r.Examples {
-		fmt.Fprintf(&b, "- `%s`: `%s`\n", example.EventID, compactJSON(example.Output))
+		fmt.Fprintf(&b, "- `%s`: model `%s`; Jax deterministic `%s`\n", example.EventID, compactJSON(example.ModelOutput), compactJSON(example.DeterministicResolution))
 	}
 	b.WriteString("\n## Disagreement review\n\n")
 	for _, item := range r.Disagreements {
-		fmt.Fprintf(&b, "- `%s`: deterministic %s `%s`; AI %s `%s`\n", item.EventID, item.DeterministicMapping, item.DeterministicAsset, item.AIMap, item.AIAsset)
+		fmt.Fprintf(&b, "- `%s`: reference %s `%s`; model %s with direct `%s` / exposure `%s`; Jax policy `%s` rule `%s` resolved `%s`\n", item.EventID, item.DeterministicMapping, item.DeterministicAsset, item.ModelMapping, item.ModelDirectTicker, item.ModelProxyExposure, item.ResolutionPolicyVersion, item.MatchedRule, item.JaxResolvedTicker)
 	}
 	if len(r.Disagreements) == 0 {
 		b.WriteString("None.\n")
