@@ -102,9 +102,9 @@ func persistedResultJSON(result EventResult) (any, error) {
 		return nil, fmt.Errorf("cannot persist current AI shadow result using schema %q", result.SchemaVersion)
 	}
 	if result.Resolution == nil || result.Resolution.PolicyVersion == "" {
-		return nil, fmt.Errorf("AI shadow v3 result requires deterministic policy provenance")
+		return nil, fmt.Errorf("AI shadow v4 result requires deterministic policy provenance")
 	}
-	payload := V3PersistedResult{ModelOutput: *result.Parsed, DeterministicResolution: *result.Resolution}
+	payload := V4PersistedResult{ModelOutput: *result.Parsed, DeterministicResolution: *result.Resolution}
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal AI shadow result: %w", err)

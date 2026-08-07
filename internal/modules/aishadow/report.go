@@ -50,8 +50,12 @@ type ReviewItem struct {
 	DeterministicMapping    string `json:"deterministic_mapping"`
 	DeterministicAsset      string `json:"deterministic_asset,omitempty"`
 	ModelMapping            string `json:"model_mapping"`
-	ModelDirectTicker       string `json:"model_direct_ticker,omitempty"`
+	ModelDirectIssuer       string `json:"model_direct_issuer,omitempty"`
 	ModelProxyExposure      string `json:"model_proxy_exposure"`
+	JaxResolutionStatus     string `json:"jax_resolution_status"`
+	JaxNormalizedIssuer     string `json:"jax_normalized_issuer,omitempty"`
+	JaxCanonicalIssuer      string `json:"jax_canonical_issuer,omitempty"`
+	JaxMatchedAlias         string `json:"jax_matched_alias,omitempty"`
 	JaxResolvedTicker       string `json:"jax_resolved_ticker,omitempty"`
 	ResolutionPolicyVersion string `json:"resolution_policy_version"`
 	MatchedRule             string `json:"matched_rule,omitempty"`
@@ -61,6 +65,20 @@ type Example struct {
 	EventID                 string           `json:"event_id"`
 	ModelOutput             StructuredResult `json:"model_output"`
 	DeterministicResolution PolicyResolution `json:"deterministic_resolution"`
+}
+
+type FrozenReference struct {
+	Decision string `json:"decision"`
+	Mapping  string `json:"mapping"`
+	Asset    string `json:"asset,omitempty"`
+}
+
+type Evaluation struct {
+	EventID                 string            `json:"event_id"`
+	ValidationStatus        string            `json:"validation_status"`
+	ModelClassification     *StructuredResult `json:"model_issuer_exposure_classification,omitempty"`
+	DeterministicResolution *PolicyResolution `json:"jax_deterministic_resolution,omitempty"`
+	FrozenReference         FrozenReference   `json:"frozen_reference"`
 }
 
 type Report struct {
@@ -94,6 +112,7 @@ type Report struct {
 	Baseline1H               Baseline         `json:"deterministic_baseline_1h"`
 	Baseline1D               Baseline         `json:"deterministic_baseline_1d"`
 	Examples                 []Example        `json:"model_output_examples"`
+	Evaluations              []Evaluation     `json:"evaluations"`
 	Disagreements            []ReviewItem     `json:"disagreement_review_list"`
 	SafetyBefore             SafetyCounts     `json:"safety_before"`
 	SafetyAfter              SafetyCounts     `json:"safety_after"`
@@ -124,6 +143,11 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 		report.RetryCount += result.RetryCount
 		event := byID[result.EventID]
 		detType, detAsset := deterministicMapping(event)
+		report.Evaluations = append(report.Evaluations, Evaluation{
+			EventID: result.EventID, ValidationStatus: result.ValidationStatus,
+			ModelClassification: result.Parsed, DeterministicResolution: result.Resolution,
+			FrozenReference: FrozenReference{Decision: event.Decision, Mapping: detType, Asset: detAsset},
+		})
 		switch detType {
 		case "DIRECT":
 			directTotal++
@@ -173,8 +197,10 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 		if !agree {
 			report.Disagreements = append(report.Disagreements, ReviewItem{
 				EventID: event.ID, DeterministicMapping: detType, DeterministicAsset: detAsset,
-				ModelMapping: output.MappingStatus, ModelDirectTicker: output.DirectTicker,
+				ModelMapping: output.MappingStatus, ModelDirectIssuer: output.DirectIssuer,
 				ModelProxyExposure: output.ProxyExposure, JaxResolvedTicker: resolvedAsset,
+				JaxResolutionStatus: result.Resolution.Status, JaxNormalizedIssuer: result.Resolution.NormalizedIssuer,
+				JaxCanonicalIssuer: result.Resolution.CanonicalIssuer, JaxMatchedAlias: result.Resolution.MatchedAlias,
 				ResolutionPolicyVersion: result.Resolution.PolicyVersion, MatchedRule: result.Resolution.MatchedRule,
 			})
 		}
@@ -361,27 +387,32 @@ func writeCSV(path string, report Report) error {
 	defer file.Close()
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	_ = writer.Write([]string{"event_id", "validation_status", "retry_count", "latency_ms", "market_relevance", "mapping_status", "direct_ticker", "proxy_exposure", "mapping_confidence", "jax_resolved_ticker", "resolution_policy_version", "matched_rule", "deterministic_decision", "deterministic_mapping", "deterministic_asset", "absolute_1h_move", "absolute_1d_move"})
+	_ = writer.Write([]string{"event_id", "validation_status", "retry_count", "latency_ms", "market_relevance", "model_mapping_status", "model_direct_issuer", "model_proxy_exposure", "model_mapping_confidence", "jax_resolution_status", "jax_raw_direct_issuer", "jax_normalized_issuer", "jax_canonical_issuer", "jax_matched_alias", "jax_resolved_ticker", "jax_mapping_type", "jax_relationship", "resolution_policy_version", "matched_rule", "jax_deterministic_reason", "frozen_reference_decision", "frozen_reference_mapping", "frozen_reference_asset", "absolute_1h_move", "absolute_1d_move"})
 	byID := map[string]BenchmarkEvent{}
 	for _, e := range report.Events {
 		byID[e.ID] = e
 	}
 	for _, r := range report.Results {
 		e := byID[r.EventID]
-		relevance, directTicker, proxyExposure, mapping, confidence := "", "", "", "", ""
+		relevance, directIssuer, proxyExposure, mapping, confidence := "", "", "", "", ""
 		if r.Parsed != nil {
 			relevance = r.Parsed.MarketRelevance
 			mapping = r.Parsed.MappingStatus
 			confidence = r.Parsed.MappingConfidence
-			directTicker = r.Parsed.DirectTicker
+			directIssuer = r.Parsed.DirectIssuer
 			proxyExposure = r.Parsed.ProxyExposure
 		}
 		resolvedTicker, policyVersion, matchedRule := "", "", ""
+		resolutionStatus, rawIssuer, normalizedIssuer, canonicalIssuer, matchedAlias := "", "", "", "", ""
+		mappingType, relationship, deterministicReason := "", "", ""
 		if r.Resolution != nil {
 			resolvedTicker, policyVersion, matchedRule = r.Resolution.ResolvedTicker, r.Resolution.PolicyVersion, r.Resolution.MatchedRule
+			resolutionStatus, rawIssuer, normalizedIssuer = r.Resolution.Status, r.Resolution.RawDirectIssuer, r.Resolution.NormalizedIssuer
+			canonicalIssuer, matchedAlias = r.Resolution.CanonicalIssuer, r.Resolution.MatchedAlias
+			mappingType, relationship, deterministicReason = r.Resolution.MappingType, r.Resolution.Relationship, r.Resolution.Reason
 		}
 		dt, da := deterministicMapping(e)
-		_ = writer.Write([]string{r.EventID, r.ValidationStatus, strconv.Itoa(r.RetryCount), strconv.FormatInt(r.Duration.Milliseconds(), 10), relevance, mapping, directTicker, proxyExposure, confidence, resolvedTicker, policyVersion, matchedRule, e.Decision, dt, da, strconv.FormatFloat(e.Outcome1H, 'f', 8, 64), strconv.FormatFloat(e.Outcome1D, 'f', 8, 64)})
+		_ = writer.Write([]string{r.EventID, r.ValidationStatus, strconv.Itoa(r.RetryCount), strconv.FormatInt(r.Duration.Milliseconds(), 10), relevance, mapping, directIssuer, proxyExposure, confidence, resolutionStatus, rawIssuer, normalizedIssuer, canonicalIssuer, matchedAlias, resolvedTicker, mappingType, relationship, policyVersion, matchedRule, deterministicReason, e.Decision, dt, da, strconv.FormatFloat(e.Outcome1H, 'f', 8, 64), strconv.FormatFloat(e.Outcome1D, 'f', 8, 64)})
 	}
 	return writer.Error()
 }
@@ -398,13 +429,13 @@ func markdown(r Report) string {
 	fmt.Fprintf(&b, "| Deterministic | 1h | %d | %d | %s | %s | %s |\n", r.Baseline1H.WatchCount, r.Baseline1H.NoTradeCount, percent(r.Baseline1H.WatchMedian), percent(r.Baseline1H.NoTradeMedian), percent(r.Baseline1H.Difference))
 	fmt.Fprintf(&b, "| Deterministic | 1d | %d | %d | %s | %s | %s |\n\n", r.Baseline1D.WatchCount, r.Baseline1D.NoTradeCount, percent(r.Baseline1D.WatchMedian), percent(r.Baseline1D.NoTradeMedian), percent(r.Baseline1D.Difference))
 	fmt.Fprintf(&b, "Likely direction and expected horizon are exploratory metrics, not proof of predictive power.\n\n## Output distributions\n\nRelevance: `%s`\n\nConfidence: `%s`\n\n", compactJSON(r.RelevanceDistribution), compactJSON(r.ConfidenceDistribution))
-	b.WriteString("## Model classifications and Jax deterministic resolutions\n\n")
+	b.WriteString("## Model issuer/exposure classifications and Jax deterministic resolutions\n\n")
 	for _, example := range r.Examples {
 		fmt.Fprintf(&b, "- `%s`: model `%s`; Jax deterministic `%s`\n", example.EventID, compactJSON(example.ModelOutput), compactJSON(example.DeterministicResolution))
 	}
-	b.WriteString("\n## Disagreement review\n\n")
+	b.WriteString("\n## Final comparison against frozen reference\n\n")
 	for _, item := range r.Disagreements {
-		fmt.Fprintf(&b, "- `%s`: reference %s `%s`; model %s with direct `%s` / exposure `%s`; Jax policy `%s` rule `%s` resolved `%s`\n", item.EventID, item.DeterministicMapping, item.DeterministicAsset, item.ModelMapping, item.ModelDirectTicker, item.ModelProxyExposure, item.ResolutionPolicyVersion, item.MatchedRule, item.JaxResolvedTicker)
+		fmt.Fprintf(&b, "- `%s`: frozen reference %s `%s`; model classification %s with issuer `%s` / exposure `%s`; Jax deterministic status `%s`, policy `%s`, alias `%s`, rule `%s`, resolved ticker `%s`\n", item.EventID, item.DeterministicMapping, item.DeterministicAsset, item.ModelMapping, item.ModelDirectIssuer, item.ModelProxyExposure, item.JaxResolutionStatus, item.ResolutionPolicyVersion, item.JaxMatchedAlias, item.MatchedRule, item.JaxResolvedTicker)
 	}
 	if len(r.Disagreements) == 0 {
 		b.WriteString("None.\n")

@@ -47,15 +47,15 @@ func testInput(title, category string) EventInput {
 }
 
 func unresolvedJSON() string {
-	return `{"market_relevance":"LOW","mapping_status":"UNRESOLVED","direct_ticker":"","proxy_exposure":"NONE","mapping_confidence":"LOW","expected_horizon":"UNCLEAR","likely_direction":"UNCLEAR","catalyst_type":"unclear","reason":"The available record does not support a bounded asset mapping.","missing_evidence":[]}`
+	return `{"market_relevance":"LOW","mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","mapping_confidence":"LOW","expected_horizon":"UNCLEAR","likely_direction":"UNCLEAR","catalyst_type":"unclear","reason":"The available record does not support a bounded asset mapping.","missing_evidence":[]}`
 }
 
 func proxyJSON(exposure string) string {
-	return `{"market_relevance":"HIGH","mapping_status":"PROXY","direct_ticker":"","proxy_exposure":"` + exposure + `","mapping_confidence":"HIGH","expected_horizon":"ONE_DAY","likely_direction":"POSITIVE","catalyst_type":"energy supply","reason":"The event has a clear principal energy-market exposure.","missing_evidence":[]}`
+	return `{"market_relevance":"HIGH","mapping_status":"PROXY","direct_issuer":"","proxy_exposure":"` + exposure + `","mapping_confidence":"HIGH","expected_horizon":"ONE_DAY","likely_direction":"POSITIVE","catalyst_type":"energy supply","reason":"The event has a clear principal energy-market exposure.","missing_evidence":[]}`
 }
 
-func directJSON(ticker string) string {
-	return `{"market_relevance":"HIGH","mapping_status":"DIRECT","direct_ticker":"` + ticker + `","proxy_exposure":"NONE","mapping_confidence":"HIGH","expected_horizon":"ONE_DAY","likely_direction":"POSITIVE","catalyst_type":"earnings","reason":"The named listed issuer is directly affected by the catalyst.","missing_evidence":[]}`
+func directJSON(issuer string) string {
+	return `{"market_relevance":"HIGH","mapping_status":"DIRECT","direct_issuer":"` + issuer + `","proxy_exposure":"NONE","mapping_confidence":"HIGH","expected_horizon":"ONE_DAY","likely_direction":"POSITIVE","catalyst_type":"earnings","reason":"The named listed issuer is directly affected by the catalyst.","missing_evidence":[]}`
 }
 
 func TestLoadConfigFailsClosed(t *testing.T) {
@@ -112,31 +112,36 @@ func TestInitialPromptContainsOnlyReceiptTimeInputAndNoTickerMapping(t *testing.
 			t.Fatalf("prompt or schema contains ticker mapping or answer leakage %q", forbidden)
 		}
 	}
-	if regexp.MustCompile(`(?i)"direct_ticker"\s*:\s*"[A-Z0-9.-]+"`).MatchString(systemPrompt) {
-		t.Fatal("system prompt contains a fixed ticker example")
+	if regexp.MustCompile(`(?i)"(?:ticker|symbol)"\s*:`).MatchString(promptAndSchema) {
+		t.Fatal("v4 prompt or schema contains a model-produced ticker field")
 	}
 	if strings.Count(systemPrompt, "\n1. ")+strings.Count(systemPrompt, "\n2. ")+strings.Count(systemPrompt, "\n3. ") != 3 || strings.Contains(systemPrompt, "\n4. ") {
 		t.Fatal("system prompt must contain exactly three generic examples")
 	}
 }
 
-func TestParseAndValidateDirectTickerUsesReceiptTimePolicy(t *testing.T) {
+func TestParseAndValidateDirectIssuerUsesReceiptTimePolicy(t *testing.T) {
 	resolver := testAssetResolver(t)
 	input := testInput("Apple reports quarterly earnings", "company")
-	result, resolution, errs := ParseAndValidate(directJSON("AAPL"), input, resolver)
+	result, resolution, errs := ParseAndValidate(directJSON("Apple"), input, resolver)
 	if len(errs) > 0 || result == nil || resolution == nil {
 		t.Fatalf("unexpected errors: %v", errs)
 	}
 	if resolution.ResolvedTicker != "AAPL" || resolution.MatchedRule != "Apple Inc." || resolution.PolicyVersion != "event-asset-resolution-v1" {
 		t.Fatalf("direct resolution provenance=%+v", resolution)
 	}
-	_, _, errs = ParseAndValidate(directJSON("MSFT"), input, resolver)
-	if !hasError(errs, "not independently verified") {
-		t.Fatalf("mismatched direct ticker was accepted: %v", errs)
+	if result.DirectIssuer != "Apple" || resolution.RawDirectIssuer != "Apple" || resolution.NormalizedIssuer != "apple" || resolution.CanonicalIssuer != "Apple Inc." || resolution.MatchedAlias != "Apple" {
+		t.Fatalf("direct issuer provenance=%+v model=%+v", resolution, result)
 	}
-	_, _, errs = ParseAndValidate(strings.TrimSuffix(directJSON("AAPL"), "}")+`,"extra":true}`, input, resolver)
-	if !hasError(errs, "unknown field") {
-		t.Fatalf("expected unknown field error: %v", errs)
+	unknown, unresolved, errs := ParseAndValidate(directJSON("Unlisted Example Holdings"), input, resolver)
+	if len(errs) != 0 || unknown == nil || unresolved == nil || unresolved.Status != assetresolution.StatusUnresolved || unresolved.ResolvedTicker != "" {
+		t.Fatalf("unknown issuer must remain valid and unresolved: model=%+v resolution=%+v errors=%v", unknown, unresolved, errs)
+	}
+	for _, field := range []string{`"ticker":"AAPL"`, `"direct_ticker":"AAPL"`} {
+		_, _, errs = ParseAndValidate(strings.TrimSuffix(directJSON("Apple"), "}")+`,`+field+`}`, input, resolver)
+		if !hasError(errs, "unknown field") {
+			t.Fatalf("expected model-produced ticker rejection for %s: %v", field, errs)
+		}
 	}
 }
 
@@ -146,7 +151,7 @@ func TestProxyExposureResolvesThroughVersionedPolicy(t *testing.T) {
 	if len(errs) != 0 || result == nil || resolution == nil {
 		t.Fatalf("unexpected validation errors: %v", errs)
 	}
-	if result.DirectTicker != "" || resolution.ResolvedTicker != "XLE" || resolution.MatchedRule != "oil_category" || resolution.PolicyVersion != "event-asset-resolution-v1" {
+	if result.DirectIssuer != "" || resolution.ResolvedTicker != "XLE" || resolution.MatchedRule != "oil_category" || resolution.PolicyVersion != "event-asset-resolution-v1" {
 		t.Fatalf("proxy result=%+v resolution=%+v", result, resolution)
 	}
 	_, _, errs = ParseAndValidate(proxyJSON("UNSUPPORTED"), testInput("Broad event", "unknown"), resolver)
@@ -160,8 +165,18 @@ func TestUnknownAssetRemainsValidAsUnresolved(t *testing.T) {
 	if len(errs) != 0 || result == nil || resolution == nil {
 		t.Fatalf("unknown asset should remain a valid unresolved result: %v", errs)
 	}
-	if result.MappingStatus != "UNRESOLVED" || result.DirectTicker != "" || result.ProxyExposure != "NONE" || resolution.Status != "unresolved" || resolution.ResolvedTicker != "" || resolution.PolicyVersion != "event-asset-resolution-v1" {
+	if result.MappingStatus != "UNRESOLVED" || result.DirectIssuer != "" || result.ProxyExposure != "NONE" || resolution.Status != "unresolved" || resolution.ResolvedTicker != "" || resolution.PolicyVersion != "event-asset-resolution-v1" {
 		t.Fatalf("unexpected unresolved model/policy result: model=%+v policy=%+v", result, resolution)
+	}
+}
+
+func TestDirectIssuerShareClassAmbiguityRemainsAcceptedWithoutTicker(t *testing.T) {
+	result, resolution, errs := ParseAndValidate(directJSON("Alphabet Inc."), testInput("Alphabet reports quarterly earnings", "company"), testAssetResolver(t))
+	if len(errs) != 0 || result == nil || resolution == nil {
+		t.Fatalf("ambiguous issuer recognition should remain a valid classification: %v", errs)
+	}
+	if resolution.Status != assetresolution.StatusAmbiguous || resolution.ResolvedTicker != "" || resolution.MappingType != "ambiguous_share_class" {
+		t.Fatalf("share-class ambiguity silently selected a ticker: %+v", resolution)
 	}
 }
 
@@ -169,16 +184,15 @@ func TestSemanticCrossFieldValidation(t *testing.T) {
 	resolver := testAssetResolver(t)
 	input := testInput("Apple reports quarterly earnings", "company")
 	cases := []struct{ name, raw, want string }{
-		{"unresolved direct ticker", strings.Replace(unresolvedJSON(), `"direct_ticker":""`, `"direct_ticker":"AAPL"`, 1), "requires an empty direct_ticker"},
+		{"unresolved direct issuer", strings.Replace(unresolvedJSON(), `"direct_issuer":""`, `"direct_issuer":"Apple"`, 1), "requires an empty direct_issuer"},
 		{"unresolved exposure", strings.Replace(unresolvedJSON(), `"proxy_exposure":"NONE"`, `"proxy_exposure":"OIL_CATEGORY"`, 1), "requires proxy_exposure NONE"},
 		{"unresolved confidence", strings.Replace(unresolvedJSON(), `"mapping_confidence":"LOW"`, `"mapping_confidence":"HIGH"`, 1), "requires LOW"},
-		{"direct empty ticker", strings.Replace(directJSON("AAPL"), `"direct_ticker":"AAPL"`, `"direct_ticker":""`, 1), "requires a non-empty direct_ticker"},
-		{"direct proxy exposure", strings.Replace(directJSON("AAPL"), `"proxy_exposure":"NONE"`, `"proxy_exposure":"OIL_CATEGORY"`, 1), "requires proxy_exposure NONE"},
-		{"direct low confidence", strings.Replace(directJSON("AAPL"), `"mapping_confidence":"HIGH"`, `"mapping_confidence":"LOW"`, 1), "requires HIGH or MEDIUM"},
-		{"proxy direct ticker", strings.Replace(proxyJSON("OIL_CATEGORY"), `"direct_ticker":""`, `"direct_ticker":"AAPL"`, 1), "requires an empty direct_ticker"},
+		{"direct empty issuer", strings.Replace(directJSON("Apple"), `"direct_issuer":"Apple"`, `"direct_issuer":""`, 1), "requires a non-empty direct_issuer"},
+		{"direct proxy exposure", strings.Replace(directJSON("Apple"), `"proxy_exposure":"NONE"`, `"proxy_exposure":"OIL_CATEGORY"`, 1), "requires proxy_exposure NONE"},
+		{"direct low confidence", strings.Replace(directJSON("Apple"), `"mapping_confidence":"HIGH"`, `"mapping_confidence":"LOW"`, 1), "requires HIGH or MEDIUM"},
+		{"proxy direct issuer", strings.Replace(proxyJSON("OIL_CATEGORY"), `"direct_issuer":""`, `"direct_issuer":"Apple"`, 1), "requires an empty direct_issuer"},
 		{"proxy none", strings.Replace(proxyJSON("OIL_CATEGORY"), `"proxy_exposure":"OIL_CATEGORY"`, `"proxy_exposure":"NONE"`, 1), "requires a bounded proxy_exposure"},
-		{"ticker format", strings.Replace(directJSON("AAPL"), `"direct_ticker":"AAPL"`, `"direct_ticker":"bad ticker"`, 1), "invalid format"},
-		{"null ticker", strings.Replace(unresolvedJSON(), `"direct_ticker":""`, `"direct_ticker":null`, 1), "not null"},
+		{"null issuer", strings.Replace(unresolvedJSON(), `"direct_issuer":""`, `"direct_issuer":null`, 1), "not null"},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -198,24 +212,24 @@ func TestOutputSchemaIsBoundedAndHasNoProxyTicker(t *testing.T) {
 	}
 	schema := OutputSchema(exposures)
 	properties := schema["properties"].(map[string]any)
-	if properties["direct_ticker"].(map[string]any)["type"] != "string" {
-		t.Fatal("direct_ticker must have only string type")
+	if properties["direct_issuer"].(map[string]any)["type"] != "string" {
+		t.Fatal("direct_issuer must have only string type")
 	}
 	gotExposures := properties["proxy_exposure"].(map[string]any)["enum"].([]string)
 	if !reflect.DeepEqual(gotExposures, append([]string{"NONE"}, exposures...)) {
 		t.Fatalf("proxy exposure enum=%v", gotExposures)
 	}
-	for _, removed := range []string{"ticker", "resolved_asset", "asset_mapping_type", "confidence"} {
+	for _, removed := range []string{"ticker", "direct_ticker", "resolved_asset", "asset_mapping_type", "confidence"} {
 		if _, ok := properties[removed]; ok {
 			t.Fatalf("historic property %s remains in v3 schema", removed)
 		}
 	}
 }
 
-func TestPersistedDecoderKeepsV1V2AndV3Distinct(t *testing.T) {
+func TestPersistedDecoderKeepsV1V2V3AndV4Distinct(t *testing.T) {
 	legacyRaw := []byte(`{"market_relevance":"HIGH","resolved_asset":"NVDA","asset_mapping_type":"direct","expected_horizon":"1d","likely_direction":"positive","confidence":85,"catalyst_type":"earnings","reason":"A concrete company catalyst may move the named equity.","missing_evidence":[]}`)
 	legacy, err := DecodePersistedResult(LegacySchemaVersion, legacyRaw)
-	if err != nil || legacy.Legacy == nil || legacy.V2 != nil || legacy.Current != nil || legacy.Legacy.Confidence != 85 {
+	if err != nil || legacy.Legacy == nil || legacy.V2 != nil || legacy.V3 != nil || legacy.Current != nil || legacy.Legacy.Confidence != 85 {
 		t.Fatalf("legacy numeric confidence was not preserved: %#v err=%v", legacy, err)
 	}
 	v2Raw := []byte(`{"market_relevance":"HIGH","mapping_status":"PROXY","ticker":"XLE","mapping_confidence":"HIGH","expected_horizon":"ONE_DAY","likely_direction":"POSITIVE","catalyst_type":"energy","reason":"A prior free-form proxy ticker result remains historical.","missing_evidence":[]}`)
@@ -223,22 +237,31 @@ func TestPersistedDecoderKeepsV1V2AndV3Distinct(t *testing.T) {
 	if err != nil || v2.V2 == nil || v2.Current != nil || v2.V2.Ticker != "XLE" {
 		t.Fatalf("v2 free-form result was reinterpreted: %#v err=%v", v2, err)
 	}
-	v3Raw := []byte(`{"model_output":` + proxyJSON("OIL_CATEGORY") + `,"deterministic_resolution":{"status":"resolved","policy_version":"event-asset-resolution-v1","matched_rule":"oil_category","resolved_ticker":"XLE","mapping_type":"event_category_proxy","relationship":"proxy","reason":"policy mapping"}}`)
-	v3, err := DecodePersistedResult(SchemaVersion, v3Raw)
-	if err != nil || v3.Current == nil || v3.V2 != nil || v3.Current.DeterministicResolution.MatchedRule != "oil_category" {
+	v3Model := `{"market_relevance":"HIGH","mapping_status":"PROXY","direct_ticker":"","proxy_exposure":"OIL_CATEGORY","mapping_confidence":"HIGH","expected_horizon":"ONE_DAY","likely_direction":"POSITIVE","catalyst_type":"energy","reason":"A prior bounded exposure result remains historical.","missing_evidence":[]}`
+	v3Raw := []byte(`{"model_output":` + v3Model + `,"deterministic_resolution":{"status":"resolved","policy_version":"event-asset-resolution-v1","matched_rule":"oil_category","resolved_ticker":"XLE","mapping_type":"event_category_proxy","relationship":"proxy","reason":"policy mapping"}}`)
+	v3, err := DecodePersistedResult(V3SchemaVersion, v3Raw)
+	if err != nil || v3.V3 == nil || v3.Current != nil || v3.V3.DeterministicResolution.MatchedRule != "oil_category" {
 		t.Fatalf("v3 envelope was not decoded: %#v err=%v", v3, err)
 	}
-	if _, err := DecodePersistedResult(SchemaVersion, v2Raw); err == nil {
-		t.Fatal("v2 flat result must not be interpreted as v3")
+	v4Raw := []byte(`{"model_output":` + directJSON("Apple") + `,"deterministic_resolution":{"status":"resolved","policy_version":"event-asset-resolution-v1","raw_direct_issuer":"Apple","normalized_issuer":"apple","canonical_issuer":"Apple Inc.","matched_alias":"Apple","matched_rule":"Apple Inc.","resolved_ticker":"AAPL","mapping_type":"verified_issuer_identity","relationship":"direct","reason":"policy mapping"}}`)
+	v4, err := DecodePersistedResult(SchemaVersion, v4Raw)
+	if err != nil || v4.Current == nil || v4.V3 != nil || v4.Current.ModelOutput.DirectIssuer != "Apple" {
+		t.Fatalf("v4 envelope was not decoded: %#v err=%v", v4, err)
+	}
+	if _, err := DecodePersistedResult(SchemaVersion, v3Raw); err == nil {
+		t.Fatal("v3 ticker-producing result must not be interpreted as v4")
 	}
 	if _, err := DecodePersistedResult(V2SchemaVersion, v3Raw); err == nil {
 		t.Fatal("v3 envelope must not be interpreted as v2")
 	}
+	if _, err := DecodePersistedResult(V3SchemaVersion, v4Raw); err == nil {
+		t.Fatal("v4 issuer result must not be interpreted as v3")
+	}
 }
 
-func TestPersistedV3PayloadIncludesSeparatePolicyProvenance(t *testing.T) {
-	model := &StructuredResult{MarketRelevance: "HIGH", MappingStatus: "PROXY", ProxyExposure: "OIL_CATEGORY", MappingConfidence: "HIGH", ExpectedHorizon: "ONE_DAY", LikelyDirection: "POSITIVE", CatalystType: "energy", Reason: "The event has one bounded energy exposure.", MissingEvidence: []string{}}
-	resolution := &PolicyResolution{Status: "resolved", PolicyVersion: "event-asset-resolution-v1", MatchedRule: "oil_category", ResolvedTicker: "XLE", MappingType: "event_category_proxy", Relationship: "proxy", Reason: "policy mapping"}
+func TestPersistedV4PayloadIncludesSeparatePolicyProvenance(t *testing.T) {
+	model := &StructuredResult{MarketRelevance: "HIGH", MappingStatus: "DIRECT", DirectIssuer: "Apple", ProxyExposure: "NONE", MappingConfidence: "HIGH", ExpectedHorizon: "ONE_DAY", LikelyDirection: "POSITIVE", CatalystType: "earnings", Reason: "The named issuer has a direct company catalyst.", MissingEvidence: []string{}}
+	resolution := &PolicyResolution{Status: "resolved", PolicyVersion: "event-asset-resolution-v1", RawDirectIssuer: "Apple", NormalizedIssuer: "apple", CanonicalIssuer: "Apple Inc.", MatchedAlias: "Apple", MatchedRule: "Apple Inc.", ResolvedTicker: "AAPL", MappingType: "verified_issuer_identity", Relationship: "direct", Reason: "policy mapping"}
 	raw, err := persistedResultJSON(EventResult{Attempt: Attempt{SchemaVersion: SchemaVersion}, Parsed: model, Resolution: resolution})
 	if err != nil {
 		t.Fatal(err)
@@ -247,7 +270,7 @@ func TestPersistedV3PayloadIncludesSeparatePolicyProvenance(t *testing.T) {
 	if err != nil || decoded.Current == nil {
 		t.Fatalf("decode persisted payload: %v %#v", err, decoded)
 	}
-	if decoded.Current.ModelOutput.DirectTicker != "" || decoded.Current.DeterministicResolution.ResolvedTicker != "XLE" {
+	if decoded.Current.ModelOutput.DirectIssuer != "Apple" || decoded.Current.DeterministicResolution.ResolvedTicker != "AAPL" || decoded.Current.DeterministicResolution.NormalizedIssuer != "apple" || decoded.Current.DeterministicResolution.MatchedAlias != "Apple" {
 		t.Fatalf("model and policy fields were not separated: %#v", decoded.Current)
 	}
 }
@@ -279,6 +302,40 @@ func TestManifestDeterminismAndFingerprintValidation(t *testing.T) {
 	loaded.Events[0].InputFingerprint = "changed"
 	if _, err := ResolveManifest(loaded, events, 2); err == nil {
 		t.Fatal("changed input fingerprint should fail")
+	}
+}
+
+func TestIssuerDiagnosticManifestHasFrozenBalancedAdjudicatedLabels(t *testing.T) {
+	resolver := testAssetResolver(t)
+	exposures, err := resolver.ProxyExposures()
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := LoadDiagnosticManifest("../../../config/ai-shadow-issuer-diagnostic-manifest-v1.json", exposures)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.Events) != 48 || manifest.OutputContract != SchemaVersion || manifest.LabelVersion != DiagnosticLabelVersion {
+		t.Fatalf("unexpected diagnostic manifest metadata: %+v", manifest)
+	}
+	counts := map[string]int{}
+	for _, event := range manifest.Events {
+		counts[event.Category]++
+	}
+	for _, category := range diagnosticCategories {
+		if counts[category] != 6 {
+			t.Fatalf("category %s count=%d, want 6", category, counts[category])
+		}
+	}
+	tampered := manifest
+	tampered.Events = append([]DiagnosticEvent(nil), manifest.Events...)
+	tampered.Events[0].Label.DirectIssuer = ""
+	tampered.Fingerprint, err = diagnosticManifestFingerprint(tampered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateDiagnosticManifest(tampered, exposures); err == nil {
+		t.Fatal("invalid adjudicated label was accepted")
 	}
 }
 
@@ -323,23 +380,51 @@ func TestRunnerAllowsAtMostOneCorrectiveRetryAndPreservesSafety(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(jsonReport), `"model_output":`) || !strings.Contains(string(jsonReport), `"proxy_exposure": "OIL_CATEGORY"`) || !strings.Contains(string(jsonReport), `"deterministic_resolution":`) || !strings.Contains(string(jsonReport), `"policy_version": "event-asset-resolution-v1"`) {
+	if !strings.Contains(string(jsonReport), `"model_issuer_exposure_classification":`) || !strings.Contains(string(jsonReport), `"proxy_exposure": "OIL_CATEGORY"`) || !strings.Contains(string(jsonReport), `"jax_deterministic_resolution":`) || !strings.Contains(string(jsonReport), `"frozen_reference":`) || !strings.Contains(string(jsonReport), `"policy_version": "event-asset-resolution-v1"`) {
 		t.Fatalf("JSON report does not separate model exposure and policy provenance: %s", jsonReport)
 	}
 	csvReport, err := os.ReadFile(paths.CSV)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(csvReport), "proxy_exposure") || !strings.Contains(string(csvReport), "jax_resolved_ticker") || !strings.Contains(string(csvReport), "matched_rule") {
-		t.Fatalf("CSV report is missing v3 provenance columns: %s", csvReport)
+	if !strings.Contains(string(csvReport), "model_direct_issuer") || !strings.Contains(string(csvReport), "model_proxy_exposure") || !strings.Contains(string(csvReport), "jax_resolved_ticker") || !strings.Contains(string(csvReport), "frozen_reference_mapping") {
+		t.Fatalf("CSV report is missing v4 separation columns: %s", csvReport)
 	}
 	markdownReport, err := os.ReadFile(paths.Markdown)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(markdownReport), "model `") || !strings.Contains(string(markdownReport), "Jax deterministic `") {
+	if !strings.Contains(string(markdownReport), "model `") || !strings.Contains(string(markdownReport), "Jax deterministic `") || !strings.Contains(string(markdownReport), "Final comparison against frozen reference") {
 		t.Fatalf("markdown report does not distinguish model and Jax behavior: %s", markdownReport)
 	}
+}
+
+func TestV4ReportsSeparateIssuerResolutionAndFrozenReference(t *testing.T) {
+	event := BenchmarkEvent{ID: "00000000-0000-0000-0000-000000000099", Input: testInput("Apple reports quarterly earnings", "company"), Decision: "WATCH", Mapping: evidencequality.Mapping{Mapped: true, Direct: true, Symbol: "AAPL"}}
+	model := &StructuredResult{MarketRelevance: "HIGH", MappingStatus: "DIRECT", DirectIssuer: "Apple", ProxyExposure: "NONE", MappingConfidence: "HIGH", ExpectedHorizon: "ONE_DAY", LikelyDirection: "POSITIVE", CatalystType: "earnings", Reason: "The named issuer has a direct company catalyst.", MissingEvidence: []string{}}
+	resolution := &PolicyResolution{Status: "resolved", PolicyVersion: "event-asset-resolution-v1", RawDirectIssuer: "Apple", NormalizedIssuer: "apple", CanonicalIssuer: "Apple Inc.", MatchedAlias: "Apple", MatchedRule: "Apple Inc.", ResolvedTicker: "AAPL", MappingType: "verified_issuer_identity", Relationship: "direct", Reason: "Exact issuer alias"}
+	result := EventResult{Attempt: Attempt{EventID: event.ID, ValidationStatus: "accepted", SchemaVersion: SchemaVersion}, Parsed: model, Resolution: resolution}
+	manifest := Manifest{Version: ManifestVersion, Fingerprint: "frozen"}
+	report := BuildReport(RunRecord{ID: "run", PromptVersion: PromptVersion, SchemaVersion: SchemaVersion}, manifest, []BenchmarkEvent{event}, []EventResult{result}, SafetyCounts{}, SafetyCounts{})
+	paths, err := WriteArtifacts(t.TempDir(), report, manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFileContains := func(path string, values ...string) {
+		t.Helper()
+		raw, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		for _, value := range values {
+			if !strings.Contains(string(raw), value) {
+				t.Fatalf("%s does not contain %q: %s", path, value, raw)
+			}
+		}
+	}
+	assertFileContains(paths.JSON, `"model_issuer_exposure_classification"`, `"direct_issuer": "Apple"`, `"jax_deterministic_resolution"`, `"normalized_issuer": "apple"`, `"resolved_ticker": "AAPL"`, `"frozen_reference"`)
+	assertFileContains(paths.CSV, "model_direct_issuer", "jax_normalized_issuer", "frozen_reference_mapping", "Apple,", "apple,", "AAPL")
+	assertFileContains(paths.Markdown, "Model issuer/exposure classifications", `"direct_issuer":"Apple"`, `"resolved_ticker":"AAPL"`, "Final comparison against frozen reference")
 }
 
 func TestRunnerDoesNotLoopAfterSecondRejection(t *testing.T) {

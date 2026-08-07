@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"regexp"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -13,10 +12,8 @@ import (
 	"jax-trading-assistant/internal/modules/assetresolution"
 )
 
-var tickerPattern = regexp.MustCompile(`^[A-Z][A-Z0-9.-]{0,14}$`)
-
 var requiredResultFields = []string{
-	"market_relevance", "mapping_status", "direct_ticker", "proxy_exposure", "mapping_confidence", "expected_horizon",
+	"market_relevance", "mapping_status", "direct_issuer", "proxy_exposure", "mapping_confidence", "expected_horizon",
 	"likely_direction", "catalyst_type", "reason", "missing_evidence",
 }
 
@@ -36,7 +33,7 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 			errors = append(errors, "unknown field: "+field)
 		}
 	}
-	for _, field := range []string{"direct_ticker", "proxy_exposure"} {
+	for _, field := range []string{"direct_issuer", "proxy_exposure"} {
 		if rawValue, ok := fields[field]; ok && bytes.Equal(bytes.TrimSpace(rawValue), []byte("null")) {
 			errors = append(errors, field+" must be a string, not null")
 		}
@@ -66,8 +63,9 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 	if !contains([]string{"POSITIVE", "NEGATIVE", "NEUTRAL", "UNCLEAR"}, result.LikelyDirection) {
 		errors = append(errors, "likely_direction has an invalid value")
 	}
-	if result.DirectTicker != "" && !tickerPattern.MatchString(result.DirectTicker) {
-		errors = append(errors, "direct_ticker has an invalid format")
+	issuerLength := utf8.RuneCountInString(strings.TrimSpace(result.DirectIssuer))
+	if issuerLength > 200 {
+		errors = append(errors, "direct_issuer must contain at most 200 characters")
 	}
 	reasonLength := utf8.RuneCountInString(strings.TrimSpace(result.Reason))
 	if reasonLength < 20 || reasonLength > 400 {
@@ -91,8 +89,8 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 	var resolution *PolicyResolution
 	switch result.MappingStatus {
 	case "DIRECT":
-		if result.DirectTicker == "" {
-			errors = append(errors, "DIRECT mapping requires a non-empty direct_ticker")
+		if issuerLength == 0 {
+			errors = append(errors, "DIRECT mapping requires a non-empty direct_issuer")
 		}
 		if result.ProxyExposure != NoProxyExposure {
 			errors = append(errors, "DIRECT mapping requires proxy_exposure NONE")
@@ -100,28 +98,32 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 		if result.MappingConfidence == "LOW" {
 			errors = append(errors, "DIRECT mapping requires HIGH or MEDIUM mapping_confidence")
 		}
-		resolved := resolver.Resolve(assetResolutionInput(input))
-		if resolved.Status != assetresolution.StatusResolved || resolved.Relationship != "direct" || resolved.Symbol != result.DirectTicker {
-			errors = append(errors, "direct_ticker was not independently verified by receipt-time Jax policy")
-		} else {
-			value := newPolicyResolution(resolved)
-			resolution = &value
+		if issuerLength > 0 {
+			resolved := resolver.ResolveIssuer(assetresolution.IssuerInput{
+				IssuerName: result.DirectIssuer, PublicationAt: input.PublicationTimestamp, ReceiptAt: input.ReceiptTimestamp,
+			})
+			if resolved.Status == assetresolution.StatusRejected {
+				errors = append(errors, resolved.Reason)
+			} else {
+				value := newPolicyResolution(resolved, result.DirectIssuer)
+				resolution = &value
+			}
 		}
 	case "PROXY":
-		if result.DirectTicker != "" {
-			errors = append(errors, "PROXY mapping requires an empty direct_ticker")
+		if result.DirectIssuer != "" {
+			errors = append(errors, "PROXY mapping requires an empty direct_issuer")
 		}
 		if result.ProxyExposure == NoProxyExposure {
 			errors = append(errors, "PROXY mapping requires a bounded proxy_exposure")
 		} else if resolved, ok := resolver.ResolveProxyExposure(result.ProxyExposure); !ok {
 			errors = append(errors, "proxy_exposure is not allowlisted by the active Jax policy")
 		} else {
-			value := newPolicyResolution(resolved)
+			value := newPolicyResolution(resolved, "")
 			resolution = &value
 		}
 	case "UNRESOLVED":
-		if result.DirectTicker != "" {
-			errors = append(errors, "UNRESOLVED mapping requires an empty direct_ticker")
+		if result.DirectIssuer != "" {
+			errors = append(errors, "UNRESOLVED mapping requires an empty direct_issuer")
 		}
 		if result.ProxyExposure != NoProxyExposure {
 			errors = append(errors, "UNRESOLVED mapping requires proxy_exposure NONE")
@@ -138,26 +140,12 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 	return &result, resolution, nil
 }
 
-func assetResolutionInput(input EventInput) assetresolution.Input {
-	return assetresolution.Input{
-		Headline:      input.Title,
-		Summary:       input.Summary,
-		SourceName:    input.Source,
-		EventType:     input.EventCategory,
-		PublicationAt: input.PublicationTimestamp,
-		ReceiptAt:     input.ReceiptTimestamp,
-	}
-}
-
-func newPolicyResolution(result assetresolution.Result) PolicyResolution {
+func newPolicyResolution(result assetresolution.Result, rawDirectIssuer string) PolicyResolution {
 	return PolicyResolution{
-		Status:         result.Status,
-		PolicyVersion:  result.RulesetVersion,
-		MatchedRule:    result.CanonicalEntity,
-		ResolvedTicker: result.Symbol,
-		MappingType:    result.MappingType,
-		Relationship:   result.Relationship,
-		Reason:         result.Reason,
+		Status: result.Status, PolicyVersion: result.RulesetVersion,
+		RawDirectIssuer: rawDirectIssuer, NormalizedIssuer: assetresolution.CanonicalizeIssuerName(rawDirectIssuer),
+		CanonicalIssuer: result.CanonicalEntity, MatchedAlias: result.MatchedAlias, MatchedRule: result.CanonicalEntity,
+		ResolvedTicker: result.Symbol, MappingType: result.MappingType, Relationship: result.Relationship, Reason: result.Reason,
 	}
 }
 
@@ -165,7 +153,7 @@ func DecodePersistedResult(schemaVersion string, raw []byte) (PersistedStructure
 	result := PersistedStructuredResult{SchemaVersion: schemaVersion}
 	switch schemaVersion {
 	case SchemaVersion:
-		var current V3PersistedResult
+		var current V4PersistedResult
 		if err := decodePersistedJSON(raw, &current); err != nil {
 			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: %w", schemaVersion, err)
 		}
@@ -173,6 +161,15 @@ func DecodePersistedResult(schemaVersion string, raw []byte) (PersistedStructure
 			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: model output or deterministic resolution provenance is missing", schemaVersion)
 		}
 		result.Current = &current
+	case V3SchemaVersion:
+		var current V3PersistedResult
+		if err := decodePersistedJSON(raw, &current); err != nil {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: %w", schemaVersion, err)
+		}
+		if current.ModelOutput.MappingStatus == "" || current.DeterministicResolution.PolicyVersion == "" {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: model output or deterministic resolution provenance is missing", schemaVersion)
+		}
+		result.V3 = &current
 	case V2SchemaVersion:
 		var v2 V2StructuredResult
 		if err := decodePersistedJSON(raw, &v2); err != nil {

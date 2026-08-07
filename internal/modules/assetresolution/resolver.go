@@ -13,8 +13,131 @@ import (
 
 var symbolPattern = regexp.MustCompile(`^[A-Z][A-Z0-9.-]{0,14}$`)
 var exposurePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]{0,79}$`)
+var shareClassPattern = regexp.MustCompile(`(?i)\bclass\s+[a-z0-9]+\b`)
 
 type Resolver struct{ Rules Ruleset }
+
+// CanonicalizeIssuerName applies the complete deterministic normalization used
+// for issuer identity lookups. It intentionally does not perform fuzzy or
+// substring matching.
+func CanonicalizeIssuerName(value string) string {
+	var normalized strings.Builder
+	space := true
+	for _, r := range strings.ToLower(strings.TrimSpace(value)) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			normalized.WriteRune(r)
+			space = false
+		case r == '&':
+			if !space && normalized.Len() > 0 {
+				normalized.WriteByte(' ')
+			}
+			normalized.WriteString("and")
+			normalized.WriteByte(' ')
+			space = true
+		default:
+			if !space && normalized.Len() > 0 {
+				normalized.WriteByte(' ')
+				space = true
+			}
+		}
+	}
+	return strings.TrimSpace(normalized.String())
+}
+
+// ResolveIssuer maps one explicit issuer identity through the existing alias
+// rules. Unknown identities and collisions remain valid unresolved/ambiguous
+// results; no ticker or proxy fallback is synthesized.
+func (r Resolver) ResolveIssuer(input IssuerInput) Result {
+	raw := strings.TrimSpace(input.IssuerName)
+	normalized := CanonicalizeIssuerName(raw)
+	base := Result{
+		Status: StatusUnresolved, MappingType: "none", Relationship: "none", ConfidenceClass: "unresolved",
+		Reason:       "issuer name did not match a bounded deterministic alias rule",
+		SourceFields: []string{"direct_issuer"}, SourceValues: map[string]any{"raw_direct_issuer": raw, "normalized_issuer": normalized},
+		RulesetVersion: r.Rules.Version, KnowableAtOperationalAnchor: validIssuerAnchor(input),
+	}
+	if !base.KnowableAtOperationalAnchor {
+		base.Status = StatusRejected
+		base.ConfidenceClass = "rejected"
+		base.Reason = "issuer resolution requires valid receipt-time publication and receipt anchors"
+		base.RejectionReason = base.Reason
+		return base
+	}
+	if normalized == "" {
+		return base
+	}
+
+	type issuerMatch struct {
+		rule  AliasRule
+		alias string
+	}
+	matches := map[string]issuerMatch{}
+	for _, rule := range r.Rules.Aliases {
+		if !effective(rule, input.PublicationAt) {
+			continue
+		}
+		matchedAlias := ""
+		if CanonicalizeIssuerName(rule.CanonicalEntity) == normalized {
+			matchedAlias = rule.CanonicalEntity
+		} else {
+			for _, alias := range rule.Aliases {
+				if CanonicalizeIssuerName(alias) == normalized {
+					matchedAlias = alias
+					break
+				}
+			}
+		}
+		if matchedAlias != "" {
+			matches[strings.ToUpper(strings.TrimSpace(rule.Symbol))] = issuerMatch{rule: rule, alias: matchedAlias}
+		}
+	}
+	if len(matches) == 0 {
+		return base
+	}
+	if len(matches) > 1 {
+		symbols := make([]string, 0, len(matches))
+		for symbol := range matches {
+			symbols = append(symbols, symbol)
+		}
+		sort.Strings(symbols)
+		base.Status = StatusAmbiguous
+		base.ConfidenceClass = "ambiguous"
+		base.MappingType = "ambiguous_issuer_identity"
+		base.Relationship = "direct"
+		base.Reason = "issuer identity matched multiple listed share classes or issuers; no ticker was selected"
+		base.AmbiguityReason = strings.Join(symbols, ",")
+		return base
+	}
+	for symbol, match := range matches {
+		if shareClassPattern.MatchString(match.rule.Provenance) || shareClassPattern.MatchString(match.rule.Rationale) {
+			base.Status = StatusAmbiguous
+			base.ConfidenceClass = "ambiguous"
+			base.MappingType = "ambiguous_share_class"
+			base.Relationship = "direct"
+			base.Reason = "issuer identity maps to a share-class-specific listing but does not select a share class; no ticker was selected"
+			base.AmbiguityReason = symbol
+			base.CanonicalEntity = match.rule.CanonicalEntity
+			base.MatchedAlias = match.alias
+			return base
+		}
+		base.Status = StatusResolved
+		base.Symbol = symbol
+		base.MappingType = "verified_issuer_identity"
+		base.Relationship = "direct"
+		base.ConfidenceClass = "high_confidence_deterministic"
+		base.Reason = match.rule.Rationale
+		base.CanonicalEntity = match.rule.CanonicalEntity
+		base.MatchedAlias = match.alias
+		base.AssetClass = match.rule.AssetClass
+		base.Exchange = match.rule.Exchange
+		base.EffectiveFrom = parsedRuleDate(match.rule.EffectiveFrom)
+		base.EffectiveTo = parsedRuleDate(match.rule.EffectiveTo)
+		base.SourceValues["alias_provenance"] = match.rule.Provenance
+		return base
+	}
+	return base
+}
 
 // ProxyExposures returns the model-facing exposure names derived from the
 // versioned proxy rules. Symbols remain private to the deterministic resolver.
@@ -164,6 +287,9 @@ func sourceValues(input Input) map[string]any {
 	return map[string]any{"headline": input.Headline, "summary": input.Summary, "event_type": input.EventType, "source_name": input.SourceName, "source_url": input.SourceURL}
 }
 func validAnchorInput(input Input) bool {
+	return !input.ReceiptAt.IsZero() && !input.PublicationAt.IsZero() && !input.PublicationAt.After(input.ReceiptAt)
+}
+func validIssuerAnchor(input IssuerInput) bool {
 	return !input.ReceiptAt.IsZero() && !input.PublicationAt.IsZero() && !input.PublicationAt.After(input.ReceiptAt)
 }
 func normalizedSymbols(values []string) []string {

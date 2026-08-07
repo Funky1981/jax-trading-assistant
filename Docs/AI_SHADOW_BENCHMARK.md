@@ -16,6 +16,14 @@ Host Ollama defaults to `http://localhost:11434`. For a command executed inside 
 
 Reports are written beneath `.runtime/ai-shadow/<run-id>/` as Markdown, JSON, CSV, and a copied manifest.
 
+## v4 issuer-resolution contract
+
+`ai-shadow-output-v4-issuer-resolution` makes the model classify issuer or exposure identity without producing any ticker. A `DIRECT` output carries `direct_issuer`; a `PROXY` output carries one bounded `proxy_exposure`; and `UNRESOLVED` carries neither. Jax then applies `event-asset-resolution-v1` independently. The persisted JSONB envelope and JSON/CSV/Markdown reports keep the model classification, deterministic resolution provenance, and frozen reference comparison separate.
+
+Direct issuer matching reuses the existing canonical issuer and alias rules. Matching is exact after documented normalization; unknown issuers remain valid but unresolved, collisions remain ambiguous, and share-class-specific rules never silently select a ticker. No v2 asset policy or database migration is required for this contract.
+
+The data-only `config/ai-shadow-issuer-diagnostic-manifest-v1.json` freezes 48 independently adjudicated issuer-recognition cases, with six cases in each of eight review categories. It is deliberately not wired to the benchmark command in this implementation phase and must not be run without separate authorization.
+
 ## Predeclared verdicts
 
 The thresholds are fixed in code before any model batch: structural validity at least 98% after at most one retry; fabricated/invalid ticker rate at most 2%; direct mapping agreement at least 85%; AI HIGH 1-hour median movement at least 0.05 percentage points and 10% above LOW/UNCERTAIN; and at least a 0.05 percentage-point separation improvement over the deterministic baseline at either 1 hour or 1 day.

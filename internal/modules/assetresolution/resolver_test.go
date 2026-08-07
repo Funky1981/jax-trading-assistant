@@ -101,3 +101,53 @@ func TestProxyExposuresRejectInvalidPolicyEntries(t *testing.T) {
 		}
 	}
 }
+
+func TestCanonicalizeIssuerNameIsExplicitAndDeterministic(t *testing.T) {
+	cases := map[string]string{
+		"  Procter & Gamble Company  ": "procter and gamble company",
+		"Amazon.com, Inc.":             "amazon com inc",
+		"NIKE, Inc.":                   "nike inc",
+	}
+	for raw, want := range cases {
+		if got := CanonicalizeIssuerName(raw); got != want {
+			t.Fatalf("CanonicalizeIssuerName(%q)=%q, want %q", raw, got, want)
+		}
+	}
+}
+
+func TestResolveIssuerCanonicalAliasUnknownAndReceiptTime(t *testing.T) {
+	r := testResolver(t)
+	anchor := input("unused")
+	for _, name := range []string{"Apple", "Apple Inc."} {
+		got := r.ResolveIssuer(IssuerInput{IssuerName: name, PublicationAt: anchor.PublicationAt, ReceiptAt: anchor.ReceiptAt})
+		if got.Status != StatusResolved || got.Symbol != "AAPL" || got.CanonicalEntity != "Apple Inc." || got.MatchedAlias == "" || got.Relationship != "direct" {
+			t.Fatalf("issuer %q resolution=%+v", name, got)
+		}
+	}
+	unknown := r.ResolveIssuer(IssuerInput{IssuerName: "Unknown Example plc", PublicationAt: anchor.PublicationAt, ReceiptAt: anchor.ReceiptAt})
+	if unknown.Status != StatusUnresolved || unknown.Symbol != "" {
+		t.Fatalf("unknown issuer resolution=%+v", unknown)
+	}
+	invalid := r.ResolveIssuer(IssuerInput{IssuerName: "Apple", PublicationAt: anchor.ReceiptAt.Add(time.Minute), ReceiptAt: anchor.ReceiptAt})
+	if invalid.Status != StatusRejected || invalid.Symbol != "" {
+		t.Fatalf("invalid receipt-time anchor resolution=%+v", invalid)
+	}
+}
+
+func TestResolveIssuerDoesNotSilentlyChooseAmbiguousAliasOrShareClass(t *testing.T) {
+	anchor := input("unused")
+	r := Resolver{Rules: Ruleset{Version: "test-policy", Aliases: []AliasRule{
+		{CanonicalEntity: "Example Holdings", Aliases: []string{"Example"}, Symbol: "EXA", EffectiveFrom: "2000-01-01"},
+		{CanonicalEntity: "Example Holdings", Aliases: []string{"Example"}, Symbol: "EXB", EffectiveFrom: "2000-01-01"},
+	}}}
+	for _, issuer := range []string{"Example", "Example Holdings"} {
+		got := r.ResolveIssuer(IssuerInput{IssuerName: issuer, PublicationAt: anchor.PublicationAt, ReceiptAt: anchor.ReceiptAt})
+		if got.Status != StatusAmbiguous || got.Symbol != "" || got.Relationship != "direct" || got.AmbiguityReason != "EXA,EXB" {
+			t.Fatalf("ambiguous issuer %q resolution=%+v", issuer, got)
+		}
+	}
+	production := testResolver(t).ResolveIssuer(IssuerInput{IssuerName: "Alphabet Inc.", PublicationAt: anchor.PublicationAt, ReceiptAt: anchor.ReceiptAt})
+	if production.Status != StatusAmbiguous || production.Symbol != "" || production.MappingType != "ambiguous_share_class" {
+		t.Fatalf("share-class-specific production rule was silently selected: %+v", production)
+	}
+}

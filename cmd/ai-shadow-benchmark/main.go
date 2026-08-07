@@ -17,10 +17,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	defaultManifestPath     = "config/ai-shadow-benchmark-manifest-v1.json"
+	defaultAssetRulesetPath = "config/event-asset-resolution-v1.json"
+)
+
 func main() {
-	manifestPath := flag.String("manifest", "config/ai-shadow-benchmark-manifest-v1.json", "fixed benchmark manifest path")
+	manifestPath := flag.String("manifest", defaultManifestPath, "fixed benchmark manifest path")
 	rulesetPath := flag.String("ruleset-file", "config/historical-evidence-quality-v1.json", "qualified outcome ruleset path")
-	assetRulesetPath := flag.String("asset-ruleset-file", "config/event-asset-resolution-v1.json", "versioned deterministic asset-resolution policy path")
+	assetRulesetPath := flag.String("asset-ruleset-file", defaultAssetRulesetPath, "versioned deterministic asset-resolution policy path")
 	outputRoot := flag.String("output-root", ".runtime/ai-shadow", "gitignored benchmark output root")
 	prepareManifest := flag.Bool("prepare-manifest", false, "write the fixed manifest without calling a model")
 	preflight := flag.Bool("preflight", false, "verify configuration, database, manifest, Ollama, and model without inference")

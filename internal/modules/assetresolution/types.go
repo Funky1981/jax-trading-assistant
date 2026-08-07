@@ -58,6 +58,15 @@ type Input struct {
 	ExplicitMethods []string
 }
 
+// IssuerInput is deliberately narrower than Input. Issuer resolution uses the
+// model-recognized issuer identity plus receipt-time anchors and never falls
+// through to event-text proxy rules.
+type IssuerInput struct {
+	IssuerName    string
+	PublicationAt time.Time
+	ReceiptAt     time.Time
+}
+
 type Result struct {
 	Status                      string         `json:"status"`
 	Symbol                      string         `json:"symbol,omitempty"`
@@ -70,6 +79,7 @@ type Result struct {
 	SourceValues                map[string]any `json:"sourceValues"`
 	RulesetVersion              string         `json:"rulesetVersion"`
 	CanonicalEntity             string         `json:"canonicalEntity,omitempty"`
+	MatchedAlias                string         `json:"matchedAlias,omitempty"`
 	AssetClass                  string         `json:"assetClass,omitempty"`
 	Exchange                    string         `json:"exchange,omitempty"`
 	EffectiveFrom               *time.Time     `json:"effectiveFrom,omitempty"`
