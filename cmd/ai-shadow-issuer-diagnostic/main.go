@@ -22,18 +22,22 @@ const (
 )
 
 type dependencies struct {
-	lookup         func(string) (string, bool)
-	inspectModel   func(aishadow.Config) (aishadow.DiagnosticModelIdentity, error)
-	ollamaProvider func(aishadow.Config) aishadow.Provider
-	hostedProvider func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider
+	lookup           func(string) (string, bool)
+	inspectModel     func(aishadow.Config) (aishadow.DiagnosticModelIdentity, error)
+	ollamaProvider   func(aishadow.Config) aishadow.Provider
+	openAIProvider   func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider
+	deepSeekProvider func(aishadow.DeepSeekDiagnosticConfig) aishadow.Provider
 }
 
 func main() {
 	deps := dependencies{
 		lookup: os.LookupEnv, inspectModel: aishadow.InspectOllamaModel,
 		ollamaProvider: func(config aishadow.Config) aishadow.Provider { return aishadow.NewOllamaClient(config) },
-		hostedProvider: func(config aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+		openAIProvider: func(config aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
 			return aishadow.NewOpenAIDiagnosticClient(config, nil)
+		},
+		deepSeekProvider: func(config aishadow.DeepSeekDiagnosticConfig) aishadow.Provider {
+			return aishadow.NewDeepSeekDiagnosticClient(config, nil)
 		},
 	}
 	if err := run(os.Args[1:], os.Stdout, deps); err != nil {
@@ -70,6 +74,7 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	var prepared aishadow.PreparedDiagnostic
 	var config aishadow.Config
 	var hostedConfig aishadow.OpenAIDiagnosticConfig
+	var deepSeekConfig aishadow.DeepSeekDiagnosticConfig
 	paths := aishadow.DiagnosticPaths{
 		ManifestPath: *manifestPath, FingerprintLockPath: *fingerprintLockPath,
 		AssetRulesetPath: *assetRulesetPath,
@@ -99,6 +104,16 @@ func run(args []string, output io.Writer, deps dependencies) error {
 			config = hostedConfig.Runtime
 			prepared, err = aishadow.PrepareHostedDiagnostic(paths, hostedConfig, diagnosticSafety)
 		}
+	case aishadow.DeepSeekDiagnosticProvider:
+		deepSeekConfig, err = aishadow.LoadDeepSeekDiagnosticConfig(deps.lookup)
+		if root == "" {
+			root = defaultHostedOutputRoot
+		}
+		paths.OutputRoot = filepath.Join(root, aishadow.DeepSeekDiagnosticEvidenceNamespace, aishadow.DeepSeekDiagnosticExperimentID)
+		if err == nil {
+			config = deepSeekConfig.Runtime
+			prepared, err = aishadow.PrepareDeepSeekDiagnostic(paths, deepSeekConfig, diagnosticSafety)
+		}
 	default:
 		return fmt.Errorf("unsupported diagnostic provider %q", providerName)
 	}
@@ -125,10 +140,16 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	var provider aishadow.Provider
 	if providerName == aishadow.OpenAIDiagnosticProvider {
 		if !hostedConfig.InferenceExplicitlyAuthorized {
-			return fmt.Errorf("hosted inference is not authorized: set %s=true only after WP-00.03C approval", aishadow.OpenAIDiagnosticInferenceAuthEnv)
+			return fmt.Errorf("hosted inference is not authorized: %s must be true under separate architecture approval", aishadow.OpenAIDiagnosticInferenceAuthEnv)
 		}
 		identity = aishadow.DiagnosticModelIdentity{Name: config.Model}
-		provider = deps.hostedProvider(hostedConfig)
+		provider = deps.openAIProvider(hostedConfig)
+	} else if providerName == aishadow.DeepSeekDiagnosticProvider {
+		if !deepSeekConfig.InferenceExplicitlyAuthorized {
+			return fmt.Errorf("hosted inference is not authorized: %s must be true under separate architecture approval", aishadow.OpenAIDiagnosticInferenceAuthEnv)
+		}
+		identity = aishadow.DiagnosticModelIdentity{Name: config.Model}
+		provider = deps.deepSeekProvider(deepSeekConfig)
 	} else {
 		identity, err = deps.inspectModel(config)
 		if err != nil {

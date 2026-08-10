@@ -47,6 +47,7 @@ type DiagnosticModelConfiguration struct {
 	ReasoningEffort      string  `json:"reasoning_effort,omitempty"`
 	MaxOutputTokens      int     `json:"max_output_tokens,omitempty"`
 	StructuredOutputMode string  `json:"structured_output_mode,omitempty"`
+	ThinkingMode         string  `json:"thinking_mode,omitempty"`
 }
 
 type HostedExperimentPlan struct {
@@ -136,6 +137,8 @@ type DiagnosticAttemptAudit struct {
 	RequestID               string            `json:"request_id,omitempty"`
 	ResponseID              string            `json:"response_id,omitempty"`
 	ProviderStatus          string            `json:"provider_status,omitempty"`
+	SystemFingerprint       string            `json:"system_fingerprint,omitempty"`
+	FinishReason            string            `json:"finish_reason,omitempty"`
 	Usage                   ProviderUsage     `json:"usage"`
 	ModelClassification     *StructuredResult `json:"model_classification,omitempty"`
 	DeterministicResolution *PolicyResolution `json:"deterministic_resolution,omitempty"`
@@ -275,7 +278,55 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	return prepared, nil
 }
 
+func PrepareDeepSeekDiagnostic(paths DiagnosticPaths, config DeepSeekDiagnosticConfig, safety DiagnosticSafetyState) (PreparedDiagnostic, error) {
+	if !config.APIKey.present() {
+		return PreparedDiagnostic{}, fmt.Errorf("missing required DeepSeek diagnostic configuration: %s", DeepSeekDiagnosticAPIKeyEnv)
+	}
+	wantNamespace := filepath.Join(DeepSeekDiagnosticEvidenceNamespace, config.ExperimentID)
+	if !strings.HasSuffix(filepath.Clean(paths.OutputRoot), wantNamespace) {
+		return PreparedDiagnostic{}, fmt.Errorf("DeepSeek diagnostic output root must end in isolated namespace %s", filepath.ToSlash(wantNamespace))
+	}
+	prepared, err := PrepareDiagnostic(paths, config.Runtime, safety)
+	if err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	firstRequest, err := InitialRequest(prepared.Manifest.Events[0].Input, prepared.ProxyExposures)
+	if err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	estimatedInputTokens := len([]byte(firstRequest.System)) + len([]byte(firstRequest.User)) + 1024
+	estimatedFirstCost := tokenCostMicros(estimatedInputTokens, config.CacheMissPriceMicrosPerMillion) + tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
+	if estimatedFirstCost > config.BudgetCeilingMicros {
+		return PreparedDiagnostic{}, fmt.Errorf("configured DeepSeek request maximum exceeds the experiment budget ceiling")
+	}
+	prepared.Plan.ModelConfiguration.ReasoningEffort = config.ReasoningEffort
+	prepared.Plan.ModelConfiguration.ThinkingMode = config.ThinkingMode
+	prepared.Plan.ModelConfiguration.MaxOutputTokens = config.MaxOutputTokens
+	prepared.Plan.ModelConfiguration.StructuredOutputMode = DeepSeekDiagnosticStructuredOutput
+	prepared.Plan.HostedExperiment = &HostedExperimentPlan{
+		ExperimentID: config.ExperimentID, EvidenceNamespace: DeepSeekDiagnosticEvidenceNamespace + "/" + config.ExperimentID,
+		Endpoint: DeepSeekDiagnosticEndpoint, APIKeyEnvironment: DeepSeekDiagnosticAPIKeyEnv, APIKeyPresent: true,
+		InferenceExplicitlyAuthorized: config.InferenceExplicitlyAuthorized,
+		BudgetCeilingUSD:              formatUSDMicros(config.BudgetCeilingMicros),
+		Pricing: HostedPricingPlan{
+			InputUSDPerMillionTokens:          formatUSDMicros(config.CacheMissPriceMicrosPerMillion),
+			CachedInputUSDPerMillionTokens:    formatUSDMicros(config.CacheHitPriceMicrosPerMillion),
+			CacheMissInputUSDPerMillionTokens: formatUSDMicros(config.CacheMissPriceMicrosPerMillion),
+			OutputUSDPerMillionTokens:         formatUSDMicros(config.OutputPriceMicrosPerMillion),
+			Source:                            "execution-time configuration; re-verify before paid execution",
+		},
+		BaseRequestCount:            diagnosticEventCount * diagnosticRepetitionCount,
+		MaximumRequestCount:         diagnosticEventCount * diagnosticRepetitionCount * 2,
+		EstimatedFirstRequestMaxUSD: formatUSDMicros(estimatedFirstCost),
+		DatabaseMutationAllowed:     false, TradingStateMutationAllowed: false,
+	}
+	return prepared, nil
+}
+
 func WriteDiagnosticPreflight(prepared PreparedDiagnostic) (DiagnosticAuditPaths, string, error) {
+	if prepared.Plan.HostedExperiment != nil && prepared.Plan.HostedExperiment.InferenceExplicitlyAuthorized {
+		return DiagnosticAuditPaths{}, "", fmt.Errorf("hosted diagnostic preflight requires inference authorization to remain false")
+	}
 	runID := uuid.NewString()
 	dir := filepath.Join(prepared.Paths.OutputRoot, "preflight", runID)
 	path := filepath.Join(dir, "preflight.json")
@@ -312,6 +363,7 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 		snapshot := recorder.ExperimentSnapshot()
 		if snapshot.ExperimentID != plan.ExperimentID || snapshot.Provider != prepared.Config.Provider ||
 			snapshot.RequestedModel != prepared.Config.Model || snapshot.ReasoningEffort != prepared.Plan.ModelConfiguration.ReasoningEffort ||
+			snapshot.ThinkingMode != prepared.Plan.ModelConfiguration.ThinkingMode ||
 			snapshot.StructuredOutputMode != prepared.Plan.ModelConfiguration.StructuredOutputMode ||
 			snapshot.MaxOutputTokensPerRequest != prepared.Plan.ModelConfiguration.MaxOutputTokens ||
 			snapshot.BudgetCeilingUSD != plan.BudgetCeilingUSD || snapshot.Pricing != plan.Pricing {
@@ -410,7 +462,8 @@ func buildDiagnosticAttemptAudit(runID string, repetition int, event DiagnosticE
 		ResponseTimestamp: attempt.ResponseTimestamp, DurationMS: attempt.Duration.Milliseconds(),
 		RawResponseHash: attempt.RawResponseHash, RawResponseBody: trace.Content,
 		ValidationStatus: attempt.ValidationStatus, ValidationErrors: nonNilStrings(attempt.ValidationErrors), FailureReason: attempt.FailureReason,
-		RequestID: trace.RequestID, ResponseID: trace.ResponseID, ProviderStatus: trace.Status, Usage: trace.Usage,
+		RequestID: trace.RequestID, ResponseID: trace.ResponseID, ProviderStatus: trace.Status,
+		SystemFingerprint: trace.SystemFingerprint, FinishReason: trace.FinishReason, Usage: trace.Usage,
 		ModelClassification: parsed, DeterministicResolution: resolution,
 	}
 }

@@ -125,7 +125,8 @@ func analyseEvent(config Config, provider Provider, resolver assetresolution.Res
 		}
 		trace := ProviderTrace{
 			AttemptNumber: number, Content: response.Content, ModelIdentifier: response.ModelIdentifier,
-			RequestID: response.RequestID, ResponseID: response.ResponseID, Status: response.Status, Usage: response.Usage,
+			RequestID: response.RequestID, ResponseID: response.ResponseID, Status: response.Status,
+			SystemFingerprint: response.SystemFingerprint, FinishReason: response.FinishReason, Usage: response.Usage,
 		}
 		if providerErr != nil {
 			trace.ProviderError = providerErr.Error()

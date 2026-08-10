@@ -89,6 +89,38 @@ func TestPrepareHostedDiagnosticLocksA1BudgetNamespaceAndNoMutation(t *testing.T
 	}
 }
 
+func TestPrepareDeepSeekDiagnosticLocksA1ModeBudgetNamespaceAndNoMutation(t *testing.T) {
+	paths := diagnosticTestPaths(t)
+	paths.OutputRoot = filepath.Join(t.TempDir(), DeepSeekDiagnosticEvidenceNamespace, DeepSeekDiagnosticExperimentID)
+	config := deepSeekTestConfig()
+	prepared, err := PrepareDeepSeekDiagnostic(paths, config, diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan := prepared.Plan.HostedExperiment
+	if plan == nil || plan.ExperimentID != "A1" || plan.EvidenceNamespace != "deepseek-hosted-a1-v1/A1" || !plan.APIKeyPresent {
+		t.Fatalf("DeepSeek experiment identity is incomplete: %+v", plan)
+	}
+	if plan.DatabaseMutationAllowed || plan.TradingStateMutationAllowed || plan.InferenceExplicitlyAuthorized || plan.BudgetCeilingUSD != "0.10" {
+		t.Fatalf("DeepSeek safety, authorization, or budget plan is wrong: %+v", plan)
+	}
+	if prepared.Plan.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint || prepared.Plan.ManifestFileSHA256 != ExpectedDiagnosticManifestFileSHA256 ||
+		prepared.Plan.FingerprintLockFingerprint == "" || prepared.Plan.PromptVersion != PromptVersion || prepared.Plan.OutputContract != SchemaVersion {
+		t.Fatalf("DeepSeek plan changed frozen benchmark identity: %+v", prepared.Plan)
+	}
+	model := prepared.Plan.ModelConfiguration
+	if model.Provider != DeepSeekDiagnosticProvider || model.Model != DeepSeekDiagnosticModel || model.ThinkingMode != DeepSeekDiagnosticThinkingMode ||
+		model.Think || model.StructuredOutputMode != DeepSeekDiagnosticStructuredOutput || model.RetryLimit != 1 {
+		t.Fatalf("DeepSeek provider plan is wrong: %+v", model)
+	}
+
+	unsafePaths := diagnosticTestPaths(t)
+	unsafePaths.OutputRoot = filepath.Join(t.TempDir(), OpenAIDiagnosticEvidenceNamespace, OpenAIDiagnosticExperimentID)
+	if _, err := PrepareDeepSeekDiagnostic(unsafePaths, config, diagnosticTestSafety()); err == nil || !strings.Contains(err.Error(), "isolated namespace") {
+		t.Fatalf("OpenAI evidence namespace was not rejected: %v", err)
+	}
+}
+
 func TestPrepareDiagnosticRejectsManifestAndInputFingerprintMismatch(t *testing.T) {
 	paths := diagnosticTestPaths(t)
 	manifestRaw, err := os.ReadFile(paths.ManifestPath)
@@ -169,6 +201,20 @@ func TestDiagnosticPreflightWritesIsolatedAuditWithoutProvider(t *testing.T) {
 	}
 	if _, err := writeExclusiveJSON(paths.Preflight, prepared.Plan); err == nil {
 		t.Fatal("append-only audit file was overwritten")
+	}
+}
+
+func TestHostedPreflightRejectsInferenceAuthorization(t *testing.T) {
+	paths := diagnosticTestPaths(t)
+	paths.OutputRoot = filepath.Join(t.TempDir(), DeepSeekDiagnosticEvidenceNamespace, DeepSeekDiagnosticExperimentID)
+	config := deepSeekTestConfig()
+	config.InferenceExplicitlyAuthorized = true
+	prepared, err := PrepareDeepSeekDiagnostic(paths, config, diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := WriteDiagnosticPreflight(prepared); err == nil || !strings.Contains(err.Error(), "authorization to remain false") {
+		t.Fatalf("authorized hosted preflight was not rejected: %v", err)
 	}
 }
 
@@ -265,6 +311,29 @@ func TestHostedBudgetStopWritesAppendOnlyStopRecordWithoutHTTP(t *testing.T) {
 	}
 }
 
+func TestDeepSeekBudgetStopWritesAppendOnlyStopRecordWithoutHTTP(t *testing.T) {
+	paths := diagnosticTestPaths(t)
+	paths.OutputRoot = filepath.Join(t.TempDir(), DeepSeekDiagnosticEvidenceNamespace, DeepSeekDiagnosticExperimentID)
+	config := deepSeekTestConfig()
+	prepared, err := PrepareDeepSeekDiagnostic(paths, config, diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	doer := &queuedHTTPDoer{}
+	provider := NewDeepSeekDiagnosticClient(config, doer)
+	provider.budget.ceilingMicros = 1
+	_, audit, err := ExecuteDiagnostic(prepared, provider, DiagnosticModelIdentity{Name: DeepSeekDiagnosticModel})
+	if err == nil || !strings.Contains(err.Error(), "budget rejected request") {
+		t.Fatalf("DeepSeek budget stop was not returned: %v", err)
+	}
+	if doer.calls != 0 || audit.StopRecord == "" || audit.ArtifactIndex == "" || audit.ArtifactIndexSHA256 == "" {
+		t.Fatalf("DeepSeek no-network stop evidence is incomplete: calls=%d audit=%+v", doer.calls, audit)
+	}
+	if _, err := writeExclusiveJSON(audit.StopRecord, prepared.Plan); err == nil {
+		t.Fatal("append-only DeepSeek stop record was overwritten")
+	}
+}
+
 func TestDiagnosticAdjudicatedComparisonAndV4ResolutionReuse(t *testing.T) {
 	prepared, err := PrepareDiagnostic(diagnosticTestPaths(t), diagnosticTestConfig(), diagnosticTestSafety())
 	if err != nil {
@@ -287,5 +356,28 @@ func TestDiagnosticAdjudicatedComparisonAndV4ResolutionReuse(t *testing.T) {
 	report := EvaluateDiagnosticRepetition(1, manifest, []DiagnosticCaseRun{{CaseID: event.ID, Category: event.Category, InputFingerprint: fingerprint, Attempts: attempts, Traces: traces, Result: result}}, prepared.Resolver)
 	if report.Issuer.TruePositives != 1 || report.Issuer.FalseNegatives != 0 || !report.Cases[0].SemanticCorrect || !report.Cases[0].ResolutionCorrect {
 		t.Fatalf("adjudicated comparison failed: %+v", report)
+	}
+}
+
+func TestDiagnosticAttemptAuditCarriesDeepSeekFingerprintFinishAndCacheEvidence(t *testing.T) {
+	prepared, err := PrepareDiagnostic(diagnosticTestPaths(t), diagnosticTestConfig(), diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	event := prepared.Manifest.Events[0]
+	attempt := Attempt{
+		AttemptNumber: 1, Provider: DeepSeekDiagnosticProvider, Model: DeepSeekDiagnosticModel,
+		ModelReportedIdentifier: DeepSeekDiagnosticModel, PromptVersion: PromptVersion,
+		SchemaVersion: SchemaVersion, ValidationStatus: "accepted",
+	}
+	trace := ProviderTrace{
+		AttemptNumber: 1, Content: directJSON("Apple"), ModelIdentifier: DeepSeekDiagnosticModel,
+		RequestID: "req", ResponseID: "resp", Status: "completed", SystemFingerprint: "fp_test", FinishReason: "stop",
+		Usage: ProviderUsage{InputTokens: 100, CachedTokens: 20, CacheMissTokens: 80, OutputTokens: 10, TotalTokens: 110},
+	}
+	audit := buildDiagnosticAttemptAudit("run", 1, event, attempt, trace, prepared.Resolver)
+	if audit.SystemFingerprint != "fp_test" || audit.FinishReason != "stop" || audit.Usage.CacheMissTokens != 80 ||
+		audit.RequestID != "req" || audit.ResponseID != "resp" || audit.ModelReportedIdentifier != DeepSeekDiagnosticModel {
+		t.Fatalf("DeepSeek attempt evidence was not carried into the append-only audit: %+v", audit)
 	}
 }

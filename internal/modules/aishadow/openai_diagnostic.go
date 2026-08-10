@@ -167,7 +167,10 @@ type HostedExperimentSnapshot struct {
 	Provider                  string                  `json:"provider"`
 	RequestedModel            string                  `json:"requested_model"`
 	ReturnedModels            []string                `json:"returned_models"`
+	SystemFingerprints        []string                `json:"system_fingerprints,omitempty"`
+	FinishReasons             []string                `json:"finish_reasons,omitempty"`
 	ReasoningEffort           string                  `json:"reasoning_effort"`
+	ThinkingMode              string                  `json:"thinking_mode,omitempty"`
 	StructuredOutputMode      string                  `json:"structured_output_mode"`
 	MaxOutputTokensPerRequest int                     `json:"max_output_tokens_per_request"`
 	Pricing                   HostedPricingPlan       `json:"pricing"`
@@ -186,11 +189,12 @@ type HostedExperimentSnapshot struct {
 }
 
 type HostedPricingPlan struct {
-	InputUSDPerMillionTokens       string `json:"input_usd_per_million_tokens"`
-	CachedInputUSDPerMillionTokens string `json:"cached_input_usd_per_million_tokens"`
-	CacheWriteUSDPerMillionTokens  string `json:"cache_write_usd_per_million_tokens"`
-	OutputUSDPerMillionTokens      string `json:"output_usd_per_million_tokens"`
-	Source                         string `json:"source"`
+	InputUSDPerMillionTokens          string `json:"input_usd_per_million_tokens"`
+	CachedInputUSDPerMillionTokens    string `json:"cached_input_usd_per_million_tokens"`
+	CacheMissInputUSDPerMillionTokens string `json:"cache_miss_input_usd_per_million_tokens,omitempty"`
+	CacheWriteUSDPerMillionTokens     string `json:"cache_write_usd_per_million_tokens"`
+	OutputUSDPerMillionTokens         string `json:"output_usd_per_million_tokens"`
+	Source                            string `json:"source"`
 }
 
 type hostedExperimentRecorder interface {
@@ -573,6 +577,9 @@ func (b *experimentBudget) finishSuccess(reserved int64, usage ProviderUsage) er
 	defer b.mu.Unlock()
 	b.reservedMicros = maxInt64(b.reservedMicros-reserved, 0)
 	baseInputTokens := usage.InputTokens - usage.CachedTokens - usage.CacheWriteTokens
+	if usage.CacheMissTokens > 0 || usage.InputTokens == usage.CachedTokens+usage.CacheMissTokens {
+		baseInputTokens = usage.CacheMissTokens
+	}
 	if baseInputTokens < 0 {
 		baseInputTokens = 0
 	}
@@ -583,6 +590,7 @@ func (b *experimentBudget) finishSuccess(reserved int64, usage ProviderUsage) er
 	b.actualMicros += actual
 	b.usage.InputTokens += usage.InputTokens
 	b.usage.CachedTokens += usage.CachedTokens
+	b.usage.CacheMissTokens += usage.CacheMissTokens
 	b.usage.CacheWriteTokens += usage.CacheWriteTokens
 	b.usage.OutputTokens += usage.OutputTokens
 	b.usage.ReasoningTokens += usage.ReasoningTokens
