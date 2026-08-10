@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const DiagnosticReportVersion = "ai-shadow-issuer-diagnostic-report-v1"
+const DiagnosticReportVersion = "ai-shadow-issuer-diagnostic-report-v2"
 
 type DiagnosticPaths struct {
 	ManifestPath        string

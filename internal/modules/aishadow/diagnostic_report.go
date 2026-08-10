@@ -45,14 +45,19 @@ type DiagnosticIssuerMetrics struct {
 }
 
 type DiagnosticResolutionMetrics struct {
-	CorrectIssuerResolved             int `json:"correctly_recognized_issuer_resolved_successfully"`
-	CorrectIssuerUnresolved           int `json:"correctly_recognized_issuer_remained_unresolved"`
-	AliasMatches                      int `json:"alias_matches"`
-	CanonicalMatches                  int `json:"canonical_matches"`
-	AmbiguityRejections               int `json:"ambiguity_rejections"`
-	UnsupportedIssuerRejections       int `json:"unsupported_issuer_rejections"`
-	ExpectedTickerAgreements          int `json:"resolved_ticker_agreements"`
-	IncorrectDeterministicResolutions int `json:"incorrect_deterministic_ticker_resolutions"`
+	CorrectIssuerResolved       int `json:"correctly_recognized_issuer_resolved_successfully"`
+	CorrectIssuerUnresolved     int `json:"correctly_recognized_issuer_remained_unresolved"`
+	AliasMatches                int `json:"alias_matches"`
+	CanonicalMatches            int `json:"canonical_matches"`
+	AmbiguityRejections         int `json:"ambiguity_rejections"`
+	UnsupportedIssuerRejections int `json:"unsupported_issuer_rejections"`
+	ExpectedTickerAgreements    int `json:"resolved_ticker_agreements"`
+	// IncorrectDeterministicResolutions is the v1 end-to-end resolved-ticker
+	// mismatch metric. The v2 attribution fields below identify whether a
+	// mismatch followed correct model semantics or a model semantic failure.
+	IncorrectDeterministicResolutions  int `json:"incorrect_deterministic_ticker_resolutions"`
+	ResolverFailuresAfterSemanticMatch int `json:"resolver_failures_after_semantically_correct_classification"`
+	ModelInducedResolutionMismatches   int `json:"model_induced_resolution_mismatches"`
 }
 
 type DiagnosticCategoryMetrics struct {
@@ -300,6 +305,13 @@ func accumulateResolution(metrics *DiagnosticResolutionMetrics, event Diagnostic
 		return
 	}
 	resolution := evaluation.DeterministicResolution
+	if !evaluation.ResolutionCorrect {
+		if evaluation.SemanticCorrect {
+			metrics.ResolverFailuresAfterSemanticMatch++
+		} else {
+			metrics.ModelInducedResolutionMismatches++
+		}
+	}
 	if evaluation.IssuerCorrect {
 		if resolution.Status == assetresolution.StatusResolved {
 			metrics.CorrectIssuerResolved++
@@ -388,17 +400,26 @@ func evaluateRepeatability(manifest DiagnosticManifest, reports []DiagnosticRepe
 				variation.Repetitions = append(variation.Repetitions, DiagnosticVariationOutput{Repetition: repetition + 1, ValidationStatus: runs[repetition].Result.ValidationStatus, ModelClassification: outputs[repetition], DeterministicResolution: resolutions[repetition], Correct: correctValues[repetition]})
 			}
 			correctnessChanging := !(correctValues[0] == correctValues[1] && correctValues[1] == correctValues[2])
-			switch {
-			case correctnessChanging:
+			if correctnessChanging {
 				variation.Classification = append(variation.Classification, "correctness-changing variation")
 				result.CorrectnessChangingEvents++
-			case !mappingStable:
+			}
+			if !mappingStable {
 				variation.Classification = append(variation.Classification, "DIRECT/PROXY/UNRESOLVED variation")
-			case !issuerStable:
+			}
+			if !issuerStable {
 				variation.Classification = append(variation.Classification, "issuer variation")
-			case !confidenceStable:
+			}
+			if !exposureStable {
+				variation.Classification = append(variation.Classification, "proxy exposure variation")
+			}
+			if !tickerStable {
+				variation.Classification = append(variation.Classification, "deterministic resolution variation")
+			}
+			if !confidenceStable {
 				variation.Classification = append(variation.Classification, "confidence-only variation")
-			default:
+			}
+			if len(variation.Classification) == 0 {
 				variation.Classification = append(variation.Classification, "harmless wording variation")
 			}
 			result.Variations = append(result.Variations, variation)
@@ -412,7 +433,7 @@ func DiagnosticReportMarkdown(report DiagnosticRunReport) string {
 	var builder strings.Builder
 	fmt.Fprintf(&builder, "# V4 Issuer Diagnostic\n\nRun `%s` used manifest `%s`, model `%s` (`%s`), prompt `%s`, contract `%s`, and policy `%s`.\n\n", report.RunID, report.ManifestFingerprint, report.ModelIdentity.Name, report.ModelIdentity.Digest, report.PromptVersion, report.OutputContract, report.PolicyVersion)
 	for _, repetition := range report.Repetitions {
-		fmt.Fprintf(&builder, "## Repetition %d\n\n- First-pass valid: %d/%d\n- Final valid: %d/%d\n- Corrective retries: %d\n- Issuer precision: %s\n- Issuer recall: %s\n- False-DIRECT rate: %s\n\n", repetition.Repetition, repetition.Contract.ValidFirstPassOutputs, repetition.Contract.TotalEvents, repetition.Contract.FinalValidOutputs, repetition.Contract.TotalEvents, repetition.Contract.CorrectiveRetries, formatDiagnosticRate(repetition.Issuer.Precision), formatDiagnosticRate(repetition.Issuer.Recall), formatDiagnosticRate(repetition.Issuer.FalseDirectRate))
+		fmt.Fprintf(&builder, "## Repetition %d\n\n- First-pass valid: %d/%d\n- Final valid: %d/%d\n- Corrective retries: %d\n- Issuer precision: %s\n- Issuer recall: %s\n- False-DIRECT rate: %s\n- Resolver failures after semantically correct classification: %d\n- Model-induced resolution mismatches: %d\n\n", repetition.Repetition, repetition.Contract.ValidFirstPassOutputs, repetition.Contract.TotalEvents, repetition.Contract.FinalValidOutputs, repetition.Contract.TotalEvents, repetition.Contract.CorrectiveRetries, formatDiagnosticRate(repetition.Issuer.Precision), formatDiagnosticRate(repetition.Issuer.Recall), formatDiagnosticRate(repetition.Issuer.FalseDirectRate), repetition.Resolution.ResolverFailuresAfterSemanticMatch, repetition.Resolution.ModelInducedResolutionMismatches)
 	}
 	fmt.Fprintf(&builder, "## Repeatability\n\n- Identical across all three: %d/%d\n- Semantic stability: %s\n- Correctness-changing events: %d\n", report.Repeatability.EventsIdenticalAllRuns, report.Repeatability.SemanticClassificationStability.Denominator, formatDiagnosticRate(report.Repeatability.SemanticClassificationStability), report.Repeatability.CorrectnessChangingEvents)
 	return builder.String()
@@ -508,20 +529,15 @@ func detectTickerEmission(traces []ProviderTrace, parsed *StructuredResult, reso
 					violations["prohibited field "+field] = true
 				}
 			}
+			var attempt StructuredResult
+			_ = json.Unmarshal(fields["reason"], &attempt.Reason)
+			_ = json.Unmarshal(fields["catalyst_type"], &attempt.CatalystType)
+			_ = json.Unmarshal(fields["missing_evidence"], &attempt.MissingEvidence)
+			detectTickerTokens(attempt, resolver, violations)
 		}
 	}
 	if parsed != nil {
-		freeText := strings.Join(append([]string{parsed.Reason, parsed.CatalystType}, parsed.MissingEvidence...), " ")
-		for _, rule := range resolver.Rules.Aliases {
-			symbol := strings.ToUpper(strings.TrimSpace(rule.Symbol))
-			if symbol == "" {
-				continue
-			}
-			pattern := regexp.MustCompile(`(^|[^A-Za-z0-9])` + regexp.QuoteMeta(symbol) + `([^A-Za-z0-9]|$)`)
-			if pattern.MatchString(freeText) {
-				violations["ticker token in free text: "+symbol] = true
-			}
-		}
+		detectTickerTokens(*parsed, resolver, violations)
 	}
 	values := make([]string, 0, len(violations))
 	for value := range violations {
@@ -529,6 +545,20 @@ func detectTickerEmission(traces []ProviderTrace, parsed *StructuredResult, reso
 	}
 	sort.Strings(values)
 	return values
+}
+
+func detectTickerTokens(output StructuredResult, resolver assetresolution.Resolver, violations map[string]bool) {
+	freeText := strings.Join(append([]string{output.Reason, output.CatalystType}, output.MissingEvidence...), " ")
+	for _, rule := range resolver.Rules.Aliases {
+		symbol := strings.ToUpper(strings.TrimSpace(rule.Symbol))
+		if symbol == "" {
+			continue
+		}
+		pattern := regexp.MustCompile(`(^|[^A-Za-z0-9])` + regexp.QuoteMeta(symbol) + `([^A-Za-z0-9]|$)`)
+		if pattern.MatchString(freeText) {
+			violations["ticker token in free text: "+symbol] = true
+		}
+	}
 }
 
 func outputField(outputs []*StructuredResult, field func(*StructuredResult) string) []string {
