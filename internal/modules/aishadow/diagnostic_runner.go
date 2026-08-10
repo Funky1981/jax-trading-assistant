@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,7 +17,10 @@ import (
 	"github.com/google/uuid"
 )
 
-const DiagnosticReportVersion = "ai-shadow-issuer-diagnostic-report-v2"
+const (
+	DiagnosticReportVersion  = "ai-shadow-issuer-diagnostic-report-v2"
+	DiagnosticRepetitionsEnv = "JAX_AI_DIAGNOSTIC_REPETITIONS"
+)
 
 type DiagnosticPaths struct {
 	ManifestPath        string
@@ -86,10 +90,20 @@ type DiagnosticPlan struct {
 	PolicyVersion              string                       `json:"policy_version"`
 	Repetitions                int                          `json:"repetitions"`
 	CasesPerRepetition         int                          `json:"cases_per_repetition"`
+	ExecutionShape             DiagnosticExecutionShape     `json:"execution_shape"`
 	ModelConfiguration         DiagnosticModelConfiguration `json:"model_configuration"`
 	Safety                     DiagnosticSafetyState        `json:"safety"`
 	HostedExperiment           *HostedExperimentPlan        `json:"hosted_experiment,omitempty"`
 	Events                     []DiagnosticPlanEvent        `json:"events"`
+}
+
+type DiagnosticExecutionShape struct {
+	RepetitionEnvironment string `json:"repetition_environment"`
+	OverrideSupplied      bool   `json:"override_supplied"`
+	RequestedRepetitions  int    `json:"requested_repetitions"`
+	EffectiveRepetitions  int    `json:"effective_repetitions"`
+	CasesPerRepetition    int    `json:"cases_per_repetition"`
+	TotalPlannedCases     int    `json:"total_planned_cases"`
 }
 
 type PreparedDiagnostic struct {
@@ -100,6 +114,7 @@ type PreparedDiagnostic struct {
 	Resolver       assetresolution.Resolver
 	ProxyExposures []string
 	Paths          DiagnosticPaths
+	ExecutionShape DiagnosticExecutionShape
 }
 
 type DiagnosticModelIdentity struct {
@@ -218,12 +233,14 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 		planEvents = append(planEvents, DiagnosticPlanEvent{Position: index + 1, ID: event.ID, Category: event.Category, InputFingerprint: got})
 	}
 
+	executionShape := newDiagnosticExecutionShape(diagnosticRepetitionCount, false)
 	plan := DiagnosticPlan{
 		Version: DiagnosticReportVersion, ManifestVersion: manifest.Version,
 		ManifestFingerprint: manifest.Fingerprint, ManifestFileSHA256: ExpectedDiagnosticManifestFileSHA256,
 		FingerprintLockVersion: lock.Version, FingerprintLockFingerprint: lock.Fingerprint,
 		LabelVersion: manifest.LabelVersion, PromptVersion: PromptVersion, OutputContract: SchemaVersion,
-		PolicyVersion: rules.Version, Repetitions: diagnosticRepetitionCount, CasesPerRepetition: diagnosticEventCount,
+		PolicyVersion: rules.Version, Repetitions: executionShape.EffectiveRepetitions, CasesPerRepetition: diagnosticEventCount,
+		ExecutionShape: executionShape,
 		ModelConfiguration: DiagnosticModelConfiguration{
 			Provider: config.Provider, Model: config.Model, BaseURL: config.BaseURL,
 			TimeoutSeconds: int(config.Timeout.Seconds()), Temperature: config.Temperature,
@@ -231,7 +248,76 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 		},
 		Safety: safety, Events: planEvents,
 	}
-	return PreparedDiagnostic{Plan: plan, Manifest: manifest, Lock: lock, Config: config, Resolver: resolver, ProxyExposures: exposures, Paths: paths}, nil
+	return PreparedDiagnostic{Plan: plan, Manifest: manifest, Lock: lock, Config: config, Resolver: resolver, ProxyExposures: exposures, Paths: paths, ExecutionShape: executionShape}, nil
+}
+
+func LoadDiagnosticRepetitionSelection(lookup func(string) (string, bool)) (DiagnosticExecutionShape, error) {
+	raw, supplied := lookup(DiagnosticRepetitionsEnv)
+	if !supplied {
+		return newDiagnosticExecutionShape(diagnosticRepetitionCount, false), nil
+	}
+	value, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || value != 1 && value != diagnosticRepetitionCount {
+		return DiagnosticExecutionShape{}, fmt.Errorf("%s must be exactly 1 or %d", DiagnosticRepetitionsEnv, diagnosticRepetitionCount)
+	}
+	return newDiagnosticExecutionShape(value, true), nil
+}
+
+func ApplyDiagnosticExecutionShape(prepared PreparedDiagnostic, shape DiagnosticExecutionShape) (PreparedDiagnostic, error) {
+	if err := validateDiagnosticExecutionShapeValue(shape); err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	prepared.ExecutionShape = shape
+	prepared.Plan.ExecutionShape = shape
+	prepared.Plan.Repetitions = shape.EffectiveRepetitions
+	prepared.Plan.CasesPerRepetition = shape.CasesPerRepetition
+	if prepared.Plan.HostedExperiment != nil {
+		prepared.Plan.HostedExperiment.BaseRequestCount = shape.TotalPlannedCases
+		prepared.Plan.HostedExperiment.MaximumRequestCount = shape.TotalPlannedCases * 2
+	}
+	return prepared, nil
+}
+
+func ValidateDiagnosticExecutionShape(prepared PreparedDiagnostic) error {
+	if err := validateDiagnosticExecutionShapeValue(prepared.ExecutionShape); err != nil {
+		return err
+	}
+	shape := prepared.ExecutionShape
+	if prepared.Plan.ExecutionShape != shape || prepared.Plan.Repetitions != shape.EffectiveRepetitions ||
+		prepared.Plan.CasesPerRepetition != shape.CasesPerRepetition || len(prepared.Plan.Events) != diagnosticEventCount ||
+		len(prepared.Manifest.Events) != diagnosticEventCount {
+		return fmt.Errorf("issuer diagnostic execution shape does not match validated runtime selection")
+	}
+	if plan := prepared.Plan.HostedExperiment; plan != nil &&
+		(plan.BaseRequestCount != shape.TotalPlannedCases || plan.MaximumRequestCount != shape.TotalPlannedCases*2) {
+		return fmt.Errorf("hosted issuer diagnostic request plan does not match validated execution shape")
+	}
+	return nil
+}
+
+func newDiagnosticExecutionShape(repetitions int, overrideSupplied bool) DiagnosticExecutionShape {
+	return DiagnosticExecutionShape{
+		RepetitionEnvironment: DiagnosticRepetitionsEnv,
+		OverrideSupplied:      overrideSupplied,
+		RequestedRepetitions:  repetitions,
+		EffectiveRepetitions:  repetitions,
+		CasesPerRepetition:    diagnosticEventCount,
+		TotalPlannedCases:     repetitions * diagnosticEventCount,
+	}
+}
+
+func validateDiagnosticExecutionShapeValue(shape DiagnosticExecutionShape) error {
+	if shape.RepetitionEnvironment != DiagnosticRepetitionsEnv ||
+		shape.RequestedRepetitions != shape.EffectiveRepetitions ||
+		shape.EffectiveRepetitions != 1 && shape.EffectiveRepetitions != diagnosticRepetitionCount ||
+		shape.CasesPerRepetition != diagnosticEventCount ||
+		shape.TotalPlannedCases != shape.EffectiveRepetitions*diagnosticEventCount {
+		return fmt.Errorf("issuer diagnostic execution shape is not an allowed 1-or-%d selection", diagnosticRepetitionCount)
+	}
+	if !shape.OverrideSupplied && shape.EffectiveRepetitions != diagnosticRepetitionCount {
+		return fmt.Errorf("issuer diagnostic default execution shape must remain %d repetitions", diagnosticRepetitionCount)
+	}
+	return nil
 }
 
 func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfig, safety DiagnosticSafetyState) (PreparedDiagnostic, error) {
@@ -270,8 +356,8 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 			OutputUSDPerMillionTokens:      formatUSDMicros(config.OutputPriceMicrosPerMillion),
 			Source:                         "execution-time configuration; re-verify before paid execution",
 		},
-		BaseRequestCount:            diagnosticEventCount * diagnosticRepetitionCount,
-		MaximumRequestCount:         diagnosticEventCount * diagnosticRepetitionCount * 2,
+		BaseRequestCount:            prepared.ExecutionShape.TotalPlannedCases,
+		MaximumRequestCount:         prepared.ExecutionShape.TotalPlannedCases * 2,
 		EstimatedFirstRequestMaxUSD: formatUSDMicros(estimatedFirstCost),
 		DatabaseMutationAllowed:     false, TradingStateMutationAllowed: false,
 	}
@@ -315,8 +401,8 @@ func PrepareDeepSeekDiagnostic(paths DiagnosticPaths, config DeepSeekDiagnosticC
 			OutputUSDPerMillionTokens:         formatUSDMicros(config.OutputPriceMicrosPerMillion),
 			Source:                            "execution-time configuration; re-verify before paid execution",
 		},
-		BaseRequestCount:            diagnosticEventCount * diagnosticRepetitionCount,
-		MaximumRequestCount:         diagnosticEventCount * diagnosticRepetitionCount * 2,
+		BaseRequestCount:            prepared.ExecutionShape.TotalPlannedCases,
+		MaximumRequestCount:         prepared.ExecutionShape.TotalPlannedCases * 2,
 		EstimatedFirstRequestMaxUSD: formatUSDMicros(estimatedFirstCost),
 		DatabaseMutationAllowed:     false, TradingStateMutationAllowed: false,
 	}
@@ -324,6 +410,9 @@ func PrepareDeepSeekDiagnostic(paths DiagnosticPaths, config DeepSeekDiagnosticC
 }
 
 func WriteDiagnosticPreflight(prepared PreparedDiagnostic) (DiagnosticAuditPaths, string, error) {
+	if err := ValidateDiagnosticExecutionShape(prepared); err != nil {
+		return DiagnosticAuditPaths{}, "", err
+	}
 	if prepared.Plan.HostedExperiment != nil && prepared.Plan.HostedExperiment.InferenceExplicitlyAuthorized {
 		return DiagnosticAuditPaths{}, "", fmt.Errorf("hosted diagnostic preflight requires inference authorization to remain false")
 	}
@@ -346,11 +435,11 @@ func WriteDiagnosticPreflight(prepared PreparedDiagnostic) (DiagnosticAuditPaths
 }
 
 func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity DiagnosticModelIdentity) (DiagnosticRunReport, DiagnosticAuditPaths, error) {
+	if err := ValidateDiagnosticExecutionShape(prepared); err != nil {
+		return DiagnosticRunReport{}, DiagnosticAuditPaths{}, err
+	}
 	if provider == nil {
 		return DiagnosticRunReport{}, DiagnosticAuditPaths{}, fmt.Errorf("issuer diagnostic provider is required")
-	}
-	if prepared.Plan.Repetitions != diagnosticRepetitionCount || prepared.Plan.CasesPerRepetition != diagnosticEventCount {
-		return DiagnosticRunReport{}, DiagnosticAuditPaths{}, fmt.Errorf("issuer diagnostic execution shape changed")
 	}
 	if identity.Name != prepared.Config.Model || prepared.Config.Provider == "ollama" && strings.TrimSpace(identity.Digest) == "" {
 		return DiagnosticRunReport{}, DiagnosticAuditPaths{}, fmt.Errorf("issuer diagnostic model identity does not match configured model")
@@ -390,9 +479,10 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 		return DiagnosticRunReport{}, paths, err
 	}
 
-	repetitions := make([]DiagnosticRepetitionReport, 0, diagnosticRepetitionCount)
-	allRuns := make([][]DiagnosticCaseRun, 0, diagnosticRepetitionCount)
-	for repetition := 1; repetition <= diagnosticRepetitionCount; repetition++ {
+	repetitionCount := prepared.ExecutionShape.EffectiveRepetitions
+	repetitions := make([]DiagnosticRepetitionReport, 0, repetitionCount)
+	allRuns := make([][]DiagnosticCaseRun, 0, repetitionCount)
+	for repetition := 1; repetition <= repetitionCount; repetition++ {
 		caseRuns := make([]DiagnosticCaseRun, 0, diagnosticEventCount)
 		for _, event := range prepared.Manifest.Events {
 			inputFingerprint, _ := EventInputFingerprint(event.Input)

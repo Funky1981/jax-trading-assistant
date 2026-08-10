@@ -222,6 +222,59 @@ func TestDeepSeekPreflightMakesZeroHTTPCallsAndNeverEmitsCredential(t *testing.T
 	}
 }
 
+func TestDeepSeekOneRepetitionPreflightMakesZeroProviderCalls(t *testing.T) {
+	values := deepSeekCommandValues()
+	values[aishadow.DiagnosticRepetitionsEnv] = "1"
+	providerCalls := 0
+	deps := dependencies{
+		lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+		deepSeekProvider: func(aishadow.DeepSeekDiagnosticConfig) aishadow.Provider {
+			providerCalls++
+			return nil
+		},
+	}
+	root := filepath.Join("..", "..")
+	var output bytes.Buffer
+	err := run([]string{
+		"--preflight",
+		"--manifest", filepath.Join(root, "config", "ai-shadow-issuer-diagnostic-manifest-v1.json"),
+		"--fingerprint-lock", filepath.Join(root, "config", "ai-shadow-issuer-diagnostic-input-fingerprints-v1.json"),
+		"--asset-ruleset-file", filepath.Join(root, "config", "event-asset-resolution-v1.json"),
+		"--output-root", t.TempDir(),
+	}, &output, deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if providerCalls != 0 {
+		t.Fatalf("one-repetition preflight constructed provider %d times", providerCalls)
+	}
+	for _, want := range []string{`"requested_repetitions": 1`, `"effective_repetitions": 1`, `"total_planned_cases": 48`, `"inference": false`} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("one-repetition preflight output missing %s: %s", want, output.String())
+		}
+	}
+}
+
+func TestInvalidRepetitionSelectionFailsBeforeProviderConstruction(t *testing.T) {
+	values := deepSeekCommandValues()
+	values[aishadow.DiagnosticRepetitionsEnv] = "2"
+	providerCalls := 0
+	deps := dependencies{
+		lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+		deepSeekProvider: func(aishadow.DeepSeekDiagnosticConfig) aishadow.Provider {
+			providerCalls++
+			return nil
+		},
+	}
+	err := run([]string{"--preflight"}, &bytes.Buffer{}, deps)
+	if err == nil || !strings.Contains(err.Error(), aishadow.DiagnosticRepetitionsEnv) {
+		t.Fatalf("invalid repetition selection was not rejected: %v", err)
+	}
+	if providerCalls != 0 {
+		t.Fatalf("invalid repetition selection constructed provider %d times", providerCalls)
+	}
+}
+
 func TestDeepSeekExecutionRequiresSeparateAuthorizationBeforeProviderCreation(t *testing.T) {
 	values := deepSeekCommandValues()
 	providerCalls := 0

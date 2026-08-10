@@ -41,12 +41,57 @@ func diagnosticTestPaths(t *testing.T) DiagnosticPaths {
 	}
 }
 
+func TestLoadDiagnosticRepetitionSelectionFailsClosed(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		supplied bool
+		want     int
+		wantErr  bool
+	}{
+		{name: "default", want: 3},
+		{name: "explicit one", value: "1", supplied: true, want: 1},
+		{name: "explicit three", value: "3", supplied: true, want: 3},
+		{name: "zero", value: "0", supplied: true, wantErr: true},
+		{name: "negative", value: "-1", supplied: true, wantErr: true},
+		{name: "two", value: "2", supplied: true, wantErr: true},
+		{name: "above three", value: "4", supplied: true, wantErr: true},
+		{name: "malformed", value: "one", supplied: true, wantErr: true},
+		{name: "empty", value: "", supplied: true, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shape, err := LoadDiagnosticRepetitionSelection(func(key string) (string, bool) {
+				if key != DiagnosticRepetitionsEnv {
+					t.Fatalf("unexpected environment lookup: %s", key)
+				}
+				return tt.value, tt.supplied
+			})
+			if tt.wantErr {
+				if err == nil || !strings.Contains(err.Error(), "exactly 1 or 3") {
+					t.Fatalf("unsupported selection was not rejected: shape=%+v err=%v", shape, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if shape.RequestedRepetitions != tt.want || shape.EffectiveRepetitions != tt.want ||
+				shape.TotalPlannedCases != tt.want*48 || shape.OverrideSupplied != tt.supplied {
+				t.Fatalf("unexpected execution shape: %+v", shape)
+			}
+		})
+	}
+}
+
 func TestPrepareDiagnosticVerifiesFrozenCompletenessAndSymbolicIDs(t *testing.T) {
 	prepared, err := PrepareDiagnostic(diagnosticTestPaths(t), diagnosticTestConfig(), diagnosticTestSafety())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if prepared.Plan.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint || prepared.Plan.Repetitions != 3 || prepared.Plan.CasesPerRepetition != 48 {
+	if prepared.Plan.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint || prepared.Plan.Repetitions != 3 || prepared.Plan.CasesPerRepetition != 48 ||
+		prepared.Plan.ExecutionShape.RequestedRepetitions != 3 || prepared.Plan.ExecutionShape.EffectiveRepetitions != 3 ||
+		prepared.Plan.ExecutionShape.OverrideSupplied || prepared.Plan.ExecutionShape.TotalPlannedCases != 144 {
 		t.Fatalf("unexpected diagnostic plan: %+v", prepared.Plan)
 	}
 	if len(prepared.Plan.Events) != 48 || prepared.Plan.Events[0].ID != "issuer-diag-001" || prepared.Plan.Events[47].ID != "issuer-diag-048" {
@@ -74,6 +119,9 @@ func TestPrepareHostedDiagnosticLocksA1BudgetNamespaceAndNoMutation(t *testing.T
 	}
 	if plan.DatabaseMutationAllowed || plan.TradingStateMutationAllowed || plan.BudgetCeilingUSD != "1.00" {
 		t.Fatalf("hosted safety or budget plan is wrong: %+v", plan)
+	}
+	if prepared.Plan.Repetitions != 3 || prepared.Plan.ExecutionShape.TotalPlannedCases != 144 || plan.BaseRequestCount != 144 || plan.MaximumRequestCount != 288 {
+		t.Fatalf("hosted default execution shape changed: plan=%+v execution=%+v", plan, prepared.Plan.ExecutionShape)
 	}
 	if prepared.Plan.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint || prepared.Plan.ManifestFileSHA256 != ExpectedDiagnosticManifestFileSHA256 || prepared.Plan.PromptVersion != PromptVersion || prepared.Plan.OutputContract != SchemaVersion {
 		t.Fatalf("hosted plan changed frozen benchmark identity: %+v", prepared.Plan)
@@ -103,6 +151,9 @@ func TestPrepareDeepSeekDiagnosticLocksA1ModeBudgetNamespaceAndNoMutation(t *tes
 	}
 	if plan.DatabaseMutationAllowed || plan.TradingStateMutationAllowed || plan.InferenceExplicitlyAuthorized || plan.BudgetCeilingUSD != "0.10" {
 		t.Fatalf("DeepSeek safety, authorization, or budget plan is wrong: %+v", plan)
+	}
+	if prepared.Plan.Repetitions != 3 || prepared.Plan.ExecutionShape.TotalPlannedCases != 144 || plan.BaseRequestCount != 144 || plan.MaximumRequestCount != 288 {
+		t.Fatalf("DeepSeek default execution shape changed: plan=%+v execution=%+v", plan, prepared.Plan.ExecutionShape)
 	}
 	if prepared.Plan.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint || prepared.Plan.ManifestFileSHA256 != ExpectedDiagnosticManifestFileSHA256 ||
 		prepared.Plan.FingerprintLockFingerprint == "" || prepared.Plan.PromptVersion != PromptVersion || prepared.Plan.OutputContract != SchemaVersion {
@@ -196,11 +247,47 @@ func TestDiagnosticPreflightWritesIsolatedAuditWithoutProvider(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(raw), `"ollama_contact": false`) || !strings.Contains(string(raw), `"inference": false`) || !strings.Contains(string(raw), `"issuer-diag-048"`) {
+	if !strings.Contains(string(raw), `"ollama_contact": false`) || !strings.Contains(string(raw), `"inference": false`) ||
+		!strings.Contains(string(raw), `"requested_repetitions": 3`) || !strings.Contains(string(raw), `"effective_repetitions": 3`) ||
+		!strings.Contains(string(raw), `"total_planned_cases": 144`) || !strings.Contains(string(raw), `"issuer-diag-048"`) {
 		t.Fatalf("preflight audit is incomplete: %s", raw)
 	}
 	if _, err := writeExclusiveJSON(paths.Preflight, prepared.Plan); err == nil {
 		t.Fatal("append-only audit file was overwritten")
+	}
+}
+
+func TestOneRepetitionPlanAndPreflightRecordFortyEightCases(t *testing.T) {
+	paths := diagnosticTestPaths(t)
+	paths.OutputRoot = filepath.Join(t.TempDir(), DeepSeekDiagnosticEvidenceNamespace, DeepSeekDiagnosticExperimentID)
+	prepared, err := PrepareDeepSeekDiagnostic(paths, deepSeekTestConfig(), diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	shape, err := LoadDiagnosticRepetitionSelection(func(key string) (string, bool) { return "1", true })
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err = ApplyDiagnosticExecutionShape(prepared, shape)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prepared.Plan.Repetitions != 1 || prepared.Plan.ExecutionShape.TotalPlannedCases != 48 ||
+		prepared.Plan.HostedExperiment.BaseRequestCount != 48 || prepared.Plan.HostedExperiment.MaximumRequestCount != 96 {
+		t.Fatalf("one-repetition hosted plan is wrong: %+v", prepared.Plan)
+	}
+	pathsWritten, _, err := WriteDiagnosticPreflight(prepared)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(pathsWritten.Preflight)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"requested_repetitions": 1`, `"effective_repetitions": 1`, `"total_planned_cases": 48`, `"experiment_id": "A1"`, `"provider": "deepseek"`, `"model": "deepseek-v4-pro"`, `"inference_explicitly_authorized": false`} {
+		if !strings.Contains(string(raw), want) {
+			t.Fatalf("one-repetition preflight missing %s: %s", want, raw)
+		}
 	}
 }
 
@@ -260,6 +347,45 @@ func TestExecuteDiagnosticUsesThreeRepetitionsAndFileAuditOnly(t *testing.T) {
 	}
 	if _, err := writeExclusiveJSON(paths.ArtifactIndex, report); err == nil {
 		t.Fatal("append-only artifact index was overwritten")
+	}
+}
+
+func TestExecuteDiagnosticUsesExplicitOneRepetition(t *testing.T) {
+	prepared, err := PrepareDiagnostic(diagnosticTestPaths(t), diagnosticTestConfig(), diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	shape, err := LoadDiagnosticRepetitionSelection(func(key string) (string, bool) { return "1", true })
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err = ApplyDiagnosticExecutionShape(prepared, shape)
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider := &diagnosticConstantProvider{content: unresolvedJSON()}
+	report, _, err := ExecuteDiagnostic(prepared, provider, DiagnosticModelIdentity{Name: "test-model", Digest: "test-digest"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if provider.calls != 48 || len(report.Repetitions) != 1 || report.Repetitions[0].Contract.TotalEvents != 48 {
+		t.Fatalf("one-repetition execution shape changed: calls=%d report=%+v", provider.calls, report)
+	}
+}
+
+func TestExecuteDiagnosticRejectsPlanRuntimeShapeMismatchBeforeInference(t *testing.T) {
+	prepared, err := PrepareDiagnostic(diagnosticTestPaths(t), diagnosticTestConfig(), diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared.Plan.Repetitions = 1
+	provider := &diagnosticConstantProvider{content: unresolvedJSON()}
+	_, _, err = ExecuteDiagnostic(prepared, provider, DiagnosticModelIdentity{Name: "test-model", Digest: "test-digest"})
+	if err == nil || !strings.Contains(err.Error(), "does not match validated runtime selection") {
+		t.Fatalf("execution-shape mismatch was not rejected: %v", err)
+	}
+	if provider.calls != 0 {
+		t.Fatalf("execution-shape mismatch contacted provider %d times", provider.calls)
 	}
 }
 

@@ -54,12 +54,16 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	assetRulesetPath := flags.String("asset-ruleset-file", defaultAssetRulesetPath, "deterministic issuer resolution policy")
 	outputRoot := flags.String("output-root", "", "append-only diagnostic audit root (provider-specific default when omitted)")
 	preflight := flags.Bool("preflight", false, "perform all non-Ollama checks and write an audit artifact")
-	execute := flags.Bool("execute", false, "execute exactly three complete repetitions")
+	execute := flags.Bool("execute", false, "execute the validated diagnostic repetition selection (default 3; explicit 1 allowed)")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	if *preflight == *execute {
 		return fmt.Errorf("choose exactly one of --preflight or --execute")
+	}
+	executionShape, err := aishadow.LoadDiagnosticRepetitionSelection(deps.lookup)
+	if err != nil {
+		return err
 	}
 	safety, err := eventdecisions.ReadSafetyState(deps.lookup)
 	if err != nil {
@@ -120,6 +124,13 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	if err != nil {
 		return err
 	}
+	prepared, err = aishadow.ApplyDiagnosticExecutionShape(prepared, executionShape)
+	if err != nil {
+		return err
+	}
+	if err := aishadow.ValidateDiagnosticExecutionShape(prepared); err != nil {
+		return err
+	}
 	encoder := json.NewEncoder(output)
 	encoder.SetIndent("", "  ")
 	if *preflight {
@@ -131,8 +142,11 @@ func run(args []string, output io.Writer, deps dependencies) error {
 			"status": "ready", "inference": false, "provider_contact": false, "ollama_contact": false,
 			"provider": prepared.Plan.ModelConfiguration.Provider, "model": prepared.Plan.ModelConfiguration.Model,
 			"events": prepared.Plan.CasesPerRepetition, "repetitions": prepared.Plan.Repetitions,
-			"manifest_fingerprint": prepared.Plan.ManifestFingerprint,
-			"prompt_version":       prepared.Plan.PromptVersion, "output_contract": prepared.Plan.OutputContract,
+			"requested_repetitions": prepared.Plan.ExecutionShape.RequestedRepetitions,
+			"effective_repetitions": prepared.Plan.ExecutionShape.EffectiveRepetitions,
+			"total_planned_cases":   prepared.Plan.ExecutionShape.TotalPlannedCases,
+			"manifest_fingerprint":  prepared.Plan.ManifestFingerprint,
+			"prompt_version":        prepared.Plan.PromptVersion, "output_contract": prepared.Plan.OutputContract,
 			"policy_version": prepared.Plan.PolicyVersion, "audit": paths, "audit_sha256": hash,
 		})
 	}
