@@ -120,6 +120,6 @@ These changes improve audit accuracy only. They do not alter the prompt, output 
 
 ## Model/prompt capability failures that remain
 
-Cases 001, 003, 005, 006, 014, 016, 018-024, 026-031, 033, 035, 037-039, and 041-048 remain model/output-contract capability failures. Deterministic mappings cannot legitimately repair them.
+Cases 001, 003, 005, 006, 008, 014, 016, 018-024, 026-031, 033, 035, 037-039, and 041-048 remain model/output-contract capability failures. Deterministic mappings cannot legitimately repair them.
 
 The dominant behavior is a model tendency to emit `PROXY` even when it names a direct issuer, followed by a corrective retry that deletes the issuer and either invents a bounded proxy or leaves `NONE`. Passing Phase 00 therefore appears to require an architecture decision about model/prompt/contract capability in a later authorized package; it cannot be achieved honestly by deterministic alias or fallback injection in WP-00.03.
