@@ -29,7 +29,7 @@ func InitialRequest(input EventInput, proxyExposures []string) (ProviderRequest,
 	if err != nil {
 		return ProviderRequest{}, fmt.Errorf("marshal receipt-time model input: %w", err)
 	}
-	return ProviderRequest{System: systemPrompt, User: string(raw), Schema: OutputSchema(proxyExposures)}, nil
+	return ProviderRequest{System: systemPrompt, User: string(raw), Schema: OutputSchema(proxyExposures), RequestKind: "initial"}, nil
 }
 
 func CorrectiveRequest(validationErrors []string, previous string, proxyExposures []string) (ProviderRequest, error) {
@@ -43,7 +43,7 @@ func CorrectiveRequest(validationErrors []string, previous string, proxyExposure
 	}
 	return ProviderRequest{
 		System: "The previous response did not satisfy the structured-output contract. Correct it using only the previous response and validation errors supplied by the user. Return exactly one JSON object matching the supplied schema. Do not add facts, event-specific hints, benchmark answers, or prose outside the JSON object.",
-		User:   string(raw), Schema: OutputSchema(proxyExposures),
+		User:   string(raw), Schema: OutputSchema(proxyExposures), RequestKind: "corrective",
 	}, nil
 }
 

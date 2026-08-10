@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -34,15 +35,34 @@ type DiagnosticSafetyState struct {
 }
 
 type DiagnosticModelConfiguration struct {
-	Provider       string  `json:"provider"`
-	Model          string  `json:"model"`
-	BaseURL        string  `json:"base_url"`
-	TimeoutSeconds int     `json:"timeout_seconds"`
-	Temperature    float64 `json:"temperature"`
-	Seed           int64   `json:"seed"`
-	Stream         bool    `json:"stream"`
-	Think          bool    `json:"think"`
-	RetryLimit     int     `json:"retry_limit"`
+	Provider             string  `json:"provider"`
+	Model                string  `json:"model"`
+	BaseURL              string  `json:"base_url"`
+	TimeoutSeconds       int     `json:"timeout_seconds"`
+	Temperature          float64 `json:"temperature"`
+	Seed                 int64   `json:"seed"`
+	Stream               bool    `json:"stream"`
+	Think                bool    `json:"think"`
+	RetryLimit           int     `json:"retry_limit"`
+	ReasoningEffort      string  `json:"reasoning_effort,omitempty"`
+	MaxOutputTokens      int     `json:"max_output_tokens,omitempty"`
+	StructuredOutputMode string  `json:"structured_output_mode,omitempty"`
+}
+
+type HostedExperimentPlan struct {
+	ExperimentID                  string            `json:"experiment_id"`
+	EvidenceNamespace             string            `json:"evidence_namespace"`
+	Endpoint                      string            `json:"endpoint"`
+	APIKeyEnvironment             string            `json:"api_key_environment"`
+	APIKeyPresent                 bool              `json:"api_key_present"`
+	InferenceExplicitlyAuthorized bool              `json:"inference_explicitly_authorized"`
+	BudgetCeilingUSD              string            `json:"budget_ceiling_usd"`
+	Pricing                       HostedPricingPlan `json:"pricing"`
+	BaseRequestCount              int               `json:"base_request_count"`
+	MaximumRequestCount           int               `json:"maximum_request_count"`
+	EstimatedFirstRequestMaxUSD   string            `json:"estimated_first_request_max_usd"`
+	DatabaseMutationAllowed       bool              `json:"database_mutation_allowed"`
+	TradingStateMutationAllowed   bool              `json:"trading_state_mutation_allowed"`
 }
 
 type DiagnosticPlanEvent struct {
@@ -67,6 +87,7 @@ type DiagnosticPlan struct {
 	CasesPerRepetition         int                          `json:"cases_per_repetition"`
 	ModelConfiguration         DiagnosticModelConfiguration `json:"model_configuration"`
 	Safety                     DiagnosticSafetyState        `json:"safety"`
+	HostedExperiment           *HostedExperimentPlan        `json:"hosted_experiment,omitempty"`
 	Events                     []DiagnosticPlanEvent        `json:"events"`
 }
 
@@ -112,6 +133,10 @@ type DiagnosticAttemptAudit struct {
 	ValidationStatus        string            `json:"validation_status"`
 	ValidationErrors        []string          `json:"validation_errors"`
 	FailureReason           string            `json:"failure_reason,omitempty"`
+	RequestID               string            `json:"request_id,omitempty"`
+	ResponseID              string            `json:"response_id,omitempty"`
+	ProviderStatus          string            `json:"provider_status,omitempty"`
+	Usage                   ProviderUsage     `json:"usage"`
 	ModelClassification     *StructuredResult `json:"model_classification,omitempty"`
 	DeterministicResolution *PolicyResolution `json:"deterministic_resolution,omitempty"`
 }
@@ -126,12 +151,15 @@ type DiagnosticCaseRun struct {
 }
 
 type DiagnosticAuditPaths struct {
-	RunID          string `json:"run_id"`
-	Directory      string `json:"directory"`
-	Plan           string `json:"plan,omitempty"`
-	ReportJSON     string `json:"report_json,omitempty"`
-	ReportMarkdown string `json:"report_markdown,omitempty"`
-	Preflight      string `json:"preflight,omitempty"`
+	RunID               string `json:"run_id"`
+	Directory           string `json:"directory"`
+	Plan                string `json:"plan,omitempty"`
+	ReportJSON          string `json:"report_json,omitempty"`
+	ReportMarkdown      string `json:"report_markdown,omitempty"`
+	Preflight           string `json:"preflight,omitempty"`
+	StopRecord          string `json:"stop_record,omitempty"`
+	ArtifactIndex       string `json:"artifact_index,omitempty"`
+	ArtifactIndexSHA256 string `json:"artifact_index_sha256,omitempty"`
 }
 
 func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSafetyState) (PreparedDiagnostic, error) {
@@ -203,17 +231,62 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	return PreparedDiagnostic{Plan: plan, Manifest: manifest, Lock: lock, Config: config, Resolver: resolver, ProxyExposures: exposures, Paths: paths}, nil
 }
 
+func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfig, safety DiagnosticSafetyState) (PreparedDiagnostic, error) {
+	if !config.APIKey.present() {
+		return PreparedDiagnostic{}, fmt.Errorf("missing required hosted diagnostic configuration: %s", OpenAIDiagnosticAPIKeyEnv)
+	}
+	wantNamespace := filepath.Join(OpenAIDiagnosticEvidenceNamespace, config.ExperimentID)
+	if !strings.HasSuffix(filepath.Clean(paths.OutputRoot), wantNamespace) {
+		return PreparedDiagnostic{}, fmt.Errorf("hosted diagnostic output root must end in isolated namespace %s", filepath.ToSlash(wantNamespace))
+	}
+	prepared, err := PrepareDiagnostic(paths, config.Runtime, safety)
+	if err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	firstRequest, err := InitialRequest(prepared.Manifest.Events[0].Input, prepared.ProxyExposures)
+	if err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	estimatedInputTokens := len([]byte(firstRequest.System)) + len([]byte(firstRequest.User)) + 1024
+	estimatedFirstCost := tokenCostMicros(estimatedInputTokens, config.InputPriceMicrosPerMillion) + tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
+	if estimatedFirstCost > config.BudgetCeilingMicros {
+		return PreparedDiagnostic{}, fmt.Errorf("configured hosted request maximum exceeds the experiment budget ceiling")
+	}
+	prepared.Plan.ModelConfiguration.ReasoningEffort = config.ReasoningEffort
+	prepared.Plan.ModelConfiguration.MaxOutputTokens = config.MaxOutputTokens
+	prepared.Plan.ModelConfiguration.StructuredOutputMode = OpenAIDiagnosticStructuredOutput
+	prepared.Plan.HostedExperiment = &HostedExperimentPlan{
+		ExperimentID: config.ExperimentID, EvidenceNamespace: OpenAIDiagnosticEvidenceNamespace + "/" + config.ExperimentID,
+		Endpoint: OpenAIDiagnosticEndpoint, APIKeyEnvironment: OpenAIDiagnosticAPIKeyEnv, APIKeyPresent: true,
+		InferenceExplicitlyAuthorized: config.InferenceExplicitlyAuthorized,
+		BudgetCeilingUSD:              formatUSDMicros(config.BudgetCeilingMicros),
+		Pricing: HostedPricingPlan{
+			InputUSDPerMillionTokens:       formatUSDMicros(config.InputPriceMicrosPerMillion),
+			CachedInputUSDPerMillionTokens: formatUSDMicros(config.CachedInputPriceMicrosPerMillion),
+			CacheWriteUSDPerMillionTokens:  formatUSDMicros(config.CacheWritePriceMicrosPerMillion),
+			OutputUSDPerMillionTokens:      formatUSDMicros(config.OutputPriceMicrosPerMillion),
+			Source:                         "execution-time configuration; re-verify before paid execution",
+		},
+		BaseRequestCount:            diagnosticEventCount * diagnosticRepetitionCount,
+		MaximumRequestCount:         diagnosticEventCount * diagnosticRepetitionCount * 2,
+		EstimatedFirstRequestMaxUSD: formatUSDMicros(estimatedFirstCost),
+		DatabaseMutationAllowed:     false, TradingStateMutationAllowed: false,
+	}
+	return prepared, nil
+}
+
 func WriteDiagnosticPreflight(prepared PreparedDiagnostic) (DiagnosticAuditPaths, string, error) {
 	runID := uuid.NewString()
 	dir := filepath.Join(prepared.Paths.OutputRoot, "preflight", runID)
 	path := filepath.Join(dir, "preflight.json")
 	payload := struct {
-		RunID         string         `json:"run_id"`
-		Status        string         `json:"status"`
-		OllamaContact bool           `json:"ollama_contact"`
-		Inference     bool           `json:"inference"`
-		Plan          DiagnosticPlan `json:"plan"`
-	}{runID, "ready", false, false, prepared.Plan}
+		RunID           string         `json:"run_id"`
+		Status          string         `json:"status"`
+		ProviderContact bool           `json:"provider_contact"`
+		OllamaContact   bool           `json:"ollama_contact"`
+		Inference       bool           `json:"inference"`
+		Plan            DiagnosticPlan `json:"plan"`
+	}{runID, "ready", false, false, false, prepared.Plan}
 	hash, err := writeExclusiveJSON(path, payload)
 	if err != nil {
 		return DiagnosticAuditPaths{}, "", err
@@ -228,8 +301,22 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 	if prepared.Plan.Repetitions != diagnosticRepetitionCount || prepared.Plan.CasesPerRepetition != diagnosticEventCount {
 		return DiagnosticRunReport{}, DiagnosticAuditPaths{}, fmt.Errorf("issuer diagnostic execution shape changed")
 	}
-	if identity.Name != prepared.Config.Model || strings.TrimSpace(identity.Digest) == "" {
+	if identity.Name != prepared.Config.Model || prepared.Config.Provider == "ollama" && strings.TrimSpace(identity.Digest) == "" {
 		return DiagnosticRunReport{}, DiagnosticAuditPaths{}, fmt.Errorf("issuer diagnostic model identity does not match configured model")
+	}
+	if plan := prepared.Plan.HostedExperiment; plan != nil {
+		recorder, ok := provider.(hostedExperimentRecorder)
+		if !ok {
+			return DiagnosticRunReport{}, DiagnosticAuditPaths{}, fmt.Errorf("hosted issuer diagnostic provider must expose experiment accounting")
+		}
+		snapshot := recorder.ExperimentSnapshot()
+		if snapshot.ExperimentID != plan.ExperimentID || snapshot.Provider != prepared.Config.Provider ||
+			snapshot.RequestedModel != prepared.Config.Model || snapshot.ReasoningEffort != prepared.Plan.ModelConfiguration.ReasoningEffort ||
+			snapshot.StructuredOutputMode != prepared.Plan.ModelConfiguration.StructuredOutputMode ||
+			snapshot.MaxOutputTokensPerRequest != prepared.Plan.ModelConfiguration.MaxOutputTokens ||
+			snapshot.BudgetCeilingUSD != plan.BudgetCeilingUSD || snapshot.Pricing != plan.Pricing {
+			return DiagnosticRunReport{}, DiagnosticAuditPaths{}, fmt.Errorf("hosted issuer diagnostic provider does not match the preflight plan")
+		}
 	}
 
 	runID := uuid.NewString()
@@ -262,6 +349,17 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 				event.ID, inputFingerprint, event.Input, prepared.ProxyExposures,
 			)
 			if err != nil {
+				if recorder, ok := provider.(hostedExperimentRecorder); ok {
+					paths.StopRecord = filepath.Join(dir, "stop.json")
+					stop := struct {
+						RunID      string                   `json:"run_id"`
+						StoppedAt  time.Time                `json:"stopped_at"`
+						StopReason string                   `json:"stop_reason"`
+						Experiment HostedExperimentSnapshot `json:"experiment"`
+					}{runID, time.Now().UTC(), err.Error(), recorder.ExperimentSnapshot()}
+					_, _ = writeExclusiveJSON(paths.StopRecord, stop)
+					paths.ArtifactIndex, paths.ArtifactIndexSHA256, _ = writeDiagnosticArtifactIndex(dir)
+				}
 				return DiagnosticRunReport{}, paths, err
 			}
 			for index, attempt := range attempts {
@@ -277,6 +375,10 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 		repetitions = append(repetitions, EvaluateDiagnosticRepetition(repetition, prepared.Manifest, caseRuns, prepared.Resolver))
 	}
 	report := BuildDiagnosticRunReport(runID, prepared, identity, repetitions, allRuns)
+	if recorder, ok := provider.(hostedExperimentRecorder); ok {
+		snapshot := recorder.ExperimentSnapshot()
+		report.HostedExperiment = &snapshot
+	}
 	paths.ReportJSON = filepath.Join(dir, "report.json")
 	paths.ReportMarkdown = filepath.Join(dir, "report.md")
 	if _, err := writeExclusiveJSON(paths.ReportJSON, report); err != nil {
@@ -285,6 +387,11 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 	if _, err := writeExclusive(filepath.Join(dir, "report.md"), []byte(DiagnosticReportMarkdown(report))); err != nil {
 		return DiagnosticRunReport{}, paths, err
 	}
+	indexPath, indexHash, err := writeDiagnosticArtifactIndex(dir)
+	if err != nil {
+		return DiagnosticRunReport{}, paths, err
+	}
+	paths.ArtifactIndex, paths.ArtifactIndexSHA256 = indexPath, indexHash
 	return report, paths, nil
 }
 
@@ -303,6 +410,7 @@ func buildDiagnosticAttemptAudit(runID string, repetition int, event DiagnosticE
 		ResponseTimestamp: attempt.ResponseTimestamp, DurationMS: attempt.Duration.Milliseconds(),
 		RawResponseHash: attempt.RawResponseHash, RawResponseBody: trace.Content,
 		ValidationStatus: attempt.ValidationStatus, ValidationErrors: nonNilStrings(attempt.ValidationErrors), FailureReason: attempt.FailureReason,
+		RequestID: trace.RequestID, ResponseID: trace.ResponseID, ProviderStatus: trace.Status, Usage: trace.Usage,
 		ModelClassification: parsed, DeterministicResolution: resolution,
 	}
 }
@@ -341,4 +449,41 @@ func copyExclusive(source, destination string) error {
 	}
 	_, err = writeExclusive(destination, raw)
 	return err
+}
+
+func writeDiagnosticArtifactIndex(dir string) (string, string, error) {
+	type artifactHash struct {
+		Path   string `json:"path"`
+		SHA256 string `json:"sha256"`
+	}
+	artifacts := []artifactHash{}
+	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || entry.Name() == "artifact-index.json" {
+			return nil
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		digest := sha256.Sum256(raw)
+		relative, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		artifacts = append(artifacts, artifactHash{Path: filepath.ToSlash(relative), SHA256: hex.EncodeToString(digest[:])})
+		return nil
+	})
+	if err != nil {
+		return "", "", err
+	}
+	sort.Slice(artifacts, func(i, j int) bool { return artifacts[i].Path < artifacts[j].Path })
+	path := filepath.Join(dir, "artifact-index.json")
+	hash, err := writeExclusiveJSON(path, struct {
+		Version   string         `json:"version"`
+		Artifacts []artifactHash `json:"artifacts"`
+	}{"ai-shadow-issuer-diagnostic-artifact-index-v1", artifacts})
+	return path, hash, err
 }

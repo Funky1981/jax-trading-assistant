@@ -1,6 +1,7 @@
 package aishadow
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -104,6 +105,8 @@ func analyseEvent(config Config, provider Provider, resolver assetresolution.Res
 	var parsed *StructuredResult
 	var resolution *PolicyResolution
 	for number := 1; number <= 2; number++ {
+		request.EventID = eventID
+		request.AttemptNumber = number
 		requested := time.Now().UTC()
 		if number == 1 {
 			firstRequest = requested
@@ -120,7 +123,10 @@ func analyseEvent(config Config, provider Provider, resolver assetresolution.Res
 		} else {
 			parsed, resolution, validationErrors = ParseAndValidate(response.Content, input, resolver)
 		}
-		trace := ProviderTrace{AttemptNumber: number, Content: response.Content, ModelIdentifier: response.ModelIdentifier}
+		trace := ProviderTrace{
+			AttemptNumber: number, Content: response.Content, ModelIdentifier: response.ModelIdentifier,
+			RequestID: response.RequestID, ResponseID: response.ResponseID, Status: response.Status, Usage: response.Usage,
+		}
 		if providerErr != nil {
 			trace.ProviderError = providerErr.Error()
 		}
@@ -139,6 +145,12 @@ func analyseEvent(config Config, provider Provider, resolver assetresolution.Res
 		}
 		attempts = append(attempts, attempt)
 		final = attempt
+		if providerErr != nil {
+			var fatal interface{ FatalExperimentStop() bool }
+			if errors.As(providerErr, &fatal) && fatal.FatalExperimentStop() {
+				return EventResult{}, attempts, traces, providerErr
+			}
+		}
 		if status == "accepted" || providerErr != nil || number == 2 {
 			break
 		}

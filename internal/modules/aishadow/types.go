@@ -209,23 +209,43 @@ type Repository interface {
 }
 
 type ProviderRequest struct {
-	System string
-	User   string
-	Schema map[string]any
+	System        string
+	User          string
+	Schema        map[string]any
+	EventID       string
+	AttemptNumber int
+	RequestKind   string
 }
 
 type ProviderResponse struct {
 	Content         string
 	ModelIdentifier string
+	RequestID       string
+	ResponseID      string
+	Status          string
+	Usage           ProviderUsage
+}
+
+type ProviderUsage struct {
+	InputTokens      int `json:"input_tokens"`
+	CachedTokens     int `json:"cached_tokens"`
+	CacheWriteTokens int `json:"cache_write_tokens"`
+	OutputTokens     int `json:"output_tokens"`
+	ReasoningTokens  int `json:"reasoning_tokens"`
+	TotalTokens      int `json:"total_tokens"`
 }
 
 // ProviderTrace is retained only by the isolated diagnostic file audit. The
 // operational benchmark persistence continues to store hashes, not bodies.
 type ProviderTrace struct {
-	AttemptNumber   int    `json:"attempt_number"`
-	Content         string `json:"raw_response_body"`
-	ModelIdentifier string `json:"model_identifier,omitempty"`
-	ProviderError   string `json:"provider_error,omitempty"`
+	AttemptNumber   int           `json:"attempt_number"`
+	Content         string        `json:"raw_response_body"`
+	ModelIdentifier string        `json:"model_identifier,omitempty"`
+	RequestID       string        `json:"request_id,omitempty"`
+	ResponseID      string        `json:"response_id,omitempty"`
+	Status          string        `json:"status,omitempty"`
+	Usage           ProviderUsage `json:"usage"`
+	ProviderError   string        `json:"provider_error,omitempty"`
 }
 
 type Provider interface {

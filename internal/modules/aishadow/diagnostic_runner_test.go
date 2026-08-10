@@ -60,6 +60,35 @@ func TestPrepareDiagnosticVerifiesFrozenCompletenessAndSymbolicIDs(t *testing.T)
 	}
 }
 
+func TestPrepareHostedDiagnosticLocksA1BudgetNamespaceAndNoMutation(t *testing.T) {
+	paths := diagnosticTestPaths(t)
+	paths.OutputRoot = filepath.Join(t.TempDir(), OpenAIDiagnosticEvidenceNamespace, OpenAIDiagnosticExperimentID)
+	config := openAITestConfig()
+	prepared, err := PrepareHostedDiagnostic(paths, config, diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan := prepared.Plan.HostedExperiment
+	if plan == nil || plan.ExperimentID != "A1" || plan.EvidenceNamespace != "openai-hosted-a1-v1/A1" || !plan.APIKeyPresent {
+		t.Fatalf("hosted experiment identity is incomplete: %+v", plan)
+	}
+	if plan.DatabaseMutationAllowed || plan.TradingStateMutationAllowed || plan.BudgetCeilingUSD != "1.00" {
+		t.Fatalf("hosted safety or budget plan is wrong: %+v", plan)
+	}
+	if prepared.Plan.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint || prepared.Plan.ManifestFileSHA256 != ExpectedDiagnosticManifestFileSHA256 || prepared.Plan.PromptVersion != PromptVersion || prepared.Plan.OutputContract != SchemaVersion {
+		t.Fatalf("hosted plan changed frozen benchmark identity: %+v", prepared.Plan)
+	}
+	if prepared.Plan.ModelConfiguration.Provider != OpenAIDiagnosticProvider || prepared.Plan.ModelConfiguration.Model != OpenAIDiagnosticModel || prepared.Plan.ModelConfiguration.StructuredOutputMode != OpenAIDiagnosticStructuredOutput {
+		t.Fatalf("hosted provider plan is wrong: %+v", prepared.Plan.ModelConfiguration)
+	}
+
+	unsafePaths := diagnosticTestPaths(t)
+	unsafePaths.OutputRoot = filepath.Join(t.TempDir(), "ai-shadow-issuer")
+	if _, err := PrepareHostedDiagnostic(unsafePaths, config, diagnosticTestSafety()); err == nil || !strings.Contains(err.Error(), "isolated namespace") {
+		t.Fatalf("baseline evidence namespace was not rejected: %v", err)
+	}
+}
+
 func TestPrepareDiagnosticRejectsManifestAndInputFingerprintMismatch(t *testing.T) {
 	paths := diagnosticTestPaths(t)
 	manifestRaw, err := os.ReadFile(paths.ManifestPath)
@@ -180,6 +209,12 @@ func TestExecuteDiagnosticUsesThreeRepetitionsAndFileAuditOnly(t *testing.T) {
 	if _, err := os.Stat(paths.ReportMarkdown); err != nil {
 		t.Fatal(err)
 	}
+	if paths.ArtifactIndex == "" || paths.ArtifactIndexSHA256 == "" {
+		t.Fatalf("artifact hashes were not indexed: %+v", paths)
+	}
+	if _, err := writeExclusiveJSON(paths.ArtifactIndex, report); err == nil {
+		t.Fatal("append-only artifact index was overwritten")
+	}
 }
 
 func TestExecuteDiagnosticRejectsUnpinnedModelBeforeInference(t *testing.T) {
@@ -194,6 +229,39 @@ func TestExecuteDiagnosticRejectsUnpinnedModelBeforeInference(t *testing.T) {
 	}
 	if provider.calls != 0 {
 		t.Fatalf("model identity failure contacted inference provider %d times", provider.calls)
+	}
+}
+
+func TestHostedBudgetStopWritesAppendOnlyStopRecordWithoutHTTP(t *testing.T) {
+	paths := diagnosticTestPaths(t)
+	paths.OutputRoot = filepath.Join(t.TempDir(), OpenAIDiagnosticEvidenceNamespace, OpenAIDiagnosticExperimentID)
+	config := openAITestConfig()
+	prepared, err := PrepareHostedDiagnostic(paths, config, diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	doer := &queuedHTTPDoer{}
+	provider := NewOpenAIDiagnosticClient(config, doer)
+	provider.budget.ceilingMicros = 1
+	_, audit, err := ExecuteDiagnostic(prepared, provider, DiagnosticModelIdentity{Name: OpenAIDiagnosticModel})
+	if err == nil || !strings.Contains(err.Error(), "budget rejected request") {
+		t.Fatalf("budget stop was not returned: %v", err)
+	}
+	if doer.calls != 0 {
+		t.Fatalf("budget-stopped execution made %d HTTP calls", doer.calls)
+	}
+	if audit.StopRecord == "" || audit.ArtifactIndex == "" || audit.ArtifactIndexSHA256 == "" {
+		t.Fatalf("budget stop evidence is incomplete: %+v", audit)
+	}
+	raw, err := os.ReadFile(audit.StopRecord)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"stop_reason"`) || !strings.Contains(string(raw), `"budget_rejection_count": 1`) {
+		t.Fatalf("budget stop record is incomplete: %s", raw)
+	}
+	if _, err := writeExclusiveJSON(audit.StopRecord, prepared.Plan); err == nil {
+		t.Fatal("append-only hosted stop record was overwritten")
 	}
 }
 
