@@ -22,7 +22,31 @@ Reports are written beneath `.runtime/ai-shadow/<run-id>/` as Markdown, JSON, CS
 
 Direct issuer matching reuses the existing canonical issuer and alias rules. Matching is exact after documented normalization; unknown issuers remain valid but unresolved, collisions remain ambiguous, and share-class-specific rules never silently select a ticker. No v2 asset policy or database migration is required for this contract.
 
-The data-only `config/ai-shadow-issuer-diagnostic-manifest-v1.json` freezes 48 independently adjudicated issuer-recognition cases, with six cases in each of eight review categories. It is deliberately not wired to the benchmark command in this implementation phase and must not be run without separate authorization.
+The data-only `config/ai-shadow-issuer-diagnostic-manifest-v1.json` freezes 48 independently adjudicated issuer-recognition cases, with six cases in each of eight review categories. It remains separate from the UUID/FK-backed historical benchmark. `config/ai-shadow-issuer-diagnostic-input-fingerprints-v1.json` freezes the canonical model-visible `EventInput` fingerprint for every symbolic diagnostic ID.
+
+The diagnostic-specific command performs a file-backed, append-only audit beneath `.runtime/diagnostics/ai-shadow-issuer/`; it does not connect to the database or reuse operational benchmark rows. Preflight verifies the exact manifest bytes and semantic fingerprint, every event-input fingerprint, prompt and output-contract versions, policy version, 48-case order, three-repetition shape, model configuration, and paper-mode safety. It deliberately exits without contacting Ollama:
+
+This separation is intentional. The historical benchmark command accepts UUID event references that must already exist in `world_monitor_research_inbox`, then joins qualified outcomes and persists through UUID foreign keys. The issuer diagnostic instead freezes complete receipt-time inputs under symbolic case IDs and has no outcome dependency. Rewriting those IDs, inserting synthetic inbox rows, weakening the operational manifest loader, or changing the v54 foreign keys would alter the frozen diagnostic or contaminate operational benchmark storage, so those alternatives are rejected.
+
+```powershell
+$env:JAX_AI_SHADOW_ENABLED = "true"
+$env:JAX_AI_PROVIDER = "ollama"
+$env:JAX_AI_MODEL = "ministral-3:8b"
+$env:JAX_AI_BASE_URL = "http://localhost:11434"
+$env:JAX_AI_TIMEOUT_SECONDS = "120"
+$env:JAX_AI_TEMPERATURE = "0"
+$env:JAX_AI_SEED = "20260803"
+$env:JAX_AI_MAX_EVENTS = "48"
+$env:JAX_RUNTIME_MODE = "paper"
+$env:ALLOW_LIVE_TRADING = "false"
+$env:EXECUTION_ENABLED = "false"
+$env:EXECUTION_INSTRUCTION_WORKER_ENABLED = "false"
+$env:BROKER_EXECUTION_ALLOWED = "false"
+$env:MAX_LEVERAGE = "1"
+go run ./cmd/ai-shadow-issuer-diagnostic --preflight
+```
+
+`--execute` is a separate, fail-closed action that always runs exactly three complete repetitions in frozen event order and allows only the committed single corrective retry per case. It requires separate inference authorization; never substitute it for preflight during implementation or review.
 
 ## Predeclared verdicts
 

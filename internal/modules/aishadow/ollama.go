@@ -81,30 +81,46 @@ type ollamaMessage struct {
 }
 
 func VerifyOllama(config Config) error {
+	_, err := InspectOllamaModel(config)
+	return err
+}
+
+func InspectOllamaModel(config Config) (DiagnosticModelIdentity, error) {
 	client := &http.Client{Timeout: minDuration(config.Timeout, 10*time.Second)}
 	response, err := client.Get(config.BaseURL + "/api/tags")
 	if err != nil {
-		return fmt.Errorf("Ollama availability: %w", err)
+		return DiagnosticModelIdentity{}, fmt.Errorf("Ollama availability: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("Ollama availability returned HTTP %d", response.StatusCode)
+		return DiagnosticModelIdentity{}, fmt.Errorf("Ollama availability returned HTTP %d", response.StatusCode)
 	}
 	var tags struct {
 		Models []struct {
-			Name  string `json:"name"`
-			Model string `json:"model"`
+			Name    string `json:"name"`
+			Model   string `json:"model"`
+			Digest  string `json:"digest"`
+			Details struct {
+				Format            string `json:"format"`
+				Family            string `json:"family"`
+				ParameterSize     string `json:"parameter_size"`
+				QuantizationLevel string `json:"quantization_level"`
+			} `json:"details"`
 		} `json:"models"`
 	}
 	if err := json.NewDecoder(io.LimitReader(response.Body, 2<<20)).Decode(&tags); err != nil {
-		return fmt.Errorf("decode Ollama model list: %w", err)
+		return DiagnosticModelIdentity{}, fmt.Errorf("decode Ollama model list: %w", err)
 	}
 	for _, model := range tags.Models {
 		if model.Name == config.Model || model.Model == config.Model {
-			return nil
+			return DiagnosticModelIdentity{
+				Name: config.Model, Digest: model.Digest, Format: model.Details.Format,
+				Family: model.Details.Family, ParameterSize: model.Details.ParameterSize,
+				QuantizationLevel: model.Details.QuantizationLevel,
+			}, nil
 		}
 	}
-	return fmt.Errorf("configured Ollama model %q is not installed", config.Model)
+	return DiagnosticModelIdentity{}, fmt.Errorf("configured Ollama model %q is not installed", config.Model)
 }
 
 func minDuration(a, b time.Duration) time.Duration {

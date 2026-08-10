@@ -219,6 +219,15 @@ type ProviderResponse struct {
 	ModelIdentifier string
 }
 
+// ProviderTrace is retained only by the isolated diagnostic file audit. The
+// operational benchmark persistence continues to store hashes, not bodies.
+type ProviderTrace struct {
+	AttemptNumber   int    `json:"attempt_number"`
+	Content         string `json:"raw_response_body"`
+	ModelIdentifier string `json:"model_identifier,omitempty"`
+	ProviderError   string `json:"provider_error,omitempty"`
+}
+
 type Provider interface {
 	Complete(ProviderRequest) (ProviderResponse, error)
 }

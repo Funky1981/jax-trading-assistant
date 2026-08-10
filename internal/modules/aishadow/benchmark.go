@@ -84,11 +84,20 @@ func (r Runner) Run(manifest Manifest, events []BenchmarkEvent) (Report, Artifac
 }
 
 func (r Runner) analyse(runID string, event BenchmarkEvent, proxyExposures []string) (EventResult, []Attempt, error) {
-	request, err := InitialRequest(event.Input, proxyExposures)
+	result, attempts, _, err := analyseEvent(
+		r.Config, r.Provider, r.AssetResolver, runID, ManifestVersion,
+		event.ID, event.InputFingerprint, event.Input, proxyExposures,
+	)
+	return result, attempts, err
+}
+
+func analyseEvent(config Config, provider Provider, resolver assetresolution.Resolver, runID, manifestVersion, eventID, inputFingerprint string, input EventInput, proxyExposures []string) (EventResult, []Attempt, []ProviderTrace, error) {
+	request, err := InitialRequest(input, proxyExposures)
 	if err != nil {
-		return EventResult{}, nil, err
+		return EventResult{}, nil, nil, err
 	}
 	attempts := []Attempt{}
+	traces := []ProviderTrace{}
 	var firstRequest time.Time
 	var totalDuration time.Duration
 	var final Attempt
@@ -99,7 +108,7 @@ func (r Runner) analyse(runID string, event BenchmarkEvent, proxyExposures []str
 		if number == 1 {
 			firstRequest = requested
 		}
-		response, providerErr := r.Provider.Complete(request)
+		response, providerErr := provider.Complete(request)
 		responded := time.Now().UTC()
 		duration := responded.Sub(requested)
 		totalDuration += duration
@@ -109,17 +118,22 @@ func (r Runner) analyse(runID string, event BenchmarkEvent, proxyExposures []str
 			failureReason = providerErr.Error()
 			validationErrors = []string{"provider request failed"}
 		} else {
-			parsed, resolution, validationErrors = ParseAndValidate(response.Content, event.Input, r.AssetResolver)
+			parsed, resolution, validationErrors = ParseAndValidate(response.Content, input, resolver)
 		}
+		trace := ProviderTrace{AttemptNumber: number, Content: response.Content, ModelIdentifier: response.ModelIdentifier}
+		if providerErr != nil {
+			trace.ProviderError = providerErr.Error()
+		}
+		traces = append(traces, trace)
 		status := "accepted"
 		if len(validationErrors) > 0 {
 			status = "rejected"
 		}
 		attempt := Attempt{
-			RunID: runID, EventID: event.ID, AttemptNumber: number, InputFingerprint: event.InputFingerprint,
-			Provider: r.Config.Provider, Model: r.Config.Model, ModelReportedIdentifier: response.ModelIdentifier,
-			PromptVersion: PromptVersion, SchemaVersion: SchemaVersion, Seed: r.Config.Seed,
-			Temperature: r.Config.Temperature, RequestTimestamp: requested, ResponseTimestamp: responded,
+			RunID: runID, EventID: eventID, AttemptNumber: number, InputFingerprint: inputFingerprint,
+			Provider: config.Provider, Model: config.Model, ModelReportedIdentifier: response.ModelIdentifier,
+			PromptVersion: PromptVersion, SchemaVersion: SchemaVersion, Seed: config.Seed,
+			Temperature: config.Temperature, RequestTimestamp: requested, ResponseTimestamp: responded,
 			Duration: duration, RawResponseHash: rawHash(response.Content), ValidationStatus: status,
 			ValidationErrors: validationErrors, FailureReason: failureReason,
 		}
@@ -130,10 +144,10 @@ func (r Runner) analyse(runID string, event BenchmarkEvent, proxyExposures []str
 		}
 		request, err = CorrectiveRequest(validationErrors, response.Content, proxyExposures)
 		if err != nil {
-			return EventResult{}, attempts, err
+			return EventResult{}, attempts, traces, err
 		}
 	}
 	final.RequestTimestamp = firstRequest
 	final.Duration = totalDuration
-	return EventResult{Attempt: final, ManifestVersion: ManifestVersion, RetryCount: len(attempts) - 1, Parsed: parsed, Resolution: resolution}, attempts, nil
+	return EventResult{Attempt: final, ManifestVersion: manifestVersion, RetryCount: len(attempts) - 1, Parsed: parsed, Resolution: resolution}, attempts, traces, nil
 }
