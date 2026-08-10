@@ -137,6 +137,60 @@ func TestPrepareHostedDiagnosticLocksA1BudgetNamespaceAndNoMutation(t *testing.T
 	}
 }
 
+func TestPrepareLunaDiagnosticRecordsOneRepetitionBudgetAndFrozenIdentity(t *testing.T) {
+	paths := diagnosticTestPaths(t)
+	paths.OutputRoot = filepath.Join(t.TempDir(), OpenAIDiagnosticEvidenceNamespace, OpenAIDiagnosticExperimentID)
+	config := openAILunaTestConfig()
+	prepared, err := PrepareHostedDiagnostic(paths, config, diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prepared.Plan.ModelConfiguration.Model != OpenAIDiagnosticLunaModel || prepared.Plan.Repetitions != 3 || prepared.Plan.ExecutionShape.TotalPlannedCases != 144 {
+		t.Fatalf("Luna default selection or identity changed: %+v", prepared.Plan)
+	}
+	shape, err := LoadDiagnosticRepetitionSelection(func(string) (string, bool) { return "1", true })
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err = ApplyDiagnosticExecutionShape(prepared, shape)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateDiagnosticExecutionShape(prepared); err != nil {
+		t.Fatal(err)
+	}
+	plan := prepared.Plan.HostedExperiment
+	if plan == nil || plan.BaseRequestCount != 48 || plan.MaximumRequestCount != 96 || plan.BudgetCeilingUSD != "0.12" ||
+		plan.Pricing.InputUSDPerMillionTokens != "0.20" || plan.Pricing.CachedInputUSDPerMillionTokens != "0.02" ||
+		plan.Pricing.CacheWriteUSDPerMillionTokens != "0.25" || plan.Pricing.OutputUSDPerMillionTokens != "1.20" ||
+		plan.LargestFrozenInitialRequestBytes <= 0 || plan.ConservativeCorrectiveRequestBytes <= 0 {
+		t.Fatalf("Luna execution plan is incomplete: %+v", plan)
+	}
+	estimated, err := parseUSDMicros(plan.EstimatedMaximumRunUSD)
+	if err != nil || estimated <= 0 || estimated > config.BudgetCeilingMicros {
+		t.Fatalf("Luna complete-run estimate=%s ceiling=%s err=%v", plan.EstimatedMaximumRunUSD, plan.BudgetCeilingUSD, err)
+	}
+	if prepared.Plan.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint || prepared.Plan.ManifestFileSHA256 != ExpectedDiagnosticManifestFileSHA256 ||
+		prepared.Plan.FingerprintLockFingerprint != prepared.Lock.Fingerprint || prepared.Plan.PromptVersion != PromptVersion || prepared.Plan.OutputContract != SchemaVersion {
+		t.Fatalf("Luna plan changed frozen benchmark identities: %+v", prepared.Plan)
+	}
+}
+
+func TestLunaDefaultThreeRepetitionPlanRetains144CasesButFailsInsufficientBudget(t *testing.T) {
+	paths := diagnosticTestPaths(t)
+	paths.OutputRoot = filepath.Join(t.TempDir(), OpenAIDiagnosticEvidenceNamespace, OpenAIDiagnosticExperimentID)
+	prepared, err := PrepareHostedDiagnostic(paths, openAILunaTestConfig(), diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prepared.Plan.ExecutionShape.TotalPlannedCases != 144 {
+		t.Fatalf("default hosted execution shape changed: %+v", prepared.Plan.ExecutionShape)
+	}
+	if err := ValidateDiagnosticExecutionShape(prepared); err == nil || !strings.Contains(err.Error(), "complete-run estimate") {
+		t.Fatalf("underfunded three-repetition Luna plan was not rejected: %v", err)
+	}
+}
+
 func TestPrepareDeepSeekDiagnosticLocksA1ModeBudgetNamespaceAndNoMutation(t *testing.T) {
 	paths := diagnosticTestPaths(t)
 	paths.OutputRoot = filepath.Join(t.TempDir(), DeepSeekDiagnosticEvidenceNamespace, DeepSeekDiagnosticExperimentID)

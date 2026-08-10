@@ -55,19 +55,22 @@ type DiagnosticModelConfiguration struct {
 }
 
 type HostedExperimentPlan struct {
-	ExperimentID                  string            `json:"experiment_id"`
-	EvidenceNamespace             string            `json:"evidence_namespace"`
-	Endpoint                      string            `json:"endpoint"`
-	APIKeyEnvironment             string            `json:"api_key_environment"`
-	APIKeyPresent                 bool              `json:"api_key_present"`
-	InferenceExplicitlyAuthorized bool              `json:"inference_explicitly_authorized"`
-	BudgetCeilingUSD              string            `json:"budget_ceiling_usd"`
-	Pricing                       HostedPricingPlan `json:"pricing"`
-	BaseRequestCount              int               `json:"base_request_count"`
-	MaximumRequestCount           int               `json:"maximum_request_count"`
-	EstimatedFirstRequestMaxUSD   string            `json:"estimated_first_request_max_usd"`
-	DatabaseMutationAllowed       bool              `json:"database_mutation_allowed"`
-	TradingStateMutationAllowed   bool              `json:"trading_state_mutation_allowed"`
+	ExperimentID                       string            `json:"experiment_id"`
+	EvidenceNamespace                  string            `json:"evidence_namespace"`
+	Endpoint                           string            `json:"endpoint"`
+	APIKeyEnvironment                  string            `json:"api_key_environment"`
+	APIKeyPresent                      bool              `json:"api_key_present"`
+	InferenceExplicitlyAuthorized      bool              `json:"inference_explicitly_authorized"`
+	BudgetCeilingUSD                   string            `json:"budget_ceiling_usd"`
+	Pricing                            HostedPricingPlan `json:"pricing"`
+	BaseRequestCount                   int               `json:"base_request_count"`
+	MaximumRequestCount                int               `json:"maximum_request_count"`
+	EstimatedFirstRequestMaxUSD        string            `json:"estimated_first_request_max_usd"`
+	LargestFrozenInitialRequestBytes   int               `json:"largest_frozen_initial_request_bytes,omitempty"`
+	ConservativeCorrectiveRequestBytes int               `json:"conservative_corrective_request_bytes,omitempty"`
+	EstimatedMaximumRunUSD             string            `json:"estimated_maximum_run_usd,omitempty"`
+	DatabaseMutationAllowed            bool              `json:"database_mutation_allowed"`
+	TradingStateMutationAllowed        bool              `json:"trading_state_mutation_allowed"`
 }
 
 type DiagnosticPlanEvent struct {
@@ -272,8 +275,12 @@ func ApplyDiagnosticExecutionShape(prepared PreparedDiagnostic, shape Diagnostic
 	prepared.Plan.Repetitions = shape.EffectiveRepetitions
 	prepared.Plan.CasesPerRepetition = shape.CasesPerRepetition
 	if prepared.Plan.HostedExperiment != nil {
+		previousRepetitions := prepared.Plan.HostedExperiment.BaseRequestCount / diagnosticEventCount
 		prepared.Plan.HostedExperiment.BaseRequestCount = shape.TotalPlannedCases
 		prepared.Plan.HostedExperiment.MaximumRequestCount = shape.TotalPlannedCases * 2
+		if estimate, err := parseUSDMicros(prepared.Plan.HostedExperiment.EstimatedMaximumRunUSD); err == nil && previousRepetitions > 0 {
+			prepared.Plan.HostedExperiment.EstimatedMaximumRunUSD = formatUSDMicros(estimate / int64(previousRepetitions) * int64(shape.EffectiveRepetitions))
+		}
 	}
 	return prepared, nil
 }
@@ -291,6 +298,13 @@ func ValidateDiagnosticExecutionShape(prepared PreparedDiagnostic) error {
 	if plan := prepared.Plan.HostedExperiment; plan != nil &&
 		(plan.BaseRequestCount != shape.TotalPlannedCases || plan.MaximumRequestCount != shape.TotalPlannedCases*2) {
 		return fmt.Errorf("hosted issuer diagnostic request plan does not match validated execution shape")
+	}
+	if plan := prepared.Plan.HostedExperiment; plan != nil && prepared.Config.Provider == OpenAIDiagnosticProvider && prepared.Config.Model == OpenAIDiagnosticLunaModel {
+		estimated, estimatedErr := parseUSDMicros(plan.EstimatedMaximumRunUSD)
+		ceiling, ceilingErr := parseUSDMicros(plan.BudgetCeilingUSD)
+		if estimatedErr != nil || ceilingErr != nil || estimated > ceiling {
+			return fmt.Errorf("configured Luna budget ceiling cannot accommodate the conservative complete-run estimate")
+		}
 	}
 	return nil
 }
@@ -324,6 +338,9 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if !config.APIKey.present() {
 		return PreparedDiagnostic{}, fmt.Errorf("missing required hosted diagnostic configuration: %s", OpenAIDiagnosticAPIKeyEnv)
 	}
+	if !supportedOpenAIDiagnosticModel(config.Runtime.Model) {
+		return PreparedDiagnostic{}, fmt.Errorf("unsupported OpenAI diagnostic model %q", config.Runtime.Model)
+	}
 	wantNamespace := filepath.Join(OpenAIDiagnosticEvidenceNamespace, config.ExperimentID)
 	if !strings.HasSuffix(filepath.Clean(paths.OutputRoot), wantNamespace) {
 		return PreparedDiagnostic{}, fmt.Errorf("hosted diagnostic output root must end in isolated namespace %s", filepath.ToSlash(wantNamespace))
@@ -336,14 +353,22 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	estimatedInputTokens := len([]byte(firstRequest.System)) + len([]byte(firstRequest.User)) + 1024
-	estimatedFirstCost := tokenCostMicros(estimatedInputTokens, config.InputPriceMicrosPerMillion) + tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
+	estimatedInputTokens := estimatedHostedInputTokens(firstRequest)
+	worstInputPrice := config.InputPriceMicrosPerMillion
+	if config.CacheWritePriceMicrosPerMillion > worstInputPrice {
+		worstInputPrice = config.CacheWritePriceMicrosPerMillion
+	}
+	estimatedFirstCost := tokenCostMicros(estimatedInputTokens, worstInputPrice) + tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
 	if estimatedFirstCost > config.BudgetCeilingMicros {
 		return PreparedDiagnostic{}, fmt.Errorf("configured hosted request maximum exceeds the experiment budget ceiling")
 	}
 	prepared.Plan.ModelConfiguration.ReasoningEffort = config.ReasoningEffort
 	prepared.Plan.ModelConfiguration.MaxOutputTokens = config.MaxOutputTokens
 	prepared.Plan.ModelConfiguration.StructuredOutputMode = OpenAIDiagnosticStructuredOutput
+	largestInitialBytes, correctiveBytes, estimatedRunCost, err := estimateOpenAIDiagnosticRunMaximum(prepared, config)
+	if err != nil {
+		return PreparedDiagnostic{}, err
+	}
 	prepared.Plan.HostedExperiment = &HostedExperimentPlan{
 		ExperimentID: config.ExperimentID, EvidenceNamespace: OpenAIDiagnosticEvidenceNamespace + "/" + config.ExperimentID,
 		Endpoint: OpenAIDiagnosticEndpoint, APIKeyEnvironment: OpenAIDiagnosticAPIKeyEnv, APIKeyPresent: true,
@@ -354,14 +379,56 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 			CachedInputUSDPerMillionTokens: formatUSDMicros(config.CachedInputPriceMicrosPerMillion),
 			CacheWriteUSDPerMillionTokens:  formatUSDMicros(config.CacheWritePriceMicrosPerMillion),
 			OutputUSDPerMillionTokens:      formatUSDMicros(config.OutputPriceMicrosPerMillion),
-			Source:                         "execution-time configuration; re-verify before paid execution",
+			Source:                         OpenAIDiagnosticPricingSource,
 		},
-		BaseRequestCount:            prepared.ExecutionShape.TotalPlannedCases,
-		MaximumRequestCount:         prepared.ExecutionShape.TotalPlannedCases * 2,
-		EstimatedFirstRequestMaxUSD: formatUSDMicros(estimatedFirstCost),
-		DatabaseMutationAllowed:     false, TradingStateMutationAllowed: false,
+		BaseRequestCount:                   prepared.ExecutionShape.TotalPlannedCases,
+		MaximumRequestCount:                prepared.ExecutionShape.TotalPlannedCases * 2,
+		EstimatedFirstRequestMaxUSD:        formatUSDMicros(estimatedFirstCost),
+		LargestFrozenInitialRequestBytes:   largestInitialBytes,
+		ConservativeCorrectiveRequestBytes: correctiveBytes,
+		EstimatedMaximumRunUSD:             formatUSDMicros(estimatedRunCost),
+		DatabaseMutationAllowed:            false, TradingStateMutationAllowed: false,
 	}
 	return prepared, nil
+}
+
+func estimatedHostedInputTokens(request ProviderRequest) int {
+	return len([]byte(request.System)) + len([]byte(request.User)) + 1024
+}
+
+func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config OpenAIDiagnosticConfig) (int, int, int64, error) {
+	worstInputPrice := config.InputPriceMicrosPerMillion
+	if config.CacheWritePriceMicrosPerMillion > worstInputPrice {
+		worstInputPrice = config.CacheWritePriceMicrosPerMillion
+	}
+	largestInitialBytes := 0
+	perRepetition := int64(0)
+	for _, event := range prepared.Manifest.Events {
+		request, err := InitialRequest(event.Input, prepared.ProxyExposures)
+		if err != nil {
+			return 0, 0, 0, err
+		}
+		requestBytes := len([]byte(request.System)) + len([]byte(request.User))
+		if requestBytes > largestInitialBytes {
+			largestInitialBytes = requestBytes
+		}
+		perRepetition += tokenCostMicros(estimatedHostedInputTokens(request), worstInputPrice) +
+			tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
+	}
+	// A corrective request can repeat the entire maximum output in both the
+	// previous-response field and validation evidence. Four UTF-8 bytes per
+	// output token in each field is deliberately conservative for the bounded
+	// plain-text JSON contract while retaining the provider's 256-token cap.
+	boundedOutputBytes := config.MaxOutputTokens * 4
+	corrective, err := CorrectiveRequest([]string{strings.Repeat("e", boundedOutputBytes)}, strings.Repeat("x", boundedOutputBytes), prepared.ProxyExposures)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	correctiveBytes := len([]byte(corrective.System)) + len([]byte(corrective.User))
+	correctiveCost := tokenCostMicros(estimatedHostedInputTokens(corrective), worstInputPrice) +
+		tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
+	perRepetition += int64(diagnosticEventCount) * correctiveCost
+	return largestInitialBytes, correctiveBytes, perRepetition * int64(prepared.ExecutionShape.EffectiveRepetitions), nil
 }
 
 func PrepareDeepSeekDiagnostic(paths DiagnosticPaths, config DeepSeekDiagnosticConfig, safety DiagnosticSafetyState) (PreparedDiagnostic, error) {

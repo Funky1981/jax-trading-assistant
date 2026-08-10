@@ -311,7 +311,7 @@ func (c *DeepSeekDiagnosticClient) setStopReason(reason string) {
 }
 
 func (c *DeepSeekDiagnosticClient) ExperimentSnapshot() HostedExperimentSnapshot {
-	actual, ambiguous, usage := c.budget.snapshot()
+	budget := c.budget.snapshot()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	models, fingerprints, reasons := sortedKeys(c.returned), sortedKeys(c.fingerprints), sortedKeys(c.finishReasons)
@@ -327,9 +327,10 @@ func (c *DeepSeekDiagnosticClient) ExperimentSnapshot() HostedExperimentSnapshot
 			OutputUSDPerMillionTokens:         formatUSDMicros(c.config.OutputPriceMicrosPerMillion),
 			Source:                            "execution-time configuration; re-verify before paid execution",
 		},
-		BudgetCeilingUSD: formatUSDMicros(c.config.BudgetCeilingMicros), ActualCalculableCostUSD: formatUSDMicros(actual),
-		AmbiguousLiabilityUSD: formatUSDMicros(ambiguous), AccountedCostUSD: formatUSDMicros(actual + ambiguous),
-		RequestCount: c.requests, RetryCount: c.retries, Usage: usage, ProviderErrorCount: len(c.failures),
+		BudgetCeilingUSD: formatUSDMicros(c.config.BudgetCeilingMicros), ActualCalculableCostUSD: formatUSDMicros(budget.actualMicros),
+		CostByCategory: budget.costs, AmbiguousLiabilityUSD: formatUSDMicros(budget.ambiguousMicros),
+		AccountedCostUSD: formatUSDMicros(budget.actualMicros + budget.ambiguousMicros), RemainingBudgetUSD: formatUSDMicros(budget.remainingMicros),
+		RequestCount: c.requests, RetryCount: c.retries, Usage: budget.usage, ProviderErrorCount: len(c.failures),
 		TimeoutCount: c.timeouts, BudgetRejectionCount: c.rejections, StopReason: c.stopReason,
 		Failures: append([]HostedProviderFailure(nil), c.failures...),
 	}

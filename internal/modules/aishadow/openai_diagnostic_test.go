@@ -41,6 +41,17 @@ func openAITestConfig() OpenAIDiagnosticConfig {
 	}
 }
 
+func openAILunaTestConfig() OpenAIDiagnosticConfig {
+	config := openAITestConfig()
+	config.Runtime.Model = OpenAIDiagnosticLunaModel
+	config.BudgetCeilingMicros = OpenAIDiagnosticLunaMaximumBudgetMicros
+	config.InputPriceMicrosPerMillion = 200_000
+	config.CachedInputPriceMicrosPerMillion = 20_000
+	config.CacheWritePriceMicrosPerMillion = 250_000
+	config.OutputPriceMicrosPerMillion = 1_200_000
+	return config
+}
+
 func openAITestResponse(status int, body string) *http.Response {
 	return &http.Response{
 		StatusCode: status, Body: io.NopCloser(strings.NewReader(body)),
@@ -49,9 +60,14 @@ func openAITestResponse(status int, body string) *http.Response {
 }
 
 func completedOpenAIResponse(content string, inputTokens, outputTokens int) string {
+	return completedOpenAIResponseForModel(content, OpenAIDiagnosticSolModel+"-2026-08-01", "fp_openai_test", inputTokens, outputTokens)
+}
+
+func completedOpenAIResponseForModel(content, model, fingerprint string, inputTokens, outputTokens int) string {
 	return `{
   "id":"resp_test",
-  "model":"gpt-5.6-sol-2026-08-01",
+  "model":` + strconvQuote(model) + `,
+  "system_fingerprint":` + strconvQuote(fingerprint) + `,
   "status":"completed",
   "output":[{"type":"message","content":[{"type":"output_text","text":` + strconvQuote(content) + `}]}],
   "usage":{"input_tokens":` + itoa(inputTokens) + `,"input_tokens_details":{"cached_tokens":11,"cache_write_tokens":7},"output_tokens":` + itoa(outputTokens) + `,"output_tokens_details":{"reasoning_tokens":13},"total_tokens":` + itoa(inputTokens+outputTokens) + `}
@@ -78,6 +94,39 @@ func TestLoadOpenAIDiagnosticConfigFailsClosed(t *testing.T) {
 	}
 }
 
+func TestLoadOpenAIDiagnosticConfigAcceptsOnlySolAndLuna(t *testing.T) {
+	for _, model := range []string{OpenAIDiagnosticSolModel, OpenAIDiagnosticLunaModel} {
+		t.Run(model, func(t *testing.T) {
+			values := hostedConfigValues()
+			values["JAX_AI_MODEL"] = model
+			if model == OpenAIDiagnosticLunaModel {
+				values["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.12"
+			}
+			config, err := LoadOpenAIDiagnosticConfig(mapLookup(values))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if config.Runtime.Model != model {
+				t.Fatalf("selected model=%s, want %s", config.Runtime.Model, model)
+			}
+		})
+	}
+	values := hostedConfigValues()
+	values["JAX_AI_MODEL"] = "gpt-5.6-terra"
+	if _, err := LoadOpenAIDiagnosticConfig(mapLookup(values)); err == nil {
+		t.Fatal("arbitrary OpenAI model was accepted")
+	}
+}
+
+func TestLoadOpenAIDiagnosticConfigAppliesLunaBudgetCap(t *testing.T) {
+	values := hostedConfigValues()
+	values["JAX_AI_MODEL"] = OpenAIDiagnosticLunaModel
+	values["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.120001"
+	if _, err := LoadOpenAIDiagnosticConfig(mapLookup(values)); err == nil || !strings.Contains(err.Error(), "0.12") {
+		t.Fatalf("Luna budget cap was not enforced: %v", err)
+	}
+}
+
 func TestOpenAIDiagnosticConfigCannotSerializeOrFormatCredential(t *testing.T) {
 	config := openAITestConfig()
 	raw, err := json.Marshal(config)
@@ -98,10 +147,10 @@ func TestOpenAIDiagnosticClientParsesResponseAndUsageWithoutStructuredOutputs(t 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Content != unresolvedJSON() || response.ModelIdentifier != "gpt-5.6-sol-2026-08-01" || response.RequestID != "req-test" || response.ResponseID != "resp_test" {
+	if response.Content != unresolvedJSON() || response.ModelIdentifier != "gpt-5.6-sol-2026-08-01" || response.SystemFingerprint != "fp_openai_test" || response.RequestID != "req-test" || response.ResponseID != "resp_test" {
 		t.Fatalf("unexpected response metadata: %+v", response)
 	}
-	if response.Usage.InputTokens != 1000 || response.Usage.OutputTokens != 100 || response.Usage.ReasoningTokens != 13 || response.Usage.CachedTokens != 11 || response.Usage.CacheWriteTokens != 7 {
+	if response.Usage.InputTokens != 1000 || response.Usage.CacheMissTokens != 982 || response.Usage.OutputTokens != 100 || response.Usage.ReasoningTokens != 13 || response.Usage.CachedTokens != 11 || response.Usage.CacheWriteTokens != 7 {
 		t.Fatalf("unexpected usage: %+v", response.Usage)
 	}
 	if doer.calls != 1 {
@@ -122,8 +171,55 @@ func TestOpenAIDiagnosticClientParsesResponseAndUsageWithoutStructuredOutputs(t 
 		t.Fatalf("A1 request silently enabled provider structured outputs: %s", body)
 	}
 	snapshot := client.ExperimentSnapshot()
-	if snapshot.RequestCount != 1 || snapshot.ActualCalculableCostUSD != "0.00796" || snapshot.AccountedCostUSD != "0.00796" || len(snapshot.ReturnedModels) != 1 {
+	if snapshot.RequestCount != 1 || snapshot.ActualCalculableCostUSD != "0.00796" || snapshot.AccountedCostUSD != "0.00796" || snapshot.RemainingBudgetUSD != "0.99204" ||
+		snapshot.CostByCategory.TotalUSD != "0.00796" || len(snapshot.ReturnedModels) != 1 || len(snapshot.SystemFingerprints) != 1 {
 		t.Fatalf("unexpected experiment snapshot: %+v", snapshot)
+	}
+}
+
+func TestOpenAIDiagnosticClientParsesLunaResponseAndRequiresExactIdentity(t *testing.T) {
+	config := openAILunaTestConfig()
+	body := completedOpenAIResponseForModel(unresolvedJSON(), OpenAIDiagnosticLunaModel, "fp_luna_test", 1000, 100)
+	doer := &queuedHTTPDoer{responses: []*http.Response{openAITestResponse(http.StatusOK, body)}}
+	client := NewOpenAIDiagnosticClient(config, doer)
+	response, err := client.Complete(ProviderRequest{System: "frozen-system", User: "frozen-user", RequestKind: "initial"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.ModelIdentifier != OpenAIDiagnosticLunaModel || response.SystemFingerprint != "fp_luna_test" || response.Usage.CacheMissTokens != 982 {
+		t.Fatalf("unexpected Luna response evidence: %+v", response)
+	}
+	raw, _ := io.ReadAll(doer.requests[0].Body)
+	for _, want := range []string{`"model":"gpt-5.6-luna"`, `"effort":"none"`, `"store":false`} {
+		if !strings.Contains(string(raw), want) {
+			t.Fatalf("Luna request missing %s: %s", want, raw)
+		}
+	}
+	for _, forbidden := range []string{`"tools"`, "web_search", "file_search", "json_schema"} {
+		if strings.Contains(string(raw), forbidden) {
+			t.Fatalf("Luna request enabled forbidden feature %q: %s", forbidden, raw)
+		}
+	}
+	snapshot := client.ExperimentSnapshot()
+	if snapshot.RequestedModel != OpenAIDiagnosticLunaModel || snapshot.ReasoningEffort != "none" || snapshot.ActualCalculableCostUSD != "0.00032" || snapshot.RemainingBudgetUSD != "0.11968" {
+		t.Fatalf("unexpected Luna experiment snapshot: %+v", snapshot)
+	}
+
+	mismatch := completedOpenAIResponseForModel(unresolvedJSON(), OpenAIDiagnosticLunaModel+"-2026-08-01", "fp_luna_test", 100, 20)
+	doer = &queuedHTTPDoer{responses: []*http.Response{openAITestResponse(http.StatusOK, mismatch)}}
+	_, err = NewOpenAIDiagnosticClient(config, doer).Complete(ProviderRequest{System: "system", User: "user"})
+	if err == nil || !strings.Contains(err.Error(), "kind=model_identity") {
+		t.Fatalf("non-published Luna snapshot identity was not rejected: %v", err)
+	}
+}
+
+func TestOpenAIDiagnosticClientRejectsUnsupportedConfiguredModelBeforeHTTP(t *testing.T) {
+	config := openAITestConfig()
+	config.Runtime.Model = "gpt-5.6-terra"
+	doer := &queuedHTTPDoer{}
+	_, err := NewOpenAIDiagnosticClient(config, doer).Complete(ProviderRequest{System: "system", User: "user"})
+	if err == nil || !strings.Contains(err.Error(), "kind=configured_model") || doer.calls != 0 {
+		t.Fatalf("unsupported configured model did not fail before HTTP: err=%v calls=%d", err, doer.calls)
 	}
 }
 

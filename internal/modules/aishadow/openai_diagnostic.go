@@ -17,16 +17,20 @@ import (
 )
 
 const (
-	OpenAIDiagnosticProvider            = "openai"
-	OpenAIDiagnosticModel               = "gpt-5.6-sol"
-	OpenAIDiagnosticAPIKeyEnv           = "JAX_OPENAI_EXPERIMENT_API_KEY"
-	OpenAIDiagnosticEndpoint            = "https://api.openai.com/v1/responses"
-	OpenAIDiagnosticReasoningEffort     = "none"
-	OpenAIDiagnosticStructuredOutput    = "v4-prompt-contract-plain-text"
-	OpenAIDiagnosticEvidenceNamespace   = "openai-hosted-a1-v1"
-	OpenAIDiagnosticInferenceAuthEnv    = "JAX_AI_HOSTED_INFERENCE_AUTHORIZED"
-	OpenAIDiagnosticExperimentID        = "A1"
-	OpenAIDiagnosticMaximumBudgetMicros = int64(1_000_000)
+	OpenAIDiagnosticProvider                = "openai"
+	OpenAIDiagnosticSolModel                = "gpt-5.6-sol"
+	OpenAIDiagnosticLunaModel               = "gpt-5.6-luna"
+	OpenAIDiagnosticModel                   = OpenAIDiagnosticSolModel
+	OpenAIDiagnosticAPIKeyEnv               = "JAX_OPENAI_EXPERIMENT_API_KEY"
+	OpenAIDiagnosticEndpoint                = "https://api.openai.com/v1/responses"
+	OpenAIDiagnosticReasoningEffort         = "none"
+	OpenAIDiagnosticStructuredOutput        = "v4-prompt-contract-plain-text"
+	OpenAIDiagnosticEvidenceNamespace       = "openai-hosted-a1-v1"
+	OpenAIDiagnosticInferenceAuthEnv        = "JAX_AI_HOSTED_INFERENCE_AUTHORIZED"
+	OpenAIDiagnosticExperimentID            = "A1"
+	OpenAIDiagnosticMaximumBudgetMicros     = int64(1_000_000)
+	OpenAIDiagnosticLunaMaximumBudgetMicros = int64(120_000)
+	OpenAIDiagnosticPricingSource           = "https://developers.openai.com/api/docs/pricing; execution-time configuration; re-verify immediately before paid execution"
 )
 
 var experimentIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
@@ -83,8 +87,9 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 	if provider := strings.ToLower(values["JAX_AI_PROVIDER"]); provider != OpenAIDiagnosticProvider {
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_PROVIDER=%s", OpenAIDiagnosticProvider)
 	}
-	if values["JAX_AI_MODEL"] != OpenAIDiagnosticModel {
-		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_MODEL=%s", OpenAIDiagnosticModel)
+	model := values["JAX_AI_MODEL"]
+	if !supportedOpenAIDiagnosticModel(model) {
+		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_MODEL=%s or %s", OpenAIDiagnosticSolModel, OpenAIDiagnosticLunaModel)
 	}
 	if values["JAX_AI_EXPERIMENT_ID"] != OpenAIDiagnosticExperimentID || !experimentIDPattern.MatchString(values["JAX_AI_EXPERIMENT_ID"]) {
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_EXPERIMENT_ID=%s", OpenAIDiagnosticExperimentID)
@@ -105,8 +110,9 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("JAX_AI_MAX_OUTPUT_TOKENS must be between 1 and 4096")
 	}
 	budget, err := parseUSDMicros(values["JAX_AI_EXPERIMENT_BUDGET_USD"])
-	if err != nil || budget <= 0 || budget > OpenAIDiagnosticMaximumBudgetMicros {
-		return OpenAIDiagnosticConfig{}, fmt.Errorf("JAX_AI_EXPERIMENT_BUDGET_USD must be positive and no greater than 1.00")
+	maximumBudget := openAIDiagnosticMaximumBudgetMicros(model)
+	if err != nil || budget <= 0 || budget > maximumBudget {
+		return OpenAIDiagnosticConfig{}, fmt.Errorf("JAX_AI_EXPERIMENT_BUDGET_USD must be positive and no greater than %s for %s", formatUSDMicros(maximumBudget), model)
 	}
 	inputPrice, err := parseUSDMicros(values["JAX_AI_INPUT_PRICE_USD_PER_MILLION_TOKENS"])
 	if err != nil || inputPrice <= 0 {
@@ -133,7 +139,7 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 	}
 	return OpenAIDiagnosticConfig{
 		Runtime: Config{
-			Enabled: true, Provider: OpenAIDiagnosticProvider, Model: OpenAIDiagnosticModel,
+			Enabled: true, Provider: OpenAIDiagnosticProvider, Model: model,
 			BaseURL: "https://api.openai.com", Timeout: time.Duration(timeoutSeconds) * time.Second, MaxEvents: maxEvents,
 		},
 		APIKey: APISecret{value: values[OpenAIDiagnosticAPIKeyEnv]}, ExperimentID: values["JAX_AI_EXPERIMENT_ID"],
@@ -143,6 +149,28 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 		OutputPriceMicrosPerMillion:   outputPrice,
 		InferenceExplicitlyAuthorized: authorized,
 	}, nil
+}
+
+func supportedOpenAIDiagnosticModel(model string) bool {
+	return model == OpenAIDiagnosticSolModel || model == OpenAIDiagnosticLunaModel
+}
+
+func openAIDiagnosticMaximumBudgetMicros(model string) int64 {
+	if model == OpenAIDiagnosticLunaModel {
+		return OpenAIDiagnosticLunaMaximumBudgetMicros
+	}
+	return OpenAIDiagnosticMaximumBudgetMicros
+}
+
+func openAIReturnedModelMatchesRequested(requested, returned string) bool {
+	switch requested {
+	case OpenAIDiagnosticLunaModel:
+		return returned == requested
+	case OpenAIDiagnosticSolModel:
+		return returned == requested || strings.HasPrefix(returned, requested+"-")
+	default:
+		return false
+	}
 }
 
 type HTTPDoer interface {
@@ -176,8 +204,10 @@ type HostedExperimentSnapshot struct {
 	Pricing                   HostedPricingPlan       `json:"pricing"`
 	BudgetCeilingUSD          string                  `json:"budget_ceiling_usd"`
 	ActualCalculableCostUSD   string                  `json:"actual_calculable_cost_usd"`
+	CostByCategory            HostedCostBreakdown     `json:"cost_by_category"`
 	AmbiguousLiabilityUSD     string                  `json:"ambiguous_liability_usd"`
 	AccountedCostUSD          string                  `json:"accounted_cost_usd"`
+	RemainingBudgetUSD        string                  `json:"remaining_experiment_budget_usd"`
 	RequestCount              int                     `json:"request_count"`
 	RetryCount                int                     `json:"retry_count"`
 	Usage                     ProviderUsage           `json:"usage"`
@@ -186,6 +216,14 @@ type HostedExperimentSnapshot struct {
 	BudgetRejectionCount      int                     `json:"budget_rejection_count"`
 	StopReason                string                  `json:"stop_reason,omitempty"`
 	Failures                  []HostedProviderFailure `json:"failures"`
+}
+
+type HostedCostBreakdown struct {
+	UncachedInputUSD string `json:"uncached_input_usd"`
+	CachedInputUSD   string `json:"cached_input_usd"`
+	CacheWriteUSD    string `json:"cache_write_usd"`
+	OutputUSD        string `json:"output_usd"`
+	TotalUSD         string `json:"total_usd"`
 }
 
 type HostedPricingPlan struct {
@@ -202,17 +240,18 @@ type hostedExperimentRecorder interface {
 }
 
 type OpenAIDiagnosticClient struct {
-	config     OpenAIDiagnosticConfig
-	http       HTTPDoer
-	budget     *experimentBudget
-	mu         sync.Mutex
-	returned   map[string]bool
-	failures   []HostedProviderFailure
-	requests   int
-	retries    int
-	timeouts   int
-	rejections int
-	stopReason string
+	config       OpenAIDiagnosticConfig
+	http         HTTPDoer
+	budget       *experimentBudget
+	mu           sync.Mutex
+	returned     map[string]bool
+	fingerprints map[string]bool
+	failures     []HostedProviderFailure
+	requests     int
+	retries      int
+	timeouts     int
+	rejections   int
+	stopReason   string
 }
 
 func NewOpenAIDiagnosticClient(config OpenAIDiagnosticConfig, transport HTTPDoer) *OpenAIDiagnosticClient {
@@ -220,12 +259,15 @@ func NewOpenAIDiagnosticClient(config OpenAIDiagnosticConfig, transport HTTPDoer
 		transport = &http.Client{Timeout: config.Runtime.Timeout}
 	}
 	return &OpenAIDiagnosticClient{
-		config: config, http: transport, returned: map[string]bool{}, failures: []HostedProviderFailure{},
+		config: config, http: transport, returned: map[string]bool{}, fingerprints: map[string]bool{}, failures: []HostedProviderFailure{},
 		budget: newExperimentBudget(config.BudgetCeilingMicros, config.InputPriceMicrosPerMillion, config.CachedInputPriceMicrosPerMillion, config.CacheWritePriceMicrosPerMillion, config.OutputPriceMicrosPerMillion),
 	}
 }
 
 func (c *OpenAIDiagnosticClient) Complete(request ProviderRequest) (ProviderResponse, error) {
+	if !supportedOpenAIDiagnosticModel(c.config.Runtime.Model) {
+		return ProviderResponse{}, providerSafeError{kind: "configured_model", fatal: true}
+	}
 	estimatedInputTokens := len([]byte(request.System)) + len([]byte(request.User)) + 1024
 	estimatedCost := c.budget.estimateCost(estimatedInputTokens, c.config.MaxOutputTokens)
 	requestNumber, err := c.reserve(request, estimatedCost)
@@ -309,9 +351,15 @@ func (c *OpenAIDiagnosticClient) Complete(request ProviderRequest) (ProviderResp
 		c.returned[decoded.Model] = true
 		c.mu.Unlock()
 	}
-	if decoded.Model != c.config.Runtime.Model && !strings.HasPrefix(decoded.Model, c.config.Runtime.Model+"-") {
+	if !openAIReturnedModelMatchesRequested(c.config.Runtime.Model, decoded.Model) {
 		c.recordFailure(HostedProviderFailure{RequestNumber: requestNumber, EventID: request.EventID, AttemptNumber: request.AttemptNumber, Kind: "model_identity", HTTPStatus: response.StatusCode, RequestID: requestID})
 		return ProviderResponse{}, providerSafeError{kind: "model_identity", status: response.StatusCode, requestID: requestID, fatal: true}
+	}
+	decoded.SystemFingerprint = c.sanitize(decoded.SystemFingerprint)
+	if decoded.SystemFingerprint != "" {
+		c.mu.Lock()
+		c.fingerprints[decoded.SystemFingerprint] = true
+		c.mu.Unlock()
 	}
 	content, contentErr := decoded.outputText()
 	content = c.sanitize(content)
@@ -323,7 +371,7 @@ func (c *OpenAIDiagnosticClient) Complete(request ProviderRequest) (ProviderResp
 		c.recordFailure(HostedProviderFailure{RequestNumber: requestNumber, EventID: request.EventID, AttemptNumber: request.AttemptNumber, Kind: kind, HTTPStatus: response.StatusCode, RequestID: requestID})
 		return ProviderResponse{}, providerSafeError{kind: kind, status: response.StatusCode, requestID: requestID, fatal: true}
 	}
-	return ProviderResponse{Content: content, ModelIdentifier: decoded.Model, RequestID: requestID, ResponseID: decoded.ID, Status: decoded.Status, Usage: usage}, nil
+	return ProviderResponse{Content: content, ModelIdentifier: decoded.Model, RequestID: requestID, ResponseID: decoded.ID, Status: decoded.Status, SystemFingerprint: decoded.SystemFingerprint, Usage: usage}, nil
 }
 
 func (c *OpenAIDiagnosticClient) sanitize(value string) string {
@@ -366,7 +414,7 @@ func (c *OpenAIDiagnosticClient) setStopReason(reason string) {
 }
 
 func (c *OpenAIDiagnosticClient) ExperimentSnapshot() HostedExperimentSnapshot {
-	actual, ambiguous, usage := c.budget.snapshot()
+	budget := c.budget.snapshot()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	models := make([]string, 0, len(c.returned))
@@ -374,20 +422,22 @@ func (c *OpenAIDiagnosticClient) ExperimentSnapshot() HostedExperimentSnapshot {
 		models = append(models, model)
 	}
 	sort.Strings(models)
+	fingerprints := sortedKeys(c.fingerprints)
 	return HostedExperimentSnapshot{
 		ExperimentID: c.config.ExperimentID, Provider: OpenAIDiagnosticProvider, RequestedModel: c.config.Runtime.Model,
-		ReturnedModels: models, ReasoningEffort: c.config.ReasoningEffort, StructuredOutputMode: OpenAIDiagnosticStructuredOutput,
+		ReturnedModels: models, SystemFingerprints: fingerprints, ReasoningEffort: c.config.ReasoningEffort, StructuredOutputMode: OpenAIDiagnosticStructuredOutput,
 		MaxOutputTokensPerRequest: c.config.MaxOutputTokens,
 		Pricing: HostedPricingPlan{
 			InputUSDPerMillionTokens:       formatUSDMicros(c.config.InputPriceMicrosPerMillion),
 			CachedInputUSDPerMillionTokens: formatUSDMicros(c.config.CachedInputPriceMicrosPerMillion),
 			CacheWriteUSDPerMillionTokens:  formatUSDMicros(c.config.CacheWritePriceMicrosPerMillion),
 			OutputUSDPerMillionTokens:      formatUSDMicros(c.config.OutputPriceMicrosPerMillion),
-			Source:                         "execution-time configuration; re-verify before paid execution",
+			Source:                         OpenAIDiagnosticPricingSource,
 		},
-		BudgetCeilingUSD: formatUSDMicros(c.config.BudgetCeilingMicros), ActualCalculableCostUSD: formatUSDMicros(actual),
-		AmbiguousLiabilityUSD: formatUSDMicros(ambiguous), AccountedCostUSD: formatUSDMicros(actual + ambiguous),
-		RequestCount: c.requests, RetryCount: c.retries, Usage: usage, ProviderErrorCount: len(c.failures), TimeoutCount: c.timeouts,
+		BudgetCeilingUSD: formatUSDMicros(c.config.BudgetCeilingMicros), ActualCalculableCostUSD: formatUSDMicros(budget.actualMicros),
+		CostByCategory: budget.costs, AmbiguousLiabilityUSD: formatUSDMicros(budget.ambiguousMicros),
+		AccountedCostUSD: formatUSDMicros(budget.actualMicros + budget.ambiguousMicros), RemainingBudgetUSD: formatUSDMicros(budget.remainingMicros),
+		RequestCount: c.requests, RetryCount: c.retries, Usage: budget.usage, ProviderErrorCount: len(c.failures), TimeoutCount: c.timeouts,
 		BudgetRejectionCount: c.rejections, StopReason: c.stopReason, Failures: append([]HostedProviderFailure(nil), c.failures...),
 	}
 }
@@ -398,11 +448,12 @@ type openAIInputMessage struct {
 }
 
 type openAIResponse struct {
-	ID     string              `json:"id"`
-	Model  string              `json:"model"`
-	Status string              `json:"status"`
-	Output []openAIOutputItem  `json:"output"`
-	Usage  openAIResponseUsage `json:"usage"`
+	ID                string              `json:"id"`
+	Model             string              `json:"model"`
+	Status            string              `json:"status"`
+	SystemFingerprint string              `json:"system_fingerprint"`
+	Output            []openAIOutputItem  `json:"output"`
+	Usage             openAIResponseUsage `json:"usage"`
 }
 
 type openAIOutputItem struct {
@@ -430,7 +481,8 @@ type openAIResponseUsage struct {
 }
 
 func (u openAIResponseUsage) providerUsage() ProviderUsage {
-	return ProviderUsage{InputTokens: u.InputTokens, CachedTokens: u.InputDetails.CachedTokens, CacheWriteTokens: u.InputDetails.CacheWriteTokens, OutputTokens: u.OutputTokens, ReasoningTokens: u.OutputDetails.ReasoningTokens, TotalTokens: u.TotalTokens}
+	uncached := u.InputTokens - u.InputDetails.CachedTokens - u.InputDetails.CacheWriteTokens
+	return ProviderUsage{InputTokens: u.InputTokens, CachedTokens: u.InputDetails.CachedTokens, CacheMissTokens: uncached, CacheWriteTokens: u.InputDetails.CacheWriteTokens, OutputTokens: u.OutputTokens, ReasoningTokens: u.OutputDetails.ReasoningTokens, TotalTokens: u.TotalTokens}
 }
 
 func validProviderUsage(usage ProviderUsage) bool {
@@ -532,7 +584,19 @@ type experimentBudget struct {
 	reservedMicros         int64
 	actualMicros           int64
 	ambiguousMicros        int64
+	uncachedInputMicros    int64
+	cachedInputMicros      int64
+	cacheWriteMicros       int64
+	outputMicros           int64
 	usage                  ProviderUsage
+}
+
+type experimentBudgetSnapshot struct {
+	actualMicros    int64
+	ambiguousMicros int64
+	remainingMicros int64
+	usage           ProviderUsage
+	costs           HostedCostBreakdown
 }
 
 func newExperimentBudget(ceiling, inputPrice, cachedInputPrice, cacheWritePrice, outputPrice int64) *experimentBudget {
@@ -543,7 +607,11 @@ func newExperimentBudget(ceiling, inputPrice, cachedInputPrice, cacheWritePrice,
 }
 
 func (b *experimentBudget) estimateCost(inputTokens, outputTokens int) int64 {
-	return tokenCostMicros(inputTokens, b.inputPriceMicros) + tokenCostMicros(outputTokens, b.outputPriceMicros)
+	worstInputPrice := b.inputPriceMicros
+	if b.cacheWritePriceMicros > worstInputPrice {
+		worstInputPrice = b.cacheWritePriceMicros
+	}
+	return tokenCostMicros(inputTokens, worstInputPrice) + tokenCostMicros(outputTokens, b.outputPriceMicros)
 }
 
 func (b *experimentBudget) reserve(amount int64) error {
@@ -583,11 +651,16 @@ func (b *experimentBudget) finishSuccess(reserved int64, usage ProviderUsage) er
 	if baseInputTokens < 0 {
 		baseInputTokens = 0
 	}
-	actual := tokenCostMicros(baseInputTokens, b.inputPriceMicros) +
-		tokenCostMicros(usage.CachedTokens, b.cachedInputPriceMicros) +
-		tokenCostMicros(usage.CacheWriteTokens, b.cacheWritePriceMicros) +
-		tokenCostMicros(usage.OutputTokens, b.outputPriceMicros)
+	uncachedInputCost := tokenCostMicros(baseInputTokens, b.inputPriceMicros)
+	cachedInputCost := tokenCostMicros(usage.CachedTokens, b.cachedInputPriceMicros)
+	cacheWriteCost := tokenCostMicros(usage.CacheWriteTokens, b.cacheWritePriceMicros)
+	outputCost := tokenCostMicros(usage.OutputTokens, b.outputPriceMicros)
+	actual := uncachedInputCost + cachedInputCost + cacheWriteCost + outputCost
 	b.actualMicros += actual
+	b.uncachedInputMicros += uncachedInputCost
+	b.cachedInputMicros += cachedInputCost
+	b.cacheWriteMicros += cacheWriteCost
+	b.outputMicros += outputCost
 	b.usage.InputTokens += usage.InputTokens
 	b.usage.CachedTokens += usage.CachedTokens
 	b.usage.CacheMissTokens += usage.CacheMissTokens
@@ -601,10 +674,17 @@ func (b *experimentBudget) finishSuccess(reserved int64, usage ProviderUsage) er
 	return nil
 }
 
-func (b *experimentBudget) snapshot() (int64, int64, ProviderUsage) {
+func (b *experimentBudget) snapshot() experimentBudgetSnapshot {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.actualMicros, b.ambiguousMicros, b.usage
+	remaining := maxInt64(b.ceilingMicros-b.actualMicros-b.ambiguousMicros-b.reservedMicros, 0)
+	return experimentBudgetSnapshot{
+		actualMicros: b.actualMicros, ambiguousMicros: b.ambiguousMicros, remainingMicros: remaining, usage: b.usage,
+		costs: HostedCostBreakdown{
+			UncachedInputUSD: formatUSDMicros(b.uncachedInputMicros), CachedInputUSD: formatUSDMicros(b.cachedInputMicros),
+			CacheWriteUSD: formatUSDMicros(b.cacheWriteMicros), OutputUSD: formatUSDMicros(b.outputMicros), TotalUSD: formatUSDMicros(b.actualMicros),
+		},
+	}
 }
 
 func tokenCostMicros(tokens int, priceMicrosPerMillion int64) int64 {

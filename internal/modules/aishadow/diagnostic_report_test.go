@@ -72,6 +72,12 @@ func TestTickerEmissionIncludesRejectedAttemptFreeText(t *testing.T) {
 func TestDiagnosticReportV2ShowsResolutionAttribution(t *testing.T) {
 	report := DiagnosticRunReport{
 		Version: DiagnosticReportVersion,
+		HostedExperiment: &HostedExperimentSnapshot{
+			Provider: "openai", RequestedModel: OpenAIDiagnosticLunaModel, SystemFingerprints: []string{"fp_luna"},
+			Usage:                   ProviderUsage{InputTokens: 100, CacheMissTokens: 70, CachedTokens: 20, CacheWriteTokens: 10, OutputTokens: 30, ReasoningTokens: 5},
+			CostByCategory:          HostedCostBreakdown{UncachedInputUSD: "0.01", CachedInputUSD: "0.02", CacheWriteUSD: "0.03", OutputUSD: "0.04"},
+			ActualCalculableCostUSD: "0.10", AmbiguousLiabilityUSD: "0.00", RemainingBudgetUSD: "0.02", BudgetCeilingUSD: "0.12",
+		},
 		Repetitions: []DiagnosticRepetitionReport{{
 			Repetition: 1,
 			Resolution: DiagnosticResolutionMetrics{
@@ -84,6 +90,9 @@ func TestDiagnosticReportV2ShowsResolutionAttribution(t *testing.T) {
 	for _, want := range []string{
 		"Resolver failures after semantically correct classification: 2",
 		"Model-induced resolution mismatches: 3",
+		"Provider / requested model: openai / gpt-5.6-luna",
+		"Input / uncached / cached / cache-write tokens: 100 / 70 / 20 / 10",
+		"Calculable / ambiguous / remaining / ceiling USD: 0.10 / 0.00 / 0.02 / 0.12",
 	} {
 		if !strings.Contains(markdown, want) {
 			t.Fatalf("report markdown does not contain %q: %s", want, markdown)

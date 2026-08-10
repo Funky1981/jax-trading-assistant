@@ -138,17 +138,31 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		if err != nil {
 			return err
 		}
-		return encoder.Encode(map[string]any{
+		result := map[string]any{
 			"status": "ready", "inference": false, "provider_contact": false, "ollama_contact": false,
 			"provider": prepared.Plan.ModelConfiguration.Provider, "model": prepared.Plan.ModelConfiguration.Model,
-			"events": prepared.Plan.CasesPerRepetition, "repetitions": prepared.Plan.Repetitions,
-			"requested_repetitions": prepared.Plan.ExecutionShape.RequestedRepetitions,
-			"effective_repetitions": prepared.Plan.ExecutionShape.EffectiveRepetitions,
-			"total_planned_cases":   prepared.Plan.ExecutionShape.TotalPlannedCases,
-			"manifest_fingerprint":  prepared.Plan.ManifestFingerprint,
-			"prompt_version":        prepared.Plan.PromptVersion, "output_contract": prepared.Plan.OutputContract,
-			"policy_version": prepared.Plan.PolicyVersion, "audit": paths, "audit_sha256": hash,
-		})
+			"requested_model": prepared.Plan.ModelConfiguration.Model, "reasoning": prepared.Plan.ModelConfiguration.ReasoningEffort,
+			"events": prepared.Plan.CasesPerRepetition, "cases_per_repetition": prepared.Plan.CasesPerRepetition, "repetitions": prepared.Plan.Repetitions,
+			"requested_repetitions":        prepared.Plan.ExecutionShape.RequestedRepetitions,
+			"effective_repetitions":        prepared.Plan.ExecutionShape.EffectiveRepetitions,
+			"total_planned_cases":          prepared.Plan.ExecutionShape.TotalPlannedCases,
+			"manifest_fingerprint":         prepared.Plan.ManifestFingerprint,
+			"manifest_file_sha256":         prepared.Plan.ManifestFileSHA256,
+			"fingerprint_lock_version":     prepared.Plan.FingerprintLockVersion,
+			"fingerprint_lock_fingerprint": prepared.Plan.FingerprintLockFingerprint,
+			"prompt_version":               prepared.Plan.PromptVersion, "output_contract": prepared.Plan.OutputContract,
+			"policy_version":    prepared.Plan.PolicyVersion,
+			"database_mutation": false, "trading_mutation": false,
+			"audit": paths, "audit_sha256": hash,
+		}
+		if hosted := prepared.Plan.HostedExperiment; hosted != nil {
+			result["api_key_present"] = hosted.APIKeyPresent
+			result["budget_configuration"] = map[string]any{
+				"ceiling_usd": hosted.BudgetCeilingUSD, "pricing": hosted.Pricing,
+				"estimated_maximum_run_usd": hosted.EstimatedMaximumRunUSD,
+			}
+		}
+		return encoder.Encode(result)
 	}
 	var identity aishadow.DiagnosticModelIdentity
 	var provider aishadow.Provider

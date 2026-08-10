@@ -118,6 +118,63 @@ func TestHostedPreflightMakesZeroHTTPCallsAndNeverEmitsCredential(t *testing.T) 
 	}
 }
 
+func TestLunaOneRepetitionPreflightReportsReadinessWithZeroProviderCalls(t *testing.T) {
+	values := hostedCommandValues()
+	values["JAX_AI_MODEL"] = aishadow.OpenAIDiagnosticLunaModel
+	values[aishadow.DiagnosticRepetitionsEnv] = "1"
+	values["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.12"
+	values["JAX_AI_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "0.20"
+	values["JAX_AI_CACHED_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "0.02"
+	values["JAX_AI_CACHE_WRITE_PRICE_USD_PER_MILLION_TOKENS"] = "0.25"
+	values["JAX_AI_OUTPUT_PRICE_USD_PER_MILLION_TOKENS"] = "1.20"
+	providerCalls := 0
+	deps := dependencies{
+		lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+		inspectModel: func(aishadow.Config) (aishadow.DiagnosticModelIdentity, error) {
+			t.Fatal("Luna preflight inspected an Ollama model")
+			return aishadow.DiagnosticModelIdentity{}, nil
+		},
+		ollamaProvider: func(aishadow.Config) aishadow.Provider {
+			t.Fatal("Luna preflight constructed an Ollama provider")
+			return nil
+		},
+		openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+			providerCalls++
+			return nil
+		},
+	}
+	root := filepath.Join("..", "..")
+	outputRoot := t.TempDir()
+	var output bytes.Buffer
+	err := run([]string{
+		"--preflight",
+		"--manifest", filepath.Join(root, "config", "ai-shadow-issuer-diagnostic-manifest-v1.json"),
+		"--fingerprint-lock", filepath.Join(root, "config", "ai-shadow-issuer-diagnostic-input-fingerprints-v1.json"),
+		"--asset-ruleset-file", filepath.Join(root, "config", "event-asset-resolution-v1.json"),
+		"--output-root", outputRoot,
+	}, &output, deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if providerCalls != 0 {
+		t.Fatalf("Luna preflight constructed provider %d times", providerCalls)
+	}
+	for _, want := range []string{
+		`"status": "ready"`, `"provider": "openai"`, `"model": "gpt-5.6-luna"`, `"requested_model": "gpt-5.6-luna"`,
+		`"reasoning": "none"`, `"requested_repetitions": 1`, `"effective_repetitions": 1`, `"cases_per_repetition": 48`,
+		`"total_planned_cases": 48`, `"provider_contact": false`, `"inference": false`, `"api_key_present": true`,
+		`"database_mutation": false`, `"trading_mutation": false`, `"manifest_file_sha256"`, `"fingerprint_lock_fingerprint"`,
+		`"budget_configuration"`,
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("Luna preflight output missing %s: %s", want, output.String())
+		}
+	}
+	if strings.Contains(output.String(), values[aishadow.OpenAIDiagnosticAPIKeyEnv]) {
+		t.Fatalf("Luna credential leaked in preflight output: %s", output.String())
+	}
+}
+
 func TestHostedExecutionRequiresSeparateAuthorizationBeforeProviderCreation(t *testing.T) {
 	values := hostedCommandValues()
 	providerCalls := 0
