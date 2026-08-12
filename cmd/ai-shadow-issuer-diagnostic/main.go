@@ -166,6 +166,9 @@ func run(args []string, output io.Writer, deps dependencies) error {
 			result["schema_contract"] = hosted.SchemaContract
 			result["schema_sha256"] = hosted.SchemaSHA256
 			result["contract_enforcement"] = hosted.ContractEnforcement
+			if hosted.ServiceTier != "" {
+				result["service_tier"] = hosted.ServiceTier
+			}
 			result["budget_configuration"] = map[string]any{
 				"ceiling_usd": hosted.BudgetCeilingUSD, "pricing": hosted.Pricing,
 				"estimated_maximum_run_usd": hosted.EstimatedMaximumRunUSD,

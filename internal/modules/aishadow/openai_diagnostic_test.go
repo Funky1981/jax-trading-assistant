@@ -58,10 +58,10 @@ func openAIStructuredOutputsTestConfig() OpenAIDiagnosticConfig {
 	config.ExperimentID = OpenAIStructuredOutputsExperimentID
 	config.OutputContractMode = OpenAIOutputContractStrictJSONSchema
 	config.BudgetCeilingMicros = OpenAIStructuredOutputsMaximumBudgetMicros
-	config.InputPriceMicrosPerMillion = 1_000_000
-	config.CachedInputPriceMicrosPerMillion = 100_000
-	config.CacheWritePriceMicrosPerMillion = 1_250_000
-	config.OutputPriceMicrosPerMillion = 6_000_000
+	config.InputPriceMicrosPerMillion = 200_000
+	config.CachedInputPriceMicrosPerMillion = 20_000
+	config.CacheWritePriceMicrosPerMillion = 250_000
+	config.OutputPriceMicrosPerMillion = 1_200_000
 	return config
 }
 
@@ -145,7 +145,11 @@ func TestLoadOpenAIStructuredOutputsCellFailsClosedOnIdentityModelAndMode(t *tes
 	values["JAX_AI_MODEL"] = OpenAIDiagnosticLunaModel
 	values["JAX_AI_EXPERIMENT_ID"] = OpenAIStructuredOutputsExperimentID
 	values[OpenAIDiagnosticContractModeEnv] = OpenAIStructuredOutputsMode
-	values["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.75"
+	values["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.20"
+	values["JAX_AI_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "0.20"
+	values["JAX_AI_CACHED_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "0.02"
+	values["JAX_AI_CACHE_WRITE_PRICE_USD_PER_MILLION_TOKENS"] = "0.25"
+	values["JAX_AI_OUTPUT_PRICE_USD_PER_MILLION_TOKENS"] = "1.20"
 	config, err := LoadOpenAIDiagnosticConfig(mapLookup(values))
 	if err != nil {
 		t.Fatal(err)
@@ -157,8 +161,8 @@ func TestLoadOpenAIStructuredOutputsCellFailsClosedOnIdentityModelAndMode(t *tes
 	for key, value := range values {
 		overBudget[key] = value
 	}
-	overBudget["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.750001"
-	if _, err := LoadOpenAIDiagnosticConfig(mapLookup(overBudget)); err == nil || !strings.Contains(err.Error(), "0.75") {
+	overBudget["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.200001"
+	if _, err := LoadOpenAIDiagnosticConfig(mapLookup(overBudget)); err == nil || !strings.Contains(err.Error(), "0.20") {
 		t.Fatalf("C1B hard ceiling was not enforced: %v", err)
 	}
 	for name, mutate := range map[string]func(map[string]string){
@@ -252,13 +256,13 @@ func TestOpenAIDiagnosticClientParsesLunaResponseAndRequiresExactIdentity(t *tes
 			t.Fatalf("Luna request missing %s: %s", want, raw)
 		}
 	}
-	for _, forbidden := range []string{`"tools"`, "web_search", "file_search", "json_schema"} {
+	for _, forbidden := range []string{`"tools"`, `"service_tier"`, "web_search", "file_search", "json_schema"} {
 		if strings.Contains(string(raw), forbidden) {
 			t.Fatalf("Luna request enabled forbidden feature %q: %s", forbidden, raw)
 		}
 	}
 	snapshot := client.ExperimentSnapshot()
-	if snapshot.RequestedModel != OpenAIDiagnosticLunaModel || snapshot.ReasoningEffort != "none" || snapshot.ActualCalculableCostUSD != "0.00032" || snapshot.RemainingBudgetUSD != "0.11968" {
+	if snapshot.RequestedModel != OpenAIDiagnosticLunaModel || snapshot.ReasoningEffort != "none" || snapshot.ServiceTier != "" || snapshot.ActualCalculableCostUSD != "0.00032" || snapshot.RemainingBudgetUSD != "0.11968" {
 		t.Fatalf("unexpected Luna experiment snapshot: %+v", snapshot)
 	}
 
@@ -288,11 +292,12 @@ func TestOpenAIStructuredOutputsCellSendsCanonicalStrictSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	var wire struct {
-		Model     string               `json:"model"`
-		Input     []openAIInputMessage `json:"input"`
-		Reasoning map[string]string    `json:"reasoning"`
-		Store     bool                 `json:"store"`
-		Text      struct {
+		Model       string               `json:"model"`
+		Input       []openAIInputMessage `json:"input"`
+		Reasoning   map[string]string    `json:"reasoning"`
+		ServiceTier string               `json:"service_tier"`
+		Store       bool                 `json:"store"`
+		Text        struct {
 			Format struct {
 				Type   string         `json:"type"`
 				Name   string         `json:"name"`
@@ -305,7 +310,7 @@ func TestOpenAIStructuredOutputsCellSendsCanonicalStrictSchema(t *testing.T) {
 	if err := json.Unmarshal(raw, &wire); err != nil {
 		t.Fatal(err)
 	}
-	if wire.Model != OpenAIDiagnosticLunaModel || wire.Reasoning["effort"] != "none" || wire.Store ||
+	if wire.Model != OpenAIDiagnosticLunaModel || wire.Reasoning["effort"] != "none" || wire.ServiceTier != OpenAIStructuredOutputsServiceTier || wire.Store ||
 		wire.Text.Format.Type != "json_schema" || wire.Text.Format.Name != OpenAIStructuredOutputsSchemaName || !wire.Text.Format.Strict || wire.Tools != nil {
 		t.Fatalf("unexpected Structured Outputs request: %s", raw)
 	}
@@ -326,7 +331,7 @@ func TestOpenAIStructuredOutputsCellSendsCanonicalStrictSchema(t *testing.T) {
 	if got := fmt.Sprint(proxyEnum); got != "[NONE GOLD_CATEGORY OIL_CATEGORY]" {
 		t.Fatalf("resolver-derived proxy vocabulary changed: %s", got)
 	}
-	if client.ExperimentSnapshot().StructuredOutputMode != OpenAIStructuredOutputsMode {
+	if client.ExperimentSnapshot().StructuredOutputMode != OpenAIStructuredOutputsMode || client.ExperimentSnapshot().ServiceTier != OpenAIStructuredOutputsServiceTier {
 		t.Fatalf("snapshot did not declare strict enforcement: %+v", client.ExperimentSnapshot())
 	}
 }
@@ -482,6 +487,9 @@ func TestOpenAIStructuredOutputsCorrectiveRetryRetainsCanonicalSchema(t *testing
 		}
 		if wire.Text == nil || !wire.Text.Format.Strict || len(wire.Text.Format.Schema["properties"].(map[string]any)) != 10 {
 			t.Fatalf("attempt %d lost canonical strict schema: %s", index+1, raw)
+		}
+		if wire.ServiceTier != OpenAIStructuredOutputsServiceTier {
+			t.Fatalf("attempt %d did not pin service tier: %s", index+1, raw)
 		}
 	}
 }

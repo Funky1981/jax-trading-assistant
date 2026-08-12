@@ -33,9 +33,10 @@ const (
 	OpenAIStructuredOutputsEvidenceNamespace   = "openai-hosted-c1b-structured-outputs-v1"
 	OpenAIStructuredOutputsMode                = "openai-responses-json-schema-strict"
 	OpenAIStructuredOutputsSchemaName          = "jax_ai_shadow_output_v4_issuer_resolution"
+	OpenAIStructuredOutputsServiceTier         = "default"
 	OpenAIDiagnosticMaximumBudgetMicros        = int64(1_000_000)
 	OpenAIDiagnosticLunaMaximumBudgetMicros    = int64(120_000)
-	OpenAIStructuredOutputsMaximumBudgetMicros = int64(750_000)
+	OpenAIStructuredOutputsMaximumBudgetMicros = int64(200_000)
 	OpenAIDiagnosticPricingSource              = "https://developers.openai.com/api/docs/pricing; execution-time configuration; re-verify immediately before paid execution"
 )
 
@@ -222,6 +223,13 @@ func (c OpenAIDiagnosticConfig) StructuredOutputsEnabled() bool {
 	return c.OutputContractMode == OpenAIOutputContractStrictJSONSchema
 }
 
+func (c OpenAIDiagnosticConfig) ServiceTier() string {
+	if c.ExperimentID == OpenAIStructuredOutputsExperimentID && c.StructuredOutputsEnabled() {
+		return OpenAIStructuredOutputsServiceTier
+	}
+	return ""
+}
+
 func openAIReturnedModelMatchesRequested(requested, returned string) bool {
 	switch requested {
 	case OpenAIDiagnosticLunaModel:
@@ -258,6 +266,7 @@ type HostedExperimentSnapshot struct {
 	SystemFingerprints        []string                `json:"system_fingerprints,omitempty"`
 	FinishReasons             []string                `json:"finish_reasons,omitempty"`
 	ReasoningEffort           string                  `json:"reasoning_effort"`
+	ServiceTier               string                  `json:"service_tier,omitempty"`
 	ThinkingMode              string                  `json:"thinking_mode,omitempty"`
 	StructuredOutputMode      string                  `json:"structured_output_mode"`
 	MaxOutputTokensPerRequest int                     `json:"max_output_tokens_per_request"`
@@ -476,7 +485,7 @@ func (c *OpenAIDiagnosticClient) ExperimentSnapshot() HostedExperimentSnapshot {
 	fingerprints := sortedKeys(c.fingerprints)
 	return HostedExperimentSnapshot{
 		ExperimentID: c.config.ExperimentID, Provider: OpenAIDiagnosticProvider, RequestedModel: c.config.Runtime.Model,
-		ReturnedModels: models, SystemFingerprints: fingerprints, ReasoningEffort: c.config.ReasoningEffort, StructuredOutputMode: c.config.StructuredOutputMode(),
+		ReturnedModels: models, SystemFingerprints: fingerprints, ReasoningEffort: c.config.ReasoningEffort, ServiceTier: c.config.ServiceTier(), StructuredOutputMode: c.config.StructuredOutputMode(),
 		MaxOutputTokensPerRequest: c.config.MaxOutputTokens,
 		Pricing: HostedPricingPlan{
 			InputUSDPerMillionTokens:       formatUSDMicros(c.config.InputPriceMicrosPerMillion),
@@ -516,6 +525,7 @@ type openAIDiagnosticRequest struct {
 	MaxOutputTokens int                      `json:"max_output_tokens"`
 	Store           bool                     `json:"store"`
 	Text            *openAITextConfiguration `json:"text,omitempty"`
+	ServiceTier     string                   `json:"service_tier,omitempty"`
 }
 
 func marshalOpenAIDiagnosticRequest(config OpenAIDiagnosticConfig, request ProviderRequest) ([]byte, error) {
@@ -531,6 +541,7 @@ func marshalOpenAIDiagnosticRequest(config OpenAIDiagnosticConfig, request Provi
 		payload.Text = &openAITextConfiguration{Format: openAIResponseFormat{
 			Type: "json_schema", Name: OpenAIStructuredOutputsSchemaName, Strict: true, Schema: request.Schema,
 		}}
+		payload.ServiceTier = config.ServiceTier()
 	}
 	return json.Marshal(payload)
 }

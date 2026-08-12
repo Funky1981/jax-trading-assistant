@@ -221,18 +221,27 @@ func TestPrepareLunaStructuredOutputsCellLocksContractNamespaceAndOneRepetition(
 		plan.ContractEnforcement != string(OpenAIOutputContractStrictJSONSchema) || plan.BaseRequestCount != 48 || plan.MaximumRequestCount != 96 {
 		t.Fatalf("C1B hosted plan is incomplete: %+v", plan)
 	}
-	if !model.StructuredOutputs || model.StructuredOutputMode != OpenAIStructuredOutputsMode || model.SchemaContract != SchemaVersion ||
+	if plan.ServiceTier != OpenAIStructuredOutputsServiceTier {
+		t.Fatalf("C1B service tier is not pinned: %+v", plan)
+	}
+	if !model.StructuredOutputs || model.StructuredOutputMode != OpenAIStructuredOutputsMode || model.SchemaContract != SchemaVersion || model.ServiceTier != OpenAIStructuredOutputsServiceTier ||
 		model.ContractEnforcement != string(OpenAIOutputContractStrictJSONSchema) {
 		t.Fatalf("C1B model contract is ambiguous: %+v", model)
 	}
-	if plan.Pricing.InputUSDPerMillionTokens != "1.00" || plan.Pricing.CachedInputUSDPerMillionTokens != "0.10" ||
-		plan.Pricing.CacheWriteUSDPerMillionTokens != "1.25" || plan.Pricing.OutputUSDPerMillionTokens != "6.00" {
+	if plan.Pricing.InputUSDPerMillionTokens != "0.20" || plan.Pricing.CachedInputUSDPerMillionTokens != "0.02" ||
+		plan.Pricing.CacheWriteUSDPerMillionTokens != "0.25" || plan.Pricing.OutputUSDPerMillionTokens != "1.20" || plan.BudgetCeilingUSD != "0.20" {
 		t.Fatalf("C1B review-time pricing inputs are wrong: %+v", plan.Pricing)
 	}
 	estimated, err := parseUSDMicros(plan.EstimatedMaximumRunUSD)
-	if err != nil || estimated <= 0 || estimated > config.BudgetCeilingMicros {
+	if err != nil || estimated <= 0 || estimated > config.BudgetCeilingMicros || plan.EstimatedMaximumRunUSD != "0.145073" ||
+		plan.LargestFrozenInitialRequestBytes != 3785 || plan.ConservativeCorrectiveRequestBytes != 3829 {
 		t.Fatalf("C1B complete-run estimate=%s ceiling=%s err=%v", plan.EstimatedMaximumRunUSD, plan.BudgetCeilingUSD, err)
 	}
+	plan.EstimatedMaximumRunUSD = "0.200001"
+	if err := ValidateDiagnosticExecutionShape(prepared); err == nil || !strings.Contains(err.Error(), "cannot accommodate") {
+		t.Fatalf("C1B did not fail closed above the hard ceiling: %v", err)
+	}
+	plan.EstimatedMaximumRunUSD = "0.145073"
 	if prepared.Plan.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint || prepared.Plan.ManifestFileSHA256 != ExpectedDiagnosticManifestFileSHA256 ||
 		prepared.Plan.FingerprintLockFingerprint != prepared.Lock.Fingerprint || prepared.Plan.PromptVersion != PromptVersion || prepared.Plan.OutputContract != SchemaVersion {
 		t.Fatalf("C1B changed frozen benchmark identities: %+v", prepared.Plan)

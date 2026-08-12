@@ -215,9 +215,12 @@ func TestLunaStructuredOutputsPreflightReportsContractAndMakesZeroProviderCalls(
 		`"evidence_namespace": "openai-hosted-c1b-structured-outputs-v1/WP-00.03C1B"`,
 		`"structured_outputs": true`, `"schema_contract": "ai-shadow-output-v4-issuer-resolution"`,
 		`"contract_enforcement": "openai-responses-json-schema-strict"`, `"schema_sha256"`,
+		`"service_tier": "default"`,
 		`"requested_repetitions": 1`, `"effective_repetitions": 1`, `"cases_per_repetition": 48`, `"total_planned_cases": 48`,
 		`"provider_contact": false`, `"inference": false`, `"api_key_present": true`,
 		`"database_mutation": false`, `"trading_mutation": false`,
+		`"ceiling_usd": "0.20"`, `"input_usd_per_million_tokens": "0.20"`, `"cached_input_usd_per_million_tokens": "0.02"`,
+		`"cache_write_usd_per_million_tokens": "0.25"`, `"output_usd_per_million_tokens": "1.20"`,
 	} {
 		if !strings.Contains(output.String(), want) {
 			t.Fatalf("C1B preflight output missing %s: %s", want, output.String())
@@ -446,11 +449,11 @@ func hostedStructuredOutputsCommandValues() map[string]string {
 	values["JAX_AI_EXPERIMENT_ID"] = aishadow.OpenAIStructuredOutputsExperimentID
 	values[aishadow.OpenAIDiagnosticContractModeEnv] = aishadow.OpenAIStructuredOutputsMode
 	values[aishadow.DiagnosticRepetitionsEnv] = "1"
-	values["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.75"
-	values["JAX_AI_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "1.00"
-	values["JAX_AI_CACHED_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "0.10"
-	values["JAX_AI_CACHE_WRITE_PRICE_USD_PER_MILLION_TOKENS"] = "1.25"
-	values["JAX_AI_OUTPUT_PRICE_USD_PER_MILLION_TOKENS"] = "6.00"
+	values["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.20"
+	values["JAX_AI_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "0.20"
+	values["JAX_AI_CACHED_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "0.02"
+	values["JAX_AI_CACHE_WRITE_PRICE_USD_PER_MILLION_TOKENS"] = "0.25"
+	values["JAX_AI_OUTPUT_PRICE_USD_PER_MILLION_TOKENS"] = "1.20"
 	return values
 }
 

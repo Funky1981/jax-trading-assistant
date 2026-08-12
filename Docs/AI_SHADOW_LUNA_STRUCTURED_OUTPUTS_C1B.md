@@ -26,6 +26,7 @@ The existing system and user messages remain unchanged. The OpenAI Responses req
   "reasoning": {"effort": "none"},
   "max_output_tokens": 256,
   "store": false,
+  "service_tier": "default",
   "text": {
     "format": {
       "type": "json_schema",
@@ -37,7 +38,7 @@ The existing system and user messages remain unchanged. The OpenAI Responses req
 }
 ```
 
-No tools, web search, retrieval, or additional model instructions are sent. The `schema` value is not copied or redefined: it is the same `ProviderRequest.Schema` constructed by `OutputSchema`, including the resolver-derived proxy vocabulary. Both initial and corrective requests use that path.
+No tools, web search, retrieval, or additional model instructions are sent. The `schema` value is not copied or redefined: it is the same `ProviderRequest.Schema` constructed by `OutputSchema`, including the resolver-derived proxy vocabulary. Both initial and corrective requests use that path. The C1B-only `service_tier` pin prevents the Responses API from inheriting the project's `auto` processing tier; existing A1 request bodies omit the field and remain unchanged.
 
 ## Compatibility determination
 
@@ -49,6 +50,7 @@ Official contract references checked for this package:
 
 - <https://developers.openai.com/api/docs/guides/structured-outputs>
 - <https://developers.openai.com/api/docs/models/gpt-5.6-luna>
+- <https://platform.openai.com/docs/api-reference/responses/create#responses-create-service_tier>
 
 ## Isolation and safety
 
@@ -58,14 +60,14 @@ The C1B preflight requires one explicit repetition and retains the existing 48-c
 
 ## Conservative budget proposal
 
-At implementation review, the supplied planning rates are USD 1.00/M uncached input, USD 0.10/M cached input, USD 1.25/M cache writes, and USD 6.00/M output. These values are runtime inputs, not permanent source-code truth, and must be reverified immediately before any paid execution.
+At execution-hardening review, the supplied Standard-tier planning rates are USD 0.20/M uncached input, USD 0.02/M cached input, USD 0.25/M cache writes, and USD 1.20/M output. These values are runtime inputs, not permanent source-code truth, and must be reverified immediately before any paid execution.
 
 The offline estimator serializes every frozen initial request including the Structured Outputs schema. It also prices 48 worst-case corrective requests, each containing bounded prior-response and validation evidence, with 256 output tokens per request. It assumes no cache hits and applies the higher cache-write input rate to every estimated input token. Its deliberately conservative byte-as-token allowance plus a 1,024-token per-request margin gives:
 
-- largest initial wire request: 3,760 bytes
-- conservative corrective wire request: 3,804 bytes
+- largest initial wire request: 3,785 bytes
+- conservative corrective wire request: 3,829 bytes
 - maximum requests: 96
-- estimated maximum: USD 0.721729
-- proposed hard ceiling: USD 0.75
+- estimated maximum: USD 0.145073
+- enforced hard ceiling: USD 0.20
 
 This ceiling is a cell guard, not a forecast of actual spend or a reusable price assertion.

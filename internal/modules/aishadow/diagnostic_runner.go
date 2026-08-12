@@ -54,6 +54,7 @@ type DiagnosticModelConfiguration struct {
 	StructuredOutputs    bool    `json:"structured_outputs,omitempty"`
 	SchemaContract       string  `json:"schema_contract,omitempty"`
 	ContractEnforcement  string  `json:"contract_enforcement,omitempty"`
+	ServiceTier          string  `json:"service_tier,omitempty"`
 	ThinkingMode         string  `json:"thinking_mode,omitempty"`
 }
 
@@ -65,6 +66,7 @@ type HostedExperimentPlan struct {
 	SchemaSHA256                       string            `json:"schema_sha256,omitempty"`
 	StructuredOutputs                  bool              `json:"structured_outputs,omitempty"`
 	ContractEnforcement                string            `json:"contract_enforcement,omitempty"`
+	ServiceTier                        string            `json:"service_tier,omitempty"`
 	Endpoint                           string            `json:"endpoint"`
 	APIKeyEnvironment                  string            `json:"api_key_environment"`
 	APIKeyPresent                      bool              `json:"api_key_present"`
@@ -386,6 +388,7 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	prepared.Plan.ModelConfiguration.StructuredOutputs = config.StructuredOutputsEnabled()
 	prepared.Plan.ModelConfiguration.SchemaContract = SchemaVersion
 	prepared.Plan.ModelConfiguration.ContractEnforcement = string(config.OutputContractMode)
+	prepared.Plan.ModelConfiguration.ServiceTier = config.ServiceTier()
 	schemaSHA256, err := providerRequestSchemaSHA256(firstRequest.Schema)
 	if err != nil {
 		return PreparedDiagnostic{}, err
@@ -397,7 +400,8 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	prepared.Plan.HostedExperiment = &HostedExperimentPlan{
 		ExperimentID: config.ExperimentID, CellIdentity: config.ExperimentID, EvidenceNamespace: config.EvidenceNamespace() + "/" + config.ExperimentID,
 		SchemaContract: SchemaVersion, SchemaSHA256: schemaSHA256, StructuredOutputs: config.StructuredOutputsEnabled(), ContractEnforcement: string(config.OutputContractMode),
-		Endpoint: OpenAIDiagnosticEndpoint, APIKeyEnvironment: OpenAIDiagnosticAPIKeyEnv, APIKeyPresent: true,
+		ServiceTier: config.ServiceTier(),
+		Endpoint:    OpenAIDiagnosticEndpoint, APIKeyEnvironment: OpenAIDiagnosticAPIKeyEnv, APIKeyPresent: true,
 		InferenceExplicitlyAuthorized: config.InferenceExplicitlyAuthorized,
 		BudgetCeilingUSD:              formatUSDMicros(config.BudgetCeilingMicros),
 		Pricing: HostedPricingPlan{
