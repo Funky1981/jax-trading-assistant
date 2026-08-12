@@ -38,6 +38,7 @@ func openAITestConfig() OpenAIDiagnosticConfig {
 		BudgetCeilingMicros: 1_000_000, InputPriceMicrosPerMillion: 5_000_000,
 		CachedInputPriceMicrosPerMillion: 500_000, CacheWritePriceMicrosPerMillion: 6_250_000,
 		OutputPriceMicrosPerMillion: 30_000_000,
+		OutputContractMode:          OpenAIOutputContractPromptOnly,
 	}
 }
 
@@ -49,6 +50,18 @@ func openAILunaTestConfig() OpenAIDiagnosticConfig {
 	config.CachedInputPriceMicrosPerMillion = 20_000
 	config.CacheWritePriceMicrosPerMillion = 250_000
 	config.OutputPriceMicrosPerMillion = 1_200_000
+	return config
+}
+
+func openAIStructuredOutputsTestConfig() OpenAIDiagnosticConfig {
+	config := openAILunaTestConfig()
+	config.ExperimentID = OpenAIStructuredOutputsExperimentID
+	config.OutputContractMode = OpenAIOutputContractStrictJSONSchema
+	config.BudgetCeilingMicros = OpenAIStructuredOutputsMaximumBudgetMicros
+	config.InputPriceMicrosPerMillion = 1_000_000
+	config.CachedInputPriceMicrosPerMillion = 100_000
+	config.CacheWritePriceMicrosPerMillion = 1_250_000
+	config.OutputPriceMicrosPerMillion = 6_000_000
 	return config
 }
 
@@ -127,6 +140,46 @@ func TestLoadOpenAIDiagnosticConfigAppliesLunaBudgetCap(t *testing.T) {
 	}
 }
 
+func TestLoadOpenAIStructuredOutputsCellFailsClosedOnIdentityModelAndMode(t *testing.T) {
+	values := hostedConfigValues()
+	values["JAX_AI_MODEL"] = OpenAIDiagnosticLunaModel
+	values["JAX_AI_EXPERIMENT_ID"] = OpenAIStructuredOutputsExperimentID
+	values[OpenAIDiagnosticContractModeEnv] = OpenAIStructuredOutputsMode
+	values["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.75"
+	config, err := LoadOpenAIDiagnosticConfig(mapLookup(values))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !config.StructuredOutputsEnabled() || config.EvidenceNamespace() != OpenAIStructuredOutputsEvidenceNamespace {
+		t.Fatalf("structured-output cell identity was not loaded: %+v", config)
+	}
+	overBudget := make(map[string]string, len(values))
+	for key, value := range values {
+		overBudget[key] = value
+	}
+	overBudget["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.750001"
+	if _, err := LoadOpenAIDiagnosticConfig(mapLookup(overBudget)); err == nil || !strings.Contains(err.Error(), "0.75") {
+		t.Fatalf("C1B hard ceiling was not enforced: %v", err)
+	}
+	for name, mutate := range map[string]func(map[string]string){
+		"wrong model":    func(v map[string]string) { v["JAX_AI_MODEL"] = OpenAIDiagnosticSolModel },
+		"missing mode":   func(v map[string]string) { delete(v, OpenAIDiagnosticContractModeEnv) },
+		"A1 strict":      func(v map[string]string) { v["JAX_AI_EXPERIMENT_ID"] = OpenAIDiagnosticExperimentID },
+		"arbitrary cell": func(v map[string]string) { v["JAX_AI_EXPERIMENT_ID"] = "other" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			candidate := make(map[string]string, len(values))
+			for key, value := range values {
+				candidate[key] = value
+			}
+			mutate(candidate)
+			if _, err := LoadOpenAIDiagnosticConfig(mapLookup(candidate)); err == nil {
+				t.Fatal("invalid OpenAI experiment cell was accepted")
+			}
+		})
+	}
+}
+
 func TestOpenAIDiagnosticConfigCannotSerializeOrFormatCredential(t *testing.T) {
 	config := openAITestConfig()
 	raw, err := json.Marshal(config)
@@ -162,6 +215,10 @@ func TestOpenAIDiagnosticClientParsesResponseAndUsageWithoutStructuredOutputs(t 
 	}
 	raw, _ := io.ReadAll(request.Body)
 	body := string(raw)
+	wantBody := `{"model":"gpt-5.6-sol","input":[{"role":"system","content":"frozen-system"},{"role":"user","content":"frozen-user"}],"reasoning":{"effort":"none"},"max_output_tokens":256,"store":false}`
+	if body != wantBody {
+		t.Fatalf("existing A1 wire request changed\nwant=%s\n got=%s", wantBody, body)
+	}
 	for _, want := range []string{`"model":"gpt-5.6-sol"`, `"effort":"none"`, `"max_output_tokens":256`, `"store":false`, `"role":"system"`, `"role":"user"`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("request body missing %s: %s", want, body)
@@ -210,6 +267,85 @@ func TestOpenAIDiagnosticClientParsesLunaResponseAndRequiresExactIdentity(t *tes
 	_, err = NewOpenAIDiagnosticClient(config, doer).Complete(ProviderRequest{System: "system", User: "user"})
 	if err == nil || !strings.Contains(err.Error(), "kind=model_identity") {
 		t.Fatalf("non-published Luna snapshot identity was not rejected: %v", err)
+	}
+}
+
+func TestOpenAIStructuredOutputsCellSendsCanonicalStrictSchema(t *testing.T) {
+	exposures := []string{"GOLD_CATEGORY", "OIL_CATEGORY"}
+	providerRequest, err := InitialRequest(testInput("Acme signs contract", "business"), exposures)
+	if err != nil {
+		t.Fatal(err)
+	}
+	doer := &queuedHTTPDoer{responses: []*http.Response{
+		openAITestResponse(http.StatusOK, completedOpenAIResponseForModel(unresolvedJSON(), OpenAIDiagnosticLunaModel, "fp_structured", 1000, 100)),
+	}}
+	client := NewOpenAIDiagnosticClient(openAIStructuredOutputsTestConfig(), doer)
+	if _, err := client.Complete(providerRequest); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := io.ReadAll(doer.requests[0].Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wire struct {
+		Model     string               `json:"model"`
+		Input     []openAIInputMessage `json:"input"`
+		Reasoning map[string]string    `json:"reasoning"`
+		Store     bool                 `json:"store"`
+		Text      struct {
+			Format struct {
+				Type   string         `json:"type"`
+				Name   string         `json:"name"`
+				Strict bool           `json:"strict"`
+				Schema map[string]any `json:"schema"`
+			} `json:"format"`
+		} `json:"text"`
+		Tools json.RawMessage `json:"tools"`
+	}
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		t.Fatal(err)
+	}
+	if wire.Model != OpenAIDiagnosticLunaModel || wire.Reasoning["effort"] != "none" || wire.Store ||
+		wire.Text.Format.Type != "json_schema" || wire.Text.Format.Name != OpenAIStructuredOutputsSchemaName || !wire.Text.Format.Strict || wire.Tools != nil {
+		t.Fatalf("unexpected Structured Outputs request: %s", raw)
+	}
+	if len(wire.Input) != 2 || wire.Input[0].Role != "system" || wire.Input[0].Content != providerRequest.System ||
+		wire.Input[1].Role != "user" || wire.Input[1].Content != providerRequest.User {
+		t.Fatalf("frozen model-visible messages changed: %+v", wire.Input)
+	}
+	wantSchema, _ := json.Marshal(providerRequest.Schema)
+	gotSchema, _ := json.Marshal(wire.Text.Format.Schema)
+	if string(gotSchema) != string(wantSchema) {
+		t.Fatalf("wire schema diverged from ProviderRequest.Schema\nwant=%s\n got=%s", wantSchema, gotSchema)
+	}
+	properties := wire.Text.Format.Schema["properties"].(map[string]any)
+	if len(properties) != 10 || wire.Text.Format.Schema["additionalProperties"] != false {
+		t.Fatalf("canonical required-field contract changed: %s", gotSchema)
+	}
+	proxyEnum := properties["proxy_exposure"].(map[string]any)["enum"].([]any)
+	if got := fmt.Sprint(proxyEnum); got != "[NONE GOLD_CATEGORY OIL_CATEGORY]" {
+		t.Fatalf("resolver-derived proxy vocabulary changed: %s", got)
+	}
+	if client.ExperimentSnapshot().StructuredOutputMode != OpenAIStructuredOutputsMode {
+		t.Fatalf("snapshot did not declare strict enforcement: %+v", client.ExperimentSnapshot())
+	}
+}
+
+func TestOpenAIStructuredOutputsCellRejectsMissingSchemaBeforeHTTP(t *testing.T) {
+	doer := &queuedHTTPDoer{}
+	_, err := NewOpenAIDiagnosticClient(openAIStructuredOutputsTestConfig(), doer).Complete(ProviderRequest{System: "system", User: "user"})
+	if err == nil || !strings.Contains(err.Error(), "kind=output_contract") || doer.calls != 0 {
+		t.Fatalf("missing schema did not fail closed before HTTP: err=%v calls=%d", err, doer.calls)
+	}
+}
+
+func TestOpenAIStructuredOutputsCellRejectsUnsupportedSchemaBeforeHTTP(t *testing.T) {
+	doer := &queuedHTTPDoer{}
+	schema := OutputSchema([]string{"OIL_CATEGORY"})
+	schema["oneOf"] = []any{}
+	_, err := NewOpenAIDiagnosticClient(openAIStructuredOutputsTestConfig(), doer).Complete(ProviderRequest{System: "system", User: "user", Schema: schema})
+	if err == nil || !strings.Contains(err.Error(), "kind=output_contract") || doer.calls != 0 {
+		t.Fatalf("unsupported schema did not fail closed before HTTP: err=%v calls=%d", err, doer.calls)
 	}
 }
 
@@ -316,6 +452,37 @@ func TestOpenAIDiagnosticCorrectiveRetryAccountingUsesExistingPipeline(t *testin
 	}
 	if len(attempts) != 2 || provider.ExperimentSnapshot().RetryCount != 1 || doer.calls != 2 {
 		t.Fatalf("corrective retry semantics changed: attempts=%d snapshot=%+v calls=%d", len(attempts), provider.ExperimentSnapshot(), doer.calls)
+	}
+}
+
+func TestOpenAIStructuredOutputsCorrectiveRetryRetainsCanonicalSchema(t *testing.T) {
+	config := openAIStructuredOutputsTestConfig()
+	doer := &queuedHTTPDoer{responses: []*http.Response{
+		openAITestResponse(http.StatusOK, completedOpenAIResponseForModel(`{"mapping_status":"PROXY"}`, OpenAIDiagnosticLunaModel, "fp_structured", 100, 20)),
+		openAITestResponse(http.StatusOK, completedOpenAIResponseForModel(unresolvedJSON(), OpenAIDiagnosticLunaModel, "fp_structured", 110, 30)),
+	}}
+	provider := NewOpenAIDiagnosticClient(config, doer)
+	resolver := testAssetResolver(t)
+	input := testInput("Unknown local event", "unknown")
+	_, attempts, _, err := analyseEvent(config.Runtime, provider, resolver, "run", DiagnosticManifestVersion, "case-1", "fingerprint", input, []string{"OIL_CATEGORY"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attempts) != 2 || provider.ExperimentSnapshot().RetryCount != 1 || doer.calls != 2 {
+		t.Fatalf("structured corrective retry semantics changed: attempts=%d snapshot=%+v calls=%d", len(attempts), provider.ExperimentSnapshot(), doer.calls)
+	}
+	for index, request := range doer.requests {
+		raw, readErr := io.ReadAll(request.Body)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		var wire openAIDiagnosticRequest
+		if err := json.Unmarshal(raw, &wire); err != nil {
+			t.Fatal(err)
+		}
+		if wire.Text == nil || !wire.Text.Format.Strict || len(wire.Text.Format.Schema["properties"].(map[string]any)) != 10 {
+			t.Fatalf("attempt %d lost canonical strict schema: %s", index+1, raw)
+		}
 	}
 }
 

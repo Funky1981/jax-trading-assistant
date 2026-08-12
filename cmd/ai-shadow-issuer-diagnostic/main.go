@@ -103,7 +103,9 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		if root == "" {
 			root = defaultHostedOutputRoot
 		}
-		paths.OutputRoot = filepath.Join(root, aishadow.OpenAIDiagnosticEvidenceNamespace, aishadow.OpenAIDiagnosticExperimentID)
+		if err == nil {
+			paths.OutputRoot = filepath.Join(root, hostedConfig.EvidenceNamespace(), hostedConfig.ExperimentID)
+		}
 		if err == nil {
 			config = hostedConfig.Runtime
 			prepared, err = aishadow.PrepareHostedDiagnostic(paths, hostedConfig, diagnosticSafety)
@@ -157,6 +159,13 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		}
 		if hosted := prepared.Plan.HostedExperiment; hosted != nil {
 			result["api_key_present"] = hosted.APIKeyPresent
+			result["experiment_id"] = hosted.ExperimentID
+			result["cell_identity"] = hosted.CellIdentity
+			result["evidence_namespace"] = hosted.EvidenceNamespace
+			result["structured_outputs"] = hosted.StructuredOutputs
+			result["schema_contract"] = hosted.SchemaContract
+			result["schema_sha256"] = hosted.SchemaSHA256
+			result["contract_enforcement"] = hosted.ContractEnforcement
 			result["budget_configuration"] = map[string]any{
 				"ceiling_usd": hosted.BudgetCeilingUSD, "pricing": hosted.Pricing,
 				"estimated_maximum_run_usd": hosted.EstimatedMaximumRunUSD,

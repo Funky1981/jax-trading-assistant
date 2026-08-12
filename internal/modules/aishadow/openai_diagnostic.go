@@ -17,20 +17,33 @@ import (
 )
 
 const (
-	OpenAIDiagnosticProvider                = "openai"
-	OpenAIDiagnosticSolModel                = "gpt-5.6-sol"
-	OpenAIDiagnosticLunaModel               = "gpt-5.6-luna"
-	OpenAIDiagnosticModel                   = OpenAIDiagnosticSolModel
-	OpenAIDiagnosticAPIKeyEnv               = "JAX_OPENAI_EXPERIMENT_API_KEY"
-	OpenAIDiagnosticEndpoint                = "https://api.openai.com/v1/responses"
-	OpenAIDiagnosticReasoningEffort         = "none"
-	OpenAIDiagnosticStructuredOutput        = "v4-prompt-contract-plain-text"
-	OpenAIDiagnosticEvidenceNamespace       = "openai-hosted-a1-v1"
-	OpenAIDiagnosticInferenceAuthEnv        = "JAX_AI_HOSTED_INFERENCE_AUTHORIZED"
-	OpenAIDiagnosticExperimentID            = "A1"
-	OpenAIDiagnosticMaximumBudgetMicros     = int64(1_000_000)
-	OpenAIDiagnosticLunaMaximumBudgetMicros = int64(120_000)
-	OpenAIDiagnosticPricingSource           = "https://developers.openai.com/api/docs/pricing; execution-time configuration; re-verify immediately before paid execution"
+	OpenAIDiagnosticProvider                   = "openai"
+	OpenAIDiagnosticSolModel                   = "gpt-5.6-sol"
+	OpenAIDiagnosticLunaModel                  = "gpt-5.6-luna"
+	OpenAIDiagnosticModel                      = OpenAIDiagnosticSolModel
+	OpenAIDiagnosticAPIKeyEnv                  = "JAX_OPENAI_EXPERIMENT_API_KEY"
+	OpenAIDiagnosticEndpoint                   = "https://api.openai.com/v1/responses"
+	OpenAIDiagnosticReasoningEffort            = "none"
+	OpenAIDiagnosticStructuredOutput           = "v4-prompt-contract-plain-text"
+	OpenAIDiagnosticEvidenceNamespace          = "openai-hosted-a1-v1"
+	OpenAIDiagnosticInferenceAuthEnv           = "JAX_AI_HOSTED_INFERENCE_AUTHORIZED"
+	OpenAIDiagnosticContractModeEnv            = "JAX_AI_OUTPUT_CONTRACT_MODE"
+	OpenAIDiagnosticExperimentID               = "A1"
+	OpenAIStructuredOutputsExperimentID        = "WP-00.03C1B"
+	OpenAIStructuredOutputsEvidenceNamespace   = "openai-hosted-c1b-structured-outputs-v1"
+	OpenAIStructuredOutputsMode                = "openai-responses-json-schema-strict"
+	OpenAIStructuredOutputsSchemaName          = "jax_ai_shadow_output_v4_issuer_resolution"
+	OpenAIDiagnosticMaximumBudgetMicros        = int64(1_000_000)
+	OpenAIDiagnosticLunaMaximumBudgetMicros    = int64(120_000)
+	OpenAIStructuredOutputsMaximumBudgetMicros = int64(750_000)
+	OpenAIDiagnosticPricingSource              = "https://developers.openai.com/api/docs/pricing; execution-time configuration; re-verify immediately before paid execution"
+)
+
+type OpenAIOutputContractMode string
+
+const (
+	OpenAIOutputContractPromptOnly       OpenAIOutputContractMode = "prompt-only"
+	OpenAIOutputContractStrictJSONSchema OpenAIOutputContractMode = OpenAIStructuredOutputsMode
 )
 
 var experimentIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
@@ -63,6 +76,7 @@ type OpenAIDiagnosticConfig struct {
 	CacheWritePriceMicrosPerMillion  int64
 	OutputPriceMicrosPerMillion      int64
 	InferenceExplicitlyAuthorized    bool
+	OutputContractMode               OpenAIOutputContractMode
 }
 
 func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagnosticConfig, error) {
@@ -91,11 +105,19 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 	if !supportedOpenAIDiagnosticModel(model) {
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_MODEL=%s or %s", OpenAIDiagnosticSolModel, OpenAIDiagnosticLunaModel)
 	}
-	if values["JAX_AI_EXPERIMENT_ID"] != OpenAIDiagnosticExperimentID || !experimentIDPattern.MatchString(values["JAX_AI_EXPERIMENT_ID"]) {
-		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_EXPERIMENT_ID=%s", OpenAIDiagnosticExperimentID)
+	experimentID := values["JAX_AI_EXPERIMENT_ID"]
+	if !experimentIDPattern.MatchString(experimentID) {
+		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic experiment identity is invalid")
+	}
+	contractMode := OpenAIOutputContractPromptOnly
+	if raw, ok := lookup(OpenAIDiagnosticContractModeEnv); ok && strings.TrimSpace(raw) != "" {
+		contractMode = OpenAIOutputContractMode(strings.TrimSpace(raw))
+	}
+	if err := validateOpenAIExperimentCell(experimentID, model, contractMode); err != nil {
+		return OpenAIDiagnosticConfig{}, err
 	}
 	if values["JAX_AI_REASONING_EFFORT"] != OpenAIDiagnosticReasoningEffort {
-		return OpenAIDiagnosticConfig{}, fmt.Errorf("A1 requires JAX_AI_REASONING_EFFORT=%s", OpenAIDiagnosticReasoningEffort)
+		return OpenAIDiagnosticConfig{}, fmt.Errorf("OpenAI issuer diagnostic requires JAX_AI_REASONING_EFFORT=%s", OpenAIDiagnosticReasoningEffort)
 	}
 	timeoutSeconds, err := strconv.Atoi(values["JAX_AI_TIMEOUT_SECONDS"])
 	if err != nil || timeoutSeconds < 1 || timeoutSeconds > 600 {
@@ -110,7 +132,7 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("JAX_AI_MAX_OUTPUT_TOKENS must be between 1 and 4096")
 	}
 	budget, err := parseUSDMicros(values["JAX_AI_EXPERIMENT_BUDGET_USD"])
-	maximumBudget := openAIDiagnosticMaximumBudgetMicros(model)
+	maximumBudget := openAIDiagnosticMaximumBudgetMicros(model, experimentID)
 	if err != nil || budget <= 0 || budget > maximumBudget {
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("JAX_AI_EXPERIMENT_BUDGET_USD must be positive and no greater than %s for %s", formatUSDMicros(maximumBudget), model)
 	}
@@ -148,18 +170,56 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 		CachedInputPriceMicrosPerMillion: cachedInputPrice, CacheWritePriceMicrosPerMillion: cacheWritePrice,
 		OutputPriceMicrosPerMillion:   outputPrice,
 		InferenceExplicitlyAuthorized: authorized,
+		OutputContractMode:            contractMode,
 	}, nil
+}
+
+func validateOpenAIExperimentCell(experimentID, model string, mode OpenAIOutputContractMode) error {
+	switch experimentID {
+	case OpenAIDiagnosticExperimentID:
+		if mode != OpenAIOutputContractPromptOnly {
+			return fmt.Errorf("existing OpenAI A1 cell requires %s=%s", OpenAIDiagnosticContractModeEnv, OpenAIOutputContractPromptOnly)
+		}
+	case OpenAIStructuredOutputsExperimentID:
+		if model != OpenAIDiagnosticLunaModel || mode != OpenAIOutputContractStrictJSONSchema {
+			return fmt.Errorf("%s requires model=%s and %s=%s", OpenAIStructuredOutputsExperimentID, OpenAIDiagnosticLunaModel, OpenAIDiagnosticContractModeEnv, OpenAIOutputContractStrictJSONSchema)
+		}
+	default:
+		return fmt.Errorf("unsupported OpenAI diagnostic experiment %q", experimentID)
+	}
+	return nil
 }
 
 func supportedOpenAIDiagnosticModel(model string) bool {
 	return model == OpenAIDiagnosticSolModel || model == OpenAIDiagnosticLunaModel
 }
 
-func openAIDiagnosticMaximumBudgetMicros(model string) int64 {
+func openAIDiagnosticMaximumBudgetMicros(model, experimentID string) int64 {
+	if experimentID == OpenAIStructuredOutputsExperimentID {
+		return OpenAIStructuredOutputsMaximumBudgetMicros
+	}
 	if model == OpenAIDiagnosticLunaModel {
 		return OpenAIDiagnosticLunaMaximumBudgetMicros
 	}
 	return OpenAIDiagnosticMaximumBudgetMicros
+}
+
+func (c OpenAIDiagnosticConfig) EvidenceNamespace() string {
+	if c.ExperimentID == OpenAIStructuredOutputsExperimentID {
+		return OpenAIStructuredOutputsEvidenceNamespace
+	}
+	return OpenAIDiagnosticEvidenceNamespace
+}
+
+func (c OpenAIDiagnosticConfig) StructuredOutputMode() string {
+	if c.OutputContractMode == OpenAIOutputContractStrictJSONSchema {
+		return OpenAIStructuredOutputsMode
+	}
+	return OpenAIDiagnosticStructuredOutput
+}
+
+func (c OpenAIDiagnosticConfig) StructuredOutputsEnabled() bool {
+	return c.OutputContractMode == OpenAIOutputContractStrictJSONSchema
 }
 
 func openAIReturnedModelMatchesRequested(requested, returned string) bool {
@@ -268,27 +328,18 @@ func (c *OpenAIDiagnosticClient) Complete(request ProviderRequest) (ProviderResp
 	if !supportedOpenAIDiagnosticModel(c.config.Runtime.Model) {
 		return ProviderResponse{}, providerSafeError{kind: "configured_model", fatal: true}
 	}
-	estimatedInputTokens := len([]byte(request.System)) + len([]byte(request.User)) + 1024
+	if err := validateOpenAIExperimentCell(c.config.ExperimentID, c.config.Runtime.Model, c.config.OutputContractMode); err != nil {
+		return ProviderResponse{}, providerSafeError{kind: "experiment_cell", fatal: true}
+	}
+	raw, err := marshalOpenAIDiagnosticRequest(c.config, request)
+	if err != nil {
+		return ProviderResponse{}, providerSafeError{kind: "output_contract", fatal: true}
+	}
+	estimatedInputTokens := estimatedOpenAIInputTokens(c.config, request, len(raw))
 	estimatedCost := c.budget.estimateCost(estimatedInputTokens, c.config.MaxOutputTokens)
 	requestNumber, err := c.reserve(request, estimatedCost)
 	if err != nil {
 		return ProviderResponse{}, err
-	}
-	payload := struct {
-		Model           string               `json:"model"`
-		Input           []openAIInputMessage `json:"input"`
-		Reasoning       map[string]string    `json:"reasoning"`
-		MaxOutputTokens int                  `json:"max_output_tokens"`
-		Store           bool                 `json:"store"`
-	}{
-		Model:     c.config.Runtime.Model,
-		Input:     []openAIInputMessage{{Role: "system", Content: request.System}, {Role: "user", Content: request.User}},
-		Reasoning: map[string]string{"effort": c.config.ReasoningEffort}, MaxOutputTokens: c.config.MaxOutputTokens, Store: false,
-	}
-	raw, err := json.Marshal(payload)
-	if err != nil {
-		c.budget.releaseReservation(estimatedCost)
-		return ProviderResponse{}, fmt.Errorf("marshal hosted diagnostic request")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), c.config.Runtime.Timeout)
 	defer cancel()
@@ -425,7 +476,7 @@ func (c *OpenAIDiagnosticClient) ExperimentSnapshot() HostedExperimentSnapshot {
 	fingerprints := sortedKeys(c.fingerprints)
 	return HostedExperimentSnapshot{
 		ExperimentID: c.config.ExperimentID, Provider: OpenAIDiagnosticProvider, RequestedModel: c.config.Runtime.Model,
-		ReturnedModels: models, SystemFingerprints: fingerprints, ReasoningEffort: c.config.ReasoningEffort, StructuredOutputMode: OpenAIDiagnosticStructuredOutput,
+		ReturnedModels: models, SystemFingerprints: fingerprints, ReasoningEffort: c.config.ReasoningEffort, StructuredOutputMode: c.config.StructuredOutputMode(),
 		MaxOutputTokensPerRequest: c.config.MaxOutputTokens,
 		Pricing: HostedPricingPlan{
 			InputUSDPerMillionTokens:       formatUSDMicros(c.config.InputPriceMicrosPerMillion),
@@ -445,6 +496,118 @@ func (c *OpenAIDiagnosticClient) ExperimentSnapshot() HostedExperimentSnapshot {
 type openAIInputMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+}
+
+type openAIResponseFormat struct {
+	Type   string         `json:"type"`
+	Name   string         `json:"name"`
+	Strict bool           `json:"strict"`
+	Schema map[string]any `json:"schema"`
+}
+
+type openAITextConfiguration struct {
+	Format openAIResponseFormat `json:"format"`
+}
+
+type openAIDiagnosticRequest struct {
+	Model           string                   `json:"model"`
+	Input           []openAIInputMessage     `json:"input"`
+	Reasoning       map[string]string        `json:"reasoning"`
+	MaxOutputTokens int                      `json:"max_output_tokens"`
+	Store           bool                     `json:"store"`
+	Text            *openAITextConfiguration `json:"text,omitempty"`
+}
+
+func marshalOpenAIDiagnosticRequest(config OpenAIDiagnosticConfig, request ProviderRequest) ([]byte, error) {
+	payload := openAIDiagnosticRequest{
+		Model:     config.Runtime.Model,
+		Input:     []openAIInputMessage{{Role: "system", Content: request.System}, {Role: "user", Content: request.User}},
+		Reasoning: map[string]string{"effort": config.ReasoningEffort}, MaxOutputTokens: config.MaxOutputTokens, Store: false,
+	}
+	if config.StructuredOutputsEnabled() {
+		if err := validateOpenAIStructuredOutputSchema(request.Schema); err != nil {
+			return nil, err
+		}
+		payload.Text = &openAITextConfiguration{Format: openAIResponseFormat{
+			Type: "json_schema", Name: OpenAIStructuredOutputsSchemaName, Strict: true, Schema: request.Schema,
+		}}
+	}
+	return json.Marshal(payload)
+}
+
+func estimatedOpenAIInputTokens(config OpenAIDiagnosticConfig, request ProviderRequest, wireBytes int) int {
+	if config.StructuredOutputsEnabled() {
+		return wireBytes + 1024
+	}
+	return len([]byte(request.System)) + len([]byte(request.User)) + 1024
+}
+
+func validateOpenAIStructuredOutputSchema(schema map[string]any) error {
+	if schema == nil {
+		return fmt.Errorf("Structured Outputs require ProviderRequest.Schema")
+	}
+	for keyword := range schema {
+		if !map[string]bool{"type": true, "properties": true, "required": true, "additionalProperties": true}[keyword] {
+			return fmt.Errorf("Structured Outputs root contains unsupported schema keyword %q", keyword)
+		}
+	}
+	if schema["type"] != "object" {
+		return fmt.Errorf("Structured Outputs require a root object schema")
+	}
+	additional, ok := schema["additionalProperties"].(bool)
+	if !ok || additional {
+		return fmt.Errorf("Structured Outputs require additionalProperties=false")
+	}
+	properties, ok := schema["properties"].(map[string]any)
+	if !ok || len(properties) == 0 {
+		return fmt.Errorf("Structured Outputs require object properties")
+	}
+	required, ok := schema["required"].([]string)
+	if !ok || len(required) != len(properties) {
+		return fmt.Errorf("Structured Outputs require every property")
+	}
+	requiredSet := make(map[string]bool, len(required))
+	for _, name := range required {
+		requiredSet[name] = true
+	}
+	for name, property := range properties {
+		if !requiredSet[name] {
+			return fmt.Errorf("Structured Outputs property %q is not required", name)
+		}
+		if err := validateOpenAISchemaNode(property); err != nil {
+			return fmt.Errorf("Structured Outputs property %q: %w", name, err)
+		}
+	}
+	return nil
+}
+
+func validateOpenAISchemaNode(value any) error {
+	node, ok := value.(map[string]any)
+	if !ok {
+		return fmt.Errorf("schema node must be an object")
+	}
+	allowed := map[string]bool{
+		"type": true, "enum": true, "items": true, "minLength": true, "maxLength": true,
+		"minItems": true, "maxItems": true, "properties": true, "required": true, "additionalProperties": true,
+	}
+	for keyword := range node {
+		if !allowed[keyword] {
+			return fmt.Errorf("unsupported schema keyword %q", keyword)
+		}
+	}
+	switch node["type"] {
+	case "string":
+		return nil
+	case "array":
+		if node["items"] == nil {
+			return fmt.Errorf("array schema is missing items")
+		}
+		return validateOpenAISchemaNode(node["items"])
+	case "object":
+		return validateOpenAIStructuredOutputSchema(node)
+	default:
+		return fmt.Errorf("unsupported schema type %q", node["type"])
+	}
 }
 
 type openAIResponse struct {

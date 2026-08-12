@@ -191,6 +191,59 @@ func TestLunaDefaultThreeRepetitionPlanRetains144CasesButFailsInsufficientBudget
 	}
 }
 
+func TestPrepareLunaStructuredOutputsCellLocksContractNamespaceAndOneRepetition(t *testing.T) {
+	paths := diagnosticTestPaths(t)
+	paths.OutputRoot = filepath.Join(t.TempDir(), OpenAIStructuredOutputsEvidenceNamespace, OpenAIStructuredOutputsExperimentID)
+	config := openAIStructuredOutputsTestConfig()
+	prepared, err := PrepareHostedDiagnostic(paths, config, diagnosticTestSafety())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateDiagnosticExecutionShape(prepared); err == nil || !strings.Contains(err.Error(), "exactly one") {
+		t.Fatalf("C1B default three-repetition shape did not fail closed: %v", err)
+	}
+	shape, err := LoadDiagnosticRepetitionSelection(func(string) (string, bool) { return "1", true })
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err = ApplyDiagnosticExecutionShape(prepared, shape)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateDiagnosticExecutionShape(prepared); err != nil {
+		t.Fatal(err)
+	}
+	plan := prepared.Plan.HostedExperiment
+	model := prepared.Plan.ModelConfiguration
+	if plan == nil || plan.ExperimentID != OpenAIStructuredOutputsExperimentID || plan.CellIdentity != OpenAIStructuredOutputsExperimentID ||
+		plan.EvidenceNamespace != OpenAIStructuredOutputsEvidenceNamespace+"/"+OpenAIStructuredOutputsExperimentID ||
+		!plan.StructuredOutputs || plan.SchemaContract != SchemaVersion || len(plan.SchemaSHA256) != 64 ||
+		plan.ContractEnforcement != string(OpenAIOutputContractStrictJSONSchema) || plan.BaseRequestCount != 48 || plan.MaximumRequestCount != 96 {
+		t.Fatalf("C1B hosted plan is incomplete: %+v", plan)
+	}
+	if !model.StructuredOutputs || model.StructuredOutputMode != OpenAIStructuredOutputsMode || model.SchemaContract != SchemaVersion ||
+		model.ContractEnforcement != string(OpenAIOutputContractStrictJSONSchema) {
+		t.Fatalf("C1B model contract is ambiguous: %+v", model)
+	}
+	if plan.Pricing.InputUSDPerMillionTokens != "1.00" || plan.Pricing.CachedInputUSDPerMillionTokens != "0.10" ||
+		plan.Pricing.CacheWriteUSDPerMillionTokens != "1.25" || plan.Pricing.OutputUSDPerMillionTokens != "6.00" {
+		t.Fatalf("C1B review-time pricing inputs are wrong: %+v", plan.Pricing)
+	}
+	estimated, err := parseUSDMicros(plan.EstimatedMaximumRunUSD)
+	if err != nil || estimated <= 0 || estimated > config.BudgetCeilingMicros {
+		t.Fatalf("C1B complete-run estimate=%s ceiling=%s err=%v", plan.EstimatedMaximumRunUSD, plan.BudgetCeilingUSD, err)
+	}
+	if prepared.Plan.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint || prepared.Plan.ManifestFileSHA256 != ExpectedDiagnosticManifestFileSHA256 ||
+		prepared.Plan.FingerprintLockFingerprint != prepared.Lock.Fingerprint || prepared.Plan.PromptVersion != PromptVersion || prepared.Plan.OutputContract != SchemaVersion {
+		t.Fatalf("C1B changed frozen benchmark identities: %+v", prepared.Plan)
+	}
+	unsafePaths := diagnosticTestPaths(t)
+	unsafePaths.OutputRoot = filepath.Join(t.TempDir(), OpenAIDiagnosticEvidenceNamespace, OpenAIDiagnosticExperimentID)
+	if _, err := PrepareHostedDiagnostic(unsafePaths, config, diagnosticTestSafety()); err == nil || !strings.Contains(err.Error(), "isolated namespace") {
+		t.Fatalf("C1B accepted the prior A1 namespace: %v", err)
+	}
+}
+
 func TestPrepareDeepSeekDiagnosticLocksA1ModeBudgetNamespaceAndNoMutation(t *testing.T) {
 	paths := diagnosticTestPaths(t)
 	paths.OutputRoot = filepath.Join(t.TempDir(), DeepSeekDiagnosticEvidenceNamespace, DeepSeekDiagnosticExperimentID)

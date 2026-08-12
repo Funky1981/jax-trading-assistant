@@ -175,6 +175,75 @@ func TestLunaOneRepetitionPreflightReportsReadinessWithZeroProviderCalls(t *test
 	}
 }
 
+func TestLunaStructuredOutputsPreflightReportsContractAndMakesZeroProviderCalls(t *testing.T) {
+	values := hostedStructuredOutputsCommandValues()
+	providerCalls := 0
+	deps := dependencies{
+		lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+		inspectModel: func(aishadow.Config) (aishadow.DiagnosticModelIdentity, error) {
+			t.Fatal("C1B preflight inspected an Ollama model")
+			return aishadow.DiagnosticModelIdentity{}, nil
+		},
+		ollamaProvider: func(aishadow.Config) aishadow.Provider {
+			t.Fatal("C1B preflight constructed an Ollama provider")
+			return nil
+		},
+		openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+			providerCalls++
+			return nil
+		},
+	}
+	root := filepath.Join("..", "..")
+	outputRoot := t.TempDir()
+	var output bytes.Buffer
+	err := run([]string{
+		"--preflight",
+		"--manifest", filepath.Join(root, "config", "ai-shadow-issuer-diagnostic-manifest-v1.json"),
+		"--fingerprint-lock", filepath.Join(root, "config", "ai-shadow-issuer-diagnostic-input-fingerprints-v1.json"),
+		"--asset-ruleset-file", filepath.Join(root, "config", "event-asset-resolution-v1.json"),
+		"--output-root", outputRoot,
+	}, &output, deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if providerCalls != 0 {
+		t.Fatalf("C1B preflight constructed provider %d times", providerCalls)
+	}
+	for _, want := range []string{
+		`"status": "ready"`, `"provider": "openai"`, `"model": "gpt-5.6-luna"`, `"reasoning": "none"`,
+		`"experiment_id": "WP-00.03C1B"`, `"cell_identity": "WP-00.03C1B"`,
+		`"evidence_namespace": "openai-hosted-c1b-structured-outputs-v1/WP-00.03C1B"`,
+		`"structured_outputs": true`, `"schema_contract": "ai-shadow-output-v4-issuer-resolution"`,
+		`"contract_enforcement": "openai-responses-json-schema-strict"`, `"schema_sha256"`,
+		`"requested_repetitions": 1`, `"effective_repetitions": 1`, `"cases_per_repetition": 48`, `"total_planned_cases": 48`,
+		`"provider_contact": false`, `"inference": false`, `"api_key_present": true`,
+		`"database_mutation": false`, `"trading_mutation": false`,
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("C1B preflight output missing %s: %s", want, output.String())
+		}
+	}
+	if strings.Contains(output.String(), values[aishadow.OpenAIDiagnosticAPIKeyEnv]) {
+		t.Fatalf("C1B credential leaked in preflight output: %s", output.String())
+	}
+	err = filepath.Walk(outputRoot, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil || info.IsDir() {
+			return walkErr
+		}
+		raw, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		if strings.Contains(string(raw), values[aishadow.OpenAIDiagnosticAPIKeyEnv]) || strings.Contains(strings.ToLower(string(raw)), "authorization") {
+			t.Fatalf("C1B credential material leaked into %s", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestHostedExecutionRequiresSeparateAuthorizationBeforeProviderCreation(t *testing.T) {
 	values := hostedCommandValues()
 	providerCalls := 0
@@ -369,6 +438,20 @@ func hostedCommandValues() map[string]string {
 		"JAX_RUNTIME_MODE": "paper", "ALLOW_LIVE_TRADING": "false", "EXECUTION_ENABLED": "false",
 		"EXECUTION_INSTRUCTION_WORKER_ENABLED": "false", "BROKER_EXECUTION_ALLOWED": "false", "MAX_LEVERAGE": "1",
 	}
+}
+
+func hostedStructuredOutputsCommandValues() map[string]string {
+	values := hostedCommandValues()
+	values["JAX_AI_MODEL"] = aishadow.OpenAIDiagnosticLunaModel
+	values["JAX_AI_EXPERIMENT_ID"] = aishadow.OpenAIStructuredOutputsExperimentID
+	values[aishadow.OpenAIDiagnosticContractModeEnv] = aishadow.OpenAIStructuredOutputsMode
+	values[aishadow.DiagnosticRepetitionsEnv] = "1"
+	values["JAX_AI_EXPERIMENT_BUDGET_USD"] = "0.75"
+	values["JAX_AI_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "1.00"
+	values["JAX_AI_CACHED_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "0.10"
+	values["JAX_AI_CACHE_WRITE_PRICE_USD_PER_MILLION_TOKENS"] = "1.25"
+	values["JAX_AI_OUTPUT_PRICE_USD_PER_MILLION_TOKENS"] = "6.00"
+	return values
 }
 
 func deepSeekCommandValues() map[string]string {

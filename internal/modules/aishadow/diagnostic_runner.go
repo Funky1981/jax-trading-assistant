@@ -51,12 +51,20 @@ type DiagnosticModelConfiguration struct {
 	ReasoningEffort      string  `json:"reasoning_effort,omitempty"`
 	MaxOutputTokens      int     `json:"max_output_tokens,omitempty"`
 	StructuredOutputMode string  `json:"structured_output_mode,omitempty"`
+	StructuredOutputs    bool    `json:"structured_outputs,omitempty"`
+	SchemaContract       string  `json:"schema_contract,omitempty"`
+	ContractEnforcement  string  `json:"contract_enforcement,omitempty"`
 	ThinkingMode         string  `json:"thinking_mode,omitempty"`
 }
 
 type HostedExperimentPlan struct {
 	ExperimentID                       string            `json:"experiment_id"`
+	CellIdentity                       string            `json:"cell_identity,omitempty"`
 	EvidenceNamespace                  string            `json:"evidence_namespace"`
+	SchemaContract                     string            `json:"schema_contract,omitempty"`
+	SchemaSHA256                       string            `json:"schema_sha256,omitempty"`
+	StructuredOutputs                  bool              `json:"structured_outputs,omitempty"`
+	ContractEnforcement                string            `json:"contract_enforcement,omitempty"`
 	Endpoint                           string            `json:"endpoint"`
 	APIKeyEnvironment                  string            `json:"api_key_environment"`
 	APIKeyPresent                      bool              `json:"api_key_present"`
@@ -299,6 +307,9 @@ func ValidateDiagnosticExecutionShape(prepared PreparedDiagnostic) error {
 		(plan.BaseRequestCount != shape.TotalPlannedCases || plan.MaximumRequestCount != shape.TotalPlannedCases*2) {
 		return fmt.Errorf("hosted issuer diagnostic request plan does not match validated execution shape")
 	}
+	if plan := prepared.Plan.HostedExperiment; plan != nil && plan.ExperimentID == OpenAIStructuredOutputsExperimentID && shape.EffectiveRepetitions != 1 {
+		return fmt.Errorf("%s requires exactly one diagnostic repetition", OpenAIStructuredOutputsExperimentID)
+	}
 	if plan := prepared.Plan.HostedExperiment; plan != nil && prepared.Config.Provider == OpenAIDiagnosticProvider && prepared.Config.Model == OpenAIDiagnosticLunaModel {
 		estimated, estimatedErr := parseUSDMicros(plan.EstimatedMaximumRunUSD)
 		ceiling, ceilingErr := parseUSDMicros(plan.BudgetCeilingUSD)
@@ -341,7 +352,10 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if !supportedOpenAIDiagnosticModel(config.Runtime.Model) {
 		return PreparedDiagnostic{}, fmt.Errorf("unsupported OpenAI diagnostic model %q", config.Runtime.Model)
 	}
-	wantNamespace := filepath.Join(OpenAIDiagnosticEvidenceNamespace, config.ExperimentID)
+	if err := validateOpenAIExperimentCell(config.ExperimentID, config.Runtime.Model, config.OutputContractMode); err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	wantNamespace := filepath.Join(config.EvidenceNamespace(), config.ExperimentID)
 	if !strings.HasSuffix(filepath.Clean(paths.OutputRoot), wantNamespace) {
 		return PreparedDiagnostic{}, fmt.Errorf("hosted diagnostic output root must end in isolated namespace %s", filepath.ToSlash(wantNamespace))
 	}
@@ -353,7 +367,11 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	estimatedInputTokens := estimatedHostedInputTokens(firstRequest)
+	firstWireBytes, err := openAIDiagnosticRequestBytes(config, firstRequest)
+	if err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	estimatedInputTokens := estimatedOpenAIInputTokens(config, firstRequest, firstWireBytes)
 	worstInputPrice := config.InputPriceMicrosPerMillion
 	if config.CacheWritePriceMicrosPerMillion > worstInputPrice {
 		worstInputPrice = config.CacheWritePriceMicrosPerMillion
@@ -364,13 +382,21 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	}
 	prepared.Plan.ModelConfiguration.ReasoningEffort = config.ReasoningEffort
 	prepared.Plan.ModelConfiguration.MaxOutputTokens = config.MaxOutputTokens
-	prepared.Plan.ModelConfiguration.StructuredOutputMode = OpenAIDiagnosticStructuredOutput
+	prepared.Plan.ModelConfiguration.StructuredOutputMode = config.StructuredOutputMode()
+	prepared.Plan.ModelConfiguration.StructuredOutputs = config.StructuredOutputsEnabled()
+	prepared.Plan.ModelConfiguration.SchemaContract = SchemaVersion
+	prepared.Plan.ModelConfiguration.ContractEnforcement = string(config.OutputContractMode)
+	schemaSHA256, err := providerRequestSchemaSHA256(firstRequest.Schema)
+	if err != nil {
+		return PreparedDiagnostic{}, err
+	}
 	largestInitialBytes, correctiveBytes, estimatedRunCost, err := estimateOpenAIDiagnosticRunMaximum(prepared, config)
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
 	prepared.Plan.HostedExperiment = &HostedExperimentPlan{
-		ExperimentID: config.ExperimentID, EvidenceNamespace: OpenAIDiagnosticEvidenceNamespace + "/" + config.ExperimentID,
+		ExperimentID: config.ExperimentID, CellIdentity: config.ExperimentID, EvidenceNamespace: config.EvidenceNamespace() + "/" + config.ExperimentID,
+		SchemaContract: SchemaVersion, SchemaSHA256: schemaSHA256, StructuredOutputs: config.StructuredOutputsEnabled(), ContractEnforcement: string(config.OutputContractMode),
 		Endpoint: OpenAIDiagnosticEndpoint, APIKeyEnvironment: OpenAIDiagnosticAPIKeyEnv, APIKeyPresent: true,
 		InferenceExplicitlyAuthorized: config.InferenceExplicitlyAuthorized,
 		BudgetCeilingUSD:              formatUSDMicros(config.BudgetCeilingMicros),
@@ -392,10 +418,6 @@ func PrepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	return prepared, nil
 }
 
-func estimatedHostedInputTokens(request ProviderRequest) int {
-	return len([]byte(request.System)) + len([]byte(request.User)) + 1024
-}
-
 func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config OpenAIDiagnosticConfig) (int, int, int64, error) {
 	worstInputPrice := config.InputPriceMicrosPerMillion
 	if config.CacheWritePriceMicrosPerMillion > worstInputPrice {
@@ -408,11 +430,14 @@ func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config Open
 		if err != nil {
 			return 0, 0, 0, err
 		}
-		requestBytes := len([]byte(request.System)) + len([]byte(request.User))
+		requestBytes, err := openAIDiagnosticRequestBytes(config, request)
+		if err != nil {
+			return 0, 0, 0, err
+		}
 		if requestBytes > largestInitialBytes {
 			largestInitialBytes = requestBytes
 		}
-		perRepetition += tokenCostMicros(estimatedHostedInputTokens(request), worstInputPrice) +
+		perRepetition += tokenCostMicros(estimatedOpenAIInputTokens(config, request, requestBytes), worstInputPrice) +
 			tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
 	}
 	// A corrective request can repeat the entire maximum output in both the
@@ -424,11 +449,34 @@ func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config Open
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	correctiveBytes := len([]byte(corrective.System)) + len([]byte(corrective.User))
-	correctiveCost := tokenCostMicros(estimatedHostedInputTokens(corrective), worstInputPrice) +
+	correctiveBytes, err := openAIDiagnosticRequestBytes(config, corrective)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	correctiveCost := tokenCostMicros(estimatedOpenAIInputTokens(config, corrective, correctiveBytes), worstInputPrice) +
 		tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
 	perRepetition += int64(diagnosticEventCount) * correctiveCost
 	return largestInitialBytes, correctiveBytes, perRepetition * int64(prepared.ExecutionShape.EffectiveRepetitions), nil
+}
+
+func openAIDiagnosticRequestBytes(config OpenAIDiagnosticConfig, request ProviderRequest) (int, error) {
+	if !config.StructuredOutputsEnabled() {
+		return len([]byte(request.System)) + len([]byte(request.User)), nil
+	}
+	raw, err := marshalOpenAIDiagnosticRequest(config, request)
+	if err != nil {
+		return 0, err
+	}
+	return len(raw), nil
+}
+
+func providerRequestSchemaSHA256(schema map[string]any) (string, error) {
+	raw, err := json.Marshal(schema)
+	if err != nil {
+		return "", fmt.Errorf("marshal canonical output schema: %w", err)
+	}
+	digest := sha256.Sum256(raw)
+	return hex.EncodeToString(digest[:]), nil
 }
 
 func PrepareDeepSeekDiagnostic(paths DiagnosticPaths, config DeepSeekDiagnosticConfig, safety DiagnosticSafetyState) (PreparedDiagnostic, error) {
