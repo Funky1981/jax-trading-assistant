@@ -1,0 +1,38 @@
+{
+  "version": "ai-shadow-issuer-generalization-holdout-freeze-v1",
+  "dataset_version": "ai-shadow-issuer-generalization-holdout-v1",
+  "created_at": "2026-08-12T16:25:55Z",
+  "independence_statement": "Constructed and frozen before inspection of detailed C1C false-positive response artifacts or the WP-00.03 forensic report.",
+  "manifest": {
+    "path": "config/ai-shadow-issuer-generalization-holdout-v1.json",
+    "file_sha256": "bbad87247e3c532c780b21d052d13b5e5b5407379ec8f73e21ba18c6e9463c72",
+    "semantic_fingerprint": "7dbd15ddcc9209c658ad56b1e175e83e2a67a6eadb8813cf36bb50e4531a6ad5"
+  },
+  "input_fingerprint_lock": {
+    "path": "config/ai-shadow-issuer-generalization-holdout-input-fingerprints-v1.json",
+    "file_sha256": "c4161bc7e80fb64984b180e5e5c710a3c1b5f27c92ffc940044e29b774ffb10e",
+    "semantic_fingerprint": "512fb2a7ccb91c237aba3e65e4cd43a4408435ae25af843f2ba07c01529d3716"
+  },
+  "case_count": 48,
+  "mapping_status_distribution": {"DIRECT":25,"PROXY":6,"UNRESOLVED":17},
+  "expected_resolution_status_distribution": {"resolved":26,"ambiguous":1,"unresolved":21},
+  "category_distribution": {
+    "ambiguous_company_reference": 6,
+    "clear_single_issuer": 6,
+    "company_mentioned_not_causal": 6,
+    "legitimate_proxy_exposure": 6,
+    "less_famous_issuer": 6,
+    "multi_issuer_event": 6,
+    "supported_issuer_alias": 6,
+    "unsupported_or_unknown_issuer": 6
+  },
+  "policy": {
+    "identity": "event-asset-resolution-v1",
+    "path": "config/event-asset-resolution-v1.json",
+    "file_sha256": "5170cc7c8dede5f1a095dfae1ffa7f0060bb8358c85b6dbb0609dab8ef30ede0"
+  },
+  "prompt_version": "ai-shadow-prompt-v4-issuer-resolution",
+  "output_contract": "ai-shadow-output-v4-issuer-resolution",
+  "label_version": "issuer-recognition-adjudication-v1",
+  "mutation_rule": "Do not modify this dataset after observing model outputs; create a new version and identity instead."
+}

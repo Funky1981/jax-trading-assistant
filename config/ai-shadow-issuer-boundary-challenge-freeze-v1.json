@@ -1,0 +1,41 @@
+{
+  "version": "ai-shadow-issuer-boundary-challenge-freeze-v1",
+  "dataset_version": "ai-shadow-issuer-boundary-challenge-v1",
+  "created_at": "2026-08-12T16:29:46Z",
+  "construction_statement": "Constructed after ai-shadow-issuer-generalization-holdout-v1 was frozen; intentionally targets difficult frozen-policy boundaries and does not replace that holdout.",
+  "manifest": {
+    "path": "config/ai-shadow-issuer-boundary-challenge-v1.json",
+    "file_sha256": "aa20ee9b37fbb200f21a90a79ca98fb3964ba56603f592cece55a5bd92e366a9",
+    "semantic_fingerprint": "84bba8c605a35da96a7c97c15b8176f85e3f9fc8213994177696549630fd2ba7"
+  },
+  "input_fingerprint_lock": {
+    "path": "config/ai-shadow-issuer-boundary-challenge-input-fingerprints-v1.json",
+    "file_sha256": "feabd614dcdc5d853cc7dcb8c50070f4f25c986fec556a20ca68e9a4d08e1dc8",
+    "semantic_fingerprint": "fc0ad093ed589373f32e9319b81319145595991af4d9fd25a59128c16ca498ed"
+  },
+  "case_count": 24,
+  "mapping_status_distribution": {"DIRECT":8,"PROXY":8,"UNRESOLVED":8},
+  "expected_resolution_status_distribution": {"resolved":13,"ambiguous":1,"unresolved":10},
+  "category_distribution": {
+    "ambiguous_company_reference": 2,
+    "incidental_identifier_language": 2,
+    "legitimate_proxy_exposure": 4,
+    "multi_issuer_principal_boundary": 2,
+    "named_company_causality_boundary": 2,
+    "proxy_term_boundary": 2,
+    "strong_relevance_no_direct_issuer": 2,
+    "supported_issuer_alias": 2,
+    "tempting_incorrect_proxy": 2,
+    "unsupported_unknown_issuer": 2,
+    "weak_legitimate_causal_effect": 2
+  },
+  "policy": {
+    "identity": "event-asset-resolution-v1",
+    "path": "config/event-asset-resolution-v1.json",
+    "file_sha256": "5170cc7c8dede5f1a095dfae1ffa7f0060bb8358c85b6dbb0609dab8ef30ede0"
+  },
+  "prompt_version": "ai-shadow-prompt-v4-issuer-resolution",
+  "output_contract": "ai-shadow-output-v4-issuer-resolution",
+  "label_version": "issuer-recognition-adjudication-v1",
+  "mutation_rule": "Do not modify this dataset after observing model outputs; create a new version and identity instead."
+}
