@@ -1,0 +1,41 @@
+{
+  "version": "ai-shadow-issuer-generalization-holdout-freeze-v2",
+  "dataset_version": "ai-shadow-issuer-generalization-holdout-v2",
+  "created_at": "2026-08-14T16:57:17Z",
+  "independence_statement": "Constructed and frozen before C1E remediation design and without inspecting detailed C1D3 case-level findings, observed C1D2 model outputs, expected answers derived from those outputs, or detailed C1D2 failure analysis.",
+  "manifest": {
+    "path": "config/ai-shadow-issuer-generalization-holdout-v2.json",
+    "file_sha256": "7b22c4c6d72d53d9976df17463bd6116a50ac305008c6d71c5a36f6971091c04",
+    "semantic_fingerprint": "1686f2fa9494dd07887763e0bf55b37a8f0fa2cdb98214a6a23a03156e1f9114"
+  },
+  "input_fingerprint_lock": {
+    "path": "config/ai-shadow-issuer-generalization-holdout-input-fingerprints-v2.json",
+    "file_sha256": "c3dc9715e5c7bcc1f8e0cb1020d95e7979a79f4c5748abf0124df5fa76e1cf88",
+    "semantic_fingerprint": "81d369388e071e7b84f6adeae997b3f8ccb9d9bdcd2e9e4ae2426c75c4e5b514"
+  },
+  "case_count": 48,
+  "mapping_status_distribution": {"DIRECT":25,"PROXY":6,"UNRESOLVED":17},
+  "expected_resolution_status_distribution": {"resolved":27,"ambiguous":1,"unresolved":20},
+  "category_distribution": {
+    "ambiguous_or_invalid_exposure": 4,
+    "clear_causal_direct": 5,
+    "commentator_beneficiary_boundary": 4,
+    "contextual_historical_mention": 4,
+    "equal_causality_multi_issuer": 4,
+    "legitimate_principal_proxy": 6,
+    "low_medium_relevance_direct": 5,
+    "principal_issuer_among_many": 4,
+    "supported_alias_direct": 4,
+    "unsupported_causal_issuer": 3,
+    "weak_causal_direct": 5
+  },
+  "policy": {
+    "identity": "event-asset-resolution-v1",
+    "path": "config/event-asset-resolution-v1.json",
+    "file_sha256": "5170cc7c8dede5f1a095dfae1ffa7f0060bb8358c85b6dbb0609dab8ef30ede0"
+  },
+  "prompt_version": "ai-shadow-prompt-v4-issuer-resolution",
+  "output_contract": "ai-shadow-output-v4-issuer-resolution",
+  "label_version": "issuer-recognition-adjudication-v1",
+  "mutation_rule": "Do not modify this dataset after any model output is observed; any later change requires a new version and dataset identity."
+}

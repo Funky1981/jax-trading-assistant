@@ -107,6 +107,48 @@ var holdoutDatasetSpecs = []holdoutDatasetSpec{
 			"weak_legitimate_causal_effect": 2,
 		},
 	},
+	{
+		Name:                "generalization_v2",
+		ManifestPath:        "../../../config/ai-shadow-issuer-generalization-holdout-v2.json",
+		LockPath:            "../../../config/ai-shadow-issuer-generalization-holdout-input-fingerprints-v2.json",
+		FreezePath:          "../../../config/ai-shadow-issuer-generalization-holdout-freeze-v2.json",
+		ManifestVersion:     "ai-shadow-issuer-generalization-holdout-v2",
+		LockVersion:         "ai-shadow-issuer-generalization-holdout-input-fingerprints-v2",
+		FreezeVersion:       "ai-shadow-issuer-generalization-holdout-freeze-v2",
+		IDPrefix:            "issuer-generalization-v2-",
+		CaseCount:           48,
+		MappingDistribution: map[string]int{"DIRECT": 25, "PROXY": 6, "UNRESOLVED": 17},
+		CategoryDistribution: map[string]int{
+			"ambiguous_or_invalid_exposure": 4, "clear_causal_direct": 5,
+			"commentator_beneficiary_boundary": 4, "contextual_historical_mention": 4,
+			"equal_causality_multi_issuer": 4, "legitimate_principal_proxy": 6,
+			"low_medium_relevance_direct": 5, "principal_issuer_among_many": 4,
+			"supported_alias_direct": 4, "unsupported_causal_issuer": 3,
+			"weak_causal_direct": 5,
+		},
+	},
+	{
+		Name:                "boundary_v2",
+		ManifestPath:        "../../../config/ai-shadow-issuer-boundary-challenge-v2.json",
+		LockPath:            "../../../config/ai-shadow-issuer-boundary-challenge-input-fingerprints-v2.json",
+		FreezePath:          "../../../config/ai-shadow-issuer-boundary-challenge-freeze-v2.json",
+		ManifestVersion:     "ai-shadow-issuer-boundary-challenge-v2",
+		LockVersion:         "ai-shadow-issuer-boundary-challenge-input-fingerprints-v2",
+		FreezeVersion:       "ai-shadow-issuer-boundary-challenge-freeze-v2",
+		IDPrefix:            "issuer-boundary-v2-",
+		CaseCount:           32,
+		MappingDistribution: map[string]int{"DIRECT": 14, "PROXY": 5, "UNRESOLVED": 13},
+		CategoryDistribution: map[string]int{
+			"ambiguous_unknown_identity": 2, "beneficiary_subject_distinction": 2,
+			"clear_causal_direct": 2, "direct_plus_sector_effect": 2,
+			"equal_causality_multi_issuer": 2, "high_relevance_noncausal_mention": 2,
+			"historical_contextual_mention": 2, "incidental_entity_extraction": 2,
+			"low_medium_relevance_causal_issuer": 2, "multiple_plausible_proxies": 2,
+			"principal_proxy": 2, "principal_vs_related_exposure": 2,
+			"single_principal_among_many": 2, "supplier_customer_causal_chain": 2,
+			"victim_commentator_distinction": 2, "weak_causal_direct": 2,
+		},
+	},
 }
 
 func TestFrozenIssuerHoldoutDatasets(t *testing.T) {
@@ -141,10 +183,10 @@ func TestFrozenIssuerHoldoutDatasets(t *testing.T) {
 			if freeze.DatasetVersion != manifest.Version || freeze.CreatedAt.IsZero() {
 				t.Fatalf("incomplete freeze identity: %+v", freeze)
 			}
-			if spec.Name == "generalization" && strings.TrimSpace(freeze.IndependenceStatement) == "" {
+			if strings.HasPrefix(spec.Name, "generalization") && strings.TrimSpace(freeze.IndependenceStatement) == "" {
 				t.Fatal("generalization freeze lacks independence statement")
 			}
-			if spec.Name == "boundary" && strings.TrimSpace(freeze.ConstructionStatement) == "" {
+			if strings.HasPrefix(spec.Name, "boundary") && strings.TrimSpace(freeze.ConstructionStatement) == "" {
 				t.Fatal("boundary freeze lacks construction statement")
 			}
 			if !strings.Contains(freeze.MutationRule, "new version") {

@@ -1,0 +1,202 @@
+{
+  "version": "ai-shadow-issuer-boundary-challenge-v2",
+  "output_contract": "ai-shadow-output-v4-issuer-resolution",
+  "policy_version": "event-asset-resolution-v1",
+  "label_version": "issuer-recognition-adjudication-v1",
+  "adjudication_note": "Independent causal-boundary challenge v2. Labels distinguish the principal causally attributable issuer or exposure from entities that are merely named, relevant, historical, comparative, commenting, benefiting indirectly, or part of an equal-causality set. The current output contract and event-asset-resolution-v1 remain unchanged.",
+  "fingerprint": "4567c371d1a376596911c97a76a8b8cb24efc6ccee376ff78485f0a79d09fdd9",
+  "events": [
+    {
+      "id": "issuer-boundary-v2-001",
+      "category": "clear_causal_direct",
+      "input": {"title":"Exxon Mobil receives approval for a carbon-storage injection well","summary":"The regulator granted Exxon Mobil the operating permit for a well the company will own and manage.","source":"Regulatory permit decision","publication_timestamp":"2026-08-14T06:00:00Z","receipt_timestamp":"2026-08-14T06:01:00Z","event_category":"company_regulatory","entities":["Exxon Mobil"],"receipt_evidence":["final permit","named operator"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Exxon Mobil Corporation","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"Exxon Mobil is the sole permit recipient and operator directly affected by the approval."}
+    },
+    {
+      "id": "issuer-boundary-v2-002",
+      "category": "clear_causal_direct",
+      "input": {"title":"Procter & Gamble quarantines output after contamination at one plant","summary":"Procter & Gamble stopped releases from its facility and began testing inventory produced on the affected line.","source":"Issuer safety statement","publication_timestamp":"2026-08-14T06:05:00Z","receipt_timestamp":"2026-08-14T06:06:00Z","event_category":"company_operations","entities":["Procter & Gamble"],"receipt_evidence":["issuer quarantine statement"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Procter & Gamble Company","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"The contamination response concerns Procter & Gamble's own plant and inventory."}
+    },
+    {
+      "id": "issuer-boundary-v2-003",
+      "category": "weak_causal_direct",
+      "input": {"title":"IBM removes a little-used visitor kiosk from its research lobby","summary":"IBM confirmed that the kiosk in its company research building will be retired at month end.","source":"Facility notice","publication_timestamp":"2026-08-14T06:10:00Z","receipt_timestamp":"2026-08-14T06:11:00Z","event_category":"company_operations","entities":["IBM"],"receipt_evidence":["company facility notice"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"International Business Machines Corporation","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"The event is commercially weak but remains a direct IBM decision about its own facility."}
+    },
+    {
+      "id": "issuer-boundary-v2-004",
+      "category": "weak_causal_direct",
+      "input": {"title":"Visa updates two optional codes in its dispute manual","summary":"Visa issued revised code descriptions for merchants using its network dispute process.","source":"Network rule bulletin","publication_timestamp":"2026-08-14T06:15:00Z","receipt_timestamp":"2026-08-14T06:16:00Z","event_category":"company_service","entities":["Visa"],"receipt_evidence":["issuer network bulletin"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Visa Inc.","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"Visa directly changed its own network manual even though the update is narrow and low materiality."}
+    },
+    {
+      "id": "issuer-boundary-v2-005",
+      "category": "high_relevance_noncausal_mention",
+      "input": {"title":"Microsoft executive warns that drought could disrupt national power supply","summary":"The executive speaks at a policy hearing, but the drought report identifies no Microsoft facility, contract, or financial effect.","source":"Parliamentary hearing transcript","publication_timestamp":"2026-08-14T06:20:00Z","receipt_timestamp":"2026-08-14T06:21:00Z","event_category":"infrastructure_policy","entities":["Microsoft"],"receipt_evidence":["expert witness attribution"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"The topic may be market-relevant, but Microsoft is only the speaker's employer and has no causal exposure in the evidence."}
+    },
+    {
+      "id": "issuer-boundary-v2-006",
+      "category": "high_relevance_noncausal_mention",
+      "input": {"title":"Emergency planners use Tesla's largest factory as an evacuation-capacity benchmark","summary":"The regional earthquake exercise uses a published headcount for scale and does not involve Tesla property or operations.","source":"Emergency planning report","publication_timestamp":"2026-08-14T06:25:00Z","receipt_timestamp":"2026-08-14T06:26:00Z","event_category":"disaster_planning","entities":["Tesla"],"receipt_evidence":["capacity comparison only"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Tesla is a size benchmark in a consequential planning exercise, not a causal subject or affected issuer."}
+    },
+    {
+      "id": "issuer-boundary-v2-007",
+      "category": "low_medium_relevance_causal_issuer",
+      "input": {"title":"Netflix relocates its prop archive to a smaller leased warehouse","summary":"Netflix signed the replacement lease and will move its own stored production props during September.","source":"Property registry notice","publication_timestamp":"2026-08-14T06:30:00Z","receipt_timestamp":"2026-08-14T06:31:00Z","event_category":"company_property","entities":["Netflix"],"receipt_evidence":["tenant lease filing"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Netflix, Inc.","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"The low-relevance warehouse move is nevertheless directly undertaken by Netflix for its own assets."}
+    },
+    {
+      "id": "issuer-boundary-v2-008",
+      "category": "low_medium_relevance_causal_issuer",
+      "input": {"title":"eBay changes the insertion fee for postage-stamp listings","summary":"eBay set a new fee for one small collectibles category on its marketplace.","source":"Seller fee schedule","publication_timestamp":"2026-08-14T06:35:00Z","receipt_timestamp":"2026-08-14T06:36:00Z","event_category":"company_service","entities":["eBay"],"receipt_evidence":["issuer fee schedule"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"eBay Inc.","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"The narrowly scoped fee is causally attributable to eBay as the marketplace operator."}
+    },
+    {
+      "id": "issuer-boundary-v2-009",
+      "category": "historical_contextual_mention",
+      "input": {"title":"Fashion exhibit recreates a Nike catalogue shoot from 1978","summary":"The museum reconstruction discusses Nike's historical advertising and reports no current company action or effect.","source":"Museum exhibition note","publication_timestamp":"2026-08-14T06:40:00Z","receipt_timestamp":"2026-08-14T06:41:00Z","event_category":"culture","entities":["Nike"],"receipt_evidence":["historical exhibit description"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Nike is a historical subject of the exhibit rather than a causally affected current issuer."}
+    },
+    {
+      "id": "issuer-boundary-v2-010",
+      "category": "historical_contextual_mention",
+      "input": {"title":"Exchange lecture revisits Coinbase's 2021 direct listing","summary":"The academic lecture uses the listing as a past market-structure case and announces no new Coinbase event.","source":"University lecture abstract","publication_timestamp":"2026-08-14T06:45:00Z","receipt_timestamp":"2026-08-14T06:46:00Z","event_category":"education","entities":["Coinbase"],"receipt_evidence":["historical case study"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"A retrospective case study does not establish current causal attribution to Coinbase."}
+    },
+    {
+      "id": "issuer-boundary-v2-011",
+      "category": "beneficiary_subject_distinction",
+      "input": {"title":"City awards Apple a grant to restore a public plaza beside its store","summary":"The signed award names Apple as recipient and requires the company to fund and manage the restoration work.","source":"Municipal grant award","publication_timestamp":"2026-08-14T06:50:00Z","receipt_timestamp":"2026-08-14T06:51:00Z","event_category":"company_award","entities":["Apple"],"receipt_evidence":["signed grant","named recipient"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Apple Inc.","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"Apple is not merely a possible beneficiary; it is the named grant recipient with direct contractual duties."}
+    },
+    {
+      "id": "issuer-boundary-v2-012",
+      "category": "beneficiary_subject_distinction",
+      "input": {"title":"Amazon listed among retailers that might gain from a proposed rural broadband fund","summary":"The draft funds network operators and offers no award, contract, or entitlement to Amazon or any retailer.","source":"Legislative impact note","publication_timestamp":"2026-08-14T06:55:00Z","receipt_timestamp":"2026-08-14T06:56:00Z","event_category":"policy_analysis","entities":["Amazon"],"receipt_evidence":["illustrative beneficiary list","draft proposal"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Amazon is only a speculative downstream beneficiary and is not directly subject to the proposed fund."}
+    },
+    {
+      "id": "issuer-boundary-v2-013",
+      "category": "victim_commentator_distinction",
+      "input": {"title":"Grid fault cuts power to Corning plant for three production days","summary":"Corning confirmed that its furnaces stopped and customer shipments from the site will be delayed.","source":"Utility incident update","publication_timestamp":"2026-08-14T07:00:00Z","receipt_timestamp":"2026-08-14T07:01:00Z","event_category":"company_disruption","entities":["Corning"],"receipt_evidence":["utility outage map","issuer shipment impact"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Corning Incorporated","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"Corning is the identified victim whose plant and shipments are directly affected by the fault."}
+    },
+    {
+      "id": "issuer-boundary-v2-014",
+      "category": "victim_commentator_distinction",
+      "input": {"title":"Ford economist explains the latest consumer-price release","summary":"Ford's economist comments on inflation methodology, while the release contains no Ford-specific cost or demand evidence.","source":"News interview","publication_timestamp":"2026-08-14T07:05:00Z","receipt_timestamp":"2026-08-14T07:06:00Z","event_category":"macro_commentary","entities":["Ford"],"receipt_evidence":["commentator affiliation"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Ford is the commentator's affiliation and is not shown to be a victim or direct subject of the price release."}
+    },
+    {
+      "id": "issuer-boundary-v2-015",
+      "category": "supplier_customer_causal_chain",
+      "input": {"title":"Rivian delays a test fleet after NVIDIA pauses delivery of control modules","summary":"Rivian states that its own test programme will slip; NVIDIA's temporary module pause is identified as the upstream cause.","source":"Customer programme update","publication_timestamp":"2026-08-14T07:10:00Z","receipt_timestamp":"2026-08-14T07:11:00Z","event_category":"supply_chain","entities":["Rivian","NVIDIA"],"receipt_evidence":["Rivian schedule impact","upstream cause statement"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Rivian Automotive, Inc.","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"Rivian is the principal affected issuer and subject of the schedule event; NVIDIA is the identified upstream cause."}
+    },
+    {
+      "id": "issuer-boundary-v2-016",
+      "category": "supplier_customer_causal_chain",
+      "input": {"title":"Battery supplier warns of delays to unnamed Tesla and Ford programmes","summary":"The supplier does not identify an affected model, allocation, contract value, or which customer will bear the delay.","source":"Private supplier notice","publication_timestamp":"2026-08-14T07:15:00Z","receipt_timestamp":"2026-08-14T07:16:00Z","event_category":"supply_chain","entities":["Tesla","Ford"],"receipt_evidence":["unallocated customer warning"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Two customers are named without attributable impact, leaving neither one causal issuer nor one supported principal proxy."}
+    },
+    {
+      "id": "issuer-boundary-v2-017",
+      "category": "single_principal_among_many",
+      "input": {"title":"Microsoft buys a rail easement beside Apple and IBM offices","summary":"Microsoft is the sole purchaser in the signed deed; Apple and IBM are named only as owners of neighbouring premises.","source":"Land registry filing","publication_timestamp":"2026-08-14T07:20:00Z","receipt_timestamp":"2026-08-14T07:21:00Z","event_category":"company_property","entities":["Microsoft","Apple","IBM"],"receipt_evidence":["signed purchaser deed","adjacent-owner schedule"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Microsoft Corporation","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"Microsoft alone acquires the easement; Apple and IBM are incidental geographic identifiers."}
+    },
+    {
+      "id": "issuer-boundary-v2-018",
+      "category": "single_principal_among_many",
+      "input": {"title":"Court blocks NVIDIA accelerator sales under a patent injunction","summary":"The injunction binds NVIDIA; old AMD and IBM patents appear in the judgment only as prior-art citations.","source":"Patent court judgment","publication_timestamp":"2026-08-14T07:25:00Z","receipt_timestamp":"2026-08-14T07:26:00Z","event_category":"company_legal","entities":["NVIDIA","AMD","IBM"],"receipt_evidence":["binding NVIDIA injunction","prior-art citations"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"NVIDIA Corporation","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"NVIDIA is the only issuer bound by the sales injunction; AMD and IBM are historical patent references."}
+    },
+    {
+      "id": "issuer-boundary-v2-019",
+      "category": "equal_causality_multi_issuer",
+      "input": {"title":"Battery-supplier insolvency delays equal numbers of Ford and Tesla vehicles","summary":"The administrator confirms identical allocation shortfalls and delivery delays for both manufacturers.","source":"Supplier administrator report","publication_timestamp":"2026-08-14T07:30:00Z","receipt_timestamp":"2026-08-14T07:31:00Z","event_category":"multi_company_supply_chain","entities":["Ford","Tesla"],"receipt_evidence":["equal allocation shortfalls","matched delivery delays"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Ford and Tesla are equally affected customers, so neither can be selected as the sole causal direct issuer."}
+    },
+    {
+      "id": "issuer-boundary-v2-020",
+      "category": "equal_causality_multi_issuer",
+      "input": {"title":"Port closure strands equal container volumes for Amazon and eBay","summary":"The authority's closure notice records the same number of inaccessible customer containers for both marketplaces.","source":"Port authority incident notice","publication_timestamp":"2026-08-14T07:35:00Z","receipt_timestamp":"2026-08-14T07:36:00Z","event_category":"multi_company_disruption","entities":["Amazon","eBay"],"receipt_evidence":["equal stranded volumes","shared closure impact"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Amazon and eBay are equally affected victims of the port closure, leaving no single principal issuer."}
+    },
+    {
+      "id": "issuer-boundary-v2-021",
+      "category": "direct_plus_sector_effect",
+      "input": {"title":"Apple supplier cancellation sends electronics manufacturers lower","summary":"Apple cancelled the named component programme; the report then describes a broad decline among unrelated supplier shares.","source":"Procurement report","publication_timestamp":"2026-08-14T07:40:00Z","receipt_timestamp":"2026-08-14T07:41:00Z","event_category":"company_supply_chain","entities":["Apple"],"receipt_evidence":["Apple cancellation notice","secondary sector reaction"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Apple Inc.","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"Apple's procurement cancellation is the directly attributable event; the sector move is a secondary broad effect."}
+    },
+    {
+      "id": "issuer-boundary-v2-022",
+      "category": "direct_plus_sector_effect",
+      "input": {"title":"Humana raises its cost forecast and managed-care shares retreat","summary":"Humana issued the company forecast that anchors the report; peers are discussed only as a subsequent market reaction.","source":"Issuer forecast update","publication_timestamp":"2026-08-14T07:45:00Z","receipt_timestamp":"2026-08-14T07:46:00Z","event_category":"company_financial","entities":["Humana"],"receipt_evidence":["issuer forecast","secondary peer reaction"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Humana Inc.","proxy_exposure":"NONE","expected_resolution_status":"resolved","rationale":"Humana is the principal issuer causing the reportable event, while the broader sector move is secondary."}
+    },
+    {
+      "id": "issuer-boundary-v2-023",
+      "category": "principal_proxy",
+      "input": {"title":"Crude export embargo removes ten percent of seaborne oil supply","summary":"The embargo concerns the global petroleum market and identifies no listed producer, shipper, or refiner as principal.","source":"Government sanctions notice","publication_timestamp":"2026-08-14T07:50:00Z","receipt_timestamp":"2026-08-14T07:51:00Z","event_category":"oil_market","entities":[],"receipt_evidence":["official embargo","market-wide supply estimate"]},
+      "adjudicated_label": {"mapping_status":"PROXY","direct_issuer":"","proxy_exposure":"OIL_CATEGORY","expected_resolution_status":"resolved","rationale":"There is no directly attributable issuer and oil is the single bounded principal exposure."}
+    },
+    {
+      "id": "issuer-boundary-v2-024",
+      "category": "principal_proxy",
+      "input": {"title":"Federal Reserve adopts a standing repo floor for Treasury markets","summary":"The official facility decision concerns US rates and duration without naming a traded company.","source":"Federal Reserve","publication_timestamp":"2026-08-14T07:55:00Z","receipt_timestamp":"2026-08-14T07:56:00Z","event_category":"macro_rates","entities":["Federal Reserve"],"receipt_evidence":["official Federal Reserve decision"]},
+      "adjudicated_label": {"mapping_status":"PROXY","direct_issuer":"","proxy_exposure":"FEDERAL_RESERVE_OFFICIAL","expected_resolution_status":"resolved","rationale":"The official central-bank action has one supported principal duration exposure and no causal company issuer."}
+    },
+    {
+      "id": "issuer-boundary-v2-025",
+      "category": "multiple_plausible_proxies",
+      "input": {"title":"Risk shock drives equal record moves in gold and the S&P 500","summary":"The report assigns equal weight to a gold-market surge and an S&P 500 decline, with no common principal market selected.","source":"Cross-market bulletin","publication_timestamp":"2026-08-14T08:00:00Z","receipt_timestamp":"2026-08-14T08:01:00Z","event_category":"cross_asset_markets","entities":["gold market","S&P 500"],"receipt_evidence":["equal headline treatment"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Two bounded proxies are equally plausible and the evidence does not justify choosing one principal exposure."}
+    },
+    {
+      "id": "issuer-boundary-v2-026",
+      "category": "multiple_plausible_proxies",
+      "input": {"title":"Inflation report accelerates as fuel costs rise modestly","summary":"The official release is principally a broad consumer-price update; oil is mentioned only as one small component of the basket.","source":"National statistics release","publication_timestamp":"2026-08-14T08:05:00Z","receipt_timestamp":"2026-08-14T08:06:00Z","event_category":"inflation","entities":[],"receipt_evidence":["official inflation release","component contribution table"]},
+      "adjudicated_label": {"mapping_status":"PROXY","direct_issuer":"","proxy_exposure":"US_RATES_CATEGORY","expected_resolution_status":"resolved","rationale":"US inflation is the principal event and supports the rates proxy; the oil-related component is secondary rather than co-principal."}
+    },
+    {
+      "id": "issuer-boundary-v2-027",
+      "category": "incidental_entity_extraction",
+      "input": {"title":"Apple growers approve a new orchard irrigation timetable","summary":"The agricultural cooperative is discussing the fruit crop and no technology company or financial market is involved.","source":"Agricultural cooperative minutes","publication_timestamp":"2026-08-14T08:10:00Z","receipt_timestamp":"2026-08-14T08:11:00Z","event_category":"agriculture","entities":["Apple"],"receipt_evidence":["crop context"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Apple is an incidental crop term, not an issuer identity or a causal market exposure."}
+    },
+    {
+      "id": "issuer-boundary-v2-028",
+      "category": "incidental_entity_extraction",
+      "input": {"title":"Visa processing times shortened for visiting researchers","summary":"The immigration office changed travel-document processing and the notice contains no payment-network context.","source":"Immigration service notice","publication_timestamp":"2026-08-14T08:15:00Z","receipt_timestamp":"2026-08-14T08:16:00Z","event_category":"public_administration","entities":["Visa"],"receipt_evidence":["travel document context"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Visa denotes a travel document and cannot be attributed to Visa Inc. or a supported proxy."}
+    },
+    {
+      "id": "issuer-boundary-v2-029",
+      "category": "ambiguous_unknown_identity",
+      "input": {"title":"Pioneer shares jump after an exploration licence report","summary":"Several unrelated public and private businesses use the Pioneer name, and the report omits country, exchange, legal suffix, and asset location.","source":"Unattributed market flash","publication_timestamp":"2026-08-14T08:20:00Z","receipt_timestamp":"2026-08-14T08:21:00Z","event_category":"company_market_report","entities":["Pioneer"],"receipt_evidence":["ambiguous issuer name","missing jurisdiction"]},
+      "adjudicated_label": {"mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"The flash asserts a company effect but cannot identify which same-named issuer or security is causally involved."}
+    },
+    {
+      "id": "issuer-boundary-v2-030",
+      "category": "ambiguous_unknown_identity",
+      "input": {"title":"Roblox outage prevents users from joining paid experiences","summary":"Roblox confirmed that a configuration error in its own platform caused the service interruption.","source":"Issuer status report","publication_timestamp":"2026-08-14T08:25:00Z","receipt_timestamp":"2026-08-14T08:26:00Z","event_category":"company_disruption","entities":["Roblox"],"receipt_evidence":["issuer root-cause report"]},
+      "adjudicated_label": {"mapping_status":"DIRECT","direct_issuer":"Roblox Corporation","proxy_exposure":"NONE","expected_resolution_status":"unresolved","rationale":"Roblox is a confidently identified causal issuer, but the bounded deterministic resolver does not support it."}
+    },
+    {
+      "id": "issuer-boundary-v2-031",
+      "category": "principal_vs_related_exposure",
+      "input": {"title":"New tax applies specifically to semiconductor stocks held by domestic funds","summary":"The enacted rule defines chip stocks as the affected group; the S&P 500 is cited only as a performance comparator.","source":"Tax authority guidance","publication_timestamp":"2026-08-14T08:30:00Z","receipt_timestamp":"2026-08-14T08:31:00Z","event_category":"semiconductor_sector","entities":["semiconductor stocks","S&P 500"],"receipt_evidence":["statutory affected group","benchmark comparison"]},
+      "adjudicated_label": {"mapping_status":"PROXY","direct_issuer":"","proxy_exposure":"SEMICONDUCTOR_GROUP","expected_resolution_status":"resolved","rationale":"Semiconductor stocks are the principal affected exposure; the named index is merely a comparison benchmark."}
+    },
+    {
+      "id": "issuer-boundary-v2-032",
+      "category": "principal_vs_related_exposure",
+      "input": {"title":"Gold market borrowing costs rise as oil-focused funds rebalance collateral","summary":"The report is principally about financing conditions for gold; oil funds explain flows but are not themselves the affected market.","source":"Bullion financing report","publication_timestamp":"2026-08-14T08:35:00Z","receipt_timestamp":"2026-08-14T08:36:00Z","event_category":"gold_market","entities":["gold market","oil funds"],"receipt_evidence":["gold financing rates","secondary fund-flow explanation"]},
+      "adjudicated_label": {"mapping_status":"PROXY","direct_issuer":"","proxy_exposure":"GOLD_NAMED_MARKET","expected_resolution_status":"resolved","rationale":"Gold is the principal named market exposure; oil-related funds are contextual flow sources rather than a co-principal exposure."}
+    }
+  ]
+}
