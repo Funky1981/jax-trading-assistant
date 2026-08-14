@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -244,6 +245,105 @@ func TestLunaStructuredOutputsPreflightReportsContractAndMakesZeroProviderCalls(
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestHoldoutPreflightsRequireNoCredentialAndConstructNoProvider(t *testing.T) {
+	tests := []struct {
+		profileID         string
+		experimentID      string
+		evidenceNamespace string
+		manifest          string
+		lock              string
+		freeze            string
+		cases             string
+		budget            string
+	}{
+		{
+			profileID: aishadow.DiagnosticProfileGeneralization, experimentID: aishadow.OpenAIGeneralizationExperimentID,
+			evidenceNamespace: aishadow.OpenAIGeneralizationEvidenceNamespace, manifest: "ai-shadow-issuer-generalization-holdout-v1.json",
+			lock: "ai-shadow-issuer-generalization-holdout-input-fingerprints-v1.json", freeze: "ai-shadow-issuer-generalization-holdout-freeze-v1.json",
+			cases: "48", budget: "0.20",
+		},
+		{
+			profileID: aishadow.DiagnosticProfileBoundary, experimentID: aishadow.OpenAIBoundaryExperimentID,
+			evidenceNamespace: aishadow.OpenAIBoundaryEvidenceNamespace, manifest: "ai-shadow-issuer-boundary-challenge-v1.json",
+			lock: "ai-shadow-issuer-boundary-challenge-input-fingerprints-v1.json", freeze: "ai-shadow-issuer-boundary-challenge-freeze-v1.json",
+			cases: "24", budget: "0.10",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.profileID, func(t *testing.T) {
+			values := hostedStructuredOutputsCommandValues()
+			delete(values, aishadow.OpenAIDiagnosticAPIKeyEnv)
+			values["JAX_AI_EXPERIMENT_ID"] = tt.experimentID
+			values["JAX_AI_MAX_EVENTS"] = tt.cases
+			values["JAX_AI_EXPERIMENT_BUDGET_USD"] = tt.budget
+			providerCalls := 0
+			deps := dependencies{
+				lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+				inspectModel: func(aishadow.Config) (aishadow.DiagnosticModelIdentity, error) {
+					t.Fatal("holdout preflight inspected an Ollama model")
+					return aishadow.DiagnosticModelIdentity{}, nil
+				},
+				ollamaProvider: func(aishadow.Config) aishadow.Provider {
+					t.Fatal("holdout preflight constructed an Ollama provider")
+					return nil
+				},
+				openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+					providerCalls++
+					return nil
+				},
+			}
+			root := filepath.Join("..", "..")
+			outputRoot := t.TempDir()
+			var output bytes.Buffer
+			err := run([]string{
+				"--preflight", "--evaluation-profile", tt.profileID,
+				"--manifest", filepath.Join(root, "config", tt.manifest),
+				"--fingerprint-lock", filepath.Join(root, "config", tt.lock),
+				"--freeze", filepath.Join(root, "config", tt.freeze),
+				"--asset-ruleset-file", filepath.Join(root, "config", "event-asset-resolution-v1.json"),
+				"--output-root", outputRoot,
+			}, &output, deps)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if providerCalls != 0 {
+				t.Fatalf("holdout preflight constructed provider %d times", providerCalls)
+			}
+			var result struct {
+				Status        string                        `json:"status"`
+				Profile       string                        `json:"evaluation_profile"`
+				Dataset       string                        `json:"dataset_identity"`
+				Guard         string                        `json:"causal_consistency_policy"`
+				Inference     bool                          `json:"inference"`
+				ProviderTouch bool                          `json:"provider_contact"`
+				APIKeyPresent bool                          `json:"api_key_present"`
+				Audit         aishadow.DiagnosticAuditPaths `json:"audit"`
+				AuditSHA256   string                        `json:"audit_sha256"`
+			}
+			if err := json.Unmarshal(output.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Status != "ready" || result.Profile != tt.profileID || result.Dataset != tt.profileID ||
+				result.Guard != aishadow.CausalConsistencyPolicyVersion || result.Inference || result.ProviderTouch || result.APIKeyPresent ||
+				result.Audit.RunID == "" || result.AuditSHA256 == "" {
+				t.Fatalf("incomplete credentialless holdout preflight: %+v", result)
+			}
+			if !strings.Contains(filepath.ToSlash(result.Audit.Preflight), tt.evidenceNamespace+"/"+tt.experimentID+"/preflight/") {
+				t.Fatalf("preflight evidence namespace is not isolated: %+v", result.Audit)
+			}
+			raw, err := os.ReadFile(result.Audit.Preflight)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(raw), `"cases_per_repetition": `+tt.cases) ||
+				!strings.Contains(string(raw), `"database_mutation_allowed": false`) ||
+				!strings.Contains(string(raw), `"trading_state_mutation_allowed": false`) {
+				t.Fatalf("preflight evidence lacks frozen shape or safety facts: %s", raw)
+			}
+		})
 	}
 }
 

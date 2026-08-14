@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 const (
@@ -70,31 +71,76 @@ type DiagnosticEventFingerprint struct {
 	InputFingerprint string `json:"input_fingerprint"`
 }
 
+type DiagnosticFrozenFileIdentity struct {
+	Path                string `json:"path"`
+	FileSHA256          string `json:"file_sha256"`
+	SemanticFingerprint string `json:"semantic_fingerprint"`
+}
+
+type DiagnosticFrozenPolicyIdentity struct {
+	Identity   string `json:"identity"`
+	Path       string `json:"path"`
+	FileSHA256 string `json:"file_sha256"`
+}
+
+type DiagnosticFreezeRecord struct {
+	Version                              string                         `json:"version"`
+	DatasetVersion                       string                         `json:"dataset_version"`
+	CreatedAt                            time.Time                      `json:"created_at"`
+	IndependenceStatement                string                         `json:"independence_statement,omitempty"`
+	ConstructionStatement                string                         `json:"construction_statement,omitempty"`
+	Manifest                             DiagnosticFrozenFileIdentity   `json:"manifest"`
+	InputFingerprintLock                 DiagnosticFrozenFileIdentity   `json:"input_fingerprint_lock"`
+	CaseCount                            int                            `json:"case_count"`
+	MappingStatusDistribution            map[string]int                 `json:"mapping_status_distribution"`
+	ExpectedResolutionStatusDistribution map[string]int                 `json:"expected_resolution_status_distribution"`
+	CategoryDistribution                 map[string]int                 `json:"category_distribution"`
+	Policy                               DiagnosticFrozenPolicyIdentity `json:"policy"`
+	PromptVersion                        string                         `json:"prompt_version"`
+	OutputContract                       string                         `json:"output_contract"`
+	LabelVersion                         string                         `json:"label_version"`
+	MutationRule                         string                         `json:"mutation_rule"`
+}
+
 // LoadFrozenDiagnosticManifest verifies both the exact committed file bytes
 // and the manifest's canonical content fingerprint before decoding any cases.
 func LoadFrozenDiagnosticManifest(path string, proxyExposures []string) (DiagnosticManifest, error) {
+	profile, _ := LoadDiagnosticEvaluationProfile(DiagnosticProfileOriginal)
+	return LoadFrozenDiagnosticManifestForProfile(profile, path, proxyExposures)
+}
+
+func LoadFrozenDiagnosticManifestForProfile(profile DiagnosticEvaluationProfile, path string, proxyExposures []string) (DiagnosticManifest, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return DiagnosticManifest{}, fmt.Errorf("read frozen issuer diagnostic manifest: %w", err)
 	}
 	digest := sha256.Sum256(raw)
-	if got := hex.EncodeToString(digest[:]); got != ExpectedDiagnosticManifestFileSHA256 {
-		return DiagnosticManifest{}, fmt.Errorf("frozen issuer diagnostic manifest file hash changed: got %s want %s", got, ExpectedDiagnosticManifestFileSHA256)
+	if got := hex.EncodeToString(digest[:]); got != profile.ManifestFileSHA256 {
+		return DiagnosticManifest{}, fmt.Errorf("frozen issuer diagnostic manifest file hash changed for profile %s: got %s want %s", profile.Identity, got, profile.ManifestFileSHA256)
 	}
-	manifest, err := LoadDiagnosticManifest(path, proxyExposures)
+	manifest, err := loadDiagnosticManifestForProfile(profile, raw, proxyExposures)
 	if err != nil {
 		return DiagnosticManifest{}, err
 	}
-	if manifest.Fingerprint != ExpectedDiagnosticManifestFingerprint {
-		return DiagnosticManifest{}, fmt.Errorf("frozen issuer diagnostic manifest fingerprint changed: got %s want %s", manifest.Fingerprint, ExpectedDiagnosticManifestFingerprint)
+	if manifest.Fingerprint != profile.ManifestFingerprint {
+		return DiagnosticManifest{}, fmt.Errorf("frozen issuer diagnostic manifest fingerprint changed for profile %s: got %s want %s", profile.Identity, manifest.Fingerprint, profile.ManifestFingerprint)
 	}
 	return manifest, nil
 }
 
 func LoadDiagnosticFingerprintLock(path string) (DiagnosticFingerprintLock, error) {
+	profile, _ := LoadDiagnosticEvaluationProfile(DiagnosticProfileOriginal)
+	return LoadDiagnosticFingerprintLockForProfile(profile, path)
+}
+
+func LoadDiagnosticFingerprintLockForProfile(profile DiagnosticEvaluationProfile, path string) (DiagnosticFingerprintLock, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return DiagnosticFingerprintLock{}, fmt.Errorf("read issuer diagnostic fingerprint lock: %w", err)
+	}
+	digest := sha256.Sum256(raw)
+	if got := hex.EncodeToString(digest[:]); got != profile.FingerprintLockFileSHA256 {
+		return DiagnosticFingerprintLock{}, fmt.Errorf("frozen issuer diagnostic input lock file hash changed for profile %s: got %s want %s", profile.Identity, got, profile.FingerprintLockFileSHA256)
 	}
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
 	decoder.DisallowUnknownFields()
@@ -105,13 +151,13 @@ func LoadDiagnosticFingerprintLock(path string) (DiagnosticFingerprintLock, erro
 	if err := ensureEOF(decoder); err != nil {
 		return DiagnosticFingerprintLock{}, fmt.Errorf("decode issuer diagnostic fingerprint lock: %w", err)
 	}
-	if lock.Version != DiagnosticFingerprintLockVersion || lock.ManifestFingerprint != ExpectedDiagnosticManifestFingerprint ||
+	if lock.Version != profile.FingerprintLockVersion || lock.ManifestFingerprint != profile.ManifestFingerprint ||
 		lock.PromptVersion != PromptVersion || lock.OutputContract != SchemaVersion ||
-		strings.TrimSpace(lock.PolicyVersion) == "" || len(lock.Events) != diagnosticEventCount {
+		strings.TrimSpace(lock.PolicyVersion) == "" || len(lock.Events) != profile.CaseCount {
 		return DiagnosticFingerprintLock{}, fmt.Errorf("issuer diagnostic fingerprint lock has incompatible metadata or event count")
 	}
 	want, err := diagnosticFingerprintLockFingerprint(lock)
-	if err != nil || lock.Fingerprint != want {
+	if err != nil || lock.Fingerprint != want || lock.Fingerprint != profile.FingerprintLockFingerprint {
 		return DiagnosticFingerprintLock{}, fmt.Errorf("corrupted issuer diagnostic fingerprint lock: want %s", want)
 	}
 	seen := map[string]bool{}
@@ -140,10 +186,15 @@ func diagnosticFingerprintLockFingerprint(lock DiagnosticFingerprintLock) (strin
 }
 
 func LoadDiagnosticManifest(path string, proxyExposures []string) (DiagnosticManifest, error) {
+	profile, _ := LoadDiagnosticEvaluationProfile(DiagnosticProfileOriginal)
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return DiagnosticManifest{}, fmt.Errorf("read issuer diagnostic manifest: %w", err)
 	}
+	return loadDiagnosticManifestForProfile(profile, raw, proxyExposures)
+}
+
+func loadDiagnosticManifestForProfile(profile DiagnosticEvaluationProfile, raw []byte, proxyExposures []string) (DiagnosticManifest, error) {
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
 	decoder.DisallowUnknownFields()
 	var manifest DiagnosticManifest
@@ -153,21 +204,26 @@ func LoadDiagnosticManifest(path string, proxyExposures []string) (DiagnosticMan
 	if err := ensureEOF(decoder); err != nil {
 		return DiagnosticManifest{}, fmt.Errorf("decode issuer diagnostic manifest: %w", err)
 	}
-	if err := ValidateDiagnosticManifest(manifest, proxyExposures); err != nil {
+	if err := ValidateDiagnosticManifestForProfile(profile, manifest, proxyExposures); err != nil {
 		return DiagnosticManifest{}, err
 	}
 	return manifest, nil
 }
 
 func ValidateDiagnosticManifest(manifest DiagnosticManifest, proxyExposures []string) error {
-	if manifest.Version != DiagnosticManifestVersion || manifest.OutputContract != SchemaVersion || manifest.LabelVersion != DiagnosticLabelVersion {
+	profile, _ := LoadDiagnosticEvaluationProfile(DiagnosticProfileOriginal)
+	return ValidateDiagnosticManifestForProfile(profile, manifest, proxyExposures)
+}
+
+func ValidateDiagnosticManifestForProfile(profile DiagnosticEvaluationProfile, manifest DiagnosticManifest, proxyExposures []string) error {
+	if manifest.Version != profile.ManifestVersion || manifest.OutputContract != SchemaVersion || manifest.LabelVersion != DiagnosticLabelVersion {
 		return fmt.Errorf("issuer diagnostic manifest has incompatible version metadata")
 	}
 	if strings.TrimSpace(manifest.PolicyVersion) == "" || strings.TrimSpace(manifest.AdjudicationNote) == "" {
 		return fmt.Errorf("issuer diagnostic manifest requires policy and adjudication provenance")
 	}
-	if len(manifest.Events) != diagnosticEventCount {
-		return fmt.Errorf("issuer diagnostic manifest requires exactly %d events", diagnosticEventCount)
+	if len(manifest.Events) != profile.CaseCount {
+		return fmt.Errorf("issuer diagnostic profile %s requires exactly %d events", profile.Identity, profile.CaseCount)
 	}
 	wantFingerprint, err := diagnosticManifestFingerprint(manifest)
 	if err != nil || manifest.Fingerprint != wantFingerprint {
@@ -177,18 +233,14 @@ func ValidateDiagnosticManifest(manifest DiagnosticManifest, proxyExposures []st
 	for _, exposure := range proxyExposures {
 		allowedExposures[exposure] = true
 	}
-	allowedCategories := map[string]bool{}
 	categoryCounts := map[string]int{}
-	for _, category := range diagnosticCategories {
-		allowedCategories[category] = true
-	}
 	seen := map[string]bool{}
 	for _, event := range manifest.Events {
 		if strings.TrimSpace(event.ID) == "" || seen[event.ID] {
 			return fmt.Errorf("issuer diagnostic manifest contains an empty or duplicate event id")
 		}
 		seen[event.ID] = true
-		if !allowedCategories[event.Category] {
+		if _, allowed := profile.CategoryCounts[event.Category]; !allowed {
 			return fmt.Errorf("issuer diagnostic event %s has unsupported category %q", event.ID, event.Category)
 		}
 		categoryCounts[event.Category]++
@@ -199,12 +251,43 @@ func ValidateDiagnosticManifest(manifest DiagnosticManifest, proxyExposures []st
 			return fmt.Errorf("issuer diagnostic event %s: %w", event.ID, err)
 		}
 	}
-	for _, category := range diagnosticCategories {
-		if categoryCounts[category] != diagnosticEventCount/len(diagnosticCategories) {
-			return fmt.Errorf("issuer diagnostic category %s requires %d events", category, diagnosticEventCount/len(diagnosticCategories))
+	for category, expected := range profile.CategoryCounts {
+		if categoryCounts[category] != expected {
+			return fmt.Errorf("issuer diagnostic category %s requires %d events", category, expected)
 		}
 	}
 	return nil
+}
+
+func LoadDiagnosticFreezeRecord(profile DiagnosticEvaluationProfile, path string) (DiagnosticFreezeRecord, error) {
+	if !profile.isHoldout() || profile.FreezeVersion == "" || profile.FreezeFileSHA256 == "" {
+		return DiagnosticFreezeRecord{}, fmt.Errorf("diagnostic profile %s has no registered freeze record", profile.Identity)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return DiagnosticFreezeRecord{}, fmt.Errorf("read issuer diagnostic freeze record: %w", err)
+	}
+	digest := sha256.Sum256(raw)
+	if got := hex.EncodeToString(digest[:]); got != profile.FreezeFileSHA256 {
+		return DiagnosticFreezeRecord{}, fmt.Errorf("frozen issuer diagnostic freeze file hash changed for profile %s: got %s want %s", profile.Identity, got, profile.FreezeFileSHA256)
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.DisallowUnknownFields()
+	var freeze DiagnosticFreezeRecord
+	if err := decoder.Decode(&freeze); err != nil {
+		return DiagnosticFreezeRecord{}, fmt.Errorf("decode issuer diagnostic freeze record: %w", err)
+	}
+	if err := ensureEOF(decoder); err != nil {
+		return DiagnosticFreezeRecord{}, fmt.Errorf("decode issuer diagnostic freeze record: %w", err)
+	}
+	if freeze.Version != profile.FreezeVersion || freeze.DatasetVersion != profile.ManifestVersion || freeze.CaseCount != profile.CaseCount ||
+		freeze.Manifest.FileSHA256 != profile.ManifestFileSHA256 || freeze.Manifest.SemanticFingerprint != profile.ManifestFingerprint ||
+		freeze.InputFingerprintLock.FileSHA256 != profile.FingerprintLockFileSHA256 || freeze.InputFingerprintLock.SemanticFingerprint != profile.FingerprintLockFingerprint ||
+		freeze.Policy.Identity != "event-asset-resolution-v1" || freeze.Policy.FileSHA256 != expectedAssetRulesetFileSHA256 ||
+		freeze.PromptVersion != PromptVersion || freeze.OutputContract != SchemaVersion || freeze.LabelVersion != DiagnosticLabelVersion || freeze.CreatedAt.IsZero() {
+		return DiagnosticFreezeRecord{}, fmt.Errorf("issuer diagnostic freeze record does not match registered profile %s", profile.Identity)
+	}
+	return freeze, nil
 }
 
 func validateDiagnosticLabel(label DiagnosticLabel, allowedExposures map[string]bool) error {
@@ -242,6 +325,15 @@ func diagnosticManifestFingerprint(manifest DiagnosticManifest) (string, error) 
 		AdjudicationNote string            `json:"adjudication_note"`
 		Events           []DiagnosticEvent `json:"events"`
 	}{manifest.Version, manifest.OutputContract, manifest.PolicyVersion, manifest.LabelVersion, manifest.AdjudicationNote, manifest.Events})
+}
+
+func diagnosticFileSHA256(path string) (string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read frozen diagnostic file: %w", err)
+	}
+	digest := sha256.Sum256(raw)
+	return hex.EncodeToString(digest[:]), nil
 }
 
 const (

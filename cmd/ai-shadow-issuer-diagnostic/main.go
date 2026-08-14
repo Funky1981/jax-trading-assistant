@@ -14,11 +14,9 @@ import (
 )
 
 const (
-	defaultDiagnosticManifestPath = "config/ai-shadow-issuer-diagnostic-manifest-v1.json"
-	defaultFingerprintLockPath    = "config/ai-shadow-issuer-diagnostic-input-fingerprints-v1.json"
-	defaultAssetRulesetPath       = "config/event-asset-resolution-v1.json"
-	defaultDiagnosticOutputRoot   = ".runtime/diagnostics/ai-shadow-issuer"
-	defaultHostedOutputRoot       = ".runtime/diagnostics/ai-shadow-issuer-hosted"
+	defaultAssetRulesetPath     = "config/event-asset-resolution-v1.json"
+	defaultDiagnosticOutputRoot = ".runtime/diagnostics/ai-shadow-issuer"
+	defaultHostedOutputRoot     = ".runtime/diagnostics/ai-shadow-issuer-hosted"
 )
 
 type dependencies struct {
@@ -49,8 +47,10 @@ func main() {
 func run(args []string, output io.Writer, deps dependencies) error {
 	flags := flag.NewFlagSet("ai-shadow-issuer-diagnostic", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
-	manifestPath := flags.String("manifest", defaultDiagnosticManifestPath, "frozen issuer diagnostic manifest")
-	fingerprintLockPath := flags.String("fingerprint-lock", defaultFingerprintLockPath, "frozen per-event input fingerprint lock")
+	evaluationProfileID := flags.String("evaluation-profile", aishadow.DiagnosticProfileOriginal, "registered frozen issuer diagnostic evaluation profile")
+	manifestPath := flags.String("manifest", "", "frozen issuer diagnostic manifest (registered profile default when omitted)")
+	fingerprintLockPath := flags.String("fingerprint-lock", "", "frozen per-event input fingerprint lock (registered profile default when omitted)")
+	freezePath := flags.String("freeze", "", "frozen evaluation metadata (registered holdout profile default when omitted)")
 	assetRulesetPath := flags.String("asset-ruleset-file", defaultAssetRulesetPath, "deterministic issuer resolution policy")
 	outputRoot := flags.String("output-root", "", "append-only diagnostic audit root (provider-specific default when omitted)")
 	preflight := flags.Bool("preflight", false, "perform all non-Ollama checks and write an audit artifact")
@@ -61,7 +61,20 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	if *preflight == *execute {
 		return fmt.Errorf("choose exactly one of --preflight or --execute")
 	}
-	executionShape, err := aishadow.LoadDiagnosticRepetitionSelection(deps.lookup)
+	profile, err := aishadow.LoadDiagnosticEvaluationProfile(*evaluationProfileID)
+	if err != nil {
+		return err
+	}
+	if *manifestPath == "" {
+		*manifestPath = profile.ManifestPath
+	}
+	if *fingerprintLockPath == "" {
+		*fingerprintLockPath = profile.FingerprintLockPath
+	}
+	if *freezePath == "" {
+		*freezePath = profile.FreezePath
+	}
+	executionShape, err := aishadow.LoadDiagnosticRepetitionSelectionForProfile(deps.lookup, profile)
 	if err != nil {
 		return err
 	}
@@ -74,14 +87,18 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		return fmt.Errorf("missing required AI shadow configuration: JAX_AI_PROVIDER")
 	}
 	providerName := strings.ToLower(strings.TrimSpace(providerValue))
+	if profile.RequiredProvider != "" && providerName != profile.RequiredProvider {
+		return fmt.Errorf("frozen profile %s requires provider %s", profile.Identity, profile.RequiredProvider)
+	}
 	root := *outputRoot
 	var prepared aishadow.PreparedDiagnostic
 	var config aishadow.Config
 	var hostedConfig aishadow.OpenAIDiagnosticConfig
 	var deepSeekConfig aishadow.DeepSeekDiagnosticConfig
 	paths := aishadow.DiagnosticPaths{
-		ManifestPath: *manifestPath, FingerprintLockPath: *fingerprintLockPath,
-		AssetRulesetPath: *assetRulesetPath,
+		EvaluationProfileID: profile.Identity,
+		ManifestPath:        *manifestPath, FingerprintLockPath: *fingerprintLockPath,
+		FreezePath: *freezePath, AssetRulesetPath: *assetRulesetPath,
 	}
 	diagnosticSafety := aishadow.DiagnosticSafetyState{
 		RuntimeMode: safety.RuntimeMode, AllowLiveTrading: safety.AllowLiveTrading,
@@ -99,14 +116,18 @@ func run(args []string, output io.Writer, deps dependencies) error {
 			prepared, err = aishadow.PrepareDiagnostic(paths, config, diagnosticSafety)
 		}
 	case aishadow.OpenAIDiagnosticProvider:
-		hostedConfig, err = aishadow.LoadOpenAIDiagnosticConfig(deps.lookup)
+		requireCredential := !*preflight || !profile.CredentiallessPreflightAllowed
+		hostedConfig, err = aishadow.LoadOpenAIDiagnosticConfigForProfile(deps.lookup, profile, requireCredential)
 		if root == "" {
 			root = defaultHostedOutputRoot
 		}
 		if err == nil {
 			paths.OutputRoot = filepath.Join(root, hostedConfig.EvidenceNamespace(), hostedConfig.ExperimentID)
 		}
-		if err == nil {
+		if err == nil && *preflight && profile.CredentiallessPreflightAllowed {
+			config = hostedConfig.Runtime
+			prepared, err = aishadow.PrepareHostedDiagnosticPreflight(paths, hostedConfig, diagnosticSafety)
+		} else if err == nil {
 			config = hostedConfig.Runtime
 			prepared, err = aishadow.PrepareHostedDiagnostic(paths, hostedConfig, diagnosticSafety)
 		}
@@ -142,7 +163,9 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		}
 		result := map[string]any{
 			"status": "ready", "inference": false, "provider_contact": false, "ollama_contact": false,
-			"provider": prepared.Plan.ModelConfiguration.Provider, "model": prepared.Plan.ModelConfiguration.Model,
+			"evaluation_profile": prepared.Plan.EvaluationProfile, "dataset_identity": prepared.Plan.DatasetIdentity,
+			"causal_consistency_policy": prepared.Plan.CausalConsistencyPolicy,
+			"provider":                  prepared.Plan.ModelConfiguration.Provider, "model": prepared.Plan.ModelConfiguration.Model,
 			"requested_model": prepared.Plan.ModelConfiguration.Model, "reasoning": prepared.Plan.ModelConfiguration.ReasoningEffort,
 			"events": prepared.Plan.CasesPerRepetition, "cases_per_repetition": prepared.Plan.CasesPerRepetition, "repetitions": prepared.Plan.Repetitions,
 			"requested_repetitions":        prepared.Plan.ExecutionShape.RequestedRepetitions,

@@ -317,7 +317,7 @@ func TestPrepareDiagnosticRejectsManifestAndInputFingerprintMismatch(t *testing.
 	if err := os.WriteFile(paths.FingerprintLockPath, raw, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := PrepareDiagnostic(paths, diagnosticTestConfig(), diagnosticTestSafety()); err == nil || !strings.Contains(err.Error(), "input fingerprint changed") {
+	if _, err := PrepareDiagnostic(paths, diagnosticTestConfig(), diagnosticTestSafety()); err == nil || !strings.Contains(err.Error(), "input lock file hash changed") {
 		t.Fatalf("changed EventInput fingerprint was not rejected: %v", err)
 	}
 }

@@ -81,11 +81,19 @@ type OpenAIDiagnosticConfig struct {
 }
 
 func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagnosticConfig, error) {
+	profile, _ := LoadDiagnosticEvaluationProfile(DiagnosticProfileOriginal)
+	return LoadOpenAIDiagnosticConfigForProfile(lookup, profile, true)
+}
+
+func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), profile DiagnosticEvaluationProfile, requireCredential bool) (OpenAIDiagnosticConfig, error) {
 	required := []string{
 		"JAX_AI_SHADOW_ENABLED", "JAX_AI_PROVIDER", "JAX_AI_MODEL", "JAX_AI_TIMEOUT_SECONDS", "JAX_AI_MAX_EVENTS",
-		OpenAIDiagnosticAPIKeyEnv, "JAX_AI_EXPERIMENT_ID", "JAX_AI_REASONING_EFFORT", "JAX_AI_MAX_OUTPUT_TOKENS",
+		"JAX_AI_EXPERIMENT_ID", "JAX_AI_REASONING_EFFORT", "JAX_AI_MAX_OUTPUT_TOKENS",
 		"JAX_AI_EXPERIMENT_BUDGET_USD", "JAX_AI_INPUT_PRICE_USD_PER_MILLION_TOKENS", "JAX_AI_OUTPUT_PRICE_USD_PER_MILLION_TOKENS",
 		"JAX_AI_CACHED_INPUT_PRICE_USD_PER_MILLION_TOKENS", "JAX_AI_CACHE_WRITE_PRICE_USD_PER_MILLION_TOKENS",
+	}
+	if requireCredential {
+		required = append(required, OpenAIDiagnosticAPIKeyEnv)
 	}
 	values := make(map[string]string, len(required))
 	for _, key := range required {
@@ -117,6 +125,13 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 	if err := validateOpenAIExperimentCell(experimentID, model, contractMode); err != nil {
 		return OpenAIDiagnosticConfig{}, err
 	}
+	if profile.RequiredProvider != "" && (profile.RequiredProvider != OpenAIDiagnosticProvider || profile.RequiredModel != model ||
+		profile.RequiredExperimentID != experimentID || profile.RequiredOutputContractMode != contractMode) {
+		return OpenAIDiagnosticConfig{}, fmt.Errorf("frozen profile %s requires provider=%s model=%s experiment=%s contract=%s", profile.Identity, profile.RequiredProvider, profile.RequiredModel, profile.RequiredExperimentID, profile.RequiredOutputContractMode)
+	}
+	if !requireCredential && !profile.CredentiallessPreflightAllowed {
+		return OpenAIDiagnosticConfig{}, fmt.Errorf("frozen profile %s does not allow credentialless preflight", profile.Identity)
+	}
 	if values["JAX_AI_REASONING_EFFORT"] != OpenAIDiagnosticReasoningEffort {
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("OpenAI issuer diagnostic requires JAX_AI_REASONING_EFFORT=%s", OpenAIDiagnosticReasoningEffort)
 	}
@@ -125,8 +140,8 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("JAX_AI_TIMEOUT_SECONDS must be between 1 and 600")
 	}
 	maxEvents, err := strconv.Atoi(values["JAX_AI_MAX_EVENTS"])
-	if err != nil || maxEvents != diagnosticEventCount {
-		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_MAX_EVENTS=%d", diagnosticEventCount)
+	if err != nil || maxEvents != profile.CaseCount {
+		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic profile %s requires JAX_AI_MAX_EVENTS=%d", profile.Identity, profile.CaseCount)
 	}
 	maxOutputTokens, err := strconv.Atoi(values["JAX_AI_MAX_OUTPUT_TOKENS"])
 	if err != nil || maxOutputTokens < 1 || maxOutputTokens > 4096 {
@@ -134,6 +149,9 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 	}
 	budget, err := parseUSDMicros(values["JAX_AI_EXPERIMENT_BUDGET_USD"])
 	maximumBudget := openAIDiagnosticMaximumBudgetMicros(model, experimentID)
+	if profile.MaximumBudgetMicros > 0 {
+		maximumBudget = profile.MaximumBudgetMicros
+	}
 	if err != nil || budget <= 0 || budget > maximumBudget {
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("JAX_AI_EXPERIMENT_BUDGET_USD must be positive and no greater than %s for %s", formatUSDMicros(maximumBudget), model)
 	}
@@ -181,7 +199,7 @@ func validateOpenAIExperimentCell(experimentID, model string, mode OpenAIOutputC
 		if mode != OpenAIOutputContractPromptOnly {
 			return fmt.Errorf("existing OpenAI A1 cell requires %s=%s", OpenAIDiagnosticContractModeEnv, OpenAIOutputContractPromptOnly)
 		}
-	case OpenAIStructuredOutputsExperimentID:
+	case OpenAIStructuredOutputsExperimentID, OpenAIGeneralizationExperimentID, OpenAIBoundaryExperimentID:
 		if model != OpenAIDiagnosticLunaModel || mode != OpenAIOutputContractStrictJSONSchema {
 			return fmt.Errorf("%s requires model=%s and %s=%s", OpenAIStructuredOutputsExperimentID, OpenAIDiagnosticLunaModel, OpenAIDiagnosticContractModeEnv, OpenAIOutputContractStrictJSONSchema)
 		}
@@ -196,7 +214,10 @@ func supportedOpenAIDiagnosticModel(model string) bool {
 }
 
 func openAIDiagnosticMaximumBudgetMicros(model, experimentID string) int64 {
-	if experimentID == OpenAIStructuredOutputsExperimentID {
+	if experimentID == OpenAIBoundaryExperimentID {
+		return 100_000
+	}
+	if experimentID == OpenAIStructuredOutputsExperimentID || experimentID == OpenAIGeneralizationExperimentID {
 		return OpenAIStructuredOutputsMaximumBudgetMicros
 	}
 	if model == OpenAIDiagnosticLunaModel {
@@ -206,8 +227,13 @@ func openAIDiagnosticMaximumBudgetMicros(model, experimentID string) int64 {
 }
 
 func (c OpenAIDiagnosticConfig) EvidenceNamespace() string {
-	if c.ExperimentID == OpenAIStructuredOutputsExperimentID {
+	switch c.ExperimentID {
+	case OpenAIStructuredOutputsExperimentID:
 		return OpenAIStructuredOutputsEvidenceNamespace
+	case OpenAIGeneralizationExperimentID:
+		return OpenAIGeneralizationEvidenceNamespace
+	case OpenAIBoundaryExperimentID:
+		return OpenAIBoundaryEvidenceNamespace
 	}
 	return OpenAIDiagnosticEvidenceNamespace
 }
@@ -224,7 +250,7 @@ func (c OpenAIDiagnosticConfig) StructuredOutputsEnabled() bool {
 }
 
 func (c OpenAIDiagnosticConfig) ServiceTier() string {
-	if c.ExperimentID == OpenAIStructuredOutputsExperimentID && c.StructuredOutputsEnabled() {
+	if (c.ExperimentID == OpenAIStructuredOutputsExperimentID || c.ExperimentID == OpenAIGeneralizationExperimentID || c.ExperimentID == OpenAIBoundaryExperimentID) && c.StructuredOutputsEnabled() {
 		return OpenAIStructuredOutputsServiceTier
 	}
 	return ""
