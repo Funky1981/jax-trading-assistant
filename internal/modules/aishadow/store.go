@@ -104,7 +104,10 @@ func persistedResultJSON(result EventResult) (any, error) {
 	if result.Resolution == nil || result.Resolution.PolicyVersion == "" {
 		return nil, fmt.Errorf("AI shadow v4 result requires deterministic policy provenance")
 	}
-	payload := V4PersistedResult{ModelOutput: *result.Parsed, DeterministicResolution: *result.Resolution}
+	if result.CausalGuard == nil || result.CausalGuard.PolicyVersion == "" {
+		return nil, fmt.Errorf("AI shadow v4 result requires causal-consistency policy provenance")
+	}
+	payload := V4PersistedResult{ModelOutput: *result.Parsed, CausalConsistencyGuard: result.CausalGuard, DeterministicResolution: *result.Resolution}
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal AI shadow result: %w", err)

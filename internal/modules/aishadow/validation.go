@@ -18,10 +18,17 @@ var requiredResultFields = []string{
 }
 
 func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Resolver) (*StructuredResult, *PolicyResolution, []string) {
+	result, _, resolution, errors := ParseValidateAndGuard(raw, input, resolver)
+	return result, resolution, errors
+}
+
+// ParseValidateAndGuard validates the canonical provider output, applies the
+// causal-consistency policy, and only then invokes deterministic resolution.
+func ParseValidateAndGuard(raw string, input EventInput, resolver assetresolution.Resolver) (*StructuredResult, *CausalConsistencyDecision, *PolicyResolution, []string) {
 	errors := []string{}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(raw), &fields); err != nil {
-		return nil, nil, []string{"invalid JSON: " + err.Error()}
+		return nil, nil, nil, []string{"invalid JSON: " + err.Error()}
 	}
 	for _, field := range requiredResultFields {
 		if _, ok := fields[field]; !ok {
@@ -43,7 +50,7 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 	var result StructuredResult
 	if err := decoder.Decode(&result); err != nil {
 		errors = append(errors, "schema decode: "+err.Error())
-		return nil, nil, uniqueSorted(errors)
+		return nil, nil, nil, uniqueSorted(errors)
 	}
 	if err := ensureEOF(decoder); err != nil {
 		errors = append(errors, err.Error())
@@ -86,7 +93,6 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 			errors = append(errors, fmt.Sprintf("missing_evidence[%d] must contain 1 to 160 characters", index))
 		}
 	}
-	var resolution *PolicyResolution
 	switch result.MappingStatus {
 	case "DIRECT":
 		if issuerLength == 0 {
@@ -98,16 +104,8 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 		if result.MappingConfidence == "LOW" {
 			errors = append(errors, "DIRECT mapping requires HIGH or MEDIUM mapping_confidence")
 		}
-		if issuerLength > 0 {
-			resolved := resolver.ResolveIssuer(assetresolution.IssuerInput{
-				IssuerName: result.DirectIssuer, PublicationAt: input.PublicationTimestamp, ReceiptAt: input.ReceiptTimestamp,
-			})
-			if resolved.Status == assetresolution.StatusRejected {
-				errors = append(errors, resolved.Reason)
-			} else {
-				value := newPolicyResolution(resolved, result.DirectIssuer)
-				resolution = &value
-			}
+		if input.PublicationTimestamp.IsZero() || input.ReceiptTimestamp.IsZero() || input.PublicationTimestamp.After(input.ReceiptTimestamp) {
+			errors = append(errors, "issuer resolution requires valid receipt-time publication and receipt anchors")
 		}
 	case "PROXY":
 		if result.DirectIssuer != "" {
@@ -115,11 +113,8 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 		}
 		if result.ProxyExposure == NoProxyExposure {
 			errors = append(errors, "PROXY mapping requires a bounded proxy_exposure")
-		} else if resolved, ok := resolver.ResolveProxyExposure(result.ProxyExposure); !ok {
+		} else if !isAllowedProxyExposure(result.ProxyExposure, resolver) {
 			errors = append(errors, "proxy_exposure is not allowlisted by the active Jax policy")
-		} else {
-			value := newPolicyResolution(resolved, "")
-			resolution = &value
 		}
 	case "UNRESOLVED":
 		if result.DirectIssuer != "" {
@@ -131,13 +126,42 @@ func ParseAndValidate(raw string, input EventInput, resolver assetresolution.Res
 		if result.MappingConfidence != "LOW" {
 			errors = append(errors, "UNRESOLVED mapping requires LOW mapping_confidence")
 		}
-		value := PolicyResolution{Status: assetresolution.StatusUnresolved, PolicyVersion: resolver.Rules.Version, MappingType: "none", Relationship: "none", Reason: "model classified the receipt-time asset mapping as unresolved"}
-		resolution = &value
 	}
 	if len(errors) > 0 {
-		return nil, nil, uniqueSorted(errors)
+		return nil, nil, nil, uniqueSorted(errors)
 	}
-	return &result, resolution, nil
+	guard := ApplyCausalConsistencyGuard(result, input, resolver)
+	resolution := resolveEffectiveMapping(guard, input, resolver)
+	return &result, &guard, &resolution, nil
+}
+
+func isAllowedProxyExposure(exposure string, resolver assetresolution.Resolver) bool {
+	for _, rule := range resolver.Rules.Proxies {
+		if strings.EqualFold(strings.TrimSpace(rule.Key), strings.TrimSpace(exposure)) {
+			return true
+		}
+	}
+	return false
+}
+
+func resolveEffectiveMapping(guard CausalConsistencyDecision, input EventInput, resolver assetresolution.Resolver) PolicyResolution {
+	effective := guard.EffectiveMapping
+	switch effective.MappingStatus {
+	case "DIRECT":
+		resolved := resolver.ResolveIssuer(assetresolution.IssuerInput{
+			IssuerName: effective.DirectIssuer, PublicationAt: input.PublicationTimestamp, ReceiptAt: input.ReceiptTimestamp,
+		})
+		return newPolicyResolution(resolved, effective.DirectIssuer)
+	case "PROXY":
+		resolved, _ := resolver.ResolveProxyExposure(effective.ProxyExposure)
+		return newPolicyResolution(resolved, "")
+	default:
+		reason := "model classified the receipt-time asset mapping as unresolved"
+		if guard.Abstained {
+			reason = "causal-consistency guard abstained before deterministic asset resolution: " + strings.Join(guard.ReasonCodes, ",")
+		}
+		return PolicyResolution{Status: assetresolution.StatusUnresolved, PolicyVersion: resolver.Rules.Version, MappingType: "none", Relationship: "none", Reason: reason}
+	}
 }
 
 func newPolicyResolution(result assetresolution.Result, rawDirectIssuer string) PolicyResolution {

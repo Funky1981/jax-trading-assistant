@@ -103,6 +103,7 @@ func analyseEvent(config Config, provider Provider, resolver assetresolution.Res
 	var totalDuration time.Duration
 	var final Attempt
 	var parsed *StructuredResult
+	var causalGuard *CausalConsistencyDecision
 	var resolution *PolicyResolution
 	for number := 1; number <= 2; number++ {
 		request.EventID = eventID
@@ -121,7 +122,7 @@ func analyseEvent(config Config, provider Provider, resolver assetresolution.Res
 			failureReason = providerErr.Error()
 			validationErrors = []string{"provider request failed"}
 		} else {
-			parsed, resolution, validationErrors = ParseAndValidate(response.Content, input, resolver)
+			parsed, causalGuard, resolution, validationErrors = ParseValidateAndGuard(response.Content, input, resolver)
 		}
 		trace := ProviderTrace{
 			AttemptNumber: number, Content: response.Content, ModelIdentifier: response.ModelIdentifier,
@@ -162,5 +163,5 @@ func analyseEvent(config Config, provider Provider, resolver assetresolution.Res
 	}
 	final.RequestTimestamp = firstRequest
 	final.Duration = totalDuration
-	return EventResult{Attempt: final, ManifestVersion: manifestVersion, RetryCount: len(attempts) - 1, Parsed: parsed, Resolution: resolution}, attempts, traces, nil
+	return EventResult{Attempt: final, ManifestVersion: manifestVersion, RetryCount: len(attempts) - 1, Parsed: parsed, CausalGuard: causalGuard, Resolution: resolution}, attempts, traces, nil
 }

@@ -140,36 +140,37 @@ type DiagnosticModelIdentity struct {
 }
 
 type DiagnosticAttemptAudit struct {
-	RunID                   string            `json:"run_id"`
-	Repetition              int               `json:"repetition"`
-	CaseID                  string            `json:"case_id"`
-	Category                string            `json:"category"`
-	AttemptNumber           int               `json:"attempt_number"`
-	InputFingerprint        string            `json:"input_fingerprint"`
-	Provider                string            `json:"provider"`
-	ConfiguredModel         string            `json:"configured_model"`
-	ModelReportedIdentifier string            `json:"model_reported_identifier,omitempty"`
-	PromptVersion           string            `json:"prompt_version"`
-	OutputContract          string            `json:"output_contract"`
-	PolicyVersion           string            `json:"policy_version"`
-	Seed                    int64             `json:"seed"`
-	Temperature             float64           `json:"temperature"`
-	RequestTimestamp        time.Time         `json:"request_timestamp"`
-	ResponseTimestamp       time.Time         `json:"response_timestamp"`
-	DurationMS              int64             `json:"duration_ms"`
-	RawResponseHash         string            `json:"raw_response_hash"`
-	RawResponseBody         string            `json:"raw_response_body"`
-	ValidationStatus        string            `json:"validation_status"`
-	ValidationErrors        []string          `json:"validation_errors"`
-	FailureReason           string            `json:"failure_reason,omitempty"`
-	RequestID               string            `json:"request_id,omitempty"`
-	ResponseID              string            `json:"response_id,omitempty"`
-	ProviderStatus          string            `json:"provider_status,omitempty"`
-	SystemFingerprint       string            `json:"system_fingerprint,omitempty"`
-	FinishReason            string            `json:"finish_reason,omitempty"`
-	Usage                   ProviderUsage     `json:"usage"`
-	ModelClassification     *StructuredResult `json:"model_classification,omitempty"`
-	DeterministicResolution *PolicyResolution `json:"deterministic_resolution,omitempty"`
+	RunID                   string                     `json:"run_id"`
+	Repetition              int                        `json:"repetition"`
+	CaseID                  string                     `json:"case_id"`
+	Category                string                     `json:"category"`
+	AttemptNumber           int                        `json:"attempt_number"`
+	InputFingerprint        string                     `json:"input_fingerprint"`
+	Provider                string                     `json:"provider"`
+	ConfiguredModel         string                     `json:"configured_model"`
+	ModelReportedIdentifier string                     `json:"model_reported_identifier,omitempty"`
+	PromptVersion           string                     `json:"prompt_version"`
+	OutputContract          string                     `json:"output_contract"`
+	PolicyVersion           string                     `json:"policy_version"`
+	Seed                    int64                      `json:"seed"`
+	Temperature             float64                    `json:"temperature"`
+	RequestTimestamp        time.Time                  `json:"request_timestamp"`
+	ResponseTimestamp       time.Time                  `json:"response_timestamp"`
+	DurationMS              int64                      `json:"duration_ms"`
+	RawResponseHash         string                     `json:"raw_response_hash"`
+	RawResponseBody         string                     `json:"raw_response_body"`
+	ValidationStatus        string                     `json:"validation_status"`
+	ValidationErrors        []string                   `json:"validation_errors"`
+	FailureReason           string                     `json:"failure_reason,omitempty"`
+	RequestID               string                     `json:"request_id,omitempty"`
+	ResponseID              string                     `json:"response_id,omitempty"`
+	ProviderStatus          string                     `json:"provider_status,omitempty"`
+	SystemFingerprint       string                     `json:"system_fingerprint,omitempty"`
+	FinishReason            string                     `json:"finish_reason,omitempty"`
+	Usage                   ProviderUsage              `json:"usage"`
+	ModelClassification     *StructuredResult          `json:"model_classification,omitempty"`
+	CausalConsistencyGuard  *CausalConsistencyDecision `json:"causal_consistency_guard,omitempty"`
+	DeterministicResolution *PolicyResolution          `json:"deterministic_resolution,omitempty"`
 }
 
 type DiagnosticCaseRun struct {
@@ -658,9 +659,10 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 
 func buildDiagnosticAttemptAudit(runID string, repetition int, event DiagnosticEvent, attempt Attempt, trace ProviderTrace, resolver assetresolution.Resolver) DiagnosticAttemptAudit {
 	var parsed *StructuredResult
+	var causalGuard *CausalConsistencyDecision
 	var resolution *PolicyResolution
 	if attempt.ValidationStatus == "accepted" {
-		parsed, resolution, _ = ParseAndValidate(trace.Content, event.Input, resolver)
+		parsed, causalGuard, resolution, _ = ParseValidateAndGuard(trace.Content, event.Input, resolver)
 	}
 	return DiagnosticAttemptAudit{
 		RunID: runID, Repetition: repetition, CaseID: event.ID, Category: event.Category,
@@ -673,7 +675,7 @@ func buildDiagnosticAttemptAudit(runID string, repetition int, event DiagnosticE
 		ValidationStatus: attempt.ValidationStatus, ValidationErrors: nonNilStrings(attempt.ValidationErrors), FailureReason: attempt.FailureReason,
 		RequestID: trace.RequestID, ResponseID: trace.ResponseID, ProviderStatus: trace.Status,
 		SystemFingerprint: trace.SystemFingerprint, FinishReason: trace.FinishReason, Usage: trace.Usage,
-		ModelClassification: parsed, DeterministicResolution: resolution,
+		ModelClassification: parsed, CausalConsistencyGuard: causalGuard, DeterministicResolution: resolution,
 	}
 }
 

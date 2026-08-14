@@ -97,8 +97,9 @@ type V3PersistedResult struct {
 }
 
 type V4PersistedResult struct {
-	ModelOutput             StructuredResult `json:"model_output"`
-	DeterministicResolution PolicyResolution `json:"deterministic_resolution"`
+	ModelOutput             StructuredResult           `json:"model_output"`
+	CausalConsistencyGuard  *CausalConsistencyDecision `json:"causal_consistency_guard,omitempty"`
+	DeterministicResolution PolicyResolution           `json:"deterministic_resolution"`
 }
 
 // LegacyStructuredResult preserves the v1 representation for append-only
@@ -173,6 +174,7 @@ type EventResult struct {
 	ManifestVersion string
 	RetryCount      int
 	Parsed          *StructuredResult
+	CausalGuard     *CausalConsistencyDecision
 	Resolution      *PolicyResolution
 }
 

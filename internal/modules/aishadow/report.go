@@ -62,9 +62,10 @@ type ReviewItem struct {
 }
 
 type Example struct {
-	EventID                 string           `json:"event_id"`
-	ModelOutput             StructuredResult `json:"model_output"`
-	DeterministicResolution PolicyResolution `json:"deterministic_resolution"`
+	EventID                 string                     `json:"event_id"`
+	ModelOutput             StructuredResult           `json:"model_output"`
+	CausalConsistencyGuard  *CausalConsistencyDecision `json:"causal_consistency_guard,omitempty"`
+	DeterministicResolution PolicyResolution           `json:"deterministic_resolution"`
 }
 
 type FrozenReference struct {
@@ -74,11 +75,12 @@ type FrozenReference struct {
 }
 
 type Evaluation struct {
-	EventID                 string            `json:"event_id"`
-	ValidationStatus        string            `json:"validation_status"`
-	ModelClassification     *StructuredResult `json:"model_issuer_exposure_classification,omitempty"`
-	DeterministicResolution *PolicyResolution `json:"jax_deterministic_resolution,omitempty"`
-	FrozenReference         FrozenReference   `json:"frozen_reference"`
+	EventID                 string                     `json:"event_id"`
+	ValidationStatus        string                     `json:"validation_status"`
+	ModelClassification     *StructuredResult          `json:"model_issuer_exposure_classification,omitempty"`
+	CausalConsistencyGuard  *CausalConsistencyDecision `json:"causal_consistency_guard,omitempty"`
+	DeterministicResolution *PolicyResolution          `json:"jax_deterministic_resolution,omitempty"`
+	FrozenReference         FrozenReference            `json:"frozen_reference"`
 }
 
 type Report struct {
@@ -145,7 +147,7 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 		detType, detAsset := deterministicMapping(event)
 		report.Evaluations = append(report.Evaluations, Evaluation{
 			EventID: result.EventID, ValidationStatus: result.ValidationStatus,
-			ModelClassification: result.Parsed, DeterministicResolution: result.Resolution,
+			ModelClassification: result.Parsed, CausalConsistencyGuard: result.CausalGuard, DeterministicResolution: result.Resolution,
 			FrozenReference: FrozenReference{Decision: event.Decision, Mapping: detType, Asset: detAsset},
 		})
 		switch detType {
@@ -205,7 +207,7 @@ func BuildReport(run RunRecord, manifest Manifest, events []BenchmarkEvent, resu
 			})
 		}
 		if len(report.Examples) < 5 {
-			report.Examples = append(report.Examples, Example{EventID: event.ID, ModelOutput: output, DeterministicResolution: *result.Resolution})
+			report.Examples = append(report.Examples, Example{EventID: event.ID, ModelOutput: output, CausalConsistencyGuard: result.CausalGuard, DeterministicResolution: *result.Resolution})
 		}
 	}
 	report.MedianLatencyMS = percentile(latencies, 0.5)

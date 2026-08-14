@@ -261,8 +261,9 @@ func TestPersistedDecoderKeepsV1V2V3AndV4Distinct(t *testing.T) {
 
 func TestPersistedV4PayloadIncludesSeparatePolicyProvenance(t *testing.T) {
 	model := &StructuredResult{MarketRelevance: "HIGH", MappingStatus: "DIRECT", DirectIssuer: "Apple", ProxyExposure: "NONE", MappingConfidence: "HIGH", ExpectedHorizon: "ONE_DAY", LikelyDirection: "POSITIVE", CatalystType: "earnings", Reason: "The named issuer has a direct company catalyst.", MissingEvidence: []string{}}
+	guard := ApplyCausalConsistencyGuard(*model, testInput("Apple reports quarterly earnings", "company"), testAssetResolver(t))
 	resolution := &PolicyResolution{Status: "resolved", PolicyVersion: "event-asset-resolution-v1", RawDirectIssuer: "Apple", NormalizedIssuer: "apple", CanonicalIssuer: "Apple Inc.", MatchedAlias: "Apple", MatchedRule: "Apple Inc.", ResolvedTicker: "AAPL", MappingType: "verified_issuer_identity", Relationship: "direct", Reason: "policy mapping"}
-	raw, err := persistedResultJSON(EventResult{Attempt: Attempt{SchemaVersion: SchemaVersion}, Parsed: model, Resolution: resolution})
+	raw, err := persistedResultJSON(EventResult{Attempt: Attempt{SchemaVersion: SchemaVersion}, Parsed: model, CausalGuard: &guard, Resolution: resolution})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +271,7 @@ func TestPersistedV4PayloadIncludesSeparatePolicyProvenance(t *testing.T) {
 	if err != nil || decoded.Current == nil {
 		t.Fatalf("decode persisted payload: %v %#v", err, decoded)
 	}
-	if decoded.Current.ModelOutput.DirectIssuer != "Apple" || decoded.Current.DeterministicResolution.ResolvedTicker != "AAPL" || decoded.Current.DeterministicResolution.NormalizedIssuer != "apple" || decoded.Current.DeterministicResolution.MatchedAlias != "Apple" {
+	if decoded.Current.ModelOutput.DirectIssuer != "Apple" || decoded.Current.CausalConsistencyGuard == nil || decoded.Current.CausalConsistencyGuard.EffectiveMapping.DirectIssuer != "Apple" || decoded.Current.DeterministicResolution.ResolvedTicker != "AAPL" || decoded.Current.DeterministicResolution.NormalizedIssuer != "apple" || decoded.Current.DeterministicResolution.MatchedAlias != "Apple" {
 		t.Fatalf("model and policy fields were not separated: %#v", decoded.Current)
 	}
 }

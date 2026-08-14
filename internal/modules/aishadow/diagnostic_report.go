@@ -67,19 +67,20 @@ type DiagnosticCategoryMetrics struct {
 }
 
 type DiagnosticCaseEvaluation struct {
-	CaseID                  string            `json:"case_id"`
-	Category                string            `json:"category"`
-	ValidationStatus        string            `json:"validation_status"`
-	FirstPassValid          bool              `json:"first_pass_valid"`
-	RetryCount              int               `json:"retry_count"`
-	ModelClassification     *StructuredResult `json:"model_classification,omitempty"`
-	DeterministicResolution *PolicyResolution `json:"deterministic_resolution,omitempty"`
-	AdjudicatedLabel        DiagnosticLabel   `json:"adjudicated_label"`
-	IssuerCorrect           bool              `json:"issuer_correct"`
-	SemanticCorrect         bool              `json:"semantic_correct"`
-	ResolutionCorrect       bool              `json:"resolution_correct"`
-	FailureClass            string            `json:"failure_class,omitempty"`
-	TickerEmission          []string          `json:"ticker_emission,omitempty"`
+	CaseID                  string                     `json:"case_id"`
+	Category                string                     `json:"category"`
+	ValidationStatus        string                     `json:"validation_status"`
+	FirstPassValid          bool                       `json:"first_pass_valid"`
+	RetryCount              int                        `json:"retry_count"`
+	ModelClassification     *StructuredResult          `json:"model_classification,omitempty"`
+	CausalConsistencyGuard  *CausalConsistencyDecision `json:"causal_consistency_guard,omitempty"`
+	DeterministicResolution *PolicyResolution          `json:"deterministic_resolution,omitempty"`
+	AdjudicatedLabel        DiagnosticLabel            `json:"adjudicated_label"`
+	IssuerCorrect           bool                       `json:"issuer_correct"`
+	SemanticCorrect         bool                       `json:"semantic_correct"`
+	ResolutionCorrect       bool                       `json:"resolution_correct"`
+	FailureClass            string                     `json:"failure_class,omitempty"`
+	TickerEmission          []string                   `json:"ticker_emission,omitempty"`
 }
 
 type DiagnosticRepetitionReport struct {
@@ -238,7 +239,7 @@ func evaluateDiagnosticCase(event DiagnosticEvent, run DiagnosticCaseRun, resolv
 	evaluation := DiagnosticCaseEvaluation{
 		CaseID: event.ID, Category: event.Category, ValidationStatus: run.Result.ValidationStatus,
 		RetryCount: run.Result.RetryCount, ModelClassification: run.Result.Parsed,
-		DeterministicResolution: run.Result.Resolution, AdjudicatedLabel: event.Label,
+		CausalConsistencyGuard: run.Result.CausalGuard, DeterministicResolution: run.Result.Resolution, AdjudicatedLabel: event.Label,
 	}
 	if len(run.Attempts) > 0 {
 		evaluation.FirstPassValid = run.Attempts[0].ValidationStatus == "accepted"
