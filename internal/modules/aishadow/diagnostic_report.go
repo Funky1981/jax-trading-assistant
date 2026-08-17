@@ -133,6 +133,7 @@ type DiagnosticRunReport struct {
 	Repetitions         []DiagnosticRepetitionReport `json:"repetitions"`
 	Repeatability       DiagnosticRepeatability      `json:"repeatability"`
 	HostedExperiment    *HostedExperimentSnapshot    `json:"hosted_experiment,omitempty"`
+	CausalAttribution   *CausalAttributionMetrics    `json:"causal_attribution_metrics,omitempty"`
 }
 
 func EvaluateDiagnosticRepetition(repetition int, manifest DiagnosticManifest, runs []DiagnosticCaseRun, resolver assetresolution.Resolver) DiagnosticRepetitionReport {

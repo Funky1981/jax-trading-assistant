@@ -92,6 +92,35 @@ func (s *PGStore) SaveResult(result EventResult) error {
 }
 
 func persistedResultJSON(result EventResult) (any, error) {
+	if result.SchemaVersion == V5SchemaVersion {
+		if result.V5Parsed == nil {
+			if result.CausalAttribution != nil || result.Resolution != nil {
+				return nil, fmt.Errorf("AI shadow v5 result has policy or resolution data without an accepted model output")
+			}
+			return nil, nil
+		}
+		if result.Parsed != nil || result.CausalGuard != nil {
+			return nil, fmt.Errorf("AI shadow v5 result cannot contain v4 model or guard data")
+		}
+		if result.CausalAttribution == nil || result.CausalAttribution.PolicyVersion != CausalAttributionPolicyVersion {
+			return nil, fmt.Errorf("AI shadow v5 result requires C1E causal-attribution policy provenance")
+		}
+		if result.Resolution == nil || result.Resolution.PolicyVersion == "" {
+			return nil, fmt.Errorf("AI shadow v5 result requires deterministic resolver provenance")
+		}
+		payload := V5PersistedResult{
+			RawModelOutput:            *result.V5Parsed,
+			TypedAttribution:          TypedAttributionFromV5(*result.V5Parsed),
+			CausalAttributionDecision: *result.CausalAttribution,
+			EffectiveSemanticMapping:  result.CausalAttribution.EffectiveMapping,
+			DeterministicResolution:   *result.Resolution,
+		}
+		raw, err := json.Marshal(payload)
+		if err != nil {
+			return nil, fmt.Errorf("marshal AI shadow v5 result: %w", err)
+		}
+		return string(raw), nil
+	}
 	if result.Parsed == nil {
 		if result.Resolution != nil {
 			return nil, fmt.Errorf("AI shadow result has deterministic resolution without an accepted model output")

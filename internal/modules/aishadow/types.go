@@ -19,6 +19,8 @@ const (
 	V3SchemaVersion     = "ai-shadow-output-v3-bounded-exposure"
 	PromptVersion       = "ai-shadow-prompt-v4-issuer-resolution"
 	SchemaVersion       = "ai-shadow-output-v4-issuer-resolution"
+	V5PromptVersion     = "ai-shadow-prompt-v5-causal-attribution"
+	V5SchemaVersion     = "ai-shadow-output-v5-causal-attribution"
 	NoProxyExposure     = "NONE"
 )
 
@@ -44,6 +46,41 @@ type StructuredResult struct {
 	CatalystType      string   `json:"catalyst_type"`
 	Reason            string   `json:"reason"`
 	MissingEvidence   []string `json:"missing_evidence"`
+}
+
+// CausalRole is the model's typed causal relationship between a named issuer
+// and the event. These values are contract data, not resolver classifications.
+type CausalRole string
+
+const (
+	CausalRolePrincipal         CausalRole = "PRINCIPAL"
+	CausalRoleEqualPrincipal    CausalRole = "EQUAL_PRINCIPAL"
+	CausalRoleSecondaryAffected CausalRole = "SECONDARY_AFFECTED"
+	CausalRoleContextOnly       CausalRole = "CONTEXT_ONLY"
+	CausalRolePossiblePrincipal CausalRole = "POSSIBLE_PRINCIPAL"
+)
+
+type IssuerAttribution struct {
+	Issuer     string     `json:"issuer"`
+	CausalRole CausalRole `json:"causal_role"`
+}
+
+// V5StructuredResult preserves the v4 fields while adding the typed causal
+// information used by the C1E policy. It is deliberately a distinct type so
+// historical v4 output can never be silently interpreted as v5.
+type V5StructuredResult struct {
+	MarketRelevance          string              `json:"market_relevance"`
+	MappingStatus            string              `json:"mapping_status"`
+	DirectIssuer             string              `json:"direct_issuer"`
+	ProxyExposure            string              `json:"proxy_exposure"`
+	MappingConfidence        string              `json:"mapping_confidence"`
+	ExpectedHorizon          string              `json:"expected_horizon"`
+	LikelyDirection          string              `json:"likely_direction"`
+	CatalystType             string              `json:"catalyst_type"`
+	Reason                   string              `json:"reason"`
+	MissingEvidence          []string            `json:"missing_evidence"`
+	IssuerAttributions       []IssuerAttribution `json:"issuer_attributions"`
+	PrincipalProxyCandidates []string            `json:"principal_proxy_candidates"`
 }
 
 // V3StructuredResult preserves the bounded-exposure contract in which the
@@ -102,6 +139,14 @@ type V4PersistedResult struct {
 	DeterministicResolution PolicyResolution           `json:"deterministic_resolution"`
 }
 
+type V5PersistedResult struct {
+	RawModelOutput            V5StructuredResult        `json:"raw_model_output"`
+	TypedAttribution          TypedCausalAttribution    `json:"typed_causal_attribution"`
+	CausalAttributionDecision CausalAttributionDecision `json:"causal_attribution_policy_decision"`
+	EffectiveSemanticMapping  AssetMapping              `json:"effective_semantic_mapping"`
+	DeterministicResolution   PolicyResolution          `json:"deterministic_resolution"`
+}
+
 // LegacyStructuredResult preserves the v1 representation for append-only
 // historical result reads. Numeric confidence is intentionally not converted
 // into the categorical v2 mapping confidence.
@@ -119,6 +164,7 @@ type LegacyStructuredResult struct {
 
 type PersistedStructuredResult struct {
 	SchemaVersion string
+	V5            *V5PersistedResult
 	Current       *V4PersistedResult
 	V3            *V3PersistedResult
 	V2            *V2StructuredResult
@@ -171,11 +217,13 @@ type Attempt struct {
 
 type EventResult struct {
 	Attempt
-	ManifestVersion string
-	RetryCount      int
-	Parsed          *StructuredResult
-	CausalGuard     *CausalConsistencyDecision
-	Resolution      *PolicyResolution
+	ManifestVersion   string
+	RetryCount        int
+	Parsed            *StructuredResult
+	V5Parsed          *V5StructuredResult
+	CausalGuard       *CausalConsistencyDecision
+	CausalAttribution *CausalAttributionDecision
+	Resolution        *PolicyResolution
 }
 
 type RunRecord struct {
@@ -211,12 +259,14 @@ type Repository interface {
 }
 
 type ProviderRequest struct {
-	System        string
-	User          string
-	Schema        map[string]any
-	EventID       string
-	AttemptNumber int
-	RequestKind   string
+	System         string
+	User           string
+	Schema         map[string]any
+	SchemaContract string
+	SchemaSHA256   string
+	EventID        string
+	AttemptNumber  int
+	RequestKind    string
 }
 
 type ProviderResponse struct {

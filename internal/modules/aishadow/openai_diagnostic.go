@@ -33,6 +33,10 @@ const (
 	OpenAIStructuredOutputsEvidenceNamespace   = "openai-hosted-c1b-structured-outputs-v1"
 	OpenAIStructuredOutputsMode                = "openai-responses-json-schema-strict"
 	OpenAIStructuredOutputsSchemaName          = "jax_ai_shadow_output_v4_issuer_resolution"
+	OpenAIC1E3GeneralizationExperimentID       = "WP-00.03C1E3-GENERALIZATION"
+	OpenAIC1E3BoundaryExperimentID             = "WP-00.03C1E3-BOUNDARY"
+	OpenAIC1E3GeneralizationEvidenceNamespace  = "openai-hosted-c1e3-generalization-v2"
+	OpenAIC1E3BoundaryEvidenceNamespace        = "openai-hosted-c1e3-boundary-v2"
 	OpenAIStructuredOutputsServiceTier         = "default"
 	OpenAIDiagnosticMaximumBudgetMicros        = int64(1_000_000)
 	OpenAIDiagnosticLunaMaximumBudgetMicros    = int64(120_000)
@@ -78,6 +82,9 @@ type OpenAIDiagnosticConfig struct {
 	OutputPriceMicrosPerMillion      int64
 	InferenceExplicitlyAuthorized    bool
 	OutputContractMode               OpenAIOutputContractMode
+	PromptVersion                    string
+	OutputContract                   string
+	CausalPolicy                     string
 }
 
 func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagnosticConfig, error) {
@@ -86,6 +93,10 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 }
 
 func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), profile DiagnosticEvaluationProfile, requireCredential bool) (OpenAIDiagnosticConfig, error) {
+	promptVersion, outputContract, causalPolicy := profile.executionVersions()
+	if err := ValidateContractRoute(promptVersion, outputContract, causalPolicy); err != nil {
+		return OpenAIDiagnosticConfig{}, err
+	}
 	required := []string{
 		"JAX_AI_SHADOW_ENABLED", "JAX_AI_PROVIDER", "JAX_AI_MODEL", "JAX_AI_TIMEOUT_SECONDS", "JAX_AI_MAX_EVENTS",
 		"JAX_AI_EXPERIMENT_ID", "JAX_AI_REASONING_EFFORT", "JAX_AI_MAX_OUTPUT_TOKENS",
@@ -190,6 +201,9 @@ func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), pr
 		OutputPriceMicrosPerMillion:   outputPrice,
 		InferenceExplicitlyAuthorized: authorized,
 		OutputContractMode:            contractMode,
+		PromptVersion:                 promptVersion,
+		OutputContract:                outputContract,
+		CausalPolicy:                  causalPolicy,
 	}, nil
 }
 
@@ -199,9 +213,10 @@ func validateOpenAIExperimentCell(experimentID, model string, mode OpenAIOutputC
 		if mode != OpenAIOutputContractPromptOnly {
 			return fmt.Errorf("existing OpenAI A1 cell requires %s=%s", OpenAIDiagnosticContractModeEnv, OpenAIOutputContractPromptOnly)
 		}
-	case OpenAIStructuredOutputsExperimentID, OpenAIGeneralizationExperimentID, OpenAIBoundaryExperimentID:
+	case OpenAIStructuredOutputsExperimentID, OpenAIGeneralizationExperimentID, OpenAIBoundaryExperimentID,
+		OpenAIC1E3GeneralizationExperimentID, OpenAIC1E3BoundaryExperimentID:
 		if model != OpenAIDiagnosticLunaModel || mode != OpenAIOutputContractStrictJSONSchema {
-			return fmt.Errorf("%s requires model=%s and %s=%s", OpenAIStructuredOutputsExperimentID, OpenAIDiagnosticLunaModel, OpenAIDiagnosticContractModeEnv, OpenAIOutputContractStrictJSONSchema)
+			return fmt.Errorf("%s requires model=%s and %s=%s", experimentID, OpenAIDiagnosticLunaModel, OpenAIDiagnosticContractModeEnv, OpenAIOutputContractStrictJSONSchema)
 		}
 	default:
 		return fmt.Errorf("unsupported OpenAI diagnostic experiment %q", experimentID)
@@ -214,10 +229,10 @@ func supportedOpenAIDiagnosticModel(model string) bool {
 }
 
 func openAIDiagnosticMaximumBudgetMicros(model, experimentID string) int64 {
-	if experimentID == OpenAIBoundaryExperimentID {
+	if experimentID == OpenAIBoundaryExperimentID || experimentID == OpenAIC1E3BoundaryExperimentID {
 		return 100_000
 	}
-	if experimentID == OpenAIStructuredOutputsExperimentID || experimentID == OpenAIGeneralizationExperimentID {
+	if experimentID == OpenAIStructuredOutputsExperimentID || experimentID == OpenAIGeneralizationExperimentID || experimentID == OpenAIC1E3GeneralizationExperimentID {
 		return OpenAIStructuredOutputsMaximumBudgetMicros
 	}
 	if model == OpenAIDiagnosticLunaModel {
@@ -234,6 +249,10 @@ func (c OpenAIDiagnosticConfig) EvidenceNamespace() string {
 		return OpenAIGeneralizationEvidenceNamespace
 	case OpenAIBoundaryExperimentID:
 		return OpenAIBoundaryEvidenceNamespace
+	case OpenAIC1E3GeneralizationExperimentID:
+		return OpenAIC1E3GeneralizationEvidenceNamespace
+	case OpenAIC1E3BoundaryExperimentID:
+		return OpenAIC1E3BoundaryEvidenceNamespace
 	}
 	return OpenAIDiagnosticEvidenceNamespace
 }
@@ -250,10 +269,20 @@ func (c OpenAIDiagnosticConfig) StructuredOutputsEnabled() bool {
 }
 
 func (c OpenAIDiagnosticConfig) ServiceTier() string {
-	if (c.ExperimentID == OpenAIStructuredOutputsExperimentID || c.ExperimentID == OpenAIGeneralizationExperimentID || c.ExperimentID == OpenAIBoundaryExperimentID) && c.StructuredOutputsEnabled() {
+	if (c.ExperimentID == OpenAIStructuredOutputsExperimentID || c.ExperimentID == OpenAIGeneralizationExperimentID || c.ExperimentID == OpenAIBoundaryExperimentID ||
+		c.ExperimentID == OpenAIC1E3GeneralizationExperimentID || c.ExperimentID == OpenAIC1E3BoundaryExperimentID) && c.StructuredOutputsEnabled() {
 		return OpenAIStructuredOutputsServiceTier
 	}
 	return ""
+}
+
+func (c OpenAIDiagnosticConfig) StructuredOutputSchemaName() string {
+	switch c.ExperimentID {
+	case OpenAIC1E3GeneralizationExperimentID, OpenAIC1E3BoundaryExperimentID:
+		return V5OpenAISchemaName
+	default:
+		return OpenAIStructuredOutputsSchemaName
+	}
 }
 
 func openAIReturnedModelMatchesRequested(requested, returned string) bool {
@@ -555,6 +584,16 @@ type openAIDiagnosticRequest struct {
 }
 
 func marshalOpenAIDiagnosticRequest(config OpenAIDiagnosticConfig, request ProviderRequest) ([]byte, error) {
+	if config.OutputContract != "" {
+		if err := ValidateContractRoute(config.PromptVersion, config.OutputContract, config.CausalPolicy); err != nil {
+			return nil, err
+		}
+		if config.OutputContract == V5SchemaVersion {
+			if err := ValidateV5ProviderRequestSchema(request); err != nil {
+				return nil, err
+			}
+		}
+	}
 	payload := openAIDiagnosticRequest{
 		Model:     config.Runtime.Model,
 		Input:     []openAIInputMessage{{Role: "system", Content: request.System}, {Role: "user", Content: request.User}},
@@ -565,7 +604,7 @@ func marshalOpenAIDiagnosticRequest(config OpenAIDiagnosticConfig, request Provi
 			return nil, err
 		}
 		payload.Text = &openAITextConfiguration{Format: openAIResponseFormat{
-			Type: "json_schema", Name: OpenAIStructuredOutputsSchemaName, Strict: true, Schema: request.Schema,
+			Type: "json_schema", Name: config.StructuredOutputSchemaName(), Strict: true, Schema: request.Schema,
 		}}
 		payload.ServiceTier = config.ServiceTier()
 	}

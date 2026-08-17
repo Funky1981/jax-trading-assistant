@@ -176,6 +176,15 @@ func newPolicyResolution(result assetresolution.Result, rawDirectIssuer string) 
 func DecodePersistedResult(schemaVersion string, raw []byte) (PersistedStructuredResult, error) {
 	result := PersistedStructuredResult{SchemaVersion: schemaVersion}
 	switch schemaVersion {
+	case V5SchemaVersion:
+		var current V5PersistedResult
+		if err := decodePersistedJSON(raw, &current); err != nil {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: %w", schemaVersion, err)
+		}
+		if current.RawModelOutput.MappingStatus == "" || current.CausalAttributionDecision.PolicyVersion != CausalAttributionPolicyVersion || current.DeterministicResolution.PolicyVersion == "" {
+			return PersistedStructuredResult{}, fmt.Errorf("decode %s result: model output, causal attribution, or deterministic resolution provenance is missing", schemaVersion)
+		}
+		result.V5 = &current
 	case SchemaVersion:
 		var current V4PersistedResult
 		if err := decodePersistedJSON(raw, &current); err != nil {

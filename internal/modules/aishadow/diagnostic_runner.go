@@ -109,6 +109,8 @@ type DiagnosticPlan struct {
 	OutputContract             string                       `json:"output_contract"`
 	PolicyVersion              string                       `json:"policy_version"`
 	CausalConsistencyPolicy    string                       `json:"causal_consistency_policy"`
+	CausalAttributionPolicy    string                       `json:"causal_attribution_policy,omitempty"`
+	ScoringVersion             string                       `json:"scoring_version,omitempty"`
 	Repetitions                int                          `json:"repetitions"`
 	CasesPerRepetition         int                          `json:"cases_per_repetition"`
 	ExecutionShape             DiagnosticExecutionShape     `json:"execution_shape"`
@@ -150,37 +152,41 @@ type DiagnosticModelIdentity struct {
 }
 
 type DiagnosticAttemptAudit struct {
-	RunID                   string                     `json:"run_id"`
-	Repetition              int                        `json:"repetition"`
-	CaseID                  string                     `json:"case_id"`
-	Category                string                     `json:"category"`
-	AttemptNumber           int                        `json:"attempt_number"`
-	InputFingerprint        string                     `json:"input_fingerprint"`
-	Provider                string                     `json:"provider"`
-	ConfiguredModel         string                     `json:"configured_model"`
-	ModelReportedIdentifier string                     `json:"model_reported_identifier,omitempty"`
-	PromptVersion           string                     `json:"prompt_version"`
-	OutputContract          string                     `json:"output_contract"`
-	PolicyVersion           string                     `json:"policy_version"`
-	Seed                    int64                      `json:"seed"`
-	Temperature             float64                    `json:"temperature"`
-	RequestTimestamp        time.Time                  `json:"request_timestamp"`
-	ResponseTimestamp       time.Time                  `json:"response_timestamp"`
-	DurationMS              int64                      `json:"duration_ms"`
-	RawResponseHash         string                     `json:"raw_response_hash"`
-	RawResponseBody         string                     `json:"raw_response_body"`
-	ValidationStatus        string                     `json:"validation_status"`
-	ValidationErrors        []string                   `json:"validation_errors"`
-	FailureReason           string                     `json:"failure_reason,omitempty"`
-	RequestID               string                     `json:"request_id,omitempty"`
-	ResponseID              string                     `json:"response_id,omitempty"`
-	ProviderStatus          string                     `json:"provider_status,omitempty"`
-	SystemFingerprint       string                     `json:"system_fingerprint,omitempty"`
-	FinishReason            string                     `json:"finish_reason,omitempty"`
-	Usage                   ProviderUsage              `json:"usage"`
-	ModelClassification     *StructuredResult          `json:"model_classification,omitempty"`
-	CausalConsistencyGuard  *CausalConsistencyDecision `json:"causal_consistency_guard,omitempty"`
-	DeterministicResolution *PolicyResolution          `json:"deterministic_resolution,omitempty"`
+	RunID                    string                     `json:"run_id"`
+	Repetition               int                        `json:"repetition"`
+	CaseID                   string                     `json:"case_id"`
+	Category                 string                     `json:"category"`
+	AttemptNumber            int                        `json:"attempt_number"`
+	InputFingerprint         string                     `json:"input_fingerprint"`
+	Provider                 string                     `json:"provider"`
+	ConfiguredModel          string                     `json:"configured_model"`
+	ModelReportedIdentifier  string                     `json:"model_reported_identifier,omitempty"`
+	PromptVersion            string                     `json:"prompt_version"`
+	OutputContract           string                     `json:"output_contract"`
+	PolicyVersion            string                     `json:"policy_version"`
+	Seed                     int64                      `json:"seed"`
+	Temperature              float64                    `json:"temperature"`
+	RequestTimestamp         time.Time                  `json:"request_timestamp"`
+	ResponseTimestamp        time.Time                  `json:"response_timestamp"`
+	DurationMS               int64                      `json:"duration_ms"`
+	RawResponseHash          string                     `json:"raw_response_hash"`
+	RawResponseBody          string                     `json:"raw_response_body"`
+	ValidationStatus         string                     `json:"validation_status"`
+	ValidationErrors         []string                   `json:"validation_errors"`
+	FailureReason            string                     `json:"failure_reason,omitempty"`
+	RequestID                string                     `json:"request_id,omitempty"`
+	ResponseID               string                     `json:"response_id,omitempty"`
+	ProviderStatus           string                     `json:"provider_status,omitempty"`
+	SystemFingerprint        string                     `json:"system_fingerprint,omitempty"`
+	FinishReason             string                     `json:"finish_reason,omitempty"`
+	Usage                    ProviderUsage              `json:"usage"`
+	ModelClassification      *StructuredResult          `json:"model_classification,omitempty"`
+	V5RawModelOutput         *V5StructuredResult        `json:"v5_raw_model_output,omitempty"`
+	TypedAttribution         *TypedCausalAttribution    `json:"typed_causal_attribution,omitempty"`
+	CausalConsistencyGuard   *CausalConsistencyDecision `json:"causal_consistency_guard,omitempty"`
+	CausalAttributionPolicy  *CausalAttributionDecision `json:"causal_attribution_policy_decision,omitempty"`
+	EffectiveSemanticMapping *AssetMapping              `json:"effective_semantic_mapping,omitempty"`
+	DeterministicResolution  *PolicyResolution          `json:"deterministic_resolution,omitempty"`
 }
 
 type DiagnosticCaseRun struct {
@@ -212,6 +218,9 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	profile, err := LoadDiagnosticEvaluationProfile(profileID)
 	if err != nil {
 		return PreparedDiagnostic{}, err
+	}
+	if profile.RequiresTypedAttributionLabels {
+		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s is registered for C1E3 but cannot execute until a separately frozen typed-attribution label sidecar is supplied", profile.Identity)
 	}
 	if config.MaxEvents != profile.CaseCount {
 		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s requires JAX_AI_MAX_EVENTS=%d", profile.Identity, profile.CaseCount)
@@ -746,10 +755,26 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 
 func buildDiagnosticAttemptAudit(runID string, repetition int, event DiagnosticEvent, attempt Attempt, trace ProviderTrace, resolver assetresolution.Resolver) DiagnosticAttemptAudit {
 	var parsed *StructuredResult
+	var v5Parsed *V5StructuredResult
+	var typedAttribution *TypedCausalAttribution
 	var causalGuard *CausalConsistencyDecision
+	var causalAttribution *CausalAttributionDecision
+	var effectiveMapping *AssetMapping
 	var resolution *PolicyResolution
 	if attempt.ValidationStatus == "accepted" {
-		parsed, causalGuard, resolution, _ = ParseValidateAndGuard(trace.Content, event.Input, resolver)
+		if attempt.SchemaVersion == V5SchemaVersion {
+			v5Parsed, causalAttribution, resolution, _ = ParseValidateAndApplyV5(trace.Content, event.Input, resolver)
+			if v5Parsed != nil {
+				attribution := TypedAttributionFromV5(*v5Parsed)
+				typedAttribution = &attribution
+			}
+			if causalAttribution != nil {
+				effective := causalAttribution.EffectiveMapping
+				effectiveMapping = &effective
+			}
+		} else {
+			parsed, causalGuard, resolution, _ = ParseValidateAndGuard(trace.Content, event.Input, resolver)
+		}
 	}
 	return DiagnosticAttemptAudit{
 		RunID: runID, Repetition: repetition, CaseID: event.ID, Category: event.Category,
@@ -762,7 +787,9 @@ func buildDiagnosticAttemptAudit(runID string, repetition int, event DiagnosticE
 		ValidationStatus: attempt.ValidationStatus, ValidationErrors: nonNilStrings(attempt.ValidationErrors), FailureReason: attempt.FailureReason,
 		RequestID: trace.RequestID, ResponseID: trace.ResponseID, ProviderStatus: trace.Status,
 		SystemFingerprint: trace.SystemFingerprint, FinishReason: trace.FinishReason, Usage: trace.Usage,
-		ModelClassification: parsed, CausalConsistencyGuard: causalGuard, DeterministicResolution: resolution,
+		ModelClassification: parsed, V5RawModelOutput: v5Parsed, TypedAttribution: typedAttribution,
+		CausalConsistencyGuard: causalGuard, CausalAttributionPolicy: causalAttribution,
+		EffectiveSemanticMapping: effectiveMapping, DeterministicResolution: resolution,
 	}
 }
 

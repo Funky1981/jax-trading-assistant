@@ -3,9 +3,12 @@ package aishadow
 import "fmt"
 
 const (
-	DiagnosticProfileOriginal       = DiagnosticManifestVersion
-	DiagnosticProfileGeneralization = "ai-shadow-issuer-generalization-holdout-v1"
-	DiagnosticProfileBoundary       = "ai-shadow-issuer-boundary-challenge-v1"
+	DiagnosticProfileOriginal         = DiagnosticManifestVersion
+	DiagnosticProfileGeneralization   = "ai-shadow-issuer-generalization-holdout-v1"
+	DiagnosticProfileBoundary         = "ai-shadow-issuer-boundary-challenge-v1"
+	DiagnosticProfileGeneralizationV2 = "ai-shadow-issuer-generalization-holdout-v2"
+	DiagnosticProfileBoundaryV2       = "ai-shadow-issuer-boundary-challenge-v2"
+	CausalAttributionScoringVersion   = "ai-shadow-causal-attribution-metrics-v1"
 
 	OpenAIGeneralizationExperimentID      = "WP-00.03C1D2-GENERALIZATION"
 	OpenAIBoundaryExperimentID            = "WP-00.03C1D2-BOUNDARY"
@@ -42,6 +45,11 @@ type DiagnosticEvaluationProfile struct {
 	EvidenceNamespace              string
 	CredentiallessPreflightAllowed bool
 	MaximumBudgetMicros            int64
+	ExecutionPromptVersion         string
+	ExecutionOutputContract        string
+	ExecutionCausalPolicy          string
+	ScoringVersion                 string
+	RequiresTypedAttributionLabels bool
 }
 
 var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
@@ -140,6 +148,64 @@ var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
 		CredentiallessPreflightAllowed: true,
 		MaximumBudgetMicros:            100_000,
 	},
+	DiagnosticProfileGeneralizationV2: {
+		Identity:                       DiagnosticProfileGeneralizationV2,
+		ManifestPath:                   "config/ai-shadow-issuer-generalization-holdout-v2.json",
+		ManifestVersion:                DiagnosticProfileGeneralizationV2,
+		ManifestFileSHA256:             "7b22c4c6d72d53d9976df17463bd6116a50ac305008c6d71c5a36f6971091c04",
+		ManifestFingerprint:            "1686f2fa9494dd07887763e0bf55b37a8f0fa2cdb98214a6a23a03156e1f9114",
+		FingerprintLockPath:            "config/ai-shadow-issuer-generalization-holdout-input-fingerprints-v2.json",
+		FingerprintLockVersion:         "ai-shadow-issuer-generalization-holdout-input-fingerprints-v2",
+		FingerprintLockFileSHA256:      "c3dc9715e5c7bcc1f8e0cb1020d95e7979a79f4c5748abf0124df5fa76e1cf88",
+		FingerprintLockFingerprint:     "81d369388e071e7b84f6adeae997b3f8ccb9d9bdcd2e9e4ae2426c75c4e5b514",
+		FreezePath:                     "config/ai-shadow-issuer-generalization-holdout-freeze-v2.json",
+		FreezeVersion:                  "ai-shadow-issuer-generalization-holdout-freeze-v2",
+		FreezeFileSHA256:               "e32eb3ef76a234b5b53db2cea9c011a4e1d85571c6d4b865e1498cd48761d878",
+		CaseCount:                      48,
+		DefaultRepetitions:             1,
+		AllowedRepetitions:             []int{1},
+		RequiredProvider:               OpenAIDiagnosticProvider,
+		RequiredModel:                  OpenAIDiagnosticLunaModel,
+		RequiredExperimentID:           OpenAIC1E3GeneralizationExperimentID,
+		RequiredOutputContractMode:     OpenAIOutputContractStrictJSONSchema,
+		EvidenceNamespace:              OpenAIC1E3GeneralizationEvidenceNamespace,
+		CredentiallessPreflightAllowed: true,
+		MaximumBudgetMicros:            200_000,
+		ExecutionPromptVersion:         V5PromptVersion,
+		ExecutionOutputContract:        V5SchemaVersion,
+		ExecutionCausalPolicy:          CausalAttributionPolicyVersion,
+		ScoringVersion:                 CausalAttributionScoringVersion,
+		RequiresTypedAttributionLabels: true,
+	},
+	DiagnosticProfileBoundaryV2: {
+		Identity:                       DiagnosticProfileBoundaryV2,
+		ManifestPath:                   "config/ai-shadow-issuer-boundary-challenge-v2.json",
+		ManifestVersion:                DiagnosticProfileBoundaryV2,
+		ManifestFileSHA256:             "ae2e15a18e28094c44663bd94bc8f40145e3fd1358ae46e525fca85166ce7578",
+		ManifestFingerprint:            "4567c371d1a376596911c97a76a8b8cb24efc6ccee376ff78485f0a79d09fdd9",
+		FingerprintLockPath:            "config/ai-shadow-issuer-boundary-challenge-input-fingerprints-v2.json",
+		FingerprintLockVersion:         "ai-shadow-issuer-boundary-challenge-input-fingerprints-v2",
+		FingerprintLockFileSHA256:      "3cced77fbc0d2d229143f379d22365981a668dce6e93174027b0dcfe7a137112",
+		FingerprintLockFingerprint:     "0c48bf1456a107d2996676157416ca9b51b23d59e60cecfccfa26d19c3271953",
+		FreezePath:                     "config/ai-shadow-issuer-boundary-challenge-freeze-v2.json",
+		FreezeVersion:                  "ai-shadow-issuer-boundary-challenge-freeze-v2",
+		FreezeFileSHA256:               "0123286e7e0862961368e85ebea81d3474b49008bd70f85b5c21f7ad75f80dc2",
+		CaseCount:                      32,
+		DefaultRepetitions:             1,
+		AllowedRepetitions:             []int{1},
+		RequiredProvider:               OpenAIDiagnosticProvider,
+		RequiredModel:                  OpenAIDiagnosticLunaModel,
+		RequiredExperimentID:           OpenAIC1E3BoundaryExperimentID,
+		RequiredOutputContractMode:     OpenAIOutputContractStrictJSONSchema,
+		EvidenceNamespace:              OpenAIC1E3BoundaryEvidenceNamespace,
+		CredentiallessPreflightAllowed: true,
+		MaximumBudgetMicros:            100_000,
+		ExecutionPromptVersion:         V5PromptVersion,
+		ExecutionOutputContract:        V5SchemaVersion,
+		ExecutionCausalPolicy:          CausalAttributionPolicyVersion,
+		ScoringVersion:                 CausalAttributionScoringVersion,
+		RequiresTypedAttributionLabels: true,
+	},
 }
 
 func LoadDiagnosticEvaluationProfile(identity string) (DiagnosticEvaluationProfile, error) {
@@ -160,5 +226,13 @@ func (p DiagnosticEvaluationProfile) permitsRepetitions(value int) bool {
 }
 
 func (p DiagnosticEvaluationProfile) isHoldout() bool {
-	return p.Identity == DiagnosticProfileGeneralization || p.Identity == DiagnosticProfileBoundary
+	return p.Identity == DiagnosticProfileGeneralization || p.Identity == DiagnosticProfileBoundary ||
+		p.Identity == DiagnosticProfileGeneralizationV2 || p.Identity == DiagnosticProfileBoundaryV2
+}
+
+func (p DiagnosticEvaluationProfile) executionVersions() (prompt, output, policy string) {
+	if p.ExecutionOutputContract == "" {
+		return PromptVersion, SchemaVersion, CausalConsistencyPolicyVersion
+	}
+	return p.ExecutionPromptVersion, p.ExecutionOutputContract, p.ExecutionCausalPolicy
 }

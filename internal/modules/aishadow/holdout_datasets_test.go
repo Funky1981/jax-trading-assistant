@@ -173,6 +173,9 @@ func TestFrozenIssuerHoldoutDatasets(t *testing.T) {
 	for _, spec := range holdoutDatasetSpecs {
 		spec := spec
 		t.Run(spec.Name, func(t *testing.T) {
+			if strings.Contains(spec.ManifestPath, "-v2.json") {
+				t.Skip("v2 holdout contents remain blind until authorized C1E3 execution")
+			}
 			manifest := loadStrictJSON[DiagnosticManifest](t, spec.ManifestPath)
 			lock := loadStrictJSON[DiagnosticFingerprintLock](t, spec.LockPath)
 			freeze := loadStrictJSON[holdoutFreezeRecord](t, spec.FreezePath)
@@ -289,6 +292,9 @@ func TestIssuerHoldoutDatasetsHaveNoDuplicateOrNearCopyInputs(t *testing.T) {
 		corpus = append(corpus, corpusCase{Dataset: "baseline", Event: event})
 	}
 	for _, spec := range holdoutDatasetSpecs {
+		if strings.Contains(spec.ManifestPath, "-v2.json") {
+			continue
+		}
 		manifest := loadStrictJSON[DiagnosticManifest](t, spec.ManifestPath)
 		for _, event := range manifest.Events {
 			corpus = append(corpus, corpusCase{Dataset: spec.Name, Event: event})
