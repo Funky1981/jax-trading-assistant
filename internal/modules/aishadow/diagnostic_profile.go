@@ -49,7 +49,15 @@ type DiagnosticEvaluationProfile struct {
 	ExecutionOutputContract        string
 	ExecutionCausalPolicy          string
 	ScoringVersion                 string
+	ScoringRubricVersion           string
 	RequiresTypedAttributionLabels bool
+	TypedLabelPath                 string
+	TypedLabelVersion              string
+	TypedLabelFileSHA256           string
+	TypedLabelFingerprint          string
+	ScoringRubricPath              string
+	ScoringRubricFileSHA256        string
+	ScoringRubricFingerprint       string
 }
 
 var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
@@ -149,19 +157,25 @@ var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
 		MaximumBudgetMicros:            100_000,
 	},
 	DiagnosticProfileGeneralizationV2: {
-		Identity:                       DiagnosticProfileGeneralizationV2,
-		ManifestPath:                   "config/ai-shadow-issuer-generalization-holdout-v2.json",
-		ManifestVersion:                DiagnosticProfileGeneralizationV2,
-		ManifestFileSHA256:             "7b22c4c6d72d53d9976df17463bd6116a50ac305008c6d71c5a36f6971091c04",
-		ManifestFingerprint:            "1686f2fa9494dd07887763e0bf55b37a8f0fa2cdb98214a6a23a03156e1f9114",
-		FingerprintLockPath:            "config/ai-shadow-issuer-generalization-holdout-input-fingerprints-v2.json",
-		FingerprintLockVersion:         "ai-shadow-issuer-generalization-holdout-input-fingerprints-v2",
-		FingerprintLockFileSHA256:      "c3dc9715e5c7bcc1f8e0cb1020d95e7979a79f4c5748abf0124df5fa76e1cf88",
-		FingerprintLockFingerprint:     "81d369388e071e7b84f6adeae997b3f8ccb9d9bdcd2e9e4ae2426c75c4e5b514",
-		FreezePath:                     "config/ai-shadow-issuer-generalization-holdout-freeze-v2.json",
-		FreezeVersion:                  "ai-shadow-issuer-generalization-holdout-freeze-v2",
-		FreezeFileSHA256:               "e32eb3ef76a234b5b53db2cea9c011a4e1d85571c6d4b865e1498cd48761d878",
-		CaseCount:                      48,
+		Identity:                   DiagnosticProfileGeneralizationV2,
+		ManifestPath:               "config/ai-shadow-issuer-generalization-holdout-v2.json",
+		ManifestVersion:            DiagnosticProfileGeneralizationV2,
+		ManifestFileSHA256:         "7b22c4c6d72d53d9976df17463bd6116a50ac305008c6d71c5a36f6971091c04",
+		ManifestFingerprint:        "1686f2fa9494dd07887763e0bf55b37a8f0fa2cdb98214a6a23a03156e1f9114",
+		FingerprintLockPath:        "config/ai-shadow-issuer-generalization-holdout-input-fingerprints-v2.json",
+		FingerprintLockVersion:     "ai-shadow-issuer-generalization-holdout-input-fingerprints-v2",
+		FingerprintLockFileSHA256:  "c3dc9715e5c7bcc1f8e0cb1020d95e7979a79f4c5748abf0124df5fa76e1cf88",
+		FingerprintLockFingerprint: "81d369388e071e7b84f6adeae997b3f8ccb9d9bdcd2e9e4ae2426c75c4e5b514",
+		FreezePath:                 "config/ai-shadow-issuer-generalization-holdout-freeze-v2.json",
+		FreezeVersion:              "ai-shadow-issuer-generalization-holdout-freeze-v2",
+		FreezeFileSHA256:           "e32eb3ef76a234b5b53db2cea9c011a4e1d85571c6d4b865e1498cd48761d878",
+		CaseCount:                  48,
+		CategoryCounts: map[string]int{
+			"ambiguous_or_invalid_exposure": 4, "clear_causal_direct": 5, "commentator_beneficiary_boundary": 4,
+			"contextual_historical_mention": 4, "equal_causality_multi_issuer": 4, "legitimate_principal_proxy": 6,
+			"low_medium_relevance_direct": 5, "principal_issuer_among_many": 4, "supported_alias_direct": 4,
+			"unsupported_causal_issuer": 3, "weak_causal_direct": 5,
+		},
 		DefaultRepetitions:             1,
 		AllowedRepetitions:             []int{1},
 		RequiredProvider:               OpenAIDiagnosticProvider,
@@ -175,22 +189,38 @@ var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
 		ExecutionOutputContract:        V5SchemaVersion,
 		ExecutionCausalPolicy:          CausalAttributionPolicyVersion,
 		ScoringVersion:                 CausalAttributionScoringVersion,
+		ScoringRubricVersion:           C1E2AScoringRubricVersion,
 		RequiresTypedAttributionLabels: true,
+		TypedLabelPath:                 "config/ai-shadow-causal-attribution-labels-generalization-v2-v1.json",
+		TypedLabelVersion:              GeneralizationV2TypedLabelsVersion,
+		TypedLabelFileSHA256:           "7092398e52df79c375b850e2d408e689ab879fecf1b2d37a63520e2cd98d2855",
+		TypedLabelFingerprint:          "1fceef630e5e5519a7bfe09e2d807cbbfd5c524ee4058515335b26bea2616db9",
+		ScoringRubricPath:              "config/ai-shadow-causal-attribution-scoring-c1e3-v1.json",
+		ScoringRubricFileSHA256:        "d9b415d0201657ad7c322e5b3dc9064d4ae4e0f572e5b3232b1b1d66b367066b",
+		ScoringRubricFingerprint:       "349ca731a4b95d1d0046f0d8eacf7ee771b1c0db1e7f127910b63ece4e5d11df",
 	},
 	DiagnosticProfileBoundaryV2: {
-		Identity:                       DiagnosticProfileBoundaryV2,
-		ManifestPath:                   "config/ai-shadow-issuer-boundary-challenge-v2.json",
-		ManifestVersion:                DiagnosticProfileBoundaryV2,
-		ManifestFileSHA256:             "ae2e15a18e28094c44663bd94bc8f40145e3fd1358ae46e525fca85166ce7578",
-		ManifestFingerprint:            "4567c371d1a376596911c97a76a8b8cb24efc6ccee376ff78485f0a79d09fdd9",
-		FingerprintLockPath:            "config/ai-shadow-issuer-boundary-challenge-input-fingerprints-v2.json",
-		FingerprintLockVersion:         "ai-shadow-issuer-boundary-challenge-input-fingerprints-v2",
-		FingerprintLockFileSHA256:      "3cced77fbc0d2d229143f379d22365981a668dce6e93174027b0dcfe7a137112",
-		FingerprintLockFingerprint:     "0c48bf1456a107d2996676157416ca9b51b23d59e60cecfccfa26d19c3271953",
-		FreezePath:                     "config/ai-shadow-issuer-boundary-challenge-freeze-v2.json",
-		FreezeVersion:                  "ai-shadow-issuer-boundary-challenge-freeze-v2",
-		FreezeFileSHA256:               "0123286e7e0862961368e85ebea81d3474b49008bd70f85b5c21f7ad75f80dc2",
-		CaseCount:                      32,
+		Identity:                   DiagnosticProfileBoundaryV2,
+		ManifestPath:               "config/ai-shadow-issuer-boundary-challenge-v2.json",
+		ManifestVersion:            DiagnosticProfileBoundaryV2,
+		ManifestFileSHA256:         "ae2e15a18e28094c44663bd94bc8f40145e3fd1358ae46e525fca85166ce7578",
+		ManifestFingerprint:        "4567c371d1a376596911c97a76a8b8cb24efc6ccee376ff78485f0a79d09fdd9",
+		FingerprintLockPath:        "config/ai-shadow-issuer-boundary-challenge-input-fingerprints-v2.json",
+		FingerprintLockVersion:     "ai-shadow-issuer-boundary-challenge-input-fingerprints-v2",
+		FingerprintLockFileSHA256:  "3cced77fbc0d2d229143f379d22365981a668dce6e93174027b0dcfe7a137112",
+		FingerprintLockFingerprint: "0c48bf1456a107d2996676157416ca9b51b23d59e60cecfccfa26d19c3271953",
+		FreezePath:                 "config/ai-shadow-issuer-boundary-challenge-freeze-v2.json",
+		FreezeVersion:              "ai-shadow-issuer-boundary-challenge-freeze-v2",
+		FreezeFileSHA256:           "0123286e7e0862961368e85ebea81d3474b49008bd70f85b5c21f7ad75f80dc2",
+		CaseCount:                  32,
+		CategoryCounts: map[string]int{
+			"ambiguous_unknown_identity": 2, "beneficiary_subject_distinction": 2, "clear_causal_direct": 2,
+			"direct_plus_sector_effect": 2, "equal_causality_multi_issuer": 2, "high_relevance_noncausal_mention": 2,
+			"historical_contextual_mention": 2, "incidental_entity_extraction": 2, "low_medium_relevance_causal_issuer": 2,
+			"multiple_plausible_proxies": 2, "principal_proxy": 2, "principal_vs_related_exposure": 2,
+			"single_principal_among_many": 2, "supplier_customer_causal_chain": 2, "victim_commentator_distinction": 2,
+			"weak_causal_direct": 2,
+		},
 		DefaultRepetitions:             1,
 		AllowedRepetitions:             []int{1},
 		RequiredProvider:               OpenAIDiagnosticProvider,
@@ -204,7 +234,15 @@ var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
 		ExecutionOutputContract:        V5SchemaVersion,
 		ExecutionCausalPolicy:          CausalAttributionPolicyVersion,
 		ScoringVersion:                 CausalAttributionScoringVersion,
+		ScoringRubricVersion:           C1E2AScoringRubricVersion,
 		RequiresTypedAttributionLabels: true,
+		TypedLabelPath:                 "config/ai-shadow-causal-attribution-labels-boundary-v2-v1.json",
+		TypedLabelVersion:              BoundaryV2TypedLabelsVersion,
+		TypedLabelFileSHA256:           "54be48060bc4c430f19824ada39db4054bbdb93ac46bb698d939ddbf8a61c5d5",
+		TypedLabelFingerprint:          "db5490be5c99675e1a27ebd39706c184538f3663694806c16814bad3b0f191a1",
+		ScoringRubricPath:              "config/ai-shadow-causal-attribution-scoring-c1e3-v1.json",
+		ScoringRubricFileSHA256:        "d9b415d0201657ad7c322e5b3dc9064d4ae4e0f572e5b3232b1b1d66b367066b",
+		ScoringRubricFingerprint:       "349ca731a4b95d1d0046f0d8eacf7ee771b1c0db1e7f127910b63ece4e5d11df",
 	},
 }
 

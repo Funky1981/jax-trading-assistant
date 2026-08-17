@@ -28,6 +28,8 @@ type DiagnosticPaths struct {
 	FingerprintLockPath string
 	FreezePath          string
 	AssetRulesetPath    string
+	TypedLabelPath      string
+	ScoringRubricPath   string
 	OutputRoot          string
 }
 
@@ -220,7 +222,13 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 		return PreparedDiagnostic{}, err
 	}
 	if profile.RequiresTypedAttributionLabels {
-		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s is registered for C1E3 but cannot execute until a separately frozen typed-attribution label sidecar is supplied", profile.Identity)
+		if _, err := LoadFrozenTypedLabelSidecarForProfile(profile, paths.TypedLabelPath); err != nil {
+			return PreparedDiagnostic{}, err
+		}
+		if _, err := LoadFrozenC1E3ScoringRubric(profile, paths.ScoringRubricPath); err != nil {
+			return PreparedDiagnostic{}, err
+		}
+		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s has exact frozen C1E2A labels and scoring bound, but C1E3 execution remains unauthorized", profile.Identity)
 	}
 	if config.MaxEvents != profile.CaseCount {
 		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s requires JAX_AI_MAX_EVENTS=%d", profile.Identity, profile.CaseCount)

@@ -51,6 +51,8 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	manifestPath := flags.String("manifest", "", "frozen issuer diagnostic manifest (registered profile default when omitted)")
 	fingerprintLockPath := flags.String("fingerprint-lock", "", "frozen per-event input fingerprint lock (registered profile default when omitted)")
 	freezePath := flags.String("freeze", "", "frozen evaluation metadata (registered holdout profile default when omitted)")
+	typedLabelPath := flags.String("typed-labels", "", "frozen typed causal-attribution labels (registered C1E3 profile default when omitted)")
+	scoringRubricPath := flags.String("scoring-rubric", "", "frozen typed scoring rubric (registered C1E3 profile default when omitted)")
 	assetRulesetPath := flags.String("asset-ruleset-file", defaultAssetRulesetPath, "deterministic issuer resolution policy")
 	outputRoot := flags.String("output-root", "", "append-only diagnostic audit root (provider-specific default when omitted)")
 	preflight := flags.Bool("preflight", false, "perform all non-Ollama checks and write an audit artifact")
@@ -73,6 +75,12 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	}
 	if *freezePath == "" {
 		*freezePath = profile.FreezePath
+	}
+	if *typedLabelPath == "" {
+		*typedLabelPath = profile.TypedLabelPath
+	}
+	if *scoringRubricPath == "" {
+		*scoringRubricPath = profile.ScoringRubricPath
 	}
 	executionShape, err := aishadow.LoadDiagnosticRepetitionSelectionForProfile(deps.lookup, profile)
 	if err != nil {
@@ -99,6 +107,7 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		EvaluationProfileID: profile.Identity,
 		ManifestPath:        *manifestPath, FingerprintLockPath: *fingerprintLockPath,
 		FreezePath: *freezePath, AssetRulesetPath: *assetRulesetPath,
+		TypedLabelPath: *typedLabelPath, ScoringRubricPath: *scoringRubricPath,
 	}
 	diagnosticSafety := aishadow.DiagnosticSafetyState{
 		RuntimeMode: safety.RuntimeMode, AllowLiveTrading: safety.AllowLiveTrading,
