@@ -85,6 +85,7 @@ type OpenAIDiagnosticConfig struct {
 	PromptVersion                    string
 	OutputContract                   string
 	CausalPolicy                     string
+	C1E3ExecutionAuthorization       C1E3ExecutionAuthorization
 }
 
 func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagnosticConfig, error) {
@@ -204,6 +205,7 @@ func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), pr
 		PromptVersion:                 promptVersion,
 		OutputContract:                outputContract,
 		CausalPolicy:                  causalPolicy,
+		C1E3ExecutionAuthorization:    NewC1E3ExecutionAuthorization(false),
 	}, nil
 }
 

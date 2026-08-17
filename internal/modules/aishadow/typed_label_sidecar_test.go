@@ -140,13 +140,18 @@ func TestC1E2AExpectedAnswersCannotEnterProviderRequest(t *testing.T) {
 	}
 }
 
-func TestC1E3ProfilesBindExactLabelsAndRemainUnauthorized(t *testing.T) {
+func TestC1E3ProfilesBindExactLabelsForAuthorizedPlanning(t *testing.T) {
 	for _, identity := range []string{DiagnosticProfileGeneralizationV2, DiagnosticProfileBoundaryV2} {
 		profile, _ := LoadDiagnosticEvaluationProfile(identity)
 		paths := c1e2aProfilePaths(profile)
-		_, err := PrepareDiagnostic(paths, Config{Provider: OpenAIDiagnosticProvider, MaxEvents: profile.CaseCount}, diagnosticTestSafety())
-		if err == nil || !strings.Contains(err.Error(), "C1E3 execution remains unauthorized") {
-			t.Fatalf("exact C1E2A binding did not remain execution-gated: %v", err)
+		prepared, err := PrepareDiagnostic(paths, Config{Provider: OpenAIDiagnosticProvider, MaxEvents: profile.CaseCount}, diagnosticTestSafety())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if prepared.Plan.PromptVersion != V5PromptVersion || prepared.Plan.OutputContract != V5SchemaVersion ||
+			prepared.Plan.CausalAttributionPolicy != CausalAttributionPolicyVersion || prepared.Plan.TypedLabelVersion != profile.TypedLabelVersion ||
+			prepared.Plan.ScoringRubricVersion != profile.ScoringRubricVersion {
+			t.Fatalf("C1E3 planning lost frozen v5/sidecar/scoring bindings: %+v", prepared.Plan)
 		}
 		missing := paths
 		missing.TypedLabelPath = filepath.Join(t.TempDir(), "missing.json")

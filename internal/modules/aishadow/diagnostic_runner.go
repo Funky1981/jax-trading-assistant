@@ -95,31 +95,38 @@ type DiagnosticPlanEvent struct {
 }
 
 type DiagnosticPlan struct {
-	Version                    string                       `json:"version"`
-	EvaluationProfile          string                       `json:"evaluation_profile"`
-	DatasetIdentity            string                       `json:"dataset_identity"`
-	ManifestVersion            string                       `json:"manifest_version"`
-	ManifestFingerprint        string                       `json:"manifest_fingerprint"`
-	ManifestFileSHA256         string                       `json:"manifest_file_sha256"`
-	FingerprintLockVersion     string                       `json:"fingerprint_lock_version"`
-	FingerprintLockFingerprint string                       `json:"fingerprint_lock_fingerprint"`
-	FingerprintLockFileSHA256  string                       `json:"fingerprint_lock_file_sha256"`
-	FreezeVersion              string                       `json:"freeze_version,omitempty"`
-	FreezeFileSHA256           string                       `json:"freeze_file_sha256,omitempty"`
-	LabelVersion               string                       `json:"label_version"`
-	PromptVersion              string                       `json:"prompt_version"`
-	OutputContract             string                       `json:"output_contract"`
-	PolicyVersion              string                       `json:"policy_version"`
-	CausalConsistencyPolicy    string                       `json:"causal_consistency_policy"`
-	CausalAttributionPolicy    string                       `json:"causal_attribution_policy,omitempty"`
-	ScoringVersion             string                       `json:"scoring_version,omitempty"`
-	Repetitions                int                          `json:"repetitions"`
-	CasesPerRepetition         int                          `json:"cases_per_repetition"`
-	ExecutionShape             DiagnosticExecutionShape     `json:"execution_shape"`
-	ModelConfiguration         DiagnosticModelConfiguration `json:"model_configuration"`
-	Safety                     DiagnosticSafetyState        `json:"safety"`
-	HostedExperiment           *HostedExperimentPlan        `json:"hosted_experiment,omitempty"`
-	Events                     []DiagnosticPlanEvent        `json:"events"`
+	Version                    string                          `json:"version"`
+	EvaluationProfile          string                          `json:"evaluation_profile"`
+	DatasetIdentity            string                          `json:"dataset_identity"`
+	ManifestVersion            string                          `json:"manifest_version"`
+	ManifestFingerprint        string                          `json:"manifest_fingerprint"`
+	ManifestFileSHA256         string                          `json:"manifest_file_sha256"`
+	FingerprintLockVersion     string                          `json:"fingerprint_lock_version"`
+	FingerprintLockFingerprint string                          `json:"fingerprint_lock_fingerprint"`
+	FingerprintLockFileSHA256  string                          `json:"fingerprint_lock_file_sha256"`
+	FreezeVersion              string                          `json:"freeze_version,omitempty"`
+	FreezeFileSHA256           string                          `json:"freeze_file_sha256,omitempty"`
+	LabelVersion               string                          `json:"label_version"`
+	PromptVersion              string                          `json:"prompt_version"`
+	OutputContract             string                          `json:"output_contract"`
+	PolicyVersion              string                          `json:"policy_version"`
+	CausalConsistencyPolicy    string                          `json:"causal_consistency_policy"`
+	CausalAttributionPolicy    string                          `json:"causal_attribution_policy,omitempty"`
+	ScoringVersion             string                          `json:"scoring_version,omitempty"`
+	TypedLabelVersion          string                          `json:"typed_label_version,omitempty"`
+	TypedLabelFileSHA256       string                          `json:"typed_label_file_sha256,omitempty"`
+	TypedLabelFingerprint      string                          `json:"typed_label_fingerprint,omitempty"`
+	ScoringRubricVersion       string                          `json:"scoring_rubric_version,omitempty"`
+	ScoringRubricFileSHA256    string                          `json:"scoring_rubric_file_sha256,omitempty"`
+	ScoringRubricFingerprint   string                          `json:"scoring_rubric_fingerprint,omitempty"`
+	C1E3ExecutionAuthorization *C1E3ExecutionAuthorizationPlan `json:"c1e3_execution_authorization,omitempty"`
+	Repetitions                int                             `json:"repetitions"`
+	CasesPerRepetition         int                             `json:"cases_per_repetition"`
+	ExecutionShape             DiagnosticExecutionShape        `json:"execution_shape"`
+	ModelConfiguration         DiagnosticModelConfiguration    `json:"model_configuration"`
+	Safety                     DiagnosticSafetyState           `json:"safety"`
+	HostedExperiment           *HostedExperimentPlan           `json:"hosted_experiment,omitempty"`
+	Events                     []DiagnosticPlanEvent           `json:"events"`
 }
 
 type DiagnosticExecutionShape struct {
@@ -228,7 +235,6 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 		if _, err := LoadFrozenC1E3ScoringRubric(profile, paths.ScoringRubricPath); err != nil {
 			return PreparedDiagnostic{}, err
 		}
-		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s has exact frozen C1E2A labels and scoring bound, but C1E3 execution remains unauthorized", profile.Identity)
 	}
 	if config.MaxEvents != profile.CaseCount {
 		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s requires JAX_AI_MAX_EVENTS=%d", profile.Identity, profile.CaseCount)
@@ -256,6 +262,11 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	exposures, err := resolver.ProxyExposures()
 	if err != nil {
 		return PreparedDiagnostic{}, err
+	}
+	if isC1E3Profile(profile) {
+		if err := validateC1E3FrozenSemanticSources(paths, rules.Version, exposures); err != nil {
+			return PreparedDiagnostic{}, err
+		}
 	}
 	manifest, err := LoadFrozenDiagnosticManifestForProfile(profile, paths.ManifestPath, exposures)
 	if err != nil {
@@ -308,14 +319,15 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	}
 
 	executionShape := newDiagnosticExecutionShape(profile, profile.DefaultRepetitions, false)
+	executionPrompt, executionOutput, executionPolicy := profile.executionVersions()
 	plan := DiagnosticPlan{
 		Version: DiagnosticReportVersion, EvaluationProfile: profile.Identity, DatasetIdentity: profile.ManifestVersion, ManifestVersion: manifest.Version,
 		ManifestFingerprint: manifest.Fingerprint, ManifestFileSHA256: profile.ManifestFileSHA256,
 		FingerprintLockVersion: lock.Version, FingerprintLockFingerprint: lock.Fingerprint, FingerprintLockFileSHA256: profile.FingerprintLockFileSHA256,
 		FreezeVersion: profile.FreezeVersion, FreezeFileSHA256: profile.FreezeFileSHA256,
-		LabelVersion: manifest.LabelVersion, PromptVersion: PromptVersion, OutputContract: SchemaVersion,
-		PolicyVersion: rules.Version, CausalConsistencyPolicy: CausalConsistencyPolicyVersion,
-		Repetitions: executionShape.EffectiveRepetitions, CasesPerRepetition: profile.CaseCount,
+		LabelVersion: manifest.LabelVersion, PromptVersion: executionPrompt, OutputContract: executionOutput,
+		PolicyVersion: rules.Version,
+		Repetitions:   executionShape.EffectiveRepetitions, CasesPerRepetition: profile.CaseCount,
 		ExecutionShape: executionShape,
 		ModelConfiguration: DiagnosticModelConfiguration{
 			Provider: config.Provider, Model: config.Model, BaseURL: config.BaseURL,
@@ -323,6 +335,18 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 			Seed: config.Seed, Stream: false, Think: false, RetryLimit: 1,
 		},
 		Safety: safety, Events: planEvents,
+	}
+	if executionOutput == V5SchemaVersion {
+		plan.CausalAttributionPolicy = executionPolicy
+		plan.ScoringVersion = profile.ScoringVersion
+		plan.TypedLabelVersion = profile.TypedLabelVersion
+		plan.TypedLabelFileSHA256 = profile.TypedLabelFileSHA256
+		plan.TypedLabelFingerprint = profile.TypedLabelFingerprint
+		plan.ScoringRubricVersion = profile.ScoringRubricVersion
+		plan.ScoringRubricFileSHA256 = profile.ScoringRubricFileSHA256
+		plan.ScoringRubricFingerprint = profile.ScoringRubricFingerprint
+	} else {
+		plan.CausalConsistencyPolicy = executionPolicy
 	}
 	return PreparedDiagnostic{Profile: profile, Plan: plan, Manifest: manifest, Lock: lock, Freeze: freeze, Config: config, Resolver: resolver, ProxyExposures: exposures, Paths: paths, ExecutionShape: executionShape}, nil
 }
@@ -374,9 +398,15 @@ func ValidateDiagnosticExecutionShape(prepared PreparedDiagnostic) error {
 	shape := prepared.ExecutionShape
 	if prepared.Plan.ExecutionShape != shape || prepared.Plan.Repetitions != shape.EffectiveRepetitions ||
 		prepared.Plan.CasesPerRepetition != shape.CasesPerRepetition || prepared.Plan.EvaluationProfile != prepared.Profile.Identity ||
-		prepared.Plan.CausalConsistencyPolicy != CausalConsistencyPolicyVersion || len(prepared.Plan.Events) != prepared.Profile.CaseCount ||
+		len(prepared.Plan.Events) != prepared.Profile.CaseCount ||
 		len(prepared.Manifest.Events) != prepared.Profile.CaseCount {
 		return fmt.Errorf("issuer diagnostic execution shape does not match validated runtime selection")
+	}
+	prompt, output, policy := prepared.Profile.executionVersions()
+	if prepared.Plan.PromptVersion != prompt || prepared.Plan.OutputContract != output ||
+		(output == V5SchemaVersion && (prepared.Plan.CausalAttributionPolicy != policy || prepared.Plan.CausalConsistencyPolicy != "")) ||
+		(output != V5SchemaVersion && prepared.Plan.CausalConsistencyPolicy != policy) {
+		return fmt.Errorf("issuer diagnostic execution contract does not match the frozen profile")
 	}
 	if plan := prepared.Plan.HostedExperiment; plan != nil &&
 		(plan.BaseRequestCount != shape.TotalPlannedCases || plan.MaximumRequestCount != shape.TotalPlannedCases*2) {
@@ -436,7 +466,7 @@ func PrepareHostedDiagnosticPreflight(paths DiagnosticPaths, config OpenAIDiagno
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized {
+	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized || config.C1E3ExecutionAuthorization.OperatorOptIn {
 		return PreparedDiagnostic{}, fmt.Errorf("frozen profile %s does not permit this local preflight", profile.Identity)
 	}
 	return prepareHostedDiagnostic(paths, config, safety, false)
@@ -465,7 +495,20 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 		prepared.Profile.RequiredOutputContractMode != config.OutputContractMode || prepared.Profile.EvidenceNamespace != config.EvidenceNamespace()) {
 		return PreparedDiagnostic{}, fmt.Errorf("hosted configuration does not match frozen profile %s", prepared.Profile.Identity)
 	}
-	firstRequest, err := InitialRequest(prepared.Manifest.Events[0].Input, prepared.ProxyExposures)
+	if err := validateC1E3AuthorizationScope(prepared.Profile, config); err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	collisionFree := true
+	if isC1E3Profile(prepared.Profile) {
+		collisionFree, err = c1e3EvidenceNamespaceCollisionFree(paths.OutputRoot)
+		if err != nil {
+			return PreparedDiagnostic{}, fmt.Errorf("inspect C1E3 evidence namespace: %w", err)
+		}
+		if !collisionFree {
+			return PreparedDiagnostic{}, fmt.Errorf("C1E3 evidence namespace already contains execution evidence")
+		}
+	}
+	firstRequest, err := diagnosticInitialRequest(config, prepared.Manifest.Events[0].Input, prepared.ProxyExposures)
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
@@ -486,7 +529,7 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	prepared.Plan.ModelConfiguration.MaxOutputTokens = config.MaxOutputTokens
 	prepared.Plan.ModelConfiguration.StructuredOutputMode = config.StructuredOutputMode()
 	prepared.Plan.ModelConfiguration.StructuredOutputs = config.StructuredOutputsEnabled()
-	prepared.Plan.ModelConfiguration.SchemaContract = SchemaVersion
+	prepared.Plan.ModelConfiguration.SchemaContract = prepared.Plan.OutputContract
 	prepared.Plan.ModelConfiguration.ContractEnforcement = string(config.OutputContractMode)
 	prepared.Plan.ModelConfiguration.ServiceTier = config.ServiceTier()
 	schemaSHA256, err := providerRequestSchemaSHA256(firstRequest.Schema)
@@ -499,7 +542,7 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	}
 	prepared.Plan.HostedExperiment = &HostedExperimentPlan{
 		ExperimentID: config.ExperimentID, CellIdentity: config.ExperimentID, EvidenceNamespace: config.EvidenceNamespace() + "/" + config.ExperimentID,
-		SchemaContract: SchemaVersion, SchemaSHA256: schemaSHA256, StructuredOutputs: config.StructuredOutputsEnabled(), ContractEnforcement: string(config.OutputContractMode),
+		SchemaContract: prepared.Plan.OutputContract, SchemaSHA256: schemaSHA256, StructuredOutputs: config.StructuredOutputsEnabled(), ContractEnforcement: string(config.OutputContractMode),
 		ServiceTier: config.ServiceTier(),
 		Endpoint:    OpenAIDiagnosticEndpoint, APIKeyEnvironment: OpenAIDiagnosticAPIKeyEnv, APIKeyPresent: config.APIKey.present(),
 		InferenceExplicitlyAuthorized: config.InferenceExplicitlyAuthorized,
@@ -519,7 +562,36 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 		EstimatedMaximumRunUSD:             formatUSDMicros(estimatedRunCost),
 		DatabaseMutationAllowed:            false, TradingStateMutationAllowed: false,
 	}
+	if isC1E3Profile(prepared.Profile) {
+		budgetValid := estimatedRunCost <= config.BudgetCeilingMicros
+		authorized := requireCredential && config.C1E3ExecutionAuthorization.OperatorOptIn && config.InferenceExplicitlyAuthorized && config.APIKey.present() && budgetValid && collisionFree
+		prepared.Plan.C1E3ExecutionAuthorization = &C1E3ExecutionAuthorizationPlan{
+			Version: C1E3ExecutionAuthorizationVersion, OperatorOptIn: config.C1E3ExecutionAuthorization.OperatorOptIn,
+			HostedInferenceAuthorized: config.InferenceExplicitlyAuthorized, CredentialPresent: config.APIKey.present(),
+			FrozenInputsValid: true, BudgetValid: budgetValid, EvidenceNamespaceCollisionFree: collisionFree,
+			ExecutionAuthorized: authorized,
+		}
+		if requireCredential {
+			if err := validateC1E3ExecutionAuthorization(prepared, config); err != nil {
+				return PreparedDiagnostic{}, err
+			}
+		}
+	}
 	return prepared, nil
+}
+
+func diagnosticInitialRequest(config OpenAIDiagnosticConfig, input EventInput, proxyExposures []string) (ProviderRequest, error) {
+	if config.OutputContract == V5SchemaVersion {
+		return V5InitialRequest(input, proxyExposures)
+	}
+	return InitialRequest(input, proxyExposures)
+}
+
+func diagnosticCorrectiveRequest(config OpenAIDiagnosticConfig, validationErrors []string, previous string, proxyExposures []string) (ProviderRequest, error) {
+	if config.OutputContract == V5SchemaVersion {
+		return V5CorrectiveRequest(validationErrors, previous, proxyExposures)
+	}
+	return CorrectiveRequest(validationErrors, previous, proxyExposures)
 }
 
 func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config OpenAIDiagnosticConfig) (int, int, int64, error) {
@@ -530,7 +602,7 @@ func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config Open
 	largestInitialBytes := 0
 	perRepetition := int64(0)
 	for _, event := range prepared.Manifest.Events {
-		request, err := InitialRequest(event.Input, prepared.ProxyExposures)
+		request, err := diagnosticInitialRequest(config, event.Input, prepared.ProxyExposures)
 		if err != nil {
 			return 0, 0, 0, err
 		}
@@ -549,7 +621,7 @@ func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config Open
 	// output token in each field is deliberately conservative for the bounded
 	// plain-text JSON contract while retaining the provider's 256-token cap.
 	boundedOutputBytes := config.MaxOutputTokens * 4
-	corrective, err := CorrectiveRequest([]string{strings.Repeat("e", boundedOutputBytes)}, strings.Repeat("x", boundedOutputBytes), prepared.ProxyExposures)
+	corrective, err := diagnosticCorrectiveRequest(config, []string{strings.Repeat("e", boundedOutputBytes)}, strings.Repeat("x", boundedOutputBytes), prepared.ProxyExposures)
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -710,10 +782,15 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 		caseRuns := make([]DiagnosticCaseRun, 0, prepared.Profile.CaseCount)
 		for _, event := range prepared.Manifest.Events {
 			inputFingerprint, _ := EventInputFingerprint(event.Input)
-			result, attempts, traces, err := analyseEvent(
-				prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version,
-				event.ID, inputFingerprint, event.Input, prepared.ProxyExposures,
-			)
+			var result EventResult
+			var attempts []Attempt
+			var traces []ProviderTrace
+			var err error
+			if prepared.Plan.OutputContract == V5SchemaVersion {
+				result, attempts, traces, err = analyseV5Event(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
+			} else {
+				result, attempts, traces, err = analyseEvent(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
+			}
 			if err != nil {
 				if recorder, ok := provider.(hostedExperimentRecorder); ok {
 					paths.StopRecord = filepath.Join(dir, "stop.json")

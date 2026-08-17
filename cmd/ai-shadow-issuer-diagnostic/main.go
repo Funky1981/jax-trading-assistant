@@ -57,6 +57,7 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	outputRoot := flags.String("output-root", "", "append-only diagnostic audit root (provider-specific default when omitted)")
 	preflight := flags.Bool("preflight", false, "perform all non-Ollama checks and write an audit artifact")
 	execute := flags.Bool("execute", false, "execute the validated diagnostic repetition selection (default 3; explicit 1 allowed)")
+	authorizeC1E3Execution := flags.Bool("authorize-c1e3-execution", false, "explicitly authorize provider construction for a registered frozen C1E3 profile")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -66,6 +67,9 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	profile, err := aishadow.LoadDiagnosticEvaluationProfile(*evaluationProfileID)
 	if err != nil {
 		return err
+	}
+	if *authorizeC1E3Execution && !*execute {
+		return fmt.Errorf("--authorize-c1e3-execution is valid only with --execute")
 	}
 	if *manifestPath == "" {
 		*manifestPath = profile.ManifestPath
@@ -127,6 +131,9 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	case aishadow.OpenAIDiagnosticProvider:
 		requireCredential := !*preflight || !profile.CredentiallessPreflightAllowed
 		hostedConfig, err = aishadow.LoadOpenAIDiagnosticConfigForProfile(deps.lookup, profile, requireCredential)
+		if err == nil {
+			hostedConfig.C1E3ExecutionAuthorization = aishadow.NewC1E3ExecutionAuthorization(*authorizeC1E3Execution)
+		}
 		if root == "" {
 			root = defaultHostedOutputRoot
 		}
@@ -205,6 +212,10 @@ func run(args []string, output io.Writer, deps dependencies) error {
 				"ceiling_usd": hosted.BudgetCeilingUSD, "pricing": hosted.Pricing,
 				"estimated_maximum_run_usd": hosted.EstimatedMaximumRunUSD,
 			}
+			if authorization := prepared.Plan.C1E3ExecutionAuthorization; authorization != nil {
+				result["c1e3_execution_authorization"] = authorization
+				result["execution_authorized"] = authorization.ExecutionAuthorized
+			}
 		}
 		return encoder.Encode(result)
 	}
@@ -213,6 +224,9 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	if providerName == aishadow.OpenAIDiagnosticProvider {
 		if !hostedConfig.InferenceExplicitlyAuthorized {
 			return fmt.Errorf("hosted inference is not authorized: %s must be true under separate architecture approval", aishadow.OpenAIDiagnosticInferenceAuthEnv)
+		}
+		if err := aishadow.RevalidateC1E3ProviderConstruction(prepared, hostedConfig); err != nil {
+			return err
 		}
 		identity = aishadow.DiagnosticModelIdentity{Name: config.Model}
 		provider = deps.openAIProvider(hostedConfig)
