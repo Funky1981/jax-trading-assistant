@@ -1,0 +1,138 @@
+{
+  "version": "ai-shadow-issuer-boundary-challenge-input-fingerprints-v3",
+  "manifest_fingerprint": "47dac15c2cbc3684d1d1f07bc1cd3188778326f51ea0198fa5cd176f8cd6dda9",
+  "prompt_version": "ai-shadow-prompt-v5-causal-attribution",
+  "output_contract": "ai-shadow-output-v5-causal-attribution",
+  "policy_version": "event-asset-resolution-v1",
+  "fingerprint": "7707a32766748fce1e1f564dc2bd18d0e4042853fecf55115ffb09f770e0196e",
+  "events": [
+    {
+      "id": "issuer-boundary-v3-001",
+      "input_fingerprint": "6dbe4144b917fe4d67c02c5c9c7b54e5b6fe639d6fa3f9b37874df586ee6d859"
+    },
+    {
+      "id": "issuer-boundary-v3-002",
+      "input_fingerprint": "a2ca321c46a7abc383377f22782d85140502592ff9b7fd80d9271d32960e9230"
+    },
+    {
+      "id": "issuer-boundary-v3-003",
+      "input_fingerprint": "ed3edad57311da2ef306dc521a3a2a1efee895400ad93aefd04445d87ebd5b69"
+    },
+    {
+      "id": "issuer-boundary-v3-004",
+      "input_fingerprint": "a0e73c01c1c07358a6dcacb36d841320968018d3ed150d51a1e6f70bd81d3ffc"
+    },
+    {
+      "id": "issuer-boundary-v3-005",
+      "input_fingerprint": "6e3390d461e76daa0b55ccfba734fce6ac9c274ed96bf600584259c020e9ca20"
+    },
+    {
+      "id": "issuer-boundary-v3-006",
+      "input_fingerprint": "ce49c4f39bd0b0908c8afe7414106dea1ebfb90675cd1bc3ada3d97851e64920"
+    },
+    {
+      "id": "issuer-boundary-v3-007",
+      "input_fingerprint": "0a71c880cd67c46e038ac4426d6ae72b1e7bb5d5ffafdabc21d8b38eafcb8a1b"
+    },
+    {
+      "id": "issuer-boundary-v3-008",
+      "input_fingerprint": "b84cb78387a501257709e750bcf957c8abeb24df75dcc0e1584996abc20c36fb"
+    },
+    {
+      "id": "issuer-boundary-v3-009",
+      "input_fingerprint": "891a3b62b5e1519162f86a2343a550d08d70c33be4b29689178503b9caaa29ad"
+    },
+    {
+      "id": "issuer-boundary-v3-010",
+      "input_fingerprint": "92d04115d5eacfd92f4510d40aaf24b95cd6a092d07cf3b1612f32122c34e262"
+    },
+    {
+      "id": "issuer-boundary-v3-011",
+      "input_fingerprint": "2d4ddda85789cd53bd470d3efc400247aedfaedb3ae2c010ebdbf8ad7816364a"
+    },
+    {
+      "id": "issuer-boundary-v3-012",
+      "input_fingerprint": "600e60561049a0606ea7a9e69903567cb76310dc51ae62d7ec50b17706f9f260"
+    },
+    {
+      "id": "issuer-boundary-v3-013",
+      "input_fingerprint": "184932ee6652bc733f3d901c2764687c69a215dbbeeb27d0d7cb1e6c3b66dc5f"
+    },
+    {
+      "id": "issuer-boundary-v3-014",
+      "input_fingerprint": "c1a67fa44bc2d51402185c2c2ee6ff63d7b5c9e32e78e358b65ae9c82a243d38"
+    },
+    {
+      "id": "issuer-boundary-v3-015",
+      "input_fingerprint": "2f0b13db6acd6169793ce156760109793b1b4863ff87c71af731c9a5eaccc687"
+    },
+    {
+      "id": "issuer-boundary-v3-016",
+      "input_fingerprint": "bf74614a319b969e68c600d7e0b5f5aca172763f6fa85f4690fcc3c399297c77"
+    },
+    {
+      "id": "issuer-boundary-v3-017",
+      "input_fingerprint": "cc534a65b5b7deca0ff57d6dedecbc171ab8f480415892cf0009a5046dfce98d"
+    },
+    {
+      "id": "issuer-boundary-v3-018",
+      "input_fingerprint": "4fe6747440da9be890b06fb952da580e1589f29ba0e37eec944f1d1fdba012e4"
+    },
+    {
+      "id": "issuer-boundary-v3-019",
+      "input_fingerprint": "34a054b2ce55ecee2a96fc41cbef6c924dbbdf34b50b3e3546f42f3972ae564c"
+    },
+    {
+      "id": "issuer-boundary-v3-020",
+      "input_fingerprint": "3943993a0e5c4aaf835efa67b41973e32d1466dd3b165b3ad0e5036c14258ece"
+    },
+    {
+      "id": "issuer-boundary-v3-021",
+      "input_fingerprint": "c7cab1d8e0ec54dfb14baf8a8be2663fc599f8c382c1e29c302c688de8cef220"
+    },
+    {
+      "id": "issuer-boundary-v3-022",
+      "input_fingerprint": "b25bdeb391b408bc673400af307d619a0305d8ca6454b718ca73ef340fd0df55"
+    },
+    {
+      "id": "issuer-boundary-v3-023",
+      "input_fingerprint": "be48a950062cb2ecac35eb48248c4a27a2ba54c415d56730645f8113820217f4"
+    },
+    {
+      "id": "issuer-boundary-v3-024",
+      "input_fingerprint": "a51301a062a72f72113ea6d8ed6212ac7fd467112e0df42f5c46fc78d41f57de"
+    },
+    {
+      "id": "issuer-boundary-v3-025",
+      "input_fingerprint": "8e70c5f635da6b10849444dcebafe7dab2ff506b76ade8e3edb1eb8328065467"
+    },
+    {
+      "id": "issuer-boundary-v3-026",
+      "input_fingerprint": "ac7f20954a4597cb733a52b323f887e3037d97a0c7985710713d4e3c29bf44da"
+    },
+    {
+      "id": "issuer-boundary-v3-027",
+      "input_fingerprint": "c4f2485d9b61374482803d0e1ea4d1a3f65ccb5740eb26b9bed8775feb844b99"
+    },
+    {
+      "id": "issuer-boundary-v3-028",
+      "input_fingerprint": "5f29631b7a417afdfd95482336570f5fa89fce91e0a4334bb4133ff2f14cc69a"
+    },
+    {
+      "id": "issuer-boundary-v3-029",
+      "input_fingerprint": "1747b8ca5a3d63d12bdc7e0a30596e218ad8b5beb97e3c5db560fd9bb9a29ff8"
+    },
+    {
+      "id": "issuer-boundary-v3-030",
+      "input_fingerprint": "ce0b4a53f5e1dea70a2749dc9c0dadaed54d4ea88fc9e8dcb03c0f2794fc7911"
+    },
+    {
+      "id": "issuer-boundary-v3-031",
+      "input_fingerprint": "55a284972e20c70ba80f630c3c01e9c8f7ce7927ec3cbfdad85937f0e7b86885"
+    },
+    {
+      "id": "issuer-boundary-v3-032",
+      "input_fingerprint": "eb244bbc50deadbc7c7c7e2ea9bb0f90e85a4d20a207ad5f18ce4f14b61ed5f1"
+    }
+  ]
+}

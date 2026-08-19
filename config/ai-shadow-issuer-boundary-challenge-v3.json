@@ -1,0 +1,865 @@
+{
+  "version": "ai-shadow-issuer-boundary-challenge-v3",
+  "output_contract": "ai-shadow-output-v5-causal-attribution",
+  "policy_version": "event-asset-resolution-v1",
+  "label_version": "issuer-recognition-adjudication-v1",
+  "adjudication_note": "Independent adversarial boundary holdout v3, frozen before C1E3 forensic review or C1F remediation design. Exact issuer identity, causal role, entity-versus-exposure, and unique-proxy requirements are adjudicated independently of relevance, materiality, and resolver coverage. DIRECT requires one exact principal traded issuer; PROXY requires no eligible direct issuer and one bounded principal exposure; all other cases abstain.",
+  "fingerprint": "47dac15c2cbc3684d1d1f07bc1cd3188778326f51ea0198fa5cd176f8cd6dda9",
+  "events": [
+    {
+      "id": "issuer-boundary-v3-001",
+      "category": "brand_parent_identity",
+      "input": {
+        "title": "Alphabet says its YouTube business will close a creator-support office",
+        "summary": "Alphabet Inc. identified itself as the legal employer and approved the closure of the office used solely by its YouTube division.",
+        "source": "Issuer employment notice",
+        "publication_timestamp": "2026-08-19T07:00:00Z",
+        "receipt_timestamp": "2026-08-19T07:01:00Z",
+        "event_category": "company_operations",
+        "entities": [
+          "Alphabet Inc.",
+          "YouTube"
+        ],
+        "receipt_evidence": [
+          "legal employer identity",
+          "issuer-approved closure"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Alphabet Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "ambiguous",
+        "rationale": "The evidence expressly links the YouTube division action to legal issuer Alphabet, though its listed share class remains ambiguous."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-002",
+      "category": "brand_parent_identity",
+      "input": {
+        "title": "FreshMart recalls frozen meals from stores in three countries",
+        "summary": "Different unrelated franchise groups trade as FreshMart, and the notice omits the legal operator, brand owner, jurisdiction, and exchange.",
+        "source": "Reposted consumer alert",
+        "publication_timestamp": "2026-08-19T07:06:00Z",
+        "receipt_timestamp": "2026-08-19T07:07:00Z",
+        "event_category": "company_product",
+        "entities": [
+          "FreshMart"
+        ],
+        "receipt_evidence": [
+          "brand-only recall",
+          "multiple operators"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The causal retail brand is known, but no exact legal issuer can be inferred across unrelated FreshMart operators."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-003",
+      "category": "division_issuer_boundary",
+      "input": {
+        "title": "Amazon.com consolidates two AWS billing teams",
+        "summary": "Amazon.com, Inc. filed the employment notice and states that AWS is the internal division whose teams will be combined.",
+        "source": "Issuer labour filing",
+        "publication_timestamp": "2026-08-19T07:12:00Z",
+        "receipt_timestamp": "2026-08-19T07:13:00Z",
+        "event_category": "company_operations",
+        "entities": [
+          "Amazon.com, Inc.",
+          "AWS"
+        ],
+        "receipt_evidence": [
+          "legal employer filing",
+          "division relationship"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Amazon.com, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "The legal parent is explicit and directly makes the operating decision for its AWS division."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-004",
+      "category": "division_issuer_boundary",
+      "input": {
+        "title": "Mobility division suspends scooter rentals after a software fault",
+        "summary": "The alert names only Mobility division and provides no parent, operator, brand, country, legal suffix, or exchange.",
+        "source": "Anonymous service-status repost",
+        "publication_timestamp": "2026-08-19T07:18:00Z",
+        "receipt_timestamp": "2026-08-19T07:19:00Z",
+        "event_category": "company_disruption",
+        "entities": [
+          "Mobility division"
+        ],
+        "receipt_evidence": [
+          "division-only name",
+          "missing parent identity"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "A causal operating unit is described, but its legal issuer identity cannot be determined from a generic division name."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-005",
+      "category": "legal_issuer_symbol_boundary",
+      "input": {
+        "title": "NIKE, Inc. files a warehouse easement under legal name and NKE symbol",
+        "summary": "The county filing names NIKE, Inc. as purchaser and includes NKE only as a cross-reference to the listed security.",
+        "source": "County property filing",
+        "publication_timestamp": "2026-08-19T07:24:00Z",
+        "receipt_timestamp": "2026-08-19T07:25:00Z",
+        "event_category": "company_property",
+        "entities": [
+          "NIKE, Inc.",
+          "NKE"
+        ],
+        "receipt_evidence": [
+          "legal purchaser name",
+          "security cross-reference"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "NIKE, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "The legal issuer is explicit and NKE is merely its corroborating trading symbol, not a separate entity."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-006",
+      "category": "legal_issuer_symbol_boundary",
+      "input": {
+        "title": "ARM inspection completed after repetitive-motion complaints",
+        "summary": "The workplace memo uses ARM as a body-part heading and names no semiconductor company, legal employer, exchange, or security.",
+        "source": "Workplace ergonomics memo",
+        "publication_timestamp": "2026-08-19T07:30:00Z",
+        "receipt_timestamp": "2026-08-19T07:31:00Z",
+        "event_category": "workplace_safety",
+        "entities": [
+          "ARM"
+        ],
+        "receipt_evidence": [
+          "anatomical context",
+          "no company identity"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The uppercase ticker-like string is anatomical language and does not identify Arm Holdings or another issuer."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-007",
+      "category": "company_exposure_boundary",
+      "input": {
+        "title": "Oil producers face a uniform increase in offshore royalty rates",
+        "summary": "The enacted rule applies across crude producers and names Exxon and Chevron only as examples without assigning either distinct obligations.",
+        "source": "Government royalty schedule",
+        "publication_timestamp": "2026-08-19T07:36:00Z",
+        "receipt_timestamp": "2026-08-19T07:37:00Z",
+        "event_category": "oil_market",
+        "entities": [
+          "oil producers",
+          "Exxon",
+          "Chevron"
+        ],
+        "receipt_evidence": [
+          "sector-wide rule",
+          "non-exhaustive examples"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "OIL_CATEGORY",
+        "expected_resolution_status": "resolved",
+        "rationale": "No company has principal causal weight; the oil market is the one bounded exposure directly covered by the rule."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-008",
+      "category": "company_exposure_boundary",
+      "input": {
+        "title": "Semiconductor Capital Partners purchases a city-centre office",
+        "summary": "The private property buyer happens to use Semiconductor in its legal name; the deal does not concern chip stocks, manufacturing, or a traded issuer.",
+        "source": "Land registry notice",
+        "publication_timestamp": "2026-08-19T07:42:00Z",
+        "receipt_timestamp": "2026-08-19T07:43:00Z",
+        "event_category": "private_property",
+        "entities": [
+          "Semiconductor Capital Partners"
+        ],
+        "receipt_evidence": [
+          "private buyer",
+          "property-only transaction"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "A sector word inside a private company name does not create a semiconductor exposure or eligible direct issuer."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-009",
+      "category": "supplier_customer_roles",
+      "input": {
+        "title": "onsemi halts a sensor line while General Motors reports sufficient stock",
+        "summary": "onsemi stated that contamination stopped its own production; General Motors said existing inventory prevents any current vehicle impact.",
+        "source": "Supplier incident notice",
+        "publication_timestamp": "2026-08-19T07:48:00Z",
+        "receipt_timestamp": "2026-08-19T07:49:00Z",
+        "event_category": "company_disruption",
+        "entities": [
+          "onsemi",
+          "General Motors"
+        ],
+        "receipt_evidence": [
+          "supplier shutdown statement",
+          "customer no-impact statement"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "ON Semiconductor Corporation",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The exact traded supplier owns the stopped line and is the principal subject; the customer explicitly has no current effect."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-010",
+      "category": "supplier_customer_roles",
+      "input": {
+        "title": "Private display maker auctions patents; Apple and Microsoft named as possible bidders",
+        "summary": "The seller has opened an auction, but neither listed company has registered, submitted a bid, or acknowledged interest.",
+        "source": "Private seller auction memorandum",
+        "publication_timestamp": "2026-08-19T07:54:00Z",
+        "receipt_timestamp": "2026-08-19T07:55:00Z",
+        "event_category": "private_company_transaction",
+        "entities": [
+          "Apple",
+          "Microsoft"
+        ],
+        "receipt_evidence": [
+          "private patent auction",
+          "speculative bidder list"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The private supplier is the only actual actor; Apple and Microsoft are speculative customers with no causal role or confirmed exposure."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-011",
+      "category": "single_principal_affected_set",
+      "input": {
+        "title": "Visa terminates a processor; layoffs follow at the vendor",
+        "summary": "Visa exercised the termination right in its contract; the vendor bears the layoffs and Mastercard appears only in a market-share chart.",
+        "source": "Contract termination filing",
+        "publication_timestamp": "2026-08-19T08:00:00Z",
+        "receipt_timestamp": "2026-08-19T08:01:00Z",
+        "event_category": "company_contract",
+        "entities": [
+          "Visa",
+          "Mastercard"
+        ],
+        "receipt_evidence": [
+          "Visa termination notice",
+          "contextual market-share chart"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Visa Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Visa alone makes the causal contract decision; vendor layoffs are downstream and Mastercard is only contextual."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-012",
+      "category": "single_principal_affected_set",
+      "input": {
+        "title": "Private port operator delays cargo belonging to Netflix and eBay",
+        "summary": "The operator reports different delays but provides no economic value, priority, contractual exposure, or basis for treating either customer as principal.",
+        "source": "Private terminal status notice",
+        "publication_timestamp": "2026-08-19T08:06:00Z",
+        "receipt_timestamp": "2026-08-19T08:07:00Z",
+        "event_category": "supply_chain_disruption",
+        "entities": [
+          "Netflix",
+          "eBay"
+        ],
+        "receipt_evidence": [
+          "customer cargo list",
+          "no principal weighting"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The private operator is causal and the evidence cannot identify one listed customer as the principal affected issuer."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-013",
+      "category": "equal_principal_boundary",
+      "input": {
+        "title": "Shell and BP equally fund and govern a new carbon-storage venture",
+        "summary": "The executed venture agreement assigns each company half the capital, board seats, voting rights, and operating risk.",
+        "source": "Joint venture agreement",
+        "publication_timestamp": "2026-08-19T08:12:00Z",
+        "receipt_timestamp": "2026-08-19T08:13:00Z",
+        "event_category": "multi_company_transaction",
+        "entities": [
+          "Shell",
+          "BP"
+        ],
+        "receipt_evidence": [
+          "equal ownership",
+          "equal governance"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Shell and BP are equal causal principals, so the frozen policy must abstain from selecting either issuer."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-014",
+      "category": "equal_principal_boundary",
+      "input": {
+        "title": "Sony and Honda recall the same number of vehicles from their shared programme",
+        "summary": "The coordinated notices impose identical repair costs and customer duties on both companies with no lead operator identified.",
+        "source": "Coordinated recall notices",
+        "publication_timestamp": "2026-08-19T08:18:00Z",
+        "receipt_timestamp": "2026-08-19T08:19:00Z",
+        "event_category": "multi_company_product",
+        "entities": [
+          "Sony",
+          "Honda"
+        ],
+        "receipt_evidence": [
+          "matching recall populations",
+          "equal obligations"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Both traded companies bear equal direct recall obligations and neither is identified as the unique principal."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-015",
+      "category": "uncertain_principal_identity",
+      "input": {
+        "title": "Universal announces a debt exchange after lender talks",
+        "summary": "The flash supplies no country, legal suffix, business description, exchange, or security identifier despite many unrelated Universal entities.",
+        "source": "Unattributed debt-market flash",
+        "publication_timestamp": "2026-08-19T08:24:00Z",
+        "receipt_timestamp": "2026-08-19T08:25:00Z",
+        "event_category": "company_financial",
+        "entities": [
+          "Universal"
+        ],
+        "receipt_evidence": [
+          "same-name entities",
+          "missing jurisdiction"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The event may be company-specific, but the exact causal legal issuer cannot be distinguished."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-016",
+      "category": "uncertain_principal_identity",
+      "input": {
+        "title": "Block closes its payments service after a licensing dispute",
+        "summary": "The notice does not say whether Block is Block, Inc., a local service branded Block, or a generic reference to a transaction block.",
+        "source": "Reposted payments alert",
+        "publication_timestamp": "2026-08-19T08:30:00Z",
+        "receipt_timestamp": "2026-08-19T08:31:00Z",
+        "event_category": "company_disruption",
+        "entities": [
+          "Block"
+        ],
+        "receipt_evidence": [
+          "ambiguous name",
+          "missing legal operator"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Payments context is insufficient to identify the exact causal legal entity behind the ambiguous Block name."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-017",
+      "category": "secondary_contextual_boundary",
+      "input": {
+        "title": "Netflix receives exclusive film-restoration rights; Roku appears in a valuation model",
+        "summary": "The archive grants the rights solely to Netflix, while Roku is one of several comparables in an analyst's attached valuation table.",
+        "source": "Archive rights award",
+        "publication_timestamp": "2026-08-19T08:36:00Z",
+        "receipt_timestamp": "2026-08-19T08:37:00Z",
+        "event_category": "company_contract",
+        "entities": [
+          "Netflix",
+          "Roku"
+        ],
+        "receipt_evidence": [
+          "exclusive rights grant",
+          "attached comparable table"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Netflix, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Netflix alone receives the operative rights; Roku is a contextual valuation comparable with no causal role."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-018",
+      "category": "secondary_contextual_boundary",
+      "input": {
+        "title": "Bank cyber standard cites Coinbase loss estimates in an explanatory annex",
+        "summary": "The binding standard applies to deposit-taking banks; Coinbase figures illustrate prior incidents but no rule or finding applies to the company.",
+        "source": "Bank regulator final standard",
+        "publication_timestamp": "2026-08-19T08:42:00Z",
+        "receipt_timestamp": "2026-08-19T08:43:00Z",
+        "event_category": "financial_regulation",
+        "entities": [
+          "Coinbase"
+        ],
+        "receipt_evidence": [
+          "contextual annex",
+          "bank-only scope"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Coinbase is contextual evidence rather than a principal or secondary affected issuer, and no bounded proxy fits the bank rule."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-019",
+      "category": "materiality_causality_boundary",
+      "input": {
+        "title": "Corning changes bicycle-parking permits at one office",
+        "summary": "Corning will issue new colour-coded permits to employees using racks at its company office; no other facility is affected.",
+        "source": "Issuer facilities circular",
+        "publication_timestamp": "2026-08-19T08:48:00Z",
+        "receipt_timestamp": "2026-08-19T08:49:00Z",
+        "event_category": "company_operations",
+        "entities": [
+          "Corning"
+        ],
+        "receipt_evidence": [
+          "employee facilities rule",
+          "company office"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Corning Incorporated",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Very low materiality does not alter the clear causal attribution to Corning's own workplace decision."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-020",
+      "category": "materiality_causality_boundary",
+      "input": {
+        "title": "Coordinated refinery fires remove a quarter of regional fuel output",
+        "summary": "The emergency report describes severe petroleum-market disruption but withholds every operator, owner, and listed company identity.",
+        "source": "National emergency energy bulletin",
+        "publication_timestamp": "2026-08-19T08:54:00Z",
+        "receipt_timestamp": "2026-08-19T08:55:00Z",
+        "event_category": "oil_market",
+        "entities": [
+          "regional refineries"
+        ],
+        "receipt_evidence": [
+          "aggregate output loss",
+          "operators withheld"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "OIL_CATEGORY",
+        "expected_resolution_status": "resolved",
+        "rationale": "Despite high materiality, no issuer is identifiable and oil is the sole supported principal exposure."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-021",
+      "category": "proxy_uniqueness_boundary",
+      "input": {
+        "title": "Gold import duty takes effect at the largest bullion hub",
+        "summary": "The duty applies specifically to physical gold transactions; jewellery retailers are discussed only as customers and no listed company is principal.",
+        "source": "Customs tariff notice",
+        "publication_timestamp": "2026-08-19T09:00:00Z",
+        "receipt_timestamp": "2026-08-19T09:01:00Z",
+        "event_category": "gold_market",
+        "entities": [
+          "gold market",
+          "jewellery retailers"
+        ],
+        "receipt_evidence": [
+          "gold-specific tariff",
+          "customer context"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "GOLD_NAMED_MARKET",
+        "expected_resolution_status": "resolved",
+        "rationale": "Physical gold is the unique principal exposure and related retailer demand does not create another principal."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-022",
+      "category": "proxy_uniqueness_boundary",
+      "input": {
+        "title": "Drought damages orange groves as report notes higher oil-based transport costs",
+        "summary": "The crop loss is principal, while petroleum costs are one small input and no supported crop proxy or traded grower is identified.",
+        "source": "Agricultural damage assessment",
+        "publication_timestamp": "2026-08-19T09:06:00Z",
+        "receipt_timestamp": "2026-08-19T09:07:00Z",
+        "event_category": "agriculture",
+        "entities": [
+          "orange groves",
+          "oil-based transport"
+        ],
+        "receipt_evidence": [
+          "crop damage estimate",
+          "secondary input cost"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Oil is related but not the principal subject, while the principal crop exposure has no bounded proxy."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-023",
+      "category": "multiple_proxy_boundary",
+      "input": {
+        "title": "Transaction levy applies equally to gold-backed funds and S\u0026P 500 funds",
+        "summary": "The enacted levy gives the two fund groups the same rate, effective date, and statutory prominence without selecting a primary market.",
+        "source": "Financial transaction tax schedule",
+        "publication_timestamp": "2026-08-19T09:12:00Z",
+        "receipt_timestamp": "2026-08-19T09:13:00Z",
+        "event_category": "cross_asset_markets",
+        "entities": [
+          "gold market",
+          "S\u0026P 500"
+        ],
+        "receipt_evidence": [
+          "identical statutory rates",
+          "two co-equal fund groups"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Gold and the S\u0026P 500 exposures are co-equal statutory subjects, so neither proxy is uniquely principal."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-024",
+      "category": "multiple_proxy_boundary",
+      "input": {
+        "title": "Fund mandate equally tracks chip stocks and long-duration Treasuries",
+        "summary": "The new mandate allocates exactly half to semiconductor stocks and half to US duration, with no dominant sleeve or causal company.",
+        "source": "Institutional mandate notice",
+        "publication_timestamp": "2026-08-19T09:18:00Z",
+        "receipt_timestamp": "2026-08-19T09:19:00Z",
+        "event_category": "cross_asset_markets",
+        "entities": [
+          "semiconductor stocks",
+          "US Treasuries"
+        ],
+        "receipt_evidence": [
+          "equal allocation",
+          "two principal sleeves"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Two supported exposures are explicitly equal principals and policy cannot select one proxy."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-025",
+      "category": "unknown_resolver_issuer",
+      "input": {
+        "title": "Duolingo, Inc. closes one classroom certificate to new enrolments",
+        "summary": "Duolingo, Inc. named itself as the legal provider and set the closure time for its own paid certificate programme.",
+        "source": "Issuer education-product notice",
+        "publication_timestamp": "2026-08-19T09:24:00Z",
+        "receipt_timestamp": "2026-08-19T09:25:00Z",
+        "event_category": "company_product",
+        "entities": [
+          "Duolingo, Inc."
+        ],
+        "receipt_evidence": [
+          "legal issuer name",
+          "certificate closure time"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Duolingo, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The causal traded issuer is exact, but the frozen deterministic resolver has no Duolingo identity."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-026",
+      "category": "unknown_resolver_issuer",
+      "input": {
+        "title": "Schneider Electric SE recalls a named industrial relay",
+        "summary": "Schneider Electric SE issued serial ranges and replacement instructions for relays sold under its legal manufacturer identity.",
+        "source": "Issuer safety recall",
+        "publication_timestamp": "2026-08-19T09:30:00Z",
+        "receipt_timestamp": "2026-08-19T09:31:00Z",
+        "event_category": "company_product",
+        "entities": [
+          "Schneider Electric SE"
+        ],
+        "receipt_evidence": [
+          "legal manufacturer name",
+          "serial ranges"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Schneider Electric SE",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Schneider Electric SE is precisely identified as the recalling issuer, despite absent resolver coverage."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-027",
+      "category": "cross_company_joint_venture",
+      "input": {
+        "title": "Chevron orders shutdown at the joint venture platform it operates",
+        "summary": "Chevron holds operating authority and issued the shutdown order; minority partner Exxon Mobil did not vote or take a separate action.",
+        "source": "Joint venture operator notice",
+        "publication_timestamp": "2026-08-19T09:36:00Z",
+        "receipt_timestamp": "2026-08-19T09:37:00Z",
+        "event_category": "company_operations",
+        "entities": [
+          "Chevron",
+          "Exxon Mobil"
+        ],
+        "receipt_evidence": [
+          "operator authority",
+          "shutdown order"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Chevron Corporation",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Chevron is the uniquely causal operator issuing the shutdown; Exxon Mobil is an affected minority partner only."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-028",
+      "category": "cross_company_joint_venture",
+      "input": {
+        "title": "BMW and Mercedes-Benz dissolve a jointly governed mobility venture",
+        "summary": "Both companies approved the dissolution, share wind-down costs equally, and appoint the same number of liquidator representatives.",
+        "source": "Joint shareholder notice",
+        "publication_timestamp": "2026-08-19T09:42:00Z",
+        "receipt_timestamp": "2026-08-19T09:43:00Z",
+        "event_category": "multi_company_transaction",
+        "entities": [
+          "BMW",
+          "Mercedes-Benz"
+        ],
+        "receipt_evidence": [
+          "joint approval",
+          "equal wind-down obligations"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The joint-venture owners are equal causal principals and no lead issuer can be selected."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-029",
+      "category": "merger_acquisition_roles",
+      "input": {
+        "title": "Microsoft exercises a call option for the remaining stake in a private joint venture",
+        "summary": "The option agreement gives Microsoft sole discretion to trigger the purchase; the private founder disputes valuation but cannot prevent closing.",
+        "source": "Option exercise filing",
+        "publication_timestamp": "2026-08-19T09:48:00Z",
+        "receipt_timestamp": "2026-08-19T09:49:00Z",
+        "event_category": "company_transaction",
+        "entities": [
+          "Microsoft"
+        ],
+        "receipt_evidence": [
+          "sole exercise right",
+          "binding closing mechanism"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Microsoft Corporation",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Microsoft is the only traded party and uniquely causes the acquisition by exercising its unilateral option."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-030",
+      "category": "merger_acquisition_roles",
+      "input": {
+        "title": "Kroger and Albertsons terminate their merger and split the break costs",
+        "summary": "The termination agreement records mutual consent, equal fees, and matching release obligations for both listed companies.",
+        "source": "Joint termination filing",
+        "publication_timestamp": "2026-08-19T09:54:00Z",
+        "receipt_timestamp": "2026-08-19T09:55:00Z",
+        "event_category": "multi_company_transaction",
+        "entities": [
+          "Kroger",
+          "Albertsons"
+        ],
+        "receipt_evidence": [
+          "mutual termination",
+          "equal cost allocation"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Buyer and target are equal causal parties to the termination, so neither is a unique principal issuer."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-031",
+      "category": "macro_sector_company_examples",
+      "input": {
+        "title": "Crude shipping surcharge rises across all sanctioned routes",
+        "summary": "The market-wide surcharge applies to petroleum cargoes; Occidental and Valero appear only as examples of companies analysts may monitor.",
+        "source": "Shipping-rate circular",
+        "publication_timestamp": "2026-08-19T10:00:00Z",
+        "receipt_timestamp": "2026-08-19T10:01:00Z",
+        "event_category": "oil_market",
+        "entities": [
+          "crude cargoes",
+          "Occidental",
+          "Valero"
+        ],
+        "receipt_evidence": [
+          "route-wide surcharge",
+          "analyst example list"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "OIL_CATEGORY",
+        "expected_resolution_status": "resolved",
+        "rationale": "Oil shipping is the sole principal market exposure; example companies have no issuer-specific action or confirmed impact."
+      }
+    },
+    {
+      "id": "issuer-boundary-v3-032",
+      "category": "macro_sector_company_examples",
+      "input": {
+        "title": "Semiconductor stocks receive a uniform capital-buffer recommendation",
+        "summary": "The industry report addresses chip stocks collectively and lists NVIDIA and AMD solely to illustrate company sizes, without recommending distinct treatment.",
+        "source": "Sector prudential study",
+        "publication_timestamp": "2026-08-19T10:06:00Z",
+        "receipt_timestamp": "2026-08-19T10:07:00Z",
+        "event_category": "semiconductor_sector",
+        "entities": [
+          "semiconductor stocks",
+          "NVIDIA",
+          "AMD"
+        ],
+        "receipt_evidence": [
+          "group-wide recommendation",
+          "illustrative company sizes"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "SEMICONDUCTOR_GROUP",
+        "expected_resolution_status": "resolved",
+        "rationale": "The semiconductor group is the unique principal exposure and named issuers are non-causal examples."
+      }
+    }
+  ]
+}

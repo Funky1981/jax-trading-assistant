@@ -1,0 +1,53 @@
+{
+  "version": "ai-shadow-issuer-generalization-holdout-freeze-v3",
+  "dataset_version": "ai-shadow-issuer-generalization-holdout-v3",
+  "created_at": "2026-08-19T10:50:00Z",
+  "independence_statement": "Constructed before detailed C1E3 failure evidence or any C1F remediation design was inspected. Cases are new, manually adjudicated under frozen causal mapping semantics, and checked against the original 48 plus Generalization and Boundary v1/v2 for duplicate wording, lexical near-copies, superficial substitutions, and semantic template reuse.",
+  "manifest": {
+    "path": "config/ai-shadow-issuer-generalization-holdout-v3.json",
+    "file_sha256": "6abd7767e0031945e71f2a1d3ef49536adc2d9e9b7d4a78bd938f1f469d27502",
+    "semantic_fingerprint": "6e4cdd0133b1a12e980650e18786070586a522375c01d0ed0f2e61823a42f86c"
+  },
+  "input_fingerprint_lock": {
+    "path": "config/ai-shadow-issuer-generalization-holdout-input-fingerprints-v3.json",
+    "file_sha256": "0b6ab35b963c99dae44d1c43fa657dc23c202a65f6b78f17dcc73af0a145ee8a",
+    "semantic_fingerprint": "890dd084bc65828b839b250d5c0a7663016d11ee6bfade7a9b1dc7cd61e7d501"
+  },
+  "case_count": 48,
+  "mapping_status_distribution": {
+    "DIRECT": 25,
+    "PROXY": 6,
+    "UNRESOLVED": 17
+  },
+  "expected_resolution_status_distribution": {
+    "ambiguous": 1,
+    "resolved": 27,
+    "unresolved": 20
+  },
+  "category_distribution": {
+    "causal_contextual_direct": 3,
+    "clear_single_principal_direct": 4,
+    "entity_exposure_distinction": 3,
+    "equal_principals": 3,
+    "high_relevance_noncausal": 3,
+    "identity_ambiguity": 3,
+    "indirect_exposure_boundary": 3,
+    "legitimate_principal_proxy": 6,
+    "less_famous_direct": 3,
+    "low_medium_relevance_direct": 3,
+    "multi_proxy_or_invalid": 2,
+    "single_principal_among_entities": 3,
+    "supported_alias_direct": 3,
+    "unsupported_identifiable_direct": 3,
+    "weak_genuine_direct": 3
+  },
+  "policy": {
+    "identity": "event-asset-resolution-v1",
+    "path": "config/event-asset-resolution-v1.json",
+    "file_sha256": "5170cc7c8dede5f1a095dfae1ffa7f0060bb8358c85b6dbb0609dab8ef30ede0"
+  },
+  "prompt_version": "ai-shadow-prompt-v5-causal-attribution",
+  "output_contract": "ai-shadow-output-v5-causal-attribution",
+  "label_version": "issuer-recognition-adjudication-v1",
+  "mutation_rule": "Once any model output is observed against v3, this dataset is immutable forever; any later alteration requires a new version using v4 dataset identities and a new evaluation cell."
+}

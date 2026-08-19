@@ -62,6 +62,8 @@ type holdoutDatasetSpec struct {
 	ManifestVersion      string
 	LockVersion          string
 	FreezeVersion        string
+	PromptVersion        string
+	OutputContract       string
 	IDPrefix             string
 	CaseCount            int
 	MappingDistribution  map[string]int
@@ -77,6 +79,8 @@ var holdoutDatasetSpecs = []holdoutDatasetSpec{
 		ManifestVersion:     "ai-shadow-issuer-generalization-holdout-v1",
 		LockVersion:         "ai-shadow-issuer-generalization-holdout-input-fingerprints-v1",
 		FreezeVersion:       "ai-shadow-issuer-generalization-holdout-freeze-v1",
+		PromptVersion:       PromptVersion,
+		OutputContract:      SchemaVersion,
 		IDPrefix:            "issuer-generalization-v1-",
 		CaseCount:           48,
 		MappingDistribution: map[string]int{"DIRECT": 25, "PROXY": 6, "UNRESOLVED": 17},
@@ -95,6 +99,8 @@ var holdoutDatasetSpecs = []holdoutDatasetSpec{
 		ManifestVersion:     "ai-shadow-issuer-boundary-challenge-v1",
 		LockVersion:         "ai-shadow-issuer-boundary-challenge-input-fingerprints-v1",
 		FreezeVersion:       "ai-shadow-issuer-boundary-challenge-freeze-v1",
+		PromptVersion:       PromptVersion,
+		OutputContract:      SchemaVersion,
 		IDPrefix:            "issuer-boundary-v1-",
 		CaseCount:           24,
 		MappingDistribution: map[string]int{"DIRECT": 8, "PROXY": 8, "UNRESOLVED": 8},
@@ -115,6 +121,8 @@ var holdoutDatasetSpecs = []holdoutDatasetSpec{
 		ManifestVersion:     "ai-shadow-issuer-generalization-holdout-v2",
 		LockVersion:         "ai-shadow-issuer-generalization-holdout-input-fingerprints-v2",
 		FreezeVersion:       "ai-shadow-issuer-generalization-holdout-freeze-v2",
+		PromptVersion:       PromptVersion,
+		OutputContract:      SchemaVersion,
 		IDPrefix:            "issuer-generalization-v2-",
 		CaseCount:           48,
 		MappingDistribution: map[string]int{"DIRECT": 25, "PROXY": 6, "UNRESOLVED": 17},
@@ -135,6 +143,8 @@ var holdoutDatasetSpecs = []holdoutDatasetSpec{
 		ManifestVersion:     "ai-shadow-issuer-boundary-challenge-v2",
 		LockVersion:         "ai-shadow-issuer-boundary-challenge-input-fingerprints-v2",
 		FreezeVersion:       "ai-shadow-issuer-boundary-challenge-freeze-v2",
+		PromptVersion:       PromptVersion,
+		OutputContract:      SchemaVersion,
 		IDPrefix:            "issuer-boundary-v2-",
 		CaseCount:           32,
 		MappingDistribution: map[string]int{"DIRECT": 14, "PROXY": 5, "UNRESOLVED": 13},
@@ -147,6 +157,54 @@ var holdoutDatasetSpecs = []holdoutDatasetSpec{
 			"principal_proxy": 2, "principal_vs_related_exposure": 2,
 			"single_principal_among_many": 2, "supplier_customer_causal_chain": 2,
 			"victim_commentator_distinction": 2, "weak_causal_direct": 2,
+		},
+	},
+	{
+		Name:                "generalization_v3",
+		ManifestPath:        "../../../config/ai-shadow-issuer-generalization-holdout-v3.json",
+		LockPath:            "../../../config/ai-shadow-issuer-generalization-holdout-input-fingerprints-v3.json",
+		FreezePath:          "../../../config/ai-shadow-issuer-generalization-holdout-freeze-v3.json",
+		ManifestVersion:     "ai-shadow-issuer-generalization-holdout-v3",
+		LockVersion:         "ai-shadow-issuer-generalization-holdout-input-fingerprints-v3",
+		FreezeVersion:       "ai-shadow-issuer-generalization-holdout-freeze-v3",
+		PromptVersion:       V5PromptVersion,
+		OutputContract:      V5SchemaVersion,
+		IDPrefix:            "issuer-generalization-v3-",
+		CaseCount:           48,
+		MappingDistribution: map[string]int{"DIRECT": 25, "PROXY": 6, "UNRESOLVED": 17},
+		CategoryDistribution: map[string]int{
+			"causal_contextual_direct": 3, "clear_single_principal_direct": 4,
+			"entity_exposure_distinction": 3, "equal_principals": 3,
+			"high_relevance_noncausal": 3, "identity_ambiguity": 3,
+			"indirect_exposure_boundary": 3, "legitimate_principal_proxy": 6,
+			"less_famous_direct": 3, "low_medium_relevance_direct": 3,
+			"multi_proxy_or_invalid": 2, "single_principal_among_entities": 3,
+			"supported_alias_direct": 3, "unsupported_identifiable_direct": 3,
+			"weak_genuine_direct": 3,
+		},
+	},
+	{
+		Name:                "boundary_v3",
+		ManifestPath:        "../../../config/ai-shadow-issuer-boundary-challenge-v3.json",
+		LockPath:            "../../../config/ai-shadow-issuer-boundary-challenge-input-fingerprints-v3.json",
+		FreezePath:          "../../../config/ai-shadow-issuer-boundary-challenge-freeze-v3.json",
+		ManifestVersion:     "ai-shadow-issuer-boundary-challenge-v3",
+		LockVersion:         "ai-shadow-issuer-boundary-challenge-input-fingerprints-v3",
+		FreezeVersion:       "ai-shadow-issuer-boundary-challenge-freeze-v3",
+		PromptVersion:       V5PromptVersion,
+		OutputContract:      V5SchemaVersion,
+		IDPrefix:            "issuer-boundary-v3-",
+		CaseCount:           32,
+		MappingDistribution: map[string]int{"DIRECT": 11, "PROXY": 5, "UNRESOLVED": 16},
+		CategoryDistribution: map[string]int{
+			"brand_parent_identity": 2, "company_exposure_boundary": 2,
+			"cross_company_joint_venture": 2, "division_issuer_boundary": 2,
+			"equal_principal_boundary": 2, "legal_issuer_symbol_boundary": 2,
+			"macro_sector_company_examples": 2, "materiality_causality_boundary": 2,
+			"merger_acquisition_roles": 2, "multiple_proxy_boundary": 2,
+			"proxy_uniqueness_boundary": 2, "secondary_contextual_boundary": 2,
+			"single_principal_affected_set": 2, "supplier_customer_roles": 2,
+			"uncertain_principal_identity": 2, "unknown_resolver_issuer": 2,
 		},
 	},
 }
@@ -173,9 +231,6 @@ func TestFrozenIssuerHoldoutDatasets(t *testing.T) {
 	for _, spec := range holdoutDatasetSpecs {
 		spec := spec
 		t.Run(spec.Name, func(t *testing.T) {
-			if strings.Contains(spec.ManifestPath, "-v2.json") {
-				t.Skip("v2 holdout contents remain blind until authorized C1E3 execution")
-			}
 			manifest := loadStrictJSON[DiagnosticManifest](t, spec.ManifestPath)
 			lock := loadStrictJSON[DiagnosticFingerprintLock](t, spec.LockPath)
 			freeze := loadStrictJSON[holdoutFreezeRecord](t, spec.FreezePath)
@@ -222,13 +277,13 @@ func TestFrozenIssuerHoldoutDatasets(t *testing.T) {
 				t.Fatalf("input lock semantic fingerprint mismatch: embedded=%s computed=%s frozen=%s", lock.Fingerprint, lockFingerprint, freeze.InputFingerprintLock.SemanticFingerprint)
 			}
 
-			if manifest.OutputContract != SchemaVersion || manifest.PolicyVersion != rules.Version || manifest.LabelVersion != DiagnosticLabelVersion {
+			if manifest.OutputContract != spec.OutputContract || manifest.PolicyVersion != rules.Version || manifest.LabelVersion != DiagnosticLabelVersion {
 				t.Fatalf("manifest contract metadata is incompatible: %+v", manifest)
 			}
-			if lock.ManifestFingerprint != manifest.Fingerprint || lock.PromptVersion != PromptVersion || lock.OutputContract != SchemaVersion || lock.PolicyVersion != rules.Version {
+			if lock.ManifestFingerprint != manifest.Fingerprint || lock.PromptVersion != spec.PromptVersion || lock.OutputContract != spec.OutputContract || lock.PolicyVersion != rules.Version {
 				t.Fatalf("fingerprint lock metadata is incompatible: %+v", lock)
 			}
-			if freeze.Policy.Identity != rules.Version || freeze.Policy.FileSHA256 != policySHA || freeze.PromptVersion != PromptVersion || freeze.OutputContract != SchemaVersion || freeze.LabelVersion != DiagnosticLabelVersion {
+			if freeze.Policy.Identity != rules.Version || freeze.Policy.FileSHA256 != policySHA || freeze.PromptVersion != spec.PromptVersion || freeze.OutputContract != spec.OutputContract || freeze.LabelVersion != DiagnosticLabelVersion {
 				t.Fatalf("freeze policy or contract provenance mismatch: %+v", freeze)
 			}
 
@@ -292,9 +347,6 @@ func TestIssuerHoldoutDatasetsHaveNoDuplicateOrNearCopyInputs(t *testing.T) {
 		corpus = append(corpus, corpusCase{Dataset: "baseline", Event: event})
 	}
 	for _, spec := range holdoutDatasetSpecs {
-		if strings.Contains(spec.ManifestPath, "-v2.json") {
-			continue
-		}
 		manifest := loadStrictJSON[DiagnosticManifest](t, spec.ManifestPath)
 		for _, event := range manifest.Events {
 			corpus = append(corpus, corpusCase{Dataset: spec.Name, Event: event})
@@ -306,6 +358,8 @@ func TestIssuerHoldoutDatasetsHaveNoDuplicateOrNearCopyInputs(t *testing.T) {
 	seenWording := map[string]string{}
 	maximumSimilarity := 0.0
 	maximumPair := ""
+	maximumV3Similarity := 0.0
+	maximumV3Pair := ""
 	for index, current := range corpus {
 		if previous, ok := seenIDs[current.Event.ID]; ok {
 			t.Fatalf("duplicate case id %s across %s and %s", current.Event.ID, previous, current.Dataset)
@@ -338,12 +392,17 @@ func TestIssuerHoldoutDatasetsHaveNoDuplicateOrNearCopyInputs(t *testing.T) {
 				maximumSimilarity = similarity
 				maximumPair = prior.Event.ID + "/" + current.Event.ID
 			}
+			if (strings.Contains(prior.Dataset, "_v3") || strings.Contains(current.Dataset, "_v3")) && similarity > maximumV3Similarity {
+				maximumV3Similarity = similarity
+				maximumV3Pair = prior.Event.ID + "/" + current.Event.ID
+			}
 			if similarity >= nearCopyThreshold {
 				t.Fatalf("near-copy event wording %.3f >= %.2f for %s and %s", similarity, nearCopyThreshold, prior.Event.ID, current.Event.ID)
 			}
 		}
 	}
 	t.Logf("maximum cross-dataset token similarity %.3f for %s (threshold %.2f)", maximumSimilarity, maximumPair, nearCopyThreshold)
+	t.Logf("maximum v3-to-other-dataset token similarity %.3f for %s (threshold %.2f)", maximumV3Similarity, maximumV3Pair, nearCopyThreshold)
 }
 
 func assertExpectedResolution(t *testing.T, resolver assetresolution.Resolver, event DiagnosticEvent) {

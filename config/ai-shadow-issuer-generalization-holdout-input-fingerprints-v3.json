@@ -1,0 +1,202 @@
+{
+  "version": "ai-shadow-issuer-generalization-holdout-input-fingerprints-v3",
+  "manifest_fingerprint": "6e4cdd0133b1a12e980650e18786070586a522375c01d0ed0f2e61823a42f86c",
+  "prompt_version": "ai-shadow-prompt-v5-causal-attribution",
+  "output_contract": "ai-shadow-output-v5-causal-attribution",
+  "policy_version": "event-asset-resolution-v1",
+  "fingerprint": "890dd084bc65828b839b250d5c0a7663016d11ee6bfade7a9b1dc7cd61e7d501",
+  "events": [
+    {
+      "id": "issuer-generalization-v3-001",
+      "input_fingerprint": "2c9ab0b1ca7134219a3502afbd1566b0f09931c2bc12f70f91f15d713d5012ca"
+    },
+    {
+      "id": "issuer-generalization-v3-002",
+      "input_fingerprint": "4ad61d645f0876100083acf3d0a1c016db7a67755fea64c55a7a941aa9835f3c"
+    },
+    {
+      "id": "issuer-generalization-v3-003",
+      "input_fingerprint": "741f0c4737710e9f543a39ef4f47d737364d60ad6125f47caae62feb496996b2"
+    },
+    {
+      "id": "issuer-generalization-v3-004",
+      "input_fingerprint": "b5cdd22468c99154a59c34b436d9d7c5dceb7979d82cf33e4f84a8ca969bae84"
+    },
+    {
+      "id": "issuer-generalization-v3-005",
+      "input_fingerprint": "97e276e44c47451789f7bd1cdf2f6f4b913252dd4d750707d67f4c5cc734cb01"
+    },
+    {
+      "id": "issuer-generalization-v3-006",
+      "input_fingerprint": "7682e5aeaf7212176703b04accfe31fda62ee428e2d3ebb6445b47525a668058"
+    },
+    {
+      "id": "issuer-generalization-v3-007",
+      "input_fingerprint": "438002e34af36d899a456d4c034135bb7a7f35c2326b7e86660b07f14412af8f"
+    },
+    {
+      "id": "issuer-generalization-v3-008",
+      "input_fingerprint": "ed7e5532aa668104eb7e630568891535bb2acdf25aa497d7a768f2c0d3b86b56"
+    },
+    {
+      "id": "issuer-generalization-v3-009",
+      "input_fingerprint": "251e477f78981421f77547981ffd7e2165746275b4824fb20f31cd1db481d87e"
+    },
+    {
+      "id": "issuer-generalization-v3-010",
+      "input_fingerprint": "77d850ef8375e3d6d6c00641a05e0f7873690356cb592578ac15c4dfa5fc8c30"
+    },
+    {
+      "id": "issuer-generalization-v3-011",
+      "input_fingerprint": "57c95d4806247eccea136b17c3bdda3f1606c136a441c061ff241f5c5ad77e53"
+    },
+    {
+      "id": "issuer-generalization-v3-012",
+      "input_fingerprint": "8f5c7455bf3da206a79e9a6eaec9842b35d348c69375f2245e04f1098dbac28a"
+    },
+    {
+      "id": "issuer-generalization-v3-013",
+      "input_fingerprint": "10f0bea184df6c6a409f1bde3e310ac61f5cce95dab9f2c25327b906b7437ae5"
+    },
+    {
+      "id": "issuer-generalization-v3-014",
+      "input_fingerprint": "186cf6720aac2e0cc90ecc04536e8848dcffbf9bc864a2044d5408e9af7ee6a5"
+    },
+    {
+      "id": "issuer-generalization-v3-015",
+      "input_fingerprint": "4c154bf97ad8631790bcbcf94e88aa33abe279cd456a9c2fc2b1a2268af771cc"
+    },
+    {
+      "id": "issuer-generalization-v3-016",
+      "input_fingerprint": "b9a8178b06471c9563b4b95d39666697f74d9c3732dcb800375e5f256fa2f382"
+    },
+    {
+      "id": "issuer-generalization-v3-017",
+      "input_fingerprint": "0912ffb98d2d4ed71e6ef782e17b8716cfa7fde3779840115cd846eb6db813f4"
+    },
+    {
+      "id": "issuer-generalization-v3-018",
+      "input_fingerprint": "41f6351ff48869e5bba6966dcd6a261cc7d322a03fbf1e76b1c90d1264622afd"
+    },
+    {
+      "id": "issuer-generalization-v3-019",
+      "input_fingerprint": "b70cb1f85e644a7e3e38437a207151eed1ba47740d4027775b900d8f40e2c67d"
+    },
+    {
+      "id": "issuer-generalization-v3-020",
+      "input_fingerprint": "046de80eada72110ed12efc3cdfec671e075d8d735d1a8fcf96f9ea267d902ce"
+    },
+    {
+      "id": "issuer-generalization-v3-021",
+      "input_fingerprint": "6583746d071d3b2c2f9b1cca47389dd9163fce62a0b1813a7a2211da7dab4bb1"
+    },
+    {
+      "id": "issuer-generalization-v3-022",
+      "input_fingerprint": "cfe74125210324ff2fd544cec731c4079a1215d190ed954f9e50d525a9c3cdf2"
+    },
+    {
+      "id": "issuer-generalization-v3-023",
+      "input_fingerprint": "21b5f4a158754e26c90cf285389034477b3dcf5ac2f21f264874b644723e41bc"
+    },
+    {
+      "id": "issuer-generalization-v3-024",
+      "input_fingerprint": "686fdb8da2047ffed3da3e71ab8c72353b383391ad59085278588611c89bb394"
+    },
+    {
+      "id": "issuer-generalization-v3-025",
+      "input_fingerprint": "e0ecaeb246b4b0c6cdfd240aa167c2c3abcf19763df841fac3fe0dbe3ba8c2c1"
+    },
+    {
+      "id": "issuer-generalization-v3-026",
+      "input_fingerprint": "0ee4ed94cf729b0da2256b1e2738073c17f683f7f9b6ad38c1e497e7f0471579"
+    },
+    {
+      "id": "issuer-generalization-v3-027",
+      "input_fingerprint": "4c38a32cf0e86c9d0f29eeb44b5ecfd3ebb24d1fa92f73451a140e6d6a45ba73"
+    },
+    {
+      "id": "issuer-generalization-v3-028",
+      "input_fingerprint": "3b4e6ffd6e6a074e5fadacea8e0d5a9a820ebed5061280499a82e0d6abc2893d"
+    },
+    {
+      "id": "issuer-generalization-v3-029",
+      "input_fingerprint": "34a056339a0b6bb84e21dfea62f201d305f29c18af72d495568f85edc08f4091"
+    },
+    {
+      "id": "issuer-generalization-v3-030",
+      "input_fingerprint": "0ac7d40435af16363671aacb33cf42dcfd0f7cd7489ae60ded709c5e9e3ddb70"
+    },
+    {
+      "id": "issuer-generalization-v3-031",
+      "input_fingerprint": "fa0fc8f0bc3a25b8a0b5e26abef6642f44de39d9fdcf1db5f7d2589ffe17737a"
+    },
+    {
+      "id": "issuer-generalization-v3-032",
+      "input_fingerprint": "c7f296faebf96d042feedb5f483f8cbaa87e6bbfb97cc0a08fdc310d3acfee8c"
+    },
+    {
+      "id": "issuer-generalization-v3-033",
+      "input_fingerprint": "8f30588b07dc4e054e7109f251eca5f8842550ba41e024e802792911c6dc2d39"
+    },
+    {
+      "id": "issuer-generalization-v3-034",
+      "input_fingerprint": "e7fb4e49a4c79ff67348a683efbd1826c5b4d98a3076eca873805d787a183a08"
+    },
+    {
+      "id": "issuer-generalization-v3-035",
+      "input_fingerprint": "25a68df895abe6e0b07cbf6ce138aee219d3030b981b019c3f7f75ba7bd81476"
+    },
+    {
+      "id": "issuer-generalization-v3-036",
+      "input_fingerprint": "d26eba43da3fb9d42c765b612b050b1409c9def6571d385913bf561c640b1e4e"
+    },
+    {
+      "id": "issuer-generalization-v3-037",
+      "input_fingerprint": "ffd3ebc5a7f932a72666650b03aa80d34624c1e381b95cb4aa2864c92ca8d70f"
+    },
+    {
+      "id": "issuer-generalization-v3-038",
+      "input_fingerprint": "aa953a909942d29eb26ae0293e6e77675408fbbc0840e151bdaeb2d8dd48e47b"
+    },
+    {
+      "id": "issuer-generalization-v3-039",
+      "input_fingerprint": "f64cdc516caa5fc7aa29d588b9527abe15ac5a3b121485136675055a1effe292"
+    },
+    {
+      "id": "issuer-generalization-v3-040",
+      "input_fingerprint": "86ba0c3b9fe9fb8583de5bcb2705568dcac587ac3bc66e9f1d96080a68c0ab11"
+    },
+    {
+      "id": "issuer-generalization-v3-041",
+      "input_fingerprint": "7dfb5ed8928e93c404df37679121fdaea281e57d1c60cacbab893fcf18b888fb"
+    },
+    {
+      "id": "issuer-generalization-v3-042",
+      "input_fingerprint": "d19b0caead5356a072dcd1c7b8d06eca5605b84c1b05a7ac716ab2299df55c7a"
+    },
+    {
+      "id": "issuer-generalization-v3-043",
+      "input_fingerprint": "8c25d37a9514ca75c9f0a5375d5665b9e1e712039521d946f26fdefb13ad6da9"
+    },
+    {
+      "id": "issuer-generalization-v3-044",
+      "input_fingerprint": "7c7e551eb19ecbbf0a95f65935a04bdb32bb37b9e6b99b62aedf6ff0f442b42d"
+    },
+    {
+      "id": "issuer-generalization-v3-045",
+      "input_fingerprint": "351577694ae6ed7a214c7070a043ebd0d70ed736e635f8925ec3ab4a85ad01d2"
+    },
+    {
+      "id": "issuer-generalization-v3-046",
+      "input_fingerprint": "d039280b77cbac304e2a1016f536805392233305d6ac3613c1c0b1b0e03f1418"
+    },
+    {
+      "id": "issuer-generalization-v3-047",
+      "input_fingerprint": "a8d3c0949d9fca620e475932a95c2851ffd20d1d4800ccccf529343ceb7583e3"
+    },
+    {
+      "id": "issuer-generalization-v3-048",
+      "input_fingerprint": "6f7db1ce4aa815848be8ec41eb1628878af7374894a67df0475dde11352d02ff"
+    }
+  ]
+}

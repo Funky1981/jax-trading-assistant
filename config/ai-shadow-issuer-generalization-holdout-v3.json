@@ -1,0 +1,1264 @@
+{
+  "version": "ai-shadow-issuer-generalization-holdout-v3",
+  "output_contract": "ai-shadow-output-v5-causal-attribution",
+  "policy_version": "event-asset-resolution-v1",
+  "label_version": "issuer-recognition-adjudication-v1",
+  "adjudication_note": "Independent targeted-remediation holdout v3, frozen before C1E3 forensic review or C1F remediation design. DIRECT requires one principal causally attributable traded issuer with exact identity adjudicated independently of deterministic resolver coverage; PROXY requires exactly one bounded principal exposure and no eligible direct issuer; otherwise UNRESOLVED. Relevance and materiality do not determine mapping class.",
+  "fingerprint": "6e4cdd0133b1a12e980650e18786070586a522375c01d0ed0f2e61823a42f86c",
+  "events": [
+    {
+      "id": "issuer-generalization-v3-001",
+      "category": "clear_single_principal_direct",
+      "input": {
+        "title": "Humana terminates a pharmacy administrator contract for one state plan",
+        "summary": "Humana issued the termination notice for its own state-plan contract and named a replacement administrator effective next quarter.",
+        "source": "Issuer contract notice",
+        "publication_timestamp": "2026-08-19T07:00:00Z",
+        "receipt_timestamp": "2026-08-19T07:01:00Z",
+        "event_category": "company_contract",
+        "entities": [
+          "Humana"
+        ],
+        "receipt_evidence": [
+          "signed termination notice",
+          "replacement effective date"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Humana Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Humana is the sole traded issuer making the contract decision for its own health-plan operations."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-002",
+      "category": "clear_single_principal_direct",
+      "input": {
+        "title": "Coinbase restores withdrawals after replacing a failed signing cluster",
+        "summary": "Coinbase reported that its own key-signing infrastructure caused the interruption and that withdrawals resumed after the cluster was replaced.",
+        "source": "Issuer incident report",
+        "publication_timestamp": "2026-08-19T07:08:00Z",
+        "receipt_timestamp": "2026-08-19T07:09:00Z",
+        "event_category": "company_disruption",
+        "entities": [
+          "Coinbase"
+        ],
+        "receipt_evidence": [
+          "issuer root-cause statement",
+          "service restoration timestamp"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Coinbase Global, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Coinbase owns the failed service infrastructure and is the only causal traded issuer in the report."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-003",
+      "category": "clear_single_principal_direct",
+      "input": {
+        "title": "Chevron awards the removal contract for its retired North Sea platform",
+        "summary": "Chevron selected the dismantling contractor and approved the schedule for a platform operated and owned by the company.",
+        "source": "Operator decommissioning notice",
+        "publication_timestamp": "2026-08-19T07:16:00Z",
+        "receipt_timestamp": "2026-08-19T07:17:00Z",
+        "event_category": "company_contract",
+        "entities": [
+          "Chevron"
+        ],
+        "receipt_evidence": [
+          "operator award notice",
+          "asset ownership statement"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Chevron Corporation",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Chevron is the sole operator and owner taking the company-specific decommissioning action."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-004",
+      "category": "clear_single_principal_direct",
+      "input": {
+        "title": "Reddit revokes a data broker's API access after an audit",
+        "summary": "Reddit completed the platform audit and disabled the broker's credentials under its own developer-access rules.",
+        "source": "Issuer platform enforcement notice",
+        "publication_timestamp": "2026-08-19T07:24:00Z",
+        "receipt_timestamp": "2026-08-19T07:25:00Z",
+        "event_category": "company_service",
+        "entities": [
+          "Reddit"
+        ],
+        "receipt_evidence": [
+          "completed platform audit",
+          "credential revocation"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Reddit, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Reddit is the sole platform operator and directly takes the access-enforcement action."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-005",
+      "category": "weak_genuine_direct",
+      "input": {
+        "title": "Tesla changes the wording of service-appointment text reminders",
+        "summary": "Tesla replaced one sentence in automated reminders sent by its service centres; appointment times and terms are unchanged.",
+        "source": "Issuer customer-service bulletin",
+        "publication_timestamp": "2026-08-19T07:32:00Z",
+        "receipt_timestamp": "2026-08-19T07:33:00Z",
+        "event_category": "company_service",
+        "entities": [
+          "Tesla"
+        ],
+        "receipt_evidence": [
+          "service bulletin",
+          "revised reminder text"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Tesla, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "The effect is minor, but Tesla is clearly responsible for a change to its own customer-service process."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-006",
+      "category": "weak_genuine_direct",
+      "input": {
+        "title": "IBM relocates a small patent archive within its Zurich campus",
+        "summary": "IBM moved the archive between two company buildings and said public research access will be unavailable for one afternoon.",
+        "source": "Issuer facilities notice",
+        "publication_timestamp": "2026-08-19T07:40:00Z",
+        "receipt_timestamp": "2026-08-19T07:41:00Z",
+        "event_category": "company_operations",
+        "entities": [
+          "IBM"
+        ],
+        "receipt_evidence": [
+          "facilities notice",
+          "temporary access schedule"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "International Business Machines Corporation",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "IBM alone controls the archive and the small operational relocation at its own campus."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-007",
+      "category": "weak_genuine_direct",
+      "input": {
+        "title": "Procter \u0026 Gamble revises carton recycling instructions for one soap line",
+        "summary": "Procter \u0026 Gamble will print updated disposal guidance on future cartons without changing the product or package materials.",
+        "source": "Issuer packaging update",
+        "publication_timestamp": "2026-08-19T07:48:00Z",
+        "receipt_timestamp": "2026-08-19T07:49:00Z",
+        "event_category": "company_product",
+        "entities": [
+          "Procter \u0026 Gamble"
+        ],
+        "receipt_evidence": [
+          "packaging change notice"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Procter \u0026 Gamble Company",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Procter \u0026 Gamble is directly responsible for the narrowly scoped packaging instruction change."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-008",
+      "category": "low_medium_relevance_direct",
+      "input": {
+        "title": "Netflix renews a six-desk dubbing office lease in Prague",
+        "summary": "Netflix exercised a one-year renewal option for a small office used by its regional dubbing coordinators.",
+        "source": "Commercial property filing",
+        "publication_timestamp": "2026-08-19T07:56:00Z",
+        "receipt_timestamp": "2026-08-19T07:57:00Z",
+        "event_category": "company_property",
+        "entities": [
+          "Netflix"
+        ],
+        "receipt_evidence": [
+          "executed renewal option",
+          "tenant identity"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Netflix, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Netflix is the identified tenant taking a genuine but low-materiality property action."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-009",
+      "category": "low_medium_relevance_direct",
+      "input": {
+        "title": "Visa waives one manual-review fee for merchants in Fiji",
+        "summary": "Visa removed a rarely charged network fee for a limited merchant group beginning next month.",
+        "source": "Network fee circular",
+        "publication_timestamp": "2026-08-19T08:04:00Z",
+        "receipt_timestamp": "2026-08-19T08:05:00Z",
+        "event_category": "company_service",
+        "entities": [
+          "Visa"
+        ],
+        "receipt_evidence": [
+          "network circular",
+          "effective date"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Visa Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Payment-network context identifies Visa Inc. as the issuer directly changing its own fee schedule."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-010",
+      "category": "low_medium_relevance_direct",
+      "input": {
+        "title": "Exxon ends public tours at a former research laboratory",
+        "summary": "Exxon said the company-owned site will remain in use, but monthly visitor tours will cease after September.",
+        "source": "Issuer visitor notice",
+        "publication_timestamp": "2026-08-19T08:12:00Z",
+        "receipt_timestamp": "2026-08-19T08:13:00Z",
+        "event_category": "company_operations",
+        "entities": [
+          "Exxon"
+        ],
+        "receipt_evidence": [
+          "company visitor notice",
+          "site ownership"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Exxon Mobil Corporation",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Exxon is unambiguously the issuer making the limited decision for its own facility."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-011",
+      "category": "supported_alias_direct",
+      "input": {
+        "title": "Amazon adds reusable delivery bags to one grocery route",
+        "summary": "Amazon began the bag-return programme for orders packed and delivered through its own grocery service in Leeds.",
+        "source": "Issuer delivery update",
+        "publication_timestamp": "2026-08-19T08:20:00Z",
+        "receipt_timestamp": "2026-08-19T08:21:00Z",
+        "event_category": "company_programme",
+        "entities": [
+          "Amazon"
+        ],
+        "receipt_evidence": [
+          "issuer programme notice",
+          "operated delivery route"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Amazon.com, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Retail and delivery context makes Amazon the supported alias of Amazon.com, Inc., which operates the programme."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-012",
+      "category": "supported_alias_direct",
+      "input": {
+        "title": "Google removes dormant classroom backups after a longer retention period",
+        "summary": "Google updated retention rules for backups stored by schools in its Workspace service and notified administrators of the change.",
+        "source": "Issuer product administration notice",
+        "publication_timestamp": "2026-08-19T08:28:00Z",
+        "receipt_timestamp": "2026-08-19T08:29:00Z",
+        "event_category": "company_product",
+        "entities": [
+          "Google"
+        ],
+        "receipt_evidence": [
+          "Workspace administrator notice",
+          "retention policy"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Alphabet Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "ambiguous",
+        "rationale": "Google clearly denotes Alphabet's operating business, while the resolver cannot choose one Alphabet listed share class."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-013",
+      "category": "supported_alias_direct",
+      "input": {
+        "title": "Ford opens its design archive catalogue to university researchers",
+        "summary": "Ford published a searchable catalogue for records held by the company's design archive and set researcher access terms.",
+        "source": "Issuer archive announcement",
+        "publication_timestamp": "2026-08-19T08:36:00Z",
+        "receipt_timestamp": "2026-08-19T08:37:00Z",
+        "event_category": "company_service",
+        "entities": [
+          "Ford"
+        ],
+        "receipt_evidence": [
+          "company archive notice",
+          "access terms"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Ford Motor Company",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Automotive and company-archive context identifies Ford Motor Company as the sole actor."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-014",
+      "category": "less_famous_direct",
+      "input": {
+        "title": "Corning licenses a fibre-coating patent to a private cable maker",
+        "summary": "Corning granted a five-year non-exclusive licence covering a patent owned by the company.",
+        "source": "Issuer intellectual-property notice",
+        "publication_timestamp": "2026-08-19T08:44:00Z",
+        "receipt_timestamp": "2026-08-19T08:45:00Z",
+        "event_category": "company_contract",
+        "entities": [
+          "Corning"
+        ],
+        "receipt_evidence": [
+          "executed patent licence",
+          "patent owner"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Corning Incorporated",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Corning is the sole traded licensor and the patent belongs to its own portfolio."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-015",
+      "category": "less_famous_direct",
+      "input": {
+        "title": "Yum! Brands selects a new reporting portal for franchisees",
+        "summary": "Yum! Brands signed the vendor agreement and will require its restaurant franchisees to submit monthly operating reports through the portal.",
+        "source": "Issuer franchise circular",
+        "publication_timestamp": "2026-08-19T08:52:00Z",
+        "receipt_timestamp": "2026-08-19T08:53:00Z",
+        "event_category": "company_operations",
+        "entities": [
+          "Yum! Brands"
+        ],
+        "receipt_evidence": [
+          "signed vendor agreement",
+          "franchise requirement"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Yum! Brands, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Yum! Brands is explicitly the contracting issuer and sets the reporting rule for its franchise system."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-016",
+      "category": "less_famous_direct",
+      "input": {
+        "title": "Rivian repays a municipal equipment loan ahead of schedule",
+        "summary": "Rivian transferred the final balance on financing used for machinery at its service-parts operation.",
+        "source": "Municipal finance notice",
+        "publication_timestamp": "2026-08-19T09:00:00Z",
+        "receipt_timestamp": "2026-08-19T09:01:00Z",
+        "event_category": "company_financial",
+        "entities": [
+          "Rivian"
+        ],
+        "receipt_evidence": [
+          "repayment confirmation",
+          "borrower identity"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Rivian Automotive, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Rivian is the named borrower taking the company-specific financing action."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-017",
+      "category": "unsupported_identifiable_direct",
+      "input": {
+        "title": "Wise plc lowers the instant-transfer cap for one currency corridor",
+        "summary": "Wise plc notified customers that it will apply the new cap to transfers processed on its own platform.",
+        "source": "Issuer customer notice",
+        "publication_timestamp": "2026-08-19T09:08:00Z",
+        "receipt_timestamp": "2026-08-19T09:09:00Z",
+        "event_category": "company_service",
+        "entities": [
+          "Wise plc"
+        ],
+        "receipt_evidence": [
+          "legal issuer name",
+          "platform notice"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Wise plc",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Wise plc is exactly identified as the causal traded issuer, but it is absent from the bounded resolver."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-018",
+      "category": "unsupported_identifiable_direct",
+      "input": {
+        "title": "Marvell Technology cancels a networking-chip tapeout after verification errors",
+        "summary": "Marvell Technology, Inc. said its engineering review found the errors and that the company cancelled the scheduled tapeout.",
+        "source": "Issuer engineering update",
+        "publication_timestamp": "2026-08-19T09:16:00Z",
+        "receipt_timestamp": "2026-08-19T09:17:00Z",
+        "event_category": "company_product",
+        "entities": [
+          "Marvell Technology, Inc."
+        ],
+        "receipt_evidence": [
+          "legal issuer name",
+          "issuer cancellation"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Marvell Technology, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The legal issuer and its causal product decision are explicit, although the resolver has no Marvell entry."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-019",
+      "category": "unsupported_identifiable_direct",
+      "input": {
+        "title": "Saab AB wins a radar-maintenance extension from Sweden",
+        "summary": "The procurement authority awarded Saab AB the extension for radar systems maintained by the company.",
+        "source": "Government contract award",
+        "publication_timestamp": "2026-08-19T09:24:00Z",
+        "receipt_timestamp": "2026-08-19T09:25:00Z",
+        "event_category": "contract_award",
+        "entities": [
+          "Saab AB"
+        ],
+        "receipt_evidence": [
+          "award decision",
+          "legal supplier identity"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Saab AB",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Saab AB is the exact traded contractor receiving the award, but the frozen resolver does not support it."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-020",
+      "category": "single_principal_among_entities",
+      "input": {
+        "title": "Apple recalls a charging cable after tests by supplier Belkin",
+        "summary": "Apple issued the recall for cables sold in Apple-branded accessory packs; Belkin supplied test data but has no recall obligation.",
+        "source": "Issuer recall notice",
+        "publication_timestamp": "2026-08-19T09:32:00Z",
+        "receipt_timestamp": "2026-08-19T09:33:00Z",
+        "event_category": "company_product",
+        "entities": [
+          "Apple",
+          "Belkin"
+        ],
+        "receipt_evidence": [
+          "Apple recall notice",
+          "supplier test report"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Apple Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Apple alone owns the branded packs and imposes the recall; Belkin is an evidentiary supplier."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-021",
+      "category": "single_principal_among_entities",
+      "input": {
+        "title": "NVIDIA writes off prepaid foundry capacity; TSMC keeps the deposit",
+        "summary": "NVIDIA recorded the write-off after deciding not to use reserved capacity, while TSMC is named only as the contract counterparty.",
+        "source": "Issuer accounting filing",
+        "publication_timestamp": "2026-08-19T09:40:00Z",
+        "receipt_timestamp": "2026-08-19T09:41:00Z",
+        "event_category": "company_financial",
+        "entities": [
+          "NVIDIA",
+          "TSMC"
+        ],
+        "receipt_evidence": [
+          "NVIDIA filing",
+          "capacity decision"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "NVIDIA Corporation",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "NVIDIA's capacity decision and accounting charge are the event; TSMC is only the unaffected counterparty."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-022",
+      "category": "single_principal_among_entities",
+      "input": {
+        "title": "eBay settles a New York tax audit while Etsy discusses industry compliance",
+        "summary": "The signed settlement binds eBay alone; an Etsy executive provides general commentary in a separate paragraph.",
+        "source": "Tax authority settlement",
+        "publication_timestamp": "2026-08-19T09:48:00Z",
+        "receipt_timestamp": "2026-08-19T09:49:00Z",
+        "event_category": "company_legal",
+        "entities": [
+          "eBay",
+          "Etsy"
+        ],
+        "receipt_evidence": [
+          "binding eBay settlement",
+          "separate industry comment"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "eBay Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "eBay is the only issuer legally bound by the settlement; Etsy is merely a commentator."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-023",
+      "category": "causal_contextual_direct",
+      "input": {
+        "title": "Fire destroys Nike-owned inventory at a contract warehouse",
+        "summary": "Nike confirmed the destroyed footwear belongs to the company; the warehouse operator and a FedEx route are mentioned only in the site description.",
+        "source": "Issuer inventory notice",
+        "publication_timestamp": "2026-08-19T09:56:00Z",
+        "receipt_timestamp": "2026-08-19T09:57:00Z",
+        "event_category": "company_disruption",
+        "entities": [
+          "Nike",
+          "FedEx"
+        ],
+        "receipt_evidence": [
+          "inventory ownership",
+          "issuer loss estimate"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "NIKE, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Nike is the sole traded owner suffering the direct inventory loss; other names locate or service the site."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-024",
+      "category": "causal_contextual_direct",
+      "input": {
+        "title": "Meta discontinues Workplace while citing an older Slack migration study",
+        "summary": "Meta set the shutdown date for its Workplace service; Slack appears only in historical migration research attached to the notice.",
+        "source": "Issuer product closure notice",
+        "publication_timestamp": "2026-08-19T10:04:00Z",
+        "receipt_timestamp": "2026-08-19T10:05:00Z",
+        "event_category": "company_product",
+        "entities": [
+          "Meta",
+          "Slack"
+        ],
+        "receipt_evidence": [
+          "Meta shutdown decision",
+          "historical comparison appendix"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Meta Platforms, Inc.",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Meta alone closes its service; Slack is a contextual historical comparison rather than a causal issuer."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-025",
+      "category": "causal_contextual_direct",
+      "input": {
+        "title": "Novo Nordisk changes a medicine label after a regulator instruction",
+        "summary": "Novo Nordisk will implement the label revision for its product; Pfizer is named only in a quotation about an unrelated earlier label case.",
+        "source": "Regulatory product notice",
+        "publication_timestamp": "2026-08-19T10:12:00Z",
+        "receipt_timestamp": "2026-08-19T10:13:00Z",
+        "event_category": "company_product",
+        "entities": [
+          "Novo Nordisk",
+          "Pfizer"
+        ],
+        "receipt_evidence": [
+          "binding label instruction",
+          "historical quotation"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "DIRECT",
+        "direct_issuer": "Novo Nordisk A/S",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "resolved",
+        "rationale": "Novo Nordisk is the only issuer whose product and obligations are changed; Pfizer is contextual history."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-026",
+      "category": "high_relevance_noncausal",
+      "input": {
+        "title": "Sovereign-compute budget uses NVIDIA server prices as an illustration",
+        "summary": "The budget converts public capacity targets using catalogue prices for NVIDIA hardware, but opens no tender and creates no vendor eligibility or order.",
+        "source": "Government budget appendix",
+        "publication_timestamp": "2026-08-19T10:20:00Z",
+        "receipt_timestamp": "2026-08-19T10:21:00Z",
+        "event_category": "public_policy",
+        "entities": [
+          "NVIDIA"
+        ],
+        "receipt_evidence": [
+          "illustrative price calculation",
+          "no procurement action"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "NVIDIA is a pricing illustration only; no procurement, company action, or issuer-specific effect is established."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-027",
+      "category": "high_relevance_noncausal",
+      "input": {
+        "title": "Pension report expresses a funding gap in units of Apple's market value",
+        "summary": "The comparison makes the national shortfall easier to visualize but contains no finding, transaction, obligation, or forecast concerning Apple.",
+        "source": "National pension solvency report",
+        "publication_timestamp": "2026-08-19T10:28:00Z",
+        "receipt_timestamp": "2026-08-19T10:29:00Z",
+        "event_category": "public_policy",
+        "entities": [
+          "Apple"
+        ],
+        "receipt_evidence": [
+          "scale comparison",
+          "no issuer finding"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Apple is a high-salience unit of comparison, not the causal subject or an affected issuer."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-028",
+      "category": "high_relevance_noncausal",
+      "input": {
+        "title": "Climate commission uses Exxon refinery data to illustrate a 1990 baseline",
+        "summary": "The commission reproduces archived figures as a historical example and announces no current rule, finding, or effect concerning Exxon.",
+        "source": "Climate commission methodology paper",
+        "publication_timestamp": "2026-08-19T10:36:00Z",
+        "receipt_timestamp": "2026-08-19T10:37:00Z",
+        "event_category": "public_research",
+        "entities": [
+          "Exxon"
+        ],
+        "receipt_evidence": [
+          "archived baseline table",
+          "methodology context"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The material Exxon reference is historical evidence only and creates no present causal issuer event."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-029",
+      "category": "equal_principals",
+      "input": {
+        "title": "Oracle and SAP share customer refunds after a joint tax connector miscalculates VAT",
+        "summary": "The incident agreement attributes half of the defective connector to each company and divides every refund and repair cost equally.",
+        "source": "Joint incident settlement",
+        "publication_timestamp": "2026-08-19T10:44:00Z",
+        "receipt_timestamp": "2026-08-19T10:45:00Z",
+        "event_category": "multi_company_contract",
+        "entities": [
+          "Oracle",
+          "SAP"
+        ],
+        "receipt_evidence": [
+          "equal fault allocation",
+          "equal refund shares"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Oracle and SAP are explicitly equal causes of the defect and equal bearers of remediation, leaving no unique principal."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-030",
+      "category": "equal_principals",
+      "input": {
+        "title": "Ford and Tesla surrender equal emissions credits under a coordinated order",
+        "summary": "The regulator cancels the same number of credits from each manufacturer for separate reporting breaches assessed as equally serious.",
+        "source": "Emissions regulator final order",
+        "publication_timestamp": "2026-08-19T10:52:00Z",
+        "receipt_timestamp": "2026-08-19T10:53:00Z",
+        "event_category": "multi_company_product",
+        "entities": [
+          "Ford",
+          "Tesla"
+        ],
+        "receipt_evidence": [
+          "matched credit cancellations",
+          "equal breach findings"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Ford and Tesla receive equal operative sanctions for equally weighted breaches, so neither issuer is principal."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-031",
+      "category": "equal_principals",
+      "input": {
+        "title": "Independent Visa and Mastercard configuration errors interrupt a shared gateway",
+        "summary": "The operator's forensic report assigns half of the outage duration to each network's incompatible change and identifies no initiating network.",
+        "source": "Shared gateway incident report",
+        "publication_timestamp": "2026-08-19T11:00:00Z",
+        "receipt_timestamp": "2026-08-19T11:01:00Z",
+        "event_category": "multi_company_legal",
+        "entities": [
+          "Visa",
+          "Mastercard"
+        ],
+        "receipt_evidence": [
+          "equal root-cause allocation",
+          "no initiating network"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Both networks are independently and equally causal for the shared outage, so one DIRECT selection would be arbitrary."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-032",
+      "category": "identity_ambiguity",
+      "input": {
+        "title": "Atlas reports a covenant breach after a warehouse valuation",
+        "summary": "The bulletin omits the country, exchange, legal suffix, business line, and address even though several issuers use Atlas in their names.",
+        "source": "Unattributed credit flash",
+        "publication_timestamp": "2026-08-19T11:08:00Z",
+        "receipt_timestamp": "2026-08-19T11:09:00Z",
+        "event_category": "company_financial",
+        "entities": [
+          "Atlas"
+        ],
+        "receipt_evidence": [
+          "missing legal identity",
+          "missing jurisdiction"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "A causal company is asserted, but the information cannot distinguish among multiple Atlas legal entities."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-033",
+      "category": "identity_ambiguity",
+      "input": {
+        "title": "CAT service bulletin warns of hydraulic-hose fatigue",
+        "summary": "The document does not identify an author, equipment manufacturer, exchange, legal name, or whether CAT is merely an internal category code.",
+        "source": "Forwarded service bulletin",
+        "publication_timestamp": "2026-08-19T11:16:00Z",
+        "receipt_timestamp": "2026-08-19T11:17:00Z",
+        "event_category": "equipment_notice",
+        "entities": [
+          "CAT"
+        ],
+        "receipt_evidence": [
+          "unattributed acronym",
+          "missing manufacturer"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The ticker-like token does not establish Caterpillar or any other exact traded issuer identity."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-034",
+      "category": "identity_ambiguity",
+      "input": {
+        "title": "Orange Mobile outage spreads across the northern region",
+        "summary": "The alert gives no country, network licence, parent company, legal entity, or exchange for the Orange-branded service.",
+        "source": "Regional outage aggregator",
+        "publication_timestamp": "2026-08-19T11:24:00Z",
+        "receipt_timestamp": "2026-08-19T11:25:00Z",
+        "event_category": "company_disruption",
+        "entities": [
+          "Orange Mobile"
+        ],
+        "receipt_evidence": [
+          "brand-only reference",
+          "missing jurisdiction"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The brand-level outage is causal, but its owning legal issuer cannot be identified from the supplied jurisdiction-free evidence."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-035",
+      "category": "entity_exposure_distinction",
+      "input": {
+        "title": "SPY surveillance drone completes a coastal mapping trial",
+        "summary": "SPY is the private laboratory's drone codename; the trial has no connection to the S\u0026P 500, an ETF, or a listed manufacturer.",
+        "source": "University laboratory release",
+        "publication_timestamp": "2026-08-19T11:32:00Z",
+        "receipt_timestamp": "2026-08-19T11:33:00Z",
+        "event_category": "research_trial",
+        "entities": [
+          "SPY"
+        ],
+        "receipt_evidence": [
+          "drone codename",
+          "non-financial context"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "SPY is a project name rather than a legal issuer, security identity, or supported market exposure."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-036",
+      "category": "entity_exposure_distinction",
+      "input": {
+        "title": "Applied Materials hosts an industry workshop on technician shortages",
+        "summary": "The workshop surveys semiconductor employers generally and announces no Applied Materials decision, contract, award, or operational impact.",
+        "source": "Industry association agenda",
+        "publication_timestamp": "2026-08-19T11:40:00Z",
+        "receipt_timestamp": "2026-08-19T11:41:00Z",
+        "event_category": "industry_event",
+        "entities": [
+          "Applied Materials",
+          "semiconductor employers"
+        ],
+        "receipt_evidence": [
+          "host venue",
+          "sector survey scope"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "The company is only a host and the sector discussion does not establish a principal issuer or proxy event."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-037",
+      "category": "entity_exposure_distinction",
+      "input": {
+        "title": "Amazon basin rainfall blocks a cocoa-growing road",
+        "summary": "Amazon refers to the geographic basin; the report concerns local crop transport and identifies no Amazon.com operation or supported market proxy.",
+        "source": "Regional agriculture bulletin",
+        "publication_timestamp": "2026-08-19T11:48:00Z",
+        "receipt_timestamp": "2026-08-19T11:49:00Z",
+        "event_category": "agriculture",
+        "entities": [
+          "Amazon basin"
+        ],
+        "receipt_evidence": [
+          "geographic context",
+          "crop road closure"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Amazon is a place name here, not the traded issuer, and cocoa transport is outside the bounded proxy set."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-038",
+      "category": "indirect_exposure_boundary",
+      "input": {
+        "title": "Delta Air Lines named as a possible beneficiary of cheaper jet fuel",
+        "summary": "A strategist lists Delta with many airlines that might benefit if prices persist, but reports no purchase, hedge, guidance change, or company action.",
+        "source": "Market strategy note",
+        "publication_timestamp": "2026-08-19T11:56:00Z",
+        "receipt_timestamp": "2026-08-19T11:57:00Z",
+        "event_category": "market_commentary",
+        "entities": [
+          "Delta Air Lines"
+        ],
+        "receipt_evidence": [
+          "speculative beneficiary list",
+          "no issuer action"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Delta is only a speculative indirect beneficiary and no single bounded market exposure is the event's principal subject."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-039",
+      "category": "indirect_exposure_boundary",
+      "input": {
+        "title": "University loses a cloud grant and may reduce future Microsoft purchases",
+        "summary": "The university is the grant recipient; Microsoft is one of several vendors whose later sales could decline, with no order cancelled or contract changed.",
+        "source": "University budget minutes",
+        "publication_timestamp": "2026-08-19T12:04:00Z",
+        "receipt_timestamp": "2026-08-19T12:05:00Z",
+        "event_category": "customer_budget",
+        "entities": [
+          "Microsoft"
+        ],
+        "receipt_evidence": [
+          "customer grant loss",
+          "speculative vendor impact"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Microsoft is a possible downstream supplier exposure, not the causal principal or a confirmed affected issuer."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-040",
+      "category": "indirect_exposure_boundary",
+      "input": {
+        "title": "Private battery recycler receives a subsidy and cites Tesla as a potential customer",
+        "summary": "The award goes only to the private recycler; Tesla has made no commitment and is included in a list of possible future buyers.",
+        "source": "Government grant award",
+        "publication_timestamp": "2026-08-19T12:12:00Z",
+        "receipt_timestamp": "2026-08-19T12:13:00Z",
+        "event_category": "private_company_award",
+        "entities": [
+          "Tesla"
+        ],
+        "receipt_evidence": [
+          "private recipient",
+          "uncommitted customer list"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Tesla is neither award recipient nor committed customer, and the private-company event has no eligible proxy."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-041",
+      "category": "legitimate_principal_proxy",
+      "input": {
+        "title": "New insurance exclusion sharply reduces cover for crude cargoes",
+        "summary": "Marine insurers adopted a market-wide exclusion for crude shipments without identifying any producer, tanker owner, or refiner as principal.",
+        "source": "Marine insurance circular",
+        "publication_timestamp": "2026-08-19T12:20:00Z",
+        "receipt_timestamp": "2026-08-19T12:21:00Z",
+        "event_category": "oil_market",
+        "entities": [
+          "crude cargoes"
+        ],
+        "receipt_evidence": [
+          "market-wide insurance exclusion"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "OIL_CATEGORY",
+        "expected_resolution_status": "resolved",
+        "rationale": "No eligible company is principal, while crude oil is the single bounded market exposure directly affected."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-042",
+      "category": "legitimate_principal_proxy",
+      "input": {
+        "title": "Federal Reserve lowers reserve requirements for a narrow bank category",
+        "summary": "The official rule changes monetary conditions for the covered institutions and names no traded bank as a principal subject.",
+        "source": "Federal Reserve",
+        "publication_timestamp": "2026-08-19T12:28:00Z",
+        "receipt_timestamp": "2026-08-19T12:29:00Z",
+        "event_category": "macro_rates",
+        "entities": [
+          "Federal Reserve"
+        ],
+        "receipt_evidence": [
+          "official final rule"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "FEDERAL_RESERVE_OFFICIAL",
+        "expected_resolution_status": "resolved",
+        "rationale": "The official central-bank action has one supported duration exposure and no causal traded issuer."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-043",
+      "category": "legitimate_principal_proxy",
+      "input": {
+        "title": "Long-dated Treasury auction clears at an unexpectedly high yield",
+        "summary": "The auction result is a US duration event and the report identifies no dealer or corporate issuer as the causal principal.",
+        "source": "Treasury auction release",
+        "publication_timestamp": "2026-08-19T12:36:00Z",
+        "receipt_timestamp": "2026-08-19T12:37:00Z",
+        "event_category": "macro_rates",
+        "entities": [
+          "US Treasuries"
+        ],
+        "receipt_evidence": [
+          "official auction result",
+          "tail size"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "US_RATES_CATEGORY",
+        "expected_resolution_status": "resolved",
+        "rationale": "US rates are the single principal supported exposure, with no company issuer causally attributable."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-044",
+      "category": "legitimate_principal_proxy",
+      "input": {
+        "title": "Bullion exchange doubles margin on gold futures",
+        "summary": "The exchange applies the margin increase to the gold market as a whole and does not identify a miner, dealer, or fund issuer as principal.",
+        "source": "Bullion exchange notice",
+        "publication_timestamp": "2026-08-19T12:44:00Z",
+        "receipt_timestamp": "2026-08-19T12:45:00Z",
+        "event_category": "gold_market",
+        "entities": [
+          "gold futures"
+        ],
+        "receipt_evidence": [
+          "exchange margin circular"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "GOLD_NAMED_MARKET",
+        "expected_resolution_status": "resolved",
+        "rationale": "Gold is the sole named principal market and there is no eligible direct issuer."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-045",
+      "category": "legitimate_principal_proxy",
+      "input": {
+        "title": "Clearinghouse triples collateral for all semiconductor stocks",
+        "summary": "The clearing rule applies the same collateral schedule to the chip-stock group and does not single out any manufacturer or security.",
+        "source": "Securities clearing circular",
+        "publication_timestamp": "2026-08-19T12:52:00Z",
+        "receipt_timestamp": "2026-08-19T12:53:00Z",
+        "event_category": "semiconductor_sector",
+        "entities": [
+          "chip stocks"
+        ],
+        "receipt_evidence": [
+          "group-wide collateral rule",
+          "no singled-out security"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "SEMICONDUCTOR_GROUP",
+        "expected_resolution_status": "resolved",
+        "rationale": "The semiconductor group is the single bounded principal exposure and no individual issuer is selected."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-046",
+      "category": "legitimate_principal_proxy",
+      "input": {
+        "title": "S\u0026P 500 index committee raises the minimum free-float threshold",
+        "summary": "The methodology change applies to the named broad index and does not make any current constituent the principal subject.",
+        "source": "Index methodology notice",
+        "publication_timestamp": "2026-08-19T13:00:00Z",
+        "receipt_timestamp": "2026-08-19T13:01:00Z",
+        "event_category": "broad_market_index",
+        "entities": [
+          "S\u0026P 500"
+        ],
+        "receipt_evidence": [
+          "index methodology revision"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "PROXY",
+        "direct_issuer": "",
+        "proxy_exposure": "SP500_NAMED_INDEX",
+        "expected_resolution_status": "resolved",
+        "rationale": "The S\u0026P 500 is the one explicit principal exposure and no constituent issuer is causally singled out."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-047",
+      "category": "multi_proxy_or_invalid",
+      "input": {
+        "title": "Clearing venue admits gold and long-duration Treasury funds as equal collateral",
+        "summary": "The emergency rule assigns identical haircuts and limits to both asset groups and names neither as the primary collateral market.",
+        "source": "Clearing venue collateral rule",
+        "publication_timestamp": "2026-08-19T13:08:00Z",
+        "receipt_timestamp": "2026-08-19T13:09:00Z",
+        "event_category": "cross_asset_markets",
+        "entities": [
+          "gold funds",
+          "long-duration Treasury funds"
+        ],
+        "receipt_evidence": [
+          "identical collateral haircuts",
+          "co-equal asset groups"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Gold and US duration are co-equal supported exposures under one rule, so no unique principal proxy may be chosen."
+      }
+    },
+    {
+      "id": "issuer-generalization-v3-048",
+      "category": "multi_proxy_or_invalid",
+      "input": {
+        "title": "Golden Oil bakery wins the town's window-display prize",
+        "summary": "Golden Oil is the bakery's registered trading name; the award has no connection to bullion, petroleum, a listed issuer, or financial markets.",
+        "source": "Town business association",
+        "publication_timestamp": "2026-08-19T13:16:00Z",
+        "receipt_timestamp": "2026-08-19T13:17:00Z",
+        "event_category": "local_award",
+        "entities": [
+          "Golden Oil bakery"
+        ],
+        "receipt_evidence": [
+          "local trading name",
+          "retail award"
+        ]
+      },
+      "adjudicated_label": {
+        "mapping_status": "UNRESOLVED",
+        "direct_issuer": "",
+        "proxy_exposure": "NONE",
+        "expected_resolution_status": "unresolved",
+        "rationale": "Keyword overlap does not establish a gold or oil exposure, and no traded legal issuer is identified."
+      }
+    }
+  ]
+}
