@@ -21,6 +21,7 @@ const (
 	SchemaVersion       = "ai-shadow-output-v4-issuer-resolution"
 	V5PromptVersion     = "ai-shadow-prompt-v5-causal-attribution"
 	V5SchemaVersion     = "ai-shadow-output-v5-causal-attribution"
+	V6PromptVersion     = "ai-shadow-prompt-v6-causal-attribution-boundaries"
 	NoProxyExposure     = "NONE"
 )
 
