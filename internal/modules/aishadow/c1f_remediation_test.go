@@ -227,19 +227,19 @@ func TestC1FRoleContractRegressions(t *testing.T) {
 	}
 }
 
-func TestC1F3ProfilesAreMetadataOnlyAndDefaultDeny(t *testing.T) {
+func TestC1F3ProfilesAreBoundMetadataOnlyAndDefaultDeny(t *testing.T) {
 	for _, name := range []string{C1F3ProfileGeneralization, C1F3ProfileBoundary} {
 		p, err := LoadC1F3EvaluationProfile(name)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if p.Executable || p.TypedSidecarIdentity != "" || p.ScoringRubricSHA256 != "" {
-			t.Fatalf("profile must be unbound: %+v", p)
+		if p.Executable || p.TypedSidecarIdentity == "" || p.TypedSidecarSHA256 == "" || p.TypedSidecarFingerprint == "" || p.ScoringRubricSHA256 == "" || p.ScoringRubricFingerprint == "" {
+			t.Fatalf("profile must be fully bound and non-executable: %+v", p)
 		}
 		if _, err = p.Fingerprint(); err != nil {
 			t.Fatal(err)
 		}
-		if err = ValidateC1F3ExecutionReadiness(p); err == nil || !strings.Contains(err.Error(), "C1F2A typed sidecar") {
+		if err = ValidateC1F3ExecutionReadiness(p); err == nil || !strings.Contains(err.Error(), "non-executable") {
 			t.Fatalf("profile did not fail closed: %v", err)
 		}
 	}

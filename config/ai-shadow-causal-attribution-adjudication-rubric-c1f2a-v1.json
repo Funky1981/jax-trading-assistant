@@ -1,0 +1,18 @@
+{
+  "identity": "ai-shadow-causal-attribution-adjudication-rubric-c1f2a-v1",
+  "version": "v1",
+  "created_at": "2026-08-19T14:50:24Z",
+  "source_semantics": "ai-shadow-output-v5-causal-attribution",
+  "roles": {
+    "PRINCIPAL": "Exactly one principal causal issuer.",
+    "EQUAL_PRINCIPAL": "Two or more issuers with equal principal causal weight.",
+    "SECONDARY_AFFECTED": "An issuer genuinely affected downstream but not principal.",
+    "CONTEXT_ONLY": "An issuer present only as context, comparison, commentary, history, or another non-causal reference.",
+    "POSSIBLE_PRINCIPAL": "A genuine unresolved ambiguity over principal issuer identity or causality; difficulty alone is insufficient."
+  },
+  "completeness_rule": "Include every issuer identity required to represent the causal structure, not only the selected issuer, while excluding irrelevant lexical entities.",
+  "identity_rule": "Store the expected semantic issuer identity supported by frozen adjudication. Do not rewrite truth labels solely to obtain deterministic comparator equivalence; preserve legal-entity, parent/subsidiary, brand/parent, and collision distinctions.",
+  "proxy_rule": "PRINCIPAL, EQUAL_PRINCIPAL, or POSSIBLE_PRINCIPAL implies zero proxy candidates. With no such issuer, retain exactly the genuinely principal bounded exposures: one permits PROXY, multiple require UNRESOLVED, and none requires an empty set.",
+  "projection_rule": "Typed labels must project exactly to the frozen v3 mapping through ai-shadow-causal-attribution-c1e-v1 and remain valid under ai-shadow-causal-attribution-validator-c1f-v1.",
+  "review_rule": "Use two explicit logical passes. Pass 2 reports contradictions and never silently repairs them. Freeze only with zero remaining marking ambiguity and zero contract conflict."
+}
