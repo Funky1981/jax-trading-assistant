@@ -265,7 +265,7 @@ func (p DiagnosticEvaluationProfile) permitsRepetitions(value int) bool {
 
 func (p DiagnosticEvaluationProfile) isHoldout() bool {
 	return p.Identity == DiagnosticProfileGeneralization || p.Identity == DiagnosticProfileBoundary ||
-		p.Identity == DiagnosticProfileGeneralizationV2 || p.Identity == DiagnosticProfileBoundaryV2
+		p.Identity == DiagnosticProfileGeneralizationV2 || p.Identity == DiagnosticProfileBoundaryV2 || isC1F3Profile(p)
 }
 
 func (p DiagnosticEvaluationProfile) executionVersions() (prompt, output, policy string) {

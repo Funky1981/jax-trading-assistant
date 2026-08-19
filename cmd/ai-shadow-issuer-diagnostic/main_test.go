@@ -468,6 +468,118 @@ func TestC1E3CredentiallessPreflightReportsDefaultDenyWithoutProviderConstructio
 	}
 }
 
+func TestC1F3CommandAuthorizationMatrixAndMockedProviderConstruction(t *testing.T) {
+	tests := []struct {
+		name             string
+		profileID        string
+		experimentID     string
+		cases            string
+		budget           string
+		hostedAuthorized bool
+		operatorOptIn    bool
+		wantProvider     int
+		wantError        string
+	}{
+		{name: "default deny", profileID: aishadow.C1F3ProfileGeneralization, experimentID: aishadow.OpenAIC1F3GeneralizationExperimentID, cases: "48", budget: "0.30", wantError: "--authorize-c1f3-execution"},
+		{name: "global authorization alone denied", profileID: aishadow.C1F3ProfileGeneralization, experimentID: aishadow.OpenAIC1F3GeneralizationExperimentID, cases: "48", budget: "0.30", hostedAuthorized: true, wantError: "--authorize-c1f3-execution"},
+		{name: "C1F3 opt-in alone denied", profileID: aishadow.C1F3ProfileGeneralization, experimentID: aishadow.OpenAIC1F3GeneralizationExperimentID, cases: "48", budget: "0.30", operatorOptIn: true, wantError: aishadow.OpenAIDiagnosticInferenceAuthEnv + "=true"},
+		{name: "generalization fully authorized reaches mock constructor", profileID: aishadow.C1F3ProfileGeneralization, experimentID: aishadow.OpenAIC1F3GeneralizationExperimentID, cases: "48", budget: "0.30", hostedAuthorized: true, operatorOptIn: true, wantProvider: 1, wantError: "provider is required"},
+		{name: "boundary fully authorized reaches mock constructor", profileID: aishadow.C1F3ProfileBoundary, experimentID: aishadow.OpenAIC1F3BoundaryExperimentID, cases: "32", budget: "0.20", hostedAuthorized: true, operatorOptIn: true, wantProvider: 1, wantError: "provider is required"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			values := c1f3CommandValues(tt.experimentID, tt.cases, tt.budget)
+			if tt.hostedAuthorized {
+				values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "true"
+			}
+			providerCalls := 0
+			deps := dependencies{
+				lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+				openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+					providerCalls++
+					return nil
+				},
+			}
+			root := filepath.Join("..", "..")
+			args := []string{"--execute", "--evaluation-profile", tt.profileID, "--output-root", t.TempDir()}
+			args = append(args, c1f3CommandFrozenPathArgs(t, root, tt.profileID)...)
+			if tt.operatorOptIn {
+				args = append(args, "--authorize-c1f3-execution")
+			}
+			err := run(args, &bytes.Buffer{}, deps)
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("unexpected C1F3 command result: %v", err)
+			}
+			if providerCalls != tt.wantProvider {
+				t.Fatalf("mock provider constructor calls=%d want=%d", providerCalls, tt.wantProvider)
+			}
+		})
+	}
+}
+
+func TestC1F3CredentiallessPreflightReportsDefaultDenyAndZeroProviderConstruction(t *testing.T) {
+	for _, tt := range []struct{ profileID, experimentID, cases, budget string }{
+		{aishadow.C1F3ProfileGeneralization, aishadow.OpenAIC1F3GeneralizationExperimentID, "48", "0.30"},
+		{aishadow.C1F3ProfileBoundary, aishadow.OpenAIC1F3BoundaryExperimentID, "32", "0.20"},
+	} {
+		values := c1f3CommandValues(tt.experimentID, tt.cases, tt.budget)
+		delete(values, aishadow.OpenAIDiagnosticAPIKeyEnv)
+		providerCalls := 0
+		deps := dependencies{
+			lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+			openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+				providerCalls++
+				return nil
+			},
+		}
+		root := filepath.Join("..", "..")
+		args := []string{"--preflight", "--evaluation-profile", tt.profileID, "--output-root", t.TempDir()}
+		args = append(args, c1f3CommandFrozenPathArgs(t, root, tt.profileID)...)
+		var output bytes.Buffer
+		if err := run(args, &output, deps); err != nil {
+			t.Fatal(err)
+		}
+		if providerCalls != 0 {
+			t.Fatalf("C1F3 preflight constructed provider %d times", providerCalls)
+		}
+		for _, want := range []string{
+			`"provider_contact": false`, `"inference": false`, `"execution_authorized": false`,
+			`"version": "` + aishadow.C1F3ExecutionAuthorizationVersion + `"`, `"api_key_present": false`,
+			`"provider_input_isolated": true`, `"frozen_bindings_valid": true`,
+		} {
+			if !strings.Contains(output.String(), want) {
+				t.Fatalf("C1F3 preflight output missing %s: %s", want, output.String())
+			}
+		}
+	}
+}
+
+func TestC1F3FlagCannotAuthorizeHistoricalProfile(t *testing.T) {
+	values := hostedStructuredOutputsCommandValues()
+	values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "true"
+	providerCalls := 0
+	deps := dependencies{
+		lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+		openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+			providerCalls++
+			return nil
+		},
+	}
+	root := filepath.Join("..", "..")
+	err := run([]string{
+		"--execute", "--authorize-c1f3-execution", "--output-root", t.TempDir(),
+		"--manifest", filepath.Join(root, "config", "ai-shadow-issuer-diagnostic-manifest-v1.json"),
+		"--fingerprint-lock", filepath.Join(root, "config", "ai-shadow-issuer-diagnostic-input-fingerprints-v1.json"),
+		"--asset-ruleset-file", filepath.Join(root, "config", "event-asset-resolution-v1.json"),
+	}, &bytes.Buffer{}, deps)
+	if err == nil || !strings.Contains(err.Error(), "scoped only") {
+		t.Fatalf("C1F3 opt-in authorized a historical profile: %v", err)
+	}
+	if providerCalls != 0 {
+		t.Fatalf("historical profile constructed provider %d times", providerCalls)
+	}
+}
+
 func TestC1E3OptInCannotAuthorizeAnotherHostedProfile(t *testing.T) {
 	values := hostedStructuredOutputsCommandValues()
 	values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "true"
@@ -684,9 +796,35 @@ func c1e3CommandValues(experimentID, cases, budget string) map[string]string {
 	return values
 }
 
+func c1f3CommandValues(experimentID, cases, budget string) map[string]string {
+	values := hostedStructuredOutputsCommandValues()
+	values["JAX_AI_EXPERIMENT_ID"] = experimentID
+	values["JAX_AI_MAX_EVENTS"] = cases
+	values["JAX_AI_EXPERIMENT_BUDGET_USD"] = budget
+	values[aishadow.DiagnosticRepetitionsEnv] = "1"
+	values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "false"
+	return values
+}
+
 func c1e3CommandFrozenPathArgs(t *testing.T, root, profileID string) []string {
 	t.Helper()
 	profile, err := aishadow.LoadDiagnosticEvaluationProfile(profileID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return []string{
+		"--manifest", filepath.Join(root, filepath.FromSlash(profile.ManifestPath)),
+		"--fingerprint-lock", filepath.Join(root, filepath.FromSlash(profile.FingerprintLockPath)),
+		"--freeze", filepath.Join(root, filepath.FromSlash(profile.FreezePath)),
+		"--typed-labels", filepath.Join(root, filepath.FromSlash(profile.TypedLabelPath)),
+		"--scoring-rubric", filepath.Join(root, filepath.FromSlash(profile.ScoringRubricPath)),
+		"--asset-ruleset-file", filepath.Join(root, "config", "event-asset-resolution-v1.json"),
+	}
+}
+
+func c1f3CommandFrozenPathArgs(t *testing.T, root, profileID string) []string {
+	t.Helper()
+	profile, err := aishadow.LoadDiagnosticExecutionProfile(profileID)
 	if err != nil {
 		t.Fatal(err)
 	}

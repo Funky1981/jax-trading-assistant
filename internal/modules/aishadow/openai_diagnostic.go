@@ -86,6 +86,7 @@ type OpenAIDiagnosticConfig struct {
 	OutputContract                   string
 	CausalPolicy                     string
 	C1E3ExecutionAuthorization       C1E3ExecutionAuthorization
+	C1F3ExecutionAuthorization       C1F3ExecutionAuthorization
 }
 
 func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagnosticConfig, error) {
@@ -95,7 +96,11 @@ func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagn
 
 func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), profile DiagnosticEvaluationProfile, requireCredential bool) (OpenAIDiagnosticConfig, error) {
 	promptVersion, outputContract, causalPolicy := profile.executionVersions()
-	if err := ValidateContractRoute(promptVersion, outputContract, causalPolicy); err != nil {
+	if promptVersion == V6PromptVersion {
+		if err := ValidateC1FContractRoute(promptVersion, outputContract, C1FValidatorVersion, causalPolicy, IssuerSemanticIdentityVersion, profile.ScoringVersion); err != nil {
+			return OpenAIDiagnosticConfig{}, err
+		}
+	} else if err := ValidateContractRoute(promptVersion, outputContract, causalPolicy); err != nil {
 		return OpenAIDiagnosticConfig{}, err
 	}
 	required := []string{
@@ -206,6 +211,7 @@ func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), pr
 		OutputContract:                outputContract,
 		CausalPolicy:                  causalPolicy,
 		C1E3ExecutionAuthorization:    NewC1E3ExecutionAuthorization(false),
+		C1F3ExecutionAuthorization:    NewC1F3ExecutionAuthorization(false),
 	}, nil
 }
 
@@ -216,7 +222,8 @@ func validateOpenAIExperimentCell(experimentID, model string, mode OpenAIOutputC
 			return fmt.Errorf("existing OpenAI A1 cell requires %s=%s", OpenAIDiagnosticContractModeEnv, OpenAIOutputContractPromptOnly)
 		}
 	case OpenAIStructuredOutputsExperimentID, OpenAIGeneralizationExperimentID, OpenAIBoundaryExperimentID,
-		OpenAIC1E3GeneralizationExperimentID, OpenAIC1E3BoundaryExperimentID:
+		OpenAIC1E3GeneralizationExperimentID, OpenAIC1E3BoundaryExperimentID,
+		OpenAIC1F3GeneralizationExperimentID, OpenAIC1F3BoundaryExperimentID:
 		if model != OpenAIDiagnosticLunaModel || mode != OpenAIOutputContractStrictJSONSchema {
 			return fmt.Errorf("%s requires model=%s and %s=%s", experimentID, OpenAIDiagnosticLunaModel, OpenAIDiagnosticContractModeEnv, OpenAIOutputContractStrictJSONSchema)
 		}
@@ -231,10 +238,10 @@ func supportedOpenAIDiagnosticModel(model string) bool {
 }
 
 func openAIDiagnosticMaximumBudgetMicros(model, experimentID string) int64 {
-	if experimentID == OpenAIBoundaryExperimentID || experimentID == OpenAIC1E3BoundaryExperimentID {
+	if experimentID == OpenAIBoundaryExperimentID || experimentID == OpenAIC1E3BoundaryExperimentID || experimentID == OpenAIC1F3BoundaryExperimentID {
 		return 100_000
 	}
-	if experimentID == OpenAIStructuredOutputsExperimentID || experimentID == OpenAIGeneralizationExperimentID || experimentID == OpenAIC1E3GeneralizationExperimentID {
+	if experimentID == OpenAIStructuredOutputsExperimentID || experimentID == OpenAIGeneralizationExperimentID || experimentID == OpenAIC1E3GeneralizationExperimentID || experimentID == OpenAIC1F3GeneralizationExperimentID {
 		return OpenAIStructuredOutputsMaximumBudgetMicros
 	}
 	if model == OpenAIDiagnosticLunaModel {
@@ -255,6 +262,10 @@ func (c OpenAIDiagnosticConfig) EvidenceNamespace() string {
 		return OpenAIC1E3GeneralizationEvidenceNamespace
 	case OpenAIC1E3BoundaryExperimentID:
 		return OpenAIC1E3BoundaryEvidenceNamespace
+	case OpenAIC1F3GeneralizationExperimentID:
+		return OpenAIC1F3GeneralizationEvidenceNamespace
+	case OpenAIC1F3BoundaryExperimentID:
+		return OpenAIC1F3BoundaryEvidenceNamespace
 	}
 	return OpenAIDiagnosticEvidenceNamespace
 }
@@ -272,7 +283,8 @@ func (c OpenAIDiagnosticConfig) StructuredOutputsEnabled() bool {
 
 func (c OpenAIDiagnosticConfig) ServiceTier() string {
 	if (c.ExperimentID == OpenAIStructuredOutputsExperimentID || c.ExperimentID == OpenAIGeneralizationExperimentID || c.ExperimentID == OpenAIBoundaryExperimentID ||
-		c.ExperimentID == OpenAIC1E3GeneralizationExperimentID || c.ExperimentID == OpenAIC1E3BoundaryExperimentID) && c.StructuredOutputsEnabled() {
+		c.ExperimentID == OpenAIC1E3GeneralizationExperimentID || c.ExperimentID == OpenAIC1E3BoundaryExperimentID ||
+		c.ExperimentID == OpenAIC1F3GeneralizationExperimentID || c.ExperimentID == OpenAIC1F3BoundaryExperimentID) && c.StructuredOutputsEnabled() {
 		return OpenAIStructuredOutputsServiceTier
 	}
 	return ""
@@ -280,7 +292,8 @@ func (c OpenAIDiagnosticConfig) ServiceTier() string {
 
 func (c OpenAIDiagnosticConfig) StructuredOutputSchemaName() string {
 	switch c.ExperimentID {
-	case OpenAIC1E3GeneralizationExperimentID, OpenAIC1E3BoundaryExperimentID:
+	case OpenAIC1E3GeneralizationExperimentID, OpenAIC1E3BoundaryExperimentID,
+		OpenAIC1F3GeneralizationExperimentID, OpenAIC1F3BoundaryExperimentID:
 		return V5OpenAISchemaName
 	default:
 		return OpenAIStructuredOutputsSchemaName
@@ -587,7 +600,11 @@ type openAIDiagnosticRequest struct {
 
 func marshalOpenAIDiagnosticRequest(config OpenAIDiagnosticConfig, request ProviderRequest) ([]byte, error) {
 	if config.OutputContract != "" {
-		if err := ValidateContractRoute(config.PromptVersion, config.OutputContract, config.CausalPolicy); err != nil {
+		if config.PromptVersion == V6PromptVersion {
+			if err := ValidateC1FContractRoute(config.PromptVersion, config.OutputContract, C1FValidatorVersion, config.CausalPolicy, IssuerSemanticIdentityVersion, C1FScoringVersion); err != nil {
+				return nil, err
+			}
+		} else if err := ValidateContractRoute(config.PromptVersion, config.OutputContract, config.CausalPolicy); err != nil {
 			return nil, err
 		}
 		if config.OutputContract == V5SchemaVersion {

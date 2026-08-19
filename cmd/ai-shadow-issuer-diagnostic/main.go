@@ -58,18 +58,22 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	preflight := flags.Bool("preflight", false, "perform all non-Ollama checks and write an audit artifact")
 	execute := flags.Bool("execute", false, "execute the validated diagnostic repetition selection (default 3; explicit 1 allowed)")
 	authorizeC1E3Execution := flags.Bool("authorize-c1e3-execution", false, "explicitly authorize provider construction for a registered frozen C1E3 profile")
+	authorizeC1F3Execution := flags.Bool("authorize-c1f3-execution", false, "explicitly authorize provider construction for one of the two registered frozen C1F3 profiles")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	if *preflight == *execute {
 		return fmt.Errorf("choose exactly one of --preflight or --execute")
 	}
-	profile, err := aishadow.LoadDiagnosticEvaluationProfile(*evaluationProfileID)
+	profile, err := aishadow.LoadDiagnosticExecutionProfile(*evaluationProfileID)
 	if err != nil {
 		return err
 	}
 	if *authorizeC1E3Execution && !*execute {
 		return fmt.Errorf("--authorize-c1e3-execution is valid only with --execute")
+	}
+	if *authorizeC1F3Execution && !*execute {
+		return fmt.Errorf("--authorize-c1f3-execution is valid only with --execute")
 	}
 	if *manifestPath == "" {
 		*manifestPath = profile.ManifestPath
@@ -133,6 +137,7 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		hostedConfig, err = aishadow.LoadOpenAIDiagnosticConfigForProfile(deps.lookup, profile, requireCredential)
 		if err == nil {
 			hostedConfig.C1E3ExecutionAuthorization = aishadow.NewC1E3ExecutionAuthorization(*authorizeC1E3Execution)
+			hostedConfig.C1F3ExecutionAuthorization = aishadow.NewC1F3ExecutionAuthorization(*authorizeC1F3Execution)
 		}
 		if root == "" {
 			root = defaultHostedOutputRoot
@@ -216,6 +221,10 @@ func run(args []string, output io.Writer, deps dependencies) error {
 				result["c1e3_execution_authorization"] = authorization
 				result["execution_authorized"] = authorization.ExecutionAuthorized
 			}
+			if authorization := prepared.Plan.C1F3ExecutionAuthorization; authorization != nil {
+				result["c1f3_execution_authorization"] = authorization
+				result["execution_authorized"] = authorization.ExecutionAuthorized
+			}
 		}
 		return encoder.Encode(result)
 	}
@@ -225,7 +234,7 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		if !hostedConfig.InferenceExplicitlyAuthorized {
 			return fmt.Errorf("hosted inference is not authorized: %s must be true under separate architecture approval", aishadow.OpenAIDiagnosticInferenceAuthEnv)
 		}
-		if err := aishadow.RevalidateC1E3ProviderConstruction(prepared, hostedConfig); err != nil {
+		if err := aishadow.RevalidateOpenAIProviderConstruction(prepared, hostedConfig); err != nil {
 			return err
 		}
 		identity = aishadow.DiagnosticModelIdentity{Name: config.Model}

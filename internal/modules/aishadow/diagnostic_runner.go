@@ -120,6 +120,8 @@ type DiagnosticPlan struct {
 	ScoringRubricFileSHA256    string                          `json:"scoring_rubric_file_sha256,omitempty"`
 	ScoringRubricFingerprint   string                          `json:"scoring_rubric_fingerprint,omitempty"`
 	C1E3ExecutionAuthorization *C1E3ExecutionAuthorizationPlan `json:"c1e3_execution_authorization,omitempty"`
+	C1F3FrozenBindings         *C1F3FrozenBindingPlan          `json:"c1f3_frozen_bindings,omitempty"`
+	C1F3ExecutionAuthorization *C1F3ExecutionAuthorizationPlan `json:"c1f3_execution_authorization,omitempty"`
 	Repetitions                int                             `json:"repetitions"`
 	CasesPerRepetition         int                             `json:"cases_per_repetition"`
 	ExecutionShape             DiagnosticExecutionShape        `json:"execution_shape"`
@@ -224,11 +226,11 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	if profileID == "" {
 		profileID = DiagnosticProfileOriginal
 	}
-	profile, err := LoadDiagnosticEvaluationProfile(profileID)
+	profile, err := LoadDiagnosticExecutionProfile(profileID)
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	if profile.RequiresTypedAttributionLabels {
+	if profile.RequiresTypedAttributionLabels && !isC1F3Profile(profile) {
 		if _, err := LoadFrozenTypedLabelSidecarForProfile(profile, paths.TypedLabelPath); err != nil {
 			return PreparedDiagnostic{}, err
 		}
@@ -268,19 +270,32 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 			return PreparedDiagnostic{}, err
 		}
 	}
-	manifest, err := LoadFrozenDiagnosticManifestForProfile(profile, paths.ManifestPath, exposures)
-	if err != nil {
-		return PreparedDiagnostic{}, err
-	}
-	lock, err := LoadDiagnosticFingerprintLockForProfile(profile, paths.FingerprintLockPath)
-	if err != nil {
-		return PreparedDiagnostic{}, err
-	}
-	if manifest.OutputContract != SchemaVersion || lock.OutputContract != SchemaVersion {
-		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic output contract mismatch")
-	}
-	if lock.PromptVersion != PromptVersion {
-		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic prompt version mismatch")
+	var manifest DiagnosticManifest
+	var lock DiagnosticFingerprintLock
+	var freeze *DiagnosticFreezeRecord
+	var c1f3Bindings *C1F3FrozenBindingPlan
+	if isC1F3Profile(profile) {
+		loadedManifest, loadedLock, loadedFreeze, bindings, loadErr := loadC1F3ExecutionInputs(paths, profile, resolver, exposures)
+		if loadErr != nil {
+			return PreparedDiagnostic{}, loadErr
+		}
+		manifest, lock, freeze = loadedManifest, loadedLock, &loadedFreeze
+		c1f3Bindings = &bindings
+	} else {
+		manifest, err = LoadFrozenDiagnosticManifestForProfile(profile, paths.ManifestPath, exposures)
+		if err != nil {
+			return PreparedDiagnostic{}, err
+		}
+		lock, err = LoadDiagnosticFingerprintLockForProfile(profile, paths.FingerprintLockPath)
+		if err != nil {
+			return PreparedDiagnostic{}, err
+		}
+		if manifest.OutputContract != SchemaVersion || lock.OutputContract != SchemaVersion {
+			return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic output contract mismatch")
+		}
+		if lock.PromptVersion != PromptVersion {
+			return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic prompt version mismatch")
+		}
 	}
 	if manifest.PolicyVersion != rules.Version || lock.PolicyVersion != rules.Version {
 		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic policy version mismatch")
@@ -288,8 +303,7 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	if lock.ManifestFingerprint != manifest.Fingerprint {
 		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic fingerprint lock references a different manifest")
 	}
-	var freeze *DiagnosticFreezeRecord
-	if profile.isHoldout() {
+	if profile.isHoldout() && !isC1F3Profile(profile) {
 		if strings.TrimSpace(paths.FreezePath) == "" {
 			return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s requires its registered freeze record", profile.Identity)
 		}
@@ -298,7 +312,7 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 			return PreparedDiagnostic{}, err
 		}
 		freeze = &loaded
-	} else if strings.TrimSpace(paths.FreezePath) != "" {
+	} else if !isC1F3Profile(profile) && strings.TrimSpace(paths.FreezePath) != "" {
 		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s does not accept a freeze record", profile.Identity)
 	}
 
@@ -348,6 +362,7 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	} else {
 		plan.CausalConsistencyPolicy = executionPolicy
 	}
+	plan.C1F3FrozenBindings = c1f3Bindings
 	return PreparedDiagnostic{Profile: profile, Plan: plan, Manifest: manifest, Lock: lock, Freeze: freeze, Config: config, Resolver: resolver, ProxyExposures: exposures, Paths: paths, ExecutionShape: executionShape}, nil
 }
 
@@ -462,11 +477,11 @@ func PrepareHostedDiagnosticPreflight(paths DiagnosticPaths, config OpenAIDiagno
 	if profileID == "" {
 		profileID = DiagnosticProfileOriginal
 	}
-	profile, err := LoadDiagnosticEvaluationProfile(profileID)
+	profile, err := LoadDiagnosticExecutionProfile(profileID)
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized || config.C1E3ExecutionAuthorization.OperatorOptIn {
+	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized || config.C1E3ExecutionAuthorization.OperatorOptIn || config.C1F3ExecutionAuthorization.OperatorOptIn {
 		return PreparedDiagnostic{}, fmt.Errorf("frozen profile %s does not permit this local preflight", profile.Identity)
 	}
 	return prepareHostedDiagnostic(paths, config, safety, false)
@@ -498,6 +513,9 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if err := validateC1E3AuthorizationScope(prepared.Profile, config); err != nil {
 		return PreparedDiagnostic{}, err
 	}
+	if err := validateC1F3AuthorizationScope(prepared.Profile, config); err != nil {
+		return PreparedDiagnostic{}, err
+	}
 	collisionFree := true
 	if isC1E3Profile(prepared.Profile) {
 		collisionFree, err = c1e3EvidenceNamespaceCollisionFree(paths.OutputRoot)
@@ -506,6 +524,15 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 		}
 		if !collisionFree {
 			return PreparedDiagnostic{}, fmt.Errorf("C1E3 evidence namespace already contains execution evidence")
+		}
+	}
+	if isC1F3Profile(prepared.Profile) {
+		collisionFree, err = c1f3EvidenceNamespaceCollisionFree(paths.OutputRoot)
+		if err != nil {
+			return PreparedDiagnostic{}, fmt.Errorf("inspect C1F3 evidence namespace: %w", err)
+		}
+		if !collisionFree {
+			return PreparedDiagnostic{}, fmt.Errorf("C1F3 evidence namespace already contains execution evidence")
 		}
 	}
 	firstRequest, err := diagnosticInitialRequest(config, prepared.Manifest.Events[0].Input, prepared.ProxyExposures)
@@ -577,10 +604,33 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 			}
 		}
 	}
+	if isC1F3Profile(prepared.Profile) {
+		isolationErr := validateC1F3ProviderInputIsolation(prepared.Manifest, config, prepared.ProxyExposures)
+		budgetValid := estimatedRunCost <= config.BudgetCeilingMicros
+		authorized := requireCredential && config.C1F3ExecutionAuthorization.OperatorOptIn && config.InferenceExplicitlyAuthorized && config.APIKey.present() && budgetValid && collisionFree && isolationErr == nil
+		prepared.Plan.C1F3ExecutionAuthorization = &C1F3ExecutionAuthorizationPlan{
+			Version: C1F3ExecutionAuthorizationVersion, AuthorizationFingerprint: C1F3ExecutionAuthorizationFingerprint(),
+			OperatorOptIn: config.C1F3ExecutionAuthorization.OperatorOptIn, HostedInferenceAuthorized: config.InferenceExplicitlyAuthorized,
+			CredentialPresent: config.APIKey.present(), FrozenBindingsValid: prepared.Plan.C1F3FrozenBindings != nil,
+			BudgetValid: budgetValid, EvidenceNamespaceCollisionFree: collisionFree, ProviderInputIsolated: isolationErr == nil,
+			ExecutionAuthorized: authorized,
+		}
+		if isolationErr != nil {
+			return PreparedDiagnostic{}, isolationErr
+		}
+		if requireCredential {
+			if err := validateC1F3ExecutionAuthorization(prepared, config); err != nil {
+				return PreparedDiagnostic{}, err
+			}
+		}
+	}
 	return prepared, nil
 }
 
 func diagnosticInitialRequest(config OpenAIDiagnosticConfig, input EventInput, proxyExposures []string) (ProviderRequest, error) {
+	if config.PromptVersion == V6PromptVersion {
+		return V6InitialRequest(input, proxyExposures)
+	}
 	if config.OutputContract == V5SchemaVersion {
 		return V5InitialRequest(input, proxyExposures)
 	}
@@ -588,6 +638,9 @@ func diagnosticInitialRequest(config OpenAIDiagnosticConfig, input EventInput, p
 }
 
 func diagnosticCorrectiveRequest(config OpenAIDiagnosticConfig, validationErrors []string, previous string, proxyExposures []string) (ProviderRequest, error) {
+	if config.PromptVersion == V6PromptVersion {
+		return V6CorrectiveRequest(validationErrors, previous, proxyExposures)
+	}
 	if config.OutputContract == V5SchemaVersion {
 		return V5CorrectiveRequest(validationErrors, previous, proxyExposures)
 	}
@@ -786,7 +839,9 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 			var attempts []Attempt
 			var traces []ProviderTrace
 			var err error
-			if prepared.Plan.OutputContract == V5SchemaVersion {
+			if isC1F3Profile(prepared.Profile) {
+				result, attempts, traces, err = analyseC1FEvent(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
+			} else if prepared.Plan.OutputContract == V5SchemaVersion {
 				result, attempts, traces, err = analyseV5Event(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
 			} else {
 				result, attempts, traces, err = analyseEvent(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
