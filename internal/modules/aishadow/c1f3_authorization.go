@@ -139,7 +139,8 @@ func loadC1F3AuthorizedDiagnosticProfile(identity string) (DiagnosticEvaluationP
 		RequiredExperimentID: experimentID, RequiredOutputContractMode: OpenAIOutputContractStrictJSONSchema,
 		EvidenceNamespace: namespace, CredentiallessPreflightAllowed: true, MaximumBudgetMicros: budget,
 		ExecutionPromptVersion: V6PromptVersion, ExecutionOutputContract: V5SchemaVersion,
-		ExecutionCausalPolicy: CausalAttributionPolicyVersion, ScoringVersion: C1FScoringVersion,
+		ExecutionValidatorVersion: C1FValidatorVersion,
+		ExecutionCausalPolicy:     CausalAttributionPolicyVersion, ScoringVersion: C1FScoringVersion,
 		ScoringRubricVersion: C1F3ScoringRubricVersion, RequiresTypedAttributionLabels: true,
 		TypedLabelPath: frozen.TypedSidecarPath, TypedLabelVersion: frozen.TypedSidecarIdentity,
 		TypedLabelFileSHA256: frozen.TypedSidecarSHA256, TypedLabelFingerprint: frozen.TypedSidecarFingerprint,
@@ -149,7 +150,8 @@ func loadC1F3AuthorizedDiagnosticProfile(identity string) (DiagnosticEvaluationP
 }
 
 // LoadDiagnosticExecutionProfile retains the historical hosted registry and
-// adds only the two C1F3 profiles through this explicit control-plane route.
+// adds only the frozen C1F3 and versioned repeatability profiles through this
+// explicit control-plane route.
 func LoadDiagnosticExecutionProfile(identity string) (DiagnosticEvaluationProfile, error) {
 	if profile, err := LoadDiagnosticEvaluationProfile(identity); err == nil {
 		return profile, nil
@@ -412,7 +414,13 @@ func RevalidateOpenAIProviderConstruction(prepared PreparedDiagnostic, config Op
 	if err := validateC1F3RepeatabilityAuthorizationScope(prepared.Profile, config); err != nil {
 		return err
 	}
-	if isC1F3RepeatabilityProfile(prepared.Profile) {
+	if err := validateC1F3RepeatabilityR3AuthorizationScope(prepared.Profile, config); err != nil {
+		return err
+	}
+	if isC1F3RepeatabilityR3Profile(prepared.Profile) {
+		return RevalidateC1F3RepeatabilityR3ProviderConstruction(prepared, config)
+	}
+	if isC1F3RepeatabilityR2Profile(prepared.Profile) {
 		return RevalidateC1F3RepeatabilityProviderConstruction(prepared, config)
 	}
 	if isC1F3Profile(prepared.Profile) {

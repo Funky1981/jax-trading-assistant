@@ -11,10 +11,14 @@ const (
 	C1F3RepeatabilityProfileIdentity           = "openai-hosted-c1f3-repeatability-generalization-v3-r2"
 	C1F3RepeatabilityExperimentID              = "WP-00.03C1F3B-GENERALIZATION-R2"
 	C1F3RepeatabilityEvidenceNamespace         = C1F3RepeatabilityProfileIdentity
+	C1F3RepeatabilityR3ProfileIdentity         = "openai-hosted-c1f3-repeatability-generalization-v3-r3"
+	C1F3RepeatabilityR3ExperimentID            = "WP-00.03C1F3D-GENERALIZATION-R3"
+	C1F3RepeatabilityR3EvidenceNamespace       = C1F3RepeatabilityR3ProfileIdentity
 	C1F3RepeatabilityScoringPath               = "config/ai-shadow-c1f3-repeatability-scoring-v1.json"
 	C1F3RepeatabilityScoringFileSHA256         = "ff6fe9618ad8e89440e4d015724a9949c95f0542e6b0e0048bcb5d73f7e4c45d"
 	C1F3RepeatabilityScoringFingerprint        = "70313e7f77f5f82b912c382d96aa513f8e67dc03f53abe09c26189494677d1f5"
 	C1F3RepeatabilityProfileFingerprint        = "294433030c9e24ff695b0a6792e7039555de21cdcfce8cc86805a3c86d45964d"
+	C1F3RepeatabilityR3ProfileFingerprint      = "0e66075694190cfa5aeac4457862d59dedc4965d46d4db22d24c1c2f70f19912"
 	C1F3RepeatabilityComparisonSourceSHA256    = "7b5e36b96bda8456b20841c59ec759ddf8f31472b288668b6880c4e7deb73114"
 	C1F3RepeatabilityBaselineRelativeDirectory = ".runtime/diagnostics/ai-shadow-issuer-hosted/openai-hosted-c1f3-generalization-v3/WP-00.03C1F3-GENERALIZATION/0a650e09-1c64-4349-bf5d-09bf4dd697d9"
 	C1F3AReprojectionRelativeDirectory         = ".runtime/diagnostics/ai-shadow-c1f3-reprojection-v1/WP-00.03C1F3A/8f860c0a8abcdc755b737b59c6feeb17af796a00c97afc900443a663563eba05"
@@ -77,12 +81,29 @@ func frozenC1F3RepeatabilityBaseline() C1F3RepeatabilityBaseline {
 }
 
 func FrozenC1F3RepeatabilityProfile() (C1F3RepeatabilityProfile, error) {
+	return frozenC1F3RepeatabilityProfile(C1F3RepeatabilityProfileIdentity)
+}
+
+func FrozenC1F3RepeatabilityR3Profile() (C1F3RepeatabilityProfile, error) {
+	return frozenC1F3RepeatabilityProfile(C1F3RepeatabilityR3ProfileIdentity)
+}
+
+func frozenC1F3RepeatabilityProfile(identity string) (C1F3RepeatabilityProfile, error) {
 	base, err := LoadC1F3EvaluationProfile(C1F3ProfileGeneralization)
 	if err != nil {
 		return C1F3RepeatabilityProfile{}, err
 	}
+	experimentID, namespace := "", ""
+	switch identity {
+	case C1F3RepeatabilityProfileIdentity:
+		experimentID, namespace = C1F3RepeatabilityExperimentID, C1F3RepeatabilityEvidenceNamespace
+	case C1F3RepeatabilityR3ProfileIdentity:
+		experimentID, namespace = C1F3RepeatabilityR3ExperimentID, C1F3RepeatabilityR3EvidenceNamespace
+	default:
+		return C1F3RepeatabilityProfile{}, fmt.Errorf("unknown C1F repeatability profile %q", identity)
+	}
 	return C1F3RepeatabilityProfile{
-		Identity: C1F3RepeatabilityProfileIdentity, SourceProfileIdentity: C1F3ProfileGeneralization, FrozenSemanticStack: base,
+		Identity: identity, SourceProfileIdentity: C1F3ProfileGeneralization, FrozenSemanticStack: base,
 		Baseline: frozenC1F3RepeatabilityBaseline(), ComparisonScoring: C1F3RepeatabilityScoringBinding{
 			Identity: C1F3RepeatabilityScoringVersion, Path: C1F3RepeatabilityScoringPath, FileSHA256: C1F3RepeatabilityScoringFileSHA256,
 			SemanticFingerprint:      C1F3RepeatabilityScoringFingerprint,
@@ -90,7 +111,7 @@ func FrozenC1F3RepeatabilityProfile() (C1F3RepeatabilityProfile, error) {
 			ComparisonImplementation: C1F3RepeatabilityImplementationBinding{Identity: C1F3RepeatabilityScoringVersion, SHA256: C1F3RepeatabilityComparisonSourceSHA256, SourcePath: "internal/modules/aishadow/repeatability_scoring.go"},
 		},
 		Provider: OpenAIDiagnosticProvider, Model: OpenAIDiagnosticLunaModel, ReasoningEffort: OpenAIDiagnosticReasoningEffort,
-		CaseCount: 48, Repetitions: 1, ExperimentIdentity: C1F3RepeatabilityExperimentID, EvidenceNamespace: C1F3RepeatabilityEvidenceNamespace,
+		CaseCount: 48, Repetitions: 1, ExperimentIdentity: experimentID, EvidenceNamespace: namespace,
 		MaximumBudgetMicros: 300_000, ExpectedAnswerControlPlane: true, DefaultDeny: true,
 	}, nil
 }
@@ -98,22 +119,34 @@ func FrozenC1F3RepeatabilityProfile() (C1F3RepeatabilityProfile, error) {
 func (p C1F3RepeatabilityProfile) Fingerprint() (string, error) { return fingerprint(p) }
 
 func loadC1F3RepeatabilityDiagnosticProfile(identity string) (DiagnosticEvaluationProfile, bool) {
-	if identity != C1F3RepeatabilityProfileIdentity {
+	if identity != C1F3RepeatabilityProfileIdentity && identity != C1F3RepeatabilityR3ProfileIdentity {
 		return DiagnosticEvaluationProfile{}, false
 	}
 	base, ok := loadC1F3AuthorizedDiagnosticProfile(C1F3ProfileGeneralization)
 	if !ok {
 		return DiagnosticEvaluationProfile{}, false
 	}
-	base.Identity = C1F3RepeatabilityProfileIdentity
-	base.RequiredExperimentID = C1F3RepeatabilityExperimentID
-	base.EvidenceNamespace = C1F3RepeatabilityEvidenceNamespace
+	repeatability, err := frozenC1F3RepeatabilityProfile(identity)
+	if err != nil {
+		return DiagnosticEvaluationProfile{}, false
+	}
+	base.Identity = repeatability.Identity
+	base.RequiredExperimentID = repeatability.ExperimentIdentity
+	base.EvidenceNamespace = repeatability.EvidenceNamespace
 	base.MaximumBudgetMicros = 300_000
 	return base, true
 }
 
 func isC1F3RepeatabilityProfile(profile DiagnosticEvaluationProfile) bool {
+	return isC1F3RepeatabilityR2Profile(profile) || isC1F3RepeatabilityR3Profile(profile)
+}
+
+func isC1F3RepeatabilityR2Profile(profile DiagnosticEvaluationProfile) bool {
 	return profile.Identity == C1F3RepeatabilityProfileIdentity
+}
+
+func isC1F3RepeatabilityR3Profile(profile DiagnosticEvaluationProfile) bool {
+	return profile.Identity == C1F3RepeatabilityR3ProfileIdentity
 }
 
 func usesC1F3SemanticStack(profile DiagnosticEvaluationProfile) bool {
@@ -153,12 +186,16 @@ func loadC1F3RepeatabilityExecutionInputs(paths DiagnosticPaths, profile Diagnos
 	if err != nil {
 		return DiagnosticManifest{}, DiagnosticFingerprintLock{}, DiagnosticFreezeRecord{}, C1F3FrozenBindingPlan{}, C1F3RepeatabilityFrozenBindingPlan{}, err
 	}
-	repeatProfile, err := FrozenC1F3RepeatabilityProfile()
+	repeatProfile, err := frozenC1F3RepeatabilityProfile(profile.Identity)
 	if err != nil {
 		return DiagnosticManifest{}, DiagnosticFingerprintLock{}, DiagnosticFreezeRecord{}, C1F3FrozenBindingPlan{}, C1F3RepeatabilityFrozenBindingPlan{}, err
 	}
 	profileFingerprint, err := repeatProfile.Fingerprint()
-	if err != nil || profileFingerprint != C1F3RepeatabilityProfileFingerprint || profile.Identity != repeatProfile.Identity {
+	wantFingerprint := C1F3RepeatabilityProfileFingerprint
+	if isC1F3RepeatabilityR3Profile(profile) {
+		wantFingerprint = C1F3RepeatabilityR3ProfileFingerprint
+	}
+	if err != nil || profileFingerprint != wantFingerprint || profile.Identity != repeatProfile.Identity {
 		return DiagnosticManifest{}, DiagnosticFingerprintLock{}, DiagnosticFreezeRecord{}, C1F3FrozenBindingPlan{}, C1F3RepeatabilityFrozenBindingPlan{}, fmt.Errorf("frozen C1F3 repeatability profile identity changed")
 	}
 	root := c1e3RepositoryRoot(paths.AssetRulesetPath)

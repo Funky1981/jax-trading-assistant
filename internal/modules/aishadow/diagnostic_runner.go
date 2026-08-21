@@ -95,42 +95,45 @@ type DiagnosticPlanEvent struct {
 }
 
 type DiagnosticPlan struct {
-	Version                                 string                                       `json:"version"`
-	EvaluationProfile                       string                                       `json:"evaluation_profile"`
-	DatasetIdentity                         string                                       `json:"dataset_identity"`
-	ManifestVersion                         string                                       `json:"manifest_version"`
-	ManifestFingerprint                     string                                       `json:"manifest_fingerprint"`
-	ManifestFileSHA256                      string                                       `json:"manifest_file_sha256"`
-	FingerprintLockVersion                  string                                       `json:"fingerprint_lock_version"`
-	FingerprintLockFingerprint              string                                       `json:"fingerprint_lock_fingerprint"`
-	FingerprintLockFileSHA256               string                                       `json:"fingerprint_lock_file_sha256"`
-	FreezeVersion                           string                                       `json:"freeze_version,omitempty"`
-	FreezeFileSHA256                        string                                       `json:"freeze_file_sha256,omitempty"`
-	LabelVersion                            string                                       `json:"label_version"`
-	PromptVersion                           string                                       `json:"prompt_version"`
-	OutputContract                          string                                       `json:"output_contract"`
-	PolicyVersion                           string                                       `json:"policy_version"`
-	CausalConsistencyPolicy                 string                                       `json:"causal_consistency_policy"`
-	CausalAttributionPolicy                 string                                       `json:"causal_attribution_policy,omitempty"`
-	ScoringVersion                          string                                       `json:"scoring_version,omitempty"`
-	TypedLabelVersion                       string                                       `json:"typed_label_version,omitempty"`
-	TypedLabelFileSHA256                    string                                       `json:"typed_label_file_sha256,omitempty"`
-	TypedLabelFingerprint                   string                                       `json:"typed_label_fingerprint,omitempty"`
-	ScoringRubricVersion                    string                                       `json:"scoring_rubric_version,omitempty"`
-	ScoringRubricFileSHA256                 string                                       `json:"scoring_rubric_file_sha256,omitempty"`
-	ScoringRubricFingerprint                string                                       `json:"scoring_rubric_fingerprint,omitempty"`
-	C1E3ExecutionAuthorization              *C1E3ExecutionAuthorizationPlan              `json:"c1e3_execution_authorization,omitempty"`
-	C1F3FrozenBindings                      *C1F3FrozenBindingPlan                       `json:"c1f3_frozen_bindings,omitempty"`
-	C1F3ExecutionAuthorization              *C1F3ExecutionAuthorizationPlan              `json:"c1f3_execution_authorization,omitempty"`
-	C1F3RepeatabilityFrozenBindings         *C1F3RepeatabilityFrozenBindingPlan          `json:"c1f3_repeatability_frozen_bindings,omitempty"`
-	C1F3RepeatabilityExecutionAuthorization *C1F3RepeatabilityExecutionAuthorizationPlan `json:"c1f3_repeatability_execution_authorization,omitempty"`
-	Repetitions                             int                                          `json:"repetitions"`
-	CasesPerRepetition                      int                                          `json:"cases_per_repetition"`
-	ExecutionShape                          DiagnosticExecutionShape                     `json:"execution_shape"`
-	ModelConfiguration                      DiagnosticModelConfiguration                 `json:"model_configuration"`
-	Safety                                  DiagnosticSafetyState                        `json:"safety"`
-	HostedExperiment                        *HostedExperimentPlan                        `json:"hosted_experiment,omitempty"`
-	Events                                  []DiagnosticPlanEvent                        `json:"events"`
+	Version                                   string                                         `json:"version"`
+	EvaluationProfile                         string                                         `json:"evaluation_profile"`
+	DatasetIdentity                           string                                         `json:"dataset_identity"`
+	ManifestVersion                           string                                         `json:"manifest_version"`
+	ManifestFingerprint                       string                                         `json:"manifest_fingerprint"`
+	ManifestFileSHA256                        string                                         `json:"manifest_file_sha256"`
+	FingerprintLockVersion                    string                                         `json:"fingerprint_lock_version"`
+	FingerprintLockFingerprint                string                                         `json:"fingerprint_lock_fingerprint"`
+	FingerprintLockFileSHA256                 string                                         `json:"fingerprint_lock_file_sha256"`
+	FreezeVersion                             string                                         `json:"freeze_version,omitempty"`
+	FreezeFileSHA256                          string                                         `json:"freeze_file_sha256,omitempty"`
+	LabelVersion                              string                                         `json:"label_version"`
+	PromptVersion                             string                                         `json:"prompt_version"`
+	OutputContract                            string                                         `json:"output_contract"`
+	ExecutionRoute                            diagnosticExecutionRoute                       `json:"execution_route"`
+	ValidatorVersion                          string                                         `json:"validator_version"`
+	PolicyVersion                             string                                         `json:"policy_version"`
+	CausalConsistencyPolicy                   string                                         `json:"causal_consistency_policy"`
+	CausalAttributionPolicy                   string                                         `json:"causal_attribution_policy,omitempty"`
+	ScoringVersion                            string                                         `json:"scoring_version,omitempty"`
+	TypedLabelVersion                         string                                         `json:"typed_label_version,omitempty"`
+	TypedLabelFileSHA256                      string                                         `json:"typed_label_file_sha256,omitempty"`
+	TypedLabelFingerprint                     string                                         `json:"typed_label_fingerprint,omitempty"`
+	ScoringRubricVersion                      string                                         `json:"scoring_rubric_version,omitempty"`
+	ScoringRubricFileSHA256                   string                                         `json:"scoring_rubric_file_sha256,omitempty"`
+	ScoringRubricFingerprint                  string                                         `json:"scoring_rubric_fingerprint,omitempty"`
+	C1E3ExecutionAuthorization                *C1E3ExecutionAuthorizationPlan                `json:"c1e3_execution_authorization,omitempty"`
+	C1F3FrozenBindings                        *C1F3FrozenBindingPlan                         `json:"c1f3_frozen_bindings,omitempty"`
+	C1F3ExecutionAuthorization                *C1F3ExecutionAuthorizationPlan                `json:"c1f3_execution_authorization,omitempty"`
+	C1F3RepeatabilityFrozenBindings           *C1F3RepeatabilityFrozenBindingPlan            `json:"c1f3_repeatability_frozen_bindings,omitempty"`
+	C1F3RepeatabilityExecutionAuthorization   *C1F3RepeatabilityExecutionAuthorizationPlan   `json:"c1f3_repeatability_execution_authorization,omitempty"`
+	C1F3RepeatabilityR3ExecutionAuthorization *C1F3RepeatabilityR3ExecutionAuthorizationPlan `json:"c1f3_repeatability_r3_execution_authorization,omitempty"`
+	Repetitions                               int                                            `json:"repetitions"`
+	CasesPerRepetition                        int                                            `json:"cases_per_repetition"`
+	ExecutionShape                            DiagnosticExecutionShape                       `json:"execution_shape"`
+	ModelConfiguration                        DiagnosticModelConfiguration                   `json:"model_configuration"`
+	Safety                                    DiagnosticSafetyState                          `json:"safety"`
+	HostedExperiment                          *HostedExperimentPlan                          `json:"hosted_experiment,omitempty"`
+	Events                                    []DiagnosticPlanEvent                          `json:"events"`
 }
 
 type DiagnosticExecutionShape struct {
@@ -229,6 +232,10 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 		profileID = DiagnosticProfileOriginal
 	}
 	profile, err := LoadDiagnosticExecutionProfile(profileID)
+	if err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	executionContract, err := diagnosticExecutionContractForProfile(profile)
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
@@ -344,13 +351,14 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	}
 
 	executionShape := newDiagnosticExecutionShape(profile, profile.DefaultRepetitions, false)
-	executionPrompt, executionOutput, executionPolicy := profile.executionVersions()
+	executionPrompt, executionOutput, executionPolicy := executionContract.Prompt, executionContract.Output, executionContract.Policy
 	plan := DiagnosticPlan{
 		Version: DiagnosticReportVersion, EvaluationProfile: profile.Identity, DatasetIdentity: profile.ManifestVersion, ManifestVersion: manifest.Version,
 		ManifestFingerprint: manifest.Fingerprint, ManifestFileSHA256: profile.ManifestFileSHA256,
 		FingerprintLockVersion: lock.Version, FingerprintLockFingerprint: lock.Fingerprint, FingerprintLockFileSHA256: profile.FingerprintLockFileSHA256,
 		FreezeVersion: profile.FreezeVersion, FreezeFileSHA256: profile.FreezeFileSHA256,
 		LabelVersion: manifest.LabelVersion, PromptVersion: executionPrompt, OutputContract: executionOutput,
+		ExecutionRoute: executionContract.Route, ValidatorVersion: executionContract.Validator,
 		PolicyVersion: rules.Version,
 		Repetitions:   executionShape.EffectiveRepetitions, CasesPerRepetition: profile.CaseCount,
 		ExecutionShape: executionShape,
@@ -429,8 +437,13 @@ func ValidateDiagnosticExecutionShape(prepared PreparedDiagnostic) error {
 		len(prepared.Manifest.Events) != prepared.Profile.CaseCount {
 		return fmt.Errorf("issuer diagnostic execution shape does not match validated runtime selection")
 	}
-	prompt, output, policy := prepared.Profile.executionVersions()
+	contract, err := diagnosticExecutionContractForProfile(prepared.Profile)
+	if err != nil {
+		return err
+	}
+	prompt, output, policy := contract.Prompt, contract.Output, contract.Policy
 	if prepared.Plan.PromptVersion != prompt || prepared.Plan.OutputContract != output ||
+		prepared.Plan.ExecutionRoute != contract.Route || prepared.Plan.ValidatorVersion != contract.Validator ||
 		(output == V5SchemaVersion && (prepared.Plan.CausalAttributionPolicy != policy || prepared.Plan.CausalConsistencyPolicy != "")) ||
 		(output != V5SchemaVersion && prepared.Plan.CausalConsistencyPolicy != policy) {
 		return fmt.Errorf("issuer diagnostic execution contract does not match the frozen profile")
@@ -493,7 +506,7 @@ func PrepareHostedDiagnosticPreflight(paths DiagnosticPaths, config OpenAIDiagno
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized || config.C1E3ExecutionAuthorization.OperatorOptIn || config.C1F3ExecutionAuthorization.OperatorOptIn || config.C1F3RepeatabilityExecutionAuthorization.OperatorOptIn {
+	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized || config.C1E3ExecutionAuthorization.OperatorOptIn || config.C1F3ExecutionAuthorization.OperatorOptIn || config.C1F3RepeatabilityExecutionAuthorization.OperatorOptIn || config.C1F3RepeatabilityR3ExecutionAuthorization.OperatorOptIn {
 		return PreparedDiagnostic{}, fmt.Errorf("frozen profile %s does not permit this local preflight", profile.Identity)
 	}
 	return prepareHostedDiagnostic(paths, config, safety, false)
@@ -529,6 +542,9 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 		return PreparedDiagnostic{}, err
 	}
 	if err := validateC1F3RepeatabilityAuthorizationScope(prepared.Profile, config); err != nil {
+		return PreparedDiagnostic{}, err
+	}
+	if err := validateC1F3RepeatabilityR3AuthorizationScope(prepared.Profile, config); err != nil {
 		return PreparedDiagnostic{}, err
 	}
 	collisionFree := true
@@ -648,7 +664,7 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 			}
 		}
 	}
-	if isC1F3RepeatabilityProfile(prepared.Profile) {
+	if isC1F3RepeatabilityR2Profile(prepared.Profile) {
 		isolationErr := validateC1F3RepeatabilityProviderInputIsolation(prepared.Manifest, config, prepared.ProxyExposures)
 		budgetValid := estimatedRunCost <= config.BudgetCeilingMicros && config.BudgetCeilingMicros <= 300_000
 		bindings := prepared.Plan.C1F3RepeatabilityFrozenBindings
@@ -669,6 +685,31 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 		}
 		if requireCredential {
 			if err := validateC1F3RepeatabilityExecutionAuthorization(prepared, config); err != nil {
+				return PreparedDiagnostic{}, err
+			}
+		}
+	}
+	if isC1F3RepeatabilityR3Profile(prepared.Profile) {
+		isolationErr := validateC1F3RepeatabilityProviderInputIsolation(prepared.Manifest, config, prepared.ProxyExposures)
+		budgetValid := estimatedRunCost <= config.BudgetCeilingMicros && config.BudgetCeilingMicros <= 300_000
+		bindings := prepared.Plan.C1F3RepeatabilityFrozenBindings
+		baselineValid := bindings != nil && bindings.Baseline == frozenC1F3RepeatabilityBaseline()
+		scoringValid := bindings != nil && bindings.ComparisonScoring.Identity == C1F3RepeatabilityScoringVersion && bindings.ComparisonScoring.FileSHA256 == C1F3RepeatabilityScoringFileSHA256
+		runtimeSafetyValid := prepared.Plan.Safety.RuntimeMode == "paper" && !prepared.Plan.Safety.AllowLiveTrading && !prepared.Plan.Safety.ExecutionEnabled && !prepared.Plan.Safety.ExecutionWorker && !prepared.Plan.Safety.BrokerExecution && prepared.Plan.Safety.MaximumLeverage > 0 && prepared.Plan.Safety.MaximumLeverage <= 1
+		authorized := requireCredential && config.C1F3RepeatabilityR3ExecutionAuthorization.OperatorOptIn && config.InferenceExplicitlyAuthorized && config.APIKey.present() && budgetValid && collisionFree && isolationErr == nil && baselineValid && scoringValid && runtimeSafetyValid
+		prepared.Plan.C1F3RepeatabilityR3ExecutionAuthorization = &C1F3RepeatabilityR3ExecutionAuthorizationPlan{
+			Version: C1F3RepeatabilityR3ExecutionAuthorizationVersion, AuthorizationFingerprint: C1F3RepeatabilityR3ExecutionAuthorizationFingerprint(),
+			OperatorOptIn: config.C1F3RepeatabilityR3ExecutionAuthorization.OperatorOptIn, HostedInferenceAuthorized: config.InferenceExplicitlyAuthorized,
+			CredentialPresent: config.APIKey.present(), FrozenBindingsValid: bindings != nil, BaselineBindingValid: baselineValid,
+			RepeatabilityScoringValid: scoringValid, BudgetValid: budgetValid, EvidenceNamespaceCollisionFree: collisionFree,
+			ProviderInputIsolated: isolationErr == nil, ProviderInputMatchesC1F3: isolationErr == nil, R2ResponseIsolated: isolationErr == nil, RuntimeSafetyValid: runtimeSafetyValid,
+			ExecutionAuthorized: authorized,
+		}
+		if isolationErr != nil {
+			return PreparedDiagnostic{}, isolationErr
+		}
+		if requireCredential {
+			if err := validateC1F3RepeatabilityR3ExecutionAuthorization(prepared, config); err != nil {
 				return PreparedDiagnostic{}, err
 			}
 		}
@@ -831,6 +872,10 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 	if err := ValidateDiagnosticExecutionShape(prepared); err != nil {
 		return DiagnosticRunReport{}, DiagnosticAuditPaths{}, err
 	}
+	executionContract, err := diagnosticExecutionContractForProfile(prepared.Profile)
+	if err != nil {
+		return DiagnosticRunReport{}, DiagnosticAuditPaths{}, err
+	}
 	if provider == nil {
 		return DiagnosticRunReport{}, DiagnosticAuditPaths{}, fmt.Errorf("issuer diagnostic provider is required")
 	}
@@ -888,12 +933,15 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 			var attempts []Attempt
 			var traces []ProviderTrace
 			var err error
-			if isC1F3Profile(prepared.Profile) {
+			switch executionContract.Route {
+			case diagnosticRouteC1F3, diagnosticRouteC1FRepeatabilityR2, diagnosticRouteC1FRepeatabilityR3:
 				result, attempts, traces, err = analyseC1FEvent(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
-			} else if prepared.Plan.OutputContract == V5SchemaVersion {
+			case diagnosticRouteHistoricalC1EV5:
 				result, attempts, traces, err = analyseV5Event(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
-			} else {
+			case diagnosticRouteHistoricalV4:
 				result, attempts, traces, err = analyseEvent(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
+			default:
+				err = fmt.Errorf("unsupported diagnostic execution route %q", executionContract.Route)
 			}
 			if err != nil {
 				if recorder, ok := provider.(hostedExperimentRecorder); ok {
@@ -948,12 +996,14 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 	return report, paths, nil
 }
 
-type diagnosticProjectionRoute string
+type diagnosticProjectionRoute = diagnosticExecutionRoute
 
 const (
-	diagnosticProjectionV4  diagnosticProjectionRoute = "historical-v4"
-	diagnosticProjectionV5  diagnosticProjectionRoute = "historical-c1e-v5"
-	diagnosticProjectionC1F diagnosticProjectionRoute = C1FValidatorVersion
+	diagnosticProjectionV4                 diagnosticProjectionRoute = diagnosticRouteHistoricalV4
+	diagnosticProjectionV5                 diagnosticProjectionRoute = diagnosticRouteHistoricalC1EV5
+	diagnosticProjectionC1F                diagnosticProjectionRoute = diagnosticRouteC1F3
+	diagnosticProjectionC1FRepeatabilityR2 diagnosticProjectionRoute = diagnosticRouteC1FRepeatabilityR2
+	diagnosticProjectionC1FRepeatabilityR3 diagnosticProjectionRoute = diagnosticRouteC1FRepeatabilityR3
 )
 
 type diagnosticAttemptProjection struct {
@@ -975,8 +1025,8 @@ func newV5DiagnosticAttemptProjection(parsed *V5StructuredResult, decision *Caus
 	return newTypedDiagnosticAttemptProjection(diagnosticProjectionV5, parsed, decision, resolution)
 }
 
-func newC1FDiagnosticAttemptProjection(parsed *V5StructuredResult, decision *CausalAttributionDecision, resolution *PolicyResolution) *diagnosticAttemptProjection {
-	return newTypedDiagnosticAttemptProjection(diagnosticProjectionC1F, parsed, decision, resolution)
+func newC1FDiagnosticAttemptProjection(route diagnosticProjectionRoute, parsed *V5StructuredResult, decision *CausalAttributionDecision, resolution *PolicyResolution) *diagnosticAttemptProjection {
+	return newTypedDiagnosticAttemptProjection(route, parsed, decision, resolution)
 }
 
 func newTypedDiagnosticAttemptProjection(route diagnosticProjectionRoute, parsed *V5StructuredResult, decision *CausalAttributionDecision, resolution *PolicyResolution) *diagnosticAttemptProjection {
@@ -1009,8 +1059,8 @@ func attachDiagnosticResultProjection(profile DiagnosticEvaluationProfile, resul
 		final.projection = newV4DiagnosticAttemptProjection(result.Parsed, result.CausalGuard, result.Resolution)
 	case diagnosticProjectionV5:
 		final.projection = newV5DiagnosticAttemptProjection(result.V5Parsed, result.CausalAttribution, result.Resolution)
-	case diagnosticProjectionC1F:
-		final.projection = newC1FDiagnosticAttemptProjection(result.V5Parsed, result.CausalAttribution, result.Resolution)
+	case diagnosticProjectionC1F, diagnosticProjectionC1FRepeatabilityR2, diagnosticProjectionC1FRepeatabilityR3:
+		final.projection = newC1FDiagnosticAttemptProjection(route, result.V5Parsed, result.CausalAttribution, result.Resolution)
 	default:
 		return fmt.Errorf("unsupported diagnostic result projection route %q", route)
 	}
@@ -1018,27 +1068,11 @@ func attachDiagnosticResultProjection(profile DiagnosticEvaluationProfile, resul
 }
 
 func diagnosticProjectionRouteForProfile(profile DiagnosticEvaluationProfile) (diagnosticProjectionRoute, error) {
-	prompt, output, policy := profile.executionVersions()
-	if isC1F3Profile(profile) {
-		frozen, err := LoadC1F3EvaluationProfile(profile.Identity)
-		if err != nil {
-			return "", err
-		}
-		if err = ValidateC1FContractRoute(prompt, output, frozen.Validator, policy, frozen.SemanticIdentity, profile.ScoringVersion); err != nil {
-			return "", fmt.Errorf("diagnostic evidence projection route: %w", err)
-		}
-		return diagnosticProjectionC1F, nil
-	}
-	if err := ValidateContractRoute(prompt, output, policy); err != nil {
+	contract, err := diagnosticExecutionContractForProfile(profile)
+	if err != nil {
 		return "", fmt.Errorf("diagnostic evidence projection route: %w", err)
 	}
-	if output == V5SchemaVersion {
-		return diagnosticProjectionV5, nil
-	}
-	if output == SchemaVersion {
-		return diagnosticProjectionV4, nil
-	}
-	return "", fmt.Errorf("diagnostic evidence projection route is unsupported")
+	return contract.Route, nil
 }
 
 func buildDiagnosticAttemptAudit(profile DiagnosticEvaluationProfile, runID string, repetition int, event DiagnosticEvent, attempt Attempt, trace ProviderTrace, resolver assetresolution.Resolver) (DiagnosticAttemptAudit, error) {
@@ -1046,7 +1080,11 @@ func buildDiagnosticAttemptAudit(profile DiagnosticEvaluationProfile, runID stri
 	if err != nil {
 		return DiagnosticAttemptAudit{}, err
 	}
-	prompt, output, _ := profile.executionVersions()
+	contract, err := diagnosticExecutionContractForProfile(profile)
+	if err != nil {
+		return DiagnosticAttemptAudit{}, err
+	}
+	prompt, output := contract.Prompt, contract.Output
 	if attempt.PromptVersion != prompt || attempt.SchemaVersion != output {
 		return DiagnosticAttemptAudit{}, fmt.Errorf("diagnostic attempt route does not match frozen profile %q", profile.Identity)
 	}

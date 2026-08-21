@@ -138,30 +138,27 @@ func TestC1F3RepeatabilityAuthorizationMatrix(t *testing.T) {
 		hosted     bool
 		optIn      bool
 		credential bool
-		want       string
 	}{
-		{name: "default deny", credential: true, want: "--authorize-c1f3-repeatability"},
-		{name: "hosted authorization alone", hosted: true, credential: true, want: "--authorize-c1f3-repeatability"},
-		{name: "repeatability opt-in alone", optIn: true, credential: true, want: OpenAIDiagnosticInferenceAuthEnv + "=true"},
-		{name: "missing credential", hosted: true, optIn: true, want: OpenAIDiagnosticAPIKeyEnv},
+		{name: "default deny", credential: true},
+		{name: "hosted authorization alone", hosted: true, credential: true},
+		{name: "repeatability opt-in alone", optIn: true, credential: true},
+		{name: "formerly exact dual authorization", hosted: true, optIn: true, credential: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			config := repeatabilityTestConfig(t, profile, tt.hosted, tt.optIn, tt.credential)
 			_, err := PrepareHostedDiagnostic(repeatabilityTestPaths(t, profile), config, diagnosticTestSafety())
-			if err == nil || !strings.Contains(err.Error(), tt.want) {
+			if err == nil || !strings.Contains(err.Error(), "permanently consumed") {
 				t.Fatalf("repeatability authorization state did not fail closed: %v", err)
 			}
 		})
 	}
 }
 
-func TestC1F3RepeatabilityExactCombinationReachesProviderConstructionGate(t *testing.T) {
-	prepared, config := repeatabilityPreparedAuthorized(t)
-	if err := RevalidateOpenAIProviderConstruction(prepared, config); err != nil {
-		t.Fatal(err)
-	}
-	if !prepared.Plan.C1F3RepeatabilityExecutionAuthorization.ExecutionAuthorized {
-		t.Fatal("exact repeatability combination did not reach provider construction gate")
+func TestC1F3RepeatabilityR2ExactCombinationIsPermanentlyConsumed(t *testing.T) {
+	profile := repeatabilityTestProfile(t)
+	config := repeatabilityTestConfig(t, profile, true, true, true)
+	if _, err := PrepareHostedDiagnostic(repeatabilityTestPaths(t, profile), config, diagnosticTestSafety()); err == nil || !strings.Contains(err.Error(), "permanently consumed") {
+		t.Fatalf("consumed r2 cell reached provider construction: %v", err)
 	}
 }
 
@@ -204,24 +201,6 @@ func TestC1F3RepeatabilityRejectsWrongProfileModelShapeBindingsAndNamespace(t *t
 			t.Fatalf("colliding repeatability namespace accepted: %v", err)
 		}
 	})
-	prepared, config := repeatabilityPreparedAuthorized(t)
-	mutations := map[string]func(*C1F3RepeatabilityFrozenBindingPlan){
-		"wrong baseline":       func(binding *C1F3RepeatabilityFrozenBindingPlan) { binding.Baseline.RunID = "wrong" },
-		"wrong baseline index": func(binding *C1F3RepeatabilityFrozenBindingPlan) { binding.Baseline.ArtifactIndexSHA256 = "wrong" },
-		"wrong semantic hash":  func(binding *C1F3RepeatabilityFrozenBindingPlan) { binding.SemanticStack.PromptSHA256 = "wrong" },
-		"wrong scoring":        func(binding *C1F3RepeatabilityFrozenBindingPlan) { binding.ComparisonScoring.FileSHA256 = "wrong" },
-	}
-	for name, mutate := range mutations {
-		t.Run(name, func(t *testing.T) {
-			changed := prepared
-			binding := *prepared.Plan.C1F3RepeatabilityFrozenBindings
-			mutate(&binding)
-			changed.Plan.C1F3RepeatabilityFrozenBindings = &binding
-			if err := validateC1F3RepeatabilityExecutionAuthorization(changed, config); err == nil {
-				t.Fatal("mutated repeatability binding accepted")
-			}
-		})
-	}
 }
 
 func TestC1F3AndRepeatabilityAuthorizationsCannotCrossAuthorize(t *testing.T) {

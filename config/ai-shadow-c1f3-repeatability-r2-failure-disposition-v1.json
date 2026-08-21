@@ -1,0 +1,25 @@
+{
+  "version": "ai-shadow-c1f3-repeatability-r2-failure-disposition-v1",
+  "failed_run_id": "59f74c48-bb28-479e-aa7f-16f213b49a15",
+  "preflight": {
+    "run_id": "9ec27c4c-b53b-4b85-9167-d17f76c940e3",
+    "sha256": "d552298a912e0e9dc56aeaabd9958bc3225c06c7131e1fc15f9f12086b233e18"
+  },
+  "profile": {
+    "identity": "openai-hosted-c1f3-repeatability-generalization-v3-r2",
+    "fingerprint": "294433030c9e24ff695b0a6792e7039555de21cdcfce8cc86805a3c86d45964d"
+  },
+  "failure_classification": "TECHNICAL_INTEGRITY_FAIL_NO_REPEATABILITY_RESULT",
+  "first_provider_activity_occurred": true,
+  "provider_request_count": {
+    "exact_known": false,
+    "possible_values": [1, 2]
+  },
+  "scoreable_artifacts_present": false,
+  "artifact_index_present": false,
+  "semantic_result_present": false,
+  "cell_consumed": true,
+  "rerun_allowed": false,
+  "response_semantics_inspected": false,
+  "repeatability_measured": false
+}

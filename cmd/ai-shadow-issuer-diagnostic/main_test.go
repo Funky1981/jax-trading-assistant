@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,32 @@ import (
 
 	"jax-trading-assistant/internal/modules/aishadow"
 )
+
+type commandR3MockProvider struct {
+	config  aishadow.OpenAIDiagnosticConfig
+	content string
+	calls   int
+}
+
+func (p *commandR3MockProvider) Complete(aishadow.ProviderRequest) (aishadow.ProviderResponse, error) {
+	p.calls++
+	return aishadow.ProviderResponse{
+		Content: p.content, ModelIdentifier: p.config.Runtime.Model,
+		RequestID: fmt.Sprintf("req-r3-offline-%02d", p.calls), ResponseID: fmt.Sprintf("resp-r3-offline-%02d", p.calls), Status: "completed",
+	}, nil
+}
+
+func (p *commandR3MockProvider) ExperimentSnapshot() aishadow.HostedExperimentSnapshot {
+	return aishadow.HostedExperimentSnapshot{
+		ExperimentID: p.config.ExperimentID, Provider: p.config.Runtime.Provider, RequestedModel: p.config.Runtime.Model,
+		ReasoningEffort: p.config.ReasoningEffort, ServiceTier: p.config.ServiceTier(), StructuredOutputMode: p.config.StructuredOutputMode(),
+		MaxOutputTokensPerRequest: p.config.MaxOutputTokens, BudgetCeilingUSD: "0.30", RequestCount: p.calls,
+		Pricing: aishadow.HostedPricingPlan{
+			InputUSDPerMillionTokens: "0.20", CachedInputUSDPerMillionTokens: "0.02", CacheWriteUSDPerMillionTokens: "0.25",
+			OutputUSDPerMillionTokens: "1.20", Source: aishadow.OpenAIDiagnosticPricingSource,
+		},
+	}
+}
 
 func TestPreflightDoesNotInspectOrInvokeOllama(t *testing.T) {
 	values := map[string]string{
@@ -588,10 +615,10 @@ func TestC1F3RepeatabilityCommandAuthorizationAndMockedProviderConstruction(t *t
 		wantProvider     int
 		wantError        string
 	}{
-		{name: "default deny", wantError: "--authorize-c1f3-repeatability"},
-		{name: "hosted authorization alone", hostedAuthorized: true, wantError: "--authorize-c1f3-repeatability"},
-		{name: "repeatability flag alone", operatorOptIn: true, wantError: aishadow.OpenAIDiagnosticInferenceAuthEnv + "=true"},
-		{name: "exact frozen combination reaches injected mock constructor", hostedAuthorized: true, operatorOptIn: true, wantProvider: 1, wantError: "provider is required"},
+		{name: "default deny", wantError: "permanently consumed"},
+		{name: "hosted authorization alone", hostedAuthorized: true, wantError: "permanently consumed"},
+		{name: "repeatability flag alone", operatorOptIn: true, wantError: "permanently consumed"},
+		{name: "formerly exact frozen combination", hostedAuthorized: true, operatorOptIn: true, wantError: "permanently consumed"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			values := c1f3CommandValues(aishadow.C1F3RepeatabilityExperimentID, "48", "0.30")
@@ -652,6 +679,107 @@ func TestC1F3RepeatabilityCredentiallessPreflightIsZeroNetworkDefaultDeny(t *tes
 		if !strings.Contains(output.String(), want) {
 			t.Fatalf("repeatability preflight output missing %s: %s", want, output.String())
 		}
+	}
+}
+
+func TestC1F3RepeatabilityR3CommandRunsFullMockedC1FProjectionOffline(t *testing.T) {
+	values := c1f3CommandValues(aishadow.C1F3RepeatabilityR3ExperimentID, "48", "0.30")
+	values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "true"
+	providerConstructors := 0
+	var provider *commandR3MockProvider
+	deps := dependencies{
+		lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+		openAIProvider: func(config aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+			providerConstructors++
+			provider = &commandR3MockProvider{
+				config:  config,
+				content: `{"market_relevance":"MEDIUM","mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","mapping_confidence":"HIGH","expected_horizon":"MULTI_DAY","likely_direction":"UNCLEAR","catalyst_type":"synthetic fixture","reason":"Synthetic offline policy fixture with no provider inference.","missing_evidence":[],"issuer_attributions":[],"principal_proxy_candidates":[]}`,
+			}
+			return provider
+		},
+	}
+	root := filepath.Join("..", "..")
+	outputRoot := t.TempDir()
+	args := []string{
+		"--execute", "--authorize-c1f3-repeatability-r3", "--evaluation-profile", aishadow.C1F3RepeatabilityR3ProfileIdentity,
+		"--output-root", outputRoot,
+	}
+	args = append(args, c1f3CommandFrozenPathArgs(t, root, aishadow.C1F3RepeatabilityR3ProfileIdentity)...)
+	var output bytes.Buffer
+	if err := run(args, &output, deps); err != nil {
+		t.Fatal(err)
+	}
+	if providerConstructors != 1 || provider == nil || provider.calls != 48 {
+		t.Fatalf("r3 mocked execution shape changed: constructors=%d calls=%d", providerConstructors, provider.calls)
+	}
+	var completed struct {
+		Status    string                        `json:"status"`
+		RunID     string                        `json:"run_id"`
+		Artifacts aishadow.DiagnosticAuditPaths `json:"artifacts"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &completed); err != nil {
+		t.Fatal(err)
+	}
+	if completed.Status != "completed" || completed.RunID == "" || completed.Artifacts.ArtifactIndex == "" {
+		t.Fatalf("r3 mocked command did not persist completed evidence: %s", output.String())
+	}
+	attempts, err := filepath.Glob(filepath.Join(completed.Artifacts.Directory, "repetition-01", "*-attempt-01.json"))
+	if err != nil || len(attempts) != 48 {
+		t.Fatalf("r3 mocked command persisted %d attempts: %v", len(attempts), err)
+	}
+	raw, err := os.ReadFile(attempts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var audit map[string]any
+	if err := json.Unmarshal(raw, &audit); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"v5_raw_model_output", "typed_causal_attribution", "causal_attribution_policy_decision", "effective_semantic_mapping", "deterministic_resolution"} {
+		if audit[field] == nil {
+			t.Fatalf("r3 mocked attempt omitted %s", field)
+		}
+	}
+}
+
+func TestC1F3RepeatabilityR3CommandAuthorizationMatrix(t *testing.T) {
+	for _, tt := range []struct {
+		name             string
+		hostedAuthorized bool
+		operatorOptIn    bool
+		want             string
+	}{
+		{name: "default deny", want: "--authorize-c1f3-repeatability-r3"},
+		{name: "hosted authorization alone", hostedAuthorized: true, want: "--authorize-c1f3-repeatability-r3"},
+		{name: "r3 flag alone", operatorOptIn: true, want: aishadow.OpenAIDiagnosticInferenceAuthEnv + "=true"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			values := c1f3CommandValues(aishadow.C1F3RepeatabilityR3ExperimentID, "48", "0.30")
+			if tt.hostedAuthorized {
+				values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "true"
+			}
+			providerConstructors := 0
+			deps := dependencies{
+				lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+				openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+					providerConstructors++
+					return nil
+				},
+			}
+			root := filepath.Join("..", "..")
+			args := []string{"--execute", "--evaluation-profile", aishadow.C1F3RepeatabilityR3ProfileIdentity, "--output-root", t.TempDir()}
+			args = append(args, c1f3CommandFrozenPathArgs(t, root, aishadow.C1F3RepeatabilityR3ProfileIdentity)...)
+			if tt.operatorOptIn {
+				args = append(args, "--authorize-c1f3-repeatability-r3")
+			}
+			err := run(args, &bytes.Buffer{}, deps)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("unexpected r3 command authorization result: %v", err)
+			}
+			if providerConstructors != 0 {
+				t.Fatalf("default-denied r3 command constructed provider %d times", providerConstructors)
+			}
+		})
 	}
 }
 

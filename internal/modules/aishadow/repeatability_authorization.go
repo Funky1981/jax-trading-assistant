@@ -65,7 +65,7 @@ func C1F3RepeatabilityExecutionAuthorizationFingerprint() string {
 }
 
 func validateC1F3RepeatabilityAuthorizationScope(profile DiagnosticEvaluationProfile, config OpenAIDiagnosticConfig) error {
-	if !isC1F3RepeatabilityProfile(profile) {
+	if !isC1F3RepeatabilityR2Profile(profile) {
 		if config.C1F3RepeatabilityExecutionAuthorization.OperatorOptIn {
 			return fmt.Errorf("C1F3 repeatability execution authorization is scoped only to %s", C1F3RepeatabilityProfileIdentity)
 		}
@@ -93,6 +93,8 @@ func validateC1F3RepeatabilityProviderInputIsolation(manifest DiagnosticManifest
 	forbidden := []string{
 		C1F3GeneralizationSourceRunID, C1F3GeneralizationArtifactIndex, C1F3RepeatabilityScoringVersion,
 		C1F3GeneralizationTypedLabelsVersion, C1F3AAcceptedReprojectionFingerprint,
+		C1F3RepeatabilityProfileIdentity, C1F3RepeatabilityR2FailedRunID, C1F3RepeatabilityR2PreflightRunID,
+		C1F3RepeatabilityR2PreflightSHA256, C1F3RepeatabilityR2FailureDispositionVersion,
 		"baseline_mapping", "repeatability_comparison", "original_luna_answer", "failure_ids",
 	}
 	for _, event := range manifest.Events {
@@ -115,6 +117,21 @@ func validateC1F3RepeatabilityProviderInputIsolation(manifest DiagnosticManifest
 		if !reflect.DeepEqual(repeatRequest, baselineRequest) || string(repeatWire) != string(baselineWire) {
 			return fmt.Errorf("C1F3 repeatability provider-visible request differs from original C1F3 Generalization")
 		}
+		if isR3 := config.ExperimentID == C1F3RepeatabilityR3ExperimentID; isR3 {
+			r2Config := config
+			r2Config.ExperimentID = C1F3RepeatabilityExperimentID
+			r2Request, err := diagnosticInitialRequest(r2Config, event.Input, exposures)
+			if err != nil {
+				return err
+			}
+			r2Wire, err := marshalOpenAIDiagnosticRequest(r2Config, r2Request)
+			if err != nil {
+				return err
+			}
+			if !reflect.DeepEqual(repeatRequest, r2Request) || string(repeatWire) != string(r2Wire) {
+				return fmt.Errorf("C1F3 repeatability r3 provider-visible request differs from consumed r2 request")
+			}
+		}
 		visible := strings.ToLower(string(repeatWire))
 		for _, blocked := range forbidden {
 			if strings.Contains(visible, strings.ToLower(blocked)) {
@@ -129,39 +146,14 @@ func validateC1F3RepeatabilityExecutionAuthorization(prepared PreparedDiagnostic
 	if err := validateC1F3RepeatabilityAuthorizationScope(prepared.Profile, config); err != nil {
 		return err
 	}
-	if !isC1F3RepeatabilityProfile(prepared.Profile) {
+	if !isC1F3RepeatabilityR2Profile(prepared.Profile) {
 		return nil
 	}
-	plan := prepared.Plan.C1F3RepeatabilityExecutionAuthorization
-	bindings := prepared.Plan.C1F3RepeatabilityFrozenBindings
-	frozenProfile, frozenProfileErr := FrozenC1F3RepeatabilityProfile()
-	if plan == nil || bindings == nil || plan.Version != C1F3RepeatabilityExecutionAuthorizationVersion ||
-		plan.AuthorizationFingerprint != C1F3RepeatabilityExecutionAuthorizationFingerprint() || !plan.FrozenBindingsValid ||
-		!plan.BaselineBindingValid || !plan.RepeatabilityScoringValid || !plan.BudgetValid || !plan.EvidenceNamespaceCollisionFree ||
-		!plan.ProviderInputIsolated || !plan.ProviderInputMatchesC1F3 || !plan.RuntimeSafetyValid ||
-		frozenProfileErr != nil || prepared.Plan.C1F3FrozenBindings == nil || bindings.SemanticStack != *prepared.Plan.C1F3FrozenBindings ||
-		bindings.ComparisonScoring != frozenProfile.ComparisonScoring ||
-		bindings.ProfileIdentity != C1F3RepeatabilityProfileIdentity || bindings.ProfileFingerprint != C1F3RepeatabilityProfileFingerprint ||
-		bindings.Baseline != frozenC1F3RepeatabilityBaseline() || bindings.CaseCount != 48 || bindings.Repetitions != 1 {
-		return fmt.Errorf("C1F3 repeatability execution authorization plan is incomplete or invalid")
-	}
-	if !config.C1F3RepeatabilityExecutionAuthorization.OperatorOptIn {
-		return fmt.Errorf("C1F3 repeatability execution requires the explicit --authorize-c1f3-repeatability operator opt-in")
-	}
-	if !config.InferenceExplicitlyAuthorized {
-		return fmt.Errorf("C1F3 repeatability execution requires %s=true in addition to the repeatability opt-in", OpenAIDiagnosticInferenceAuthEnv)
-	}
-	if !config.APIKey.present() {
-		return fmt.Errorf("missing required hosted diagnostic configuration: %s", OpenAIDiagnosticAPIKeyEnv)
-	}
-	if !plan.OperatorOptIn || !plan.HostedInferenceAuthorized || !plan.CredentialPresent || !plan.ExecutionAuthorized {
-		return fmt.Errorf("C1F3 repeatability execution authorization conditions are not all satisfied")
-	}
-	return ValidateDiagnosticExecutionShape(prepared)
+	return fmt.Errorf("C1F3 repeatability r2 cell is permanently consumed and cannot be executed")
 }
 
 func RevalidateC1F3RepeatabilityProviderConstruction(prepared PreparedDiagnostic, config OpenAIDiagnosticConfig) error {
-	if !isC1F3RepeatabilityProfile(prepared.Profile) {
+	if !isC1F3RepeatabilityR2Profile(prepared.Profile) {
 		return validateC1F3RepeatabilityAuthorizationScope(prepared.Profile, config)
 	}
 	revalidated, err := prepareHostedDiagnostic(prepared.Paths, config, prepared.Plan.Safety, true)

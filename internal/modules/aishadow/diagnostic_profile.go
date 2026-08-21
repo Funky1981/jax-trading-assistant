@@ -47,6 +47,7 @@ type DiagnosticEvaluationProfile struct {
 	MaximumBudgetMicros            int64
 	ExecutionPromptVersion         string
 	ExecutionOutputContract        string
+	ExecutionValidatorVersion      string
 	ExecutionCausalPolicy          string
 	ScoringVersion                 string
 	ScoringRubricVersion           string
@@ -74,6 +75,7 @@ var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
 		CaseCount:                  diagnosticEventCount,
 		DefaultRepetitions:         diagnosticRepetitionCount,
 		AllowedRepetitions:         []int{1, diagnosticRepetitionCount},
+		ExecutionValidatorVersion:  DiagnosticValidatorV4,
 		CategoryCounts: map[string]int{
 			"clear_single_issuer_positive": 6,
 			"clear_exposure_only_negative": 6,
@@ -118,6 +120,7 @@ var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
 		EvidenceNamespace:              OpenAIGeneralizationEvidenceNamespace,
 		CredentiallessPreflightAllowed: true,
 		MaximumBudgetMicros:            200_000,
+		ExecutionValidatorVersion:      DiagnosticValidatorV4,
 	},
 	DiagnosticProfileBoundary: {
 		Identity:                   DiagnosticProfileBoundary,
@@ -155,6 +158,7 @@ var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
 		EvidenceNamespace:              OpenAIBoundaryEvidenceNamespace,
 		CredentiallessPreflightAllowed: true,
 		MaximumBudgetMicros:            100_000,
+		ExecutionValidatorVersion:      DiagnosticValidatorV4,
 	},
 	DiagnosticProfileGeneralizationV2: {
 		Identity:                   DiagnosticProfileGeneralizationV2,
@@ -187,6 +191,7 @@ var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
 		MaximumBudgetMicros:            300_000,
 		ExecutionPromptVersion:         V5PromptVersion,
 		ExecutionOutputContract:        V5SchemaVersion,
+		ExecutionValidatorVersion:      DiagnosticValidatorV5,
 		ExecutionCausalPolicy:          CausalAttributionPolicyVersion,
 		ScoringVersion:                 CausalAttributionScoringVersion,
 		ScoringRubricVersion:           C1E2AScoringRubricVersion,
@@ -232,6 +237,7 @@ var diagnosticEvaluationProfiles = map[string]DiagnosticEvaluationProfile{
 		MaximumBudgetMicros:            200_000,
 		ExecutionPromptVersion:         V5PromptVersion,
 		ExecutionOutputContract:        V5SchemaVersion,
+		ExecutionValidatorVersion:      DiagnosticValidatorV5,
 		ExecutionCausalPolicy:          CausalAttributionPolicyVersion,
 		ScoringVersion:                 CausalAttributionScoringVersion,
 		ScoringRubricVersion:           C1E2AScoringRubricVersion,
