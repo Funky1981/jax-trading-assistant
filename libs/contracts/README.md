@@ -6,6 +6,7 @@ This package provides domain models, service interfaces, and HTTP adapters for t
 
 ```
 contracts/
+|-- canonical/           # Canonical versioned Jax domain contracts
 ├── domain/              # Shared domain models
 │   ├── signal.go       # Trading signals
 │   ├── order.go        # Trade orders
@@ -30,6 +31,19 @@ contracts/
 - **Domain Models**: Shared types used by all services (e.g., `Signal`, `Order`, `Position`)
 - **Service Interfaces**: Go interfaces defining service contracts (e.g., `SignalGenerator`)
 - **HTTP Adapters**: Implementations that call services via HTTP (preserves current behavior)
+
+## Canonical domain vocabulary
+
+`canonical/` is the sole owner of the Phase 01 Instrument, Issuer, Event,
+Evidence, Observation, ResearchRun, QuantResult, and Recommendation contracts.
+It is shared by both Go runtimes and has no dependency on persistence, HTTP,
+frontend, provider, broker, or AI DTOs. Use explicit boundary adapters to enter
+or leave this package, and call `Validate`, `EncodeJSON`, or `DecodeJSON` before
+accepting a contract.
+
+The older `domain/` package remains an ADR-0012 service-compatibility surface.
+Its Signal, Order, Position, Portfolio, and OrchestrationRun types are not
+promoted to the Phase 01 canonical vocabulary and are not migrated by WP-01.02.
 
 ## Usage
 
