@@ -45,13 +45,15 @@ type Recommendation struct {
 	ExecutionAuthority ExecutionAuthority        `json:"execution_authority"`
 	CreatedAt          time.Time                 `json:"created_at"`
 	ValidUntil         *time.Time                `json:"valid_until,omitempty"`
+	Provenance         *Provenance               `json:"provenance,omitempty"`
 }
 
 func (recommendation Recommendation) Validate() error {
 	const contract = "recommendation"
-	if err := validateVersion(contract, recommendation.ContractVersion, RecommendationContractV1); err != nil {
+	if err := validateVersionOneOf(contract, recommendation.ContractVersion, RecommendationContractV1, RecommendationContractV2); err != nil {
 		return err
 	}
+	isV2 := recommendation.ContractVersion == RecommendationContractV2
 	if err := validateCanonicalID(contract, "id", string(recommendation.ID), "rec_"); err != nil {
 		return err
 	}
@@ -71,7 +73,7 @@ func (recommendation Recommendation) Validate() error {
 		ContractKindIssuer:     true,
 		ContractKindEvent:      true,
 	}
-	if err := validateContractRefs(contract, "subjects", recommendation.Subjects, allowedSubjects); err != nil {
+	if err := validateContractRefsForOwner(contract, "subjects", recommendation.Subjects, allowedSubjects, isV2); err != nil {
 		return err
 	}
 	if len(recommendation.Basis) == 0 {
@@ -84,7 +86,7 @@ func (recommendation Recommendation) Validate() error {
 		ContractKindResearchRun: true,
 		ContractKindQuantResult: true,
 	}
-	if err := validateContractRefs(contract, "basis", recommendation.Basis, allowedBasis); err != nil {
+	if err := validateContractRefsForOwner(contract, "basis", recommendation.Basis, allowedBasis, isV2); err != nil {
 		return err
 	}
 	if len(recommendation.Reasons) == 0 {
@@ -126,6 +128,24 @@ func (recommendation Recommendation) Validate() error {
 	}
 	if recommendation.ValidUntil != nil && !recommendation.ValidUntil.After(recommendation.CreatedAt) {
 		return invalid(contract, "valid_until", "must be after created_at")
+	}
+	if !isV2 {
+		if recommendation.Provenance != nil {
+			return invalid(contract, "contract_version", "v1 cannot carry v2 provenance fields")
+		}
+		return nil
+	}
+	if recommendation.Provenance == nil {
+		return invalid(contract, "provenance", "is required by recommendation v2")
+	}
+	self := ContractRef{Kind: ContractKindRecommendation, ID: string(recommendation.ID), ContractVersion: recommendation.ContractVersion}
+	if err := validateProvenance(contract, "provenance", *recommendation.Provenance, &self); err != nil {
+		return err
+	}
+	required := append([]ContractRef(nil), recommendation.Basis...)
+	required = append(required, ContractRef{Kind: ContractKindResearchRun, ID: string(recommendation.ResearchRunID), ContractVersion: ResearchRunContractV2})
+	if !provenanceCoversContractRefsFlexibleRun(*recommendation.Provenance, required, recommendation.ResearchRunID) {
+		return invalid(contract, "provenance.inputs", "must immutably cover every basis reference and the producing research run")
 	}
 	return nil
 }

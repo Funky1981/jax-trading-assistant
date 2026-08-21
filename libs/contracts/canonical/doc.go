@@ -7,6 +7,8 @@
 //
 // Contract values use record semantics: callers construct a complete value,
 // validate it, and replace it with a newly identified/versioned record when its
-// historical meaning changes. Persistence and append-only audit policy are
-// deliberately outside this package.
+// historical meaning changes. Provenance types bind exact content, source,
+// provider, revision, dataset snapshot, producing component, and immutable
+// inputs without introducing storage or replay behavior. Persistence and
+// append-only audit policy are deliberately outside this package.
 package canonical

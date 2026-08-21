@@ -25,10 +25,15 @@ const (
 	IssuerContractV1         ContractVersion = "jax.issuer/v1"
 	EventContractV1          ContractVersion = "jax.event/v1"
 	EvidenceContractV1       ContractVersion = "jax.evidence/v1"
+	EvidenceContractV2       ContractVersion = "jax.evidence/v2"
 	ObservationContractV1    ContractVersion = "jax.observation/v1"
+	ObservationContractV2    ContractVersion = "jax.observation/v2"
 	ResearchRunContractV1    ContractVersion = "jax.research_run/v1"
+	ResearchRunContractV2    ContractVersion = "jax.research_run/v2"
 	QuantResultContractV1    ContractVersion = "jax.quant_result/v1"
+	QuantResultContractV2    ContractVersion = "jax.quant_result/v2"
 	RecommendationContractV1 ContractVersion = "jax.recommendation/v1"
+	RecommendationContractV2 ContractVersion = "jax.recommendation/v2"
 )
 
 // The distinct ID types prevent accidental interchange between canonical
@@ -61,9 +66,9 @@ type ExternalID struct {
 	Value     string `json:"value"`
 }
 
-// SourceKind classifies the minimal source placeholder used by Evidence and
-// Observation. WP-01.03 may enrich source and provenance identity without
-// changing the distinction between a source and the canonical record.
+// SourceKind classifies the source placeholder used by Evidence and
+// Observation. V2 immutable references additionally separate logical source
+// identity from provider/transport identity.
 type SourceKind string
 
 const (
@@ -78,8 +83,8 @@ const (
 )
 
 // SourceReference attributes a record to a stable source identity and a
-// resolvable boundary locator. It deliberately carries no content hash or
-// lineage graph; those belong to WP-01.03.
+// resolvable boundary locator. V2 records bind it to a SourceIdentity and
+// immutable content through provenance types in this package.
 type SourceReference struct {
 	ID         string      `json:"id"`
 	Kind       SourceKind  `json:"kind"`
@@ -106,9 +111,8 @@ const (
 	ComponentKindPolicy    ComponentKind = "policy"
 )
 
-// ComponentRef provides the minimum method/model/tool version identity needed
-// in WP-01.02. Full component provenance and input fingerprints are deferred to
-// WP-01.03.
+// ComponentRef preserves the compact V1 method field. V2 provenance binds the
+// same method to a namespaced ComponentIdentity and exact immutable inputs.
 type ComponentRef struct {
 	Kind    ComponentKind `json:"kind"`
 	Name    string        `json:"name"`

@@ -38,6 +38,19 @@ func validateVersion(contract string, got, want ContractVersion) error {
 	return nil
 }
 
+func validateVersionOneOf(contract string, got ContractVersion, wants ...ContractVersion) error {
+	for _, want := range wants {
+		if got == want {
+			return nil
+		}
+	}
+	quoted := make([]string, len(wants))
+	for i, want := range wants {
+		quoted[i] = fmt.Sprintf("%q", want)
+	}
+	return invalid(contract, "contract_version", "must be one of "+strings.Join(quoted, ", "))
+}
+
 func validateCanonicalID(contract, field, value, prefix string) error {
 	if len(value) <= len(prefix) || len(value) > maxIDLength || !strings.HasPrefix(value, prefix) {
 		return invalid(contract, field, fmt.Sprintf("must be a %q-prefixed canonical ID", prefix))
@@ -197,11 +210,36 @@ func validateContractRef(contract, field string, ref ContractRef) error {
 	return nil
 }
 
+func validateSupportedContractRef(contract, field string, ref ContractRef) error {
+	_, prefix, ok := contractIdentity(ref.Kind)
+	if !ok {
+		return invalid(contract, field+".kind", "is not supported")
+	}
+	if err := validateCanonicalID(contract, field+".id", ref.ID, prefix); err != nil {
+		return err
+	}
+	if !isSupportedContractVersion(ref.Kind, ref.ContractVersion) {
+		return invalid(contract, field+".contract_version", "is not supported for the referenced contract kind")
+	}
+	return nil
+}
+
+func validateContractRefForOwner(contract, field string, ref ContractRef, ownerV2 bool) error {
+	if !ownerV2 {
+		return validateContractRef(contract, field, ref)
+	}
+	return validateSupportedContractRef(contract, field, ref)
+}
+
 func validateContractRefs(contract, field string, refs []ContractRef, allowed map[ContractKind]bool) error {
+	return validateContractRefsForOwner(contract, field, refs, allowed, false)
+}
+
+func validateContractRefsForOwner(contract, field string, refs []ContractRef, allowed map[ContractKind]bool, ownerV2 bool) error {
 	seen := make(map[string]struct{}, len(refs))
 	for i, ref := range refs {
 		itemField := fmt.Sprintf("%s[%d]", field, i)
-		if err := validateContractRef(contract, itemField, ref); err != nil {
+		if err := validateContractRefForOwner(contract, itemField, ref, ownerV2); err != nil {
 			return err
 		}
 		if allowed != nil && !allowed[ref.Kind] {
@@ -214,6 +252,29 @@ func validateContractRefs(contract, field string, refs []ContractRef, allowed ma
 		seen[key] = struct{}{}
 	}
 	return nil
+}
+
+func isSupportedContractVersion(kind ContractKind, version ContractVersion) bool {
+	switch kind {
+	case ContractKindInstrument:
+		return version == InstrumentContractV1
+	case ContractKindIssuer:
+		return version == IssuerContractV1
+	case ContractKindEvent:
+		return version == EventContractV1
+	case ContractKindEvidence:
+		return version == EvidenceContractV1 || version == EvidenceContractV2
+	case ContractKindObservation:
+		return version == ObservationContractV1 || version == ObservationContractV2
+	case ContractKindResearchRun:
+		return version == ResearchRunContractV1 || version == ResearchRunContractV2
+	case ContractKindQuantResult:
+		return version == QuantResultContractV1 || version == QuantResultContractV2
+	case ContractKindRecommendation:
+		return version == RecommendationContractV1 || version == RecommendationContractV2
+	default:
+		return false
+	}
 }
 
 func contractIdentity(kind ContractKind) (ContractVersion, string, bool) {

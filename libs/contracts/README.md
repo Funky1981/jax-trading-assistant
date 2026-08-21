@@ -41,6 +41,14 @@ frontend, provider, broker, or AI DTOs. Use explicit boundary adapters to enter
 or leave this package, and call `Validate`, `EncodeJSON`, or `DecodeJSON` before
 accepting a contract.
 
+The same package owns canonical provenance. Use `EvidenceRef` for immutable
+source evidence, `DatasetSnapshotRef` for point-in-time datasets,
+`ComponentIdentity` for exact producer/model/prompt/policy/tool/build versions,
+and `Provenance` for validated immutable input lineage. Raw provider bytes are
+hashed byte-for-byte; Jax-owned canonical records use
+`CanonicalContractBytes`. Provenance is contract identity only: persistence,
+audit events, and replay orchestration remain outside this package.
+
 The older `domain/` package remains an ADR-0012 service-compatibility surface.
 Its Signal, Order, Position, Portfolio, and OrchestrationRun types are not
 promoted to the Phase 01 canonical vocabulary and are not migrated by WP-01.02.

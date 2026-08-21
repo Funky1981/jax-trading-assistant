@@ -50,13 +50,15 @@ type Observation struct {
 	PublishedAt     *time.Time      `json:"published_at,omitempty"`
 	CollectedAt     time.Time       `json:"collected_at"`
 	CreatedAt       time.Time       `json:"created_at"`
+	Provenance      *Provenance     `json:"provenance,omitempty"`
 }
 
 func (observation Observation) Validate() error {
 	const contract = "observation"
-	if err := validateVersion(contract, observation.ContractVersion, ObservationContractV1); err != nil {
+	if err := validateVersionOneOf(contract, observation.ContractVersion, ObservationContractV1, ObservationContractV2); err != nil {
 		return err
 	}
+	isV2 := observation.ContractVersion == ObservationContractV2
 	if err := validateCanonicalID(contract, "id", string(observation.ID), "obs_"); err != nil {
 		return err
 	}
@@ -66,7 +68,7 @@ func (observation Observation) Validate() error {
 	default:
 		return invalid(contract, "type", "is not supported")
 	}
-	if err := validateContractRef(contract, "subject", observation.Subject); err != nil {
+	if err := validateContractRefForOwner(contract, "subject", observation.Subject, isV2); err != nil {
 		return err
 	}
 	if observation.Subject.Kind != ContractKindInstrument && observation.Subject.Kind != ContractKindIssuer && observation.Subject.Kind != ContractKindEvent {
@@ -115,6 +117,22 @@ func (observation Observation) Validate() error {
 	}
 	if observation.CreatedAt.Before(observation.CollectedAt) {
 		return invalid(contract, "created_at", "must not precede collected_at")
+	}
+	if !isV2 {
+		if observation.Provenance != nil {
+			return invalid(contract, "contract_version", "v1 cannot carry v2 provenance fields")
+		}
+		return nil
+	}
+	if observation.Provenance == nil {
+		return invalid(contract, "provenance", "is required by observation v2")
+	}
+	self := ContractRef{Kind: ContractKindObservation, ID: string(observation.ID), ContractVersion: observation.ContractVersion}
+	if err := validateProvenance(contract, "provenance", *observation.Provenance, &self); err != nil {
+		return err
+	}
+	if !provenanceCoversEvidenceIDs(*observation.Provenance, observation.EvidenceIDs) {
+		return invalid(contract, "provenance.inputs", "must immutably cover every evidence_id")
 	}
 	return nil
 }

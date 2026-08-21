@@ -65,11 +65,11 @@ func TestCanonicalContractsRejectUnsupportedVersions(t *testing.T) {
 		{"issuer", withIssuerVersion(fixtures.issuer, "jax.issuer/v2")},
 		{"instrument", withInstrumentVersion(fixtures.instrument, "jax.instrument/v2")},
 		{"event", withEventVersion(fixtures.event, "jax.event/v2")},
-		{"evidence", withEvidenceVersion(fixtures.evidence, "jax.evidence/v2")},
-		{"observation", withObservationVersion(fixtures.observation, "jax.observation/v2")},
-		{"research_run", withResearchRunVersion(fixtures.run, "jax.research_run/v2")},
-		{"quant_result", withQuantResultVersion(fixtures.quant, "jax.quant_result/v2")},
-		{"recommendation", withRecommendationVersion(fixtures.recommendation, "jax.recommendation/v2")},
+		{"evidence", withEvidenceVersion(fixtures.evidence, "jax.evidence/v3")},
+		{"observation", withObservationVersion(fixtures.observation, "jax.observation/v3")},
+		{"research_run", withResearchRunVersion(fixtures.run, "jax.research_run/v3")},
+		{"quant_result", withQuantResultVersion(fixtures.quant, "jax.quant_result/v3")},
+		{"recommendation", withRecommendationVersion(fixtures.recommendation, "jax.recommendation/v3")},
 	}
 
 	for _, test := range tests {

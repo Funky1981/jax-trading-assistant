@@ -46,13 +46,15 @@ type ResearchRun struct {
 	CreatedAt       time.Time         `json:"created_at"`
 	StartedAt       *time.Time        `json:"started_at,omitempty"`
 	CompletedAt     *time.Time        `json:"completed_at,omitempty"`
+	Provenance      *Provenance       `json:"provenance,omitempty"`
 }
 
 func (run ResearchRun) Validate() error {
 	const contract = "research_run"
-	if err := validateVersion(contract, run.ContractVersion, ResearchRunContractV1); err != nil {
+	if err := validateVersionOneOf(contract, run.ContractVersion, ResearchRunContractV1, ResearchRunContractV2); err != nil {
 		return err
 	}
+	isV2 := run.ContractVersion == ResearchRunContractV2
 	if err := validateCanonicalID(contract, "id", string(run.ID), "run_"); err != nil {
 		return err
 	}
@@ -68,10 +70,10 @@ func (run ResearchRun) Validate() error {
 	if len(run.InputRefs) == 0 {
 		return invalid(contract, "input_refs", "requires at least one identified input")
 	}
-	if err := validateContractRefs(contract, "input_refs", run.InputRefs, nil); err != nil {
+	if err := validateContractRefsForOwner(contract, "input_refs", run.InputRefs, nil, isV2); err != nil {
 		return err
 	}
-	if err := validateContractRefs(contract, "output_refs", run.OutputRefs, nil); err != nil {
+	if err := validateContractRefsForOwner(contract, "output_refs", run.OutputRefs, nil, isV2); err != nil {
 		return err
 	}
 	for _, ref := range run.InputRefs {
@@ -143,6 +145,25 @@ func (run ResearchRun) Validate() error {
 		}
 	default:
 		return invalid(contract, "status", "is not supported")
+	}
+	if !isV2 {
+		if run.Provenance != nil {
+			return invalid(contract, "contract_version", "v1 cannot carry v2 provenance fields")
+		}
+		return nil
+	}
+	if run.Provenance == nil {
+		return invalid(contract, "provenance", "is required by research_run v2")
+	}
+	self := ContractRef{Kind: ContractKindResearchRun, ID: string(run.ID), ContractVersion: run.ContractVersion}
+	if err := validateProvenance(contract, "provenance", *run.Provenance, &self); err != nil {
+		return err
+	}
+	if !provenanceCoversContractRefs(*run.Provenance, run.InputRefs) {
+		return invalid(contract, "provenance.inputs", "must immutably cover every input_ref")
+	}
+	if !componentMatchesRef(run.Provenance.Producer, run.Method) {
+		return invalid(contract, "provenance.producer", "must match the run method name, kind, and version")
 	}
 	return nil
 }
