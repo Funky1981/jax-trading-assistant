@@ -1,6 +1,6 @@
 # Phase 01 — Canonical Contracts, Provenance & Audit
 
-**Status:** eligible after Phase 00 GO; not started. WP-01.01 is the first incomplete package and awaits technical-lead authorization.
+**Status:** WP-01.01 through WP-01.03 accepted; WP-01.04 implementation complete and awaiting technical-lead package review. Phase 01 gate remains pending.
 
 ## Purpose
     Create the stable vocabulary and audit model required by all later data, research, quant and decision capabilities.
@@ -12,6 +12,8 @@
 Fincept bounded-context architecture and Alpha Arena replay/audit.
 
 ## Work packages
+
+WP-01.01, WP-01.02, and WP-01.03 are accepted. WP-01.04 implementation is complete and awaiting review; this status does not authorize Phase 02.
 - `01.01` — Inventory existing Jax domain contracts before adding new ones
 - `01.02` — Define canonical Instrument/Issuer/Event/Evidence/Observation/ResearchRun/QuantResult/Recommendation contracts
 - `01.03` — Define provenance/version identity and immutable evidence references

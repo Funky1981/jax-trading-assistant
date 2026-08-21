@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"unicode/utf8"
 )
 
 // EncodeJSON validates a contract before producing its deterministic JSON
@@ -36,6 +37,12 @@ func DecodeJSON(data []byte, destination Contract) error {
 	if value.Kind() != reflect.Pointer {
 		return fmt.Errorf("canonical JSON decode: destination must be a pointer")
 	}
+	if !utf8.Valid(data) {
+		return fmt.Errorf("canonical JSON decode: input must be valid UTF-8")
+	}
+	if err := rejectDuplicateObjectProperties(data); err != nil {
+		return fmt.Errorf("canonical JSON decode: %w", err)
+	}
 
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
@@ -52,6 +59,58 @@ func DecodeJSON(data []byte, destination Contract) error {
 		return fmt.Errorf("canonical JSON decode: %w", err)
 	}
 	return nil
+}
+
+func rejectDuplicateObjectProperties(data []byte) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	var walk func() error
+	walk = func() error {
+		token, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if token == nil {
+			return fmt.Errorf("null values are not canonical")
+		}
+		delim, ok := token.(json.Delim)
+		if !ok {
+			return nil
+		}
+		switch delim {
+		case '{':
+			seen := map[string]struct{}{}
+			for decoder.More() {
+				nameToken, err := decoder.Token()
+				if err != nil {
+					return err
+				}
+				name, ok := nameToken.(string)
+				if !ok {
+					return fmt.Errorf("object property name is not a string")
+				}
+				if _, exists := seen[name]; exists {
+					return fmt.Errorf("duplicate object property %q", name)
+				}
+				seen[name] = struct{}{}
+				if err := walk(); err != nil {
+					return err
+				}
+			}
+			_, err = decoder.Token()
+			return err
+		case '[':
+			for decoder.More() {
+				if err := walk(); err != nil {
+					return err
+				}
+			}
+			_, err = decoder.Token()
+			return err
+		default:
+			return fmt.Errorf("unexpected JSON delimiter %q", delim)
+		}
+	}
+	return walk()
 }
 
 func isNilContract(contract Contract) bool {

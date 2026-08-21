@@ -9,6 +9,7 @@
 // validate it, and replace it with a newly identified/versioned record when its
 // historical meaning changes. Provenance types bind exact content, source,
 // provider, revision, dataset snapshot, producing component, and immutable
-// inputs without introducing storage or replay behavior. Persistence and
-// append-only audit policy are deliberately outside this package.
+// inputs. AuditEvent and ReplayManifest define immutable history and
+// verification semantics without introducing persistence, an event store, or
+// a production replay service.
 package canonical

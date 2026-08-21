@@ -89,6 +89,14 @@ func canonicalContractMetadata(contract Contract) (ContractKind, ContractVersion
 		return ContractKindRecommendation, value.ContractVersion, nil
 	case *Recommendation:
 		return ContractKindRecommendation, value.ContractVersion, nil
+	case AuditEvent:
+		return ContractKindAuditEvent, value.ContractVersion, nil
+	case *AuditEvent:
+		return ContractKindAuditEvent, value.ContractVersion, nil
+	case ReplayManifest:
+		return ContractKindReplayManifest, value.ContractVersion, nil
+	case *ReplayManifest:
+		return ContractKindReplayManifest, value.ContractVersion, nil
 	default:
 		return "", "", fmt.Errorf("canonical content: unsupported contract type %T", contract)
 	}

@@ -6,7 +6,9 @@ import "time"
 // particular domain record.
 type ContractVersion string
 
-// ContractKind identifies one of the eight canonical contract families.
+// ContractKind identifies a canonical content-envelope family. ContractRef
+// remains limited to the eight domain families; audit and replay records use
+// their own typed references so they cannot be mistaken for domain events.
 type ContractKind string
 
 const (
@@ -18,6 +20,8 @@ const (
 	ContractKindResearchRun    ContractKind = "research_run"
 	ContractKindQuantResult    ContractKind = "quant_result"
 	ContractKindRecommendation ContractKind = "recommendation"
+	ContractKindAuditEvent     ContractKind = "audit_event"
+	ContractKindReplayManifest ContractKind = "replay_manifest"
 )
 
 const (
@@ -34,6 +38,8 @@ const (
 	QuantResultContractV2    ContractVersion = "jax.quant_result/v2"
 	RecommendationContractV1 ContractVersion = "jax.recommendation/v1"
 	RecommendationContractV2 ContractVersion = "jax.recommendation/v2"
+	AuditEventContractV1     ContractVersion = "jax.audit_event/v1"
+	ReplayManifestContractV1 ContractVersion = "jax.replay_manifest/v1"
 )
 
 // The distinct ID types prevent accidental interchange between canonical
@@ -48,6 +54,9 @@ type (
 	ResearchRunID    string
 	QuantResultID    string
 	RecommendationID string
+	AuditEventID     string
+	AuditStreamID    string
+	ReplayManifestID string
 )
 
 // ContractRef identifies a canonical record and the schema under which the

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 )
 
 const (
@@ -78,6 +79,9 @@ func validateRequiredText(contract, field, value string, max int) error {
 	if len(value) > max {
 		return invalid(contract, field, fmt.Sprintf("must not exceed %d bytes", max))
 	}
+	if !utf8.ValidString(value) {
+		return invalid(contract, field, "must be valid UTF-8")
+	}
 	for _, r := range value {
 		if unicode.IsControl(r) && r != '\n' && r != '\t' {
 			return invalid(contract, field, "contains a control character")
@@ -110,6 +114,9 @@ func validateRequiredUTC(contract, field string, value time.Time) error {
 	_, offset := value.Zone()
 	if offset != 0 {
 		return invalid(contract, field, "must use UTC (offset +00:00)")
+	}
+	if value.Year() < 0 || value.Year() > 9999 {
+		return invalid(contract, field, "must use an RFC 3339 four-digit year")
 	}
 	return nil
 }
@@ -303,6 +310,9 @@ func contractIdentity(kind ContractKind) (ContractVersion, string, bool) {
 func validateFinite(contract, field string, value float64) error {
 	if math.IsNaN(value) || math.IsInf(value, 0) {
 		return invalid(contract, field, "must be finite")
+	}
+	if value == 0 && math.Signbit(value) {
+		return invalid(contract, field, "must not be negative zero")
 	}
 	return nil
 }
