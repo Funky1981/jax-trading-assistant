@@ -617,7 +617,16 @@ func TestDiagnosticAttemptAuditCarriesDeepSeekFingerprintFinishAndCacheEvidence(
 		RequestID: "req", ResponseID: "resp", Status: "completed", SystemFingerprint: "fp_test", FinishReason: "stop",
 		Usage: ProviderUsage{InputTokens: 100, CachedTokens: 20, CacheMissTokens: 80, OutputTokens: 10, TotalTokens: 110},
 	}
-	audit := buildDiagnosticAttemptAudit("run", 1, event, attempt, trace, prepared.Resolver)
+	attempt.RawResponseHash = rawHash(trace.Content)
+	parsed, guard, resolution, validationErrors := ParseValidateAndGuard(trace.Content, event.Input, prepared.Resolver)
+	if len(validationErrors) > 0 {
+		t.Fatal(validationErrors)
+	}
+	attempt.projection = newV4DiagnosticAttemptProjection(parsed, guard, resolution)
+	audit, err := buildDiagnosticAttemptAudit(prepared.Profile, "run", 1, event, attempt, trace, prepared.Resolver)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if audit.SystemFingerprint != "fp_test" || audit.FinishReason != "stop" || audit.Usage.CacheMissTokens != 80 ||
 		audit.RequestID != "req" || audit.ResponseID != "resp" || audit.ModelReportedIdentifier != DeepSeekDiagnosticModel {
 		t.Fatalf("DeepSeek attempt evidence was not carried into the append-only audit: %+v", audit)

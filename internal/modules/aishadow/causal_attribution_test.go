@@ -251,10 +251,21 @@ func TestV5DiagnosticAuditSeparatesEveryEvidenceLayerAndExcludesC1D(t *testing.T
 	model.MappingStatus, model.DirectIssuer, model.MappingConfidence = "DIRECT", "Unknown Example plc", "HIGH"
 	model.IssuerAttributions = []IssuerAttribution{{"Unknown Example plc", CausalRolePrincipal}, {"Context Corp", CausalRoleContextOnly}}
 	raw := marshalV5(t, model)
-	audit := buildDiagnosticAttemptAudit("run", 1, DiagnosticEvent{ID: "synthetic", Category: "offline", Input: v5TestInput()}, Attempt{
+	parsed, decision, resolution, validationErrors := ParseValidateAndApplyV5(raw, v5TestInput(), testAssetResolver(t))
+	if len(validationErrors) > 0 {
+		t.Fatal(validationErrors)
+	}
+	profile, err := LoadDiagnosticEvaluationProfile(DiagnosticProfileGeneralizationV2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	audit, err := buildDiagnosticAttemptAudit(profile, "run", 1, DiagnosticEvent{ID: "synthetic", Category: "offline", Input: v5TestInput()}, Attempt{
 		AttemptNumber: 1, SchemaVersion: V5SchemaVersion, PromptVersion: V5PromptVersion,
-		ValidationStatus: "accepted", RawResponseHash: rawHash(raw),
+		ValidationStatus: "accepted", RawResponseHash: rawHash(raw), projection: newV5DiagnosticAttemptProjection(parsed, decision, resolution),
 	}, ProviderTrace{Content: raw}, testAssetResolver(t))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if audit.V5RawModelOutput == nil || audit.TypedAttribution == nil || audit.CausalAttributionPolicy == nil || audit.EffectiveSemanticMapping == nil || audit.DeterministicResolution == nil {
 		t.Fatalf("v5 audit omitted an evidence layer: %+v", audit)
 	}

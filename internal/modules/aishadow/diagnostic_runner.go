@@ -860,8 +860,14 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 				}
 				return DiagnosticRunReport{}, paths, err
 			}
+			if err = attachDiagnosticResultProjection(prepared.Profile, result, attempts); err != nil {
+				return DiagnosticRunReport{}, paths, err
+			}
 			for index, attempt := range attempts {
-				audit := buildDiagnosticAttemptAudit(runID, repetition, event, attempt, traces[index], prepared.Resolver)
+				audit, err := buildDiagnosticAttemptAudit(prepared.Profile, runID, repetition, event, attempt, traces[index], prepared.Resolver)
+				if err != nil {
+					return DiagnosticRunReport{}, paths, err
+				}
 				attemptPath := filepath.Join(dir, fmt.Sprintf("repetition-%02d", repetition), fmt.Sprintf("%s-attempt-%02d.json", event.ID, attempt.AttemptNumber))
 				if _, err := writeExclusiveJSON(attemptPath, audit); err != nil {
 					return DiagnosticRunReport{}, paths, err
@@ -893,30 +899,132 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 	return report, paths, nil
 }
 
-func buildDiagnosticAttemptAudit(runID string, repetition int, event DiagnosticEvent, attempt Attempt, trace ProviderTrace, resolver assetresolution.Resolver) DiagnosticAttemptAudit {
-	var parsed *StructuredResult
-	var v5Parsed *V5StructuredResult
-	var typedAttribution *TypedCausalAttribution
-	var causalGuard *CausalConsistencyDecision
-	var causalAttribution *CausalAttributionDecision
-	var effectiveMapping *AssetMapping
-	var resolution *PolicyResolution
-	if attempt.ValidationStatus == "accepted" {
-		if attempt.SchemaVersion == V5SchemaVersion {
-			v5Parsed, causalAttribution, resolution, _ = ParseValidateAndApplyV5(trace.Content, event.Input, resolver)
-			if v5Parsed != nil {
-				attribution := TypedAttributionFromV5(*v5Parsed)
-				typedAttribution = &attribution
-			}
-			if causalAttribution != nil {
-				effective := causalAttribution.EffectiveMapping
-				effectiveMapping = &effective
-			}
-		} else {
-			parsed, causalGuard, resolution, _ = ParseValidateAndGuard(trace.Content, event.Input, resolver)
-		}
+type diagnosticProjectionRoute string
+
+const (
+	diagnosticProjectionV4  diagnosticProjectionRoute = "historical-v4"
+	diagnosticProjectionV5  diagnosticProjectionRoute = "historical-c1e-v5"
+	diagnosticProjectionC1F diagnosticProjectionRoute = C1FValidatorVersion
+)
+
+type diagnosticAttemptProjection struct {
+	route             diagnosticProjectionRoute
+	parsed            *StructuredResult
+	v5Parsed          *V5StructuredResult
+	typedAttribution  *TypedCausalAttribution
+	causalGuard       *CausalConsistencyDecision
+	causalAttribution *CausalAttributionDecision
+	effectiveMapping  *AssetMapping
+	resolution        *PolicyResolution
+}
+
+func newV4DiagnosticAttemptProjection(parsed *StructuredResult, guard *CausalConsistencyDecision, resolution *PolicyResolution) *diagnosticAttemptProjection {
+	return &diagnosticAttemptProjection{route: diagnosticProjectionV4, parsed: parsed, causalGuard: guard, resolution: resolution}
+}
+
+func newV5DiagnosticAttemptProjection(parsed *V5StructuredResult, decision *CausalAttributionDecision, resolution *PolicyResolution) *diagnosticAttemptProjection {
+	return newTypedDiagnosticAttemptProjection(diagnosticProjectionV5, parsed, decision, resolution)
+}
+
+func newC1FDiagnosticAttemptProjection(parsed *V5StructuredResult, decision *CausalAttributionDecision, resolution *PolicyResolution) *diagnosticAttemptProjection {
+	return newTypedDiagnosticAttemptProjection(diagnosticProjectionC1F, parsed, decision, resolution)
+}
+
+func newTypedDiagnosticAttemptProjection(route diagnosticProjectionRoute, parsed *V5StructuredResult, decision *CausalAttributionDecision, resolution *PolicyResolution) *diagnosticAttemptProjection {
+	projection := &diagnosticAttemptProjection{route: route, v5Parsed: parsed, causalAttribution: decision, resolution: resolution}
+	if parsed != nil {
+		attribution := TypedAttributionFromV5(*parsed)
+		projection.typedAttribution = &attribution
 	}
-	return DiagnosticAttemptAudit{
+	if decision != nil {
+		effective := decision.EffectiveMapping
+		projection.effectiveMapping = &effective
+	}
+	return projection
+}
+
+func attachDiagnosticResultProjection(profile DiagnosticEvaluationProfile, result EventResult, attempts []Attempt) error {
+	if len(attempts) == 0 {
+		return fmt.Errorf("diagnostic result has no attempt evidence")
+	}
+	final := &attempts[len(attempts)-1]
+	if final.ValidationStatus != "accepted" {
+		return nil
+	}
+	route, err := diagnosticProjectionRouteForProfile(profile)
+	if err != nil {
+		return err
+	}
+	switch route {
+	case diagnosticProjectionV4:
+		final.projection = newV4DiagnosticAttemptProjection(result.Parsed, result.CausalGuard, result.Resolution)
+	case diagnosticProjectionV5:
+		final.projection = newV5DiagnosticAttemptProjection(result.V5Parsed, result.CausalAttribution, result.Resolution)
+	case diagnosticProjectionC1F:
+		final.projection = newC1FDiagnosticAttemptProjection(result.V5Parsed, result.CausalAttribution, result.Resolution)
+	default:
+		return fmt.Errorf("unsupported diagnostic result projection route %q", route)
+	}
+	return nil
+}
+
+func diagnosticProjectionRouteForProfile(profile DiagnosticEvaluationProfile) (diagnosticProjectionRoute, error) {
+	prompt, output, policy := profile.executionVersions()
+	if isC1F3Profile(profile) {
+		frozen, err := LoadC1F3EvaluationProfile(profile.Identity)
+		if err != nil {
+			return "", err
+		}
+		if err = ValidateC1FContractRoute(prompt, output, frozen.Validator, policy, frozen.SemanticIdentity, profile.ScoringVersion); err != nil {
+			return "", fmt.Errorf("diagnostic evidence projection route: %w", err)
+		}
+		return diagnosticProjectionC1F, nil
+	}
+	if err := ValidateContractRoute(prompt, output, policy); err != nil {
+		return "", fmt.Errorf("diagnostic evidence projection route: %w", err)
+	}
+	if output == V5SchemaVersion {
+		return diagnosticProjectionV5, nil
+	}
+	if output == SchemaVersion {
+		return diagnosticProjectionV4, nil
+	}
+	return "", fmt.Errorf("diagnostic evidence projection route is unsupported")
+}
+
+func buildDiagnosticAttemptAudit(profile DiagnosticEvaluationProfile, runID string, repetition int, event DiagnosticEvent, attempt Attempt, trace ProviderTrace, resolver assetresolution.Resolver) (DiagnosticAttemptAudit, error) {
+	route, err := diagnosticProjectionRouteForProfile(profile)
+	if err != nil {
+		return DiagnosticAttemptAudit{}, err
+	}
+	prompt, output, _ := profile.executionVersions()
+	if attempt.PromptVersion != prompt || attempt.SchemaVersion != output {
+		return DiagnosticAttemptAudit{}, fmt.Errorf("diagnostic attempt route does not match frozen profile %q", profile.Identity)
+	}
+	if trace.AttemptNumber != 0 && trace.AttemptNumber != attempt.AttemptNumber {
+		return DiagnosticAttemptAudit{}, fmt.Errorf("diagnostic attempt trace identity mismatch")
+	}
+	if rawHash(trace.Content) != attempt.RawResponseHash {
+		return DiagnosticAttemptAudit{}, fmt.Errorf("diagnostic attempt raw response hash mismatch")
+	}
+	projection := attempt.projection
+	if attempt.ValidationStatus == "accepted" {
+		if projection == nil || projection.route != route {
+			return DiagnosticAttemptAudit{}, fmt.Errorf("accepted diagnostic attempt has no projection for frozen route %q", route)
+		}
+		if route == diagnosticProjectionV4 && (projection.parsed == nil || projection.causalGuard == nil || projection.resolution == nil) {
+			return DiagnosticAttemptAudit{}, fmt.Errorf("accepted historical v4 diagnostic projection is incomplete")
+		}
+		if route != diagnosticProjectionV4 && (projection.v5Parsed == nil || projection.typedAttribution == nil || projection.causalAttribution == nil || projection.effectiveMapping == nil || projection.resolution == nil) {
+			return DiagnosticAttemptAudit{}, fmt.Errorf("accepted typed diagnostic projection is incomplete")
+		}
+	} else if projection != nil {
+		return DiagnosticAttemptAudit{}, fmt.Errorf("rejected diagnostic attempt unexpectedly carries an accepted projection")
+	}
+	if projection == nil {
+		projection = &diagnosticAttemptProjection{}
+	}
+	audit := DiagnosticAttemptAudit{
 		RunID: runID, Repetition: repetition, CaseID: event.ID, Category: event.Category,
 		AttemptNumber: attempt.AttemptNumber, InputFingerprint: attempt.InputFingerprint,
 		Provider: attempt.Provider, ConfiguredModel: attempt.Model, ModelReportedIdentifier: attempt.ModelReportedIdentifier,
@@ -927,10 +1035,11 @@ func buildDiagnosticAttemptAudit(runID string, repetition int, event DiagnosticE
 		ValidationStatus: attempt.ValidationStatus, ValidationErrors: nonNilStrings(attempt.ValidationErrors), FailureReason: attempt.FailureReason,
 		RequestID: trace.RequestID, ResponseID: trace.ResponseID, ProviderStatus: trace.Status,
 		SystemFingerprint: trace.SystemFingerprint, FinishReason: trace.FinishReason, Usage: trace.Usage,
-		ModelClassification: parsed, V5RawModelOutput: v5Parsed, TypedAttribution: typedAttribution,
-		CausalConsistencyGuard: causalGuard, CausalAttributionPolicy: causalAttribution,
-		EffectiveSemanticMapping: effectiveMapping, DeterministicResolution: resolution,
+		ModelClassification: projection.parsed, V5RawModelOutput: projection.v5Parsed, TypedAttribution: projection.typedAttribution,
+		CausalConsistencyGuard: projection.causalGuard, CausalAttributionPolicy: projection.causalAttribution,
+		EffectiveSemanticMapping: projection.effectiveMapping, DeterministicResolution: projection.resolution,
 	}
+	return audit, nil
 }
 
 func writeExclusiveJSON(path string, value any) (string, error) {

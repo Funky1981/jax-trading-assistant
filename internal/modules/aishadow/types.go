@@ -214,6 +214,7 @@ type Attempt struct {
 	ValidationStatus        string
 	ValidationErrors        []string
 	FailureReason           string
+	projection              *diagnosticAttemptProjection
 }
 
 type EventResult struct {
