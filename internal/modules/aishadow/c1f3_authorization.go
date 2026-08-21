@@ -157,6 +157,9 @@ func LoadDiagnosticExecutionProfile(identity string) (DiagnosticEvaluationProfil
 	if profile, ok := loadC1F3AuthorizedDiagnosticProfile(identity); ok {
 		return profile, nil
 	}
+	if profile, ok := loadC1F3RepeatabilityDiagnosticProfile(identity); ok {
+		return profile, nil
+	}
 	return DiagnosticEvaluationProfile{}, fmt.Errorf("unknown frozen issuer diagnostic execution profile %q", identity)
 }
 
@@ -405,6 +408,12 @@ func RevalidateOpenAIProviderConstruction(prepared PreparedDiagnostic, config Op
 	}
 	if err := validateC1F3AuthorizationScope(prepared.Profile, config); err != nil {
 		return err
+	}
+	if err := validateC1F3RepeatabilityAuthorizationScope(prepared.Profile, config); err != nil {
+		return err
+	}
+	if isC1F3RepeatabilityProfile(prepared.Profile) {
+		return RevalidateC1F3RepeatabilityProviderConstruction(prepared, config)
 	}
 	if isC1F3Profile(prepared.Profile) {
 		return RevalidateC1F3ProviderConstruction(prepared, config)

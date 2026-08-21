@@ -59,6 +59,7 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	execute := flags.Bool("execute", false, "execute the validated diagnostic repetition selection (default 3; explicit 1 allowed)")
 	authorizeC1E3Execution := flags.Bool("authorize-c1e3-execution", false, "explicitly authorize provider construction for a registered frozen C1E3 profile")
 	authorizeC1F3Execution := flags.Bool("authorize-c1f3-execution", false, "explicitly authorize provider construction for one of the two registered frozen C1F3 profiles")
+	authorizeC1F3Repeatability := flags.Bool("authorize-c1f3-repeatability", false, "explicitly authorize provider construction only for the frozen C1F3 Generalization repeatability cell")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -74,6 +75,9 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	}
 	if *authorizeC1F3Execution && !*execute {
 		return fmt.Errorf("--authorize-c1f3-execution is valid only with --execute")
+	}
+	if *authorizeC1F3Repeatability && !*execute {
+		return fmt.Errorf("--authorize-c1f3-repeatability is valid only with --execute")
 	}
 	if *manifestPath == "" {
 		*manifestPath = profile.ManifestPath
@@ -138,6 +142,7 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		if err == nil {
 			hostedConfig.C1E3ExecutionAuthorization = aishadow.NewC1E3ExecutionAuthorization(*authorizeC1E3Execution)
 			hostedConfig.C1F3ExecutionAuthorization = aishadow.NewC1F3ExecutionAuthorization(*authorizeC1F3Execution)
+			hostedConfig.C1F3RepeatabilityExecutionAuthorization = aishadow.NewC1F3RepeatabilityExecutionAuthorization(*authorizeC1F3Repeatability)
 		}
 		if root == "" {
 			root = defaultHostedOutputRoot
@@ -224,6 +229,11 @@ func run(args []string, output io.Writer, deps dependencies) error {
 			if authorization := prepared.Plan.C1F3ExecutionAuthorization; authorization != nil {
 				result["c1f3_execution_authorization"] = authorization
 				result["execution_authorized"] = authorization.ExecutionAuthorized
+			}
+			if authorization := prepared.Plan.C1F3RepeatabilityExecutionAuthorization; authorization != nil {
+				result["c1f3_repeatability_execution_authorization"] = authorization
+				result["execution_authorized"] = authorization.ExecutionAuthorized
+				result["repeatability_frozen_bindings"] = prepared.Plan.C1F3RepeatabilityFrozenBindings
 			}
 		}
 		return encoder.Encode(result)

@@ -1,0 +1,54 @@
+{
+  "version": "ai-shadow-c1f3-repeatability-scoring-v1",
+  "created_at": "2026-08-21T00:00:00Z",
+  "fingerprint": "70313e7f77f5f82b912c382d96aa513f8e67dc03f53abe09c26189494677d1f5",
+  "baseline": {
+    "profile": "openai-hosted-c1f3-generalization-v3",
+    "run_id": "0a650e09-1c64-4349-bf5d-09bf4dd697d9",
+    "artifact_index_sha256": "681db26c0d3e83e85537671e519db55c2b77397b03feb0c8a9395dd87b0ea0cb"
+  },
+  "underlying_accuracy_scorer": {
+    "identity": "ai-shadow-causal-attribution-scoring-c1f3-v1",
+    "sha256": "f54ec91af32a9a11f3c0a7f27eefd3c52624d2360fce613820e7aa39380d8269",
+    "source_path": "internal/modules/aishadow/scoring_c1f.go"
+  },
+  "comparison_implementation": {
+    "identity": "ai-shadow-c1f3-repeatability-scoring-v1",
+    "sha256": "7b5e36b96bda8456b20841c59ec759ddf8f31472b288668b6880c4e7deb73114",
+    "source_path": "internal/modules/aishadow/repeatability_scoring.go"
+  },
+  "semantic_identity": "ai-shadow-issuer-semantic-identity-v1",
+  "denominator": 48,
+  "primary_mapping_agreement_threshold": 90,
+  "accuracy_retention_gates": {
+    "final_validity": 98,
+    "direct_precision": 95,
+    "direct_recall": 90,
+    "semantic_false_direct": 5,
+    "maximum_incorrect_ticker_resolutions": 0,
+    "maximum_safety_violations": 0
+  },
+  "semantic_effective_mapping_rule": "Compare final effective mappings case-for-case. DIRECT agrees only when both mappings are DIRECT and issuer identity is EXACT or EQUIVALENT under ai-shadow-issuer-semantic-identity-v1. PROXY agrees only when both mappings are PROXY with the same case-normalized bounded proxy exposure. UNRESOLVED agrees only when both mappings are UNRESOLVED.",
+  "strict_mapping_rule": "Compare final effective mapping class case-for-case; DIRECT issuer strings use the frozen C1F3 strict deterministic canonicalization, PROXY uses the same case-normalized bounded exposure, and UNRESOLVED uses class equality.",
+  "typed_attribution_rule": "Whole and per-role typed-attribution agreement compare issuer-role sets under ai-shadow-issuer-semantic-identity-v1; whole agreement also requires exact case-normalized principal-proxy-candidate set equality. Every role metric uses all 48 cases, including empty/empty agreement.",
+  "attribution_completeness_rule": "For each run independently determine semantic completeness against the frozen v3 typed labels, allowing extras but requiring every expected issuer-role and principal-proxy candidate; agreement means the two completeness booleans are equal.",
+  "policy_decision_rule": "Compare the complete frozen C1E policy decision projection for exact equality, including accepted/abstained state and reasons.",
+  "deterministic_resolution_rule": "Compare the complete event-asset-resolution-v1 projection for exact equality. Accuracy retention separately gates incorrect deterministic ticker or rule resolutions at zero.",
+  "accuracy_context_rule": "For every case classify original and repeat semantic mapping correctness against the frozen v3 label as original wrong / repeat correct, original correct / repeat wrong, both wrong same way, both wrong differently, or both correct.",
+  "changed_case_rule": "List every case failing semantic effective-mapping agreement with original and repeat mappings, issuer/proxy values, identity outcome, typed-role differences, policy projections, resolver projections, and accuracy context.",
+  "original_failure_evidence": ["041", "043", "048"],
+  "metrics": [
+    {"identity":"semantic_effective_mapping_agreement","numerator":"Cases whose final effective mappings agree under the frozen semantic effective-mapping rule.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"strict_mapping_agreement","numerator":"Cases whose final effective mappings agree under the frozen strict mapping rule.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"whole_typed_attribution_agreement","numerator":"Cases whose complete issuer-role sets agree semantically and whose principal-proxy-candidate sets agree exactly.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"principal_agreement","numerator":"Cases whose PRINCIPAL issuer sets agree semantically.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"equal_principal_agreement","numerator":"Cases whose EQUAL_PRINCIPAL issuer sets agree semantically.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"secondary_affected_agreement","numerator":"Cases whose SECONDARY_AFFECTED issuer sets agree semantically.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"context_only_agreement","numerator":"Cases whose CONTEXT_ONLY issuer sets agree semantically.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"possible_principal_agreement","numerator":"Cases whose POSSIBLE_PRINCIPAL issuer sets agree semantically.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"principal_proxy_candidate_agreement","numerator":"Cases whose complete case-normalized bounded principal-proxy-candidate sets agree.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"attribution_completeness_agreement","numerator":"Cases whose independently scored semantic attribution-completeness booleans agree.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"policy_decision_agreement","numerator":"Cases whose complete frozen policy decision projections are exactly equal.","denominator":"All 48 frozen Generalization v3 cases."},
+    {"identity":"deterministic_resolution_agreement","numerator":"Cases whose complete frozen deterministic-resolution projections are exactly equal.","denominator":"All 48 frozen Generalization v3 cases."}
+  ]
+}

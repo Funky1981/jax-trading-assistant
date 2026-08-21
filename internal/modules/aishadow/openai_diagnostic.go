@@ -70,23 +70,24 @@ func (s APISecret) authorizationHeader() string { return "Bearer " + s.value }
 func (s APISecret) present() bool { return s.value != "" }
 
 type OpenAIDiagnosticConfig struct {
-	Runtime                          Config
-	APIKey                           APISecret
-	ExperimentID                     string
-	ReasoningEffort                  string
-	MaxOutputTokens                  int
-	BudgetCeilingMicros              int64
-	InputPriceMicrosPerMillion       int64
-	CachedInputPriceMicrosPerMillion int64
-	CacheWritePriceMicrosPerMillion  int64
-	OutputPriceMicrosPerMillion      int64
-	InferenceExplicitlyAuthorized    bool
-	OutputContractMode               OpenAIOutputContractMode
-	PromptVersion                    string
-	OutputContract                   string
-	CausalPolicy                     string
-	C1E3ExecutionAuthorization       C1E3ExecutionAuthorization
-	C1F3ExecutionAuthorization       C1F3ExecutionAuthorization
+	Runtime                                 Config
+	APIKey                                  APISecret
+	ExperimentID                            string
+	ReasoningEffort                         string
+	MaxOutputTokens                         int
+	BudgetCeilingMicros                     int64
+	InputPriceMicrosPerMillion              int64
+	CachedInputPriceMicrosPerMillion        int64
+	CacheWritePriceMicrosPerMillion         int64
+	OutputPriceMicrosPerMillion             int64
+	InferenceExplicitlyAuthorized           bool
+	OutputContractMode                      OpenAIOutputContractMode
+	PromptVersion                           string
+	OutputContract                          string
+	CausalPolicy                            string
+	C1E3ExecutionAuthorization              C1E3ExecutionAuthorization
+	C1F3ExecutionAuthorization              C1F3ExecutionAuthorization
+	C1F3RepeatabilityExecutionAuthorization C1F3RepeatabilityExecutionAuthorization
 }
 
 func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagnosticConfig, error) {
@@ -204,14 +205,15 @@ func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), pr
 		ReasoningEffort: values["JAX_AI_REASONING_EFFORT"], MaxOutputTokens: maxOutputTokens,
 		BudgetCeilingMicros: budget, InputPriceMicrosPerMillion: inputPrice,
 		CachedInputPriceMicrosPerMillion: cachedInputPrice, CacheWritePriceMicrosPerMillion: cacheWritePrice,
-		OutputPriceMicrosPerMillion:   outputPrice,
-		InferenceExplicitlyAuthorized: authorized,
-		OutputContractMode:            contractMode,
-		PromptVersion:                 promptVersion,
-		OutputContract:                outputContract,
-		CausalPolicy:                  causalPolicy,
-		C1E3ExecutionAuthorization:    NewC1E3ExecutionAuthorization(false),
-		C1F3ExecutionAuthorization:    NewC1F3ExecutionAuthorization(false),
+		OutputPriceMicrosPerMillion:             outputPrice,
+		InferenceExplicitlyAuthorized:           authorized,
+		OutputContractMode:                      contractMode,
+		PromptVersion:                           promptVersion,
+		OutputContract:                          outputContract,
+		CausalPolicy:                            causalPolicy,
+		C1E3ExecutionAuthorization:              NewC1E3ExecutionAuthorization(false),
+		C1F3ExecutionAuthorization:              NewC1F3ExecutionAuthorization(false),
+		C1F3RepeatabilityExecutionAuthorization: NewC1F3RepeatabilityExecutionAuthorization(false),
 	}, nil
 }
 
@@ -223,7 +225,7 @@ func validateOpenAIExperimentCell(experimentID, model string, mode OpenAIOutputC
 		}
 	case OpenAIStructuredOutputsExperimentID, OpenAIGeneralizationExperimentID, OpenAIBoundaryExperimentID,
 		OpenAIC1E3GeneralizationExperimentID, OpenAIC1E3BoundaryExperimentID,
-		OpenAIC1F3GeneralizationExperimentID, OpenAIC1F3BoundaryExperimentID:
+		OpenAIC1F3GeneralizationExperimentID, OpenAIC1F3BoundaryExperimentID, C1F3RepeatabilityExperimentID:
 		if model != OpenAIDiagnosticLunaModel || mode != OpenAIOutputContractStrictJSONSchema {
 			return fmt.Errorf("%s requires model=%s and %s=%s", experimentID, OpenAIDiagnosticLunaModel, OpenAIDiagnosticContractModeEnv, OpenAIOutputContractStrictJSONSchema)
 		}
@@ -241,7 +243,7 @@ func openAIDiagnosticMaximumBudgetMicros(model, experimentID string) int64 {
 	if experimentID == OpenAIBoundaryExperimentID || experimentID == OpenAIC1E3BoundaryExperimentID || experimentID == OpenAIC1F3BoundaryExperimentID {
 		return 100_000
 	}
-	if experimentID == OpenAIStructuredOutputsExperimentID || experimentID == OpenAIGeneralizationExperimentID || experimentID == OpenAIC1E3GeneralizationExperimentID || experimentID == OpenAIC1F3GeneralizationExperimentID {
+	if experimentID == OpenAIStructuredOutputsExperimentID || experimentID == OpenAIGeneralizationExperimentID || experimentID == OpenAIC1E3GeneralizationExperimentID || experimentID == OpenAIC1F3GeneralizationExperimentID || experimentID == C1F3RepeatabilityExperimentID {
 		return OpenAIStructuredOutputsMaximumBudgetMicros
 	}
 	if model == OpenAIDiagnosticLunaModel {
@@ -266,6 +268,8 @@ func (c OpenAIDiagnosticConfig) EvidenceNamespace() string {
 		return OpenAIC1F3GeneralizationEvidenceNamespace
 	case OpenAIC1F3BoundaryExperimentID:
 		return OpenAIC1F3BoundaryEvidenceNamespace
+	case C1F3RepeatabilityExperimentID:
+		return C1F3RepeatabilityEvidenceNamespace
 	}
 	return OpenAIDiagnosticEvidenceNamespace
 }
@@ -284,7 +288,7 @@ func (c OpenAIDiagnosticConfig) StructuredOutputsEnabled() bool {
 func (c OpenAIDiagnosticConfig) ServiceTier() string {
 	if (c.ExperimentID == OpenAIStructuredOutputsExperimentID || c.ExperimentID == OpenAIGeneralizationExperimentID || c.ExperimentID == OpenAIBoundaryExperimentID ||
 		c.ExperimentID == OpenAIC1E3GeneralizationExperimentID || c.ExperimentID == OpenAIC1E3BoundaryExperimentID ||
-		c.ExperimentID == OpenAIC1F3GeneralizationExperimentID || c.ExperimentID == OpenAIC1F3BoundaryExperimentID) && c.StructuredOutputsEnabled() {
+		c.ExperimentID == OpenAIC1F3GeneralizationExperimentID || c.ExperimentID == OpenAIC1F3BoundaryExperimentID || c.ExperimentID == C1F3RepeatabilityExperimentID) && c.StructuredOutputsEnabled() {
 		return OpenAIStructuredOutputsServiceTier
 	}
 	return ""
@@ -293,7 +297,7 @@ func (c OpenAIDiagnosticConfig) ServiceTier() string {
 func (c OpenAIDiagnosticConfig) StructuredOutputSchemaName() string {
 	switch c.ExperimentID {
 	case OpenAIC1E3GeneralizationExperimentID, OpenAIC1E3BoundaryExperimentID,
-		OpenAIC1F3GeneralizationExperimentID, OpenAIC1F3BoundaryExperimentID:
+		OpenAIC1F3GeneralizationExperimentID, OpenAIC1F3BoundaryExperimentID, C1F3RepeatabilityExperimentID:
 		return V5OpenAISchemaName
 	default:
 		return OpenAIStructuredOutputsSchemaName

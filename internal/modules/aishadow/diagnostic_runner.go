@@ -95,40 +95,42 @@ type DiagnosticPlanEvent struct {
 }
 
 type DiagnosticPlan struct {
-	Version                    string                          `json:"version"`
-	EvaluationProfile          string                          `json:"evaluation_profile"`
-	DatasetIdentity            string                          `json:"dataset_identity"`
-	ManifestVersion            string                          `json:"manifest_version"`
-	ManifestFingerprint        string                          `json:"manifest_fingerprint"`
-	ManifestFileSHA256         string                          `json:"manifest_file_sha256"`
-	FingerprintLockVersion     string                          `json:"fingerprint_lock_version"`
-	FingerprintLockFingerprint string                          `json:"fingerprint_lock_fingerprint"`
-	FingerprintLockFileSHA256  string                          `json:"fingerprint_lock_file_sha256"`
-	FreezeVersion              string                          `json:"freeze_version,omitempty"`
-	FreezeFileSHA256           string                          `json:"freeze_file_sha256,omitempty"`
-	LabelVersion               string                          `json:"label_version"`
-	PromptVersion              string                          `json:"prompt_version"`
-	OutputContract             string                          `json:"output_contract"`
-	PolicyVersion              string                          `json:"policy_version"`
-	CausalConsistencyPolicy    string                          `json:"causal_consistency_policy"`
-	CausalAttributionPolicy    string                          `json:"causal_attribution_policy,omitempty"`
-	ScoringVersion             string                          `json:"scoring_version,omitempty"`
-	TypedLabelVersion          string                          `json:"typed_label_version,omitempty"`
-	TypedLabelFileSHA256       string                          `json:"typed_label_file_sha256,omitempty"`
-	TypedLabelFingerprint      string                          `json:"typed_label_fingerprint,omitempty"`
-	ScoringRubricVersion       string                          `json:"scoring_rubric_version,omitempty"`
-	ScoringRubricFileSHA256    string                          `json:"scoring_rubric_file_sha256,omitempty"`
-	ScoringRubricFingerprint   string                          `json:"scoring_rubric_fingerprint,omitempty"`
-	C1E3ExecutionAuthorization *C1E3ExecutionAuthorizationPlan `json:"c1e3_execution_authorization,omitempty"`
-	C1F3FrozenBindings         *C1F3FrozenBindingPlan          `json:"c1f3_frozen_bindings,omitempty"`
-	C1F3ExecutionAuthorization *C1F3ExecutionAuthorizationPlan `json:"c1f3_execution_authorization,omitempty"`
-	Repetitions                int                             `json:"repetitions"`
-	CasesPerRepetition         int                             `json:"cases_per_repetition"`
-	ExecutionShape             DiagnosticExecutionShape        `json:"execution_shape"`
-	ModelConfiguration         DiagnosticModelConfiguration    `json:"model_configuration"`
-	Safety                     DiagnosticSafetyState           `json:"safety"`
-	HostedExperiment           *HostedExperimentPlan           `json:"hosted_experiment,omitempty"`
-	Events                     []DiagnosticPlanEvent           `json:"events"`
+	Version                                 string                                       `json:"version"`
+	EvaluationProfile                       string                                       `json:"evaluation_profile"`
+	DatasetIdentity                         string                                       `json:"dataset_identity"`
+	ManifestVersion                         string                                       `json:"manifest_version"`
+	ManifestFingerprint                     string                                       `json:"manifest_fingerprint"`
+	ManifestFileSHA256                      string                                       `json:"manifest_file_sha256"`
+	FingerprintLockVersion                  string                                       `json:"fingerprint_lock_version"`
+	FingerprintLockFingerprint              string                                       `json:"fingerprint_lock_fingerprint"`
+	FingerprintLockFileSHA256               string                                       `json:"fingerprint_lock_file_sha256"`
+	FreezeVersion                           string                                       `json:"freeze_version,omitempty"`
+	FreezeFileSHA256                        string                                       `json:"freeze_file_sha256,omitempty"`
+	LabelVersion                            string                                       `json:"label_version"`
+	PromptVersion                           string                                       `json:"prompt_version"`
+	OutputContract                          string                                       `json:"output_contract"`
+	PolicyVersion                           string                                       `json:"policy_version"`
+	CausalConsistencyPolicy                 string                                       `json:"causal_consistency_policy"`
+	CausalAttributionPolicy                 string                                       `json:"causal_attribution_policy,omitempty"`
+	ScoringVersion                          string                                       `json:"scoring_version,omitempty"`
+	TypedLabelVersion                       string                                       `json:"typed_label_version,omitempty"`
+	TypedLabelFileSHA256                    string                                       `json:"typed_label_file_sha256,omitempty"`
+	TypedLabelFingerprint                   string                                       `json:"typed_label_fingerprint,omitempty"`
+	ScoringRubricVersion                    string                                       `json:"scoring_rubric_version,omitempty"`
+	ScoringRubricFileSHA256                 string                                       `json:"scoring_rubric_file_sha256,omitempty"`
+	ScoringRubricFingerprint                string                                       `json:"scoring_rubric_fingerprint,omitempty"`
+	C1E3ExecutionAuthorization              *C1E3ExecutionAuthorizationPlan              `json:"c1e3_execution_authorization,omitempty"`
+	C1F3FrozenBindings                      *C1F3FrozenBindingPlan                       `json:"c1f3_frozen_bindings,omitempty"`
+	C1F3ExecutionAuthorization              *C1F3ExecutionAuthorizationPlan              `json:"c1f3_execution_authorization,omitempty"`
+	C1F3RepeatabilityFrozenBindings         *C1F3RepeatabilityFrozenBindingPlan          `json:"c1f3_repeatability_frozen_bindings,omitempty"`
+	C1F3RepeatabilityExecutionAuthorization *C1F3RepeatabilityExecutionAuthorizationPlan `json:"c1f3_repeatability_execution_authorization,omitempty"`
+	Repetitions                             int                                          `json:"repetitions"`
+	CasesPerRepetition                      int                                          `json:"cases_per_repetition"`
+	ExecutionShape                          DiagnosticExecutionShape                     `json:"execution_shape"`
+	ModelConfiguration                      DiagnosticModelConfiguration                 `json:"model_configuration"`
+	Safety                                  DiagnosticSafetyState                        `json:"safety"`
+	HostedExperiment                        *HostedExperimentPlan                        `json:"hosted_experiment,omitempty"`
+	Events                                  []DiagnosticPlanEvent                        `json:"events"`
 }
 
 type DiagnosticExecutionShape struct {
@@ -230,7 +232,7 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	if profile.RequiresTypedAttributionLabels && !isC1F3Profile(profile) {
+	if profile.RequiresTypedAttributionLabels && !usesC1F3SemanticStack(profile) {
 		if _, err := LoadFrozenTypedLabelSidecarForProfile(profile, paths.TypedLabelPath); err != nil {
 			return PreparedDiagnostic{}, err
 		}
@@ -274,7 +276,16 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	var lock DiagnosticFingerprintLock
 	var freeze *DiagnosticFreezeRecord
 	var c1f3Bindings *C1F3FrozenBindingPlan
-	if isC1F3Profile(profile) {
+	var repeatabilityBindings *C1F3RepeatabilityFrozenBindingPlan
+	if isC1F3RepeatabilityProfile(profile) {
+		loadedManifest, loadedLock, loadedFreeze, semanticBindings, bindings, loadErr := loadC1F3RepeatabilityExecutionInputs(paths, profile, resolver, exposures)
+		if loadErr != nil {
+			return PreparedDiagnostic{}, loadErr
+		}
+		manifest, lock, freeze = loadedManifest, loadedLock, &loadedFreeze
+		c1f3Bindings = &semanticBindings
+		repeatabilityBindings = &bindings
+	} else if isC1F3Profile(profile) {
 		loadedManifest, loadedLock, loadedFreeze, bindings, loadErr := loadC1F3ExecutionInputs(paths, profile, resolver, exposures)
 		if loadErr != nil {
 			return PreparedDiagnostic{}, loadErr
@@ -303,7 +314,7 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	if lock.ManifestFingerprint != manifest.Fingerprint {
 		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic fingerprint lock references a different manifest")
 	}
-	if profile.isHoldout() && !isC1F3Profile(profile) {
+	if profile.isHoldout() && !usesC1F3SemanticStack(profile) {
 		if strings.TrimSpace(paths.FreezePath) == "" {
 			return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s requires its registered freeze record", profile.Identity)
 		}
@@ -312,7 +323,7 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 			return PreparedDiagnostic{}, err
 		}
 		freeze = &loaded
-	} else if !isC1F3Profile(profile) && strings.TrimSpace(paths.FreezePath) != "" {
+	} else if !usesC1F3SemanticStack(profile) && strings.TrimSpace(paths.FreezePath) != "" {
 		return PreparedDiagnostic{}, fmt.Errorf("issuer diagnostic profile %s does not accept a freeze record", profile.Identity)
 	}
 
@@ -363,6 +374,7 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 		plan.CausalConsistencyPolicy = executionPolicy
 	}
 	plan.C1F3FrozenBindings = c1f3Bindings
+	plan.C1F3RepeatabilityFrozenBindings = repeatabilityBindings
 	return PreparedDiagnostic{Profile: profile, Plan: plan, Manifest: manifest, Lock: lock, Freeze: freeze, Config: config, Resolver: resolver, ProxyExposures: exposures, Paths: paths, ExecutionShape: executionShape}, nil
 }
 
@@ -481,7 +493,7 @@ func PrepareHostedDiagnosticPreflight(paths DiagnosticPaths, config OpenAIDiagno
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized || config.C1E3ExecutionAuthorization.OperatorOptIn || config.C1F3ExecutionAuthorization.OperatorOptIn {
+	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized || config.C1E3ExecutionAuthorization.OperatorOptIn || config.C1F3ExecutionAuthorization.OperatorOptIn || config.C1F3RepeatabilityExecutionAuthorization.OperatorOptIn {
 		return PreparedDiagnostic{}, fmt.Errorf("frozen profile %s does not permit this local preflight", profile.Identity)
 	}
 	return prepareHostedDiagnostic(paths, config, safety, false)
@@ -516,6 +528,9 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if err := validateC1F3AuthorizationScope(prepared.Profile, config); err != nil {
 		return PreparedDiagnostic{}, err
 	}
+	if err := validateC1F3RepeatabilityAuthorizationScope(prepared.Profile, config); err != nil {
+		return PreparedDiagnostic{}, err
+	}
 	collisionFree := true
 	if isC1E3Profile(prepared.Profile) {
 		collisionFree, err = c1e3EvidenceNamespaceCollisionFree(paths.OutputRoot)
@@ -533,6 +548,15 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 		}
 		if !collisionFree {
 			return PreparedDiagnostic{}, fmt.Errorf("C1F3 evidence namespace already contains execution evidence")
+		}
+	}
+	if isC1F3RepeatabilityProfile(prepared.Profile) {
+		collisionFree, err = c1f3EvidenceNamespaceCollisionFree(paths.OutputRoot)
+		if err != nil {
+			return PreparedDiagnostic{}, fmt.Errorf("inspect C1F3 repeatability evidence namespace: %w", err)
+		}
+		if !collisionFree {
+			return PreparedDiagnostic{}, fmt.Errorf("C1F3 repeatability evidence namespace already contains execution evidence")
 		}
 	}
 	firstRequest, err := diagnosticInitialRequest(config, prepared.Manifest.Events[0].Input, prepared.ProxyExposures)
@@ -620,6 +644,31 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 		}
 		if requireCredential {
 			if err := validateC1F3ExecutionAuthorization(prepared, config); err != nil {
+				return PreparedDiagnostic{}, err
+			}
+		}
+	}
+	if isC1F3RepeatabilityProfile(prepared.Profile) {
+		isolationErr := validateC1F3RepeatabilityProviderInputIsolation(prepared.Manifest, config, prepared.ProxyExposures)
+		budgetValid := estimatedRunCost <= config.BudgetCeilingMicros && config.BudgetCeilingMicros <= 300_000
+		bindings := prepared.Plan.C1F3RepeatabilityFrozenBindings
+		baselineValid := bindings != nil && bindings.Baseline == frozenC1F3RepeatabilityBaseline()
+		scoringValid := bindings != nil && bindings.ComparisonScoring.Identity == C1F3RepeatabilityScoringVersion && bindings.ComparisonScoring.FileSHA256 == C1F3RepeatabilityScoringFileSHA256
+		runtimeSafetyValid := prepared.Plan.Safety.RuntimeMode == "paper" && !prepared.Plan.Safety.AllowLiveTrading && !prepared.Plan.Safety.ExecutionEnabled && !prepared.Plan.Safety.ExecutionWorker && !prepared.Plan.Safety.BrokerExecution && prepared.Plan.Safety.MaximumLeverage > 0 && prepared.Plan.Safety.MaximumLeverage <= 1
+		authorized := requireCredential && config.C1F3RepeatabilityExecutionAuthorization.OperatorOptIn && config.InferenceExplicitlyAuthorized && config.APIKey.present() && budgetValid && collisionFree && isolationErr == nil && baselineValid && scoringValid && runtimeSafetyValid
+		prepared.Plan.C1F3RepeatabilityExecutionAuthorization = &C1F3RepeatabilityExecutionAuthorizationPlan{
+			Version: C1F3RepeatabilityExecutionAuthorizationVersion, AuthorizationFingerprint: C1F3RepeatabilityExecutionAuthorizationFingerprint(),
+			OperatorOptIn: config.C1F3RepeatabilityExecutionAuthorization.OperatorOptIn, HostedInferenceAuthorized: config.InferenceExplicitlyAuthorized,
+			CredentialPresent: config.APIKey.present(), FrozenBindingsValid: bindings != nil, BaselineBindingValid: baselineValid,
+			RepeatabilityScoringValid: scoringValid, BudgetValid: budgetValid, EvidenceNamespaceCollisionFree: collisionFree,
+			ProviderInputIsolated: isolationErr == nil, ProviderInputMatchesC1F3: isolationErr == nil, RuntimeSafetyValid: runtimeSafetyValid,
+			ExecutionAuthorized: authorized,
+		}
+		if isolationErr != nil {
+			return PreparedDiagnostic{}, isolationErr
+		}
+		if requireCredential {
+			if err := validateC1F3RepeatabilityExecutionAuthorization(prepared, config); err != nil {
 				return PreparedDiagnostic{}, err
 			}
 		}

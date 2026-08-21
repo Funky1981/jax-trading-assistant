@@ -580,6 +580,81 @@ func TestC1F3FlagCannotAuthorizeHistoricalProfile(t *testing.T) {
 	}
 }
 
+func TestC1F3RepeatabilityCommandAuthorizationAndMockedProviderConstruction(t *testing.T) {
+	for _, tt := range []struct {
+		name             string
+		hostedAuthorized bool
+		operatorOptIn    bool
+		wantProvider     int
+		wantError        string
+	}{
+		{name: "default deny", wantError: "--authorize-c1f3-repeatability"},
+		{name: "hosted authorization alone", hostedAuthorized: true, wantError: "--authorize-c1f3-repeatability"},
+		{name: "repeatability flag alone", operatorOptIn: true, wantError: aishadow.OpenAIDiagnosticInferenceAuthEnv + "=true"},
+		{name: "exact frozen combination reaches injected mock constructor", hostedAuthorized: true, operatorOptIn: true, wantProvider: 1, wantError: "provider is required"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			values := c1f3CommandValues(aishadow.C1F3RepeatabilityExperimentID, "48", "0.30")
+			if tt.hostedAuthorized {
+				values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "true"
+			}
+			providerCalls := 0
+			deps := dependencies{
+				lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+				openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+					providerCalls++
+					return nil
+				},
+			}
+			root := filepath.Join("..", "..")
+			args := []string{"--execute", "--evaluation-profile", aishadow.C1F3RepeatabilityProfileIdentity, "--output-root", t.TempDir()}
+			args = append(args, c1f3CommandFrozenPathArgs(t, root, aishadow.C1F3RepeatabilityProfileIdentity)...)
+			if tt.operatorOptIn {
+				args = append(args, "--authorize-c1f3-repeatability")
+			}
+			err := run(args, &bytes.Buffer{}, deps)
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("unexpected repeatability command result: %v", err)
+			}
+			if providerCalls != tt.wantProvider {
+				t.Fatalf("mock provider constructor calls=%d want=%d", providerCalls, tt.wantProvider)
+			}
+		})
+	}
+}
+
+func TestC1F3RepeatabilityCredentiallessPreflightIsZeroNetworkDefaultDeny(t *testing.T) {
+	values := c1f3CommandValues(aishadow.C1F3RepeatabilityExperimentID, "48", "0.30")
+	delete(values, aishadow.OpenAIDiagnosticAPIKeyEnv)
+	providerCalls := 0
+	deps := dependencies{
+		lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+		openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+			providerCalls++
+			return nil
+		},
+	}
+	root := filepath.Join("..", "..")
+	args := []string{"--preflight", "--evaluation-profile", aishadow.C1F3RepeatabilityProfileIdentity, "--output-root", t.TempDir()}
+	args = append(args, c1f3CommandFrozenPathArgs(t, root, aishadow.C1F3RepeatabilityProfileIdentity)...)
+	var output bytes.Buffer
+	if err := run(args, &output, deps); err != nil {
+		t.Fatal(err)
+	}
+	if providerCalls != 0 {
+		t.Fatalf("repeatability preflight constructed provider %d times", providerCalls)
+	}
+	for _, want := range []string{
+		`"provider_contact": false`, `"inference": false`, `"execution_authorized": false`, `"api_key_present": false`,
+		`"version": "` + aishadow.C1F3RepeatabilityExecutionAuthorizationVersion + `"`, `"provider_input_isolated": true`,
+		`"provider_input_matches_original_c1f3": true`, `"baseline_binding_valid": true`, `"runtime_safety_valid": true`,
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("repeatability preflight output missing %s: %s", want, output.String())
+		}
+	}
+}
+
 func TestC1E3OptInCannotAuthorizeAnotherHostedProfile(t *testing.T) {
 	values := hostedStructuredOutputsCommandValues()
 	values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "true"
