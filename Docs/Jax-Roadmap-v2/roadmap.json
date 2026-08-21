@@ -1,0 +1,11 @@
+{
+  "name": "Jax Roadmap v2",
+  "generated_on": "2026-08-10",
+  "phases": 14,
+  "governance": "Per-work-package external architecture review required",
+  "fincept_role": "Reference architecture/capability catalogue; no direct code copying",
+  "live_execution": "Optional final phase only",
+  "revision": "2026-08-21-phase-00-go-closeout",
+  "llm_cost_context_efficiency": "Cross-cutting requirement integrated into Phases 06 and 08 plus governance",
+  "pack_status": "Consolidated authoritative roadmap pack; Phase 00 GO; WP-01.01 next and not started"
+}
