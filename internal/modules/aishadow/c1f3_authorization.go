@@ -162,6 +162,9 @@ func LoadDiagnosticExecutionProfile(identity string) (DiagnosticEvaluationProfil
 	if profile, ok := loadC1F3RepeatabilityDiagnosticProfile(identity); ok {
 		return profile, nil
 	}
+	if profile, ok := loadC1F3TerraChallengerDiagnosticProfile(identity); ok {
+		return profile, nil
+	}
 	return DiagnosticEvaluationProfile{}, fmt.Errorf("unknown frozen issuer diagnostic execution profile %q", identity)
 }
 
@@ -416,6 +419,12 @@ func RevalidateOpenAIProviderConstruction(prepared PreparedDiagnostic, config Op
 	}
 	if err := validateC1F3RepeatabilityR3AuthorizationScope(prepared.Profile, config); err != nil {
 		return err
+	}
+	if err := validateC1F3TerraChallengerAuthorizationScope(prepared.Profile, config); err != nil {
+		return err
+	}
+	if isC1F3TerraChallengerProfile(prepared.Profile) {
+		return RevalidateC1F3TerraChallengerProviderConstruction(prepared, config)
 	}
 	if isC1F3RepeatabilityR3Profile(prepared.Profile) {
 		return RevalidateC1F3RepeatabilityR3ProviderConstruction(prepared, config)

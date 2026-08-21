@@ -150,7 +150,7 @@ func isC1F3RepeatabilityR3Profile(profile DiagnosticEvaluationProfile) bool {
 }
 
 func usesC1F3SemanticStack(profile DiagnosticEvaluationProfile) bool {
-	return isC1F3Profile(profile) || isC1F3RepeatabilityProfile(profile)
+	return isC1F3Profile(profile) || isC1F3RepeatabilityProfile(profile) || isC1F3TerraChallengerProfile(profile)
 }
 
 func ValidateC1F3AcceptedEvidenceBindings(repositoryRoot string) (C1F3AcceptedEvidenceBindings, error) {

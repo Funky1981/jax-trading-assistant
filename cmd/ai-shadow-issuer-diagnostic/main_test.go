@@ -27,13 +27,17 @@ func (p *commandR3MockProvider) Complete(aishadow.ProviderRequest) (aishadow.Pro
 }
 
 func (p *commandR3MockProvider) ExperimentSnapshot() aishadow.HostedExperimentSnapshot {
+	inputPrice, cachedPrice, cacheWritePrice, outputPrice := "0.20", "0.02", "0.25", "1.20"
+	if p.config.Runtime.Model == aishadow.OpenAIDiagnosticTerraModel {
+		inputPrice, cachedPrice, cacheWritePrice, outputPrice = "2.00", "0.20", "2.50", "12.00"
+	}
 	return aishadow.HostedExperimentSnapshot{
 		ExperimentID: p.config.ExperimentID, Provider: p.config.Runtime.Provider, RequestedModel: p.config.Runtime.Model,
 		ReasoningEffort: p.config.ReasoningEffort, ServiceTier: p.config.ServiceTier(), StructuredOutputMode: p.config.StructuredOutputMode(),
 		MaxOutputTokensPerRequest: p.config.MaxOutputTokens, BudgetCeilingUSD: "0.30", RequestCount: p.calls,
 		Pricing: aishadow.HostedPricingPlan{
-			InputUSDPerMillionTokens: "0.20", CachedInputUSDPerMillionTokens: "0.02", CacheWriteUSDPerMillionTokens: "0.25",
-			OutputUSDPerMillionTokens: "1.20", Source: aishadow.OpenAIDiagnosticPricingSource,
+			InputUSDPerMillionTokens: inputPrice, CachedInputUSDPerMillionTokens: cachedPrice, CacheWriteUSDPerMillionTokens: cacheWritePrice,
+			OutputUSDPerMillionTokens: outputPrice, Source: aishadow.OpenAIDiagnosticPricingSource,
 		},
 	}
 }
@@ -780,6 +784,143 @@ func TestC1F3RepeatabilityR3CommandAuthorizationMatrix(t *testing.T) {
 				t.Fatalf("default-denied r3 command constructed provider %d times", providerConstructors)
 			}
 		})
+	}
+}
+
+func terraChallengerCommandValues() map[string]string {
+	values := c1f3CommandValues(aishadow.C1F3TerraChallengerExperimentID, "48", "0.30")
+	values["JAX_AI_MODEL"] = aishadow.OpenAIDiagnosticTerraModel
+	values["JAX_AI_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "2.00"
+	values["JAX_AI_CACHED_INPUT_PRICE_USD_PER_MILLION_TOKENS"] = "0.20"
+	values["JAX_AI_CACHE_WRITE_PRICE_USD_PER_MILLION_TOKENS"] = "2.50"
+	values["JAX_AI_OUTPUT_PRICE_USD_PER_MILLION_TOKENS"] = "12.00"
+	return values
+}
+
+func TestC1F3TerraChallengerCommandPreflightIsZeroNetworkDefaultDeny(t *testing.T) {
+	values := terraChallengerCommandValues()
+	providerCalls := 0
+	deps := dependencies{
+		lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+		openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+			providerCalls++
+			return nil
+		},
+	}
+	root := filepath.Join("..", "..")
+	args := []string{"--preflight", "--evaluation-profile", aishadow.C1F3TerraChallengerProfileIdentity, "--output-root", t.TempDir()}
+	args = append(args, c1f3CommandFrozenPathArgs(t, root, aishadow.C1F3TerraChallengerProfileIdentity)...)
+	var output bytes.Buffer
+	if err := run(args, &output, deps); err != nil {
+		t.Fatal(err)
+	}
+	if providerCalls != 0 {
+		t.Fatalf("Terra preflight constructed provider %d times", providerCalls)
+	}
+	for _, want := range []string{
+		`"provider_contact": false`, `"inference": false`, `"execution_authorized": false`,
+		`"evaluation_profile": "` + aishadow.C1F3TerraChallengerProfileIdentity + `"`,
+		`"model": "` + aishadow.OpenAIDiagnosticTerraModel + `"`, `"reasoning": "none"`,
+		`"cases_per_repetition": 48`, `"repetitions": 1`, `"boundary_excluded": true`,
+		`"luna_artifacts_isolated": true`, `"runtime_mode": "paper"`,
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("Terra preflight output missing %s: %s", want, output.String())
+		}
+	}
+}
+
+func TestC1F3TerraChallengerCommandAuthorizationIsDistinct(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		hosted    bool
+		terraFlag bool
+		lunaFlag  bool
+		want      string
+	}{
+		{name: "default deny", want: "--authorize-c1f3-terra-challenger-t1"},
+		{name: "hosted only", hosted: true, want: "--authorize-c1f3-terra-challenger-t1"},
+		{name: "Terra flag only", terraFlag: true, want: aishadow.OpenAIDiagnosticInferenceAuthEnv + "=true"},
+		{name: "Luna flag cannot authorize", hosted: true, lunaFlag: true, want: "scoped only"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			values := terraChallengerCommandValues()
+			if tt.hosted {
+				values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "true"
+			}
+			providerCalls := 0
+			deps := dependencies{
+				lookup:         func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+				openAIProvider: func(aishadow.OpenAIDiagnosticConfig) aishadow.Provider { providerCalls++; return nil },
+			}
+			root := filepath.Join("..", "..")
+			args := []string{"--execute", "--evaluation-profile", aishadow.C1F3TerraChallengerProfileIdentity, "--output-root", t.TempDir()}
+			args = append(args, c1f3CommandFrozenPathArgs(t, root, aishadow.C1F3TerraChallengerProfileIdentity)...)
+			if tt.terraFlag {
+				args = append(args, "--authorize-c1f3-terra-challenger-t1")
+			}
+			if tt.lunaFlag {
+				args = append(args, "--authorize-c1f3-repeatability-r3")
+			}
+			err := run(args, &bytes.Buffer{}, deps)
+			if err == nil || !strings.Contains(err.Error(), tt.want) || providerCalls != 0 {
+				t.Fatalf("Terra command authorization did not fail closed: err=%v providers=%d", err, providerCalls)
+			}
+		})
+	}
+}
+
+func TestC1F3TerraChallengerCommandRunsOneMockedCellAndScoresOffline(t *testing.T) {
+	values := terraChallengerCommandValues()
+	values[aishadow.OpenAIDiagnosticInferenceAuthEnv] = "true"
+	providerConstructors := 0
+	var provider *commandR3MockProvider
+	deps := dependencies{
+		lookup: func(key string) (string, bool) { value, ok := values[key]; return value, ok },
+		openAIProvider: func(config aishadow.OpenAIDiagnosticConfig) aishadow.Provider {
+			providerConstructors++
+			provider = &commandR3MockProvider{
+				config:  config,
+				content: `{"market_relevance":"MEDIUM","mapping_status":"UNRESOLVED","direct_issuer":"","proxy_exposure":"NONE","mapping_confidence":"HIGH","expected_horizon":"MULTI_DAY","likely_direction":"UNCLEAR","catalyst_type":"synthetic fixture","reason":"Synthetic offline Terra route fixture with no provider inference.","missing_evidence":[],"issuer_attributions":[],"principal_proxy_candidates":[]}`,
+			}
+			return provider
+		},
+	}
+	root := filepath.Join("..", "..")
+	outputRoot := t.TempDir()
+	args := []string{
+		"--execute", "--authorize-c1f3-terra-challenger-t1", "--evaluation-profile", aishadow.C1F3TerraChallengerProfileIdentity,
+		"--output-root", outputRoot,
+	}
+	args = append(args, c1f3CommandFrozenPathArgs(t, root, aishadow.C1F3TerraChallengerProfileIdentity)...)
+	var output bytes.Buffer
+	if err := run(args, &output, deps); err != nil {
+		t.Fatal(err)
+	}
+	if providerConstructors != 1 || provider == nil || provider.calls != 48 {
+		t.Fatalf("Terra mocked execution shape changed: constructors=%d calls=%d", providerConstructors, provider.calls)
+	}
+	var completed struct {
+		RunID     string                        `json:"run_id"`
+		Artifacts aishadow.DiagnosticAuditPaths `json:"artifacts"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &completed); err != nil {
+		t.Fatal(err)
+	}
+	if completed.RunID == "" || completed.Artifacts.ArtifactIndexSHA256 == "" {
+		t.Fatalf("Terra mocked execution did not persist complete evidence: %s", output.String())
+	}
+	oldAuth := os.Getenv(aishadow.OpenAIDiagnosticInferenceAuthEnv)
+	if err := os.Setenv(aishadow.OpenAIDiagnosticInferenceAuthEnv, "false"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Setenv(aishadow.OpenAIDiagnosticInferenceAuthEnv, oldAuth) })
+	score, err := aishadow.BuildC1F3TerraChallengerScore(root, completed.Artifacts.Directory, completed.Artifacts.ArtifactIndexSHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if score.TerraRunID != completed.RunID || len(score.Cases) != 48 || score.Disposition != aishadow.C1F3TerraWorse || score.TerraProviderSnapshot == nil || score.TerraProviderSnapshot.RequestCount != 48 {
+		t.Fatalf("mocked Terra score is incomplete: %+v", score)
 	}
 }
 

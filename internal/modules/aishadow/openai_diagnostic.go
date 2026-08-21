@@ -20,6 +20,7 @@ const (
 	OpenAIDiagnosticProvider                   = "openai"
 	OpenAIDiagnosticSolModel                   = "gpt-5.6-sol"
 	OpenAIDiagnosticLunaModel                  = "gpt-5.6-luna"
+	OpenAIDiagnosticTerraModel                 = "gpt-5.6-terra"
 	OpenAIDiagnosticModel                      = OpenAIDiagnosticSolModel
 	OpenAIDiagnosticAPIKeyEnv                  = "JAX_OPENAI_EXPERIMENT_API_KEY"
 	OpenAIDiagnosticEndpoint                   = "https://api.openai.com/v1/responses"
@@ -89,6 +90,7 @@ type OpenAIDiagnosticConfig struct {
 	C1F3ExecutionAuthorization                C1F3ExecutionAuthorization
 	C1F3RepeatabilityExecutionAuthorization   C1F3RepeatabilityExecutionAuthorization
 	C1F3RepeatabilityR3ExecutionAuthorization C1F3RepeatabilityR3ExecutionAuthorization
+	C1F3TerraChallengerExecutionAuthorization C1F3TerraChallengerExecutionAuthorization
 }
 
 func LoadOpenAIDiagnosticConfig(lookup func(string) (string, bool)) (OpenAIDiagnosticConfig, error) {
@@ -134,10 +136,10 @@ func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), pr
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_PROVIDER=%s", OpenAIDiagnosticProvider)
 	}
 	model := values["JAX_AI_MODEL"]
-	if !supportedOpenAIDiagnosticModel(model) {
-		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_MODEL=%s or %s", OpenAIDiagnosticSolModel, OpenAIDiagnosticLunaModel)
-	}
 	experimentID := values["JAX_AI_EXPERIMENT_ID"]
+	if !supportedOpenAIDiagnosticModel(model) && !(model == OpenAIDiagnosticTerraModel && experimentID == C1F3TerraChallengerExperimentID) {
+		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_MODEL=%s or %s outside the registered Terra challenger cell", OpenAIDiagnosticSolModel, OpenAIDiagnosticLunaModel)
+	}
 	if !experimentIDPattern.MatchString(experimentID) {
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic experiment identity is invalid")
 	}
@@ -220,6 +222,7 @@ func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), pr
 		C1F3ExecutionAuthorization:                NewC1F3ExecutionAuthorization(false),
 		C1F3RepeatabilityExecutionAuthorization:   NewC1F3RepeatabilityExecutionAuthorization(false),
 		C1F3RepeatabilityR3ExecutionAuthorization: NewC1F3RepeatabilityR3ExecutionAuthorization(false),
+		C1F3TerraChallengerExecutionAuthorization: NewC1F3TerraChallengerExecutionAuthorization(false),
 	}, nil
 }
 
@@ -235,6 +238,10 @@ func validateOpenAIExperimentCell(experimentID, model string, mode OpenAIOutputC
 		if model != OpenAIDiagnosticLunaModel || mode != OpenAIOutputContractStrictJSONSchema {
 			return fmt.Errorf("%s requires model=%s and %s=%s", experimentID, OpenAIDiagnosticLunaModel, OpenAIDiagnosticContractModeEnv, OpenAIOutputContractStrictJSONSchema)
 		}
+	case C1F3TerraChallengerExperimentID:
+		if model != OpenAIDiagnosticTerraModel || mode != OpenAIOutputContractStrictJSONSchema {
+			return fmt.Errorf("%s requires model=%s and %s=%s", experimentID, OpenAIDiagnosticTerraModel, OpenAIDiagnosticContractModeEnv, OpenAIOutputContractStrictJSONSchema)
+		}
 	default:
 		return fmt.Errorf("unsupported OpenAI diagnostic experiment %q", experimentID)
 	}
@@ -249,7 +256,7 @@ func openAIDiagnosticMaximumBudgetMicros(model, experimentID string) int64 {
 	if experimentID == OpenAIBoundaryExperimentID || experimentID == OpenAIC1E3BoundaryExperimentID || experimentID == OpenAIC1F3BoundaryExperimentID {
 		return 100_000
 	}
-	if experimentID == OpenAIStructuredOutputsExperimentID || experimentID == OpenAIGeneralizationExperimentID || experimentID == OpenAIC1E3GeneralizationExperimentID || experimentID == OpenAIC1F3GeneralizationExperimentID || experimentID == C1F3RepeatabilityExperimentID || experimentID == C1F3RepeatabilityR3ExperimentID {
+	if experimentID == OpenAIStructuredOutputsExperimentID || experimentID == OpenAIGeneralizationExperimentID || experimentID == OpenAIC1E3GeneralizationExperimentID || experimentID == OpenAIC1F3GeneralizationExperimentID || experimentID == C1F3RepeatabilityExperimentID || experimentID == C1F3RepeatabilityR3ExperimentID || experimentID == C1F3TerraChallengerExperimentID {
 		return OpenAIStructuredOutputsMaximumBudgetMicros
 	}
 	if model == OpenAIDiagnosticLunaModel {
@@ -278,6 +285,8 @@ func (c OpenAIDiagnosticConfig) EvidenceNamespace() string {
 		return C1F3RepeatabilityEvidenceNamespace
 	case C1F3RepeatabilityR3ExperimentID:
 		return C1F3RepeatabilityR3EvidenceNamespace
+	case C1F3TerraChallengerExperimentID:
+		return C1F3TerraChallengerEvidenceNamespace
 	}
 	return OpenAIDiagnosticEvidenceNamespace
 }
@@ -296,7 +305,7 @@ func (c OpenAIDiagnosticConfig) StructuredOutputsEnabled() bool {
 func (c OpenAIDiagnosticConfig) ServiceTier() string {
 	if (c.ExperimentID == OpenAIStructuredOutputsExperimentID || c.ExperimentID == OpenAIGeneralizationExperimentID || c.ExperimentID == OpenAIBoundaryExperimentID ||
 		c.ExperimentID == OpenAIC1E3GeneralizationExperimentID || c.ExperimentID == OpenAIC1E3BoundaryExperimentID ||
-		c.ExperimentID == OpenAIC1F3GeneralizationExperimentID || c.ExperimentID == OpenAIC1F3BoundaryExperimentID || c.ExperimentID == C1F3RepeatabilityExperimentID || c.ExperimentID == C1F3RepeatabilityR3ExperimentID) && c.StructuredOutputsEnabled() {
+		c.ExperimentID == OpenAIC1F3GeneralizationExperimentID || c.ExperimentID == OpenAIC1F3BoundaryExperimentID || c.ExperimentID == C1F3RepeatabilityExperimentID || c.ExperimentID == C1F3RepeatabilityR3ExperimentID || c.ExperimentID == C1F3TerraChallengerExperimentID) && c.StructuredOutputsEnabled() {
 		return OpenAIStructuredOutputsServiceTier
 	}
 	return ""
@@ -307,6 +316,8 @@ func (c OpenAIDiagnosticConfig) StructuredOutputSchemaName() string {
 	case OpenAIC1E3GeneralizationExperimentID, OpenAIC1E3BoundaryExperimentID,
 		OpenAIC1F3GeneralizationExperimentID, OpenAIC1F3BoundaryExperimentID, C1F3RepeatabilityExperimentID, C1F3RepeatabilityR3ExperimentID:
 		return V5OpenAISchemaName
+	case C1F3TerraChallengerExperimentID:
+		return V5OpenAISchemaName
 	default:
 		return OpenAIStructuredOutputsSchemaName
 	}
@@ -315,6 +326,8 @@ func (c OpenAIDiagnosticConfig) StructuredOutputSchemaName() string {
 func openAIReturnedModelMatchesRequested(requested, returned string) bool {
 	switch requested {
 	case OpenAIDiagnosticLunaModel:
+		return returned == requested
+	case OpenAIDiagnosticTerraModel:
 		return returned == requested
 	case OpenAIDiagnosticSolModel:
 		return returned == requested || strings.HasPrefix(returned, requested+"-")
@@ -416,7 +429,7 @@ func NewOpenAIDiagnosticClient(config OpenAIDiagnosticConfig, transport HTTPDoer
 }
 
 func (c *OpenAIDiagnosticClient) Complete(request ProviderRequest) (ProviderResponse, error) {
-	if !supportedOpenAIDiagnosticModel(c.config.Runtime.Model) {
+	if !supportedOpenAIDiagnosticModel(c.config.Runtime.Model) && !(c.config.Runtime.Model == OpenAIDiagnosticTerraModel && c.config.ExperimentID == C1F3TerraChallengerExperimentID) {
 		return ProviderResponse{}, providerSafeError{kind: "configured_model", fatal: true}
 	}
 	if err := validateOpenAIExperimentCell(c.config.ExperimentID, c.config.Runtime.Model, c.config.OutputContractMode); err != nil {

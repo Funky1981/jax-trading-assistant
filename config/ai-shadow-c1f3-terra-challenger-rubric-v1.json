@@ -1,0 +1,56 @@
+{
+  "version": "ai-shadow-c1f3-terra-challenger-rubric-v1",
+  "created_at": "2026-08-21T00:00:00Z",
+  "fingerprint": "abd02e30a62f93516aa90488ef9e2b28f1611b9d75dfe5b4bc974c1367024ee0",
+  "question": "With the exact same frozen inputs, prompt, schema, validation, deterministic policy, comparator and resolver, does gpt-5.6-terra materially outperform gpt-5.6-luna?",
+  "baseline": {
+    "profile": "openai-hosted-c1f3-repeatability-generalization-v3-r3",
+    "run_id": "77bf44ba-2d3e-49bb-b7b1-a3006def8c5c",
+    "artifact_index_sha256": "ee6baeed27770d0f77581e49c6b99e3b9d1d974f90123272d6fad9d116f65439",
+    "semantic_mapping_correct": 45,
+    "semantic_mapping_denominator": 48,
+    "proxy_recall_correct": 3,
+    "proxy_recall_denominator": 6
+  },
+  "quality_retention_gates": {
+    "final_validity_minimum_percent": 98,
+    "semantic_direct_precision_minimum_percent": 95,
+    "semantic_direct_recall_minimum_percent": 90,
+    "semantic_false_direct_maximum_percent": 5,
+    "incorrect_deterministic_resolutions_maximum": 0,
+    "safety_persistence_violations_maximum": 0
+  },
+  "material_improvement_gates": {
+    "semantic_mapping_correct_minimum": 47,
+    "semantic_mapping_denominator": 48,
+    "proxy_recall_correct_minimum": 5,
+    "proxy_recall_denominator": 6
+  },
+  "categories": [
+    "MATERIALLY BETTER",
+    "BETTER BUT NOT MATERIAL",
+    "EQUIVALENT",
+    "WORSE"
+  ],
+  "category_rules": {
+    "MATERIALLY BETTER": "All six quality-retention gates pass, semantic mapping correctness is at least 47/48, and PROXY recall is at least 5/6.",
+    "BETTER BUT NOT MATERIAL": "All six quality-retention gates pass and Terra exceeds Luna's 45/48 semantic correctness and/or 3/6 PROXY recall, but does not satisfy both material-improvement gates.",
+    "EQUIVALENT": "All six quality-retention gates pass and Terra produces no meaningful accuracy advantage over Luna.",
+    "WORSE": "Terra produces lower overall evidence quality than Luna, or fails one or more quality-retention gates."
+  },
+  "case_comparison_categories": [
+    "both correct",
+    "Luna correct / Terra wrong",
+    "Luna wrong / Terra correct",
+    "both wrong same way",
+    "both wrong differently"
+  ],
+  "comparison_metrics": [
+    "effective_mapping_agreement",
+    "typed_attribution_agreement",
+    "policy_decision_agreement",
+    "deterministic_resolution_agreement"
+  ],
+  "frozen_luna_failure_cases": ["041", "042", "043"],
+  "no_post_result_tuning": true
+}

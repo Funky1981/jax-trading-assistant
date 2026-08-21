@@ -18,6 +18,7 @@ const (
 	diagnosticRouteC1F3               diagnosticExecutionRoute = "c1f-c1f3"
 	diagnosticRouteC1FRepeatabilityR2 diagnosticExecutionRoute = "c1f-repeatability-r2"
 	diagnosticRouteC1FRepeatabilityR3 diagnosticExecutionRoute = "c1f-repeatability-r3"
+	diagnosticRouteC1FTerraChallenger diagnosticExecutionRoute = "c1f-terra-challenger-t1"
 )
 
 type diagnosticExecutionContract struct {
@@ -63,6 +64,15 @@ func diagnosticExecutionContractForProfile(profile DiagnosticEvaluationProfile) 
 			return diagnosticExecutionContract{}, fmt.Errorf("frozen C1F repeatability profile %s contract identity changed", profile.Identity)
 		}
 		expected = diagnosticExecutionContract{Route: diagnosticRouteC1FRepeatabilityR3, Prompt: frozen.FrozenSemanticStack.Prompt, Output: frozen.FrozenSemanticStack.OutputContract, Validator: frozen.FrozenSemanticStack.Validator, Policy: frozen.FrozenSemanticStack.AttributionPolicy, Scoring: frozen.FrozenSemanticStack.Scoring}
+	case C1F3TerraChallengerProfileIdentity:
+		frozen, err := FrozenC1F3TerraChallengerProfile()
+		if err != nil {
+			return diagnosticExecutionContract{}, err
+		}
+		if frozen.SourceProfileIdentity != C1F3ProfileGeneralization || frozen.FrozenSemanticStack.Validator != C1FValidatorVersion {
+			return diagnosticExecutionContract{}, fmt.Errorf("frozen Terra challenger profile %s contract identity changed", profile.Identity)
+		}
+		expected = diagnosticExecutionContract{Route: diagnosticRouteC1FTerraChallenger, Prompt: frozen.FrozenSemanticStack.Prompt, Output: frozen.FrozenSemanticStack.OutputContract, Validator: frozen.FrozenSemanticStack.Validator, Policy: frozen.FrozenSemanticStack.AttributionPolicy, Scoring: frozen.FrozenSemanticStack.Scoring}
 	default:
 		return diagnosticExecutionContract{}, fmt.Errorf("unknown diagnostic execution contract for profile %q", profile.Identity)
 	}
@@ -86,7 +96,7 @@ func diagnosticExecutionContractForProfile(profile DiagnosticEvaluationProfile) 
 }
 
 func (r diagnosticExecutionRoute) usesC1F() bool {
-	return r == diagnosticRouteC1F3 || r == diagnosticRouteC1FRepeatabilityR2 || r == diagnosticRouteC1FRepeatabilityR3
+	return r == diagnosticRouteC1F3 || r == diagnosticRouteC1FRepeatabilityR2 || r == diagnosticRouteC1FRepeatabilityR3 || r == diagnosticRouteC1FTerraChallenger
 }
 
 // ValidateContractRoute rejects mixed or unknown prompt/contract/policy cells

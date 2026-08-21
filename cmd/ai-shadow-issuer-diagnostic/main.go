@@ -61,6 +61,7 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	authorizeC1F3Execution := flags.Bool("authorize-c1f3-execution", false, "explicitly authorize provider construction for one of the two registered frozen C1F3 profiles")
 	authorizeC1F3Repeatability := flags.Bool("authorize-c1f3-repeatability", false, "explicitly authorize provider construction only for the frozen C1F3 Generalization repeatability cell")
 	authorizeC1F3RepeatabilityR3 := flags.Bool("authorize-c1f3-repeatability-r3", false, "explicitly authorize provider construction only for the frozen C1F3 Generalization r3 replacement repeatability cell")
+	authorizeC1F3TerraChallengerT1 := flags.Bool("authorize-c1f3-terra-challenger-t1", false, "explicitly authorize provider construction only for the frozen Terra C1F3 challenger t1 cell")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -82,6 +83,9 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	}
 	if *authorizeC1F3RepeatabilityR3 && !*execute {
 		return fmt.Errorf("--authorize-c1f3-repeatability-r3 is valid only with --execute")
+	}
+	if *authorizeC1F3TerraChallengerT1 && !*execute {
+		return fmt.Errorf("--authorize-c1f3-terra-challenger-t1 is valid only with --execute")
 	}
 	if *manifestPath == "" {
 		*manifestPath = profile.ManifestPath
@@ -148,6 +152,7 @@ func run(args []string, output io.Writer, deps dependencies) error {
 			hostedConfig.C1F3ExecutionAuthorization = aishadow.NewC1F3ExecutionAuthorization(*authorizeC1F3Execution)
 			hostedConfig.C1F3RepeatabilityExecutionAuthorization = aishadow.NewC1F3RepeatabilityExecutionAuthorization(*authorizeC1F3Repeatability)
 			hostedConfig.C1F3RepeatabilityR3ExecutionAuthorization = aishadow.NewC1F3RepeatabilityR3ExecutionAuthorization(*authorizeC1F3RepeatabilityR3)
+			hostedConfig.C1F3TerraChallengerExecutionAuthorization = aishadow.NewC1F3TerraChallengerExecutionAuthorization(*authorizeC1F3TerraChallengerT1)
 		}
 		if root == "" {
 			root = defaultHostedOutputRoot
@@ -209,6 +214,9 @@ func run(args []string, output io.Writer, deps dependencies) error {
 			"prompt_version":               prepared.Plan.PromptVersion, "output_contract": prepared.Plan.OutputContract,
 			"policy_version":    prepared.Plan.PolicyVersion,
 			"database_mutation": false, "trading_mutation": false,
+			"runtime_mode": prepared.Plan.Safety.RuntimeMode, "live_trading": prepared.Plan.Safety.AllowLiveTrading,
+			"execution_enabled": prepared.Plan.Safety.ExecutionEnabled, "execution_worker_enabled": prepared.Plan.Safety.ExecutionWorker,
+			"broker_execution_enabled": prepared.Plan.Safety.BrokerExecution, "maximum_leverage": prepared.Plan.Safety.MaximumLeverage,
 			"audit": paths, "audit_sha256": hash,
 		}
 		if hosted := prepared.Plan.HostedExperiment; hosted != nil {
@@ -246,6 +254,15 @@ func run(args []string, output io.Writer, deps dependencies) error {
 				result["repeatability_frozen_bindings"] = prepared.Plan.C1F3RepeatabilityFrozenBindings
 				result["execution_route"] = prepared.Plan.ExecutionRoute
 				result["validator_version"] = prepared.Plan.ValidatorVersion
+			}
+			if authorization := prepared.Plan.C1F3TerraChallengerExecutionAuthorization; authorization != nil {
+				result["c1f3_terra_challenger_execution_authorization"] = authorization
+				result["execution_authorized"] = authorization.ExecutionAuthorized
+				result["terra_challenger_frozen_bindings"] = prepared.Plan.C1F3TerraChallengerFrozenBindings
+				result["execution_route"] = prepared.Plan.ExecutionRoute
+				result["validator_version"] = prepared.Plan.ValidatorVersion
+				result["boundary_excluded"] = true
+				result["luna_artifacts_isolated"] = true
 			}
 		}
 		return encoder.Encode(result)

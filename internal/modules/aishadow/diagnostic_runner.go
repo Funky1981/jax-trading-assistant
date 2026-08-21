@@ -80,6 +80,7 @@ type HostedExperimentPlan struct {
 	BaseRequestCount                   int               `json:"base_request_count"`
 	MaximumRequestCount                int               `json:"maximum_request_count"`
 	EstimatedFirstRequestMaxUSD        string            `json:"estimated_first_request_max_usd"`
+	EstimatedInitialRunUSD             string            `json:"estimated_initial_run_usd,omitempty"`
 	LargestFrozenInitialRequestBytes   int               `json:"largest_frozen_initial_request_bytes,omitempty"`
 	ConservativeCorrectiveRequestBytes int               `json:"conservative_corrective_request_bytes,omitempty"`
 	EstimatedMaximumRunUSD             string            `json:"estimated_maximum_run_usd,omitempty"`
@@ -127,6 +128,8 @@ type DiagnosticPlan struct {
 	C1F3RepeatabilityFrozenBindings           *C1F3RepeatabilityFrozenBindingPlan            `json:"c1f3_repeatability_frozen_bindings,omitempty"`
 	C1F3RepeatabilityExecutionAuthorization   *C1F3RepeatabilityExecutionAuthorizationPlan   `json:"c1f3_repeatability_execution_authorization,omitempty"`
 	C1F3RepeatabilityR3ExecutionAuthorization *C1F3RepeatabilityR3ExecutionAuthorizationPlan `json:"c1f3_repeatability_r3_execution_authorization,omitempty"`
+	C1F3TerraChallengerFrozenBindings         *C1F3TerraChallengerFrozenBindingPlan          `json:"c1f3_terra_challenger_frozen_bindings,omitempty"`
+	C1F3TerraChallengerExecutionAuthorization *C1F3TerraChallengerExecutionAuthorizationPlan `json:"c1f3_terra_challenger_execution_authorization,omitempty"`
 	Repetitions                               int                                            `json:"repetitions"`
 	CasesPerRepetition                        int                                            `json:"cases_per_repetition"`
 	ExecutionShape                            DiagnosticExecutionShape                       `json:"execution_shape"`
@@ -284,7 +287,16 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	var freeze *DiagnosticFreezeRecord
 	var c1f3Bindings *C1F3FrozenBindingPlan
 	var repeatabilityBindings *C1F3RepeatabilityFrozenBindingPlan
-	if isC1F3RepeatabilityProfile(profile) {
+	var terraChallengerBindings *C1F3TerraChallengerFrozenBindingPlan
+	if isC1F3TerraChallengerProfile(profile) {
+		loadedManifest, loadedLock, loadedFreeze, semanticBindings, bindings, loadErr := loadC1F3TerraChallengerExecutionInputs(paths, profile, resolver, exposures)
+		if loadErr != nil {
+			return PreparedDiagnostic{}, loadErr
+		}
+		manifest, lock, freeze = loadedManifest, loadedLock, &loadedFreeze
+		c1f3Bindings = &semanticBindings
+		terraChallengerBindings = &bindings
+	} else if isC1F3RepeatabilityProfile(profile) {
 		loadedManifest, loadedLock, loadedFreeze, semanticBindings, bindings, loadErr := loadC1F3RepeatabilityExecutionInputs(paths, profile, resolver, exposures)
 		if loadErr != nil {
 			return PreparedDiagnostic{}, loadErr
@@ -383,6 +395,7 @@ func PrepareDiagnostic(paths DiagnosticPaths, config Config, safety DiagnosticSa
 	}
 	plan.C1F3FrozenBindings = c1f3Bindings
 	plan.C1F3RepeatabilityFrozenBindings = repeatabilityBindings
+	plan.C1F3TerraChallengerFrozenBindings = terraChallengerBindings
 	return PreparedDiagnostic{Profile: profile, Plan: plan, Manifest: manifest, Lock: lock, Freeze: freeze, Config: config, Resolver: resolver, ProxyExposures: exposures, Paths: paths, ExecutionShape: executionShape}, nil
 }
 
@@ -422,6 +435,9 @@ func ApplyDiagnosticExecutionShape(prepared PreparedDiagnostic, shape Diagnostic
 		if estimate, err := parseUSDMicros(prepared.Plan.HostedExperiment.EstimatedMaximumRunUSD); err == nil && previousRepetitions > 0 {
 			prepared.Plan.HostedExperiment.EstimatedMaximumRunUSD = formatUSDMicros(estimate / int64(previousRepetitions) * int64(shape.EffectiveRepetitions))
 		}
+		if estimate, err := parseUSDMicros(prepared.Plan.HostedExperiment.EstimatedInitialRunUSD); err == nil && previousRepetitions > 0 {
+			prepared.Plan.HostedExperiment.EstimatedInitialRunUSD = formatUSDMicros(estimate / int64(previousRepetitions) * int64(shape.EffectiveRepetitions))
+		}
 	}
 	return prepared, nil
 }
@@ -458,10 +474,17 @@ func ValidateDiagnosticExecutionShape(prepared PreparedDiagnostic) error {
 	if prepared.Profile.RequiredExperimentID != "" && (prepared.Plan.HostedExperiment == nil || prepared.Plan.HostedExperiment.ExperimentID != prepared.Profile.RequiredExperimentID) {
 		return fmt.Errorf("issuer diagnostic profile %s requires experiment %s", prepared.Profile.Identity, prepared.Profile.RequiredExperimentID)
 	}
-	if plan := prepared.Plan.HostedExperiment; plan != nil && prepared.Config.Provider == OpenAIDiagnosticProvider && prepared.Config.Model == OpenAIDiagnosticLunaModel {
-		estimated, estimatedErr := parseUSDMicros(plan.EstimatedMaximumRunUSD)
+	if plan := prepared.Plan.HostedExperiment; plan != nil && prepared.Config.Provider == OpenAIDiagnosticProvider && (prepared.Config.Model == OpenAIDiagnosticLunaModel || prepared.Config.Model == OpenAIDiagnosticTerraModel) {
+		estimate := plan.EstimatedMaximumRunUSD
+		if prepared.Config.Model == OpenAIDiagnosticTerraModel {
+			estimate = plan.EstimatedFirstRequestMaxUSD
+		}
+		estimated, estimatedErr := parseUSDMicros(estimate)
 		ceiling, ceilingErr := parseUSDMicros(plan.BudgetCeilingUSD)
 		if estimatedErr != nil || ceilingErr != nil || estimated > ceiling {
+			if prepared.Config.Model == OpenAIDiagnosticTerraModel {
+				return fmt.Errorf("configured hosted model budget ceiling cannot accommodate the frozen per-request maximum")
+			}
 			return fmt.Errorf("configured Luna budget ceiling cannot accommodate the conservative complete-run estimate")
 		}
 	}
@@ -506,7 +529,7 @@ func PrepareHostedDiagnosticPreflight(paths DiagnosticPaths, config OpenAIDiagno
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized || config.C1E3ExecutionAuthorization.OperatorOptIn || config.C1F3ExecutionAuthorization.OperatorOptIn || config.C1F3RepeatabilityExecutionAuthorization.OperatorOptIn || config.C1F3RepeatabilityR3ExecutionAuthorization.OperatorOptIn {
+	if !profile.CredentiallessPreflightAllowed || config.InferenceExplicitlyAuthorized || config.C1E3ExecutionAuthorization.OperatorOptIn || config.C1F3ExecutionAuthorization.OperatorOptIn || config.C1F3RepeatabilityExecutionAuthorization.OperatorOptIn || config.C1F3RepeatabilityR3ExecutionAuthorization.OperatorOptIn || config.C1F3TerraChallengerExecutionAuthorization.OperatorOptIn {
 		return PreparedDiagnostic{}, fmt.Errorf("frozen profile %s does not permit this local preflight", profile.Identity)
 	}
 	return prepareHostedDiagnostic(paths, config, safety, false)
@@ -516,7 +539,7 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if requireCredential && !config.APIKey.present() {
 		return PreparedDiagnostic{}, fmt.Errorf("missing required hosted diagnostic configuration: %s", OpenAIDiagnosticAPIKeyEnv)
 	}
-	if !supportedOpenAIDiagnosticModel(config.Runtime.Model) {
+	if !supportedOpenAIDiagnosticModel(config.Runtime.Model) && !(config.Runtime.Model == OpenAIDiagnosticTerraModel && config.ExperimentID == C1F3TerraChallengerExperimentID) {
 		return PreparedDiagnostic{}, fmt.Errorf("unsupported OpenAI diagnostic model %q", config.Runtime.Model)
 	}
 	if err := validateOpenAIExperimentCell(config.ExperimentID, config.Runtime.Model, config.OutputContractMode); err != nil {
@@ -547,6 +570,9 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if err := validateC1F3RepeatabilityR3AuthorizationScope(prepared.Profile, config); err != nil {
 		return PreparedDiagnostic{}, err
 	}
+	if err := validateC1F3TerraChallengerAuthorizationScope(prepared.Profile, config); err != nil {
+		return PreparedDiagnostic{}, err
+	}
 	collisionFree := true
 	if isC1E3Profile(prepared.Profile) {
 		collisionFree, err = c1e3EvidenceNamespaceCollisionFree(paths.OutputRoot)
@@ -573,6 +599,15 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 		}
 		if !collisionFree {
 			return PreparedDiagnostic{}, fmt.Errorf("C1F3 repeatability evidence namespace already contains execution evidence")
+		}
+	}
+	if isC1F3TerraChallengerProfile(prepared.Profile) {
+		collisionFree, err = c1f3EvidenceNamespaceCollisionFree(paths.OutputRoot)
+		if err != nil {
+			return PreparedDiagnostic{}, fmt.Errorf("inspect Terra challenger evidence namespace: %w", err)
+		}
+		if !collisionFree {
+			return PreparedDiagnostic{}, fmt.Errorf("Terra challenger evidence namespace already contains execution evidence")
 		}
 	}
 	firstRequest, err := diagnosticInitialRequest(config, prepared.Manifest.Events[0].Input, prepared.ProxyExposures)
@@ -603,7 +638,7 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
-	largestInitialBytes, correctiveBytes, estimatedRunCost, err := estimateOpenAIDiagnosticRunMaximum(prepared, config)
+	largestInitialBytes, correctiveBytes, estimatedInitialRunCost, estimatedRunCost, err := estimateOpenAIDiagnosticRunMaximum(prepared, config)
 	if err != nil {
 		return PreparedDiagnostic{}, err
 	}
@@ -624,6 +659,7 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 		BaseRequestCount:                   prepared.ExecutionShape.TotalPlannedCases,
 		MaximumRequestCount:                prepared.ExecutionShape.TotalPlannedCases * 2,
 		EstimatedFirstRequestMaxUSD:        formatUSDMicros(estimatedFirstCost),
+		EstimatedInitialRunUSD:             formatUSDMicros(estimatedInitialRunCost),
 		LargestFrozenInitialRequestBytes:   largestInitialBytes,
 		ConservativeCorrectiveRequestBytes: correctiveBytes,
 		EstimatedMaximumRunUSD:             formatUSDMicros(estimatedRunCost),
@@ -714,6 +750,31 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 			}
 		}
 	}
+	if isC1F3TerraChallengerProfile(prepared.Profile) {
+		isolationErr := validateC1F3TerraProviderInputIsolation(prepared.Manifest, config, prepared.ProxyExposures)
+		budgetValid := estimatedFirstCost <= config.BudgetCeilingMicros && config.BudgetCeilingMicros <= 300_000
+		bindings := prepared.Plan.C1F3TerraChallengerFrozenBindings
+		lunaValid := bindings != nil && bindings.AcceptedLuna.RunID == C1F3TerraAcceptedLunaRunID && bindings.AcceptedLuna.ArtifactIndexSHA256 == C1F3TerraAcceptedLunaArtifactIndexSHA256 && bindings.AcceptedLuna.RawResponseCount == 48 && bindings.AcceptedLuna.EvidenceUntouched
+		rubricValid := bindings != nil && bindings.DecisionRubric.Identity == C1F3TerraChallengerRubricVersion && bindings.DecisionRubric.FileSHA256 == C1F3TerraChallengerRubricFileSHA256 && bindings.DecisionRubric.SemanticFingerprint == C1F3TerraChallengerRubricFingerprint
+		runtimeSafetyValid := prepared.Plan.Safety.RuntimeMode == "paper" && !prepared.Plan.Safety.AllowLiveTrading && !prepared.Plan.Safety.ExecutionEnabled && !prepared.Plan.Safety.ExecutionWorker && !prepared.Plan.Safety.BrokerExecution && prepared.Plan.Safety.MaximumLeverage > 0 && prepared.Plan.Safety.MaximumLeverage <= 1
+		authorized := requireCredential && config.C1F3TerraChallengerExecutionAuthorization.OperatorOptIn && config.InferenceExplicitlyAuthorized && config.APIKey.present() && budgetValid && collisionFree && isolationErr == nil && lunaValid && rubricValid && runtimeSafetyValid
+		prepared.Plan.C1F3TerraChallengerExecutionAuthorization = &C1F3TerraChallengerExecutionAuthorizationPlan{
+			Version: C1F3TerraChallengerExecutionAuthorizationVersion, AuthorizationFingerprint: C1F3TerraChallengerExecutionAuthorizationFingerprint(),
+			OperatorOptIn: config.C1F3TerraChallengerExecutionAuthorization.OperatorOptIn, HostedInferenceAuthorized: config.InferenceExplicitlyAuthorized,
+			CredentialPresent: config.APIKey.present(), FrozenBindingsValid: bindings != nil, LunaPreservationValid: lunaValid,
+			DecisionRubricValid: rubricValid, BudgetValid: budgetValid, EvidenceNamespaceCollisionFree: collisionFree,
+			ProviderInputIsolated: isolationErr == nil, OnlyModelVariableChanged: isolationErr == nil, BoundaryExcluded: bindings != nil && bindings.BoundaryExcluded,
+			RuntimeSafetyValid: runtimeSafetyValid, ExecutionAuthorized: authorized,
+		}
+		if isolationErr != nil {
+			return PreparedDiagnostic{}, isolationErr
+		}
+		if requireCredential {
+			if err := validateC1F3TerraChallengerExecutionAuthorization(prepared, config); err != nil {
+				return PreparedDiagnostic{}, err
+			}
+		}
+	}
 	return prepared, nil
 }
 
@@ -737,7 +798,7 @@ func diagnosticCorrectiveRequest(config OpenAIDiagnosticConfig, validationErrors
 	return CorrectiveRequest(validationErrors, previous, proxyExposures)
 }
 
-func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config OpenAIDiagnosticConfig) (int, int, int64, error) {
+func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config OpenAIDiagnosticConfig) (int, int, int64, int64, error) {
 	worstInputPrice := config.InputPriceMicrosPerMillion
 	if config.CacheWritePriceMicrosPerMillion > worstInputPrice {
 		worstInputPrice = config.CacheWritePriceMicrosPerMillion
@@ -747,11 +808,11 @@ func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config Open
 	for _, event := range prepared.Manifest.Events {
 		request, err := diagnosticInitialRequest(config, event.Input, prepared.ProxyExposures)
 		if err != nil {
-			return 0, 0, 0, err
+			return 0, 0, 0, 0, err
 		}
 		requestBytes, err := openAIDiagnosticRequestBytes(config, request)
 		if err != nil {
-			return 0, 0, 0, err
+			return 0, 0, 0, 0, err
 		}
 		if requestBytes > largestInitialBytes {
 			largestInitialBytes = requestBytes
@@ -759,6 +820,7 @@ func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config Open
 		perRepetition += tokenCostMicros(estimatedOpenAIInputTokens(config, request, requestBytes), worstInputPrice) +
 			tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
 	}
+	initialRunCost := perRepetition * int64(prepared.ExecutionShape.EffectiveRepetitions)
 	// A corrective request can repeat the entire maximum output in both the
 	// previous-response field and validation evidence. Four UTF-8 bytes per
 	// output token in each field is deliberately conservative for the bounded
@@ -766,16 +828,16 @@ func estimateOpenAIDiagnosticRunMaximum(prepared PreparedDiagnostic, config Open
 	boundedOutputBytes := config.MaxOutputTokens * 4
 	corrective, err := diagnosticCorrectiveRequest(config, []string{strings.Repeat("e", boundedOutputBytes)}, strings.Repeat("x", boundedOutputBytes), prepared.ProxyExposures)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 	correctiveBytes, err := openAIDiagnosticRequestBytes(config, corrective)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 	correctiveCost := tokenCostMicros(estimatedOpenAIInputTokens(config, corrective, correctiveBytes), worstInputPrice) +
 		tokenCostMicros(config.MaxOutputTokens, config.OutputPriceMicrosPerMillion)
 	perRepetition += int64(prepared.Profile.CaseCount) * correctiveCost
-	return largestInitialBytes, correctiveBytes, perRepetition * int64(prepared.ExecutionShape.EffectiveRepetitions), nil
+	return largestInitialBytes, correctiveBytes, initialRunCost, perRepetition * int64(prepared.ExecutionShape.EffectiveRepetitions), nil
 }
 
 func openAIDiagnosticRequestBytes(config OpenAIDiagnosticConfig, request ProviderRequest) (int, error) {
@@ -934,7 +996,7 @@ func ExecuteDiagnostic(prepared PreparedDiagnostic, provider Provider, identity 
 			var traces []ProviderTrace
 			var err error
 			switch executionContract.Route {
-			case diagnosticRouteC1F3, diagnosticRouteC1FRepeatabilityR2, diagnosticRouteC1FRepeatabilityR3:
+			case diagnosticRouteC1F3, diagnosticRouteC1FRepeatabilityR2, diagnosticRouteC1FRepeatabilityR3, diagnosticRouteC1FTerraChallenger:
 				result, attempts, traces, err = analyseC1FEvent(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
 			case diagnosticRouteHistoricalC1EV5:
 				result, attempts, traces, err = analyseV5Event(prepared.Config, provider, prepared.Resolver, runID, prepared.Manifest.Version, event.ID, inputFingerprint, event.Input, prepared.ProxyExposures)
@@ -1004,6 +1066,7 @@ const (
 	diagnosticProjectionC1F                diagnosticProjectionRoute = diagnosticRouteC1F3
 	diagnosticProjectionC1FRepeatabilityR2 diagnosticProjectionRoute = diagnosticRouteC1FRepeatabilityR2
 	diagnosticProjectionC1FRepeatabilityR3 diagnosticProjectionRoute = diagnosticRouteC1FRepeatabilityR3
+	diagnosticProjectionC1FTerraChallenger diagnosticProjectionRoute = diagnosticRouteC1FTerraChallenger
 )
 
 type diagnosticAttemptProjection struct {
@@ -1059,7 +1122,7 @@ func attachDiagnosticResultProjection(profile DiagnosticEvaluationProfile, resul
 		final.projection = newV4DiagnosticAttemptProjection(result.Parsed, result.CausalGuard, result.Resolution)
 	case diagnosticProjectionV5:
 		final.projection = newV5DiagnosticAttemptProjection(result.V5Parsed, result.CausalAttribution, result.Resolution)
-	case diagnosticProjectionC1F, diagnosticProjectionC1FRepeatabilityR2, diagnosticProjectionC1FRepeatabilityR3:
+	case diagnosticProjectionC1F, diagnosticProjectionC1FRepeatabilityR2, diagnosticProjectionC1FRepeatabilityR3, diagnosticProjectionC1FTerraChallenger:
 		final.projection = newC1FDiagnosticAttemptProjection(route, result.V5Parsed, result.CausalAttribution, result.Resolution)
 	default:
 		return fmt.Errorf("unsupported diagnostic result projection route %q", route)
