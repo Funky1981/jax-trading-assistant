@@ -104,3 +104,17 @@ Evidence: `../evidence/WP-02.01-PROVIDER-REGISTRY-CAPABILITY-CONTRACT.md`.
 WP-02.02 is **GO**, including the corrective identity-namespace commit `9b022fff3cd8d0f2cb08f2b104e3910a3ea4f573`. Accepted raw-payload acquisition identities use `rpa_`; the Phase 01 replay-manifest namespace remains `rpl_`. The implementation establishes exact-byte hashing, immutable acquisition/content separation, provider/capability/schema binding, verified storage-port reads, retention/redistribution metadata, and deterministic in-memory proof without production persistence or later Phase 02 behavior.
 
 Evidence: `../evidence/WP-02.02-RAW-PAYLOAD-PERSISTENCE-REFERENCE-POLICY.md`.
+
+## RD-2026-08-24-05 - WP-02.03 GO
+
+- Date: 2026-08-24
+- Phase: 02 - Data Platform & Provider Architecture
+- Work package: WP-02.03 - Normalization and validation pipeline
+- Status: Accepted
+- Decision authority: explicit technical-lead decision supplied with WP-02.04 authorization
+
+### Decision
+
+WP-02.03 is **GO**. The accepted implementation establishes deterministic provider-owned normalization, exact capability/raw-schema/canonical-target routing, typed stage failures, canonical and raw-provenance validation, loss/omission metadata, strict normalizer identity/version binding, storage-port-to-normalization proof, and repeatability without runtime provider migration or later Phase 02 behavior.
+
+Evidence: `../evidence/WP-02.03-NORMALIZATION-VALIDATION-PIPELINE.md`.
