@@ -13,8 +13,8 @@ func TestPersistRetrieveVerifyAndContentDeduplication(t *testing.T) {
 	registry, definition := rawPayloadRegistry(t)
 	store := NewMemoryRawPayloadStore()
 	payload := []byte(`{"same":"content"}`)
-	firstRequest := validRawPayloadRequest(definition, "rpl_acquisition_one", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
-	secondRequest := validRawPayloadRequest(definition, "rpl_acquisition_two", time.Date(2026, 8, 24, 10, 5, 0, 0, time.UTC))
+	firstRequest := validRawPayloadRequest(definition, "rpa_acquisition_one", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	secondRequest := validRawPayloadRequest(definition, "rpa_acquisition_two", time.Date(2026, 8, 24, 10, 5, 0, 0, time.UTC))
 
 	first, err := PersistRawPayload(context.Background(), registry, store, firstRequest, payload)
 	if err != nil {
@@ -49,7 +49,7 @@ func TestPersistRetrieveVerifyAndContentDeduplication(t *testing.T) {
 func TestDuplicateAcquisitionIsIdempotentAndConflictsOnChangedContent(t *testing.T) {
 	registry, definition := rawPayloadRegistry(t)
 	store := NewMemoryRawPayloadStore()
-	request := validRawPayloadRequest(definition, "rpl_idempotent", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	request := validRawPayloadRequest(definition, "rpa_idempotent", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
 	payload := []byte(`{"value":1}`)
 	first, err := PersistRawPayload(context.Background(), registry, store, request, payload)
 	if err != nil {
@@ -69,7 +69,7 @@ func TestDuplicateAcquisitionIsIdempotentAndConflictsOnChangedContent(t *testing
 func TestTamperedOrMissingStoredBytesFailVerification(t *testing.T) {
 	registry, definition := rawPayloadRegistry(t)
 	store := NewMemoryRawPayloadStore()
-	request := validRawPayloadRequest(definition, "rpl_tamper", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	request := validRawPayloadRequest(definition, "rpa_tamper", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
 	descriptor, err := PersistRawPayload(context.Background(), registry, store, request, []byte("original"))
 	if err != nil {
 		t.Fatalf("PersistRawPayload() error = %v", err)
@@ -78,13 +78,13 @@ func TestTamperedOrMissingStoredBytesFailVerification(t *testing.T) {
 	assertRawPayloadErrorCode(t, VerifyRawPayload(context.Background(), store, descriptor.Ref), RawPayloadErrorDigestMismatch)
 
 	missing := cloneRawPayloadRef(descriptor.Ref)
-	missing.ID = "rpl_missing"
+	missing.ID = "rpa_missing"
 	assertRawPayloadErrorCode(t, VerifyRawPayload(context.Background(), store, missing), RawPayloadErrorRetrievalMissing)
 }
 
 func TestPersistenceFailsClosedForRegistryAndRepresentationMismatch(t *testing.T) {
 	registry, definition := rawPayloadRegistry(t)
-	base := validRawPayloadRequest(definition, "rpl_mismatch", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	base := validRawPayloadRequest(definition, "rpa_mismatch", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
 	payload := []byte("payload")
 
 	tests := []struct {
@@ -120,14 +120,14 @@ func TestPersistenceRejectsKnownButUnavailableCapability(t *testing.T) {
 	if err := registry.Register(definition); err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
-	request := validRawPayloadRequest(definition, "rpl_unavailable", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	request := validRawPayloadRequest(definition, "rpa_unavailable", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
 	_, err := PersistRawPayload(context.Background(), registry, NewMemoryRawPayloadStore(), request, []byte("payload"))
 	assertRawPayloadErrorCode(t, err, RawPayloadErrorCapabilityUnavailable)
 }
 
 func TestPersistenceAcceptsMediaTypeParametersForDeclaredBaseType(t *testing.T) {
 	registry, definition := rawPayloadRegistry(t)
-	request := validRawPayloadRequest(definition, "rpl_media_parameter", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	request := validRawPayloadRequest(definition, "rpa_media_parameter", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
 	request.Raw.MediaType = "application/json; charset=utf-8"
 	if _, err := PersistRawPayload(context.Background(), registry, NewMemoryRawPayloadStore(), request, []byte("payload")); err != nil {
 		t.Fatalf("PersistRawPayload() rejected declared base media type parameters: %v", err)
@@ -136,7 +136,7 @@ func TestPersistenceAcceptsMediaTypeParametersForDeclaredBaseType(t *testing.T) 
 
 func TestPersistenceDoesNotPublishReferenceOnWriteOrIncompleteStoreFailure(t *testing.T) {
 	registry, definition := rawPayloadRegistry(t)
-	request := validRawPayloadRequest(definition, "rpl_failed_write", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	request := validRawPayloadRequest(definition, "rpa_failed_write", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
 
 	descriptor, err := PersistRawPayload(context.Background(), registry, failingRawPayloadStore{}, request, []byte("payload"))
 	if descriptor.Ref.ID != "" {
@@ -153,7 +153,7 @@ func TestPersistenceDoesNotPublishReferenceOnWriteOrIncompleteStoreFailure(t *te
 
 func TestUnsupportedReferenceVersionFailsBeforeRetrieval(t *testing.T) {
 	_, definition := rawPayloadRegistry(t)
-	ref := rawPayloadRefFromRequest(validRawPayloadRequest(definition, "rpl_version", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC)), []byte("payload"))
+	ref := rawPayloadRefFromRequest(validRawPayloadRequest(definition, "rpa_version", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC)), []byte("payload"))
 	ref.ContractVersion = "jax.provider_raw_payload_ref/v2"
 	assertRawPayloadErrorCode(t, VerifyRawPayload(context.Background(), NewMemoryRawPayloadStore(), ref), RawPayloadErrorUnsupportedVersion)
 }

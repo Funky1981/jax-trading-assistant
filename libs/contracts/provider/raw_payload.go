@@ -11,6 +11,9 @@ import (
 
 const RawPayloadRefContractV1 canonical.ContractVersion = "jax.provider_raw_payload_ref/v1"
 
+// RawPayloadIDPrefix identifies Jax raw-payload acquisition identities.
+const RawPayloadIDPrefix = "rpa_"
+
 // RawPayloadID identifies one acquisition event. It is deliberately not
 // content-derived: two receipts of identical bytes remain distinct history.
 type RawPayloadID string
@@ -313,8 +316,8 @@ func (ref RawPayloadRef) AsEvidenceRef(evidence canonical.ContractRef) (canonica
 
 func validateRawPayloadID(contract, field string, id RawPayloadID) error {
 	value := string(id)
-	if !strings.HasPrefix(value, "rpl_") || len(value) <= len("rpl_") {
-		return invalid(contract, field, "must use the rpl_ Jax raw-payload prefix")
+	if !strings.HasPrefix(value, RawPayloadIDPrefix) || len(value) <= len(RawPayloadIDPrefix) {
+		return invalid(contract, field, fmt.Sprintf("must use the %s Jax raw-payload acquisition prefix", RawPayloadIDPrefix))
 	}
 	return validateCode(contract, field, value)
 }

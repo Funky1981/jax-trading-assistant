@@ -14,7 +14,7 @@ import (
 func TestRawPayloadIdentityHashesExactReceivedBytes(t *testing.T) {
 	registry, definition := rawPayloadRegistry(t)
 	store := NewMemoryRawPayloadStore()
-	request := validRawPayloadRequest(definition, "rpl_exact_bytes", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	request := validRawPayloadRequest(definition, "rpa_exact_bytes", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
 
 	first := []byte("{\r\n  \"value\": 1\r\n}")
 	second := []byte("{\n\"value\":1\n}")
@@ -35,7 +35,7 @@ func TestRawPayloadIdentityHashesExactReceivedBytes(t *testing.T) {
 
 func TestRawPayloadReferenceValidationFailsClosed(t *testing.T) {
 	_, definition := rawPayloadRegistry(t)
-	request := validRawPayloadRequest(definition, "rpl_validation", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	request := validRawPayloadRequest(definition, "rpa_validation", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
 	ref := rawPayloadRefFromRequest(request, []byte("payload"))
 
 	tests := []struct {
@@ -70,6 +70,67 @@ func TestRawPayloadReferenceValidationFailsClosed(t *testing.T) {
 	}
 }
 
+func TestRawPayloadAndReplayManifestIdentityNamespacesAreDistinct(t *testing.T) {
+	const replayManifestPrefix = "rpl_"
+	if RawPayloadIDPrefix == replayManifestPrefix {
+		t.Fatalf("raw-payload prefix %q collides with ReplayManifest", RawPayloadIDPrefix)
+	}
+
+	reservedPrefixes := map[string]string{
+		"instrument":               "ins_",
+		"issuer":                   "iss_",
+		"event":                    "evt_",
+		"evidence":                 "evd_",
+		"observation":              "obs_",
+		"research_run":             "run_",
+		"quant_result":             "qnt_",
+		"recommendation":           "rec_",
+		"source":                   "src_",
+		"provider":                 "pvd_",
+		"dataset":                  "dset_",
+		"dataset_snapshot":         "dss_",
+		"component":                "cmp_",
+		"provenance":               "pvn_",
+		"compatibility_assessment": "cpa_",
+		"audit_event":              "aud_",
+		"audit_stream":             "ast_",
+		"audit_idempotency":        "adi_",
+		"correlation":              "cor_",
+		"failure":                  "fail_",
+		"replay_manifest":          replayManifestPrefix,
+	}
+	for identity, prefix := range reservedPrefixes {
+		if RawPayloadIDPrefix == prefix {
+			t.Fatalf("raw-payload prefix %q collides with %s", RawPayloadIDPrefix, identity)
+		}
+	}
+
+	replay := canonical.ReplayManifest{
+		ContractVersion: canonical.ReplayManifestContractV1,
+		ID:              "rpl_namespace_probe",
+	}
+	var canonicalErr *canonical.ValidationError
+	if err := replay.Validate(); !errors.As(err, &canonicalErr) || canonicalErr.Field == "id" {
+		t.Fatalf("ReplayManifest did not accept its rpl_ identity namespace: %v", err)
+	}
+	replay.ID = canonical.ReplayManifestID(RawPayloadIDPrefix + "namespace_probe")
+	canonicalErr = nil
+	if err := replay.Validate(); !errors.As(err, &canonicalErr) || canonicalErr.Field != "id" {
+		t.Fatalf("ReplayManifest accepted raw-payload identity namespace %q: %v", RawPayloadIDPrefix, err)
+	}
+
+	_, definition := rawPayloadRegistry(t)
+	ref := rawPayloadRefFromRequest(validRawPayloadRequest(definition, RawPayloadID(RawPayloadIDPrefix+"namespace_probe"), time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC)), []byte("payload"))
+	if err := ref.Validate(); err != nil {
+		t.Fatalf("RawPayloadRef did not accept its %s identity namespace: %v", RawPayloadIDPrefix, err)
+	}
+	ref.ID = "rpl_namespace_probe"
+	var providerErr *ValidationError
+	if err := ref.Validate(); !errors.As(err, &providerErr) || providerErr.Field != "id" {
+		t.Fatalf("RawPayloadRef accepted ReplayManifest identity namespace: %v", err)
+	}
+}
+
 func TestRawPayloadCaptureMakesTransportRepresentationExplicit(t *testing.T) {
 	encoded := RawPayloadCapture{
 		ByteForm:           RawPayloadByteFormEntityBody,
@@ -84,7 +145,7 @@ func TestRawPayloadCaptureMakesTransportRepresentationExplicit(t *testing.T) {
 		ContentCoding:      "gzip",
 		ContentCodingState: ContentCodingDecoded,
 		CharacterEncoding:  "utf-8",
-		RelatedTo:          &RawPayloadRelation{Kind: RawPayloadRelationDecodedFrom, PayloadID: "rpl_encoded"},
+		RelatedTo:          &RawPayloadRelation{Kind: RawPayloadRelationDecodedFrom, PayloadID: "rpa_encoded"},
 	}
 	if err := decoded.Validate(); err != nil {
 		t.Fatalf("decoded capture Validate() error = %v", err)
@@ -94,14 +155,14 @@ func TestRawPayloadCaptureMakesTransportRepresentationExplicit(t *testing.T) {
 	entityClaimingPart := RawPayloadCapture{
 		ByteForm:           RawPayloadByteFormEntityBody,
 		ContentCodingState: ContentCodingIdentity,
-		RelatedTo:          &RawPayloadRelation{Kind: RawPayloadRelationPartOf, PayloadID: "rpl_multipart"},
+		RelatedTo:          &RawPayloadRelation{Kind: RawPayloadRelationPartOf, PayloadID: "rpa_multipart"},
 	}
 	assertProviderValidationError(t, entityClaimingPart.Validate())
 }
 
 func TestRawPayloadCanBridgeToImmutableEvidenceAndProvenance(t *testing.T) {
 	registry, definition := rawPayloadRegistry(t)
-	request := validRawPayloadRequest(definition, "rpl_evidence", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
+	request := validRawPayloadRequest(definition, "rpa_evidence", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC))
 	descriptor, err := PersistRawPayload(context.Background(), registry, NewMemoryRawPayloadStore(), request, []byte(`{"filing":"exact"}`))
 	if err != nil {
 		t.Fatalf("PersistRawPayload() error = %v", err)
@@ -134,7 +195,7 @@ func TestRawPayloadCanBridgeToImmutableEvidenceAndProvenance(t *testing.T) {
 
 func TestRawPayloadReferenceJSONIsStrictAndStable(t *testing.T) {
 	_, definition := rawPayloadRegistry(t)
-	ref := rawPayloadRefFromRequest(validRawPayloadRequest(definition, "rpl_json", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC)), []byte(`{"value":1}`))
+	ref := rawPayloadRefFromRequest(validRawPayloadRequest(definition, "rpa_json", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC)), []byte(`{"value":1}`))
 	first, err := EncodeRawPayloadRefJSON(ref)
 	if err != nil {
 		t.Fatalf("EncodeRawPayloadRefJSON() error = %v", err)
@@ -152,7 +213,7 @@ func TestRawPayloadReferenceJSONIsStrictAndStable(t *testing.T) {
 	}
 
 	withSecret := bytes.Replace(first, []byte(`"provider":`), []byte(`"authorization":"secret","provider":`), 1)
-	duplicateID := bytes.Replace(first, []byte(`"id":`), []byte(`"id":"rpl_duplicate","id":`), 1)
+	duplicateID := bytes.Replace(first, []byte(`"id":`), []byte(`"id":"rpa_duplicate","id":`), 1)
 	withNull := bytes.Replace(first, []byte(`"capture":`), []byte(`"capture":null,"ignored_capture":`), 1)
 	unsupported := bytes.Replace(first, []byte(string(RawPayloadRefContractV1)), []byte("jax.provider_raw_payload_ref/v99"), 1)
 	for name, raw := range map[string][]byte{
@@ -240,7 +301,7 @@ func assertProviderValidationError(t *testing.T, err error) {
 
 func TestCloneRawPayloadRefDefensivelyCopiesPointers(t *testing.T) {
 	_, definition := rawPayloadRegistry(t)
-	ref := rawPayloadRefFromRequest(validRawPayloadRequest(definition, "rpl_clone", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC)), []byte("payload"))
+	ref := rawPayloadRefFromRequest(validRawPayloadRequest(definition, "rpa_clone", time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC)), []byte("payload"))
 	clone := cloneRawPayloadRef(ref)
 	clone.Source.ID = "src_changed"
 	clone.Revision.Value = "changed"
