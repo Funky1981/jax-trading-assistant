@@ -7,6 +7,7 @@ This package provides domain models, service interfaces, and HTTP adapters for t
 ```
 contracts/
 |-- canonical/           # Canonical versioned Jax domain contracts
+|-- provider/            # Provider registry and capability contracts
 ├── domain/              # Shared domain models
 │   ├── signal.go       # Trading signals
 │   ├── order.go        # Trade orders
@@ -52,6 +53,16 @@ audit events, and replay orchestration remain outside this package.
 The older `domain/` package remains an ADR-0012 service-compatibility surface.
 Its Signal, Order, Position, Portfolio, and OrchestrationRun types are not
 promoted to the Phase 01 canonical vocabulary and are not migrated by WP-01.02.
+
+## Provider registry vocabulary
+
+`provider/` owns the Phase 02 provider definition, capability, static support,
+raw-boundary descriptor, abstract authentication requirement, and separate
+runtime-state vocabulary. It imports `canonical.ProviderIdentity`,
+`VersionIdentity`, and exact canonical output schema references; canonical does
+not import provider. The registry is deterministic and in-memory. It contains
+no credentials, endpoints, runtime configuration, provider clients, payload
+storage, normalization, TTL, retry, health polling, or source scoring.
 
 ## Usage
 

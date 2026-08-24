@@ -1,13 +1,15 @@
 # Next Work Package
 
-Status: NEXT / awaiting technical-lead package authorization / not started
+Status: WP-02.01 implementation complete / technical-lead review pending
 
-## WP-02.01 - Provider registry/capability contract
+## Immediate next action - review WP-02.01
 
 Path: `02-data-platform-provider-architecture/WP-02.01-provider-registry-capability-contract.md`
 
-Phase 01 is complete and its technical-lead gate decision is **GO PHASE 01**. Phase 02 - Data Platform & Provider Architecture is therefore eligible. Its purpose is to make external data ingestion routine, normalized, health-aware, and replaceable.
+Phase 01 is complete and its technical-lead gate decision is **GO PHASE 01**. WP-02.01 has now implemented the bounded provider registry/capability contract and architecture evidence without adding provider calls, persistence, normalization, TTL, retry, health monitoring, or source scoring.
 
-WP-02.01 is the exact next roadmap package, but this routing record does not authorize implementation. A separate technical-lead package authorization is required before work starts.
+The technical lead must review the implementation and `../evidence/WP-02.01-PROVIDER-REGISTRY-CAPABILITY-CONTRACT.md`, then issue `GO`, `CONDITIONAL GO`, `NO-GO`, or `ROADMAP CHANGE` under `governance/GO-NO-GO-PROCESS.md`.
 
-Do not begin WP-02.01 or any other Phase 02 implementation from this close-out decision.
+The exact next roadmap package after an accepted WP-02.01 decision and separate authorization is `WP-02.02 - Raw payload persistence/reference policy`.
+
+Do not begin WP-02.02 from this implementation record.
