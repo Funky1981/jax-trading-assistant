@@ -118,3 +118,17 @@ Evidence: `../evidence/WP-02.02-RAW-PAYLOAD-PERSISTENCE-REFERENCE-POLICY.md`.
 WP-02.03 is **GO**. The accepted implementation establishes deterministic provider-owned normalization, exact capability/raw-schema/canonical-target routing, typed stage failures, canonical and raw-provenance validation, loss/omission metadata, strict normalizer identity/version binding, storage-port-to-normalization proof, and repeatability without runtime provider migration or later Phase 02 behavior.
 
 Evidence: `../evidence/WP-02.03-NORMALIZATION-VALIDATION-PIPELINE.md`.
+
+## RD-2026-08-24-06 - WP-02.04 GO
+
+- Date: 2026-08-24
+- Phase: 02 - Data Platform & Provider Architecture
+- Work package: WP-02.04 - Freshness/TTL/last-known-good semantics
+- Status: Accepted
+- Decision authority: explicit technical-lead decision supplied with WP-02.05 authorization
+
+### Decision
+
+WP-02.04 is **GO**. The accepted implementation establishes provider-neutral versioned freshness/LKG policies, explicit canonical timestamp authority and evaluation time, exact TTL/expiry states, deterministic same-key LKG qualification/selection, visible fallback identity/age/reason, future-skew and lifecycle fail-closed behavior, and an Observation V2 proof without migrating runtime providers or conflating provider health with datum freshness.
+
+Evidence: `../evidence/WP-02.04-FRESHNESS-TTL-LAST-KNOWN-GOOD-SEMANTICS.md`.

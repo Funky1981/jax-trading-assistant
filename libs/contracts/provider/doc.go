@@ -14,8 +14,13 @@
 // accepted results. Versioned provider-neutral freshness policies then
 // evaluate exact normalized records at caller-supplied times, and explicit
 // last-known-good policy can deterministically select a same-key immutable
-// record without upgrading stale data. Data freshness, normalization quality,
+// record without upgrading stale data. A bounded operational executor then
+// applies explicit operation safety, failure classification, retry/backoff,
+// Retry-After, process-local rate-limit state, capability health assessment,
+// and typed instrumentation through injected time. Successful acquisition
+// returns exact bytes for the raw-persistence boundary; it never normalizes or
+// silently returns fallback data. Data freshness, normalization quality,
 // fallback use, and provider health remain separate dimensions. The package
-// does not own provider DTOs, fetch provider data, poll health, or persist
-// freshness/LKG state.
+// does not own provider DTOs, production HTTP clients, provider quotas, health
+// persistence, or freshness/LKG state.
 package provider
