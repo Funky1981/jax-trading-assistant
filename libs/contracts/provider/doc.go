@@ -3,8 +3,10 @@
 //
 // Provider definitions describe stable provider identity and static capability
 // support. They do not contain endpoints, credentials, machine-local settings,
-// raw payloads, normalized records, health probes, retry policy, or storage.
+// normalized records, health probes, retry policy, or production storage.
 // Provider boundary representations remain explicitly raw and provider-owned;
-// canonical outputs are only declared destination schemas from package
-// canonical.
+// immutable raw payload references bind exact received bytes to acquisition,
+// capability, schema, retention, and abstract storage semantics. Canonical
+// outputs remain declared destination schemas from package canonical and are
+// never produced by this package.
 package provider
