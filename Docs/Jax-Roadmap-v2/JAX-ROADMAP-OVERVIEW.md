@@ -12,9 +12,11 @@ Jax is not greenfield. The public repository currently documents a modular-monol
 
 ## Current programme status
 
-As of 2026-08-21, Phase 00 is **GO**. The accepted architecture is `Event -> typed causal attribution -> deterministic policy -> DIRECT / PROXY / UNRESOLVED -> deterministic resolver`. Phase 00 model evaluation is closed. Luna remains the default runtime model and Terra is retained only as a validated higher-capability future option; no escalation implementation is authorized now.
+As of 2026-08-24, Phase 00 and Phase 01 are **GO** and complete. The accepted Phase 00 architecture remains `Event -> typed causal attribution -> deterministic policy -> DIRECT / PROXY / UNRESOLVED -> deterministic resolver`; its model evaluation is closed. Luna remains the default runtime model and Terra is retained only as a validated higher-capability future option; no escalation implementation is authorized now.
 
-All Phase 00 packages, including the evidence-baseline closure in WP-00.04, are complete. The exact first incomplete package is Phase 01 `WP-01.01 - Inventory existing Jax domain contracts before adding new ones`. It is identified for technical-lead authorization but has not started. See `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
+Phase 01 established the source-backed Jax contract inventory, canonical domain vocabulary, immutable provenance/version/content identities, and immutable audit/replay/compatibility foundation. Its exit condition was demonstrated by a deterministic in-memory chain tracing a representative Recommendation to immutable inputs, source/provider, versions, and timestamps without transient logs.
+
+Phase 02 is eligible but has not started. The exact next package is `WP-02.01 - Provider registry/capability contract`; it awaits separate technical-lead package authorization. See `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 
 ## Non-negotiable principles
 

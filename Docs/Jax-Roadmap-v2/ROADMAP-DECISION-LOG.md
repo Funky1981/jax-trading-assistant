@@ -38,3 +38,41 @@ WP-00.01, WP-00.02, and the expanded WP-00.03 sequence are complete. WP-00.04 wa
 No **ROADMAP CHANGE** is required. The implementation evolved beyond the roadmap's terse WP-00.03 wording, but it proved rather than invalidated the stated Phase 00 outcome and preserves the sequencing into canonical contracts/provenance/audit.
 
 The exact first incomplete authorized-by-roadmap package is `WP-01.01 - Inventory existing Jax domain contracts before adding new ones`. It is not authorized for implementation by this decision and has not started. See `NEXT-WORK-PACKAGE.md`.
+
+## RD-2026-08-24-01 - WP-01.04 GO
+
+- Date: 2026-08-24
+- Phase: 01 - Canonical Contracts, Provenance & Audit
+- Work package: WP-01.04 - Define replay/audit event model and compatibility strategy
+- Status: Accepted
+- Decision authority: explicit independent technical-lead decision supplied for close-out
+
+### Decision
+
+WP-01.04 is **GO**. The accepted implementation establishes immutable audit history, current-projection separation, deterministic replay manifests and verification, explicit compatibility classifications, V1/V2 fail-closed translation semantics, and the normative cross-runtime canonical-byte specification without changing the accepted WP-01.02/WP-01.03 architecture.
+
+Evidence: `../evidence/WP-01.04-REPLAY-AUDIT-COMPATIBILITY.md`.
+
+## RD-2026-08-24-02 - Phase 01 GO
+
+- Date: 2026-08-24
+- Phase: 01 - Canonical Contracts, Provenance & Audit
+- Status: Accepted
+- Decision authority: explicit independent technical-lead phase-gate decision supplied for close-out
+
+### Decision
+
+Phase 01 is **GO PHASE 01**. WP-01.01 established the source-backed contract inventory, WP-01.02 the canonical domain vocabulary, WP-01.03 immutable provenance/version/content identities, and WP-01.04 immutable audit/replay/compatibility semantics. All four packages were independently reviewed; no unresolved NO-GO or blocking CONDITIONAL GO remains.
+
+The exit condition is demonstrated by the deterministic in-memory reconstruction chain in the WP-01.04 evidence: a representative Recommendation traces to immutable inputs, source/provider, versions, and timestamps without transient logs. The proof requires no database, provider, inference, or trading mutation.
+
+The following accepted debts are non-blocking: broad production adoption of the canonical V2/audit model; append-only persistence enforcement; a non-Go canonical-byte conformance implementation; the inability to classify stochastic model re-inference as exact replay; unrelated repository-wide gofmt/lint debt; and the requirement that future adapters preserve immutable raw/provider evidence.
+
+Phase 02 is eligible but not started. Its next package is `WP-02.01 - Provider registry/capability contract`, which awaits separate technical-lead package authorization. See `NEXT-WORK-PACKAGE.md`.
+
+Evidence:
+
+- `../evidence/WP-01.01-JAX-DOMAIN-CONTRACT-INVENTORY.md`
+- `../evidence/WP-01.02-CANONICAL-DOMAIN-CONTRACTS.md`
+- `../evidence/WP-01.03-CANONICAL-PROVENANCE-IDENTITIES.md`
+- `../evidence/WP-01.04-REPLAY-AUDIT-COMPATIBILITY.md`

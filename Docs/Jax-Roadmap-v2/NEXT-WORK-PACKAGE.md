@@ -1,21 +1,13 @@
 # Next Work Package
 
-Status: Phase 01 package implementation complete; technical-lead review and phase gate pending
+Status: NEXT / awaiting technical-lead package authorization / not started
 
-## Immediate next action - review WP-01.04 and Phase 01 gate
+## WP-02.01 - Provider registry/capability contract
 
-No implementation work package is authorized after WP-01.04.
+Path: `02-data-platform-provider-architecture/WP-02.01-provider-registry-capability-contract.md`
 
-The technical lead must first review:
+Phase 01 is complete and its technical-lead gate decision is **GO PHASE 01**. Phase 02 - Data Platform & Provider Architecture is therefore eligible. Its purpose is to make external data ingestion routine, normalized, health-aware, and replaceable.
 
-- accepted WP-01.01 inventory evidence;
-- accepted WP-01.02 canonical-domain contract evidence;
-- accepted WP-01.03 provenance/immutable-reference evidence;
-- WP-01.04 audit/replay/compatibility implementation and evidence;
-- the Phase 01 exit proof that a representative output traces to immutable inputs, source/provider, version, and timestamp without transient logs.
+WP-02.01 is the exact next roadmap package, but this routing record does not authorize implementation. A separate technical-lead package authorization is required before work starts.
 
-The reviewer may issue `GO`, `CONDITIONAL GO`, `NO-GO`, or `ROADMAP CHANGE` for WP-01.04, then separately `GO PHASE 01`, `CONDITIONAL GO PHASE 01`, `NO-GO PHASE 01`, or `ROADMAP CHANGE` under `governance/GO-NO-GO-PROCESS.md`.
-
-Phase 02 must not start until the Phase 01 gate is resolved and a Phase 02 package receives separate authorization.
-
-Evidence: `../evidence/WP-01.04-REPLAY-AUDIT-COMPATIBILITY.md`.
+Do not begin WP-02.01 or any other Phase 02 implementation from this close-out decision.

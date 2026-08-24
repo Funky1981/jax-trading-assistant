@@ -1,8 +1,8 @@
 # Phase Index
 
 - [00-current-issuer-asset-resolution](00-current-issuer-asset-resolution/README.md) - GO / complete (2026-08-21)
-- [01-canonical-contracts-provenance-audit](01-canonical-contracts-provenance-audit/README.md) - next phase; WP-01.01 awaits authorization
-- [02-data-platform-provider-architecture](02-data-platform-provider-architecture/README.md)
+- [01-canonical-contracts-provenance-audit](01-canonical-contracts-provenance-audit/README.md) - GO / complete (2026-08-24)
+- [02-data-platform-provider-architecture](02-data-platform-provider-architecture/README.md) - eligible; WP-02.01 next, awaiting authorization and not started
 - [03-core-financial-evidence](03-core-financial-evidence/README.md)
 - [04-world-monitor-intelligence](04-world-monitor-intelligence/README.md)
 - [05-deterministic-quant-core](05-deterministic-quant-core/README.md)
