@@ -76,3 +76,31 @@ Evidence:
 - `../evidence/WP-01.02-CANONICAL-DOMAIN-CONTRACTS.md`
 - `../evidence/WP-01.03-CANONICAL-PROVENANCE-IDENTITIES.md`
 - `../evidence/WP-01.04-REPLAY-AUDIT-COMPATIBILITY.md`
+
+## RD-2026-08-24-03 - WP-02.01 GO
+
+- Date: 2026-08-24
+- Phase: 02 - Data Platform & Provider Architecture
+- Work package: WP-02.01 - Provider registry/capability contract
+- Status: Accepted
+- Decision authority: explicit technical-lead decision supplied with WP-02.03 authorization
+
+### Decision
+
+WP-02.01 is **GO**. The accepted implementation establishes stable provider identity, capability-driven canonical output declarations, explicit provider-raw representation/schema boundaries, deterministic registry behavior, static support semantics, and bounded future runtime-state attachment without provider calls or runtime migration.
+
+Evidence: `../evidence/WP-02.01-PROVIDER-REGISTRY-CAPABILITY-CONTRACT.md`.
+
+## RD-2026-08-24-04 - WP-02.02 GO
+
+- Date: 2026-08-24
+- Phase: 02 - Data Platform & Provider Architecture
+- Work package: WP-02.02 - Raw payload persistence/reference policy
+- Status: Accepted
+- Decision authority: explicit technical-lead decision supplied with WP-02.03 authorization
+
+### Decision
+
+WP-02.02 is **GO**, including the corrective identity-namespace commit `9b022fff3cd8d0f2cb08f2b104e3910a3ea4f573`. Accepted raw-payload acquisition identities use `rpa_`; the Phase 01 replay-manifest namespace remains `rpl_`. The implementation establishes exact-byte hashing, immutable acquisition/content separation, provider/capability/schema binding, verified storage-port reads, retention/redistribution metadata, and deterministic in-memory proof without production persistence or later Phase 02 behavior.
+
+Evidence: `../evidence/WP-02.02-RAW-PAYLOAD-PERSISTENCE-REFERENCE-POLICY.md`.

@@ -7,6 +7,9 @@
 // Provider boundary representations remain explicitly raw and provider-owned;
 // immutable raw payload references bind exact received bytes to acquisition,
 // capability, schema, retention, and abstract storage semantics. Canonical
-// outputs remain declared destination schemas from package canonical and are
-// never produced by this package.
+// outputs remain owned and validated by package canonical. This package also
+// owns the deterministic normalization boundary that verifies exact raw bytes,
+// routes by provider/capability/raw schema, invokes provider-owned parsers and
+// mappings, validates canonical output and provenance, and returns only fully
+// accepted results. It does not own provider DTOs or fetch provider data.
 package provider
