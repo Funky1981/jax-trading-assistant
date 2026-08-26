@@ -19,8 +19,14 @@
 // Retry-After, process-local rate-limit state, capability health assessment,
 // and typed instrumentation through injected time. Successful acquisition
 // returns exact bytes for the raw-persistence boundary; it never normalizes or
-// silently returns fallback data. Data freshness, normalization quality,
-// fallback use, and provider health remain separate dimensions. The package
-// does not own provider DTOs, production HTTP clients, provider quotas, health
-// persistence, or freshness/LKG state.
+// silently returns fallback data. Immutable, versioned source qualification
+// decisions then record whether a logical source or materially distinct
+// provider path is suitable for one exact capability, information role, use,
+// and coverage scope. Authority class, evidence, rights, historical
+// reliability, cost, conditions, hard disqualifiers, review times, and
+// supersession remain explicit; qualification performs no provider selection
+// or global scoring. Data freshness, normalization quality, fallback use,
+// provider health, and source qualification remain separate dimensions. The
+// package does not own provider DTOs, production HTTP clients, provider quotas,
+// health persistence, freshness/LKG state, or a production qualification store.
 package provider
