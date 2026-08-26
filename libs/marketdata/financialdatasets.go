@@ -75,6 +75,12 @@ func (p *FinancialDatasetsProvider) GetQuote(ctx context.Context, symbol string)
 	}, nil
 }
 
+// GetCandles is retained for compatibility with legacy trader/backtest and
+// backfill consumers. It is not a canonical evidence path: callers requiring
+// Phase 03 research evidence must use AcquireAndNormalizeDailyBars, which
+// requires RawPayloadRef persistence and canonical provenance.
+//
+// Deprecated: use the hardened daily-bars path for canonical market evidence.
 func (p *FinancialDatasetsProvider) GetCandles(ctx context.Context, symbol string, timeframe Timeframe, limit int) ([]Candle, error) {
 	symbol = strings.ToUpper(strings.TrimSpace(symbol))
 	if symbol == "" {

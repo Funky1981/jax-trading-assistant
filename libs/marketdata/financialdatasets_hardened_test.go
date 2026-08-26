@@ -104,8 +104,14 @@ func TestFinancialDatasetsHardenedDailyBarsEndToEnd(t *testing.T) {
 		t.Fatalf("expected 10 observations and 2 bars, got %d and %d", len(result.Normalization.Records), len(result.Bars))
 	}
 	for _, bar := range result.Bars {
-		if bar.Instrument.ID != string(resolver.instrument.ID) || bar.TimestampSemantics != MarketTimestampProviderDateIntervalEnd || bar.MarketTimezone != "UNKNOWN" || bar.Adjustment != MarketAdjustmentUnknown {
+		if bar.Instrument.ID != string(resolver.instrument.ID) || bar.TimestampSemantics != MarketTimestampProviderDateIntervalEnd || bar.TimestampAuthority != MarketTimestampAuthorityIntervalBoundary || bar.MarketTimezone != "UNKNOWN" || bar.Adjustment != MarketAdjustmentUnknown {
 			t.Fatalf("unexpected market semantics: %+v", bar)
+		}
+		if bar.ProviderDate != bar.Start.Format("2006-01-02") || !bar.Start.Equal(bar.End.AddDate(0, 0, -1)) || bar.Start.Location() != time.UTC || bar.End.Location() != time.UTC {
+			t.Fatalf("provider date was not represented as a neutral UTC interval: %+v", bar)
+		}
+		if _, err := bar.ExchangeCloseTime(); err == nil {
+			t.Fatal("provider calendar boundary must not be exposed as an exchange-close timestamp")
 		}
 		for _, observation := range []canonical.Observation{bar.Open, bar.High, bar.Low, bar.Close, bar.Volume} {
 			if err := observation.Validate(); err != nil {
@@ -119,6 +125,70 @@ func TestFinancialDatasetsHardenedDailyBarsEndToEnd(t *testing.T) {
 	encoded, _ := json.Marshal(result.Bars)
 	if string(encoded) == "" || string(encoded) == "null" {
 		t.Fatal("research-facing projection was empty")
+	}
+}
+
+func TestFinancialDatasetsHardenedHistoricalBarFreshnessUsesObservedTime(t *testing.T) {
+	payload := []byte(`{"ticker":"AAPL","prices":[{"time":"2024-08-20","open":100,"high":105,"low":99,"close":104,"volume":1000}]}`)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(payload)
+	}))
+	defer server.Close()
+	p, err := NewFinancialDatasetsProvider(ProviderConfig{Name: ProviderFinancialDatasets, APIKey: "fixture-key", Enabled: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.baseURL, p.client = server.URL, server.Client()
+	registry, err := providercontract.NewRegistry(providercontract.RegistryContractV1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := registry.Register(FinancialDatasetsProviderDefinition()); err != nil {
+		t.Fatal(err)
+	}
+	normals, err := providercontract.NewNormalizerRegistry(registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, err := NewFinancialDatasetsDailyBarsNormalizer(marketTestResolver{instrument: marketTestInstrument()}); err != nil {
+		t.Fatal(err)
+	} else if err := normals.Register(n); err != nil {
+		t.Fatal(err)
+	}
+	pipeline, err := providercontract.NewNormalizationPipeline(registry, normals)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC)
+	executor, err := providercontract.NewOperationalExecutor(registry, marketTestPolicy(), marketTestClock{now: receipt}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retention := providercontract.RawPayloadRetentionPolicy{Class: providercontract.RawPayloadRetentionReplayAudit, Policy: canonical.VersionIdentity{Namespace: "jax.raw_retention", Value: "replay-audit/v1"}, Redistribution: providercontract.RawPayloadRedistributionNotAuthorized}
+	result, err := p.AcquireAndNormalizeDailyBars(context.Background(), FinancialDatasetsBarsDependencies{Registry: registry, Executor: executor, Store: providercontract.NewMemoryRawPayloadStore(), Pipeline: pipeline}, FinancialDatasetsBarsRequest{Instrument: marketTestInstrument(), StartDate: time.Date(2024, 8, 20, 0, 0, 0, 0, time.UTC), EndDate: time.Date(2024, 8, 20, 0, 0, 0, 0, time.UTC), Interval: Timeframe1Day, PayloadID: "rpa_market_fd_old_fixture", Retention: retention})
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation, ok := result.Normalization.Records[0].Record.(canonical.Observation)
+	if !ok {
+		t.Fatal("expected canonical observation")
+	}
+	policies := providercontract.NewFreshnessPolicyRegistry()
+	policy := providercontract.FreshnessPolicy{ContractVersion: providercontract.FreshnessPolicyContractV1, Identity: canonical.ComponentIdentity{ID: "cmp_market_freshness", Kind: canonical.ComponentKindPolicy, Name: "market freshness", Version: canonical.VersionIdentity{Namespace: "jax.policy.freshness", Value: "v1"}}, CapabilityID: providercontract.CapabilityMarketBars, Target: result.Normalization.Target, UseClass: providercontract.DataUseResearch, ValidityMode: providercontract.FreshnessValidityAgeBounded, TimestampRole: providercontract.TimestampRoleObservedAt, FreshFor: 24 * time.Hour, ExpireAfter: 72 * time.Hour, MissingTimestamp: providercontract.MissingTimestampFail, LastKnownGood: providercontract.LastKnownGoodPolicy{ContractVersion: providercontract.LastKnownGoodPolicyContractV1, Identity: canonical.ComponentIdentity{ID: "cmp_market_lkg", Kind: canonical.ComponentKindPolicy, Name: "market lkg", Version: canonical.VersionIdentity{Namespace: "jax.policy.lkg", Value: "v1"}}, Mode: providercontract.FallbackProhibited}}
+	if err := policies.Register(policy); err != nil {
+		t.Fatal(err)
+	}
+	evaluator, err := providercontract.NewFreshnessEvaluator(registry, policies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evaluation, err := evaluator.Evaluate(providercontract.FreshnessEvaluationRequest{Policy: policy.Identity, UseClass: providercontract.DataUseResearch, EvaluationTime: receipt, Context: providercontract.FreshnessContextCurrentState, Record: providercontract.TemporalRecord{Normalized: result.Normalization.Records[0], Key: providercontract.FreshnessKey{CapabilityID: providercontract.CapabilityMarketBars, Target: result.Normalization.Target, Subject: observation.Subject, Qualifier: observation.Metric}, Lifecycle: providercontract.TemporalRecordLifecycle{State: providercontract.TemporalRecordActive}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evaluation.State != providercontract.TemporalExpired || evaluation.RawPayloadID != "rpa_market_fd_old_fixture" || !evaluation.EvaluationTime.Equal(receipt) {
+		t.Fatalf("historical observation incorrectly treated as fresh: %+v", evaluation)
 	}
 }
 

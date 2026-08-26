@@ -61,6 +61,12 @@ const (
 	MarketTimestampProviderDateIntervalEnd MarketTimestampSemantics = "PROVIDER_SESSION_DATE_INTERVAL_END"
 )
 
+type MarketTimestampAuthority string
+
+const (
+	MarketTimestampAuthorityIntervalBoundary MarketTimestampAuthority = "INTERVAL_BOUNDARY_ONLY"
+)
+
 const (
 	MarketMetricOpen   = "market_bar_open"
 	MarketMetricHigh   = "market_bar_high"
@@ -79,6 +85,7 @@ type CanonicalMarketBar struct {
 	End                time.Time
 	ProviderDate       string
 	TimestampSemantics MarketTimestampSemantics
+	TimestampAuthority MarketTimestampAuthority
 	Session            MarketSessionState
 	MarketTimezone     string
 	Adjustment         MarketAdjustmentState
@@ -96,7 +103,7 @@ func (bar CanonicalMarketBar) Validate() error {
 	if bar.Interval != Timeframe1Day || bar.Start.IsZero() || bar.End.IsZero() || !bar.End.After(bar.Start) || bar.Start.Location() != time.UTC || bar.End.Location() != time.UTC {
 		return errors.New("market bar has invalid daily UTC interval")
 	}
-	if bar.TimestampSemantics != MarketTimestampProviderDateIntervalEnd || bar.Session != MarketSessionProviderEODUnspecified || bar.MarketTimezone == "" {
+	if bar.TimestampSemantics != MarketTimestampProviderDateIntervalEnd || bar.TimestampAuthority != MarketTimestampAuthorityIntervalBoundary || bar.Session != MarketSessionProviderEODUnspecified || bar.MarketTimezone == "" {
 		return errors.New("market bar timestamp/session semantics are incomplete")
 	}
 	observations := []canonical.Observation{bar.Open, bar.High, bar.Low, bar.Close, bar.Volume}
@@ -119,6 +126,16 @@ func (bar CanonicalMarketBar) Validate() error {
 		return errors.New("market bar volume is negative")
 	}
 	return nil
+}
+
+// ExchangeCloseTime is intentionally unavailable for provider calendar-date
+// bars. Callers must not reinterpret the neutral UTC interval boundary as an
+// exchange close or market event timestamp.
+func (bar CanonicalMarketBar) ExchangeCloseTime() (time.Time, error) {
+	if bar.TimestampAuthority != MarketTimestampAuthorityIntervalBoundary {
+		return time.Time{}, errors.New("market bar does not declare a supported exchange-close timestamp")
+	}
+	return time.Time{}, errors.New("provider calendar boundary is not an authoritative exchange-close timestamp")
 }
 
 type FinancialDatasetsBarsRequest struct {
@@ -491,8 +508,8 @@ func ProjectCanonicalMarketBars(batch providercontract.BatchNormalizationResult,
 		bars = append(bars, CanonicalMarketBar{
 			Instrument: canonical.ContractRef{Kind: canonical.ContractKindInstrument, ID: string(instrument.ID), ContractVersion: instrument.ContractVersion},
 			Interval:   Timeframe1Day, Start: start, End: end, ProviderDate: start.Format("2006-01-02"),
-			TimestampSemantics: MarketTimestampProviderDateIntervalEnd,
-			Session:            MarketSessionProviderEODUnspecified, MarketTimezone: "UNKNOWN", Adjustment: MarketAdjustmentUnknown,
+			TimestampSemantics: MarketTimestampProviderDateIntervalEnd, TimestampAuthority: MarketTimestampAuthorityIntervalBoundary,
+			Session: MarketSessionProviderEODUnspecified, MarketTimezone: "UNKNOWN", Adjustment: MarketAdjustmentUnknown,
 			Open: item.observations[MarketMetricOpen], High: item.observations[MarketMetricHigh], Low: item.observations[MarketMetricLow],
 			Close: item.observations[MarketMetricClose], Volume: item.observations[MarketMetricVolume],
 		})
