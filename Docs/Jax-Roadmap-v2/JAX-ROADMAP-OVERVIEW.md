@@ -12,11 +12,13 @@ Jax is not greenfield. The public repository currently documents a modular-monol
 
 ## Current programme status
 
-As of 2026-08-24, Phase 00 and Phase 01 are **GO** and complete. The accepted Phase 00 architecture remains `Event -> typed causal attribution -> deterministic policy -> DIRECT / PROXY / UNRESOLVED -> deterministic resolver`; its model evaluation is closed. Luna remains the default runtime model and Terra is retained only as a validated higher-capability future option; no escalation implementation is authorized now.
+As of 2026-08-26, Phase 00, Phase 01, and Phase 02 are **GO** and complete. The accepted Phase 00 architecture remains `Event -> typed causal attribution -> deterministic policy -> DIRECT / PROXY / UNRESOLVED -> deterministic resolver`; its model evaluation is closed. Luna remains the default runtime model and Terra is retained only as a validated higher-capability future option; no escalation implementation is authorized now.
 
 Phase 01 established the source-backed Jax contract inventory, canonical domain vocabulary, immutable provenance/version/content identities, and immutable audit/replay/compatibility foundation. Its exit condition was demonstrated by a deterministic in-memory chain tracing a representative Recommendation to immutable inputs, source/provider, versions, and timestamps without transient logs.
 
-Phase 02 is eligible but has not started. The exact next package is `WP-02.01 - Provider registry/capability contract`; it awaits separate technical-lead package authorization. See `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
+Phase 02 established the stable provider/capability boundary, exact-byte raw acquisition references, deterministic normalization and immutable provenance, explicit freshness/LKG semantics, bounded operational resilience and health, and evidence-backed role-specific source qualification. Its exit condition was demonstrated by an executable synthetic chain and a second provider/raw-schema adapter producing the same provider-neutral downstream canonical research projection.
+
+Phase 03 — Core Financial Evidence is eligible but has not started. The exact next package candidate is `WP-03.01 - Market price/OHLCV provider hardening`; it awaits separate technical-lead package authorization. See `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 
 ## Non-negotiable principles
 

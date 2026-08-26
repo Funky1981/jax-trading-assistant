@@ -1,15 +1,15 @@
 # Next Work Package
 
-Status: WP-02.06 implementation complete / technical-lead review and Phase 02 gate pending
+Status: WP-03.01 NEXT / awaiting technical-lead package authorization / NOT STARTED
 
-## Immediate next action - review WP-02.06, then decide the Phase 02 gate
+## Immediate next action - authorize or defer WP-03.01
 
-Path: `02-data-platform-provider-architecture/WP-02.06-data-source-qualification-registry.md`
+Package: `WP-03.01 - Market price/OHLCV provider hardening`
 
-Phase 01 is complete with **GO PHASE 01**, and WP-02.01 through WP-02.05 are accepted. WP-02.06 has now implemented a deterministic source-versus-provider-path qualification registry with role/use/coverage scope, separate authority class, immutable typed evidence, licensing/retention rights, cost and historical-reliability characteristics, conditional permissions, non-overridable hard disqualifiers, exact policy/assessor identity, explicit review/expiry, immutable supersession history, and a synthetic Phase 02 exit-chain proof. No runtime provider, research consumer, database, migration, selector, network call, model call, or trading path was added.
+Path: `03-core-financial-evidence/WP-03.01-market-price-ohlcv-provider-hardening.md`
 
-The technical lead must first review the implementation and `../evidence/WP-02.06-DATA-SOURCE-QUALIFICATION-REGISTRY.md`, then issue `GO`, `CONDITIONAL GO`, `NO-GO`, or `ROADMAP CHANGE` for WP-02.06 under `governance/GO-NO-GO-PROCESS.md`.
+Phase 00, Phase 01, and Phase 02 are complete. The technical lead issued **GO** for WP-02.06 and **GO PHASE 02** on 2026-08-26. The accepted Phase 02 provider-neutral synthetic exit proof makes Phase 03 eligible.
 
-Because WP-02.06 is the final Phase 02 package, the technical lead must then issue `GO PHASE 02`, `CONDITIONAL GO PHASE 02`, `NO-GO PHASE 02`, or `ROADMAP CHANGE` against `02-data-platform-provider-architecture/GATE.md`. Do not begin Phase 03 before that gate is resolved.
+Phase 03 — Core Financial Evidence will populate the accepted data platform with the smallest high-value set of real market, corporate, and macro evidence required for useful US equity/ETF research. Its exit condition is a source-linked evidence packet for a representative US equity/ETF using real market, company, and macro evidence without relying on model memory.
 
-Only after an accepted Phase 02 gate and separate authorization is the exact next roadmap candidate `WP-03.01 - Market price/OHLCV provider hardening`.
+WP-03.01 is the exact next authorisation-candidate package. It has not started and must not begin without separate technical-lead package authorization.

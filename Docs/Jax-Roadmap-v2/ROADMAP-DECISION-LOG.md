@@ -132,3 +132,56 @@ Evidence: `../evidence/WP-02.03-NORMALIZATION-VALIDATION-PIPELINE.md`.
 WP-02.04 is **GO**. The accepted implementation establishes provider-neutral versioned freshness/LKG policies, explicit canonical timestamp authority and evaluation time, exact TTL/expiry states, deterministic same-key LKG qualification/selection, visible fallback identity/age/reason, future-skew and lifecycle fail-closed behavior, and an Observation V2 proof without migrating runtime providers or conflating provider health with datum freshness.
 
 Evidence: `../evidence/WP-02.04-FRESHNESS-TTL-LAST-KNOWN-GOOD-SEMANTICS.md`.
+
+## RD-2026-08-26-01 - WP-02.06 GO
+
+- Date: 2026-08-26
+- Phase: 02 - Data Platform & Provider Architecture
+- Work package: WP-02.06 - Data source qualification registry
+- Status: Accepted
+- Decision authority: explicit independent technical-lead decision supplied for close-out
+
+### Decision
+
+WP-02.06 is **GO**. The accepted implementation establishes evidence-backed, role-specific source qualification with separate source/provider-path identity, authority class, intended-use permissions, licensing and retention rights, historical reliability, cost, coverage, typed conditions, non-overridable hard disqualifiers, exact policy/assessor identity, explicit review/expiry, and immutable historical decisions. It does not collapse these dimensions into a trust score or source-selection engine.
+
+Evidence: `../evidence/WP-02.06-DATA-SOURCE-QUALIFICATION-REGISTRY.md`.
+
+## RD-2026-08-26-02 - Phase 02 GO
+
+- Date: 2026-08-26
+- Phase: 02 - Data Platform & Provider Architecture
+- Status: Accepted
+- Decision authority: explicit independent technical-lead phase-gate decision supplied for close-out
+
+### Decision
+
+Phase 02 is **GO PHASE 02**. WP-02.01 established the stable provider registry/capability boundary; WP-02.02 exact-byte raw acquisition identity and forensic persistence/reference semantics; WP-02.03 deterministic raw-to-canonical normalization with immutable provenance; WP-02.04 explicit freshness, TTL, and deterministic LKG/fallback semantics; WP-02.05 bounded retry, rate-limit, backoff, and provider-health semantics while preserving the exact raw-data path; and WP-02.06 evidence-backed role-specific source qualification without a universal trust score or source-selection engine. All six packages were independently reviewed. No unresolved NO-GO or blocking CONDITIONAL GO remains.
+
+The Phase 02 exit condition is demonstrated by the executable synthetic chain:
+
+```text
+provider capability
+    -> operational acquisition
+    -> exact-byte raw persistence
+    -> deterministic normalization
+    -> canonical validated data + provenance
+    -> freshness
+    -> provider health
+    -> source qualification
+```
+
+A second synthetic adapter using a different provider identity and raw schema produces the same provider-neutral downstream canonical research projection. A provider can therefore change behind the stable adapter boundary without changing research-facing canonical logic.
+
+The following accepted debts are non-blocking: provider/raw/canonical contracts are not yet broadly adopted by production consumers; the raw proof store is in-memory; production freshness TTLs and operational retry/rate-limit/health thresholds require evidence-backed configuration; no real provider/source qualification catalogue exists; real-provider licensing, reliability, and cost facts remain unassessed; no non-Go canonical-byte conformance implementation exists; and unrelated repository-wide gofmt/lint debt remains.
+
+Phase 03 is eligible but not started. Its first package candidate is `WP-03.01 - Market price/OHLCV provider hardening`, which awaits separate technical-lead package authorization. See `NEXT-WORK-PACKAGE.md`.
+
+Evidence:
+
+- `../evidence/WP-02.01-PROVIDER-REGISTRY-CAPABILITY-CONTRACT.md`
+- `../evidence/WP-02.02-RAW-PAYLOAD-PERSISTENCE-REFERENCE-POLICY.md`
+- `../evidence/WP-02.03-NORMALIZATION-VALIDATION-PIPELINE.md`
+- `../evidence/WP-02.04-FRESHNESS-TTL-LAST-KNOWN-GOOD-SEMANTICS.md`
+- `../evidence/WP-02.05-RATE-LIMIT-RETRY-BACKOFF-HEALTH-INSTRUMENTATION.md`
+- `../evidence/WP-02.06-DATA-SOURCE-QUALIFICATION-REGISTRY.md`

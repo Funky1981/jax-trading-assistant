@@ -1,5 +1,7 @@
 # Phase 03 — Core Financial Evidence
 
+**Status:** Eligible following **GO PHASE 02** on 2026-08-26. Phase 03 and WP-03.01 have not started. WP-03.01 is the next package candidate and awaits separate technical-lead authorization.
+
 ## Purpose
     Populate the data platform with the smallest high-value set of market, corporate and macro sources required for useful US equity/ETF research.
 
