@@ -32,6 +32,12 @@ func TestFinancialDatasetsGetCandlesSendsStartAndEndDate(t *testing.T) {
 		if query.Get("end_date") == "" {
 			t.Fatal("expected end_date query param")
 		}
+		if query.Get("interval") != "day" {
+			t.Fatalf("expected daily interval, got %s", query.Get("interval"))
+		}
+		if query.Get("interval_multiplier") != "" || query.Get("limit") != "" {
+			t.Fatal("legacy undocumented pagination parameters must not be sent")
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"prices":[{"time":"2026-03-05T15:30:00Z","open":1,"high":2,"low":0.5,"close":1.5,"volume":100}]}`))
 	}))
@@ -48,7 +54,7 @@ func TestFinancialDatasetsGetCandlesSendsStartAndEndDate(t *testing.T) {
 	provider.baseURL = server.URL
 	provider.client = server.Client()
 
-	candles, err := provider.GetCandles(context.Background(), "AAPL", Timeframe15Min, 100)
+	candles, err := provider.GetCandles(context.Background(), "AAPL", Timeframe1Day, 100)
 	if err != nil {
 		t.Fatalf("unexpected GetCandles error: %v", err)
 	}

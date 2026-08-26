@@ -7,8 +7,11 @@ require (
 	github.com/gofinance/ib v0.0.0-20190131202149-a7abd0c5d772
 	github.com/polygon-io/client-go v1.16.4
 	github.com/redis/go-redis/v9 v9.4.0
+	jax-trading-assistant/libs/contracts v0.0.0
 	jax-trading-assistant/libs/resilience v0.0.0
 )
+
+replace jax-trading-assistant/libs/contracts => ../contracts
 
 replace jax-trading-assistant/libs/resilience => ../resilience
 

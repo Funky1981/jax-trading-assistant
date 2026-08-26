@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -93,8 +92,11 @@ func (p *FinancialDatasetsProvider) GetCandles(ctx context.Context, symbol strin
 	q := u.Query()
 	q.Set("ticker", symbol)
 	q.Set("interval", interval)
-	q.Set("interval_multiplier", strconv.Itoa(multiplier))
-	q.Set("limit", strconv.Itoa(limit))
+	// The documented historical-prices API currently accepts only day/week/
+	// month/year intervals. It does not document interval_multiplier or limit;
+	// keep the multiplier return value only for the legacy helper contract and
+	// never send unsupported query parameters.
+	_ = multiplier
 	startDate, endDate := financialDatasetsDateRange(timeframe, limit, time.Now().UTC())
 	q.Set("start_date", startDate)
 	q.Set("end_date", endDate)
@@ -129,6 +131,9 @@ func (p *FinancialDatasetsProvider) GetCandles(ctx context.Context, symbol strin
 			Close:     row.Close,
 			Volume:    row.Volume,
 		})
+	}
+	if len(out) > limit {
+		out = out[len(out)-limit:]
 	}
 	return out, nil
 }
@@ -198,14 +203,6 @@ func (p *FinancialDatasetsProvider) fetchJSON(ctx context.Context, endpoint stri
 
 func mapTimeframe(tf Timeframe) (string, int) {
 	switch tf {
-	case Timeframe1Min:
-		return "minute", 1
-	case Timeframe5Min:
-		return "minute", 5
-	case Timeframe15Min:
-		return "minute", 15
-	case Timeframe1Hour:
-		return "hour", 1
 	case Timeframe1Day:
 		return "day", 1
 	case Timeframe1Week:
