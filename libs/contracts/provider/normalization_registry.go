@@ -55,6 +55,9 @@ func (registry *NormalizerRegistry) Register(normalizer Normalizer) error {
 	if capability.Support != SupportSupported {
 		return normalizationError(NormalizationStageRouting, NormalizationErrorUnsupportedCapability, RawPayloadRef{Provider: descriptor.Provider, CapabilityID: descriptor.CapabilityID}, "capability is not statically supported", nil)
 	}
+	if len(capability.CanonicalOutputs) == 0 {
+		return normalizationError(NormalizationStageRouting, NormalizationErrorUnsupportedRepresentation, RawPayloadRef{Provider: descriptor.Provider, CapabilityID: descriptor.CapabilityID}, "capability declares a provider-neutral output and has no canonical normalizer route", nil)
+	}
 	if !rawRepresentationsEqual(capability.Raw, descriptor.Raw) {
 		return normalizationError(NormalizationStageRouting, NormalizationErrorUnsupportedRawSchema, RawPayloadRef{Provider: descriptor.Provider, CapabilityID: descriptor.CapabilityID}, "normalizer raw expectation does not equal the provider capability declaration", nil)
 	}

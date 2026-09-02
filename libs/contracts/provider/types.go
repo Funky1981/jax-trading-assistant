@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"time"
 
 	"jax-trading-assistant/libs/contracts/canonical"
@@ -11,6 +12,7 @@ const (
 	ProviderDefinitionV1     canonical.ContractVersion = "jax.provider_definition/v1"
 	CapabilityContractV1     canonical.ContractVersion = "jax.provider_capability/v1"
 	CapabilityRuntimeStateV1 canonical.ContractVersion = "jax.provider_capability_state/v1"
+	ProviderNeutralOutputV1  canonical.ContractVersion = "jax.provider_neutral_output/v1"
 )
 
 // CapabilityID names what information a provider can supply. It is a stable
@@ -137,14 +139,34 @@ type OperationalSemantics struct {
 // families a future normalizer may emit. CanonicalOutputs never embeds a
 // provider DTO and is restricted to external information families.
 type Capability struct {
-	ContractVersion  canonical.ContractVersion     `json:"contract_version"`
-	ID               CapabilityID                  `json:"id"`
-	Category         DataCategory                  `json:"category"`
-	Support          SupportStatus                 `json:"support"`
-	Raw              RawRepresentation             `json:"raw"`
-	Authentication   AuthenticationRequirement     `json:"authentication"`
-	Operational      OperationalSemantics          `json:"operational"`
-	CanonicalOutputs []canonical.ContractSchemaRef `json:"canonical_outputs"`
+	ContractVersion        canonical.ContractVersion     `json:"contract_version"`
+	ID                     CapabilityID                  `json:"id"`
+	Category               DataCategory                  `json:"category"`
+	Support                SupportStatus                 `json:"support"`
+	Raw                    RawRepresentation             `json:"raw"`
+	Authentication         AuthenticationRequirement     `json:"authentication"`
+	Operational            OperationalSemantics          `json:"operational"`
+	CanonicalOutputs       []canonical.ContractSchemaRef `json:"canonical_outputs"`
+	ProviderNeutralOutputs []ProviderNeutralOutput       `json:"provider_neutral_outputs,omitempty"`
+}
+
+// ProviderNeutralOutput identifies a provider-neutral research contract that
+// is not yet a canonical Jax contract. It is intentionally only a versioned
+// schema identity; provider DTOs and endpoint structure never appear here.
+type ProviderNeutralOutput struct {
+	ContractVersion canonical.ContractVersion `json:"contract_version"`
+	Schema          canonical.VersionIdentity `json:"schema"`
+}
+
+func (output ProviderNeutralOutput) Validate() error {
+	const contract = "provider_neutral_output"
+	if output.ContractVersion != ProviderNeutralOutputV1 {
+		return invalid(contract, "contract_version", fmt.Sprintf("must be %q", ProviderNeutralOutputV1))
+	}
+	if err := output.Schema.Validate(); err != nil {
+		return invalid(contract, "schema", err.Error())
+	}
+	return nil
 }
 
 // ProviderDefinition is environment-independent registry metadata. Adapter

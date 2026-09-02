@@ -5,6 +5,7 @@ package macroevidence
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -60,6 +61,7 @@ type MacroSeries struct {
 	SeasonalAdjustmentCode string                         `json:"seasonal_adjustment_code,omitempty"`
 	LastUpdated            *time.Time                     `json:"last_updated,omitempty"`
 	Notes                  string                         `json:"notes,omitempty"`
+	RequestedInformation   InformationState               `json:"requested_information"`
 	ProviderRealtimePeriod *RealtimePeriod                `json:"provider_realtime_period,omitempty"`
 	SourcePayload          providercontract.RawPayloadRef `json:"source_payload"`
 	Provenance             canonical.Provenance           `json:"provenance"`
@@ -83,6 +85,9 @@ func (series MacroSeries) Validate() error {
 	}
 	if series.ObservationEnd < series.ObservationStart {
 		return fmt.Errorf("observation end precedes observation start")
+	}
+	if err := series.RequestedInformation.Validate(); err != nil {
+		return fmt.Errorf("series information state: %w", err)
 	}
 	if series.ProviderRealtimePeriod != nil {
 		if err := series.ProviderRealtimePeriod.Validate(); err != nil {
@@ -149,6 +154,9 @@ func (value MacroValue) Validate() error {
 	}
 	if value.SourceValue == "." || value.Number == nil {
 		return fmt.Errorf("present macro value requires a normalized number")
+	}
+	if math.IsNaN(*value.Number) || math.IsInf(*value.Number, 0) {
+		return fmt.Errorf("present macro value requires a finite normalized number")
 	}
 	return nil
 }

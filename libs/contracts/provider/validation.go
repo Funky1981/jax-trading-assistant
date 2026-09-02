@@ -91,6 +91,23 @@ func (capability Capability) Validate() error {
 	if err := capability.Operational.Validate(); err != nil {
 		return invalid(contract, "operational", err.Error())
 	}
+	if len(capability.ProviderNeutralOutputs) != 0 {
+		if capability.ID != CapabilityMacroObservation {
+			return invalid(contract, "provider_neutral_outputs", "provider-neutral outputs are reserved for macro observations")
+		}
+		if len(capability.CanonicalOutputs) != 0 {
+			return invalid(contract, "canonical_outputs", "a capability must not claim both canonical and provider-neutral outputs")
+		}
+		if len(capability.ProviderNeutralOutputs) != 1 {
+			return invalid(contract, "provider_neutral_outputs", "macro observations require exactly one provider-neutral output")
+		}
+		for i, output := range capability.ProviderNeutralOutputs {
+			if err := output.Validate(); err != nil {
+				return invalid(contract, fmt.Sprintf("provider_neutral_outputs[%d]", i), err.Error())
+			}
+		}
+		return nil
+	}
 	if len(capability.CanonicalOutputs) == 0 {
 		return invalid(contract, "canonical_outputs", "requires at least one meaningful canonical output")
 	}

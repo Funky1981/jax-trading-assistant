@@ -78,7 +78,10 @@ func FREDProviderDefinition() providercontract.ProviderDefinition {
 				FreshnessModes:     []providercontract.FreshnessMode{providercontract.FreshnessOnDemand},
 				QualityRequirement: providercontract.QualityCanonicalValidationRequired,
 			},
-			CanonicalOutputs: []canonical.ContractSchemaRef{{Kind: canonical.ContractKindObservation, Version: canonical.ObservationContractV2}},
+			ProviderNeutralOutputs: []providercontract.ProviderNeutralOutput{{
+				ContractVersion: providercontract.ProviderNeutralOutputV1,
+				Schema:          canonical.VersionIdentity{Namespace: "jax.macroevidence", Value: "macro_observation/v1"},
+			}},
 		}},
 	}
 }
@@ -103,7 +106,10 @@ func (provider *Provider) AcquireSeriesMetadata(ctx context.Context, deps Depend
 	if err != nil {
 		return SeriesResult{}, err
 	}
-	query := url.Values{"series_id": []string{request.SeriesID}, "file_type": []string{"json"}}
+	query, err := seriesQuery(request)
+	if err != nil {
+		return SeriesResult{}, err
+	}
 	execution, err := provider.acquire(ctx, deps, providercontract.OperationMetadataFetch, endpoint, query)
 	if err != nil {
 		return SeriesResult{Execution: execution}, err
@@ -116,7 +122,7 @@ func (provider *Provider) AcquireSeriesMetadata(ctx context.Context, deps Depend
 	if err != nil {
 		return SeriesResult{Execution: execution, Raw: raw}, err
 	}
-	series, err := normalizeSeries(payload, raw.Ref, request.SeriesID)
+	series, err := normalizeSeries(payload, raw.Ref, request.SeriesID, metadataInformationState(request.InformationState))
 	if err != nil {
 		return SeriesResult{Execution: execution, Raw: raw}, err
 	}
@@ -191,6 +197,12 @@ func (provider *Provider) AcquireVintageDates(ctx context.Context, deps Dependen
 		if len(result.VintageDates) > parsed.Page.Count {
 			return result, fmt.Errorf("FRED vintage response contains more dates than count")
 		}
+		if len(result.VintageDates) > len(parsed.Dates) {
+			previous := result.VintageDates[len(result.VintageDates)-len(parsed.Dates)-1]
+			if len(parsed.Dates) > 0 && parsed.Dates[0] <= previous {
+				return result, fmt.Errorf("FRED vintage pages are not globally ascending or contain duplicates")
+			}
+		}
 		if len(result.VintageDates) == parsed.Page.Count {
 			result.Completeness = CompletenessComplete
 			return result, nil
@@ -264,6 +276,12 @@ func (provider *Provider) AcquireObservations(ctx context.Context, deps Dependen
 		if len(result.Observations) > parsed.Page.Count {
 			return result, fmt.Errorf("FRED observation response contains more rows than count")
 		}
+		if len(result.Observations) > len(parsed.Observations) {
+			previous := result.Observations[len(result.Observations)-len(parsed.Observations)-1]
+			if len(parsed.Observations) > 0 && parsed.Observations[0].ObservationDate <= previous.ObservationDate {
+				return result, fmt.Errorf("FRED observation pages are not globally ascending or contain duplicates")
+			}
+		}
 		if len(result.Observations) == parsed.Page.Count {
 			result.Completeness = CompletenessComplete
 			return result, nil
@@ -276,7 +294,7 @@ func (provider *Provider) Acquire(ctx context.Context, deps Dependencies, reques
 	if err := validateAcquisitionRequest(request); err != nil {
 		return AcquisitionResult{}, err
 	}
-	seriesResult, err := provider.AcquireSeriesMetadata(ctx, deps, SeriesRequest{SeriesID: request.SeriesID, PayloadID: request.SeriesPayloadID, Retention: request.Retention})
+	seriesResult, err := provider.AcquireSeriesMetadata(ctx, deps, SeriesRequest{SeriesID: request.SeriesID, InformationState: metadataInformationState(request.InformationState), PayloadID: request.SeriesPayloadID, Retention: request.Retention})
 	if err != nil {
 		return AcquisitionResult{}, err
 	}
@@ -397,6 +415,28 @@ func observationQuery(request ObservationsRequest, pageSize, offset int) (url.Va
 	return query, nil
 }
 
+func seriesQuery(request SeriesRequest) (url.Values, error) {
+	query := url.Values{"series_id": []string{request.SeriesID}, "file_type": []string{"json"}}
+	switch request.InformationState.Mode {
+	case InformationStateCurrent, InformationStateInitialRelease:
+		// FRED has no series-level initial-release output. Initial-release
+		// acquisitions therefore bind explicitly to current metadata.
+	case InformationStateAsOf, InformationStateVintage:
+		query.Set("realtime_start", string(*request.InformationState.Date))
+		query.Set("realtime_end", string(*request.InformationState.Date))
+	default:
+		return nil, errors.New("unsupported FRED series information state")
+	}
+	return query, nil
+}
+
+func metadataInformationState(state InformationState) InformationState {
+	if state.Mode == InformationStateInitialRelease {
+		return InformationState{Mode: InformationStateCurrent}
+	}
+	return state
+}
+
 func pagePayloadID(base providercontract.RawPayloadID, page int) providercontract.RawPayloadID {
 	return providercontract.RawPayloadID("rpa_" + canonical.DigestBytes([]byte(string(base) + "\x00page\x00" + strconv.Itoa(page))).Value[:24])
 }
@@ -407,6 +447,9 @@ func validateSeriesRequest(request SeriesRequest) error {
 	}
 	if strings.TrimSpace(string(request.PayloadID)) == "" {
 		return errors.New("FRED series payload ID is required")
+	}
+	if err := request.InformationState.Validate(); err != nil {
+		return err
 	}
 	return request.Retention.Validate()
 }

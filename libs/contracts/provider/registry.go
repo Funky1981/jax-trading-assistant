@@ -146,5 +146,6 @@ func cloneCapability(capability Capability) Capability {
 	copyCapability.Operational.DeliveryModes = append([]DeliveryMode(nil), capability.Operational.DeliveryModes...)
 	copyCapability.Operational.FreshnessModes = append([]FreshnessMode(nil), capability.Operational.FreshnessModes...)
 	copyCapability.CanonicalOutputs = append([]canonical.ContractSchemaRef(nil), capability.CanonicalOutputs...)
+	copyCapability.ProviderNeutralOutputs = append([]ProviderNeutralOutput(nil), capability.ProviderNeutralOutputs...)
 	return copyCapability
 }

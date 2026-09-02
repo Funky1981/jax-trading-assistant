@@ -112,7 +112,10 @@ func decodeOneDocument(raw []byte, destination any) error {
 	return nil
 }
 
-func parseSeries(raw []byte, requestedSeriesID string, ref providercontract.RawPayloadRef) (MacroSeries, error) {
+func parseSeries(raw []byte, requestedSeriesID string, ref providercontract.RawPayloadRef, requestedInformation InformationState) (MacroSeries, error) {
+	if err := requestedInformation.Validate(); err != nil {
+		return MacroSeries{}, err
+	}
 	var envelope seriesEnvelope
 	if err := decodeOneDocument(raw, &envelope); err != nil {
 		return MacroSeries{}, err
@@ -155,6 +158,12 @@ func parseSeries(raw []byte, requestedSeriesID string, ref providercontract.RawP
 	} else if envelopePeriod != nil && *period != *envelopePeriod {
 		return MacroSeries{}, fmt.Errorf("FRED series realtime metadata disagrees with response metadata")
 	}
+	if requestedInformation.Mode == InformationStateAsOf || requestedInformation.Mode == InformationStateVintage {
+		expected := RealtimePeriod{Start: *requestedInformation.Date, End: *requestedInformation.Date}
+		if period == nil || *period != expected {
+			return MacroSeries{}, fmt.Errorf("FRED series metadata does not match the requested historical information state")
+		}
+	}
 	lastUpdated, err := parseOptionalLastUpdated(item.LastUpdated)
 	if err != nil {
 		return MacroSeries{}, err
@@ -164,7 +173,7 @@ func parseSeries(raw []byte, requestedSeriesID string, ref providercontract.RawP
 	if err != nil {
 		return MacroSeries{}, err
 	}
-	series := MacroSeries{ID: seriesID, ProviderSeriesID: requestedSeriesID, Title: item.Title, ObservationStart: observationStart, ObservationEnd: observationEnd, Frequency: item.Frequency, FrequencyCode: item.FrequencyCode, Units: item.Units, UnitsShort: item.UnitsShort, SeasonalAdjustment: item.SeasonalAdjustment, SeasonalAdjustmentCode: item.SeasonalCode, LastUpdated: lastUpdated, Notes: item.Notes, ProviderRealtimePeriod: period, SourcePayload: ref, Provenance: provenance}
+	series := MacroSeries{ID: seriesID, ProviderSeriesID: requestedSeriesID, Title: item.Title, ObservationStart: observationStart, ObservationEnd: observationEnd, Frequency: item.Frequency, FrequencyCode: item.FrequencyCode, Units: item.Units, UnitsShort: item.UnitsShort, SeasonalAdjustment: item.SeasonalAdjustment, SeasonalAdjustmentCode: item.SeasonalCode, LastUpdated: lastUpdated, Notes: item.Notes, RequestedInformation: requestedInformation, ProviderRealtimePeriod: period, SourcePayload: ref, Provenance: provenance}
 	if err := series.Validate(); err != nil {
 		return MacroSeries{}, err
 	}
@@ -265,8 +274,8 @@ func parseObservationEnvelope(raw []byte, request ObservationsRequest) (PageInfo
 	return page, result, nil
 }
 
-func normalizeSeries(raw []byte, ref providercontract.RawPayloadRef, requestedSeriesID string) (MacroSeries, error) {
-	return parseSeries(raw, requestedSeriesID, ref)
+func normalizeSeries(raw []byte, ref providercontract.RawPayloadRef, requestedSeriesID string, requestedInformation InformationState) (MacroSeries, error) {
+	return parseSeries(raw, requestedSeriesID, ref, requestedInformation)
 }
 
 func normalizeObservations(raw []byte, ref providercontract.RawPayloadRef, request ObservationsRequest) (parsedObservations, error) {

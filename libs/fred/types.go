@@ -104,9 +104,10 @@ type Dependencies struct {
 }
 
 type SeriesRequest struct {
-	SeriesID  string
-	PayloadID providercontract.RawPayloadID
-	Retention providercontract.RawPayloadRetentionPolicy
+	SeriesID         string
+	InformationState InformationState
+	PayloadID        providercontract.RawPayloadID
+	Retention        providercontract.RawPayloadRetentionPolicy
 }
 
 type SeriesResult struct {
