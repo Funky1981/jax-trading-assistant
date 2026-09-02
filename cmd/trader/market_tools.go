@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"jax-trading-assistant/libs/calendar"
+	providercontract "jax-trading-assistant/libs/contracts/provider"
 	"jax-trading-assistant/libs/marketdata"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/utcp"
@@ -23,11 +24,12 @@ import (
 )
 
 type marketTools struct {
-	pool        *pgxpool.Pool
-	mdClient    *marketdata.Client
-	events      *eventAggregator
-	httpClient  *http.Client
-	ibBridgeURL string
+	pool            *pgxpool.Pool
+	mdClient        *marketdata.Client
+	events          *eventAggregator
+	httpClient      *http.Client
+	ibBridgeURL     string
+	rawPayloadStore providercontract.RawPayloadStore
 }
 
 type marketToolRequest struct {
@@ -39,11 +41,14 @@ type marketToolResponse struct {
 	Output any `json:"output"`
 }
 
-func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string) *marketTools {
+func newMarketTools(pool *pgxpool.Pool, ibBridgeURL string, stores ...providercontract.RawPayloadStore) *marketTools {
 	mt := &marketTools{
 		pool:        pool,
 		httpClient:  &http.Client{Timeout: 15 * time.Second},
 		ibBridgeURL: strings.TrimSpace(ibBridgeURL),
+	}
+	if len(stores) > 0 {
+		mt.rawPayloadStore = stores[0]
 	}
 
 	providers := marketDataProviderConfigs(ibBridgeURL)

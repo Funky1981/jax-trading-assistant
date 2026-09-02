@@ -1,6 +1,21 @@
 package main
 
-import "testing"
+import (
+	"context"
+	"testing"
+
+	providercontract "jax-trading-assistant/libs/contracts/provider"
+)
+
+type marketToolsRawPayloadStoreProbe struct{}
+
+func (marketToolsRawPayloadStoreProbe) Put(context.Context, providercontract.RawPayloadRef, []byte) (providercontract.RawPayloadLocation, error) {
+	return providercontract.RawPayloadLocation{}, nil
+}
+
+func (marketToolsRawPayloadStoreProbe) Get(context.Context, providercontract.RawPayloadRef) ([]byte, error) {
+	return nil, nil
+}
 
 func TestNewMarketToolsPrefersIBBridgeForFrontendMarketData(t *testing.T) {
 	t.Setenv("ALPACA_API_KEY", "alpaca-key")
@@ -50,5 +65,13 @@ func TestMarketDataSourceLabelShowsProviderChain(t *testing.T) {
 	got := marketDataSourceLabel([]string{"ib-bridge", "alpaca"})
 	if got != "provider-chain: ib-bridge,alpaca" {
 		t.Fatalf("source label = %q", got)
+	}
+}
+
+func TestNewMarketToolsCarriesSharedRawPayloadStore(t *testing.T) {
+	store := marketToolsRawPayloadStoreProbe{}
+	mt := newMarketTools(nil, "", store)
+	if mt == nil || mt.rawPayloadStore == nil {
+		t.Fatal("expected shared raw payload store to be composed")
 	}
 }

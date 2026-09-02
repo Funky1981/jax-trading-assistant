@@ -53,6 +53,7 @@ import (
 	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/internal/modules/instruments"
 	"jax-trading-assistant/libs/auth"
+	"jax-trading-assistant/libs/contracts/provider"
 	"jax-trading-assistant/libs/middleware"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/runtimepolicy"
@@ -265,7 +266,7 @@ func etfInstrumentsHandler() http.HandlerFunc {
 
 // startFrontendAPIServer launches the jax-api-compatible HTTP server.
 // It runs until ctx is cancelled.
-func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strategies.Registry, strategyTypeReg *strategytypes.Registry) {
+func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strategies.Registry, strategyTypeReg *strategytypes.Registry, stores ...provider.RawPayloadStore) {
 	fCfg := loadFrontendAPIConfig()
 
 	jwtManager, err := auth.NewJWTManagerFromEnv()
@@ -300,7 +301,7 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	}
 
 	mux := http.NewServeMux()
-	marketAPI := newMarketTools(pool, envStr("IB_BRIDGE_URL", "http://localhost:8092"))
+	marketAPI := newMarketTools(pool, envStr("IB_BRIDGE_URL", "http://localhost:8092"), stores...)
 
 	// ── Auth ──────────────────────────────────────────────────────────────────
 	// /auth/status is always public — frontend uses it to decide whether to show login

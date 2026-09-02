@@ -21,6 +21,7 @@ import (
 	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/internal/modules/execution"
 	"jax-trading-assistant/internal/modules/instruments"
+	"jax-trading-assistant/internal/rawpayloadstore"
 	"jax-trading-assistant/internal/trader/signalgenerator"
 	"jax-trading-assistant/libs/risk"
 	"jax-trading-assistant/libs/runtimepolicy"
@@ -97,6 +98,11 @@ func main() {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 	log.Println("database connection established")
+	rawStore, err := rawpayloadstore.NewPostgresRawPayloadStore(dbPool)
+	if err != nil {
+		log.Fatalf("failed to initialise durable raw payload store: %v", err)
+	}
+	log.Println("durable raw payload store initialised")
 
 	if err := loadStrategyInstancesFromDir(ctx, dbPool, filepath.Join("config", "strategy-instances")); err != nil {
 		log.Printf("strategy instance bootstrap warning: %v", err)
@@ -191,12 +197,12 @@ func main() {
 
 	// Create HTTP server
 	mux := http.NewServeMux()
-	marketTools := newMarketTools(dbPool, cfg.IBBridgeURL)
+	marketTools := newMarketTools(dbPool, cfg.IBBridgeURL, rawStore)
 
 	// ADR-0012 Phase 6: launch in-process replacements for removed microservices.
 	// startMarketIngester replaces jax-market; startFrontendAPIServer replaces jax-api.
 	go startMarketIngester(ctx, dbPool)
-	go startFrontendAPIServer(ctx, dbPool, registry, strategyTypeRegistry)
+	go startFrontendAPIServer(ctx, dbPool, registry, strategyTypeRegistry, rawStore)
 
 	// Always-on trade watcher: continuously evaluates enabled strategy instances
 	// and creates candidate trades independent of browser presence.
