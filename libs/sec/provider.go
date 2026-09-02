@@ -126,9 +126,26 @@ func (provider *Provider) acquire(ctx context.Context, deps Dependencies, operat
 	if provider == nil || deps.Registry == nil || deps.Executor == nil || deps.Store == nil || deps.Pipeline == nil {
 		return providercontract.ExecutionResult{}, errors.New("SEC acquisition path is not fully configured")
 	}
+	if err := validateSECRateLimit(deps.Executor.Policy().RateLimit); err != nil {
+		return providercontract.ExecutionResult{}, err
+	}
 	return deps.Executor.Execute(ctx, operation, func(attemptCtx context.Context, _ providercontract.AttemptContext) providercontract.ProviderAttemptResult {
 		return provider.fetch(attemptCtx, endpoint)
 	})
+}
+
+// validateSECRateLimit keeps the SEC adapter on the shared Phase 02 limiter
+// while refusing an injected policy whose effective rate exceeds the SEC
+// published ceiling. This is validation, not a second retry/throttling
+// framework.
+func validateSECRateLimit(policy providercontract.RateLimitPolicy) error {
+	if err := policy.Validate(); err != nil {
+		return fmt.Errorf("SEC rate-limit policy is invalid: %w", err)
+	}
+	if float64(policy.RequestLimit) > float64(SECFairAccessMaxRequestsPerSecond)*policy.Window.Seconds() {
+		return fmt.Errorf("SEC rate-limit policy exceeds %d requests per second", SECFairAccessMaxRequestsPerSecond)
+	}
+	return nil
 }
 
 func persist(ctx context.Context, registry *providercontract.Registry, store providercontract.RawPayloadStore, execution providercontract.ExecutionResult, payloadID providercontract.RawPayloadID, capability providercontract.CapabilityID, raw providercontract.RawRepresentation, source canonical.SourceIdentity, retention providercontract.RawPayloadRetentionPolicy) (providercontract.RawPayloadDescriptor, error) {
@@ -286,5 +303,5 @@ func (provider *Provider) AcquireCompanyFacts(ctx context.Context, deps Dependen
 	if len(batch.Records) != len(facts) {
 		return CompanyFactsResult{Execution: execution, Raw: raw}, fmt.Errorf("SEC normalizer output count does not match preserved fact semantics")
 	}
-	return CompanyFactsResult{Execution: execution, Raw: raw, Facts: facts}, nil
+	return CompanyFactsResult{Execution: execution, Raw: raw, Facts: facts, Coverage: SECCompanyFactsCoverage}, nil
 }

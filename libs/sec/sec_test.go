@@ -55,7 +55,7 @@ func submissionsFixture(withFiles bool) string {
 	if withFiles {
 		files = `[ {"name":"CIK0000320193-submissions-001.json","filingFrom":"2020-01-01","filingTo":"2022-12-31"} ]`
 	}
-	return `{"name":"APPLE INC.","cik":"0000320193","filings":{"recent":{"accessionNumber":["0000320193-25-000001","0000320193-25-000002"],"filingDate":["2025-02-01","2025-02-02"],"reportDate":["2024-12-28","2024-12-28"],"form":["10-K","10-K/A"],"primaryDocument":["aapl-20241228.htm","aapl-20241228a.htm"],"primaryDocDescription":["Annual report","Amended annual report"],"isXBRL":[1,1],"isInlineXBRL":[1,1]},"files":` + files + `}}`
+	return `{"name":"APPLE INC.","cik":"0000320193","filings":{"recent":{"accessionNumber":["0000320193-25-000001","0000320193-25-000002"],"filingDate":["2025-02-01","2025-02-02"],"acceptanceDateTime":["2025-02-01T21:30:45.123Z","2025-02-02T14:05:06Z"],"reportDate":["2024-12-28","2024-12-28"],"form":["10-K","10-K/A"],"primaryDocument":["aapl-20241228.htm","aapl-20241228a.htm"],"primaryDocDescription":["Annual report","Amended annual report"],"isXBRL":[1,1],"isInlineXBRL":[1,1]},"files":` + files + `}}`
 }
 
 func companyFactsFixture() string {
@@ -86,8 +86,11 @@ func TestSECConfigRequiresExplicitProductionIdentity(t *testing.T) {
 	if _, err := LoadConfigFromEnv(); err == nil {
 		t.Fatal("SEC config accepted missing production contact identity")
 	}
-	if err := (Config{BaseURL: "https://data.sec.gov", Identity: RequestIdentity{Product: "Jax"}, MaxResponseBytes: 1}).Validate(); err != nil {
-		t.Fatalf("explicit product-only User-Agent should remain valid: %v", err)
+	if err := (Config{BaseURL: "https://data.sec.gov", Identity: RequestIdentity{Product: "Jax"}, MaxResponseBytes: 1}).Validate(); err == nil {
+		t.Fatal("SEC config accepted missing contact identity")
+	}
+	if err := (Config{BaseURL: "https://data.sec.gov", Identity: RequestIdentity{Product: "Jax", Contact: "org@example.invalid"}, MaxResponseBytes: 1}).Validate(); err != nil {
+		t.Fatalf("explicit configured User-Agent identity rejected: %v", err)
 	}
 	if err := (Config{BaseURL: "http://data.sec.gov", Identity: RequestIdentity{Product: "Jax"}, MaxResponseBytes: 1}).Validate(); err == nil {
 		t.Fatal("SEC config accepted non-HTTPS base URL")
@@ -102,6 +105,9 @@ func TestSECSubmissionsExactBytesCanonicalOutputAndAmendments(t *testing.T) {
 		}
 		if r.URL.Path != "/submissions/0000320193.json" {
 			t.Fatalf("path = %s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "" || r.Header.Get("Cookie") != "" {
+			t.Fatal("request credentials were sent")
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_, _ = w.Write(exact)
@@ -120,6 +126,32 @@ func TestSECSubmissionsExactBytesCanonicalOutputAndAmendments(t *testing.T) {
 	if result.Filings[1].Filing.Form != "10-K/A" || !result.Filings[1].Filing.Amended {
 		t.Fatalf("amendment was not preserved: %+v", result.Filings[1].Filing)
 	}
+	firstEvidence := result.Filings[0]
+	first := firstEvidence.Filing
+	if first.Dates.FilingDate != SECDate("2025-02-01") {
+		t.Fatalf("filing date = %q", first.Dates.FilingDate)
+	}
+	if first.Dates.ReportDate == nil || *first.Dates.ReportDate != SECDate("2024-12-28") {
+		t.Fatalf("report date = %v", first.Dates.ReportDate)
+	}
+	if first.Dates.AcceptanceDateTime == nil || !first.Dates.AcceptanceDateTime.Equal(time.Date(2025, 2, 1, 21, 30, 45, 123000000, time.UTC)) {
+		t.Fatalf("acceptance datetime = %v", first.Dates.AcceptanceDateTime)
+	}
+	if first.Dates.AcceptanceDateTime.Equal(time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Fatal("acceptance datetime was reduced to filing-date midnight")
+	}
+	if first.Dates.PublicAvailabilityTime != nil {
+		t.Fatal("SEC public availability time was fabricated")
+	}
+	if !first.Dates.AcquiredAt.Equal(result.RawPayloads[0].Ref.ReceivedAt) {
+		t.Fatal("acquisition time was not preserved independently")
+	}
+	if firstEvidence.Evidence.PublishedAt != nil || firstEvidence.Evidence.ImmutableRef.PublishedAt != nil {
+		t.Fatal("date-only filing date was mapped to canonical publication time")
+	}
+	if result.RawPayloads[0].Ref.ReceivedAt.Before(*first.Dates.AcceptanceDateTime) {
+		t.Fatal("acquisition time did not remain distinct from acceptance time")
+	}
 	stored, err := providercontract.RetrieveRawPayload(context.Background(), deps.Store, result.RawPayloads[0].Ref)
 	if err != nil {
 		t.Fatal(err)
@@ -133,6 +165,13 @@ func TestSECSubmissionsExactBytesCanonicalOutputAndAmendments(t *testing.T) {
 	}
 	if strings.Contains(string(encoded), "test@example.invalid") || strings.Contains(string(encoded), "User-Agent") {
 		t.Fatal("request identity/header leaked into raw reference")
+	}
+}
+
+func TestSECSubmissionsRejectMalformedAcceptanceDateTime(t *testing.T) {
+	body := strings.Replace(submissionsFixture(false), "2025-02-01T21:30:45.123Z", "not-a-timestamp", 1)
+	if _, err := parseSubmissions([]byte(body), providercontract.RawPayloadRef{ReceivedAt: time.Now().UTC()}); err == nil {
+		t.Fatal("malformed EDGAR acceptance datetime was accepted")
 	}
 }
 
@@ -160,12 +199,21 @@ func TestSECCompanyFactsPreservesXBRLSemanticsAndDeterminism(t *testing.T) {
 	if len(result.Facts) != 5 {
 		t.Fatalf("facts = %d", len(result.Facts))
 	}
+	if result.Coverage != SECCompanyFactsCoverage || !result.Coverage.EntityWideNonCustomTaxonomies || result.Coverage.CustomTaxonomiesIncluded || result.Coverage.AbsenceIsProofOfNonDisclosure {
+		t.Fatalf("company facts coverage semantics = %+v", result.Coverage)
+	}
 	for _, fact := range result.Facts {
 		if fact.Semantics.Taxonomy == "" || fact.Semantics.Concept == "" || fact.Semantics.Unit == "" || fact.Semantics.AccessionNumber == "" || fact.Semantics.SourcePayload.ID != result.Raw.Ref.ID {
 			t.Fatalf("semantics lost: %+v", fact.Semantics)
 		}
 		if fact.Observation.Subject.ID != string(issuer.ID) {
 			t.Fatal("fact used non-canonical issuer identity")
+		}
+		if fact.Observation.PublishedAt != nil || fact.Evidence.PublishedAt != nil || fact.Evidence.ImmutableRef.PublishedAt != nil {
+			t.Fatal("Company Facts filed date was mapped to publication time")
+		}
+		if err := fact.Semantics.FilingDate.Validate(); err != nil {
+			t.Fatal(err)
 		}
 	}
 	var sawDuration, sawInstant, sawFrame, sawAmendment bool
@@ -232,12 +280,53 @@ func TestSECFailClosedForMalformedMediaIdentityCompletenessAndPersistence(t *tes
 	if result.Completeness != CompletenessAdditionalFilesAvailable {
 		t.Fatalf("completeness = %q", result.Completeness)
 	}
+	if result.IsComplete() {
+		t.Fatal("partial submissions history masqueraded as complete")
+	}
 	failing := failingStore{}
 	registry, _ := providercontract.NewRegistry(providercontract.RegistryContractV1)
 	_ = registry.Register(SECProviderDefinition())
 	execution := providercontract.ExecutionResult{RawBytes: []byte("payload"), CompletedAt: time.Now().UTC()}
 	if _, err := persist(context.Background(), registry, failing, execution, "rpa_sec_persist_fail", providercontract.CapabilityCorporateFiling, submissionRaw(), SubmissionsSource, testRetention()); err == nil {
 		t.Fatal("persistence failure was accepted")
+	}
+}
+
+func TestSECFairAccessCeilingUsesPhase02RateLimiter(t *testing.T) {
+	hit := false
+	provider, deps, server := testDependencies(t, "", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hit = true
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(submissionsFixture(false)))
+	}))
+	defer server.Close()
+	provider.config.BaseURL = server.URL
+	policy := testPolicy()
+	policy.RateLimit.RequestLimit = 11
+	policy.RateLimit.Window = time.Second
+	executor, err := providercontract.NewOperationalExecutor(deps.Registry, policy, providercontract.SystemTimeSource{}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deps.Executor = executor
+	issuer := testIssuer()
+	_, err = provider.AcquireSubmissions(context.Background(), deps, SubmissionsRequest{Identity: CIKIdentity{Issuer: canonical.ContractRef{Kind: canonical.ContractKindIssuer, ID: string(issuer.ID), ContractVersion: issuer.ContractVersion}, CIK: testCIK}, PayloadID: "rpa_sec_rate_limit", Retention: testRetention()})
+	if err == nil || !strings.Contains(err.Error(), "exceeds 10 requests per second") {
+		t.Fatalf("rate ceiling error = %v", err)
+	}
+	if hit {
+		t.Fatal("SEC request was sent with an over-ceiling Phase 02 policy")
+	}
+}
+
+func TestCompanyFactObservationHasProviderNeutralSemanticShape(t *testing.T) {
+	// The wrapper contains normalized taxonomy/concept/unit/value/period and
+	// filing provenance only. It contains no SEC envelope, DTO, endpoint, or
+	// endpoint-array fields, so another fundamentals adapter can construct the
+	// same shape from its own source boundary.
+	observation := CompanyFactObservation{}
+	if observation.Semantics.Taxonomy != "" || observation.Semantics.Concept != "" {
+		t.Fatal("unexpected non-zero zero-value semantics")
 	}
 }
 

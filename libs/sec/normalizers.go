@@ -24,12 +24,13 @@ func (resolver staticRequestResolver) ResolveSECIdentity(cik string) (canonical.
 
 func normalizerDescriptor(capability providercontract.CapabilityID, raw providercontract.RawRepresentation, id, name string, kind canonical.ContractKind, version canonical.ContractVersion) providercontract.NormalizerDescriptor {
 	provider := ProviderIdentity
-	return providercontract.NormalizerDescriptor{ContractVersion: providercontract.NormalizerDescriptorV1, Provider: provider, CapabilityID: capability, Raw: raw, Component: canonical.ComponentIdentity{ID: id, Kind: canonical.ComponentKindNormalizer, Name: name, Version: canonical.VersionIdentity{Namespace: "jax.sec.normalizer", Value: "1.0.0"}, Provider: &provider}, Target: canonical.ContractSchemaRef{Kind: kind, Version: version}}
+	return providercontract.NormalizerDescriptor{ContractVersion: providercontract.NormalizerDescriptorV1, Provider: provider, CapabilityID: capability, Raw: raw, Component: canonical.ComponentIdentity{ID: id, Kind: canonical.ComponentKindNormalizer, Name: name, Version: canonical.VersionIdentity{Namespace: "jax.sec.normalizer", Value: "1.1.0"}, Provider: &provider}, Target: canonical.ContractSchemaRef{Kind: kind, Version: version}}
 }
 
 type submissionColumns struct {
 	AccessionNumber            []string `json:"accessionNumber"`
 	FilingDate                 []string `json:"filingDate"`
+	AcceptanceDateTime         []string `json:"acceptanceDateTime"`
 	ReportDate                 []string `json:"reportDate"`
 	Form                       []string `json:"form"`
 	PrimaryDocument            []string `json:"primaryDocument"`
@@ -123,6 +124,9 @@ func parseSubmissions(data []byte, ref providercontract.RawPayloadRef) (parsedSu
 			return parsedSubmissions{}, fmt.Errorf("SEC submissions %s column length %d does not match accession count %d", name, length, count)
 		}
 	}
+	if len(columns.AcceptanceDateTime) != 0 && len(columns.AcceptanceDateTime) != count {
+		return parsedSubmissions{}, fmt.Errorf("SEC submissions acceptanceDateTime column length %d does not match accession count %d", len(columns.AcceptanceDateTime), count)
+	}
 	identities := make([]FilingIdentity, 0, count)
 	for index, accession := range columns.AccessionNumber {
 		if err := validateAccession(accession); err != nil {
@@ -135,16 +139,24 @@ func parseSubmissions(data []byte, ref providercontract.RawPayloadRef) (parsedSu
 		if err := validateForm(form); err != nil {
 			return parsedSubmissions{}, err
 		}
-		filingDate, _ := time.Parse("2006-01-02", columns.FilingDate[index])
-		var reportDate *time.Time
+		filingDate := SECDate(columns.FilingDate[index])
+		var reportDate *SECDate
 		if columns.ReportDate[index] != "" {
 			if err := validateDate(columns.ReportDate[index]); err != nil {
 				return parsedSubmissions{}, err
 			}
-			parsed, _ := time.Parse("2006-01-02", columns.ReportDate[index])
+			parsed := SECDate(columns.ReportDate[index])
 			reportDate = &parsed
 		}
-		identities = append(identities, FilingIdentity{CIK: cik, CompanyName: envelope.Name, AccessionNumber: accession, Form: form, Dates: FilingDateSemantics{FilingDate: filingDate.UTC(), ReportDate: reportDate}, PrimaryDocument: columns.PrimaryDocument[index], PrimaryDocumentDescription: columns.PrimaryDocumentDescription[index], IsXBRL: columns.IsXBRL[index] != 0, IsInlineXBRL: columns.IsInlineXBRL[index] != 0, Amended: strings.HasSuffix(form, "/A"), SourcePayload: ref})
+		var acceptanceDateTime *time.Time
+		if len(columns.AcceptanceDateTime) != 0 && strings.TrimSpace(columns.AcceptanceDateTime[index]) != "" {
+			parsed, err := parseAcceptanceDateTime(columns.AcceptanceDateTime[index])
+			if err != nil {
+				return parsedSubmissions{}, err
+			}
+			acceptanceDateTime = &parsed
+		}
+		identities = append(identities, FilingIdentity{CIK: cik, CompanyName: envelope.Name, AccessionNumber: accession, Form: form, Dates: FilingDateSemantics{FilingDate: filingDate, ReportDate: reportDate, AcceptanceDateTime: acceptanceDateTime, AcquiredAt: ref.ReceivedAt}, PrimaryDocument: columns.PrimaryDocument[index], PrimaryDocumentDescription: columns.PrimaryDocumentDescription[index], IsXBRL: columns.IsXBRL[index] != 0, IsInlineXBRL: columns.IsInlineXBRL[index] != 0, Amended: strings.HasSuffix(form, "/A"), SourcePayload: ref})
 	}
 	for _, file := range envelope.Filings.Files {
 		if strings.TrimSpace(file.Name) == "" || strings.ContainsAny(file.Name, `/\`) || strings.Contains(file.Name, "..") {
@@ -171,6 +183,18 @@ func validateForm(value string) error {
 		return fmt.Errorf("SEC form contains unsupported characters")
 	}
 	return nil
+}
+
+func parseAcceptanceDateTime(value string) (time.Time, error) {
+	parsed, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(value))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("SEC acceptanceDateTime is malformed: %w", err)
+	}
+	_, offset := parsed.Zone()
+	if offset != 0 {
+		return time.Time{}, fmt.Errorf("SEC acceptanceDateTime must use UTC")
+	}
+	return parsed.UTC(), nil
 }
 func filingURI(cik, accession, document string) string {
 	return "https://www.sec.gov/Archives/edgar/data/" + strings.TrimLeft(cik, "0") + "/" + strings.ReplaceAll(accession, "-", "") + "/" + document
@@ -203,8 +227,10 @@ func buildFilingEvidence(identity FilingIdentity, ref providercontract.RawPayloa
 	if err != nil {
 		return FilingEvidence{}, err
 	}
-	evidenceRef.PublishedAt = &identity.Dates.FilingDate
-	evidence := canonical.Evidence{ContractVersion: canonical.EvidenceContractV2, ID: evidenceID, Type: canonical.EvidenceTypeFiling, Title: identity.CompanyName + " " + identity.Form + " " + identity.AccessionNumber, Summary: "SEC filing metadata", Source: canonical.SourceReference{ID: SubmissionsSourceID, Kind: canonical.SourceKindRegulator, ExternalID: &canonical.ExternalID{Namespace: "sec.accession", Value: identity.AccessionNumber}, URI: filingURI(identity.CIK, identity.AccessionNumber, identity.PrimaryDocument)}, Links: []canonical.EvidenceLink{{Target: issuerRef, Relationship: canonical.EvidenceRelationshipDescribes}}, PublishedAt: &identity.Dates.FilingDate, CollectedAt: ref.ReceivedAt, CreatedAt: ref.ReceivedAt, ImmutableRef: &evidenceRef}
+	// The SEC filing date is date-only. EDGAR acceptance time is retained in
+	// FilingIdentity, but neither field asserts when the content first became
+	// available on sec.gov, so canonical PublishedAt remains unknown.
+	evidence := canonical.Evidence{ContractVersion: canonical.EvidenceContractV2, ID: evidenceID, Type: canonical.EvidenceTypeFiling, Title: identity.CompanyName + " " + identity.Form + " " + identity.AccessionNumber, Summary: "SEC filing metadata", Source: canonical.SourceReference{ID: SubmissionsSourceID, Kind: canonical.SourceKindRegulator, ExternalID: &canonical.ExternalID{Namespace: "sec.accession", Value: identity.AccessionNumber}, URI: filingURI(identity.CIK, identity.AccessionNumber, identity.PrimaryDocument)}, Links: []canonical.EvidenceLink{{Target: issuerRef, Relationship: canonical.EvidenceRelationshipDescribes}}, CollectedAt: ref.ReceivedAt, CreatedAt: ref.ReceivedAt, ImmutableRef: &evidenceRef}
 	if err := evidence.Validate(); err != nil {
 		return FilingEvidence{}, err
 	}
@@ -250,7 +276,7 @@ func (normalizer *submissionsNormalizer) NormalizeBatch(_ context.Context, input
 	return result, nil
 }
 func filingCandidate(filing FilingEvidence) providercontract.NormalizationCandidate {
-	return providercontract.NormalizationCandidate{Record: filing.Evidence, Revision: canonical.RevisionIdentity{Namespace: "jax.normalized.sec.filing", Value: string(filing.Evidence.ID)}, Dispositions: []providercontract.FieldDisposition{{ProviderField: "cik", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.cik"}, {ProviderField: "accessionNumber", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.accession_number"}, {ProviderField: "form", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.form"}, {ProviderField: "filingDate", Status: providercontract.FieldDispositionRepresented, CanonicalField: "evidence.published_at"}, {ProviderField: "reportDate", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.report_date"}, {ProviderField: "primaryDocument", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.primary_document"}}}
+	return providercontract.NormalizationCandidate{Record: filing.Evidence, Revision: canonical.RevisionIdentity{Namespace: "jax.normalized.sec.filing", Value: string(filing.Evidence.ID)}, Dispositions: []providercontract.FieldDisposition{{ProviderField: "cik", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.cik"}, {ProviderField: "accessionNumber", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.accession_number"}, {ProviderField: "form", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.form"}, {ProviderField: "filingDate", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.filing_date"}, {ProviderField: "acceptanceDateTime", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.acceptance_datetime"}, {ProviderField: "reportDate", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.report_date"}, {ProviderField: "primaryDocument", Status: providercontract.FieldDispositionRepresented, CanonicalField: "filing.primary_document"}, {ProviderField: "publicAvailabilityTime", Status: providercontract.FieldDispositionIntentionallyOmitted, ReasonCode: "sec_does_not_supply_exact_availability_timestamp"}}}
 }
 
 type factValue struct {
@@ -384,11 +410,11 @@ func validateFactValue(value factValue) (factValue, error) {
 func makeFact(taxonomy, concept, unit string, conceptData factConcept, value factValue, index int, ref providercontract.RawPayloadRef, issuer canonical.Issuer, cik string) (CompanyFactObservation, error) {
 	number, _ := strconv.ParseFloat(strings.TrimSpace(string(value.Val)), 64)
 	end, _ := time.Parse("2006-01-02", value.End)
-	filed, _ := time.Parse("2006-01-02", value.Filed)
+	filed := SECDate(value.Filed)
 	periodKind := PeriodInstant
-	var start *time.Time
+	var start *SECDate
 	if value.Start != "" {
-		parsed, _ := time.Parse("2006-01-02", value.Start)
+		parsed := SECDate(value.Start)
 		start = &parsed
 		periodKind = PeriodDuration
 	}
@@ -399,22 +425,21 @@ func makeFact(taxonomy, concept, unit string, conceptData factConcept, value fac
 	if err != nil {
 		return CompanyFactObservation{}, err
 	}
-	evidenceRef.PublishedAt = &filed
-	observation := canonical.Observation{ContractVersion: canonical.ObservationContractV2, ID: observationID, Type: canonical.ObservationTypeFundamental, Subject: issuerRef, Metric: metricFor(taxonomy, concept), Value: canonical.ObservedValue{Type: canonical.ObservedValueTypeNumber, Number: &number, Unit: unit}, Source: canonical.SourceReference{ID: CompanyFactsSourceID, Kind: canonical.SourceKindRegulator, ExternalID: &canonical.ExternalID{Namespace: "sec.accession", Value: value.AccessionNumber}, URI: "https://data.sec.gov/api/xbrl/companyfacts/CIK" + cik + ".json"}, EvidenceIDs: []canonical.EvidenceID{evidenceID}, ObservedAt: end.UTC(), PublishedAt: &filed, CollectedAt: ref.ReceivedAt, CreatedAt: ref.ReceivedAt}
+	observation := canonical.Observation{ContractVersion: canonical.ObservationContractV2, ID: observationID, Type: canonical.ObservationTypeFundamental, Subject: issuerRef, Metric: metricFor(taxonomy, concept), Value: canonical.ObservedValue{Type: canonical.ObservedValueTypeNumber, Number: &number, Unit: unit}, Source: canonical.SourceReference{ID: CompanyFactsSourceID, Kind: canonical.SourceKindRegulator, ExternalID: &canonical.ExternalID{Namespace: "sec.accession", Value: value.AccessionNumber}, URI: "https://data.sec.gov/api/xbrl/companyfacts/CIK" + cik + ".json"}, EvidenceIDs: []canonical.EvidenceID{evidenceID}, ObservedAt: end.UTC(), CollectedAt: ref.ReceivedAt, CreatedAt: ref.ReceivedAt}
 	lineage := canonical.LineageInput{Kind: canonical.LineageInputKindEvidence, Evidence: &evidenceRef}
 	fingerprint, err := canonical.ComputeInputFingerprint([]canonical.LineageInput{lineage})
 	if err != nil {
 		return CompanyFactObservation{}, err
 	}
-	observation.Provenance = &canonical.Provenance{ContractVersion: canonical.ProvenanceContractV1, ID: "pvn_" + canonical.DigestBytes([]byte(string(observationID))).Value[:24], Inputs: []canonical.LineageInput{lineage}, InputFingerprint: fingerprint, Producer: canonical.ComponentIdentity{ID: CompanyFactsNormalizerID, Kind: canonical.ComponentKindNormalizer, Name: "SEC Company Facts deterministic normalizer", Version: canonical.VersionIdentity{Namespace: "jax.sec.normalizer", Value: "1.0.0"}, Provider: &ProviderIdentity}}
-	evidence := canonical.Evidence{ContractVersion: canonical.EvidenceContractV2, ID: evidenceID, Type: canonical.EvidenceTypeDocument, Title: "SEC XBRL " + taxonomy + ":" + concept + " " + value.AccessionNumber, Summary: "SEC Company Facts source context", Source: observation.Source, Links: []canonical.EvidenceLink{{Target: canonical.ContractRef{Kind: canonical.ContractKindObservation, ID: string(observationID), ContractVersion: canonical.ObservationContractV2}, Relationship: canonical.EvidenceRelationshipDescribes}}, PublishedAt: &filed, CollectedAt: ref.ReceivedAt, CreatedAt: ref.ReceivedAt, ImmutableRef: &evidenceRef}
+	observation.Provenance = &canonical.Provenance{ContractVersion: canonical.ProvenanceContractV1, ID: "pvn_" + canonical.DigestBytes([]byte(string(observationID))).Value[:24], Inputs: []canonical.LineageInput{lineage}, InputFingerprint: fingerprint, Producer: canonical.ComponentIdentity{ID: CompanyFactsNormalizerID, Kind: canonical.ComponentKindNormalizer, Name: "SEC Company Facts deterministic normalizer", Version: canonical.VersionIdentity{Namespace: "jax.sec.normalizer", Value: "1.1.0"}, Provider: &ProviderIdentity}}
+	evidence := canonical.Evidence{ContractVersion: canonical.EvidenceContractV2, ID: evidenceID, Type: canonical.EvidenceTypeDocument, Title: "SEC XBRL " + taxonomy + ":" + concept + " " + value.AccessionNumber, Summary: "SEC Company Facts source context", Source: observation.Source, Links: []canonical.EvidenceLink{{Target: canonical.ContractRef{Kind: canonical.ContractKindObservation, ID: string(observationID), ContractVersion: canonical.ObservationContractV2}, Relationship: canonical.EvidenceRelationshipDescribes}}, CollectedAt: ref.ReceivedAt, CreatedAt: ref.ReceivedAt, ImmutableRef: &evidenceRef}
 	if err := observation.Validate(); err != nil {
 		return CompanyFactObservation{}, err
 	}
 	if err := evidence.Validate(); err != nil {
 		return CompanyFactObservation{}, err
 	}
-	return CompanyFactObservation{Observation: observation, Evidence: evidence, Semantics: XBRLFactSemantics{Taxonomy: taxonomy, Concept: concept, Label: conceptData.Label, Description: conceptData.Description, Unit: unit, SourceValue: strings.TrimSpace(string(value.Val)), Period: XBRLPeriod{Kind: periodKind, Start: start, End: end.UTC()}, Form: value.Form, AccessionNumber: value.AccessionNumber, FilingDate: filed.UTC(), FiscalYear: value.FiscalYear, FiscalPeriod: value.FiscalPeriod, Frame: value.Frame, Amended: strings.HasSuffix(value.Form, "/A"), SourceIndex: index, SourcePayload: ref}}, nil
+	return CompanyFactObservation{Observation: observation, Evidence: evidence, Semantics: XBRLFactSemantics{Taxonomy: taxonomy, Concept: concept, Label: conceptData.Label, Description: conceptData.Description, Unit: unit, SourceValue: strings.TrimSpace(string(value.Val)), Period: XBRLPeriod{Kind: periodKind, Start: start, End: SECDate(value.End)}, Form: value.Form, AccessionNumber: value.AccessionNumber, FilingDate: filed, FiscalYear: value.FiscalYear, FiscalPeriod: value.FiscalPeriod, Frame: value.Frame, Amended: strings.HasSuffix(value.Form, "/A"), SourceIndex: index, SourcePayload: ref}}, nil
 }
 
 type companyFactsNormalizer struct {

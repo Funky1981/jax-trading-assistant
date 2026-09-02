@@ -34,7 +34,7 @@ func (identity RequestIdentity) userAgent() (string, error) {
 		return "", errors.New("SEC user-agent identity must not contain newlines")
 	}
 	if contact == "" {
-		return product, nil
+		return "", errors.New("SEC user-agent contact is required")
 	}
 	return product + " " + contact, nil
 }

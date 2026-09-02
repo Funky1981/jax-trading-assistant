@@ -11,15 +11,16 @@ import (
 )
 
 const (
-	ProviderID               = "pvd_sec_edgar"
-	ProviderNamespace        = "sec.data_api"
-	SubmissionsSourceID      = "src_sec_submissions"
-	CompanyFactsSourceID     = "src_sec_companyfacts"
-	SubmissionsRawSchema     = "sec.submissions"
-	CompanyFactsRawSchema    = "sec.companyfacts"
-	SubmissionsNormalizerID  = "cmp_sec_submissions_normalizer"
-	CompanyFactsNormalizerID = "cmp_sec_companyfacts_normalizer"
-	maximumHistoricalFiles   = 64
+	ProviderID                        = "pvd_sec_edgar"
+	ProviderNamespace                 = "sec.data_api"
+	SubmissionsSourceID               = "src_sec_submissions"
+	CompanyFactsSourceID              = "src_sec_companyfacts"
+	SubmissionsRawSchema              = "sec.submissions"
+	CompanyFactsRawSchema             = "sec.companyfacts"
+	SubmissionsNormalizerID           = "cmp_sec_submissions_normalizer"
+	CompanyFactsNormalizerID          = "cmp_sec_companyfacts_normalizer"
+	SECFairAccessMaxRequestsPerSecond = 10
+	maximumHistoricalFiles            = 64
 )
 
 var (
@@ -38,7 +39,7 @@ func SECProviderDefinition() providercontract.ProviderDefinition {
 		ContractVersion:    providercontract.ProviderDefinitionV1,
 		Identity:           ProviderIdentity,
 		DisplayName:        "U.S. Securities and Exchange Commission EDGAR",
-		AdapterVersion:     canonical.VersionIdentity{Namespace: "jax.sec.adapter", Value: "1.0.0"},
+		AdapterVersion:     canonical.VersionIdentity{Namespace: "jax.sec.adapter", Value: "1.1.0"},
 		ProviderAPIVersion: &canonical.VersionIdentity{Namespace: "sec.data_api.documentation", Value: "2025-04"},
 		Capabilities: []providercontract.Capability{
 			{ContractVersion: providercontract.CapabilityContractV1, ID: providercontract.CapabilityCorporateFiling, Category: providercontract.DataCategoryRegulatoryFiling, Support: providercontract.SupportSupported,
@@ -93,9 +94,19 @@ func (resolver StaticIdentityResolver) ResolveSECIdentity(cik string) (canonical
 	return canonical.Issuer{}, fmt.Errorf("canonical issuer mapping for SEC CIK %s lacks matching sec.cik external identity", cik)
 }
 
+// SECDate is a date-only SEC value. It intentionally is not time.Time: a
+// filing/report date has no asserted time-of-day or public-availability
+// meaning.
+type SECDate string
+
+func (date SECDate) Validate() error { return validateDate(string(date)) }
+
 type FilingDateSemantics struct {
-	FilingDate time.Time
-	ReportDate *time.Time
+	FilingDate             SECDate
+	ReportDate             *SECDate
+	AcceptanceDateTime     *time.Time
+	AcquiredAt             time.Time
+	PublicAvailabilityTime *time.Time
 }
 
 // FilingIdentity is a provider-neutral filing identity, retaining the SEC
@@ -140,6 +151,8 @@ type SubmissionsResult struct {
 	Completeness CompletenessState
 }
 
+func (result SubmissionsResult) IsComplete() bool { return result.Completeness == CompletenessComplete }
+
 type PeriodKind string
 
 const (
@@ -149,8 +162,8 @@ const (
 
 type XBRLPeriod struct {
 	Kind  PeriodKind
-	Start *time.Time
-	End   time.Time
+	Start *SECDate
+	End   SECDate
 }
 
 // XBRLFactSemantics preserves interpretation metadata not represented by the
@@ -166,7 +179,7 @@ type XBRLFactSemantics struct {
 	Period          XBRLPeriod
 	Form            string
 	AccessionNumber string
-	FilingDate      time.Time
+	FilingDate      SECDate
 	FiscalYear      *int
 	FiscalPeriod    string
 	Frame           string
@@ -189,6 +202,21 @@ type CompanyFactsResult struct {
 	Execution providercontract.ExecutionResult
 	Raw       providercontract.RawPayloadDescriptor
 	Facts     []CompanyFactObservation
+	Coverage  CompanyFactsCoverageSemantics
+}
+
+// CompanyFactsCoverageSemantics records the documented scope of the SEC
+// Company Facts aggregation. It is not a completeness claim.
+type CompanyFactsCoverageSemantics struct {
+	EntityWideNonCustomTaxonomies bool
+	CustomTaxonomiesIncluded      bool
+	AbsenceIsProofOfNonDisclosure bool
+}
+
+var SECCompanyFactsCoverage = CompanyFactsCoverageSemantics{
+	EntityWideNonCustomTaxonomies: true,
+	CustomTaxonomiesIncluded:      false,
+	AbsenceIsProofOfNonDisclosure: false,
 }
 
 // Dependencies is the Phase 02 composition boundary. Resolver is required so
