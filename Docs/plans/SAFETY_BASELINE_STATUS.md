@@ -1,8 +1,13 @@
 # Safety Baseline Status
 
-## Controlling Plan
+> **HISTORICAL / SUPPORTING STATUS NOTE** — The current development roadmap is
+> `Docs/ROADMAP.md`. This document records an earlier safety-baseline work
+> sequence and remains useful safety evidence; it does not control sequencing.
 
-`Docs/plans/jax-trading-roadmap-pack` is the controlling roadmap for current work.
+## Roadmap reference
+
+The earlier plan was `Docs/plans/jax-trading-roadmap-pack`. Current phase and
+package status are defined by `Docs/ROADMAP.md`.
 
 Archived autonomous, live-trading, and broker-execution docs are historical references only. They must not be used to justify live trading, leverage, automatic order placement, or broker-execution expansion until later explicit roadmap gates pass.
 

@@ -1,5 +1,10 @@
 # Current Focus
 
+> **Supporting historical focus snapshot.** Current development focus is
+> authoritative in `Docs/ROADMAP.md`. The Phase 15 review-operations notes below
+> describe existing capability work and must not be read as the active Phase 03
+> sequence or authorization for WP-03.04.
+
 This file tells humans and AI assistants what matters right now.
 
 ## Current Objective

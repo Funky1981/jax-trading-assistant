@@ -23,7 +23,9 @@ The executable synthetic proof documented in `Docs/evidence/WP-02.06-DATA-SOURCE
 ## Non-blocking debt carried forward
 
 - Provider/raw/canonical contracts are not yet broadly adopted by production runtime consumers.
-- The raw payload proof store remains in-memory rather than durable production storage.
+- The initial raw-payload proof store was in-memory; corrective WP-02.07 adds the
+  durable PostgreSQL `RawPayloadStore` while broader production consumer adoption
+  remains future work.
 - Production freshness TTL values still require evidence-backed per-capability policy.
 - Production retry/rate-limit/health thresholds remain evidence/configuration inputs rather than invented constants.
 - No real source/provider qualification catalogue exists yet.
@@ -31,4 +33,6 @@ The executable synthetic proof documented in `Docs/evidence/WP-02.06-DATA-SOURCE
 - No non-Go canonical-byte conformance implementation exists yet.
 - Repository-wide unrelated gofmt/lint debt remains.
 
-These items do not block Phase 03. Phase 03 is eligible but has not started; WP-03.01 requires separate technical-lead package authorization.
+These items do not block Phase 03. At this gate's close-out date Phase 03 was
+eligible but had not started; current Phase 03 status and package authority are
+in `Docs/ROADMAP.md`.

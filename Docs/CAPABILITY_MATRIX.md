@@ -1,5 +1,9 @@
 # Jax Capability Matrix
 
+This matrix tracks capability maturity. It is supporting evidence for the
+authoritative active roadmap in `Docs/ROADMAP.md`; it is not itself the roadmap
+sequence or a phase-completion register.
+
 ## Status values
 
 | Status | Meaning |
@@ -11,6 +15,14 @@
 | IMPLEMENTED | Code exists |
 | TESTED | Automated tests exist |
 | PROVEN | Validated through paper/research evidence |
+
+`IMPLEMENTED` and `TESTED` mean that a capability exists and has automated
+coverage. They do not by themselves mean that the capability is accepted in the
+current architecture programme, revalidated against current providers and
+provenance, or promoted toward live use. `PROVEN` is evidence maturity; roadmap
+`ACCEPTED` / `COMPLETE / GO` is a separate technical-lead gate for a stated phase
+or work package. Preserve valid historical proof even when roadmap sequencing
+changes.
 
 ## Capability matrix
 

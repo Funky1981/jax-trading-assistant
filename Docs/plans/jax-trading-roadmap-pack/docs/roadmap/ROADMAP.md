@@ -1,5 +1,13 @@
 # Jax Trading Roadmap
 
+> **HISTORICAL / SUPPORTING ROADMAP MATERIAL — NOT CURRENT AUTHORITY**
+>
+> This document preserves the earlier safety, candidate, evidence, trust-gate,
+> risk and paper-trading sequence. It is useful background, but it has been
+> superseded as the current phase sequence. Use `Docs/ROADMAP.md` for current
+> development status and authorization. Do not infer live-trading authorization
+> from this historical plan.
+
 Jax is not a magic AI trader. Jax is a production-grade trading decision system.
 
 Core flow:

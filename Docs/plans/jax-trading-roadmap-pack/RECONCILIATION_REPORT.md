@@ -1,5 +1,9 @@
 # Jax Roadmap Reconciliation Report
 
+> **HISTORICAL / SUPPORTING REPORT** — This report describes an earlier roadmap
+> reconciliation. The current authoritative roadmap is `Docs/ROADMAP.md`; the
+> pack referenced below is retained for historical context only.
+
 ## A. Current Repo Status Summary
 
 New roadmap located at:
@@ -43,7 +47,7 @@ Note: the request mentioned `Docs/plans/roadmap/`, but the actual new path is `D
 |---|---|---|---|
 | `Docs/ROADMAP.md` active roadmap | MERGE INTO NEW ROADMAP | Useful implemented-status spine, but conflicts on live trading being not planned. | Update to state new roadmap pack is controlling; mark live only as late explicit-gate phase. |
 | `docs/PHASE_CONTRACTS/00-07` | MERGE INTO NEW ROADMAP | Decision core, risk veto, approval, review align with phases 0-7. | Keep as implementation evidence; reconcile naming/status with new gates. |
-| `Docs/TRADING_BRAIN/*` | MERGE INTO NEW ROADMAP | Good decision/evidence/risk/approval concepts, but less complete than new roadmap. | Treat as supporting specs, not controlling plan. |
+| `Docs/TRADING_BRAIN/*` | MERGE INTO CURRENT ROADMAP | Good decision/evidence/risk/approval concepts, but less complete than current roadmap. | Treat as supporting specs, not the active plan. |
 | Archived `AUTONOMOUS_TRADING_ROADMAP.md` | SUPERSEDED | Promotes autonomous monitoring and automatic approved-trade execution. | Mark historical/non-canonical; do not implement from it. |
 | Archived masterplan phase 00/01 no-fake-data, baseline hardening | KEEP | Strongly matches safety baseline. | Pull into Phase 0 checklist. |
 | Archived masterplan phase 02 event data foundation | MERGE INTO NEW ROADMAP | Supports market/news/event data. | Use after safety baseline and candidate model. |
@@ -115,7 +119,7 @@ This should not add trading behavior. It should codify current safety assumption
 - Modify or add tests near `internal/modules/instruments/policy_test.go`.
 - Add a small safety config test, likely `libs/risk/policy_test.go` or a new focused test under `tests/golden` / `tests/safety`.
 - Possibly update `config/risk-constraints.json` to set leverage disabled, but only after deciding whether config changes are allowed in the first task.
-- Update `Docs/ROADMAP.md` or `Docs/plans/README.md` to point at the new controlling roadmap.
+- Update `Docs/ROADMAP.md` or `Docs/plans/README.md` to point at the current authoritative roadmap.
 
 ## F. Test Plan
 

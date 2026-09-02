@@ -1,5 +1,11 @@
 # Project Status
 
+> **Supporting implementation-status snapshot.** Current architecture phase,
+> package status and next work are authoritative in `Docs/ROADMAP.md`. The
+> Phase 15 material below records older higher-level implementation work; its
+> `implemented` / `tested` labels are capability evidence, not current-roadmap
+> phase completion.
+
 ## Snapshot
 
 - **Active runtime layout**: `cmd/trader` serves deterministic runtime plus frontend API surface; `cmd/research` serves orchestration/research and memory tools.

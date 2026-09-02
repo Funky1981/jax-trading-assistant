@@ -1,10 +1,14 @@
 # Structured Trade Candidate Model
 
+> **HISTORICAL / SUPPORTING IMPLEMENTATION NOTE** — Current roadmap authority is
+> `Docs/ROADMAP.md`. This document records an earlier candidate-model increment;
+> its implementation status does not imply current-phase acceptance.
+
 ## Status
 
 Implemented as the next phase after the Safety Baseline.
 
-Controlling roadmap:
+Historical roadmap reference:
 
 `Docs/plans/jax-trading-roadmap-pack`
 

@@ -1,5 +1,9 @@
 # Evidence Scoring
 
+> **HISTORICAL / SUPPORTING IMPLEMENTATION NOTE** — Current roadmap authority is
+> `Docs/ROADMAP.md`. This document records an earlier evidence-scoring increment;
+> its implementation status does not imply current-phase acceptance.
+
 ## Purpose
 
 Evidence scoring answers one narrow question:
@@ -8,7 +12,7 @@ Evidence scoring answers one narrow question:
 
 It does not decide whether to execute a trade.
 
-Controlling roadmap:
+Historical roadmap reference:
 
 `Docs/plans/jax-trading-roadmap-pack`
 

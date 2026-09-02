@@ -9,6 +9,7 @@ This index tracks imported, archived, and completed planning packs under `Docs/p
 | Folder | Scope | Status |
 | --- | --- | --- |
 | `jax-all-plans-pack-swing-v2/` | Swing V2 planning pack imported for reference | Archive/import |
+| `jax-trading-roadmap-pack/` | Earlier candidate/risk/paper roadmap retained for context | Historical/supporting |
 | `automation-n8n/` | N8N automation planning and integration notes | Archive/import |
 | `Completed/analysis-intelligence-layer/` | Expert-level technical analysis, fundamental analysis, scoring, review flow, memory, and TA/FA UAT | Complete |
 | `Completed/robust-profitability-layer/` | Market regime, cross-asset confirmation, confounders, execution quality, sizing, walk-away logic, review, dashboards, and stress testing | Complete |

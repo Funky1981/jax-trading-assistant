@@ -18,7 +18,13 @@ Phase 01 established the source-backed Jax contract inventory, canonical domain 
 
 Phase 02 established the stable provider/capability boundary, exact-byte raw acquisition references, deterministic normalization and immutable provenance, explicit freshness/LKG semantics, bounded operational resilience and health, and evidence-backed role-specific source qualification. Its exit condition was demonstrated by an executable synthetic chain and a second provider/raw-schema adapter producing the same provider-neutral downstream canonical research projection.
 
-Phase 03 — Core Financial Evidence is eligible but has not started. The exact next package candidate is `WP-03.01 - Market price/OHLCV provider hardening`; it awaits separate technical-lead package authorization. See `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
+Phase 03 — Core Financial Evidence is **in progress**. WP-03.01 Market
+price/OHLCV, WP-03.02 SEC/EDGAR/XBRL, and WP-03.03 FRED/ALFRED macro
+observations and vintages are accepted **COMPLETE / GO**, including their
+documented temporal, vintage and evidence-closure work. The next package is
+`WP-03.04 — Economic Release / Calendar Ingestion`; it has not started and
+requires separate technical-lead authorization. See `Docs/ROADMAP.md`,
+`ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 
 ## Non-negotiable principles
 

@@ -1,8 +1,11 @@
 # Safety Baseline GPT Handoff
 
+> **HISTORICAL / SUPPORTING HANDOFF** — Current roadmap authority is
+> `Docs/ROADMAP.md`. This handoff records the earlier safety-baseline sequence.
+
 ## Context
 
-The controlling roadmap is:
+The historical roadmap pack was:
 
 `Docs/plans/jax-trading-roadmap-pack`
 

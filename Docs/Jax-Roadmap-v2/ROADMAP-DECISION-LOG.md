@@ -173,9 +173,14 @@ provider capability
 
 A second synthetic adapter using a different provider identity and raw schema produces the same provider-neutral downstream canonical research projection. A provider can therefore change behind the stable adapter boundary without changing research-facing canonical logic.
 
-The following accepted debts are non-blocking: provider/raw/canonical contracts are not yet broadly adopted by production consumers; the raw proof store is in-memory; production freshness TTLs and operational retry/rate-limit/health thresholds require evidence-backed configuration; no real provider/source qualification catalogue exists; real-provider licensing, reliability, and cost facts remain unassessed; no non-Go canonical-byte conformance implementation exists; and unrelated repository-wide gofmt/lint debt remains.
+The following accepted debts are non-blocking: provider/raw/canonical contracts are not yet broadly adopted by production consumers; the initial in-memory raw proof store was subsequently closed by corrective WP-02.07 with a durable PostgreSQL `RawPayloadStore`; production freshness TTLs and operational retry/rate-limit/health thresholds require evidence-backed configuration; no real provider/source qualification catalogue exists; real-provider licensing, reliability, and cost facts remain unassessed; no non-Go canonical-byte conformance implementation exists; and unrelated repository-wide gofmt/lint debt remains.
 
-Phase 03 is eligible but not started. Its first package candidate is `WP-03.01 - Market price/OHLCV provider hardening`, which awaits separate technical-lead package authorization. See `NEXT-WORK-PACKAGE.md`.
+Phase 03 is now **in progress**. WP-03.01 Market price/OHLCV, WP-03.02
+SEC/EDGAR/XBRL, and WP-03.03 FRED/ALFRED macro observations and vintages are
+accepted **COMPLETE / GO** in their retained evidence handovers. The next
+package is `WP-03.04 — Economic Release / Calendar Ingestion`; it is not
+started and still requires separate technical-lead package authorization. See
+`Docs/ROADMAP.md` and `NEXT-WORK-PACKAGE.md`.
 
 Evidence:
 

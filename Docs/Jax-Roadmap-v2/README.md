@@ -1,8 +1,16 @@
 # Jax Roadmap v2 — Consolidated Pack
 
+> **SUPPORTING CURRENT PACKAGE DETAIL** — The authoritative human-readable
+> roadmap is `Docs/ROADMAP.md`. Use this pack for detailed phase briefs, gates,
+> package acceptance records and evidence navigation; do not use it as a second
+> roadmap authority.
+
 Start with `JAX-ROADMAP-OVERVIEW.md`.
 
-Current authority is recorded in `ROADMAP-DECISION-LOG.md`; the first incomplete package awaiting technical-lead authorization is recorded in `NEXT-WORK-PACKAGE.md`.
+Detailed package decisions are recorded in `ROADMAP-DECISION-LOG.md`; the first
+incomplete package awaiting technical-lead authorization is recorded in
+`NEXT-WORK-PACKAGE.md`. The human-facing current status is summarized in
+`Docs/ROADMAP.md`.
 
 This pack is intentionally implementation-oriented. Each phase contains:
 - `README.md` — purpose, prerequisites, scope and exit gate.

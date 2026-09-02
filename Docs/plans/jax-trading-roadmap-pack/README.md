@@ -1,5 +1,12 @@
 # Jax Trading Roadmap Pack
 
+> **HISTORICAL / SUPPORTING ROADMAP MATERIAL**
+>
+> This pack is retained for useful candidate, risk, paper and review concepts.
+> Its older phase sequence is not the current controlling development roadmap.
+> Read `Docs/ROADMAP.md` for the authoritative active programme, current phase,
+> package status and next work package.
+
 Files included:
 
 ```text
