@@ -20,14 +20,15 @@ decision remains `NO_TRADE`.
 | Phase 02 — Provider / Data Platform | ✅ Accepted / complete, including durable raw storage closure |
 | Phase 03 — Core Financial Evidence | **IN PROGRESS** |
 | Current accepted package | WP-03.05 — Treasury / EIA / CBOE / CFTC Source Evaluation and First Approved Integrations (**COMPLETE / GO**) |
-| Current implementation package | **WP-03.06 — Evidence-quality / cross-source checks (IMPLEMENTED — awaiting technical-lead review)** |
-| Next package | **Phase-03 technical-lead exit gate (not started)** |
+| Current implementation package | **Phase-03 exit gate — IN PROGRESS / EXIT GATE UNDER REVIEW** |
+| Next package | **Technical-lead Phase-03 exit-gate decision; Phase 04 not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
 WP-03.04 and WP-03.05 have received independent technical-lead **FINAL GO**.
-WP-03.06 is implemented but remains pending independent technical-lead review;
-Phase 03 remains in progress and Phase 04 is not authorized.
+WP-03.06 has received independent technical-lead FINAL GO and is now COMPLETE /
+GO. The Phase-03 exit demonstration is under review; Phase 03 remains in
+progress and Phase 04 is not authorized.
 
 ## Roadmap status vocabulary
 
@@ -92,7 +93,7 @@ without relying on model memory.
 | WP-03.03 — FRED / ALFRED macro observations + vintages | **COMPLETE / GO** | `Docs/evidence/WP-03.03-FRED-ALFRED-MACRO-EVIDENCE.md`; point-in-time/vintage leakage protection and macro-evidence closure are included |
 | WP-03.04 — Economic release / calendar ingestion | **COMPLETE / GO** | `Docs/evidence/WP-03.04-ECONOMIC-RELEASE-CALENDAR-EVIDENCE.md` |
 | WP-03.05 — Treasury / EIA / CBOE / CFTC source evaluation and first approved integrations | **COMPLETE / GO** | `Docs/evidence/WP-03.05-TREASURY-EIA-CBOE-CFTC-SOURCE-EVALUATION.md` |
-| WP-03.06 — Evidence-quality / cross-source checks | **IMPLEMENTED — awaiting technical-lead review** | `Docs/evidence/WP-03.06-EVIDENCE-QUALITY-CROSS-SOURCE-CHECKS.md` |
+| WP-03.06 — Evidence-quality / cross-source checks | **COMPLETE / GO** | `Docs/evidence/WP-03.06-EVIDENCE-QUALITY-CROSS-SOURCE-CHECKS.md` |
 
 Corrective packages such as WP-03.01A are closure history under their parent
 package, not new permanent roadmap phases.
@@ -197,6 +198,5 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current implementation package is **WP-03.06 — Evidence-quality /
-cross-source checks** and awaits independent technical-lead review. Do not
-begin Phase 04 as part of this handover.
+The current position is **Phase-03 exit-gate verification under review** after
+WP-03.06 COMPLETE / GO. Do not begin Phase 04 as part of this closure.

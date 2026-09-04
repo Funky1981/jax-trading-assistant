@@ -1,5 +1,21 @@
 # Roadmap Decision Log
 
+## RD-2026-09-04-03 - WP-03.06 FINAL GO and Phase-03 exit-gate closure demonstration
+
+- Date: 2026-09-04
+- Phase: 03 - Core Financial Evidence
+- Status: WP-03.06 accepted COMPLETE / GO; Phase-03 exit gate under review
+- Decision authority: independent technical-lead FINAL GO supplied for WP-03.06; Phase-03 exit decision remains open
+
+WP-03.06 has received independent technical-lead **FINAL GO**. The bounded
+exit-gate verification retained real Treasury and Cboe context evidence, but
+the accepted AAPL market path failed with authentication and the accepted SEC
+path lacked the required automated-client identity. The fail-closed gate
+therefore reports `PHASE 03 EXIT CONDITION NOT YET DEMONSTRATED`. Phase 03
+remains in progress and Phase 04 has not started.
+
+Evidence: `../evidence/PHASE-03-EXIT-GATE.md`.
+
 ## RD-2026-09-04-02 - WP-03.05 FINAL GO and WP-03.06 implementation handover
 
 - Date: 2026-09-04

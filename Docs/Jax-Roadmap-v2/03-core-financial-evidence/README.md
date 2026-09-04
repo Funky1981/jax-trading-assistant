@@ -1,9 +1,8 @@
 # Phase 03 — Core Financial Evidence
 
-**Status:** IN PROGRESS. WP-03.01 through WP-03.05 are accepted
-**COMPLETE / GO**, including their documented temporal/vintage and evidence
-closures. WP-03.05 is also **COMPLETE / GO**. WP-03.06 is implemented and
-awaits separate technical-lead review.
+**Status:** IN PROGRESS — EXIT GATE UNDER REVIEW. WP-03.01 through WP-03.06
+are accepted **COMPLETE / GO**, including their documented temporal/vintage and
+evidence closures. The Phase-03 exit demonstration is not yet a Phase-03 GO.
 
 ## Purpose
     Populate the data platform with the smallest high-value set of market, corporate and macro sources required for useful US equity/ETF research.

@@ -1,8 +1,8 @@
 # Next Work Package
 
-Status: WP-03.05 COMPLETE / GO; WP-03.06 IMPLEMENTED / awaiting technical-lead review; Phase-03 exit gate pending
+Status: WP-03.05 COMPLETE / GO; WP-03.06 COMPLETE / GO; Phase-03 exit gate under review
 
-## Immediate next action - review WP-03.06, then resolve the Phase-03 exit gate
+## Immediate next action - review the Phase-03 exit-gate demonstration
 
 Package: `WP-03.06 - Evidence-quality cross-source checks`
 
@@ -17,7 +17,8 @@ evidence handovers.
 
 Phase 03 — Core Financial Evidence will populate the accepted data platform with the smallest high-value set of real market, corporate, and macro evidence required for useful US equity/ETF research. Its exit condition is a source-linked evidence packet for a representative US equity/ETF using real market, company, and macro evidence without relying on model memory.
 
-WP-03.05 has received technical-lead FINAL GO. WP-03.06 has been implemented
-under its approved scope and must not be marked COMPLETE / GO without
-independent technical-lead review. The Phase-03 exit gate remains pending;
-Phase 04 is not authorized or started.
+WP-03.05 and WP-03.06 have received technical-lead FINAL GO. The bounded
+Phase-03 exit demonstration is under review and currently reports that the
+real AAPL market/company packet is not demonstrated because the accepted live
+market and SEC acquisitions are unavailable. Phase 04 is not authorized or
+started.

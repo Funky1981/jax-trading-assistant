@@ -134,4 +134,6 @@ func TestTreasuryLiveOfficialXMLSmoke(t *testing.T) {
 	if err != nil || len(bytes) == 0 || len(result.Observations) == 0 {
 		t.Fatalf("live Treasury smoke did not retain and normalize payload: %v", err)
 	}
+	item := result.Observations[len(result.Observations)-1]
+	t.Logf("LIVE_ACQUIRED_NOW provider=%s source=%s raw_payload=%s digest=%s normalized_observation=%s tenor=%s observation_date=%s source_value=%s acquired_at=%s", ProviderID, SourceID, result.Raw.Ref.ID, result.Raw.Ref.Content.Digest.Value, item.Observation.ID, item.Tenor, item.Observation.ObservationDate, item.Observation.Value.SourceValue, result.Raw.Ref.ReceivedAt)
 }

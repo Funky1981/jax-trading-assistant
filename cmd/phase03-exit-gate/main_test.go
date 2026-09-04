@@ -1,0 +1,17 @@
+package main
+
+import "testing"
+
+func TestSourcePreflightDoesNotExposeCredentials(t *testing.T) {
+	t.Setenv("FINANCIAL_DATASETS_API_KEY", "")
+	t.Setenv("SEC_USER_AGENT", "")
+	t.Setenv("SEC_CONTACT", "")
+	for _, status := range []sourceStatus{marketStatus(), secStatus()} {
+		if status.Status != "BLOCKED" {
+			t.Fatalf("status = %+v", status)
+		}
+		if status.Detail == "" {
+			t.Fatal("missing bounded blocker detail")
+		}
+	}
+}
