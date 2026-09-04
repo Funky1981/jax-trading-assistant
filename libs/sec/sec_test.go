@@ -80,6 +80,20 @@ func TestSECProviderDefinitionAndIdentityContract(t *testing.T) {
 	}
 }
 
+func TestSECSubmissionsEndpointUsesOfficialCIKShape(t *testing.T) {
+	provider, err := NewProvider(Config{BaseURL: "https://data.sec.gov", Identity: RequestIdentity{Product: "Jax-test", Contact: "test@example.invalid"}, MaxResponseBytes: 1}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpoint, err := provider.endpoint("submissions", "CIK"+testCIK+".json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if endpoint != "https://data.sec.gov/submissions/CIK0000320193.json" {
+		t.Fatalf("submissions endpoint = %q", endpoint)
+	}
+}
+
 func TestSECConfigRequiresExplicitProductionIdentity(t *testing.T) {
 	t.Setenv(SECUserAgentEnv, "")
 	t.Setenv(SECContactEnv, "")
@@ -103,7 +117,7 @@ func TestSECSubmissionsExactBytesCanonicalOutputAndAmendments(t *testing.T) {
 		if r.Header.Get("User-Agent") != "Jax-test test@example.invalid" {
 			t.Fatalf("user-agent = %q", r.Header.Get("User-Agent"))
 		}
-		if r.URL.Path != "/submissions/0000320193.json" {
+		if r.URL.Path != "/submissions/CIK0000320193.json" {
 			t.Fatalf("path = %s", r.URL.Path)
 		}
 		if r.Header.Get("Authorization") != "" || r.Header.Get("Cookie") != "" {
@@ -289,6 +303,22 @@ func TestSECFailClosedForMalformedMediaIdentityCompletenessAndPersistence(t *tes
 	execution := providercontract.ExecutionResult{RawBytes: []byte("payload"), CompletedAt: time.Now().UTC()}
 	if _, err := persist(context.Background(), registry, failing, execution, "rpa_sec_persist_fail", providercontract.CapabilityCorporateFiling, submissionRaw(), SubmissionsSource, testRetention()); err == nil {
 		t.Fatal("persistence failure was accepted")
+	}
+}
+
+func TestSECSubmissionsHTTPStatusIsClassified(t *testing.T) {
+	provider, deps, server := testDependencies(t, "", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/submissions/CIK0000320193.json" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+	provider.config.BaseURL = server.URL
+	issuer := testIssuer()
+	result, err := provider.AcquireSubmissions(context.Background(), deps, SubmissionsRequest{Identity: CIKIdentity{Issuer: canonical.ContractRef{Kind: canonical.ContractKindIssuer, ID: string(issuer.ID), ContractVersion: issuer.ContractVersion}, CIK: testCIK}, PayloadID: "rpa_sec_not_found", Retention: testRetention()})
+	if err == nil || result.Execution.FailureClass != providercontract.FailureNotFound {
+		t.Fatalf("result = %+v, error = %v", result.Execution, err)
 	}
 }
 

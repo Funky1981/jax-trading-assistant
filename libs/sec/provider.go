@@ -176,7 +176,7 @@ func (provider *Provider) AcquireSubmissions(ctx context.Context, deps Dependenc
 	if request.MaxHistoricalFiles > maximumHistoricalFiles {
 		return SubmissionsResult{}, fmt.Errorf("SEC historical file limit must not exceed %d", maximumHistoricalFiles)
 	}
-	endpoint, err := provider.endpoint("submissions", request.Identity.CIK+".json")
+	endpoint, err := provider.endpoint("submissions", "CIK"+request.Identity.CIK+".json")
 	if err != nil {
 		return SubmissionsResult{}, err
 	}
