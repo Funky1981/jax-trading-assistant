@@ -1,5 +1,21 @@
 # Roadmap Decision Log
 
+## RD-2026-09-04-02 - WP-03.05 FINAL GO and WP-03.06 implementation handover
+
+- Date: 2026-09-04
+- Phase: 03 - Core Financial Evidence
+- Status: WP-03.05 accepted COMPLETE / GO; WP-03.06 implemented and awaiting independent review
+- Decision authority: independent technical-lead final decision supplied for WP-03.05; WP-03.06 remains subject to technical-lead decision
+
+WP-03.05 Treasury / EIA / CBOE / CFTC Source Evaluation and First Approved
+Integrations has received **FINAL GO**. WP-03.06 Evidence-quality
+Cross-source Checks is implemented under its bounded package scope and is
+handed over for independent review. Phase 03 remains in progress and Phase 04
+has not started.
+
+Evidence: `../evidence/WP-03.05-TREASURY-EIA-CBOE-CFTC-SOURCE-EVALUATION.md` and
+`../evidence/WP-03.06-EVIDENCE-QUALITY-CROSS-SOURCE-CHECKS.md`.
+
 ## RD-2026-09-04-01 - WP-03.04 FINAL GO and WP-03.05 review handover
 
 - Date: 2026-09-04
