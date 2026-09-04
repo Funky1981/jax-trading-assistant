@@ -78,7 +78,7 @@ func observationsFixture(value string, realtimeStart, realtimeEnd string, output
 	return `{"realtime_start":"` + realtimeStart + `","realtime_end":"` + realtimeEnd + `","observation_start":"2025-01-01","observation_end":"2025-01-01","units":"lin","output_type":` + string(rune('0'+outputType)) + `,"order_by":"observation_date","sort_order":"asc","count":1,"offset":0,"limit":1000,"observations":[{"realtime_start":"` + realtimeStart + `","realtime_end":"` + realtimeEnd + `","date":"2025-01-01","value":"` + value + `"}]}`
 }
 
-func TestFREDProviderDefinitionUsesOneLogicalIdentityAndMacroCapability(t *testing.T) {
+func TestFREDProviderDefinitionUsesOneLogicalIdentityAndMacroAndCalendarCapabilities(t *testing.T) {
 	definition := FREDProviderDefinition()
 	if err := definition.Validate(); err != nil {
 		t.Fatal(err)
@@ -86,7 +86,7 @@ func TestFREDProviderDefinitionUsesOneLogicalIdentityAndMacroCapability(t *testi
 	if definition.Identity.ID != ProviderID || definition.Identity.ExternalID == nil || definition.Identity.ExternalID.Value != "fred-alfred" {
 		t.Fatalf("provider identity = %+v", definition.Identity)
 	}
-	if len(definition.Capabilities) != 1 || definition.Capabilities[0].ID != providercontract.CapabilityMacroObservation {
+	if len(definition.Capabilities) != 2 || definition.Capabilities[0].ID != providercontract.CapabilityMacroObservation || definition.Capabilities[1].ID != providercontract.CapabilityEconomicCalendar {
 		t.Fatalf("capabilities = %+v", definition.Capabilities)
 	}
 	capability := definition.Capabilities[0]
@@ -95,6 +95,10 @@ func TestFREDProviderDefinitionUsesOneLogicalIdentityAndMacroCapability(t *testi
 	}
 	if definition.Capabilities[0].Authentication.Class != providercontract.AuthenticationAPIKey {
 		t.Fatalf("authentication = %+v", definition.Capabilities[0].Authentication)
+	}
+	calendarCapability := definition.Capabilities[1]
+	if len(calendarCapability.CanonicalOutputs) != 0 || len(calendarCapability.ProviderNeutralOutputs) != 1 || calendarCapability.ProviderNeutralOutputs[0].Schema.Namespace != "jax.releaseevidence" || calendarCapability.ProviderNeutralOutputs[0].Schema.Value != "economic_release/v1" {
+		t.Fatalf("calendar output contract = %+v", calendarCapability)
 	}
 }
 

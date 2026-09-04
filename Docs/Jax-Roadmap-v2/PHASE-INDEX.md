@@ -3,7 +3,7 @@
 - [00-current-issuer-asset-resolution](00-current-issuer-asset-resolution/README.md) - GO / complete (2026-08-21)
 - [01-canonical-contracts-provenance-audit](01-canonical-contracts-provenance-audit/README.md) - GO / complete (2026-08-24)
 - [02-data-platform-provider-architecture](02-data-platform-provider-architecture/README.md) - GO / complete (2026-08-26)
-- [03-core-financial-evidence](03-core-financial-evidence/README.md) - IN PROGRESS; WP-03.01-WP-03.03 complete/GO; WP-03.04 next and not started
+- [03-core-financial-evidence](03-core-financial-evidence/README.md) - IN PROGRESS; WP-03.01-WP-03.03 complete/GO; WP-03.04 implemented awaiting review; WP-03.05 next planned
 - [04-world-monitor-intelligence](04-world-monitor-intelligence/README.md)
 - [05-deterministic-quant-core](05-deterministic-quant-core/README.md)
 - [06-research-recommendation-engine](06-research-recommendation-engine/README.md)

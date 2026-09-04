@@ -82,6 +82,22 @@ func FREDProviderDefinition() providercontract.ProviderDefinition {
 				ContractVersion: providercontract.ProviderNeutralOutputV1,
 				Schema:          canonical.VersionIdentity{Namespace: "jax.macroevidence", Value: "macro_observation/v1"},
 			}},
+		}, {
+			ContractVersion: providercontract.CapabilityContractV1,
+			ID:              providercontract.CapabilityEconomicCalendar,
+			Category:        providercontract.DataCategoryEconomicCalendar,
+			Support:         providercontract.SupportSupported,
+			Raw:             fredCalendarRawRepresentation(),
+			Authentication:  providercontract.AuthenticationRequirement{Class: providercontract.AuthenticationAPIKey},
+			Operational: providercontract.OperationalSemantics{
+				DeliveryModes:      []providercontract.DeliveryMode{providercontract.DeliverySnapshot, providercontract.DeliveryHistorical},
+				FreshnessModes:     []providercontract.FreshnessMode{providercontract.FreshnessOnDemand, providercontract.FreshnessPeriodic},
+				QualityRequirement: providercontract.QualityCanonicalValidationRequired,
+			},
+			ProviderNeutralOutputs: []providercontract.ProviderNeutralOutput{{
+				ContractVersion: providercontract.ProviderNeutralOutputV1,
+				Schema:          canonical.VersionIdentity{Namespace: "jax.releaseevidence", Value: "economic_release/v1"},
+			}},
 		}},
 	}
 }

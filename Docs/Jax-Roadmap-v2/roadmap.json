@@ -8,5 +8,5 @@
   "revision": "2026-09-04-roadmap-reconciliation-closure",
   "authoritative_roadmap": "Docs/ROADMAP.md",
   "llm_cost_context_efficiency": "Cross-cutting requirement integrated into Phases 06 and 08 plus governance",
-  "pack_status": "Supporting roadmap detail; Docs/ROADMAP.md is authoritative. Phases 00 through 02 are accepted/complete; Phase 03 is in progress; WP-03.01, WP-03.02 and WP-03.03 are COMPLETE / GO; WP-03.04 is NEXT / NOT STARTED; WP-03.05 and WP-03.06 are PLANNED"
+  "pack_status": "Supporting roadmap detail; Docs/ROADMAP.md is authoritative. Phases 00 through 02 are accepted/complete; Phase 03 is in progress; WP-03.01, WP-03.02 and WP-03.03 are COMPLETE / GO; WP-03.04 is IMPLEMENTED and awaiting technical-lead review; WP-03.05 is NEXT PLANNED / NOT STARTED; WP-03.06 is PLANNED"
 }

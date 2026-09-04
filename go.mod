@@ -24,6 +24,7 @@ replace jax-trading-assistant/libs/ingest => ./libs/ingest
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/arran4/golang-ical v0.3.6
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0

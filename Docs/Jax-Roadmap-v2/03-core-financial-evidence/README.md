@@ -2,8 +2,8 @@
 
 **Status:** IN PROGRESS. WP-03.01, WP-03.02 and WP-03.03 are accepted
 **COMPLETE / GO**, including their documented temporal/vintage and evidence
-closures. WP-03.04 is next, has not started, and awaits separate technical-lead
-package authorization.
+closures. WP-03.04 is implemented and awaits separate technical-lead review;
+it is not yet accepted COMPLETE / GO.
 
 ## Purpose
     Populate the data platform with the smallest high-value set of market, corporate and macro sources required for useful US equity/ETF research.
