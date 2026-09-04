@@ -236,9 +236,12 @@ func (provider *Provider) acquireReleaseMetadata(ctx context.Context, deps Depen
 		if err != nil {
 			return pages, raws, executions, err
 		}
+		if page.Page.Offset != expectedOffset {
+			return pages, raws, executions, fmt.Errorf("FRED release metadata pagination boundary is inconsistent")
+		}
 		if expectedCount < 0 {
 			expectedCount = page.Page.Count
-		} else if page.Page.Count != expectedCount || page.Page.Offset != expectedOffset {
+		} else if page.Page.Count != expectedCount {
 			return pages, raws, executions, fmt.Errorf("FRED release metadata pagination boundary is inconsistent")
 		}
 		for _, item := range page.Releases {
@@ -294,9 +297,12 @@ func (provider *Provider) acquireReleaseDates(ctx context.Context, deps Dependen
 		if err != nil {
 			return pages, raws, executions, err
 		}
+		if page.Page.Offset != expectedOffset {
+			return pages, raws, executions, fmt.Errorf("FRED release dates pagination boundary is inconsistent")
+		}
 		if expectedCount < 0 {
 			expectedCount = page.Page.Count
-		} else if page.Page.Count != expectedCount || page.Page.Offset != expectedOffset {
+		} else if page.Page.Count != expectedCount {
 			return pages, raws, executions, fmt.Errorf("FRED release dates pagination boundary is inconsistent")
 		}
 		for _, item := range page.Dates {

@@ -102,6 +102,37 @@ func TestFREDReleaseCalendarIncludesNoDataFutureDatesAndFailsClosedOnInconsisten
 	}
 }
 
+func TestFREDReleaseCalendarRejectsWrongFirstPageOffset(t *testing.T) {
+	metadata := `{"realtime_start":"2026-01-01","realtime_end":"9999-12-31","order_by":"release_id","sort_order":"asc","count":1,"offset":0,"limit":1,"releases":[{"id":10,"realtime_start":"2026-01-01","realtime_end":"9999-12-31","name":"Consumer Price Index"}]}`
+	dates := `{"realtime_start":"2026-01-01","realtime_end":"9999-12-31","order_by":"release_date","sort_order":"asc","count":1,"offset":0,"limit":1,"release_dates":[{"release_id":10,"release_name":"Consumer Price Index","date":"2026-09-10"}]}`
+	tests := []struct {
+		name         string
+		metadataBody string
+		datesBody    string
+	}{
+		{name: "release metadata", metadataBody: strings.Replace(metadata, `"offset":0`, `"offset":1`, 1), datesBody: dates},
+		{name: "release dates", metadataBody: metadata, datesBody: strings.Replace(dates, `"offset":0`, `"offset":1`, 1)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				writer.Header().Set("Content-Type", "application/json")
+				if request.URL.Path == "/releases" {
+					_, _ = writer.Write([]byte(test.metadataBody))
+					return
+				}
+				_, _ = writer.Write([]byte(test.datesBody))
+			}))
+			defer server.Close()
+			provider, deps := fixtureDependencies(t, server.URL, server.Client())
+			result, err := provider.AcquireReleaseCalendar(context.Background(), deps, ReleaseCalendarRequest{MetadataPayloadID: "rpa_fred_wrong_first_metadata", DatesPayloadID: "rpa_fred_wrong_first_dates", Retention: fixtureRetention(), PageSize: 1})
+			if err == nil || result.Completeness != CompletenessIncomplete {
+				t.Fatalf("wrong first-page offset was accepted: %+v", result)
+			}
+		})
+	}
+}
+
 func TestFREDCalendarProviderNeutralTypeIsNotFREDDTO(t *testing.T) {
 	typeOfRelease := reflect.TypeOf(releaseevidence.EconomicRelease{})
 	if typeOfRelease.PkgPath() != "jax-trading-assistant/libs/releaseevidence" {

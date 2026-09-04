@@ -55,9 +55,12 @@ func normalizeEvent(event *ics.VEvent, ref providercontract.RawPayloadRef) (rele
 		return releaseevidence.EconomicRelease{}, fmt.Errorf("BLS VEVENT %q DTSTART: %w", uid, err)
 	}
 	if end := event.GetProperty(ics.ComponentPropertyDtEnd); end != nil && instant != nil {
-		_, _, _, _, endInstant, err = parseScheduleTime(end, timezone)
+		_, _, _, endInstant, _, err = parseScheduleTime(end, timezone)
 		if err != nil {
 			return releaseevidence.EconomicRelease{}, fmt.Errorf("BLS VEVENT %q DTEND: %w", uid, err)
+		}
+		if endInstant != nil && endInstant.Before(*instant) {
+			return releaseevidence.EconomicRelease{}, fmt.Errorf("BLS VEVENT %q DTEND precedes DTSTART", uid)
 		}
 	}
 
@@ -65,7 +68,11 @@ func normalizeEvent(event *ics.VEvent, ref providercontract.RawPayloadRef) (rele
 	if err != nil {
 		return releaseevidence.EconomicRelease{}, fmt.Errorf("BLS VEVENT %q revision metadata: %w", uid, err)
 	}
-	revisionKey := revisionKey(revision, date)
+	status := releaseevidence.ReleaseStatusScheduled
+	if value := strings.ToUpper(propertyValue(event, ics.ComponentPropertyStatus)); value == "CANCELLED" {
+		status = releaseevidence.ReleaseStatusCancelled
+	}
+	revisionKey := revisionKey(revision, date, local, timezone, instant, endInstant, status)
 	provider := ProviderIdentity
 	source := SourceIdentity
 	id := releaseevidence.DeterministicID(provider.ID, source.ID, uid, stringValue(date), revisionKey)
@@ -75,10 +82,6 @@ func normalizeEvent(event *ics.VEvent, ref providercontract.RawPayloadRef) (rele
 	}, id)
 	if err != nil {
 		return releaseevidence.EconomicRelease{}, err
-	}
-	status := releaseevidence.ReleaseStatusScheduled
-	if value := strings.ToUpper(propertyValue(event, ics.ComponentPropertyStatus)); value == "CANCELLED" {
-		status = releaseevidence.ReleaseStatusCancelled
 	}
 	release := releaseevidence.EconomicRelease{
 		ContractVersion: releaseevidence.EconomicReleaseContractV1,
@@ -212,8 +215,15 @@ func propertyValue(event *ics.VEvent, property ics.ComponentProperty) string {
 	return ""
 }
 
-func revisionKey(revision *releaseevidence.SourceRevision, date *releaseevidence.Date) string {
-	parts := []string{stringValue(date)}
+func revisionKey(revision *releaseevidence.SourceRevision, date *releaseevidence.Date, local, timezone *string, instant, endInstant *time.Time, status releaseevidence.ReleaseStatus) string {
+	parts := []string{
+		"date=" + stringValue(date),
+		"local=" + pointerString(local),
+		"timezone=" + pointerString(timezone),
+		"instant=" + pointerTime(instant),
+		"end=" + pointerTime(endInstant),
+		"status=" + string(status),
+	}
 	if revision == nil {
 		return strings.Join(parts, "|")
 	}
@@ -224,6 +234,20 @@ func revisionKey(revision *releaseevidence.SourceRevision, date *releaseevidence
 		parts = append(parts, "last_modified="+revision.LastModifiedAt.Format(time.RFC3339Nano))
 	}
 	return strings.Join(parts, "|")
+}
+
+func pointerString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func pointerTime(value *time.Time) string {
+	if value == nil {
+		return ""
+	}
+	return value.UTC().Format(time.RFC3339Nano)
 }
 
 func stringValue(value *releaseevidence.Date) string {

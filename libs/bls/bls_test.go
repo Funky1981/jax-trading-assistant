@@ -61,7 +61,7 @@ func blsFixtureDependencies(t *testing.T, calendarBody func() string) (*Provider
 func calendarFixture() string {
 	return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//BLS//Calendar//EN\r\nX-BLS-TEST:ignored\r\n" +
 		"BEGIN:VEVENT\r\nUID:employment@example.bls.gov\r\nDTSTAMP:20260801T120000Z\r\nLAST-MODIFIED:20260801T110000Z\r\nSEQUENCE:2\r\nDTSTART;TZID=Eastern Standard Time:20260115T083000\r\nDTEND;TZID=Eastern Standard Time:20260115T083100\r\nSUMMARY:Employment Situation for December 2025\r\nDESCRIPTION:Official scheduled release\r\nSTATUS:CONFIRMED\r\nEND:VEVENT\r\n" +
-		"BEGIN:VEVENT\r\nUID:cpi@example.bls.gov\r\nDTSTAMP:20260801T120100Z\r\nDTSTART;TZID=America/New_York:20260715T083000\r\nSUMMARY:Consumer Price Index for June 2026\r\nEND:VEVENT\r\n" +
+		"BEGIN:VEVENT\r\nUID:cpi@example.bls.gov\r\nDTSTAMP:20260801T120100Z\r\nDTSTART;TZID=America/New_York:20260715T083000\r\nDTEND;TZID=America/New_York:20260715T083100\r\nSUMMARY:Consumer Price Index for June 2026\r\nEND:VEVENT\r\n" +
 		"BEGIN:VEVENT\r\nUID:date-only@example.bls.gov\r\nDTSTAMP:20260801T120200Z\r\nDTSTART;VALUE=DATE:20260910\r\nSUMMARY:Calendar maintenance day\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
 }
 
@@ -95,11 +95,14 @@ func TestBLSCalendarPreservesScheduleSemanticsAndExactRawBytes(t *testing.T) {
 	if got := employment.ScheduledInstant.UTC(); got.Hour() != 13 || got.Minute() != 30 || got.Location() != time.UTC {
 		t.Fatalf("standard-time UTC schedule = %v", got)
 	}
+	if employment.ScheduledEndInstant == nil || employment.ScheduledEndInstant.Hour() != 13 || employment.ScheduledEndInstant.Minute() != 31 || employment.ScheduledEndInstant.Location() != time.UTC || employment.ScheduledEndInstant.Before(*employment.ScheduledInstant) {
+		t.Fatalf("standard-time UTC end schedule = %v", employment.ScheduledEndInstant)
+	}
 	if employment.Revision == nil || employment.Revision.Sequence == nil || *employment.Revision.Sequence != 2 || employment.Revision.CalendarObjectStamp.Equal(*employment.ScheduledInstant) || employment.Revision.LastModifiedAt.Equal(*employment.ScheduledInstant) {
 		t.Fatalf("calendar metadata was conflated with schedule = %+v", employment.Revision)
 	}
 	cpi := byUID["cpi@example.bls.gov"]
-	if cpi.ScheduledInstant == nil || cpi.ScheduledInstant.Hour() != 12 || cpi.TimingAuthority != releaseevidence.TimingScheduledLocalTime {
+	if cpi.ScheduledInstant == nil || cpi.ScheduledInstant.Hour() != 12 || cpi.ScheduledEndInstant == nil || cpi.ScheduledEndInstant.Hour() != 12 || cpi.ScheduledEndInstant.Minute() != 31 || cpi.TimingAuthority != releaseevidence.TimingScheduledLocalTime {
 		t.Fatalf("daylight-time UTC schedule = %+v", cpi)
 	}
 	dateOnly := byUID["date-only@example.bls.gov"]
@@ -127,19 +130,30 @@ func TestBLSCalendarRejectsDuplicateUIDAndInvalidTimezone(t *testing.T) {
 	if _, err := provider.AcquireCalendar(context.Background(), deps, CalendarRequest{PayloadID: "rpa_bls_timezone", Retention: blsRetention()}); err == nil {
 		t.Fatal("invalid timezone was accepted")
 	}
+	endBeforeStart := func() string {
+		return strings.Replace(calendarFixture(), "DTEND;TZID=Eastern Standard Time:20260115T083100", "DTEND;TZID=Eastern Standard Time:20260115T082900", 1)
+	}
+	provider, deps = blsFixtureDependencies(t, endBeforeStart)
+	if _, err := provider.AcquireCalendar(context.Background(), deps, CalendarRequest{PayloadID: "rpa_bls_end_before_start", Retention: blsRetention()}); err == nil {
+		t.Fatal("DTEND preceding DTSTART was accepted")
+	}
 }
 
 func TestBLSCalendarRescheduleRetainsRawAcquisitionAndChangesNormalizedRevision(t *testing.T) {
 	var mu sync.Mutex
 	call := 0
-	oldBody := strings.Replace(calendarFixture(), "20260115T083000", "20260115T083000", 1)
-	newBody := strings.Replace(oldBody, "20260115T083000", "20260116T083000", 1)
+	oldBody := calendarFixture()
+	newBody := strings.Replace(oldBody, "20260115T083000", "20260115T100000", 1)
+	newBody = strings.Replace(newBody, "20260115T083100", "20260115T100100", 1)
+	titleBody := strings.Replace(oldBody, "Employment Situation for December 2025", "Unrelated title", 1)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		mu.Lock()
 		call++
 		body := oldBody
-		if call > 1 {
+		if call == 4 {
 			body = newBody
+		} else if call > 4 {
+			body = titleBody
 		}
 		mu.Unlock()
 		writer.Header().Set("Content-Type", "text/calendar")
@@ -164,8 +178,76 @@ func TestBLSCalendarRescheduleRetainsRawAcquisitionAndChangesNormalizedRevision(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.Raw.Ref.ID == second.Raw.Ref.ID || first.Raw.Ref.Content.Digest == second.Raw.Ref.Content.Digest {
+	same, err := provider.AcquireCalendar(context.Background(), deps, CalendarRequest{PayloadID: "rpa_bls_reschedule_same", Retention: blsRetention()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	third, err := provider.AcquireCalendar(context.Background(), deps, CalendarRequest{PayloadID: "rpa_bls_reschedule_three", Retention: blsRetention()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	titleVariant, err := provider.AcquireCalendar(context.Background(), deps, CalendarRequest{PayloadID: "rpa_bls_title_variant", Retention: blsRetention()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Raw.Ref.ID == second.Raw.Ref.ID || first.Raw.Ref.ID == third.Raw.Ref.ID || first.Raw.Ref.Content.Digest == third.Raw.Ref.Content.Digest {
 		t.Fatal("reschedule acquisitions were not distinct")
+	}
+	var firstEmployment, sameEmployment, thirdEmployment, titleEmployment releaseevidence.EconomicRelease
+	for _, release := range first.Releases {
+		if release.SourceReleaseID == "employment@example.bls.gov" {
+			firstEmployment = release
+		}
+	}
+	for _, release := range same.Releases {
+		if release.SourceReleaseID == "employment@example.bls.gov" {
+			sameEmployment = release
+		}
+	}
+	for _, release := range third.Releases {
+		if release.SourceReleaseID == "employment@example.bls.gov" {
+			thirdEmployment = release
+		}
+	}
+	for _, release := range titleVariant.Releases {
+		if release.SourceReleaseID == "employment@example.bls.gov" {
+			titleEmployment = release
+		}
+	}
+	if firstEmployment.ID != sameEmployment.ID {
+		t.Fatalf("same semantic schedule changed identity: %s/%s", firstEmployment.ID, sameEmployment.ID)
+	}
+	if firstEmployment.ID == thirdEmployment.ID || firstEmployment.ScheduledLocalTime == nil || thirdEmployment.ScheduledLocalTime == nil || *firstEmployment.ScheduledLocalTime == *thirdEmployment.ScheduledLocalTime {
+		t.Fatalf("normalized same-date reschedule was not distinguishable: %s/%s %+v/%+v", firstEmployment.ID, thirdEmployment.ID, firstEmployment.ScheduledLocalTime, thirdEmployment.ScheduledLocalTime)
+	}
+	if firstEmployment.ID != titleEmployment.ID {
+		t.Fatalf("title change altered source-event identity: %s/%s", firstEmployment.ID, titleEmployment.ID)
+	}
+	oldStored, err := deps.Store.Get(context.Background(), first.Raw.Ref)
+	if err != nil || string(oldStored) != oldBody {
+		t.Fatalf("old raw evidence was overwritten: %v", err)
+	}
+}
+
+func TestBLSCalendarStatusChangeWithoutRevisionMetadataChangesIdentity(t *testing.T) {
+	confirmed := calendarFixture()
+	for _, property := range []string{
+		"DTSTAMP:20260801T120000Z\r\n",
+		"LAST-MODIFIED:20260801T110000Z\r\n",
+		"SEQUENCE:2\r\n",
+	} {
+		confirmed = strings.Replace(confirmed, property, "", 1)
+	}
+	cancelled := strings.Replace(confirmed, "STATUS:CONFIRMED", "STATUS:CANCELLED", 1)
+	provider, deps := blsFixtureDependencies(t, func() string { return confirmed })
+	first, err := provider.AcquireCalendar(context.Background(), deps, CalendarRequest{PayloadID: "rpa_bls_status_confirmed", Retention: blsRetention()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, deps = blsFixtureDependencies(t, func() string { return cancelled })
+	second, err := provider.AcquireCalendar(context.Background(), deps, CalendarRequest{PayloadID: "rpa_bls_status_cancelled", Retention: blsRetention()})
+	if err != nil {
+		t.Fatal(err)
 	}
 	var firstEmployment, secondEmployment releaseevidence.EconomicRelease
 	for _, release := range first.Releases {
@@ -178,11 +260,7 @@ func TestBLSCalendarRescheduleRetainsRawAcquisitionAndChangesNormalizedRevision(
 			secondEmployment = release
 		}
 	}
-	if firstEmployment.ID == secondEmployment.ID || firstEmployment.ScheduledDate == nil || secondEmployment.ScheduledDate == nil || *firstEmployment.ScheduledDate == *secondEmployment.ScheduledDate {
-		t.Fatalf("normalized reschedule was not distinguishable: %s/%s %+v/%+v", firstEmployment.ID, secondEmployment.ID, firstEmployment.ScheduledDate, secondEmployment.ScheduledDate)
-	}
-	oldStored, err := deps.Store.Get(context.Background(), first.Raw.Ref)
-	if err != nil || string(oldStored) != oldBody {
-		t.Fatalf("old raw evidence was overwritten: %v", err)
+	if firstEmployment.ID == secondEmployment.ID || secondEmployment.Status != releaseevidence.ReleaseStatusCancelled {
+		t.Fatalf("status-only revision was not distinguishable: %+v/%+v", firstEmployment, secondEmployment)
 	}
 }
