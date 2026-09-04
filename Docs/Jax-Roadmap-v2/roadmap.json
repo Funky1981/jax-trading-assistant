@@ -1,11 +1,12 @@
 {
   "name": "Jax Roadmap v2",
-  "generated_on": "2026-08-10",
+  "generated_on": "2026-09-04",
   "phases": 14,
   "governance": "Per-work-package external architecture review required",
   "fincept_role": "Reference architecture/capability catalogue; no direct code copying",
-  "live_execution": "Optional final phase only",
-  "revision": "2026-08-26-phase-02-go-closeout",
+  "live_execution": "Optional future gated phase only; not currently authorized",
+  "revision": "2026-09-04-roadmap-reconciliation-closure",
+  "authoritative_roadmap": "Docs/ROADMAP.md",
   "llm_cost_context_efficiency": "Cross-cutting requirement integrated into Phases 06 and 08 plus governance",
-  "pack_status": "Consolidated authoritative roadmap pack; Phases 00 through 02 GO/complete; Phase 03 eligible; WP-03.01 next, awaiting separate technical-lead authorization and not started"
+  "pack_status": "Supporting roadmap detail; Docs/ROADMAP.md is authoritative. Phases 00 through 02 are accepted/complete; Phase 03 is in progress; WP-03.01, WP-03.02 and WP-03.03 are COMPLETE / GO; WP-03.04 is NEXT / NOT STARTED; WP-03.05 and WP-03.06 are PLANNED"
 }
