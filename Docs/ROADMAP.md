@@ -19,15 +19,15 @@ decision remains `NO_TRADE`.
 | Phase 01 — Canonical Contracts / Provenance / Replay | ✅ Accepted / complete |
 | Phase 02 — Provider / Data Platform | ✅ Accepted / complete, including durable raw storage closure |
 | Phase 03 — Core Financial Evidence | **IN PROGRESS** |
-| Current accepted package | WP-03.03 — FRED / ALFRED macro observations + vintages (**COMPLETE / GO**) |
-| Current implementation package | **WP-03.04 — Economic Release / Calendar Ingestion (IMPLEMENTED — awaiting technical-lead review)** |
-| Next package | **WP-03.05 — Treasury / EIA / CBOE / CFTC Source Evaluation and First Approved Integrations (planned; not started)** |
+| Current accepted package | WP-03.04 — Economic Release / Calendar Ingestion (**COMPLETE / GO**) |
+| Current implementation package | **WP-03.05 — Treasury / EIA / CBOE / CFTC Source Evaluation and First Approved Integrations (IMPLEMENTED — awaiting technical-lead review)** |
+| Next package | **WP-03.06 — Evidence-quality / cross-source checks (not started)** |
 
-The current package context is the `capability-reset` sequence at repository
-HEAD `42db801d766607004b37657e8d207baf8368c999` before WP-03.04 implementation.
-Package acceptance is recorded in the relevant evidence and review handovers.
-WP-03.04 is implemented but remains pending independent technical-lead review;
-the next package must be authorized separately.
+The current package context is the `capability-reset` sequence. Package
+acceptance is recorded in the relevant evidence and review handovers.
+WP-03.04 has received independent technical-lead **FINAL GO**. WP-03.05 is
+implemented but remains pending independent technical-lead review; the next
+package must be authorized separately.
 
 ## Roadmap status vocabulary
 
@@ -90,9 +90,9 @@ without relying on model memory.
 | WP-03.01 — Market price / OHLCV | **COMPLETE / GO** | `Docs/evidence/WP-03.01-MARKET-PRICE-OHLCV-PROVIDER-HARDENING.md`; timestamp/freshness closure in `Docs/evidence/WP-03.01A-MARKET-EVIDENCE-CLOSURE.md` |
 | WP-03.02 — SEC / EDGAR / XBRL | **COMPLETE / GO** | `Docs/evidence/WP-03.02-SEC-EDGAR-XBRL-EVIDENCE.md`; SEC temporal-semantics closure is included in its accepted result |
 | WP-03.03 — FRED / ALFRED macro observations + vintages | **COMPLETE / GO** | `Docs/evidence/WP-03.03-FRED-ALFRED-MACRO-EVIDENCE.md`; point-in-time/vintage leakage protection and macro-evidence closure are included |
-| WP-03.04 — Economic release / calendar ingestion | **IMPLEMENTED — awaiting technical-lead review** | `Docs/evidence/WP-03.04-ECONOMIC-RELEASE-CALENDAR-EVIDENCE.md` |
-| WP-03.05 — Treasury / EIA / CBOE / CFTC source evaluation and first approved integrations | **PLANNED** | `Docs/Jax-Roadmap-v2/03-core-financial-evidence/WP-03.05-treasury-eia-cboe-cftc-source-evaluation-and-first-approved-integrations.md` |
-| WP-03.06 — Evidence-quality / cross-source checks | **PLANNED** | `Docs/Jax-Roadmap-v2/03-core-financial-evidence/WP-03.06-evidence-quality-cross-source-checks.md` |
+| WP-03.04 — Economic release / calendar ingestion | **COMPLETE / GO** | `Docs/evidence/WP-03.04-ECONOMIC-RELEASE-CALENDAR-EVIDENCE.md` |
+| WP-03.05 — Treasury / EIA / CBOE / CFTC source evaluation and first approved integrations | **IMPLEMENTED — awaiting technical-lead review** | `Docs/evidence/WP-03.05-TREASURY-EIA-CBOE-CFTC-SOURCE-EVALUATION.md` |
+| WP-03.06 — Evidence-quality / cross-source checks | **NOT STARTED** | `Docs/Jax-Roadmap-v2/03-core-financial-evidence/WP-03.06-evidence-quality-cross-source-checks.md` |
 
 Corrective packages such as WP-03.01A are closure history under their parent
 package, not new permanent roadmap phases.
@@ -197,6 +197,5 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The next roadmap package is **WP-03.05 — Treasury / EIA / CBOE / CFTC Source
-Evaluation and First Approved Integrations**. Do not begin it as part of this
-handover.
+The next roadmap package is **WP-03.06 — Evidence-quality / cross-source
+checks**. Do not begin it as part of this handover.

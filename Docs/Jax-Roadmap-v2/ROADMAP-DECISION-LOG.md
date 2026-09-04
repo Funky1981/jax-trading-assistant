@@ -1,5 +1,19 @@
 # Roadmap Decision Log
 
+## RD-2026-09-04-01 - WP-03.04 FINAL GO and WP-03.05 review handover
+
+- Date: 2026-09-04
+- Phase: 03 - Core Financial Evidence
+- Status: WP-03.04 accepted COMPLETE / GO; WP-03.05 implemented and awaiting independent review
+- Decision authority: independent technical-lead final decision supplied for WP-03.04; WP-03.05 remains subject to technical-lead decision
+
+WP-03.04 Economic Release / Calendar Ingestion has received **FINAL GO**.
+WP-03.05 Treasury / EIA / CBOE / CFTC Source Evaluation and First Approved
+Integrations is the current implementation package. WP-03.06 remains NOT
+STARTED. See `../evidence/WP-03.04-ECONOMIC-RELEASE-CALENDAR-EVIDENCE.md`,
+`../evidence/WP-03.05-TREASURY-EIA-CBOE-CFTC-SOURCE-EVALUATION.md`, and
+`Docs/ROADMAP.md`.
+
 ## RD-2026-08-21-01 - Phase 00 GO
 
 - Date: 2026-08-21

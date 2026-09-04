@@ -143,14 +143,22 @@ type MacroValue struct {
 }
 
 func (value MacroValue) Validate() error {
-	if strings.TrimSpace(value.SourceValue) == "" {
-		return fmt.Errorf("source value is required")
-	}
 	if !value.Present {
-		if value.SourceValue != "." || value.Number != nil {
-			return fmt.Errorf("missing macro value must preserve its source marker")
+		if value.Number != nil {
+			return fmt.Errorf("missing macro value must not expose a numeric convenience value")
+		}
+		if strings.TrimSpace(value.SourceValue) == "" {
+			return nil
+		}
+		switch strings.ToUpper(strings.TrimSpace(value.SourceValue)) {
+		case ".", "N/A", "NA", "NULL":
+		default:
+			return fmt.Errorf("missing macro value must preserve a recognized source marker")
 		}
 		return nil
+	}
+	if strings.TrimSpace(value.SourceValue) == "" {
+		return fmt.Errorf("source value is required for present macro values")
 	}
 	if value.SourceValue == "." || value.Number == nil {
 		return fmt.Errorf("present macro value requires a normalized number")

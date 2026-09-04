@@ -26,8 +26,9 @@ documented temporal, vintage and evidence-closure work. The next package is
 requires separate technical-lead authorization. See `Docs/ROADMAP.md`,
 `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 
-Current status supersession: WP-03.04 is IMPLEMENTED and awaiting independent
-technical-lead review. WP-03.05 is the next planned package and is NOT STARTED.
+Current status supersession: WP-03.04 is accepted COMPLETE / GO. WP-03.05 is
+implemented and awaiting independent technical-lead review. WP-03.06 is not
+started.
 
 ## Non-negotiable principles
 
