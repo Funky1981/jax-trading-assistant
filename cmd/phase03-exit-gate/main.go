@@ -11,9 +11,9 @@ import (
 )
 
 type sourceStatus struct {
-	Family  string `json:"family"`
-	Status  string `json:"status"`
-	Detail  string `json:"detail"`
+	Family string `json:"family"`
+	Status string `json:"status"`
+	Detail string `json:"detail"`
 }
 
 type report struct {

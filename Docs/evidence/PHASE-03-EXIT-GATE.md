@@ -10,6 +10,17 @@ This closure is a bounded verification of that condition. WP-03.06 has already
 received independent technical-lead `FINAL GO`; this document does not award a
 Phase 03 decision.
 
+## Configuration preflight
+
+Using the existing ignored `.env` configuration mechanism for the live child
+process, the non-secret preflight reported:
+
+- `FINANCIAL_DATASETS_API_KEY`: PRESENT;
+- `SEC_USER_AGENT`: PRESENT;
+- `SEC_CONTACT`: PRESENT.
+
+No credential values were emitted, logged, persisted, or committed.
+
 ## Representative entity
 
 The candidate remains `AAPL / Apple Inc.` using the accepted canonical
@@ -47,7 +58,7 @@ recommendation, signal, valuation, or execution field.
 | Family | Provider/source | Real vs fixture | Acquisition path | Normalized evidence | Raw payload / provenance | Temporal limitation | Result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Market | Financial Datasets / `src_financial_datasets_historical_prices` | No accepted real item | Accepted WP-03.01 hardened daily-bars path was invoked with AAPL during this closure | None; live request failed authentication before normalization | No raw payload was retained; no real packet item exists | No market observation date can be asserted from this failed request | BLOCKED: `AUTHENTICATION`, provider path `market.bars` |
-| Company | SEC EDGAR / `src_sec_submissions` | No accepted real item | Accepted SEC submissions path was invoked in the explicit live test | None; live test failed closed before acquisition because `SEC_USER_AGENT` was absent | No raw payload was retained; no real packet item exists | No Apple filing/report/acceptance date is asserted by this closure | BLOCKED: approved automated-client identity unavailable |
+| Company | SEC EDGAR / `src_sec_submissions` | No accepted real item | Accepted SEC submissions path was invoked in the explicit live test with configured identity | None; provider operation returned `NOT_FOUND` before raw persistence | No raw payload was retained; no real packet item exists | No Apple filing/report/acceptance date is asserted by this closure | BLOCKED: SEC submissions operation `NOT_FOUND` |
 | Macro/context | U.S. Treasury / `src_treasury_daily_par_yield_curve` | LIVE ACQUIRED NOW | Accepted WP-03.05 `AcquireYear` path, official XML, 2026 request | Normalized Treasury observations; live sample included `mobs_fb4286119f65131feaf49720`, 30 Yr, 2026-09-03, source value `5.25` | `rpa_treasury_live_smoke`; digest `0ad39aa28aa955d3cab2968cdb347fc2632dd05e52ca2f99aa8619ed42988e9f`; raw ref and normalized provenance retained in the run's memory store | Observation date is 2026-09-03; acquired 2026-09-04. This does not prove historical knowability | REAL MACRO EVIDENCE |
 | Macro/context (optional) | Cboe / `src_cboe_vix_daily_history` | LIVE ACQUIRED NOW | Accepted WP-03.05 `AcquireHistory` path, official CSV | Normalized live sample `mobs_87f4a063fabf19b0dc036893`, 2026-09-03, source value `14.320000` | `rpa_cboe_live_smoke`; digest `8dba02f54d435d58249c57e45dc84842a0b1bb7f256af8708080072209337569`; raw ref and normalized provenance retained in the run's memory store | Observation date is separate from 2026-09-04 acquisition; no exchange-close timestamp was manufactured | REAL CONTEXT EVIDENCE |
 | Release/calendar | Accepted release/calendar integration | UNAVAILABLE for this packet | No live release acquisition was needed or fabricated | None | None | Existing WP-03.04 BLS/live-access limitation remains | Not a blocker for the authoritative market/company/macro gate, but absent |
@@ -109,20 +120,21 @@ $env:JAX_RUN_LIVE_PHASE03_GATE='1'
 go test ./libs/sec -run TestPhase03ExitGateLiveAAPLCompanyEvidence -count=1 -v
 ```
 
-Result: FAIL CLOSED before network acquisition: `SEC_USER_AGENT is required;
-declare an approved SEC automated-client identity`. No identity or contact
-information was invented, and no SEC raw bytes were claimed.
+Result: FAIL CLOSED. The configured accepted SEC submissions operation returned
+`NOT_FOUND`; no SEC raw bytes were claimed. No identity or contact information
+was invented.
 
 The live tests are opt-in; the ordinary test suite does not depend on the
 internet or credentials. The market test uses the existing approved local
-configuration when an operator supplies it; the SEC test requires the existing
+configuration when an operator supplies it; the SEC test uses the existing
 approved `SEC_USER_AGENT` and `SEC_CONTACT` configuration. Credentials are
 never logged or persisted in packet provenance.
 
 ## Gate limitations
 
 - No accepted real AAPL market raw acquisition was available or produced.
-- No accepted real Apple SEC raw acquisition was available or produced.
+- No accepted real Apple SEC raw acquisition was available or produced; the
+  configured submissions request returned `NOT_FOUND`.
 - Therefore no packet satisfying the real-evidence assertion was constructed.
 - Treasury/Cboe real evidence was acquired, but it is context only for this
   failed AAPL gate demonstration.
