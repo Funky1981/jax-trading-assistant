@@ -43,8 +43,9 @@ criteria remain binding.
 - Phase 04: `COMPLETE / GO`
 - Phase 05: `COMPLETE / GO`
 - Phase 06: `COMPLETE / GO`
-- Phase 07: `EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`
-- Current package: `Phase-07 exit proof complete; await external GO before Phase 08`
+- Phase 07: `COMPLETE / GO`
+- Phase 08: `AUTHORISED / IN PROGRESS`
+- Current package: `WP-08.01 — Tool registry and JSON-schema validation`
 
 
 ## 2026-08-10 integrated roadmap change

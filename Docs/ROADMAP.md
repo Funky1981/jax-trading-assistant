@@ -22,9 +22,10 @@ decision remains `NO_TRADE`.
 | Phase 04 — World Monitor Intelligence | **COMPLETE / GO** |
 | Phase 05 — Deterministic Quant Core | **COMPLETE / GO** |
 | Phase 06 — Research & Recommendation Engine | **COMPLETE / GO** |
-| Phase 07 — Evaluation, Replay & Backtesting | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
-| Current implementation package | **Phase-07 exit proof complete** |
-| Next package | **No next package — await external GO before Phase 08** |
+| Phase 07 — Evaluation, Replay & Backtesting | **COMPLETE / GO** |
+| Phase 08 — Controlled AI Tools & Durable Research Agents | **AUTHORISED / IN PROGRESS** |
+| Current implementation package | **WP-08.01 — Tool registry and JSON-schema validation** |
+| Next package | **WP-08.01 — Tool registry and JSON-schema validation** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -154,16 +155,24 @@ model for useful recommendations` are implemented. External GPT-5.6 Sol
 accepted the demonstrated exit condition with `GO PHASE 06`. The full internal
 record is `Docs/Jax-Roadmap-v2/06-research-recommendation-engine/PHASE-06-INTERNAL-VERIFICATION.md`.
 
-### Phase 07 — Evaluation, Replay & Backtesting — AUTHORISED / IN PROGRESS
+### Phase 07 — Evaluation, Replay & Backtesting — COMPLETE / GO
 
 Phase 07 is validation-first: it evaluates whether research and candidate logic
 survive historical knowability, outcome-leakage, cost, walk-forward and
 falsification checks. It must be capable of disproving an apparent edge. Its
 outputs remain evaluation artifacts and do not create approvals, orders, trades,
 fills or live execution authority. WP-07.01 through WP-07.08 are implemented and
-internally verified; the Phase-07 exit condition is demonstrated and the phase
-is awaiting external technical-lead review. Do not begin Phase 08 until external
-GO is received.
+internally verified. External GPT-5.6 Sol accepted the demonstrated exit with
+`GO PHASE 07`; trading edge remains not demonstrated because the evidence is
+`EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE`.
+
+### Phase 08 — Controlled AI Tools & Durable Research Agents — AUTHORISED / IN PROGRESS
+
+Phase 08 adds bounded read-only research tools, durable checkpointed tasks,
+explicit budgets, adaptive gap finding, critic/reflection, provenance-safe
+memory and evaluation. It must preserve deterministic recommendation, risk and
+execution gates. The current package is `WP-08.01 — Tool registry and JSON-schema
+validation`; do not begin Phase 09 before external technical-lead GO.
 
 ### Later roadmap — planned capability progression
 

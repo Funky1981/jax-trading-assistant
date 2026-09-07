@@ -1,5 +1,7 @@
 # Phase 08 — Controlled AI Tools & Durable Research Agents
 
+**Status:** **AUTHORISED / IN PROGRESS — WP-08.01 CURRENT**
+
 ## Purpose
     Allow models to perform deeper research through constrained, auditable tools and checkpointed tasks.
 

@@ -26,10 +26,12 @@ model-memory dependency. Phase 04 — World Monitor Intelligence — is
 **COMPLETE / GO**, accepted by external GPT-5.6 Sol. Phase 05 — Deterministic
 Quant Core — is **COMPLETE / GO**, accepted by external GPT-5.6 Sol. Phase 06 —
 Research & Recommendation Engine — is **COMPLETE / GO**, accepted by external
-GPT-5.6 Sol. Phase 07 — Evaluation, Replay & Backtesting — has its exit
-condition **demonstrated / external review pending**. See `Docs/ROADMAP.md`,
-`ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`. WP-07.01 through WP-07.08
-are internally verified; no Phase-08 work has begun.
+GPT-5.6 Sol. Phase 07 — Evaluation, Replay & Backtesting — is **COMPLETE / GO**,
+accepted by external GPT-5.6 Sol. Its evidence still states
+`EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE`; no trading edge is claimed.
+Phase 08 — Controlled AI Tools & Durable Research Agents — is **authorised / in
+progress**, currently at WP-08.01. See `Docs/ROADMAP.md`,
+`ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 
 ## Non-negotiable principles
 

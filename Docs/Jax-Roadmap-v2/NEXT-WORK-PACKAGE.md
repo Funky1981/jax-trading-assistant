@@ -6,9 +6,10 @@
 - Phase 04 — World Monitor Intelligence: **COMPLETE / GO**
 - Phase 05 — Deterministic Quant Core: **COMPLETE / GO**
 - Phase 06 — Research & Recommendation Engine: **COMPLETE / GO**
-- Phase 07 — Evaluation, Replay & Backtesting: **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
+- Phase 07 — Evaluation, Replay & Backtesting: **COMPLETE / GO**
+- Phase 08 — Controlled AI Tools & Durable Research Agents: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **Phase-07 exit proof complete; no next package until external GO**
+- Current implementation package: **WP-08.01 — Tool registry and JSON-schema validation**
 
 ## Phase-05 autonomous scope
 

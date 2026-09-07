@@ -1,5 +1,22 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-18 - External Phase 07 GO / Phase 08 authorization
+
+- Date: 2026-09-07
+- Phase: 07 accepted COMPLETE / GO; Phase 08 authorised / in progress
+- Current work package: WP-08.01 — Tool registry and JSON-schema validation
+- Decision authority: external GPT-5.6 Sol technical-lead review
+
+External technical-lead decision: `GO PHASE 07`. Phase 07 evaluation, replay
+and OOS capability passed its roadmap gate. This does not demonstrate a trading
+edge; the accepted evidence remains `EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE`
+and `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`.
+
+Phase 08 is now authorised through WP-08.08. Its bounded researcher must use
+permitted read-only tools, durable bounded checkpoints, deterministic budgets,
+provenance-safe memory and preserved recommendation/risk/execution gates. Phase
+09 is not authorised or started.
+
 ## RD-2026-09-07-17 - Phase 07 exit demonstrated / external review pending
 
 - Date: 2026-09-07
