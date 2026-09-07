@@ -48,6 +48,7 @@
 4046762e47cf23939aea8030300cbe4b199ada8e95775033ca6d7d7fb454bd6c  01-canonical-contracts-provenance-audit/WP-01.02-define-canonical-instrument-issuer-event-evidence-observation-researchrun-quantresult-recommendation-contracts.md
 41b53ec2c385570cdf03a043c12fe7690af4f998d9cb75dc05deade8e6b714ae  02-data-platform-provider-architecture/WP-02.04-freshness-ttl-last-known-good-semantics.md
 41d121f8ae09ad1a34b5f200cad13604795bd46607d3692cf9ae50205701a312  governance/CODEX-OPERATING-RULES.md
+4332a08ad6d29bb598c7adf2151177389abac0ce2842f64caceb07f2aadb97fe  10-workflow-hitl-operational-safety/WP-10.06-IMPLEMENTATION-EVIDENCE.md
 43cddd6007ffd3c241d63dcf9c31e4edb09e4d5f4b48ac8a48c5c3ee7c841c29  00-current-issuer-asset-resolution/GATE.md
 45fa3481f142d80177fd5d3a9df4c43e6a88724e6ee02464182e5ae962c42555  12-advanced-quant-research/WP-12.04-factor-mining-and-stability-tests.md
 464db13315e9ca1b6109654d03af753d7cec6aaaa13702cdedb1e5d39e5fb0b2  00-current-issuer-asset-resolution/README.md
@@ -59,6 +60,7 @@
 529677414fd31996921d6be27f7daaacc50b2859e17cf7f24f910b08830708fd  13-optional-live-execution/WP-13.05-order-idempotency-and-reconciliation.md
 54c6cbea265507d81a9024be582c76c5662421d8baa79fdc4689fe20f8c7f277  05-deterministic-quant-core/WP-05.06-basic-risk-adjusted-metrics.md
 555abbdaafe26a305bc317d22c5a9a286fa4c98f0f48d6c340ab29a19ddbf0ab  08-controlled-ai-tools-durable-research-agents/GATE.md
+5563afda7cefb0acfd8f91d1fc0ad8ed95a295febe2ed9baa12265618d483a19  NEXT-WORK-PACKAGE.md
 55b3d7606b3e97ff0409798bb844cfa434a3f2f532ac37262764f7885fd4040f  .gitattributes
 57f58401c9db8ea8c0ff9878740dc4721766a4fda71969a9e22197e2ea02c7cc  08-controlled-ai-tools-durable-research-agents/WP-08.07-research-memory-with-provenance.md
 597fb943f4d439abf19e65c4b99ba4fbb1148db0d281aed07dc9275d911ef857  10-workflow-hitl-operational-safety/WP-10.04-IMPLEMENTATION-EVIDENCE.md
@@ -108,7 +110,6 @@
 a0fba42019daec21dcfd1b99cda0e55fa5686a8a8427409d7d532088ac7f59a5  06-research-recommendation-engine/GATE.md
 a276f382dd1f76068b1053667387d2e75dcf273cfb49c175e0462167b38c8835  09-portfolio-intelligence-deterministic-risk/REFERENCE-NOTES.md
 a4cd6ea3ecfdf601d32bd09034f0e61b1044bcae8a377cb30a83f6673bdc773a  13-optional-live-execution/WP-13.08-small-capital-staged-rollout.md
-a61a3c66390ecd18899b463dc15fa0fa12004d6603182ba8546d7f67981e5cdd  NEXT-WORK-PACKAGE.md
 a8e158bdecaa992fb4e06dc580a2dd753aa1abeedd28cf3058d9e28735ff8ac2  governance/PHASE-REVIEW-HANDOVER.md
 abf8cb8ed61205757f7c220ceb791c712381c7dbc299e2340ed75eeed75cfeea  08-controlled-ai-tools-durable-research-agents/WP-08.03-timeout-cancellation-budget-controls.md
 ad4957571bf9107e5bc9c6935c484239f5f617fb7f9078e2a0cd60b527b2104f  12-advanced-quant-research/WP-12.06-concept-drift-and-rolling-retraining.md

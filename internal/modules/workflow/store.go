@@ -492,9 +492,9 @@ func allowedTransition(from, to State, action Action) bool {
 		return true
 	case from == StateHumanApproved && to == StatePaperIntentCreated && action == ActionCreatePaperIntent:
 		return true
-	case from != StatePaperIntentCreated && from != StateHumanRejected && from != StateCancelled && from != StateBlocked && from != StateFailed && from != StateReconciliationRequired && to == StateCancelled && action == ActionCancel:
+	case from != StatePaperIntentCreated && from != StateHumanRejected && from != StateCancelled && from != StateBlocked && from != StateFailed && to == StateCancelled && action == ActionCancel:
 		return true
-	case from != StatePaperIntentCreated && from != StateHumanRejected && from != StateCancelled && from != StateBlocked && from != StateReconciliationRequired && to == StateBlocked && action == ActionBlock:
+	case from != StatePaperIntentCreated && from != StateHumanRejected && from != StateCancelled && from != StateBlocked && from != StateFailed && to == StateBlocked && action == ActionBlock:
 		return true
 	case from != StatePaperIntentCreated && from != StateHumanRejected && from != StateCancelled && from != StateBlocked && from != StateReconciliationRequired && to == StateFailed && action == ActionFail:
 		return true

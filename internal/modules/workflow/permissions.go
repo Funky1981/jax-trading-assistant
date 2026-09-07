@@ -14,7 +14,7 @@ func PermissionAllowed(role ActorRole, action Action, from, to State) bool {
 		return true
 	case role == ActorSystem && action == ActionCreatePaperIntent && from == StateHumanApproved && to == StatePaperIntentCreated:
 		return true
-	case role == ActorHuman && action == ActionCancel && from != StatePaperIntentCreated && to == StateCancelled:
+	case (role == ActorHuman || role == ActorOperator) && action == ActionCancel && from != StatePaperIntentCreated && to == StateCancelled:
 		return true
 	case role == ActorOperator && action == ActionBlock && from != StatePaperIntentCreated && to == StateBlocked:
 		return true
