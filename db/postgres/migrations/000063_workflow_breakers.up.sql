@@ -19,3 +19,14 @@ CREATE TABLE IF NOT EXISTS workflow_breaker_events (
 
 CREATE INDEX IF NOT EXISTS idx_workflow_breaker_events_name_time
     ON workflow_breaker_events(name, occurred_at DESC);
+
+CREATE OR REPLACE FUNCTION reject_workflow_breaker_event_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'workflow breaker events are append-only';
+END;
+$$;
+
+CREATE TRIGGER trg_workflow_breaker_events_append_only
+    BEFORE UPDATE OR DELETE ON workflow_breaker_events
+    FOR EACH ROW EXECUTE FUNCTION reject_workflow_breaker_event_mutation();

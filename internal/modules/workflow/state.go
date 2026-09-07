@@ -216,13 +216,10 @@ func workflowIdentity(binding RiskBinding) string {
 	return WorkflowIdentityPrefix + hex.EncodeToString(digest[:])
 }
 
-func paperIntentIdentity(workflow Workflow) string {
-	data, _ := json.Marshal(struct {
-		Contract string  `json:"contract"`
-		Workflow string  `json:"workflow"`
-		Revision uint64  `json:"revision"`
-		Value    float64 `json:"value"`
-	}{PaperIntentContractVersion, workflow.WorkflowID, workflow.Revision, workflow.ResultingValue})
+func paperIntentIdentity(intent PaperIntent) string {
+	copyIntent := intent
+	copyIntent.IntentID = ""
+	data, _ := json.Marshal(copyIntent)
 	digest := sha256.Sum256(data)
 	return PaperIntentIdentityPrefix + hex.EncodeToString(digest[:])
 }

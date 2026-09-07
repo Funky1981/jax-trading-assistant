@@ -25,13 +25,13 @@ func TestWorkflowPersistenceMigrationsDefineStateAndAppendOnlyAuditTables(t *tes
 			t.Fatalf("workflow instance migration missing %q", fragment)
 		}
 	}
-	for _, fragment := range []string{"create table if not exists workflow_audit_events", "workflow_id text not null references workflow_instances", "idempotency_key text not null unique", "uq_workflow_audit_sequence"} {
+	for _, fragment := range []string{"create table if not exists workflow_audit_events", "workflow_id text not null references workflow_instances", "idempotency_key text not null unique", "uq_workflow_audit_sequence", "workflow audit events are append-only"} {
 		if !strings.Contains(auditSQL, fragment) {
 			t.Fatalf("workflow audit migration missing %q", fragment)
 		}
 	}
 	breakersSQL := strings.ToLower(string(breakers))
-	for _, fragment := range []string{"create table if not exists workflow_breakers", "tripped boolean not null", "create table if not exists workflow_breaker_events", "idempotency_key text not null unique"} {
+	for _, fragment := range []string{"create table if not exists workflow_breakers", "tripped boolean not null", "create table if not exists workflow_breaker_events", "idempotency_key text not null unique", "workflow breaker events are append-only"} {
 		if !strings.Contains(breakersSQL, fragment) {
 			t.Fatalf("workflow breaker migration missing %q", fragment)
 		}

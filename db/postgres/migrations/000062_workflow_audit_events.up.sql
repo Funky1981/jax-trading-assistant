@@ -18,3 +18,14 @@ CREATE TABLE IF NOT EXISTS workflow_audit_events (
 
 CREATE INDEX IF NOT EXISTS idx_workflow_audit_workflow_sequence
     ON workflow_audit_events(workflow_id, sequence);
+
+CREATE OR REPLACE FUNCTION reject_workflow_audit_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'workflow audit events are append-only';
+END;
+$$;
+
+CREATE TRIGGER trg_workflow_audit_append_only
+    BEFORE UPDATE OR DELETE ON workflow_audit_events
+    FOR EACH ROW EXECUTE FUNCTION reject_workflow_audit_mutation();

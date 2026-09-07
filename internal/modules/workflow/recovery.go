@@ -17,13 +17,14 @@ type PersistedIdempotency struct {
 }
 
 type DurableSnapshot struct {
-	Version       string                          `json:"version"`
-	Workflows     map[string]Workflow             `json:"workflows"`
-	Events        map[string][]TransitionEvent    `json:"events"`
-	Idempotency   map[string]PersistedIdempotency `json:"idempotency"`
-	PaperIntents  map[string]PaperIntent          `json:"paper_intents"`
-	Breakers      map[string]Breaker              `json:"breakers"`
-	BreakerEvents map[string][]BreakerEvent       `json:"breaker_events"`
+	Version            string                          `json:"version"`
+	Workflows          map[string]Workflow             `json:"workflows"`
+	Events             map[string][]TransitionEvent    `json:"events"`
+	Idempotency        map[string]PersistedIdempotency `json:"idempotency"`
+	PaperIntents       map[string]PaperIntent          `json:"paper_intents"`
+	Breakers           map[string]Breaker              `json:"breakers"`
+	BreakerEvents      map[string][]BreakerEvent       `json:"breaker_events"`
+	BreakerIdempotency map[string]string               `json:"breaker_idempotency"`
 }
 
 type ReconciliationRequest struct {
@@ -55,7 +56,7 @@ func (s *Store) ResolveReconciliation(_ context.Context, request ReconciliationR
 func (s *Store) ExportSnapshot() ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	snapshot := DurableSnapshot{Version: DurableSnapshotVersion, Workflows: cloneWorkflows(s.workflows), Events: cloneEvents(s.events), Idempotency: make(map[string]PersistedIdempotency, len(s.idempotency)), PaperIntents: cloneIntents(s.paperIntents), Breakers: cloneBreakers(s.breakers), BreakerEvents: cloneBreakerEvents(s.breakerEvents)}
+	snapshot := DurableSnapshot{Version: DurableSnapshotVersion, Workflows: cloneWorkflows(s.workflows), Events: cloneEvents(s.events), Idempotency: make(map[string]PersistedIdempotency, len(s.idempotency)), PaperIntents: cloneIntents(s.paperIntents), Breakers: cloneBreakers(s.breakers), BreakerEvents: cloneBreakerEvents(s.breakerEvents), BreakerIdempotency: cloneStringMap(s.breakerIdempotency)}
 	for key, record := range s.idempotency {
 		snapshot.Idempotency[key] = PersistedIdempotency{Fingerprint: record.fingerprint, WorkflowID: record.workflowID, Event: record.event}
 	}
@@ -79,6 +80,7 @@ func RestoreSnapshot(data []byte) (*Store, error) {
 	store.paperIntents = snapshot.PaperIntents
 	store.breakers = snapshot.Breakers
 	store.breakerEvents = snapshot.BreakerEvents
+	store.breakerIdempotency = snapshot.BreakerIdempotency
 	for key, record := range snapshot.Idempotency {
 		store.idempotency[key] = idempotencyRecord{fingerprint: record.Fingerprint, workflowID: record.WorkflowID, event: record.Event}
 	}
@@ -86,7 +88,7 @@ func RestoreSnapshot(data []byte) (*Store, error) {
 }
 
 func validateSnapshot(snapshot DurableSnapshot) error {
-	if snapshot.Version != DurableSnapshotVersion || snapshot.Workflows == nil || snapshot.Events == nil || snapshot.Idempotency == nil || snapshot.PaperIntents == nil || snapshot.Breakers == nil || snapshot.BreakerEvents == nil {
+	if snapshot.Version != DurableSnapshotVersion || snapshot.Workflows == nil || snapshot.Events == nil || snapshot.Idempotency == nil || snapshot.PaperIntents == nil || snapshot.Breakers == nil || snapshot.BreakerEvents == nil || snapshot.BreakerIdempotency == nil {
 		return fmt.Errorf("unsupported or incomplete durable workflow snapshot")
 	}
 	for workflowID, workflow := range snapshot.Workflows {
@@ -111,8 +113,15 @@ func validateSnapshot(snapshot DurableSnapshot) error {
 		}
 	}
 	for key, record := range snapshot.Idempotency {
-		if key == "" || record.WorkflowID == "" || record.Fingerprint == "" || record.Event.IdempotencyKey != key {
+		if key == "" || record.WorkflowID == "" || record.Fingerprint == "" || record.Event.WorkflowID != record.WorkflowID || record.Event.IdempotencyKey != key {
 			return fmt.Errorf("durable idempotency record is invalid")
+		}
+		workflow, ok := snapshot.Workflows[record.WorkflowID]
+		if !ok || record.Event.Sequence == 0 || int(record.Event.Sequence) > len(snapshot.Events[record.WorkflowID]) || snapshot.Events[record.WorkflowID][record.Event.Sequence-1].EventID != record.Event.EventID || workflow.WorkflowID != record.WorkflowID {
+			return fmt.Errorf("durable idempotency record is not bound to an audit event")
+		}
+		if err := record.Event.Validate(); err != nil {
+			return err
 		}
 	}
 	for name, breaker := range snapshot.Breakers {
@@ -121,6 +130,39 @@ func validateSnapshot(snapshot DurableSnapshot) error {
 		}
 		if err := breaker.Validate(); err != nil {
 			return err
+		}
+		events := snapshot.BreakerEvents[name]
+		if len(events) == 0 {
+			return fmt.Errorf("breaker %s has no audit history", name)
+		}
+		for index, event := range events {
+			if event.Name != name || event.Sequence != uint64(index+1) {
+				return fmt.Errorf("breaker %s audit sequence is invalid", name)
+			}
+			if err := event.Validate(); err != nil {
+				return err
+			}
+		}
+	}
+	for name := range snapshot.BreakerEvents {
+		if _, ok := snapshot.Breakers[name]; !ok {
+			return fmt.Errorf("breaker audit has no breaker state")
+		}
+	}
+	for key, fingerprint := range snapshot.BreakerIdempotency {
+		if key == "" || fingerprint == "" {
+			return fmt.Errorf("breaker idempotency record is invalid")
+		}
+		found := false
+		for _, events := range snapshot.BreakerEvents {
+			for _, event := range events {
+				if event.IdempotencyKey == key {
+					found = true
+				}
+			}
+		}
+		if !found {
+			return fmt.Errorf("breaker idempotency record is not bound to a breaker event")
 		}
 	}
 	return nil
@@ -158,6 +200,14 @@ func cloneBreakerEvents(input map[string][]BreakerEvent) map[string][]BreakerEve
 	out := make(map[string][]BreakerEvent, len(input))
 	for key, value := range input {
 		out[key] = append([]BreakerEvent(nil), value...)
+	}
+	return out
+}
+
+func cloneStringMap(input map[string]string) map[string]string {
+	out := make(map[string]string, len(input))
+	for key, value := range input {
+		out[key] = value
 	}
 	return out
 }

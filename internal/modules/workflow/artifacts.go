@@ -31,7 +31,13 @@ func (intent PaperIntent) Validate() error {
 	if intent.ExecutionStatus != ExecutionStatusNotExecuted || !intent.PaperOnly || intent.BrokerExecutionAllowed || intent.PortfolioMutation {
 		return ErrSafetyInvariant
 	}
-	return validateUTC(intent.CreatedAt)
+	if err := validateUTC(intent.CreatedAt); err != nil {
+		return err
+	}
+	if intent.IntentID != paperIntentIdentity(intent) {
+		return fmt.Errorf("paper intent identity does not match content")
+	}
+	return nil
 }
 
 // Breaker is defined here so the state store can own safety state atomically;

@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
@@ -188,6 +189,14 @@ func TestPaperIntentRequiresHumanApprovalAndIsInert(t *testing.T) {
 	_, repeated, err := store.CreatePaperIntent(ctx, PaperIntentRequest{WorkflowID: workflow.WorkflowID, Actor: "workflow-system", ActorRole: ActorSystem, IdempotencyKey: "create-intent", Now: now})
 	if err != nil || repeated.IntentID != intent.IntentID {
 		t.Fatalf("paper intent retry = %#v, %v", repeated, err)
+	}
+	snapshot, err := store.ExportSnapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tampered := bytes.Replace(snapshot, []byte(`"descriptive_value":1000`), []byte(`"descriptive_value":1001`), 1)
+	if _, err := RestoreSnapshot(tampered); err == nil {
+		t.Fatal("paper intent content tampering restored")
 	}
 }
 

@@ -237,7 +237,7 @@ func (s *Store) CreatePaperIntent(_ context.Context, request PaperIntentRequest)
 		DescriptiveValue: workflow.ResultingValue, ExecutionStatus: ExecutionStatusNotExecuted,
 		PaperOnly: true, BrokerExecutionAllowed: false, PortfolioMutation: false, CreatedAt: now,
 	}
-	intent.IntentID = paperIntentIdentity(workflow)
+	intent.IntentID = paperIntentIdentity(intent)
 	if err := intent.Validate(); err != nil {
 		return Workflow{}, PaperIntent{}, err
 	}
@@ -374,11 +374,25 @@ func isDangerousState(state State) bool {
 type BreakerEvent struct {
 	EventID        string    `json:"event_id"`
 	Name           string    `json:"name"`
+	Sequence       uint64    `json:"sequence"`
 	Tripped        bool      `json:"tripped"`
 	Reason         string    `json:"reason,omitempty"`
 	Actor          string    `json:"actor"`
 	IdempotencyKey string    `json:"idempotency_key"`
 	OccurredAt     time.Time `json:"occurred_at"`
+}
+
+func (event BreakerEvent) Validate() error {
+	if event.EventID == "" || event.Name == "" || event.Sequence == 0 || event.Actor == "" || event.IdempotencyKey == "" {
+		return fmt.Errorf("breaker event identity is invalid")
+	}
+	if err := validateUTC(event.OccurredAt); err != nil {
+		return err
+	}
+	if event.EventID != eventIdentity("breaker:"+event.Name, event.Sequence, breakerAction(event.Tripped), event.IdempotencyKey) {
+		return fmt.Errorf("breaker event identity mismatch")
+	}
+	return nil
 }
 
 type BreakerRequest struct {
@@ -423,7 +437,7 @@ func (s *Store) SetBreaker(_ context.Context, request BreakerRequest) (Breaker, 
 		return Breaker{}, err
 	}
 	sequence := uint64(len(s.breakerEvents[request.Name]) + 1)
-	event := BreakerEvent{EventID: eventIdentity("breaker:"+request.Name, sequence, breakerAction(request.Tripped), request.IdempotencyKey), Name: request.Name, Tripped: request.Tripped, Reason: breaker.Reason, Actor: request.Actor, IdempotencyKey: request.IdempotencyKey, OccurredAt: now}
+	event := BreakerEvent{EventID: eventIdentity("breaker:"+request.Name, sequence, breakerAction(request.Tripped), request.IdempotencyKey), Name: request.Name, Sequence: sequence, Tripped: request.Tripped, Reason: breaker.Reason, Actor: request.Actor, IdempotencyKey: request.IdempotencyKey, OccurredAt: now}
 	s.breakers[request.Name] = breaker
 	s.breakerEvents[request.Name] = append(s.breakerEvents[request.Name], event)
 	s.breakerIdempotency[request.IdempotencyKey] = fingerprint
