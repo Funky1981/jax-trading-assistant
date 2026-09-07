@@ -1,6 +1,6 @@
 # Phase 05 — Deterministic Quant Core
 
-**Status:** **AUTHORISED / IN PROGRESS — WP-05.06 CURRENT**
+**Status:** **AUTHORISED / IN PROGRESS — WP-05.07 CURRENT**
 
 ## Purpose
     Provide reproducible numerical context for research and risk using established numerical libraries instead of LLM arithmetic.
