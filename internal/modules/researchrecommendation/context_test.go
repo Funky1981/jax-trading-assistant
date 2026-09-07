@@ -68,6 +68,21 @@ func TestBuildContextFailsVisiblyWhenBudgetCannotFit(t *testing.T) {
 	}
 }
 
+func TestContextPlanRejectsTamperedRenderedContext(t *testing.T) {
+	packet, err := NewEvidencePacket(instrumentRef(), []EvidenceItem{packetItem("context", EvidenceKindMarket, "context")}, nil, packetTime())
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := BuildContext(ResearchTask{TaskID: "context-identity", Subject: "JAX", Objective: "identity", RequiredOutput: "research", Budget: testBudget()}, packet)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan.Context += "tampered"
+	if err := plan.Validate(); err == nil {
+		t.Fatal("tampered rendered context accepted")
+	}
+}
+
 func testBudget() ContextBudget {
 	return ContextBudget{TargetInputTokens: 50, MaxInputTokens: 5000, MaxOutputTokens: 200, MaxReasoningTokens: 100, MaxEvidenceItems: 10, MaxChunks: 10, MaxRetries: 1, MaximumModelTier: "local-small", MaxEstimatedCostUSD: 1, InputUSDPer1K: 0, OutputUSDPer1K: 0}
 }

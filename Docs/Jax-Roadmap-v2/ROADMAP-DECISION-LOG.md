@@ -1,5 +1,22 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-06 - Phase 06 exit demonstration and adversarial review
+
+- Date: 2026-09-07
+- Phase: 06 — Research & Recommendation Engine
+- Status: Exit demonstrated; external technical-lead phase review pending
+- Decision authority: internal autonomous verification; no external GO awarded
+
+WP-06.01 through WP-06.07 are implemented and locally committed. The bounded
+exit proof demonstrates reproducible evidence-linked research-only WATCH output
+with thesis, bull/counter evidence, contradiction, unknown, invalidation,
+freshness and Phase-05 quant context. The dedicated adversarial phase review
+passed after correcting timestamp normalization, incomplete content identities,
+retry enforcement and read-model cross-reference validation. Phase 06 remains
+outside Phase 07 until external `GO PHASE 06`.
+
+Evidence: `06-research-recommendation-engine/PHASE-06-INTERNAL-VERIFICATION.md`.
+
 ## RD-2026-09-07-05 - Phase 05 GO / Phase 06 authorization
 
 - Date: 2026-09-07

@@ -75,6 +75,9 @@ func ValidateStructuredResearchOutput(plan ContextPlan, packet EvidencePacket, o
 	if err := packet.Validate(); err != nil {
 		return err
 	}
+	if err := plan.Validate(); err != nil {
+		return err
+	}
 	if output.ContractVersion != ResearchOutputContractV1 || !validIdentity("rso_", output.ID) {
 		return fmt.Errorf("research output contract and rso_ identity are required")
 	}
@@ -176,13 +179,12 @@ func (provenance InferenceProvenance) Validate() error {
 }
 
 func deriveResearchOutputID(plan ContextPlan, output StructuredResearchOutput) string {
+	output.ID = ""
 	seed, _ := json.Marshal(struct {
-		ContractVersion   string `json:"contract_version"`
-		ContextPlanID     string `json:"context_plan_id"`
-		Subject           string `json:"subject"`
-		Thesis            string `json:"thesis"`
-		RawResponseSHA256 string `json:"raw_response_sha256"`
-	}{ResearchOutputContractV1, plan.ID, output.Subject, output.Thesis, output.Inference.RawResponseSHA256})
+		ContractVersion string                   `json:"contract_version"`
+		ContextPlanID   string                   `json:"context_plan_id"`
+		Output          StructuredResearchOutput `json:"output"`
+	}{ResearchOutputContractV1, plan.ID, output})
 	digest := sha256.Sum256(seed)
 	return "rso_" + hex.EncodeToString(digest[:])
 }

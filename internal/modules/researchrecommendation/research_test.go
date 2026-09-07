@@ -45,6 +45,11 @@ func TestStructuredResearchOutputRejectsFabricatedEvidenceAndIncompleteArtifacts
 	if err := ValidateStructuredResearchOutput(plan, packet, output); err == nil {
 		t.Fatal("unbound research output identity accepted")
 	}
+	output = validResearchOutput(t, packet, plan)
+	output.BullCase[0].Statement = "tampered claim"
+	if err := ValidateStructuredResearchOutput(plan, packet, output); err == nil {
+		t.Fatal("tampered structured claim accepted")
+	}
 }
 
 func researchFixture(t *testing.T) (EvidencePacket, ContextPlan) {

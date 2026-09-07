@@ -161,6 +161,7 @@ func BuildContext(task ResearchTask, packet EvidencePacket) (ContextPlan, error)
 	if len(selected) > task.Budget.MaxEvidenceItems || len(selected) > task.Budget.MaxChunks || estimatedTokens > task.Budget.MaxInputTokens || estimatedCost > task.Budget.MaxEstimatedCostUSD {
 		base.Oversize = true
 		base.OversizeDecision = "ABSTAIN_NO_TRADE_CONTEXT_BUDGET"
+		base.ID = contextPlanID(base)
 		return base, fmt.Errorf("%w: selected_items=%d/%d estimated_tokens=%d/%d estimated_cost=%.6f/%.6f", ErrContextOversize, len(selected), task.Budget.MaxEvidenceItems, estimatedTokens, task.Budget.MaxInputTokens, estimatedCost, task.Budget.MaxEstimatedCostUSD)
 	}
 	return base, nil
@@ -244,15 +245,8 @@ func renderContext(task ResearchTask, packet EvidencePacket, items []EvidenceIte
 }
 
 func contextPlanID(plan ContextPlan) string {
-	seed, _ := json.Marshal(struct {
-		ContractVersion string        `json:"contract_version"`
-		PacketID        string        `json:"packet_id"`
-		PacketContent   string        `json:"packet_content"`
-		TaskID          string        `json:"task_id"`
-		Objective       string        `json:"objective"`
-		SelectedIDs     []string      `json:"selected_ids"`
-		Budget          ContextBudget `json:"budget"`
-	}{plan.ContractVersion, plan.PacketID, plan.PacketContentFingerprint, plan.TaskID, plan.Objective, plan.SelectedIDs, plan.Budget})
+	plan.ID = ""
+	seed, _ := json.Marshal(plan)
 	digest := sha256.Sum256(seed)
 	return "ctx_" + hex.EncodeToString(digest[:])
 }

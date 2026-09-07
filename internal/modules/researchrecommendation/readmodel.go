@@ -90,6 +90,9 @@ func BuildRecommendationReadModel(packet EvidencePacket, plan ContextPlan, resea
 	if strings.TrimSpace(plan.PacketContentFingerprint) == "" || plan.PacketContentFingerprint != packetFingerprint {
 		return RecommendationReadModel{}, fmt.Errorf("read model requires the context packet fingerprint")
 	}
+	if err := validatePlanEvidenceReferences(plan, packet); err != nil {
+		return RecommendationReadModel{}, err
+	}
 	if err := ValidateStructuredResearchOutput(plan, packet, research); err != nil {
 		return RecommendationReadModel{}, err
 	}
@@ -126,6 +129,26 @@ func BuildRecommendationReadModel(packet EvidencePacket, plan ContextPlan, resea
 	model := RecommendationReadModel{ContractVersion: RecommendationReadModelContractV1, RecommendationID: recommendation.ID, Subject: packet.Subject.ID, Disposition: recommendation.Disposition, Thesis: recommendation.Thesis, BullCase: append([]ResearchClaim(nil), recommendation.BullCase...), CounterEvidence: append([]ResearchClaim(nil), recommendation.CounterEvidence...), Contradictions: append([]ResearchClaim(nil), recommendation.Contradictions...), Unknowns: append([]ResearchUnknown(nil), recommendation.Unknowns...), InvalidationConditions: append([]InvalidationCondition(nil), recommendation.InvalidationConditions...), Evidence: evidence, Freshness: freshness, QuantContext: quant, Confidence: recommendation.Confidence, ContextPlanID: plan.ID, PacketContentFingerprint: plan.PacketContentFingerprint, ContextSelectedIDs: append([]string(nil), plan.SelectedIDs...), ContextOmittedIDs: append([]string(nil), plan.OmittedIDs...), ContextDuplicateIDs: append([]string(nil), plan.DuplicateIDs...), EstimatedInputTokens: plan.EstimatedInputTokens, MaxInputTokens: plan.MaxInputTokens, MaxOutputTokens: plan.MaxOutputTokens, MaxReasoningTokens: plan.MaxReasoningTokens, Inference: InferenceView{Provider: research.Inference.Provider, Model: research.Inference.Model, PromptVersion: research.Inference.PromptVersion, SystemVersion: research.Inference.SystemVersion, OutputContractVersion: research.Inference.OutputContractVersion, RequestID: research.Inference.RequestID, RawResponseSHA256: research.Inference.RawResponseSHA256, RetryCount: research.Inference.RetryCount, InputTokens: research.Inference.InputTokens, OutputTokens: research.Inference.OutputTokens, ActualCostUSD: research.Inference.ActualCostUSD, UsageComplete: research.Inference.UsageComplete, Paid: research.Inference.Paid}, Authority: recommendation.Authority, ExecutionAuthority: recommendation.ExecutionAuthority}
 	model.ID = deriveReadModelID(model)
 	return model, nil
+}
+
+func validatePlanEvidenceReferences(plan ContextPlan, packet EvidencePacket) error {
+	known := make(map[string]struct{}, len(packet.Items))
+	for _, item := range packet.Items {
+		known[item.Identity.ID] = struct{}{}
+	}
+	seen := map[string]string{}
+	for label, ids := range map[string][]string{"selected": plan.SelectedIDs, "duplicate": plan.DuplicateIDs, "omitted": plan.OmittedIDs} {
+		for _, id := range ids {
+			if _, ok := known[id]; !ok {
+				return fmt.Errorf("context %s evidence reference is outside the packet", label)
+			}
+			if previous, ok := seen[id]; ok {
+				return fmt.Errorf("context evidence %q appears in both %s and %s selections", id, previous, label)
+			}
+			seen[id] = label
+		}
+	}
+	return nil
 }
 
 func deriveReadModelID(model RecommendationReadModel) string {

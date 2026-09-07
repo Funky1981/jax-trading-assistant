@@ -134,6 +134,9 @@ func (recommendation ResearchRecommendation) Validate(packet EvidencePacket, res
 	if recommendation.Authority != "RESEARCH_DECISION_SUPPORT" || recommendation.ExecutionAuthority != "NONE" {
 		return fmt.Errorf("recommendation authority must remain research-only")
 	}
+	if !recommendation.Eligibility.Eligible && recommendation.Disposition != DispositionNoTrade {
+		return fmt.Errorf("ineligible recommendation must fail closed to NO_TRADE")
+	}
 	if err := recommendation.Confidence.Validate(); err != nil {
 		return err
 	}
@@ -192,16 +195,8 @@ func collectResearchEvidenceIDs(research StructuredResearchOutput) []string {
 }
 
 func deriveRecommendationID(recommendation ResearchRecommendation) string {
-	seed, _ := json.Marshal(struct {
-		ContractVersion   string                    `json:"contract_version"`
-		Subject           canonical.ContractRef     `json:"subject"`
-		ResearchOutputID  string                    `json:"research_output_id"`
-		Disposition       RecommendationDisposition `json:"disposition"`
-		Thesis            string                    `json:"thesis"`
-		EvidenceIDs       []string                  `json:"evidence_ids"`
-		ReasonCodes       []string                  `json:"reason_codes"`
-		CalibrationStatus CalibrationStatus         `json:"calibration_status"`
-	}{ResearchRecommendationContractV1, recommendation.Subject, recommendation.ResearchOutputID, recommendation.Disposition, recommendation.Thesis, recommendation.EvidenceIDs, recommendation.Eligibility.ReasonCodes, recommendation.Confidence.CalibrationStatus})
+	recommendation.ID = ""
+	seed, _ := json.Marshal(recommendation)
 	digest := sha256.Sum256(seed)
 	return "rec6_" + hex.EncodeToString(digest[:])
 }

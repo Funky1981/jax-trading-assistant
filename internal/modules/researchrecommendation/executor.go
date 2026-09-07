@@ -62,6 +62,7 @@ func ExecuteStructuredResearch(plan ContextPlan, packet EvidencePacket, provider
 		// RetryCount is execution-owned provenance. A provider cannot under-report
 		// attempts by returning a stale or fabricated retry value.
 		output.Inference.RetryCount = attempt
+		output.ID = deriveResearchOutputID(plan, output)
 		if err := ValidateStructuredResearchOutput(plan, packet, output); err != nil {
 			stats.ValidationFailures++
 			stats.LastError = err.Error()
