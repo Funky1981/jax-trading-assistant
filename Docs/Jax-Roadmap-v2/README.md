@@ -44,7 +44,7 @@ criteria remain binding.
 - Phase 05: `COMPLETE / GO`
 - Phase 06: `COMPLETE / GO`
 - Phase 07: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-07.05 — Traditional strategy backtesting adapter evaluation`
+- Current package: `WP-07.06 — Transaction cost/slippage assumptions`
 
 
 ## 2026-08-10 integrated roadmap change

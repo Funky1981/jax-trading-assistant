@@ -23,8 +23,8 @@ decision remains `NO_TRADE`.
 | Phase 05 — Deterministic Quant Core | **COMPLETE / GO** |
 | Phase 06 — Research & Recommendation Engine | **COMPLETE / GO** |
 | Phase 07 — Evaluation, Replay & Backtesting | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-07.05 — Traditional strategy backtesting adapter evaluation** |
-| Next package | **WP-07.05 — Traditional strategy backtesting adapter evaluation** |
+| Current implementation package | **WP-07.06 — Transaction cost/slippage assumptions** |
+| Next package | **WP-07.06 — Transaction cost/slippage assumptions** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -161,8 +161,8 @@ survive historical knowability, outcome-leakage, cost, walk-forward and
 falsification checks. It must be capable of disproving an apparent edge. Its
 outputs remain evaluation artifacts and do not create approvals, orders, trades,
 fills or live execution authority. WP-07.01 through WP-07.04 are implemented and
-internally verified; the current package is `WP-07.05 — Traditional strategy
-backtesting adapter evaluation`. Phase 07 must demonstrate its exit condition
+internally verified; the current package is `WP-07.06 — Transaction cost/slippage
+assumptions`. Phase 07 must demonstrate its exit condition
 and receive external technical-lead GO before Phase 08.
 
 ### Later roadmap — planned capability progression

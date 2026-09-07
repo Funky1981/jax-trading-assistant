@@ -1,5 +1,22 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-13 - WP-07.05 internal verification
+
+- Date: 2026-09-07
+- Phase: 07 — Evaluation, Replay & Backtesting
+- Work package: WP-07.05 — Traditional strategy backtesting adapter evaluation
+- Status: Implemented / internally verified; WP-07.06 current
+- Decision authority: autonomous package verification under authorised Phase-07 scope
+
+WP-07.05 records a versioned adapter assessment without adding a new runtime or
+dependency. The selected custom event-replay boundary is required to be
+event-driven, point-in-time safe, reproducible, custom-data capable and
+transaction-cost capable. Alternatives and operational/license burden remain
+explicit; unsafe selection, ambiguous selection and missing rationale are
+rejected. Focused tests pass and execution authority remains NONE.
+
+Evidence: `07-evaluation-replay-backtesting/WP-07.05-traditional-strategy-backtesting-adapter-evaluation.md`.
+
 ## RD-2026-09-07-12 - WP-07.04 internal verification
 
 - Date: 2026-09-07

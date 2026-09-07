@@ -29,7 +29,7 @@ Research & Recommendation Engine — is **COMPLETE / GO**, accepted by external
 GPT-5.6 Sol. Phase 07 — Evaluation, Replay & Backtesting — is **authorised / in
 progress**. See `Docs/ROADMAP.md`,
 `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`. WP-07.01 through WP-07.04
-are internally verified and the current package is WP-07.05.
+are internally verified and the current package is WP-07.06.
 
 ## Non-negotiable principles
 
