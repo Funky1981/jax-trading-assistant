@@ -20,8 +20,8 @@ decision remains `NO_TRADE`.
 | Phase 02 — Provider / Data Platform | **COMPLETE / GO**, including durable raw storage closure |
 | Phase 03 — Core Financial Evidence | **COMPLETE / GO** |
 | Phase 04 — World Monitor Intelligence | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-04.06 — Market-reaction correlation** |
-| Next package | **WP-04.06 — Market-reaction correlation** |
+| Current implementation package | **WP-04.07 — Evaluate ACLED/AIS/prediction-market evidence adapters** |
+| Next package | **WP-04.07 — Evaluate ACLED/AIS/prediction-market evidence adapters** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.

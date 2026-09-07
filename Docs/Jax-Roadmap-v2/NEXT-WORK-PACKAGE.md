@@ -5,7 +5,7 @@
 - Phase 03 — Core Financial Evidence: **COMPLETE / GO**
 - Phase 04 — World Monitor Intelligence: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-04.06 — Market-reaction correlation**
+- Current implementation package: **WP-04.07 — Evaluate ACLED/AIS/prediction-market evidence adapters**
 
 ## Phase-04 autonomous scope
 
