@@ -23,8 +23,8 @@ GO**. Phase 03 demonstrated its exit condition with a real source-linked
 AAPL/Apple evidence packet containing real market, company and macro/context
 evidence, immutable raw provenance, a deterministic exit assertion and no
 model-memory dependency. Phase 04 — World Monitor Intelligence — is
-**implemented with its exit demonstrated; external phase-gate review is
-pending**. See `Docs/ROADMAP.md`,
+**COMPLETE / GO**, accepted by external GPT-5.6 Sol. Phase 05 — Deterministic
+Quant Core — is now **authorised/in progress**. See `Docs/ROADMAP.md`,
 `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 
 ## Non-negotiable principles

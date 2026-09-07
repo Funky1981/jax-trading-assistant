@@ -285,6 +285,19 @@ Hard stops include roadmap changes, paid dependency/account decisions, missing/r
 
 Model policy: GPT-5.6 Luna for default implementation; GPT-5.6 Sol for consequential decisions and phase review; GPT-5.6 Terra as optional bounded escalation when Luna materially struggles.
 
+## RD-2026-09-07-04 - Phase 04 GO / Phase 05 authorization
+
+- Date: 2026-09-07
+- Status: Accepted
+- Decision authority: external GPT-5.6 Sol technical-lead review
+
+### Decision
+
+Phase 04 — World Monitor Intelligence — is accepted `COMPLETE / GO`. The exact
+Phase-04 exit condition and supplied phase handover were accepted. Phase 05 —
+Deterministic Quant Core — is authorised/in progress beginning at
+`WP-05.01 — Quant service/library boundary and versioned request/response contract`.
+
 ## RD-2026-09-07-03 - Mandatory adversarial phase review
 
 - Date: 2026-09-07

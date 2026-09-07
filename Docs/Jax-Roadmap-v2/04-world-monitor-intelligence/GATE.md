@@ -15,6 +15,9 @@
 A replayed multi-source event is clustered, corroborated, linked to plausible instruments and accompanied by confidence/unknowns without creating a trade candidate automatically.
 
 ## Decision
+
+**Accepted decision:** `GO PHASE 04` — external GPT-5.6 Sol technical-lead
+review, 2026-09-07.
 Reviewer returns one of:
 - **GO PHASE 04**
 - **CONDITIONAL GO PHASE 04**

@@ -40,8 +40,9 @@ criteria remain binding.
 ## Current programme position
 
 - Phases 00–03: `COMPLETE / GO`
-- Phase 04: implemented; exit demonstrated; external phase-gate review pending
-- Current position: Phase-04 gate handover; Phase 05 remains unauthorized
+- Phase 04: `COMPLETE / GO`
+- Phase 05: `AUTHORISED / IN PROGRESS`
+- Current package: `WP-05.01 — Quant service/library boundary and versioned request/response contract`
 
 
 ## 2026-08-10 integrated roadmap change

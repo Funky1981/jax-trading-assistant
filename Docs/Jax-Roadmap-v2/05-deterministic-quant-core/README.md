@@ -1,5 +1,7 @@
 # Phase 05 — Deterministic Quant Core
 
+**Status:** **AUTHORISED / IN PROGRESS — WP-05.02 CURRENT**
+
 ## Purpose
     Provide reproducible numerical context for research and risk using established numerical libraries instead of LLM arithmetic.
 
@@ -30,4 +32,6 @@ Fincept analytics catalogue plus established Python numerical/portfolio librarie
 ## Exit gate
 Given a frozen canonical dataset, every core quant result is deterministic, versioned, tested against known values and independently reproducible.
 
-See `GATE.md`. Every work package requires independent review before the next one starts.
+See `GATE.md`. Work packages are internally verified and committed under
+Autonomous Development Mode; the dedicated adversarial phase review is
+mandatory before the eventual external Phase-05 handover.

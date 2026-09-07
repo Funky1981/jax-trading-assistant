@@ -3,30 +3,32 @@
 ## Status
 
 - Phase 03 — Core Financial Evidence: **COMPLETE / GO**
-- Phase 04 — World Monitor Intelligence: **IMPLEMENTED / EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
+- Phase 04 — World Monitor Intelligence: **COMPLETE / GO**
+- Phase 05 — Deterministic Quant Core: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **Phase-04 gate handover**
+- Current implementation package: **WP-05.02 — Returns/log returns and benchmark-relative performance**
 
-## Phase-04 autonomous scope
+## Phase-05 autonomous scope
 
 Codex may continue, one bounded package at a time, through:
 
-1. WP-04.01 — Continuous durable collection and cursor semantics
-2. WP-04.02 — Deduplication/event clustering
-3. WP-04.03 — Entity/issuer/geography extraction
-4. WP-04.04 — Source triangulation and confidence
-5. WP-04.05 — Velocity/baseline-deviation signals
-6. WP-04.06 — Market-reaction correlation
-7. WP-04.07 — Evaluate ACLED/AIS/prediction-market evidence adapters
+1. WP-05.01 — Quant service/library boundary and versioned request/response contract
+2. WP-05.02 — Returns/log returns and benchmark-relative performance
+3. WP-05.03 — Volatility/ATR/drawdown
+4. WP-05.04 — Correlation/beta/covariance
+5. WP-05.05 — Liquidity/volume anomaly metrics
+6. WP-05.06 — Basic risk-adjusted metrics
+7. WP-05.07 — Position sizing primitives
+8. WP-05.08 — Portfolio exposure primitives
+9. WP-05.09 — Library evaluation: NumPy/SciPy/statsmodels/skfolio/Riskfolio where justified
 
-Stop when the Phase-04 exit condition is demonstrated or any governance hard
-stop occurs. Do not begin Phase 05 without external `GO PHASE 04`.
+Stop when the Phase-05 exit condition is demonstrated or any governance
+hard-stop occurs. Do not begin Phase 06 without external `GO PHASE 05`.
 
-## Phase-04 exit condition
+## Phase-05 exit condition
 
-A replayed multi-source event is clustered, corroborated, linked to plausible
-instruments and accompanied by confidence/unknowns without creating a trade
-candidate automatically.
+Given a frozen canonical dataset, every core quant result is deterministic,
+versioned, tested against known values and independently reproducible.
 
 The exit condition must be demonstrated, not merely asserted.
 

@@ -19,9 +19,10 @@ decision remains `NO_TRADE`.
 | Phase 01 — Canonical Contracts / Provenance / Replay | **COMPLETE / GO** |
 | Phase 02 — Provider / Data Platform | **COMPLETE / GO**, including durable raw storage closure |
 | Phase 03 — Core Financial Evidence | **COMPLETE / GO** |
-| Phase 04 — World Monitor Intelligence | **IMPLEMENTED / EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
-| Current implementation package | **Phase-04 gate handover** |
-| Next package | **External technical-lead GO PHASE 04; Phase 05 remains unauthorized** |
+| Phase 04 — World Monitor Intelligence | **COMPLETE / GO** |
+| Phase 05 — Deterministic Quant Core | **AUTHORISED / IN PROGRESS** |
+| Current implementation package | **WP-05.02 — Returns/log returns and benchmark-relative performance** |
+| Next package | **WP-05.02 — Returns/log returns and benchmark-relative performance** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -110,13 +111,13 @@ remain future source-qualification questions. See
 Corrective packages such as WP-03.01A are closure history under their parent
 package, not new permanent roadmap phases.
 
-### Phase 04 — World Monitor Intelligence — IMPLEMENTED / EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
+### Phase 04 — World Monitor Intelligence — COMPLETE / GO
 
 Phase 04 builds corroborated event intelligence from the existing World Monitor
 boundary while preserving raw evidence, provenance, temporal semantics,
-deterministic replay and downstream safety boundaries. Its current starting
-its seven authorised work packages. The exact exit condition is demonstrated
-by the reproducible internal verification record at
+deterministic replay and downstream safety boundaries. Its seven authorised
+work packages are complete. The exact exit condition was accepted by external
+GPT-5.6 Sol with `GO PHASE 04`. The reproducible internal verification record is at
 `Docs/Jax-Roadmap-v2/04-world-monitor-intelligence/PHASE-04-INTERNAL-VERIFICATION.md`.
 
 From Phase 04 onward, Autonomous Development Mode permits Codex to complete one
@@ -124,6 +125,16 @@ bounded package at a time with internal verification and self-review, then
 continue within the authorised phase. External technical-lead review occurs at
 the phase exit gate or on a hard stop. See
 `Docs/Jax-Roadmap-v2/governance/AUTONOMOUS-DEVELOPMENT-MODE.md`.
+
+### Phase 05 — Deterministic Quant Core — AUTHORISED / IN PROGRESS
+
+Phase 05 provides deterministic numerical context for research and risk using
+frozen canonical datasets. It begins with
+`WP-05.01 — Quant service/library boundary and versioned request/response contract`.
+Its exit condition is: given a frozen canonical dataset, every core quant
+result is deterministic, versioned, tested against known values and
+independently reproducible. Phase-05 work must not create recommendations,
+candidates, approvals, orders, trades, fills or live execution authority.
 
 ### Later roadmap — planned capability progression
 
@@ -226,7 +237,6 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 04 implemented with its exit demonstrated;
-external gate review is pending**. Phase 05 remains unauthorized until the
-technical lead returns external `GO PHASE 04` or an explicitly recorded
-conditional decision.
+The current position is **Phase 05 authorised/in progress**, beginning with
+WP-05.01. Phase 05 must demonstrate its exit condition and receive external
+technical-lead GO before Phase 06 begins.

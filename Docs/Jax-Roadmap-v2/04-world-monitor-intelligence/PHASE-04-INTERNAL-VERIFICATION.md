@@ -1,6 +1,9 @@
 # Phase 04 Internal Verification Record
 
-**Status:** **PHASE EXIT DEMONSTRATED / EXTERNAL GATE PENDING**
+**Status:** **COMPLETE / GO — EXTERNAL TECHNICAL-LEAD ACCEPTED**
+
+External authority: GPT-5.6 Sol returned `GO PHASE 04` on 2026-09-07 and
+accepted the demonstrated exit condition and supplied phase handover.
 
 ## Package decisions
 
