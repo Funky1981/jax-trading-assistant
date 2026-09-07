@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 )
 
@@ -59,4 +60,8 @@ func ensureFiniteValues(values []Value) error {
 		}
 	}
 	return nil
+}
+
+func formatFloat(value float64) string {
+	return strconv.FormatFloat(value, 'g', -1, 64)
 }
