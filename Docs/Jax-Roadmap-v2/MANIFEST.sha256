@@ -64,7 +64,7 @@
 5ea998b7aae07b9fd69bb4ff37e06df5f3950a99e06a61b89daa82b18ea53421  03-core-financial-evidence/WP-03.06-evidence-quality-cross-source-checks.md
 5eba5ea23cb209afaa78378f134a090576bd3b5e9fd91c88f9b56f9fb85c5aab  02-data-platform-provider-architecture/WP-02.03-normalization-and-validation-pipeline.md
 5f52b0f6a865405a8d218dd63ce15fc407fe4c4d34558e55ed2f9ee0e91d0f0c  references/LLM-COST-CONTEXT-EFFICIENCY.md
-617fb2879e3e45fae92730817cc3321878785a691da5979f69018be67d56d4c4  06-research-recommendation-engine/README.md
+5fbdc8df16b843ff2cb009d5e26cae704eed1a60426e089f31927d7e3f604dd5  NEXT-WORK-PACKAGE.md
 61fb05c6e1ff654886f7bdc87ae0b32a7e2ca1e16135fd101a4470b1d17d842c  13-optional-live-execution/GATE.md
 62ce02a9070f937868050c4634371f704448b2426303a38466313e803efa4461  10-workflow-hitl-operational-safety/README.md
 62d0133aad6229aa01d1d27ba673895c57d94acd1d9435b0a34703c3ddc997c5  08-controlled-ai-tools-durable-research-agents/WP-08.03-timeout-cancellation-budget-controls.md
@@ -95,6 +95,7 @@
 8c894f4615e33b31b8ceb68e910cfcb8e48e2dfc7e2156b0c06669d65e47778f  08-controlled-ai-tools-durable-research-agents/WP-08.02-read-only-tool-permission-tiers.md
 8ed8c512b4c277694239e477c96c3d5337a650e51cc092239b56933311308f5e  PHASE-INDEX.md
 90ec2dbbcda76054f913fcab4562b92ad0645412190ec7362fda642246cb8e08  governance/AUTONOMOUS-DEVELOPMENT-MODE.md
+95b859a52d6642dcc74516ed42ade5db3783c68f4735070cf8fc6cff3d35df9e  06-research-recommendation-engine/README.md
 975ea242155a60563fab67ca6e9cba7ee20b397fdf1ff3d2d021b0739899410d  07-evaluation-replay-backtesting/WP-07.07-walk-forward-out-of-sample-protocol.md
 983dbd0a018ed2ee3c137887300f13b5428043eb5653e3b85ad233e0d7638c5e  ROADMAP-DECISION-LOG.md
 9846234b4cd4aa1697c8ede4dab05606f2534bd41473aa462a974dfafd89d7de  13-optional-live-execution/WP-13.07-live-observability-runbook.md
@@ -107,8 +108,6 @@
 a01d7637ae2b8a9e6b98c0d8bb874413781bbc97d6b530f9b9cf143fccf46b4a  roadmap.json
 a0fba42019daec21dcfd1b99cda0e55fa5686a8a8427409d7d532088ac7f59a5  06-research-recommendation-engine/GATE.md
 a276f382dd1f76068b1053667387d2e75dcf273cfb49c175e0462167b38c8835  09-portfolio-intelligence-deterministic-risk/REFERENCE-NOTES.md
-a2d0bed3f2d95325b4a1a6b2c4a7bd2a66b7d3b187adac5db6e60b3cc1dfa7f4  06-research-recommendation-engine/WP-06.03-bull-case-bear-case-contradiction-unknown-extraction.md
-a38dfc042f3af9fd605c2794e71148585a4c5c42f5af0e926a02844e9303b7af  NEXT-WORK-PACKAGE.md
 a4cd6ea3ecfdf601d32bd09034f0e61b1044bcae8a377cb30a83f6673bdc773a  13-optional-live-execution/WP-13.08-small-capital-staged-rollout.md
 a8e158bdecaa992fb4e06dc580a2dd753aa1abeedd28cf3058d9e28735ff8ac2  governance/PHASE-REVIEW-HANDOVER.md
 ad4957571bf9107e5bc9c6935c484239f5f617fb7f9078e2a0cd60b527b2104f  12-advanced-quant-research/WP-12.06-concept-drift-and-rolling-retraining.md
@@ -143,6 +142,7 @@ d419ddc4b935be3188270fce8c6ff3b4f87e9238938fb9f78759396ccd40b322  08-controlled-
 d4f60cb42961f86d9f0b95ac8064f82c24400987df49ba9148c4516dbf5fe755  01-canonical-contracts-provenance-audit/WP-01.04-define-replay-audit-event-model-and-compatibility-strategy.md
 d89b704d81de2348577e75905774bb6dcd5565bb2dc59cf608c231e49d136584  references/FINCEPT-CAPABILITY-MAP.md
 d94db485f8ea45112eb79ac49acf723918c9b7924f4727e19cc37430f1a3e736  10-workflow-hitl-operational-safety/WP-10.02-explicit-confirmation-hitl-contract.md
+db0da496d6fff1165f047f5cba2263426eaaf7aa7cb5195e1739951507f9b76b  06-research-recommendation-engine/WP-06.03-bull-case-bear-case-contradiction-unknown-extraction.md
 db3cdb87205fd925d863eff4504c88e75e64a80ff8423db8a22969c3b8320d19  ROADMAP-CHANGE-2026-08-10-LLM-COST-CONTEXT-EFFICIENCY.md
 dba49ded6cf39a54b1f8943a0bcd36e6e60df765e61350ac8b0f5a1ffffa7483  01-canonical-contracts-provenance-audit/WP-01.03-define-provenance-version-identity-and-immutable-evidence-references.md
 dcd580672af386207f1a8f8e6a7ba9e2cae2d8795765cdbdb70c92036fda0137  12-advanced-quant-research/WP-12.01-qlib-rd-agent-suitability-spike.md
