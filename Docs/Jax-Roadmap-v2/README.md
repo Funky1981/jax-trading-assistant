@@ -43,8 +43,8 @@ criteria remain binding.
 - Phase 04: `COMPLETE / GO`
 - Phase 05: `COMPLETE / GO`
 - Phase 06: `COMPLETE / GO`
-- Phase 07: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-07.08 — Operational replay tooling`
+- Phase 07: `EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`
+- Current package: `Phase-07 exit proof complete; await external GO before Phase 08`
 
 
 ## 2026-08-10 integrated roadmap change

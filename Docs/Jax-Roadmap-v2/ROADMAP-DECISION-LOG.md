@@ -1,5 +1,25 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-17 - Phase 07 exit demonstrated / external review pending
+
+- Date: 2026-09-07
+- Phase: 07 — Evaluation, Replay & Backtesting
+- Work packages: WP-07.01 through WP-07.08
+- Status: Exit condition demonstrated; external technical-lead review pending
+- Decision authority: autonomous phase verification; no self-awarded phase GO
+
+The complete Phase-07 chain now reproduces a frozen historical case's context
+and recommendation, records post-decision outcomes without look-ahead, binds a
+candidate logic version to explicit out-of-sample membership, applies frozen
+cost assumptions and emits an operator-facing report. The proof deliberately
+reports `EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE` and
+`UNKNOWN_INSUFFICIENT_SAMPLE_NO_EDGE_CLAIM`; it does not claim a trading edge.
+Focused evaluation tests, the full Go suite, adversarial tests and repository
+hygiene checks pass. No Phase-08 work has begun.
+
+Evidence: `internal/modules/evaluation/phase07_exit_test.go` and the WP-07.01
+through WP-07.08 evidence sections.
+
 ## RD-2026-09-07-16 - WP-07.08 internal verification
 
 - Date: 2026-09-07
