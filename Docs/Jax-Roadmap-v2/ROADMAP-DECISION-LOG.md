@@ -1,5 +1,22 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-12 - WP-07.04 internal verification
+
+- Date: 2026-09-07
+- Phase: 07 — Evaluation, Replay & Backtesting
+- Work package: WP-07.04 — Recommendation outcome tracking
+- Status: Implemented / internally verified; WP-07.05 current
+- Decision authority: autonomous package verification under authorised Phase-07 scope
+
+WP-07.04 adds a separate content-addressed recommendation outcome artifact.
+It records post-decision observation windows, explicit incomplete horizons,
+benchmark-relative results and excursion bounds without creating trade or
+execution state. Strict observation ordering, recording-time bounds and
+invalidation-time look-ahead checks pass focused tests; original recommendation
+identity is immutable and mutation is rejected.
+
+Evidence: `07-evaluation-replay-backtesting/WP-07.04-recommendation-outcome-tracking.md`.
+
 ## RD-2026-09-07-11 - WP-07.03 internal verification
 
 - Date: 2026-09-07
