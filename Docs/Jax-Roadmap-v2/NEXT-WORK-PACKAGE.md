@@ -7,7 +7,7 @@
 - Phase 05 — Deterministic Quant Core: **COMPLETE / GO**
 - Phase 06 — Research & Recommendation Engine: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-06.01 — Define evidence packet contract**
+- Current implementation package: **WP-06.03 — Bull case / bear case / contradiction / unknown extraction**
 
 ## Phase-05 autonomous scope
 

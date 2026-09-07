@@ -22,8 +22,8 @@ decision remains `NO_TRADE`.
 | Phase 04 — World Monitor Intelligence | **COMPLETE / GO** |
 | Phase 05 — Deterministic Quant Core | **COMPLETE / GO** |
 | Phase 06 — Research & Recommendation Engine | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-06.01 — Define evidence packet contract** |
-| Next package | **WP-06.01 — Define evidence packet contract** |
+| Current implementation package | **WP-06.03 — Bull case / bear case / contradiction / unknown extraction** |
+| Next package | **WP-06.03 — Bull case / bear case / contradiction / unknown extraction** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
