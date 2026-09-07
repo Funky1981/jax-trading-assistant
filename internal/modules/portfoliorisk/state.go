@@ -189,8 +189,9 @@ func validateObserved(v ObservedNumber, field string) error {
 	return nil
 }
 
-func finite(value float64) bool        { return !math.IsNaN(value) && !math.IsInf(value, 0) }
-func finiteNonZero(value float64) bool { return finite(value) && value != 0 }
+func finite(value float64) bool         { return !math.IsNaN(value) && !math.IsInf(value, 0) }
+func finiteNonZero(value float64) bool  { return finite(value) && value != 0 }
+func finitePositive(value float64) bool { return finite(value) && value > 0 }
 
 type FreshnessStatus string
 
