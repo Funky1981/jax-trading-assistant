@@ -1,6 +1,10 @@
 package workflow
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
 
 // PaperIntent is descriptive and immutable. It is deliberately not an order,
 // execution instruction, broker request, trade, or fill.
@@ -18,6 +22,16 @@ type PaperIntent struct {
 	BrokerExecutionAllowed bool      `json:"broker_execution_allowed"`
 	PortfolioMutation      bool      `json:"portfolio_mutation"`
 	CreatedAt              time.Time `json:"created_at"`
+}
+
+func (intent PaperIntent) Validate() error {
+	if !strings.HasPrefix(intent.IntentID, PaperIntentIdentityPrefix) || intent.ContractVersion != PaperIntentContractVersion || intent.WorkflowID == "" || intent.RecommendationID == "" || intent.RiskDecisionID == "" || intent.InstrumentID == "" || (intent.Direction != "LONG" && intent.Direction != "SHORT") || !finite(intent.DescriptiveValue) || intent.DescriptiveValue == 0 {
+		return fmt.Errorf("paper intent identity or descriptive fields are invalid")
+	}
+	if intent.ExecutionStatus != ExecutionStatusNotExecuted || !intent.PaperOnly || intent.BrokerExecutionAllowed || intent.PortfolioMutation {
+		return ErrSafetyInvariant
+	}
+	return validateUTC(intent.CreatedAt)
 }
 
 // Breaker is defined here so the state store can own safety state atomically;

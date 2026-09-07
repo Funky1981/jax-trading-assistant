@@ -102,6 +102,9 @@ func (s *Store) Create(_ context.Context, request CreateRequest) (Workflow, erro
 	if err := workflow.Validate(); err != nil {
 		return Workflow{}, err
 	}
+	if !PermissionAllowed(ActorSystem, ActionWorkflowCreated, State(""), workflow.State) {
+		return Workflow{}, ErrUnauthorized
+	}
 	event, err := s.appendLocked(workflow, State(""), workflow.State, ActionWorkflowCreated, ActorSystem, "workflow-system", request.IdempotencyKey, request, now, "risk decision bound")
 	if err != nil {
 		return Workflow{}, err
@@ -116,6 +119,150 @@ func (s *Store) RequestHumanConfirmation(_ context.Context, request TransitionRe
 		request.Action = ActionRequestConfirmation
 	}
 	return s.transition(request, StateAwaitingHumanConfirmation, ActorSystem)
+}
+
+type HumanConfirmationRequest struct {
+	WorkflowID     string       `json:"workflow_id"`
+	Confirmation   Confirmation `json:"confirmation"`
+	Actor          string       `json:"actor"`
+	ActorRole      ActorRole    `json:"actor_role"`
+	IdempotencyKey string       `json:"idempotency_key"`
+	Now            time.Time    `json:"now"`
+}
+
+func (s *Store) Confirm(_ context.Context, request HumanConfirmationRequest) (Workflow, error) {
+	if request.ActorRole != ActorHuman || strings.TrimSpace(request.Actor) == "" || request.Actor != request.Confirmation.Actor {
+		return Workflow{}, ErrUnauthorized
+	}
+	if strings.TrimSpace(request.WorkflowID) == "" || strings.TrimSpace(request.IdempotencyKey) == "" {
+		return Workflow{}, ErrUnauthorized
+	}
+	now, err := requestTime(request.Now)
+	if err != nil {
+		return Workflow{}, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if existing, ok := s.idempotency[request.IdempotencyKey]; ok {
+		if existing.fingerprint != inputFingerprint(request) {
+			return Workflow{}, ErrIdempotencyConflict
+		}
+		return s.workflows[existing.workflowID], nil
+	}
+	workflow, ok := s.workflows[request.WorkflowID]
+	if !ok {
+		return Workflow{}, ErrWorkflowNotFound
+	}
+	if workflow.State != StateAwaitingHumanConfirmation || !PermissionAllowed(request.ActorRole, request.ConfirmationAction(), StateAwaitingHumanConfirmation, confirmationTarget(request.Confirmation.Decision)) {
+		return Workflow{}, fmt.Errorf("%w: confirmation requires awaiting human confirmation", ErrInvalidTransition)
+	}
+	if err := request.Confirmation.ValidateFor(workflow, now); err != nil {
+		return Workflow{}, err
+	}
+	target, action := StateHumanRejected, ActionHumanReject
+	if request.Confirmation.Decision == ConfirmationApprove {
+		target, action = StateHumanApproved, ActionHumanApprove
+	}
+	if now.Before(workflow.UpdatedAt) {
+		return Workflow{}, fmt.Errorf("%w: confirmation timestamp precedes workflow update", ErrInvalidTimestamp)
+	}
+	previous := workflow.State
+	workflow.State = target
+	workflow.Revision++
+	workflow.UpdatedAt = now
+	confirmation := request.Confirmation
+	workflow.Confirmation = &confirmation
+	if err := workflow.Validate(); err != nil {
+		return Workflow{}, err
+	}
+	event, err := s.appendLocked(workflow, previous, target, action, ActorHuman, request.Actor, request.IdempotencyKey, request, now, "explicit human decision")
+	if err != nil {
+		return Workflow{}, err
+	}
+	s.workflows[workflow.WorkflowID] = workflow
+	s.idempotency[request.IdempotencyKey] = idempotencyRecord{fingerprint: inputFingerprint(request), workflowID: workflow.WorkflowID, event: event}
+	return workflow, nil
+}
+
+type PaperIntentRequest struct {
+	WorkflowID     string    `json:"workflow_id"`
+	Actor          string    `json:"actor"`
+	ActorRole      ActorRole `json:"actor_role"`
+	IdempotencyKey string    `json:"idempotency_key"`
+	Now            time.Time `json:"now"`
+}
+
+func (s *Store) CreatePaperIntent(_ context.Context, request PaperIntentRequest) (Workflow, PaperIntent, error) {
+	if request.ActorRole != ActorSystem || strings.TrimSpace(request.Actor) == "" || strings.TrimSpace(request.WorkflowID) == "" || strings.TrimSpace(request.IdempotencyKey) == "" {
+		return Workflow{}, PaperIntent{}, ErrUnauthorized
+	}
+	now, err := requestTime(request.Now)
+	if err != nil {
+		return Workflow{}, PaperIntent{}, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if existing, ok := s.idempotency[request.IdempotencyKey]; ok {
+		if existing.fingerprint != inputFingerprint(request) {
+			return Workflow{}, PaperIntent{}, ErrIdempotencyConflict
+		}
+		workflow := s.workflows[existing.workflowID]
+		return workflow, s.paperIntents[workflow.WorkflowID], nil
+	}
+	workflow, ok := s.workflows[request.WorkflowID]
+	if !ok {
+		return Workflow{}, PaperIntent{}, ErrWorkflowNotFound
+	}
+	if workflow.State != StateHumanApproved || !PermissionAllowed(request.ActorRole, ActionCreatePaperIntent, workflow.State, StatePaperIntentCreated) || workflow.Confirmation == nil {
+		return Workflow{}, PaperIntent{}, fmt.Errorf("%w: paper intent requires explicit human approval", ErrInvalidTransition)
+	}
+	if err := workflow.Confirmation.ValidateFor(workflow, now); err != nil {
+		return Workflow{}, PaperIntent{}, err
+	}
+	if now.Before(workflow.UpdatedAt) {
+		return Workflow{}, PaperIntent{}, fmt.Errorf("%w: paper intent timestamp precedes workflow update", ErrInvalidTimestamp)
+	}
+	intent := PaperIntent{
+		ContractVersion: PaperIntentContractVersion, WorkflowID: workflow.WorkflowID,
+		RecommendationID: workflow.RecommendationID, RiskDecisionID: workflow.RiskDecisionID,
+		InstrumentID: workflow.Confirmation.InstrumentID, Direction: workflow.Confirmation.Direction,
+		DescriptiveValue: workflow.ResultingValue, ExecutionStatus: ExecutionStatusNotExecuted,
+		PaperOnly: true, BrokerExecutionAllowed: false, PortfolioMutation: false, CreatedAt: now,
+	}
+	intent.IntentID = paperIntentIdentity(workflow)
+	if err := intent.Validate(); err != nil {
+		return Workflow{}, PaperIntent{}, err
+	}
+	previous := workflow.State
+	workflow.State = StatePaperIntentCreated
+	workflow.PaperIntentID = intent.IntentID
+	workflow.Revision++
+	workflow.UpdatedAt = now
+	if err := workflow.Validate(); err != nil {
+		return Workflow{}, PaperIntent{}, err
+	}
+	event, err := s.appendLocked(workflow, previous, workflow.State, ActionCreatePaperIntent, ActorSystem, request.Actor, request.IdempotencyKey, request, now, "inert paper intent created")
+	if err != nil {
+		return Workflow{}, PaperIntent{}, err
+	}
+	s.workflows[workflow.WorkflowID] = workflow
+	s.paperIntents[workflow.WorkflowID] = intent
+	s.idempotency[request.IdempotencyKey] = idempotencyRecord{fingerprint: inputFingerprint(request), workflowID: workflow.WorkflowID, event: event}
+	return workflow, intent, nil
+}
+
+func (request HumanConfirmationRequest) ConfirmationAction() Action {
+	if request.Confirmation.Decision == ConfirmationApprove {
+		return ActionHumanApprove
+	}
+	return ActionHumanReject
+}
+
+func confirmationTarget(decision ConfirmationDecision) State {
+	if decision == ConfirmationApprove {
+		return StateHumanApproved
+	}
+	return StateHumanRejected
 }
 
 func (s *Store) transition(request TransitionRequest, target State, requiredRole ActorRole) (Workflow, error) {
@@ -141,7 +288,7 @@ func (s *Store) transition(request TransitionRequest, target State, requiredRole
 	if !ok {
 		return Workflow{}, ErrWorkflowNotFound
 	}
-	if !allowedTransition(workflow.State, target, request.Action) {
+	if !allowedTransition(workflow.State, target, request.Action) || !PermissionAllowed(request.ActorRole, request.Action, workflow.State, target) {
 		return Workflow{}, fmt.Errorf("%w: %s -> %s via %s", ErrInvalidTransition, workflow.State, target, request.Action)
 	}
 	if now.Before(workflow.UpdatedAt) {
@@ -195,6 +342,7 @@ func (s *Store) appendLocked(workflow Workflow, previous, next State, action Act
 		Actor: actor, ActorRole: role, IdempotencyKey: idem, InputFingerprint: inputFingerprint(input),
 		Reason: reason, OccurredAt: now, TransitionVersion: WorkflowAlgorithmVersion,
 	}
+	event.ContentIdentity = transitionContentIdentity(event)
 	if err := event.Validate(); err != nil {
 		return TransitionEvent{}, err
 	}
@@ -216,16 +364,8 @@ func (s *Store) Replay(_ context.Context, workflowID string) (Workflow, error) {
 		return Workflow{}, ErrWorkflowNotFound
 	}
 	events := append([]TransitionEvent(nil), s.events[workflowID]...)
-	if len(events) == 0 {
-		return Workflow{}, fmt.Errorf("workflow has no audit history")
-	}
-	for i, event := range events {
-		if err := event.Validate(); err != nil || event.Sequence != uint64(i+1) {
-			return Workflow{}, fmt.Errorf("workflow audit is not replayable")
-		}
-		if i > 0 && event.PreviousState != events[i-1].NextState {
-			return Workflow{}, fmt.Errorf("workflow audit state divergence")
-		}
+	if err := ValidateAuditEvents(events); err != nil {
+		return Workflow{}, fmt.Errorf("workflow audit is not replayable: %w", err)
 	}
 	if events[len(events)-1].NextState != workflow.State || events[len(events)-1].Sequence != workflow.Revision {
 		return Workflow{}, fmt.Errorf("workflow state does not match audit")

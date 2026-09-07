@@ -66,6 +66,14 @@ func TestStateMachineAuditIsAtomicAndRetriesAreIdempotent(t *testing.T) {
 	if err != nil || replayed.State != StateAwaitingHumanConfirmation {
 		t.Fatalf("replay = %#v, %v", replayed, err)
 	}
+	events[0].Reason = "tampered"
+	if err := ValidateAuditEvents(events); err == nil {
+		t.Fatal("tampered audit event passed content validation")
+	}
+	untampered, err := store.Events(ctx, workflow.WorkflowID)
+	if err != nil || untampered[0].Reason == "tampered" {
+		t.Fatalf("audit event slice was not immutable: %#v, %v", untampered, err)
+	}
 }
 
 func TestStateMachineRejectsNonUTCTimestamps(t *testing.T) {
@@ -73,6 +81,113 @@ func TestStateMachineRejectsNonUTCTimestamps(t *testing.T) {
 	_, err := NewStore().Create(context.Background(), CreateRequest{RiskDecision: acceptedRiskDecision(t, now.UTC()), Now: now, IdempotencyKey: "non-utc"})
 	if !errors.Is(err, ErrInvalidTimestamp) {
 		t.Fatalf("non-UTC timestamp error = %v, want invalid timestamp", err)
+	}
+}
+
+func TestHumanConfirmationIsExplicitBoundAndPaperOnly(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	store := NewStore()
+	workflow, err := store.Create(ctx, CreateRequest{RiskDecision: acceptedRiskDecision(t, now), Now: now, IdempotencyKey: "create-hitl"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	workflow, err = store.RequestHumanConfirmation(ctx, TransitionRequest{WorkflowID: workflow.WorkflowID, Actor: "workflow-system", ActorRole: ActorSystem, IdempotencyKey: "request-hitl", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err := NewConfirmation(workflow, "AAPL", "LONG", now, now.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err = confirmation.WithDecision("operator-1", ConfirmationApprove)
+	if err != nil {
+		t.Fatal(err)
+	}
+	approved, err := store.Confirm(ctx, HumanConfirmationRequest{WorkflowID: workflow.WorkflowID, Confirmation: confirmation, Actor: "operator-1", ActorRole: ActorHuman, IdempotencyKey: "approve-hitl", Now: now})
+	if err != nil || approved.State != StateHumanApproved || approved.Confirmation == nil {
+		t.Fatalf("approval = %#v, %v", approved, err)
+	}
+	if !approved.Confirmation.PaperOnly || approved.Confirmation.BrokerExecutionAllowed || approved.Confirmation.LiveTradingAllowed {
+		t.Fatalf("unsafe confirmation flags: %#v", approved.Confirmation)
+	}
+	if _, err := store.Confirm(ctx, HumanConfirmationRequest{WorkflowID: workflow.WorkflowID, Confirmation: confirmation, Actor: "research-agent", ActorRole: ActorResearcher, IdempotencyKey: "forged-hitl", Now: now}); !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("researcher confirmation error = %v, want unauthorized", err)
+	}
+}
+
+func TestHumanConfirmationRejectsChangedAndExpiredFacts(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	store := NewStore()
+	workflow, err := store.Create(ctx, CreateRequest{RiskDecision: acceptedRiskDecision(t, now), Now: now, IdempotencyKey: "create-binding"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	workflow, err = store.RequestHumanConfirmation(ctx, TransitionRequest{WorkflowID: workflow.WorkflowID, Actor: "workflow-system", ActorRole: ActorSystem, IdempotencyKey: "request-binding", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err := NewConfirmation(workflow, "AAPL", "LONG", now, now.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed := confirmation
+	changed.ProposedValue++
+	changed.Decision = ConfirmationApprove
+	changed.Actor = "operator-1"
+	changed.ConfirmationID = confirmationIdentity(changed)
+	if _, err := store.Confirm(ctx, HumanConfirmationRequest{WorkflowID: workflow.WorkflowID, Confirmation: changed, Actor: "operator-1", ActorRole: ActorHuman, IdempotencyKey: "changed-binding", Now: now}); !errors.Is(err, ErrBindingMismatch) {
+		t.Fatalf("changed confirmation error = %v, want binding mismatch", err)
+	}
+	expired, err := confirmation.WithDecision("operator-1", ConfirmationApprove)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expired.ExpiresAt = now
+	expired.ConfirmationID = confirmationIdentity(expired)
+	if _, err := store.Confirm(ctx, HumanConfirmationRequest{WorkflowID: workflow.WorkflowID, Confirmation: expired, Actor: "operator-1", ActorRole: ActorHuman, IdempotencyKey: "expired-binding", Now: now}); err == nil {
+		t.Fatal("expected expired confirmation rejection")
+	}
+}
+
+func TestPaperIntentRequiresHumanApprovalAndIsInert(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	store := NewStore()
+	workflow, err := store.Create(ctx, CreateRequest{RiskDecision: acceptedRiskDecision(t, now), Now: now, IdempotencyKey: "create-paper"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := store.CreatePaperIntent(ctx, PaperIntentRequest{WorkflowID: workflow.WorkflowID, Actor: "workflow-system", ActorRole: ActorSystem, IdempotencyKey: "paper-before-approval", Now: now}); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("paper intent before approval error = %v", err)
+	}
+	workflow, err = store.RequestHumanConfirmation(ctx, TransitionRequest{WorkflowID: workflow.WorkflowID, Actor: "workflow-system", ActorRole: ActorSystem, IdempotencyKey: "request-paper", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err := NewConfirmation(workflow, "AAPL", "LONG", now, now.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err = confirmation.WithDecision("operator-1", ConfirmationApprove)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workflow, err = store.Confirm(ctx, HumanConfirmationRequest{WorkflowID: workflow.WorkflowID, Confirmation: confirmation, Actor: "operator-1", ActorRole: ActorHuman, IdempotencyKey: "approve-paper", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	workflow, intent, err := store.CreatePaperIntent(ctx, PaperIntentRequest{WorkflowID: workflow.WorkflowID, Actor: "workflow-system", ActorRole: ActorSystem, IdempotencyKey: "create-intent", Now: now})
+	if err != nil || workflow.State != StatePaperIntentCreated {
+		t.Fatalf("paper intent creation = %#v %#v %v", workflow, intent, err)
+	}
+	if err := intent.Validate(); err != nil || intent.ExecutionStatus != ExecutionStatusNotExecuted || !intent.PaperOnly || intent.BrokerExecutionAllowed || intent.PortfolioMutation {
+		t.Fatalf("paper intent safety = %#v, %v", intent, err)
+	}
+	_, repeated, err := store.CreatePaperIntent(ctx, PaperIntentRequest{WorkflowID: workflow.WorkflowID, Actor: "workflow-system", ActorRole: ActorSystem, IdempotencyKey: "create-intent", Now: now})
+	if err != nil || repeated.IntentID != intent.IntentID {
+		t.Fatalf("paper intent retry = %#v, %v", repeated, err)
 	}
 }
 

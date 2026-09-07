@@ -124,6 +124,8 @@ type Workflow struct {
 	CreatedAt           time.Time                     `json:"created_at"`
 	UpdatedAt           time.Time                     `json:"updated_at"`
 	LastError           string                        `json:"last_error,omitempty"`
+	Confirmation        *Confirmation                 `json:"confirmation,omitempty"`
+	PaperIntentID       string                        `json:"paper_intent_id,omitempty"`
 }
 
 func (workflow Workflow) Binding() RiskBinding {
@@ -157,6 +159,12 @@ func (workflow Workflow) Validate() error {
 	if workflow.UpdatedAt.Before(workflow.CreatedAt) {
 		return fmt.Errorf("%w: updated_at precedes created_at", ErrInvalidTimestamp)
 	}
+	if (workflow.State == StateHumanApproved || workflow.State == StateHumanRejected) && workflow.Confirmation == nil {
+		return fmt.Errorf("human decision requires an explicit confirmation")
+	}
+	if workflow.State == StatePaperIntentCreated && !strings.HasPrefix(workflow.PaperIntentID, PaperIntentIdentityPrefix) {
+		return fmt.Errorf("paper intent state requires an immutable paper intent identity")
+	}
 	return nil
 }
 
@@ -171,6 +179,7 @@ type TransitionEvent struct {
 	ActorRole         ActorRole `json:"actor_role"`
 	IdempotencyKey    string    `json:"idempotency_key"`
 	InputFingerprint  string    `json:"input_fingerprint"`
+	ContentIdentity   string    `json:"content_identity"`
 	Reason            string    `json:"reason,omitempty"`
 	OccurredAt        time.Time `json:"occurred_at"`
 	TransitionVersion string    `json:"transition_version"`
@@ -188,6 +197,9 @@ func (event TransitionEvent) Validate() error {
 	}
 	if event.TransitionVersion != WorkflowAlgorithmVersion {
 		return fmt.Errorf("unsupported transition version")
+	}
+	if event.ContentIdentity == "" || event.ContentIdentity != transitionContentIdentity(event) {
+		return fmt.Errorf("workflow audit content identity mismatch")
 	}
 	return nil
 }
@@ -218,6 +230,15 @@ func eventIdentity(workflowID string, sequence uint64, action Action, idempotenc
 	return TransitionEventIdentityPrefix + hex.EncodeToString(digest[:])
 }
 
+func transitionContentIdentity(event TransitionEvent) string {
+	copyEvent := event
+	copyEvent.EventID = ""
+	copyEvent.ContentIdentity = ""
+	data, _ := json.Marshal(copyEvent)
+	digest := sha256.Sum256(data)
+	return "sha256:" + hex.EncodeToString(digest[:])
+}
+
 func inputFingerprint(value any) string {
 	data, _ := json.Marshal(value)
 	digest := sha256.Sum256(data)
@@ -233,6 +254,27 @@ func validState(state State) bool {
 	default:
 		return false
 	}
+}
+
+// ValidateAuditEvents validates a complete workflow stream as it would be
+// reconstructed from durable audit storage. It rejects gaps, rewrites and
+// state divergence before replay can be trusted.
+func ValidateAuditEvents(events []TransitionEvent) error {
+	if len(events) == 0 {
+		return fmt.Errorf("workflow audit is empty")
+	}
+	for i, event := range events {
+		if err := event.Validate(); err != nil {
+			return err
+		}
+		if event.Sequence != uint64(i+1) {
+			return fmt.Errorf("workflow audit sequence gap")
+		}
+		if i > 0 && event.PreviousState != events[i-1].NextState {
+			return fmt.Errorf("workflow audit state divergence")
+		}
+	}
+	return nil
 }
 
 func finite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }

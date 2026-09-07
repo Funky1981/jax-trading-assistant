@@ -61,6 +61,7 @@
 555abbdaafe26a305bc317d22c5a9a286fa4c98f0f48d6c340ab29a19ddbf0ab  08-controlled-ai-tools-durable-research-agents/GATE.md
 55b3d7606b3e97ff0409798bb844cfa434a3f2f532ac37262764f7885fd4040f  .gitattributes
 57f58401c9db8ea8c0ff9878740dc4721766a4fda71969a9e22197e2ea02c7cc  08-controlled-ai-tools-durable-research-agents/WP-08.07-research-memory-with-provenance.md
+597fb943f4d439abf19e65c4b99ba4fbb1148db0d281aed07dc9275d911ef857  10-workflow-hitl-operational-safety/WP-10.04-IMPLEMENTATION-EVIDENCE.md
 59e3b28b73c714f7d70c9152c11ede402e61f78af6cca8f1914e1437812f86ec  09-portfolio-intelligence-deterministic-risk/GATE.md
 5a7eb2e3577aa5f45ee752929421aaadf98bad592e2b4402cc964740b28890d3  02-data-platform-provider-architecture/REFERENCE-NOTES.md
 5c699ffb35dec0a43d723cf52fd378a668a8456c0d79cd679c9463f4604fc3d9  12-advanced-quant-research/REFERENCE-NOTES.md
@@ -74,6 +75,7 @@
 62ce02a9070f937868050c4634371f704448b2426303a38466313e803efa4461  10-workflow-hitl-operational-safety/README.md
 62ef46c9a00188fa93e440e64c9c5ff0fb3175c2e5aed1bcff4e3c5f06ddc18d  02-data-platform-provider-architecture/WP-02.06-data-source-qualification-registry.md
 6406f635776a0171d2545213e075c5c9a6f5ee3c89a52377b1661efe632ef989  12-advanced-quant-research/WP-12.02-feature-factor-store-contract.md
+6438f99a5251fa576406b98882f15003535b24ad8bff37e711cc63d59f595cc8  10-workflow-hitl-operational-safety/WP-10.02-IMPLEMENTATION-EVIDENCE.md
 676ea398cea5bf4bf76eec8d862922dfd3fb13bfe5bbbe077bef3953f5ef2481  00-current-issuer-asset-resolution/WP-00.03-analyse-failures-and-harden-deterministic-resolution.md
 6aeb12928c9abdeed8d008735da4de6b470881caef8f32fa8aa476df1679cf7f  04-world-monitor-intelligence/WP-04.02-deduplication-event-clustering.md
 6b21ca16f647af95100f73f70921a4746e385ef4486672feeb9ddaec72a2bd25  03-core-financial-evidence/WP-03.01-market-price-ohlcv-provider-hardening.md
@@ -135,7 +137,6 @@ ce75921b129e78a320436c8d83366c4e8f6bfc23f8bb9fd898d251cb27d7667e  05-determinist
 cf5c33002fb213e25cc5665d028c144bd885d4e757c6906730b00ec443b84fc4  07-evaluation-replay-backtesting/REFERENCE-NOTES.md
 d09c43c442b3fffbc7cf18db64efdceac3c3c7b2e5e8d60fd6fbe6977643c014  13-optional-live-execution/WP-13.01-live-broker-adapter-selection.md
 d0f6cf770fe140dfed8820720d713b24b8f1db8dedd519f56bc6aa8c5cb3e7dd  10-workflow-hitl-operational-safety/WP-10.07-operator-health-observability.md
-d169e4de060fa990f6886cf0077f55ab4d1c577b1fa51cdd63bd22e96d83b59f  NEXT-WORK-PACKAGE.md
 d2c5cc676199ddad13d60036a968f8c8f6a8fba728cc613f40459c2ba4d70c30  06-research-recommendation-engine/WP-06.04-recommendation-grammar-and-eligibility-rules.md
 d2fc939af5d443aba414a73db111f1cac2a1c4a96f335575b2d5d8402c4416c3  08-controlled-ai-tools-durable-research-agents/REFERENCE-NOTES.md
 d4f60cb42961f86d9f0b95ac8064f82c24400987df49ba9148c4516dbf5fe755  01-canonical-contracts-provenance-audit/WP-01.04-define-replay-audit-event-model-and-compatibility-strategy.md
@@ -160,7 +161,9 @@ ed8a276f6641c28d6165e7b3b0162a10e57711362addb021c6e68dda3599e67b  08-controlled-
 f1ce60feb02f424faac4cbcfca42ae297d0d398f4304d7a98790d6ddbef5f843  07-evaluation-replay-backtesting/WP-07.06-transaction-cost-slippage-assumptions.md
 f2ef5ffd41dc1612fd9d60898c12ae6bd834d35f708dd701617aa0ce2586f361  governance/CODEX-REVIEW-HANDOVER.md
 f83930a8544365c52c0ce9aa06bff5a9dda9751036ff56115a437dbbf16fd9ec  08-controlled-ai-tools-durable-research-agents/WP-08.04-durable-research-task-checkpoint-state.md
+f8e301f534241e84aa0638b93aa97fe61c88a2887cb232766cb1fc775d8af481  10-workflow-hitl-operational-safety/WP-10.03-IMPLEMENTATION-EVIDENCE.md
 f937ba069b063b340e32701b82427a2748c0a77b0ccfda7058d944507ebcaa93  06-research-recommendation-engine/WP-06.06-confidence-calibration-contract.md
+f9e3b5979324a0b9af40f433eef05684558fe5a4e271c84734799fc2a6c10ab8  NEXT-WORK-PACKAGE.md
 fa623c460e57ff976fee3b3cde0d424af1ab671475faae34978cafb1799384d3  05-deterministic-quant-core/WP-05.08-portfolio-exposure-primitives.md
 faeb43a98ba654f1b7e38f70e8fa0f32bd2d7fd532bcf5d82341f58eb461458d  references/EXTERNAL-TECHNOLOGY-CANDIDATES.md
 fb475ff9ac6a88f10f924ea688d636d512f1bf92a8f48e76158e636f5c4935e7  13-optional-live-execution/WP-13.02-credential-session-security.md
