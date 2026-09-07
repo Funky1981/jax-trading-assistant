@@ -21,8 +21,8 @@ decision remains `NO_TRADE`.
 | Phase 03 — Core Financial Evidence | **COMPLETE / GO** |
 | Phase 04 — World Monitor Intelligence | **COMPLETE / GO** |
 | Phase 05 — Deterministic Quant Core | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-05.08 — Portfolio exposure primitives** |
-| Next package | **WP-05.08 — Portfolio exposure primitives** |
+| Current implementation package | **WP-05.09 — Library evaluation** |
+| Next package | **WP-05.09 — Library evaluation** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.

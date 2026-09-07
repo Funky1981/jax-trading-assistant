@@ -6,7 +6,7 @@
 - Phase 04 — World Monitor Intelligence: **COMPLETE / GO**
 - Phase 05 — Deterministic Quant Core: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-05.08 — Portfolio exposure primitives**
+- Current implementation package: **WP-05.09 — Library evaluation**
 
 ## Phase-05 autonomous scope
 
