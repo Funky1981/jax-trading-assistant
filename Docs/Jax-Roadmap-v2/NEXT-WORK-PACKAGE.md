@@ -5,7 +5,7 @@
 - Phase 03 — Core Financial Evidence: **COMPLETE / GO**
 - Phase 04 — World Monitor Intelligence: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-04.02 — Deduplication/event clustering**
+- Current implementation package: **WP-04.03 — Entity/issuer/geography extraction**
 
 ## Phase-04 autonomous scope
 
