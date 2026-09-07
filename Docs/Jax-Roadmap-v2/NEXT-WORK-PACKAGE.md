@@ -5,7 +5,7 @@
 - Phase 03 — Core Financial Evidence: **COMPLETE / GO**
 - Phase 04 — World Monitor Intelligence: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-04.04 — Source triangulation and confidence**
+- Current implementation package: **WP-04.05 — Velocity/baseline-deviation signals**
 
 ## Phase-04 autonomous scope
 
