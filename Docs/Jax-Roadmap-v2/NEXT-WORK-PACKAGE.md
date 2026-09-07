@@ -8,10 +8,18 @@
 - Phase 06 — Research & Recommendation Engine: **COMPLETE / GO**
 - Phase 07 — Evaluation, Replay & Backtesting: **COMPLETE / GO**
 - Phase 08 — Controlled AI Tools & Durable Research Agents: **COMPLETE / GO**
-- Phase 09 — Portfolio Intelligence & Deterministic Risk: **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
+- Phase 09 — Portfolio Intelligence & Deterministic Risk: **COMPLETE / GO**
+- Phase 10 — Workflow, HITL & Operational Safety: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **Phase 09 exit demonstrated — external review pending**
-- Next package: **None — Phase 10 NOT STARTED**
+- Current implementation package: **WP-10.01 — State machine for recommendation → risk → approval → paper intent**
+- Next package: **WP-10.01 — State machine for recommendation → risk → approval → paper intent**
+
+The approved Phase-09 migration remediation is complete. Historical migrations
+remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
+`000060_portfolio_risk_decisions`. The complete active migration registry is
+validated by `db/postgres/migrations/migration_registry_test.go`.
+
+Scientific status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE**.
 
 ## Phase-05 autonomous scope
 

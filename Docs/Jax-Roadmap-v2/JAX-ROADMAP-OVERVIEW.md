@@ -33,7 +33,11 @@ Phase 08 — Controlled AI Tools & Durable Research Agents — is **COMPLETE / G
 accepted by external GPT-5.6 Sol. Go race detection remains a
 `NON-BLOCKING ENVIRONMENTAL LIMITATION` because `gcc` is unavailable. Phase 09
 — Portfolio Intelligence & Deterministic Risk — has its exact exit condition
-**DEMONSTRATED / EXTERNAL REVIEW PENDING**. Phase 10 is **NOT STARTED**.
+**COMPLETE / GO**, accepted by external GPT-5.6 Sol. The approved
+migration-number collision remediation retained historical migrations unchanged,
+moved the Phase-09 migrations to `000059` and `000060`, and added
+complete-stream uniqueness/pair/order validation. Phase 10 is **AUTHORISED /
+IN PROGRESS**, beginning with WP-10.01.
 The scientific status remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
 SAMPLE`.
 See `Docs/ROADMAP.md`,

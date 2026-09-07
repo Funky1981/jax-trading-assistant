@@ -743,3 +743,31 @@ security/cost and trading safety, test the tests, and independently verify
 important expected values. All blocking findings must be corrected and
 reverified or reported as an explicit `NO-GO` blocker. A GO recommendation must
 state `Blocking findings remaining: 0` and `Adversarial phase review: PASS`.
+
+## RD-2026-09-07-06 - Phase 09 GO / migration collision remediation
+
+- Date: 2026-09-07
+- Phase: 09 - Portfolio Intelligence & Deterministic Risk
+- Status: Accepted and remediated
+- Decision authority: external GPT-5.6 Sol technical-lead review
+
+### Decision
+
+Phase 09 remains **COMPLETE / GO**. A duplicate-version defect was found before
+Phase 10: the single active golang-migrate stream contained historical
+`000055_raw_payload_storage` and `000056_world_monitor_pull_pages` alongside the
+new Phase-09 migrations using 000055 and 000056. The approved forward-only
+remediation preserved the historical files byte-for-byte and moved the new
+Phase-09 migrations to the next monotonically increasing unused versions:
+`000059_portfolio_snapshots` and `000060_portfolio_risk_decisions`.
+
+The persistent-application preflight found no evidence that either Phase-09
+migration had been applied. The repository-linked migration logs ended at
+version 53 before the Phase-09 commits; configured endpoints were unavailable
+or rejected credentials, and no database was modified. A permanent
+directory-wide migration registry invariant now enforces unique versions,
+deterministic filenames/order, and matching up/down pairs. The complete
+migration and Phase-09 verification passed. `MIGRATION BLOCKER RESOLVED`.
+
+Phase 10 is **AUTHORISED / IN PROGRESS** beginning at WP-10.01. Scientific
+status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE**.

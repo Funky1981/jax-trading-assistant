@@ -24,9 +24,10 @@ decision remains `NO_TRADE`.
 | Phase 06 — Research & Recommendation Engine | **COMPLETE / GO** |
 | Phase 07 — Evaluation, Replay & Backtesting | **COMPLETE / GO** |
 | Phase 08 — Controlled AI Tools & Durable Research Agents | **COMPLETE / GO** |
-| Phase 09 — Portfolio Intelligence & Deterministic Risk | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
-| Current implementation package | **Phase 09 exit demonstrated — external review pending** |
-| Next package | **None — Phase 10 NOT STARTED** |
+| Phase 09 — Portfolio Intelligence & Deterministic Risk | **COMPLETE / GO** |
+| Phase 10 — Workflow, HITL & Operational Safety | **AUTHORISED / IN PROGRESS** |
+| Current implementation package | **WP-10.01 — State machine for recommendation → risk → approval → paper intent** |
+| Next package | **WP-10.01 — State machine for recommendation → risk → approval → paper intent** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -185,9 +186,12 @@ Phase 09 evaluates Phase-06 recommendations against canonical portfolio state
 and explicit deterministic risk policy. It does not grant approval or
 execution authority. WP-09.01 through WP-09.07 are implemented and internally
 verified. The exact exit condition is demonstrated by
-`internal/modules/portfoliorisk/phase09_exit_test.go`. External technical-lead
-review is pending. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`
-remains the scientific status. Phase 10 is not started.
+`internal/modules/portfoliorisk/phase09_exit_test.go` and was accepted by
+external GPT-5.6 Sol as `GO PHASE 09`. The approved migration-number collision
+remediation retained historical migrations unchanged, moved the Phase-09
+migrations to `000059` and `000060`, and added complete-stream registry
+validation. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains the
+scientific status. Phase 10 is authorised and in progress.
 
 ### Later roadmap — planned capability progression
 
@@ -290,6 +294,7 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 05 exit demonstrated / external review pending**.
-Phase 05 has demonstrated its exit condition and must receive external
-technical-lead GO before Phase 06 begins.
+The current position is **Phase 10 authorised / in progress**. Phase 09 remains
+complete/GO after approved migration remediation. Phase 10 must preserve the
+paper-intent-only boundary and receive external technical-lead GO before Phase
+11 begins.

@@ -7,7 +7,7 @@ import (
 )
 
 func TestPortfolioSnapshotMigrationDefinesImmutableObservedFacts(t *testing.T) {
-	data, err := os.ReadFile("000055_portfolio_snapshots.up.sql")
+	data, err := os.ReadFile("000059_portfolio_snapshots.up.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestPortfolioSnapshotMigrationDefinesImmutableObservedFacts(t *testing.T) {
 }
 
 func TestPortfolioRiskDecisionMigrationDefinesImmutableAuditArtifacts(t *testing.T) {
-	data, err := os.ReadFile("000056_portfolio_risk_decisions.up.sql")
+	data, err := os.ReadFile("000060_portfolio_risk_decisions.up.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
