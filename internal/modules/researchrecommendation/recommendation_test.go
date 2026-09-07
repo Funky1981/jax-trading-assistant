@@ -11,7 +11,11 @@ func TestEligibilityProducesResearchOnlyCandidateClassification(t *testing.T) {
 	}
 	packet, plan := researchFixture(t)
 	research := validResearchOutput(t, packet, plan)
-	recommendation, err := BuildRecommendation(packet, plan, research, decision, packetTime())
+	confidence, err := NewConfidenceAssessment(nil, true, 2, 0, 1, []string{"model score is not calibrated"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recommendation, err := BuildRecommendation(packet, plan, research, decision, confidence, packetTime())
 	if err != nil {
 		t.Fatal(err)
 	}

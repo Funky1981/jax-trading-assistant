@@ -22,8 +22,8 @@ decision remains `NO_TRADE`.
 | Phase 04 — World Monitor Intelligence | **COMPLETE / GO** |
 | Phase 05 — Deterministic Quant Core | **COMPLETE / GO** |
 | Phase 06 — Research & Recommendation Engine | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-06.06 — Confidence calibration contract** |
-| Next package | **WP-06.06 — Confidence calibration contract** |
+| Current implementation package | **WP-06.07 — UI/API read model for useful recommendations** |
+| Next package | **WP-06.07 — UI/API read model for useful recommendations** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.

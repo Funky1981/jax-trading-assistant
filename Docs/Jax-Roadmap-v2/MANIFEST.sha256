@@ -39,6 +39,7 @@
 4046762e47cf23939aea8030300cbe4b199ada8e95775033ca6d7d7fb454bd6c  01-canonical-contracts-provenance-audit/WP-01.02-define-canonical-instrument-issuer-event-evidence-observation-researchrun-quantresult-recommendation-contracts.md
 41b53ec2c385570cdf03a043c12fe7690af4f998d9cb75dc05deade8e6b714ae  02-data-platform-provider-architecture/WP-02.04-freshness-ttl-last-known-good-semantics.md
 41d121f8ae09ad1a34b5f200cad13604795bd46607d3692cf9ae50205701a312  governance/CODEX-OPERATING-RULES.md
+435536dbd6f3b66dc4243ead11e17df9ca2b5f7da129ae76d6d08eb8c10fa98a  06-research-recommendation-engine/README.md
 4364c2a8edd92f4a552f62576806d54ff85274403592f6a164b0e194359bd773  09-portfolio-intelligence-deterministic-risk/WP-09.03-risk-budget-policy.md
 43cddd6007ffd3c241d63dcf9c31e4edb09e4d5f4b48ac8a48c5c3ee7c841c29  00-current-issuer-asset-resolution/GATE.md
 45fa3481f142d80177fd5d3a9df4c43e6a88724e6ee02464182e5ae962c42555  12-advanced-quant-research/WP-12.04-factor-mining-and-stability-tests.md
@@ -93,7 +94,6 @@
 8c0ea84c2d8691ed9b22e1c6ec949887819dec258e91861599e3359666fa7b93  06-research-recommendation-engine/LLM-CONTEXT-BUDGET-REQUIREMENTS.md
 8c894f4615e33b31b8ceb68e910cfcb8e48e2dfc7e2156b0c06669d65e47778f  08-controlled-ai-tools-durable-research-agents/WP-08.02-read-only-tool-permission-tiers.md
 8ed8c512b4c277694239e477c96c3d5337a650e51cc092239b56933311308f5e  PHASE-INDEX.md
-9046c392b53be71176c8cf622c99adbba170bce606441125025e4383fd022e96  06-research-recommendation-engine/README.md
 90ec2dbbcda76054f913fcab4562b92ad0645412190ec7362fda642246cb8e08  governance/AUTONOMOUS-DEVELOPMENT-MODE.md
 975ea242155a60563fab67ca6e9cba7ee20b397fdf1ff3d2d021b0739899410d  07-evaluation-replay-backtesting/WP-07.07-walk-forward-out-of-sample-protocol.md
 983dbd0a018ed2ee3c137887300f13b5428043eb5653e3b85ad233e0d7638c5e  ROADMAP-DECISION-LOG.md
@@ -131,8 +131,8 @@ c9cdcd352ee83cccbf6d0aad065725cbf7d4019ea2bc3aaaad59d75fefc8849e  07-evaluation-
 ca379ef82ebd6a862c23e4d6899753e2a26101893193f777a647cc4cdac13534  13-optional-live-execution/WP-13.03-live-only-risk-limits.md
 ca59d8ba75857b52e04f45023bfa2854c2662345450ece0066766a70deb07d1c  04-world-monitor-intelligence/WP-04.06-market-reaction-correlation.md
 cb5c44bf0f362839f240f32d5b1b204ae53c75df4e1f9623600b5a8f59c2e591  04-world-monitor-intelligence/WP-04.01-continuous-durable-collection-and-cursor-semantics.md
-cdcf7e6d779db14011061cbcea7272bc0feeb07d0cacf4f39342b3c4bef1568e  NEXT-WORK-PACKAGE.md
 ce75921b129e78a320436c8d83366c4e8f6bfc23f8bb9fd898d251cb27d7667e  05-deterministic-quant-core/WP-05.02-returns-log-returns-and-benchmark-relative-performance.md
+cf4d4bf14b63a928f2beb2ce32001c6543bbbbdf83d5770ba5c42622dacfd54c  NEXT-WORK-PACKAGE.md
 cf5c33002fb213e25cc5665d028c144bd885d4e757c6906730b00ec443b84fc4  07-evaluation-replay-backtesting/REFERENCE-NOTES.md
 d04f54d3562853979b0477d72f494c844852e3966990105f2e3a7ff75977d01c  09-portfolio-intelligence-deterministic-risk/WP-09.07-risk-reason-codes-and-audit.md
 d09c43c442b3fffbc7cf18db64efdceac3c3c7b2e5e8d60fd6fbe6977643c014  13-optional-live-execution/WP-13.01-live-broker-adapter-selection.md
@@ -154,10 +154,10 @@ e572feb20300d9c0faf5d3cd4dc6797c0015f7e0763e98ac0abb3bdbaf742783  05-determinist
 e8e495b3277642bec8123c6168e55e0ab521b386c9515cc060b87a01d6805a44  governance/CODEX-AUTONOMOUS-MASTER-PROMPT.md
 e97edce1fdae272d9b48e6c2040646a6389ddbf36aa84ae2f2ae8ac3cb811d6c  03-core-financial-evidence/WP-03.05-treasury-eia-cboe-cftc-source-evaluation-and-first-approved-integrations.md
 e998837376ce43682d53e6968a2f5e80d69ba3f0b6b19ea670f0d6f2213cd1f0  references/DATA-SOURCE-STRATEGY.md
-ea167df6567ff4f979c012fef0054d29cbb68c4a10c9571ee179ad3b60379bf3  06-research-recommendation-engine/WP-06.06-confidence-calibration-contract.md
 ed8a276f6641c28d6165e7b3b0162a10e57711362addb021c6e68dda3599e67b  08-controlled-ai-tools-durable-research-agents/LLM-COST-CONTEXT-EFFICIENCY-REQUIREMENTS.md
 f2ef5ffd41dc1612fd9d60898c12ae6bd834d35f708dd701617aa0ce2586f361  governance/CODEX-REVIEW-HANDOVER.md
 f3cd36438c23cfe0a007752ff6b188c52ae1e446c351804b62ca7251f872d376  07-evaluation-replay-backtesting/WP-07.03-model-prompt-algorithm-version-comparison.md
+f937ba069b063b340e32701b82427a2748c0a77b0ccfda7058d944507ebcaa93  06-research-recommendation-engine/WP-06.06-confidence-calibration-contract.md
 fa623c460e57ff976fee3b3cde0d424af1ab671475faae34978cafb1799384d3  05-deterministic-quant-core/WP-05.08-portfolio-exposure-primitives.md
 faeb43a98ba654f1b7e38f70e8fa0f32bd2d7fd532bcf5d82341f58eb461458d  references/EXTERNAL-TECHNOLOGY-CANDIDATES.md
 fb475ff9ac6a88f10f924ea688d636d512f1bf92a8f48e76158e636f5c4935e7  13-optional-live-execution/WP-13.02-credential-session-security.md
