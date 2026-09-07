@@ -2,6 +2,8 @@
 
 **Status:** **EXIT DEMONSTRATED — EXTERNAL PHASE REVIEW PENDING**
 
+Internal verification record: `PHASE-05-INTERNAL-VERIFICATION.md`.
+
 ## Purpose
     Provide reproducible numerical context for research and risk using established numerical libraries instead of LLM arithmetic.
 

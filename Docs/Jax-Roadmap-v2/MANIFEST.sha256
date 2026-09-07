@@ -34,6 +34,7 @@
 36a04ec99e9bde26143cc5e0896d62ff14a53e7bd1f92412162ced64a2f456b0  02-data-platform-provider-architecture/README.md
 373482b1072f6e5f13d3cad94c5730b97e26bf022edcafd48dd55016bc9fd06b  10-workflow-hitl-operational-safety/GATE.md
 376f0e489fdecd24757b0a4d33ce2b048b2fe97a623f21e5703661ddcd44dd77  13-optional-live-execution/WP-13.06-emergency-kill-disable-paths.md
+3929a9b89edbda3a2dc279c1217602f0afd6936705f2558775404b6c0cb42b91  05-deterministic-quant-core/PHASE-05-INTERNAL-VERIFICATION.md
 3cd651b19b5ff8798f662298d9f8cd0252d7e45ed2a52f9568f9b948a429d5b9  11-high-fidelity-paper-trading/WP-11.06-broker-public-market-reconciliation.md
 4046762e47cf23939aea8030300cbe4b199ada8e95775033ca6d7d7fb454bd6c  01-canonical-contracts-provenance-audit/WP-01.02-define-canonical-instrument-issuer-event-evidence-observation-researchrun-quantresult-recommendation-contracts.md
 41b53ec2c385570cdf03a043c12fe7690af4f998d9cb75dc05deade8e6b714ae  02-data-platform-provider-architecture/WP-02.04-freshness-ttl-last-known-good-semantics.md
@@ -112,6 +113,7 @@ a4cd6ea3ecfdf601d32bd09034f0e61b1044bcae8a377cb30a83f6673bdc773a  13-optional-li
 a8e158bdecaa992fb4e06dc580a2dd753aa1abeedd28cf3058d9e28735ff8ac2  governance/PHASE-REVIEW-HANDOVER.md
 ad4957571bf9107e5bc9c6935c484239f5f617fb7f9078e2a0cd60b527b2104f  12-advanced-quant-research/WP-12.06-concept-drift-and-rolling-retraining.md
 ad759a16b358402df7836974f7e663244c0b619a66c86b065a8de55b1801c409  05-deterministic-quant-core/WP-05.01-quant-service-library-boundary-and-versioned-request-response-contract.md
+ae501ae1978bf6918f769653d10bafa7d04948ac6b5ced8ec3daa5d6ac92564a  05-deterministic-quant-core/README.md
 b123306905a1419e60f019c5059f74ef5fbe3530a02e9ea7b18fe9a587853db5  12-advanced-quant-research/GATE.md
 b18d8e03ca5ecfd0c37fac7a91075a2fc1e892aceee31f38ed9a0cbfdea8eec1  11-high-fidelity-paper-trading/REFERENCE-NOTES.md
 b25e0b760ea97874eb71fdc03ca136c79decbf8c3401199a889497d72eb8b201  07-evaluation-replay-backtesting/WP-07.04-recommendation-outcome-tracking.md
@@ -132,7 +134,6 @@ ca59d8ba75857b52e04f45023bfa2854c2662345450ece0066766a70deb07d1c  04-world-monit
 cb5c44bf0f362839f240f32d5b1b204ae53c75df4e1f9623600b5a8f59c2e591  04-world-monitor-intelligence/WP-04.01-continuous-durable-collection-and-cursor-semantics.md
 ce75921b129e78a320436c8d83366c4e8f6bfc23f8bb9fd898d251cb27d7667e  05-deterministic-quant-core/WP-05.02-returns-log-returns-and-benchmark-relative-performance.md
 cf5c33002fb213e25cc5665d028c144bd885d4e757c6906730b00ec443b84fc4  07-evaluation-replay-backtesting/REFERENCE-NOTES.md
-cfb720bd1c408f79346b7a668b6aaa2adf15c9c6ce9beadd736fbf1ef2dd0eb6  05-deterministic-quant-core/README.md
 d04f54d3562853979b0477d72f494c844852e3966990105f2e3a7ff75977d01c  09-portfolio-intelligence-deterministic-risk/WP-09.07-risk-reason-codes-and-audit.md
 d09c43c442b3fffbc7cf18db64efdceac3c3c7b2e5e8d60fd6fbe6977643c014  13-optional-live-execution/WP-13.01-live-broker-adapter-selection.md
 d0f6cf770fe140dfed8820720d713b24b8f1db8dedd519f56bc6aa8c5cb3e7dd  10-workflow-hitl-operational-safety/WP-10.07-operator-health-observability.md

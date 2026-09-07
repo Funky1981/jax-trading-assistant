@@ -137,7 +137,8 @@ demonstrated by the frozen-fixture proof in
 deterministic, versioned, tested against known values and independently
 reproducible. Phase-05 work created no recommendations, candidates, approvals,
 orders, trades, fills or live execution authority. External technical-lead
-review is required before any later phase begins.
+review is required before any later phase begins. The full internal record is
+`Docs/Jax-Roadmap-v2/05-deterministic-quant-core/PHASE-05-INTERNAL-VERIFICATION.md`.
 
 ### Later roadmap — planned capability progression
 
