@@ -29,4 +29,3 @@ versioned request/response boundary, with explicit algorithm versions and
 frozen-input identity. A later optimization or advanced statistical phase may
 re-evaluate a library when its capability, pinned version, licensing, runtime
 boundary, and independent numerical oracle are specified.
-

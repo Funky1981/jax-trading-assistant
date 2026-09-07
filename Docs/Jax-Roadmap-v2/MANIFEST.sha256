@@ -45,7 +45,6 @@
 4992bb35041d2daf76c7caf11457950fd4506b16f0dfcc0a2a4ded2ec29c97da  01-canonical-contracts-provenance-audit/REFERENCE-NOTES.md
 4c28f38435878ad610c9cac9db7543fca7ab1ceee8ca4f0f6686592069e4f2b3  11-high-fidelity-paper-trading/WP-11.05-position-account-ledger.md
 4c4fa33d8ac9d47ce5dff90833680ed5e8b452c6cda8f712a23e43542e8ed70b  06-research-recommendation-engine/WP-06.01-define-evidence-packet-contract.md
-4d56848a83fb4f6c06f6c7225b85a52e0ac8dd3337b1ddd7360470afacfcad61  05-deterministic-quant-core/LIBRARY-EVALUATION.md
 4db91c53dd57402c1d6ca165721d9a56bde9b4d88145c3347d6be0867dc6d168  10-workflow-hitl-operational-safety/WP-10.01-state-machine-for-recommendation-risk-approval-paper-intent.md
 4e93aca207dbc020e2ebfc422287632472444746b35f2b89857669a28e6e6c32  09-portfolio-intelligence-deterministic-risk/WP-09.05-position-proposal-calculation.md
 4f9e0cd4dae816595f9a519bd30665f992c8c6f9f3e34d41a887356fae1c5e2e  08-controlled-ai-tools-durable-research-agents/WP-08.01-tool-registry-and-json-schema-validation.md
@@ -148,6 +147,7 @@ ddc3fcc2688ac5322077f756b8d10b46d870002c9b326f6978246efe491d68ed  03-core-financ
 df7e9573cf0a2e6e6a5fe190fb58c5e9fb3a21f57bbe24ab0ce43dfa9dd6c580  06-research-recommendation-engine/WP-06.05-freshness-evidence-sufficiency-gates.md
 e067f9604f5d9fb4e4464b7edd9bcddd0277a68a54d46891a9e6c02a750a65a7  03-core-financial-evidence/README.md
 e3a741dbaf93e45f89f1ad57b26f75bd0a742e7b1b21a060782ca280c831a464  10-workflow-hitl-operational-safety/REFERENCE-NOTES.md
+e572feb20300d9c0faf5d3cd4dc6797c0015f7e0763e98ac0abb3bdbaf742783  05-deterministic-quant-core/LIBRARY-EVALUATION.md
 e8e495b3277642bec8123c6168e55e0ab521b386c9515cc060b87a01d6805a44  governance/CODEX-AUTONOMOUS-MASTER-PROMPT.md
 e97edce1fdae272d9b48e6c2040646a6389ddbf36aa84ae2f2ae8ac3cb811d6c  03-core-financial-evidence/WP-03.05-treasury-eia-cboe-cftc-source-evaluation-and-first-approved-integrations.md
 e998837376ce43682d53e6968a2f5e80d69ba3f0b6b19ea670f0d6f2213cd1f0  references/DATA-SOURCE-STRATEGY.md
