@@ -13,5 +13,5 @@
   "revision": "2026-09-07-autonomous-phase-development-governance",
   "authoritative_roadmap": "Docs/ROADMAP.md",
   "llm_cost_context_efficiency": "Cross-cutting requirement integrated into Phases 06 and 08 plus governance",
-  "pack_status": "Supporting roadmap detail; Docs/ROADMAP.md is authoritative. Phases 00 through 07 are COMPLETE / GO, including external GO PHASE 07 acceptance. Trading edge remains not demonstrated / insufficient sample. Phase 08 is authorised/in progress at WP-08.08. No later phase is authorized. Autonomous Development Mode is active from Phase 04 onward."
+  "pack_status": "Supporting roadmap detail; Docs/ROADMAP.md is authoritative. Phases 00 through 07 are COMPLETE / GO, including external GO PHASE 07 acceptance. Trading edge remains not demonstrated / insufficient sample. Phase 08 exit is demonstrated and external review is pending. Phase 09 is not authorized or started. Autonomous Development Mode is active from Phase 04 onward."
 }

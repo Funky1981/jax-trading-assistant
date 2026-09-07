@@ -213,7 +213,7 @@ func (store *PostgresResearchMemory) Put(ctx context.Context, entry ResearchMemo
 	if err != nil {
 		return err
 	}
-	_, err = store.pool.Exec(ctx, `INSERT INTO research_memory_entries (memory_id, validity_digest, kind, status, payload, created_at, valid_until) VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7) ON CONFLICT (validity_digest) DO NOTHING`, entry.ID, entry.ValidityDigest, entry.Kind, entry.Status, payload, entry.CreatedAt, entry.ValidUntil)
+	_, err = store.pool.Exec(ctx, `INSERT INTO research_memory_entries (memory_id, validity_digest, kind, status, payload, created_at, valid_until) VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7)`, entry.ID, entry.ValidityDigest, entry.Kind, entry.Status, payload, entry.CreatedAt, entry.ValidUntil)
 	if err != nil {
 		return fmt.Errorf("save research memory: %w", err)
 	}
@@ -247,7 +247,7 @@ func (store *PostgresResearchMemory) Invalidate(ctx context.Context, digest stri
 	if store == nil || store.pool == nil || !validSHA256Usage(digest) {
 		return fmt.Errorf("research memory store or digest is invalid")
 	}
-	command, err := store.pool.Exec(ctx, `UPDATE research_memory_entries SET status = 'INVALIDATED' WHERE validity_digest = $1`, digest)
+	command, err := store.pool.Exec(ctx, `UPDATE research_memory_entries SET status = 'INVALIDATED', payload = jsonb_set(payload, '{status}', '"INVALIDATED"'::jsonb) WHERE validity_digest = $1`, digest)
 	if err != nil {
 		return fmt.Errorf("invalidate research memory: %w", err)
 	}

@@ -9,7 +9,8 @@
 - Phase 07 — Evaluation, Replay & Backtesting: **COMPLETE / GO**
 - Phase 08 — Controlled AI Tools & Durable Research Agents: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-08.08 — Agent evaluation harness**
+- Current implementation package: **Phase 08 exit demonstrated — external technical-lead review pending**
+- Next package: **None — Phase 09 NOT STARTED**
 
 ## Phase-05 autonomous scope
 

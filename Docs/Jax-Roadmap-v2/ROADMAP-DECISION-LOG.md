@@ -1,5 +1,28 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-26 - Phase 08 exit demonstrated / external review pending
+
+- Date: 2026-09-07
+- Phase: 08 — Controlled AI Tools & Durable Research Agents
+- Work packages: WP-08.01 through WP-08.08
+- Status: Exit condition demonstrated; external technical-lead review pending
+- Decision authority: autonomous phase verification; no self-awarded phase GO
+
+The reproducible Phase-08 harness executes the complete bounded researcher
+chain: explicit objective and plan, registered read-only tools with schema
+validation, evidence/provenance and budget accounting, durable checkpoint,
+simulated interruption, bounded resume, evidence-linked gap/replan, critic
+reflection and report improvement, controlled failure recovery, and final
+checkpoint. It also proves denial of forbidden tool, exhausted budget,
+corrupted checkpoint and incompatible checkpoint paths. The evaluation compares
+the agent with a simpler baseline and records local-fixture routing with zero
+spend. `ALLOW_LIVE_TRADING=false`, `BROKER_EXECUTION_ALLOWED=false`, execution
+worker disabled, maximum leverage 1x and recommendation execution authority
+`NONE` remain enforced. Phase 09 is not authorized or started.
+
+Evidence: `internal/modules/harness/evaluation_test.go` and
+`internal/modules/harness/evaluation.go`.
+
 ## RD-2026-09-07-25 - WP-08.07 internal verification
 
 - Date: 2026-09-07

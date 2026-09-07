@@ -117,7 +117,7 @@ func (critique ResearchCritique) Validate(state ResearchTaskState, policy Resear
 	if err := policy.Validate(); err != nil {
 		return err
 	}
-	if critique.ContractVersion != ResearchCritiqueContractV1 || critique.TaskID != state.TaskID || critique.Cycle != state.CriticCycles+1 || critique.Cycle > policy.MaxCycles || !validSHA256Usage(critique.InputReportSHA256) || critique.InputReportSHA256 != reportDigest(state.CurrentReport) || len(critique.Findings) > policy.MaxFindings || len(critique.ImprovedReport) > 128*1024 || len(critique.AddedUnknowns) > 32 || len(critique.RetainedContradictions) > 64 || !schemaStringList(critique.RetainedContradictions) || len(critique.RequestedGaps) > 16 || critique.ExecutionAuthority != "NONE" || strings.TrimSpace(critique.Outcome) == "" || critique.CreatedAt.IsZero() || critique.CreatedAt.Location() != time.UTC {
+	if critique.ContractVersion != ResearchCritiqueContractV1 || critique.TaskID != state.TaskID || critique.Cycle != state.CriticCycles+1 || critique.Cycle > policy.MaxCycles || !validSHA256Usage(critique.InputReportSHA256) || critique.InputReportSHA256 != reportDigest(state.CurrentReport) || len(critique.Findings) > policy.MaxFindings || len(critique.ImprovedReport) > 128*1024 || len(critique.AddedUnknowns) > 32 || len(critique.RetainedContradictions) > 64 || !schemaStringListOrEmpty(critique.RetainedContradictions) || len(critique.RequestedGaps) > 16 || critique.ExecutionAuthority != "NONE" || strings.TrimSpace(critique.Outcome) == "" || critique.CreatedAt.IsZero() || critique.CreatedAt.Location() != time.UTC {
 		return fmt.Errorf("critic result is invalid, stale or exceeds bounds")
 	}
 	seen := make(map[string]struct{}, len(critique.Findings))

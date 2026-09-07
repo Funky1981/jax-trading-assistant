@@ -30,7 +30,8 @@ GPT-5.6 Sol. Phase 07 — Evaluation, Replay & Backtesting — is **COMPLETE / G
 accepted by external GPT-5.6 Sol. Its evidence still states
 `EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE`; no trading edge is claimed.
 Phase 08 — Controlled AI Tools & Durable Research Agents — is **authorised / in
-progress**, currently at WP-08.08. See `Docs/ROADMAP.md`,
+progress**, with the Phase-08 exit demonstrated and external review pending.
+See `Docs/ROADMAP.md`,
 `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 
 ## Non-negotiable principles

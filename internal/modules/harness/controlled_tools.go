@@ -431,3 +431,7 @@ func schemaStringList(values []string) bool {
 	}
 	return true
 }
+
+func schemaStringListOrEmpty(values []string) bool {
+	return len(values) == 0 || schemaStringList(values)
+}
