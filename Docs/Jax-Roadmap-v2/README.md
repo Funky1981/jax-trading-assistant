@@ -45,7 +45,7 @@ criteria remain binding.
 - Phase 06: `COMPLETE / GO`
 - Phase 07: `COMPLETE / GO`
 - Phase 08: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-08.03 — Timeout/cancellation/budget controls`
+- Current package: `WP-08.04 — Durable research task/checkpoint state`
 
 
 ## 2026-08-10 integrated roadmap change

@@ -1,5 +1,22 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-21 - WP-08.03 internal verification
+
+- Date: 2026-09-07
+- Phase: 08 — Controlled AI Tools & Durable Research Agents
+- Work package: WP-08.03 — Timeout/cancellation/budget controls
+- Status: Implemented / internally verified; WP-08.04 current
+- Decision authority: autonomous package verification under authorised Phase-08 scope
+
+WP-08.03 adds deterministic wall-clock, step, tool, model, retry, token, cost
+and model-tier controls plus cancellation-aware contexts. Provider usage is
+normalized without fabricating unavailable categories; raw usage hashes,
+cache/reasoning availability and known/ambiguous cost are retained. Strict
+budget runs reject incomplete usage and all limits fail closed. Focused budget,
+pricing and cancellation tests pass without paid inference.
+
+Evidence: `08-controlled-ai-tools-durable-research-agents/WP-08.03-timeout-cancellation-budget-controls.md`.
+
 ## RD-2026-09-07-20 - WP-08.02 internal verification
 
 - Date: 2026-09-07
