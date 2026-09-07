@@ -52,10 +52,13 @@ func main() {
 }
 
 func marketStatus() sourceStatus {
-	if strings.TrimSpace(os.Getenv("FINANCIAL_DATASETS_API_KEY")) == "" {
-		return sourceStatus{Family: "MARKET", Status: "BLOCKED", Detail: "accepted Financial Datasets API key is not configured; no persisted real AAPL market raw evidence was found"}
+	if strings.TrimSpace(os.Getenv("ALPACA_API_KEY")) != "" && strings.TrimSpace(os.Getenv("ALPACA_API_SECRET")) != "" {
+		return sourceStatus{Family: "MARKET", Status: "CONFIGURED", Detail: "zero-cost Alpaca Basic development source is configured; use an explicit SIP or IEX feed and provide its raw provenance to the packet"}
 	}
-	return sourceStatus{Family: "MARKET", Status: "CONFIGURED", Detail: "accepted Financial Datasets API key is configured; run the bounded live acquisition and provide its raw provenance to the packet"}
+	if strings.TrimSpace(os.Getenv("FINANCIAL_DATASETS_API_KEY")) != "" {
+		return sourceStatus{Family: "MARKET", Status: "BLOCKED", Detail: "Alpaca Basic development credentials are not configured; Financial Datasets remains accepted but its development access is externally blocked"}
+	}
+	return sourceStatus{Family: "MARKET", Status: "BLOCKED", Detail: "Alpaca Basic development credentials are not configured; no persisted real AAPL market raw evidence was found"}
 }
 
 func secStatus() sourceStatus {

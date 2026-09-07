@@ -1,6 +1,6 @@
 # Next Work Package
 
-Status: WP-03.05 COMPLETE / GO; WP-03.06 COMPLETE / GO; Phase-03 exit gate under review
+Status: WP-03.05 COMPLETE / GO; WP-03.06 COMPLETE / GO; Phase-03 exit condition demonstrated / awaiting technical-lead GO
 
 ## Immediate next action - review the Phase-03 exit-gate demonstration
 
@@ -18,7 +18,7 @@ evidence handovers.
 Phase 03 — Core Financial Evidence will populate the accepted data platform with the smallest high-value set of real market, corporate, and macro evidence required for useful US equity/ETF research. Its exit condition is a source-linked evidence packet for a representative US equity/ETF using real market, company, and macro evidence without relying on model memory.
 
 WP-03.05 and WP-03.06 have received technical-lead FINAL GO. The bounded
-Phase-03 exit demonstration is under review and currently reports that the
-real AAPL market/company packet is not demonstrated because the accepted live
-market and SEC acquisitions are unavailable. Phase 04 is not authorized or
-started.
+Phase-03 exit demonstration now constructs the real AAPL market/company/macro
+packet using explicit Alpaca Basic SIP market evidence, SEC evidence and
+Treasury evidence. The exit condition is demonstrated and awaits the
+technical-lead decision. Phase 04 is not authorized or started.

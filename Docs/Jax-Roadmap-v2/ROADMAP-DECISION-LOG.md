@@ -1,5 +1,24 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-01 - Zero-cost market evidence closure
+
+- Date: 2026-09-07
+- Phase: 03 - Core Financial Evidence
+- Status: exit condition demonstrated; awaiting technical-lead GO
+- Decision authority: technical-lead roadmap change supplied by the user; final Phase-03 decision remains open
+
+Financial Datasets remains an accepted provider option, but its configured
+development credential returned HTTP 401 and Phase-03 acceptance will not be
+made contingent on paying recurring market-data fees. The bounded closure
+evaluated the existing Alpaca path, added the smallest raw-first canonical
+historical-bars path, and demonstrated real AAPL SIP market evidence together
+with real SEC Apple and Treasury evidence in `jax.phase03_exit_packet/v1`.
+Alpaca Basic is a development evidence source only; production and serious
+backtesting qualification remain open. Phase 04 has not started.
+
+Evidence: `../evidence/PHASE-03-FREE-MARKET-DATA-CLOSURE.md` and
+`../evidence/PHASE-03-EXIT-GATE.md`.
+
 ## RD-2026-09-04-03 - WP-03.06 FINAL GO and Phase-03 exit-gate closure demonstration
 
 - Date: 2026-09-04

@@ -20,15 +20,17 @@ decision remains `NO_TRADE`.
 | Phase 02 — Provider / Data Platform | ✅ Accepted / complete, including durable raw storage closure |
 | Phase 03 — Core Financial Evidence | **IN PROGRESS** |
 | Current accepted package | WP-03.05 — Treasury / EIA / CBOE / CFTC Source Evaluation and First Approved Integrations (**COMPLETE / GO**) |
-| Current implementation package | **Phase-03 exit gate — IN PROGRESS / EXIT GATE UNDER REVIEW** |
+| Current implementation package | **Phase-03 exit gate — EXIT CONDITION DEMONSTRATED / AWAITING TECHNICAL-LEAD GO** |
 | Next package | **Technical-lead Phase-03 exit-gate decision; Phase 04 not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
 WP-03.04 and WP-03.05 have received independent technical-lead **FINAL GO**.
 WP-03.06 has received independent technical-lead FINAL GO and is now COMPLETE /
-GO. The Phase-03 exit demonstration is under review; Phase 03 remains in
-progress and Phase 04 is not authorized.
+GO. The Phase-03 exit condition has now been demonstrated using a zero-cost
+Alpaca Basic development market path, real SEC evidence and real Treasury
+macro evidence. Phase 03 remains in progress pending the technical-lead GO;
+Phase 04 is not authorized.
 
 ## Roadmap status vocabulary
 
@@ -94,6 +96,15 @@ without relying on model memory.
 | WP-03.04 — Economic release / calendar ingestion | **COMPLETE / GO** | `Docs/evidence/WP-03.04-ECONOMIC-RELEASE-CALENDAR-EVIDENCE.md` |
 | WP-03.05 — Treasury / EIA / CBOE / CFTC source evaluation and first approved integrations | **COMPLETE / GO** | `Docs/evidence/WP-03.05-TREASURY-EIA-CBOE-CFTC-SOURCE-EVALUATION.md` |
 | WP-03.06 — Evidence-quality / cross-source checks | **COMPLETE / GO** | `Docs/evidence/WP-03.06-EVIDENCE-QUALITY-CROSS-SOURCE-CHECKS.md` |
+
+The paid Financial Datasets option remains accepted but is not required for
+Phase-03 development acceptance. Its configured external credential returned
+HTTP 401, so the bounded closure uses explicit Alpaca Basic SIP evidence as a
+zero-cost development source. Alpaca is not thereby approved for production or
+serious backtesting; feed completeness, corporate-action handling and licensing
+remain future source-qualification questions. See
+`Docs/evidence/PHASE-03-FREE-MARKET-DATA-CLOSURE.md` and
+`Docs/evidence/PHASE-03-EXIT-GATE.md`.
 
 Corrective packages such as WP-03.01A are closure history under their parent
 package, not new permanent roadmap phases.

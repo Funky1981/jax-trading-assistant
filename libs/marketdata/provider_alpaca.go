@@ -3,6 +3,7 @@ package marketdata
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"jax-trading-assistant/libs/resilience"
@@ -15,6 +16,8 @@ type AlpacaProvider struct {
 	client         *marketdata.Client
 	config         ProviderConfig
 	circuitBreaker *resilience.CircuitBreaker
+	baseURL        string
+	rawClient      *http.Client
 }
 
 // NewAlpacaProvider creates a new Alpaca provider
@@ -40,6 +43,8 @@ func NewAlpacaProvider(config ProviderConfig) (*AlpacaProvider, error) {
 		client:         client,
 		config:         config,
 		circuitBreaker: cb,
+		baseURL:        baseURL,
+		rawClient:      &http.Client{Timeout: 30 * time.Second},
 	}, nil
 }
 

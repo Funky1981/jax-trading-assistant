@@ -59,12 +59,28 @@ type MarketTimestampSemantics string
 
 const (
 	MarketTimestampProviderDateIntervalEnd MarketTimestampSemantics = "PROVIDER_SESSION_DATE_INTERVAL_END"
+	MarketTimestampProviderBarTimestamp    MarketTimestampSemantics = "PROVIDER_BAR_TIMESTAMP"
 )
 
 type MarketTimestampAuthority string
 
 const (
-	MarketTimestampAuthorityIntervalBoundary MarketTimestampAuthority = "INTERVAL_BOUNDARY_ONLY"
+	MarketTimestampAuthorityIntervalBoundary  MarketTimestampAuthority = "INTERVAL_BOUNDARY_ONLY"
+	MarketTimestampAuthorityProviderTimestamp MarketTimestampAuthority = "PROVIDER_TIMESTAMP_ONLY"
+)
+
+type MarketFeed string
+
+const (
+	MarketFeedIEX MarketFeed = "iex"
+	MarketFeedSIP MarketFeed = "sip"
+)
+
+type MarketFeedCoverage string
+
+const (
+	MarketFeedCoverageIEX MarketFeedCoverage = "SINGLE_EXCHANGE_IEX"
+	MarketFeedCoverageSIP MarketFeedCoverage = "CONSOLIDATED_US_EXCHANGES"
 )
 
 const (
@@ -88,6 +104,8 @@ type CanonicalMarketBar struct {
 	TimestampAuthority MarketTimestampAuthority
 	Session            MarketSessionState
 	MarketTimezone     string
+	Feed               MarketFeed
+	FeedCoverage       MarketFeedCoverage
 	Adjustment         MarketAdjustmentState
 	Open               canonical.Observation
 	High               canonical.Observation
@@ -103,15 +121,41 @@ func (bar CanonicalMarketBar) Validate() error {
 	if bar.Interval != Timeframe1Day || bar.Start.IsZero() || bar.End.IsZero() || !bar.End.After(bar.Start) || bar.Start.Location() != time.UTC || bar.End.Location() != time.UTC {
 		return errors.New("market bar has invalid daily UTC interval")
 	}
-	if bar.TimestampSemantics != MarketTimestampProviderDateIntervalEnd || bar.TimestampAuthority != MarketTimestampAuthorityIntervalBoundary || bar.Session != MarketSessionProviderEODUnspecified || bar.MarketTimezone == "" {
+	if bar.Session != MarketSessionProviderEODUnspecified || bar.MarketTimezone == "" {
 		return errors.New("market bar timestamp/session semantics are incomplete")
+	}
+	if bar.TimestampSemantics == MarketTimestampProviderDateIntervalEnd {
+		if bar.TimestampAuthority != MarketTimestampAuthorityIntervalBoundary {
+			return errors.New("date-boundary market bar has invalid timestamp authority")
+		}
+	} else if bar.TimestampSemantics == MarketTimestampProviderBarTimestamp {
+		if bar.TimestampAuthority != MarketTimestampAuthorityProviderTimestamp {
+			return errors.New("provider-timestamp market bar has invalid timestamp authority")
+		}
+	} else {
+		return errors.New("market bar timestamp/session semantics are incomplete")
+	}
+	if bar.Feed != "" {
+		if bar.Feed != MarketFeedIEX && bar.Feed != MarketFeedSIP {
+			return errors.New("market bar feed is unsupported")
+		}
+		if bar.Feed == MarketFeedIEX && bar.FeedCoverage != MarketFeedCoverageIEX {
+			return errors.New("IEX market bar must declare single-exchange coverage")
+		}
+		if bar.Feed == MarketFeedSIP && bar.FeedCoverage != MarketFeedCoverageSIP {
+			return errors.New("SIP market bar must declare consolidated coverage")
+		}
 	}
 	observations := []canonical.Observation{bar.Open, bar.High, bar.Low, bar.Close, bar.Volume}
 	for _, observation := range observations {
 		if err := observation.Validate(); err != nil {
 			return err
 		}
-		if observation.Subject != bar.Instrument || observation.ObservedAt != bar.End {
+		observationAt := bar.End
+		if bar.TimestampSemantics == MarketTimestampProviderBarTimestamp {
+			observationAt = bar.Start
+		}
+		if observation.Subject != bar.Instrument || observation.ObservedAt != observationAt {
 			return errors.New("market bar observation identity or timestamp mismatch")
 		}
 		if observation.Value.Number == nil || math.IsNaN(*observation.Value.Number) || math.IsInf(*observation.Value.Number, 0) {
