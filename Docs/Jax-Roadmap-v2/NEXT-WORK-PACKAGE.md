@@ -7,7 +7,7 @@
 - Phase 05 — Deterministic Quant Core: **COMPLETE / GO**
 - Phase 06 — Research & Recommendation Engine: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-06.04 — Recommendation grammar and eligibility rules**
+- Current implementation package: **WP-06.05 — Freshness/evidence sufficiency gates**
 
 ## Phase-05 autonomous scope
 
