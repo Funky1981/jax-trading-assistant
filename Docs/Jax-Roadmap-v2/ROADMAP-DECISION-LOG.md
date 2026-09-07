@@ -1,5 +1,21 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-16 - WP-07.08 internal verification
+
+- Date: 2026-09-07
+- Phase: 07 — Evaluation, Replay & Backtesting
+- Work package: WP-07.08 — Operational replay tooling
+- Status: Implemented / internally verified; Phase-07 exit proof pending
+- Decision authority: autonomous package verification under authorised Phase-07 scope
+
+WP-07.08 adds a deterministic operator-facing report binding a frozen case,
+artifact replay, tracked outcome, adapter assessment, cost policy and explicit
+out-of-sample protocol membership. It rejects tampered identities, incomplete
+evidence and non-OOS cases. The report records an insufficient-sample/no-edge
+claim conclusion and remains execution-disabled. Focused tests pass.
+
+Evidence: `07-evaluation-replay-backtesting/WP-07.08-operational-replay-tooling.md`.
+
 ## RD-2026-09-07-15 - WP-07.07 internal verification
 
 - Date: 2026-09-07
