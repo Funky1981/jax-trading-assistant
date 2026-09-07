@@ -1,5 +1,23 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-24 - WP-08.06 internal verification
+
+- Date: 2026-09-07
+- Phase: 08 — Controlled AI Tools & Durable Research Agents
+- Work package: WP-08.06 — Critic/reflection stage
+- Status: Implemented / internally verified; WP-08.07 current
+- Decision authority: autonomous package verification under authorised Phase-08 scope
+
+WP-08.06 adds bounded, versioned critic policy and reflection contracts. The
+stage identifies evidence-quality defects, preserves contradictions, adds
+unknowns, downgrades unsupported conclusions and requests only bounded
+evidence-linked research. Critique input is report-hash bound, cycles are capped
+at three, and applying it cannot alter objective, plan, permissions, budgets or
+execution authority. Focused improvement, stale-input, contradiction,
+cycle-limit and injection tests pass.
+
+Evidence: `08-controlled-ai-tools-durable-research-agents/WP-08.06-critic-reflection-stage.md`.
+
 ## RD-2026-09-07-23 - WP-08.05 internal verification
 
 - Date: 2026-09-07
