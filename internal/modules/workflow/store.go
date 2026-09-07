@@ -38,20 +38,22 @@ type idempotencyRecord struct {
 // state/audit transaction; the persistence adapter can apply the same command
 // contract to Postgres without changing the state machine.
 type Store struct {
-	mu            sync.RWMutex
-	workflows     map[string]Workflow
-	events        map[string][]TransitionEvent
-	idempotency   map[string]idempotencyRecord
-	paperIntents  map[string]PaperIntent
-	breakers      map[string]Breaker
-	failAuditOnce bool
+	mu                 sync.RWMutex
+	workflows          map[string]Workflow
+	events             map[string][]TransitionEvent
+	idempotency        map[string]idempotencyRecord
+	paperIntents       map[string]PaperIntent
+	breakers           map[string]Breaker
+	breakerEvents      map[string][]BreakerEvent
+	breakerIdempotency map[string]string
+	failAuditOnce      bool
 }
 
 func NewStore() *Store {
 	return &Store{
 		workflows: make(map[string]Workflow), events: make(map[string][]TransitionEvent),
 		idempotency: make(map[string]idempotencyRecord), paperIntents: make(map[string]PaperIntent),
-		breakers: make(map[string]Breaker),
+		breakers: make(map[string]Breaker), breakerEvents: make(map[string][]BreakerEvent), breakerIdempotency: make(map[string]string),
 	}
 }
 
@@ -156,6 +158,9 @@ func (s *Store) Confirm(_ context.Context, request HumanConfirmationRequest) (Wo
 	if workflow.State != StateAwaitingHumanConfirmation || !PermissionAllowed(request.ActorRole, request.ConfirmationAction(), StateAwaitingHumanConfirmation, confirmationTarget(request.Confirmation.Decision)) {
 		return Workflow{}, fmt.Errorf("%w: confirmation requires awaiting human confirmation", ErrInvalidTransition)
 	}
+	if request.Confirmation.Decision == ConfirmationApprove && s.anyBreakerTrippedLocked() {
+		return Workflow{}, ErrBreakerActive
+	}
 	if err := request.Confirmation.ValidateFor(workflow, now); err != nil {
 		return Workflow{}, err
 	}
@@ -215,6 +220,9 @@ func (s *Store) CreatePaperIntent(_ context.Context, request PaperIntentRequest)
 	}
 	if workflow.State != StateHumanApproved || !PermissionAllowed(request.ActorRole, ActionCreatePaperIntent, workflow.State, StatePaperIntentCreated) || workflow.Confirmation == nil {
 		return Workflow{}, PaperIntent{}, fmt.Errorf("%w: paper intent requires explicit human approval", ErrInvalidTransition)
+	}
+	if s.anyBreakerTrippedLocked() {
+		return Workflow{}, PaperIntent{}, ErrBreakerActive
 	}
 	if err := workflow.Confirmation.ValidateFor(workflow, now); err != nil {
 		return Workflow{}, PaperIntent{}, err
@@ -291,6 +299,9 @@ func (s *Store) transition(request TransitionRequest, target State, requiredRole
 	if !allowedTransition(workflow.State, target, request.Action) || !PermissionAllowed(request.ActorRole, request.Action, workflow.State, target) {
 		return Workflow{}, fmt.Errorf("%w: %s -> %s via %s", ErrInvalidTransition, workflow.State, target, request.Action)
 	}
+	if isDangerousState(target) && s.anyBreakerTrippedLocked() {
+		return Workflow{}, ErrBreakerActive
+	}
 	if now.Before(workflow.UpdatedAt) {
 		return Workflow{}, fmt.Errorf("%w: transition timestamp precedes workflow update", ErrInvalidTimestamp)
 	}
@@ -354,6 +365,97 @@ func (s *Store) FailNextAuditPersistence() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.failAuditOnce = true
+}
+
+func isDangerousState(state State) bool {
+	return state == StateAwaitingHumanConfirmation || state == StateHumanApproved || state == StatePaperIntentCreated
+}
+
+type BreakerEvent struct {
+	EventID        string    `json:"event_id"`
+	Name           string    `json:"name"`
+	Tripped        bool      `json:"tripped"`
+	Reason         string    `json:"reason,omitempty"`
+	Actor          string    `json:"actor"`
+	IdempotencyKey string    `json:"idempotency_key"`
+	OccurredAt     time.Time `json:"occurred_at"`
+}
+
+type BreakerRequest struct {
+	Name           string    `json:"name"`
+	Tripped        bool      `json:"tripped"`
+	Reason         string    `json:"reason,omitempty"`
+	Actor          string    `json:"actor"`
+	ActorRole      ActorRole `json:"actor_role"`
+	IdempotencyKey string    `json:"idempotency_key"`
+	Now            time.Time `json:"now"`
+}
+
+func (s *Store) SetBreaker(_ context.Context, request BreakerRequest) (Breaker, error) {
+	if strings.TrimSpace(request.Name) == "" || strings.TrimSpace(request.Actor) == "" || strings.TrimSpace(request.IdempotencyKey) == "" {
+		return Breaker{}, ErrUnauthorized
+	}
+	if request.Tripped && !(request.ActorRole == ActorOperator || request.ActorRole == ActorSystem) {
+		return Breaker{}, ErrUnauthorized
+	}
+	if !request.Tripped && request.ActorRole != ActorOperator {
+		return Breaker{}, ErrUnauthorized
+	}
+	now, err := requestTime(request.Now)
+	if err != nil {
+		return Breaker{}, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	fingerprint := inputFingerprint(request)
+	if priorFingerprint, ok := s.breakerIdempotency[request.IdempotencyKey]; ok {
+		if priorFingerprint != fingerprint {
+			return Breaker{}, ErrIdempotencyConflict
+		}
+		return s.breakers[request.Name], nil
+	}
+	current := s.breakers[request.Name]
+	if !current.UpdatedAt.IsZero() && now.Before(current.UpdatedAt) {
+		return Breaker{}, ErrInvalidTimestamp
+	}
+	breaker := Breaker{Name: request.Name, ContractVersion: BreakerContractVersion, Tripped: request.Tripped, Reason: strings.TrimSpace(request.Reason), Actor: request.Actor, UpdatedAt: now}
+	if err := breaker.Validate(); err != nil {
+		return Breaker{}, err
+	}
+	sequence := uint64(len(s.breakerEvents[request.Name]) + 1)
+	event := BreakerEvent{EventID: eventIdentity("breaker:"+request.Name, sequence, breakerAction(request.Tripped), request.IdempotencyKey), Name: request.Name, Tripped: request.Tripped, Reason: breaker.Reason, Actor: request.Actor, IdempotencyKey: request.IdempotencyKey, OccurredAt: now}
+	s.breakers[request.Name] = breaker
+	s.breakerEvents[request.Name] = append(s.breakerEvents[request.Name], event)
+	s.breakerIdempotency[request.IdempotencyKey] = fingerprint
+	return breaker, nil
+}
+
+func breakerAction(tripped bool) Action {
+	if tripped {
+		return ActionTripBreaker
+	}
+	return ActionResetBreaker
+}
+
+func (s *Store) BreakerEvents(_ context.Context, name string) []BreakerEvent {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]BreakerEvent(nil), s.breakerEvents[name]...)
+}
+
+func (s *Store) anyBreakerTrippedLocked() bool {
+	for _, breaker := range s.breakers {
+		if breaker.Tripped {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Store) AnyBreakerTripped() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.anyBreakerTrippedLocked()
 }
 
 func (s *Store) Replay(_ context.Context, workflowID string) (Workflow, error) {

@@ -61,6 +61,8 @@ const (
 	ActionBlock                 Action = "BLOCK_WORKFLOW"
 	ActionFail                  Action = "FAIL_WORKFLOW"
 	ActionRequireReconciliation Action = "REQUIRE_RECONCILIATION"
+	ActionTripBreaker           Action = "TRIP_BREAKER"
+	ActionResetBreaker          Action = "RESET_BREAKER"
 )
 
 var (
@@ -73,6 +75,7 @@ var (
 	ErrSafetyInvariant     = errors.New("workflow safety invariant failed")
 	ErrWorkflowNotFound    = errors.New("workflow not found")
 	ErrWorkflowImmutable   = errors.New("workflow artifact is immutable")
+	ErrBreakerActive       = errors.New("workflow safety breaker is active")
 )
 
 type RiskBinding struct {

@@ -22,6 +22,10 @@ func PermissionAllowed(role ActorRole, action Action, from, to State) bool {
 		return true
 	case role == ActorRecovery && action == ActionRequireReconciliation && from != StatePaperIntentCreated && to == StateReconciliationRequired:
 		return true
+	case (role == ActorOperator || role == ActorSystem) && action == ActionTripBreaker && from == State("") && to == StateBlocked:
+		return true
+	case role == ActorOperator && action == ActionResetBreaker && from == StateBlocked && to == State(""):
+		return true
 	default:
 		return false
 	}

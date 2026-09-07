@@ -37,8 +37,19 @@ func (intent PaperIntent) Validate() error {
 // Breaker is defined here so the state store can own safety state atomically;
 // its command semantics are implemented in breakers.go.
 type Breaker struct {
-	Name      string    `json:"name"`
-	Tripped   bool      `json:"tripped"`
-	Reason    string    `json:"reason,omitempty"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Name            string    `json:"name"`
+	ContractVersion string    `json:"contract_version"`
+	Tripped         bool      `json:"tripped"`
+	Reason          string    `json:"reason,omitempty"`
+	Actor           string    `json:"actor"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+const BreakerContractVersion = "jax.workflow.breaker/v1"
+
+func (breaker Breaker) Validate() error {
+	if strings.TrimSpace(breaker.Name) == "" || breaker.ContractVersion != BreakerContractVersion || strings.TrimSpace(breaker.Actor) == "" {
+		return fmt.Errorf("breaker identity is invalid")
+	}
+	return validateUTC(breaker.UpdatedAt)
 }
