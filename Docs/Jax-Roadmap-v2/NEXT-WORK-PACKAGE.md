@@ -6,7 +6,7 @@
 - Phase 04 — World Monitor Intelligence: **COMPLETE / GO**
 - Phase 05 — Deterministic Quant Core: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-05.02 — Returns/log returns and benchmark-relative performance**
+- Current implementation package: **WP-05.03 — Volatility/ATR/drawdown**
 
 ## Phase-05 autonomous scope
 
