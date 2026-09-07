@@ -1,5 +1,29 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-29 - Phase 09 exit demonstrated / external review pending
+
+- Date: 2026-09-07
+- Phase: 09 — Portfolio Intelligence & Deterministic Risk
+- Work packages: WP-09.01 through WP-09.07
+- Status: Exit condition demonstrated; external technical-lead review pending
+- Decision authority: autonomous phase verification; no self-awarded phase GO
+
+Phase 09 delivers a provider-neutral canonical portfolio snapshot with explicit
+unknown/freshness state, deterministic signed exposure/concentration and safe
+correlation semantics, versioned risk policy, deterministic ACCEPT/AMEND/REJECT,
+bounded descriptive position proposals, frozen stress scenarios, and stable
+append-only audit artifacts. The phase harness proves a synthetic frozen
+portfolio can produce all three outcomes with reproducible reason codes and no
+portfolio or execution-side effect. It also proves stale/unknown state does not
+silently return ACCEPT and invalid policy/scenario paths fail closed.
+
+Evidence: `internal/modules/portfoliorisk/phase09_exit_test.go` and
+`09-portfolio-intelligence-deterministic-risk/PHASE-09-INTERNAL-VERIFICATION.md`.
+Full tests and vet pass. Race detection remains a
+`NON-BLOCKING ENVIRONMENTAL LIMITATION` because `gcc` is unavailable; it has
+not passed. No paid service or credential was added. `TRADING EDGE NOT
+DEMONSTRATED / INSUFFICIENT SAMPLE` is preserved. Phase 10 is not started.
+
 ## RD-2026-09-07-28 - Phase 08 GO / Phase 09 authorized
 
 - Date: 2026-09-07

@@ -45,8 +45,9 @@ criteria remain binding.
 - Phase 06: `COMPLETE / GO`
 - Phase 07: `COMPLETE / GO`
 - Phase 08: `COMPLETE / GO`
-- Phase 09: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-09.01 — Canonical portfolio/position/account state`
+- Phase 09: `EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`
+- Current package: `Phase 09 exit demonstrated — external review pending`
+- Phase 10: `NOT STARTED`
 
 
 ## 2026-08-10 integrated roadmap change

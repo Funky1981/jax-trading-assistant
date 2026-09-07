@@ -24,9 +24,9 @@ decision remains `NO_TRADE`.
 | Phase 06 — Research & Recommendation Engine | **COMPLETE / GO** |
 | Phase 07 — Evaluation, Replay & Backtesting | **COMPLETE / GO** |
 | Phase 08 — Controlled AI Tools & Durable Research Agents | **COMPLETE / GO** |
-| Phase 09 — Portfolio Intelligence & Deterministic Risk | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-09.01 — Canonical portfolio/position/account state** |
-| Next package | **WP-09.01 — Canonical portfolio/position/account state** |
+| Phase 09 — Portfolio Intelligence & Deterministic Risk | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
+| Current implementation package | **Phase 09 exit demonstrated — external review pending** |
+| Next package | **None — Phase 10 NOT STARTED** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -179,12 +179,15 @@ verified; the exact Phase-08 exit condition is demonstrated by
 accepted Phase 08 as COMPLETE / GO. The inability to run Go race detection
 because `gcc` is unavailable remains a NON-BLOCKING ENVIRONMENTAL LIMITATION.
 
-### Phase 09 — Portfolio Intelligence & Deterministic Risk — AUTHORISED / IN PROGRESS
+### Phase 09 — Portfolio Intelligence & Deterministic Risk — EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
 
 Phase 09 evaluates Phase-06 recommendations against canonical portfolio state
 and explicit deterministic risk policy. It does not grant approval or
-execution authority. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`
-remains the scientific status.
+execution authority. WP-09.01 through WP-09.07 are implemented and internally
+verified. The exact exit condition is demonstrated by
+`internal/modules/portfoliorisk/phase09_exit_test.go`. External technical-lead
+review is pending. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`
+remains the scientific status. Phase 10 is not started.
 
 ### Later roadmap — planned capability progression
 

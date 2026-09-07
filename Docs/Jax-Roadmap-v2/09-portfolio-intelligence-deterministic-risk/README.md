@@ -1,6 +1,6 @@
 # Phase 09 — Portfolio Intelligence & Deterministic Risk
 
-**Status:** **AUTHORISED / IN PROGRESS — WP-09.01 CURRENT**
+**Status:** **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
 
 ## Purpose
     Evaluate recommendations in the context of the user's actual portfolio and explicit risk policy.
@@ -31,3 +31,11 @@ Fincept portfolio analytics and deterministic workflow risk manager.
 A recommendation can be accepted, amended or rejected deterministically based on portfolio/risk state, with reproducible reason codes and no execution side effect.
 
 See `GATE.md`. Every work package requires independent review before the next one starts.
+
+## Internal phase evidence
+
+The reproducible phase gate is `internal/modules/portfoliorisk/phase09_exit_test.go`.
+It demonstrates canonical synthetic portfolio identity, deterministic exposure,
+versioned policy, ACCEPT/AMEND/REJECT, descriptive position proposal, frozen
+stress analysis, reason-code audit reconstruction, stale/unknown fail-closed
+behaviour and no execution side effect. Phase 10 is not started.
