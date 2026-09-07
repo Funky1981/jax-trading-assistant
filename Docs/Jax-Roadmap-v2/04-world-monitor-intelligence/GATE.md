@@ -1,6 +1,8 @@
 # Phase 04 Gate — World Monitor Intelligence
 
 ## Required evidence
+- Internal package decisions and reproducible verification are recorded in
+  `PHASE-04-INTERNAL-VERIFICATION.md`.
 - Every Phase 04 work package has an architecture-review decision.
 - No unresolved NO-GO remains.
 - CONDITIONAL GO items are explicitly tracked and are non-blocking.

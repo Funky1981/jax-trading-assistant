@@ -3,9 +3,9 @@
 ## Status
 
 - Phase 03 — Core Financial Evidence: **COMPLETE / GO**
-- Phase 04 — World Monitor Intelligence: **AUTHORISED / IN PROGRESS**
+- Phase 04 — World Monitor Intelligence: **IMPLEMENTED / EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-04.07 — Evaluate ACLED/AIS/prediction-market evidence adapters**
+- Current implementation package: **Phase-04 gate handover**
 
 ## Phase-04 autonomous scope
 

@@ -91,6 +91,22 @@ func TestWorldMonitorFetchPageTreatsUnavailableServiceAsFailure(t *testing.T) {
 	}
 }
 
+func TestAnalyzeWorldMonitorPullPageUsesEvidenceOnlyIntelligenceBoundary(t *testing.T) {
+	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	page := worldMonitorPullPage{RawPayload: []byte(`{"events":[{"event_id":"a"},{"event_id":"b"}]} `), Events: []worldMonitorPullEvent{
+		{EventID: "a", SourceID: "sec", SourceName: "SEC", Title: "Federal Reserve policy meeting decision", Summary: "Federal Reserve policy meeting decision affects United States markets", CollectedAt: now, PublicationTime: &now, Provenance: map[string]any{"event_type": "macro_rates"}},
+		{EventID: "b", SourceID: "fed", SourceName: "Fed", Title: "Federal Reserve announces policy meeting decision", Summary: "Federal Reserve policy meeting decision affects United States markets", CollectedAt: now, PublicationTime: &now, Provenance: map[string]any{"event_type": "macro_rates"}},
+	}, NextCursor: "2", Count: 2}
+	clusters, unknowns, err := analyzeWorldMonitorPullPage(page, now)
+	if err != nil || clusters != 1 || unknowns == 0 {
+		t.Fatalf("clusters=%d unknowns=%d err=%v", clusters, unknowns, err)
+	}
+	page.RawPayload = nil
+	if _, _, err := analyzeWorldMonitorPullPage(page, now); err == nil {
+		t.Fatal("missing provider bytes accepted")
+	}
+}
+
 func TestWorldMonitorPullTriggerPreservesOldPublicationAndHonestMissingPublication(t *testing.T) {
 	collected := time.Date(2026, 7, 29, 12, 0, 0, 0, time.UTC)
 	old := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)

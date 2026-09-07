@@ -31,4 +31,6 @@ Fincept NewsMonitor/NewsNLP/NewsCluster/NewsCorrelation, geopolitics, maritime a
 ## Exit gate
 A replayed multi-source event is clustered, corroborated, linked to plausible instruments and accompanied by confidence/unknowns without creating a trade candidate automatically.
 
-See `GATE.md`. Every work package requires independent review before the next one starts.
+See `GATE.md`. Each work package is internally verified and committed during
+autonomous development; external technical-lead review occurs at this phase
+gate before any later phase starts.

@@ -68,6 +68,9 @@ func Analyze(input PipelineInput) ([]IntelligenceResult, error) {
 		for _, reaction := range reactions {
 			unknowns = append(unknowns, reaction.Unknowns...)
 		}
+		if len(reactions) == 0 {
+			unknowns = append(unknowns, "no market points matched the cluster reaction window")
+		}
 		for _, adapter := range adapters {
 			unknowns = append(unknowns, adapter.Unknowns...)
 		}

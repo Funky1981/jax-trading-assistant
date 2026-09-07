@@ -40,8 +40,8 @@ criteria remain binding.
 ## Current programme position
 
 - Phases 00–03: `COMPLETE / GO`
-- Phase 04: authorised/in progress
-- Current starting package: `WP-04.01 — Continuous durable collection and cursor semantics`
+- Phase 04: implemented; exit demonstrated; external phase-gate review pending
+- Current position: Phase-04 gate handover; Phase 05 remains unauthorized
 
 
 ## 2026-08-10 integrated roadmap change

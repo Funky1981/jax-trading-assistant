@@ -72,12 +72,14 @@ type worldMonitorPullWorker struct {
 }
 
 type worldMonitorPullResult struct {
-	Cursor           int64
-	Fetched          int
-	Ingested         int
-	Duplicates       int
-	DecisionsCreated int
-	DecisionsReused  int
+	Cursor               int64
+	Fetched              int
+	Ingested             int
+	Duplicates           int
+	DecisionsCreated     int
+	DecisionsReused      int
+	IntelligenceClusters int
+	IntelligenceUnknowns int
 }
 
 func loadWorldMonitorPullConfig(lookup func(string) (string, bool)) (worldMonitorPullConfig, error) {
@@ -174,7 +176,7 @@ func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 				log.Printf("world_monitor_pull cycle failed endpoint=%q error=%q", config.Endpoint, err)
 			}
 		} else {
-			log.Printf("world_monitor_pull cycle committed cursor=%d fetched=%d ingested=%d duplicates=%d decisions_created=%d decisions_reused=%d", result.Cursor, result.Fetched, result.Ingested, result.Duplicates, result.DecisionsCreated, result.DecisionsReused)
+			log.Printf("world_monitor_pull cycle committed cursor=%d fetched=%d ingested=%d duplicates=%d decisions_created=%d decisions_reused=%d intelligence_clusters=%d intelligence_unknowns=%d", result.Cursor, result.Fetched, result.Ingested, result.Duplicates, result.DecisionsCreated, result.DecisionsReused, result.IntelligenceClusters, result.IntelligenceUnknowns)
 		}
 		select {
 		case <-ctx.Done():
@@ -197,6 +199,11 @@ func (w *worldMonitorPullWorker) cycle(ctx context.Context) (worldMonitorPullRes
 	if len(page.Events) == 0 {
 		return result, nil
 	}
+	clusters, unknowns, err := analyzeWorldMonitorPullPage(page, w.now().UTC())
+	if err != nil {
+		return result, fmt.Errorf("analyze World Monitor page: %w", err)
+	}
+	result.IntelligenceClusters, result.IntelligenceUnknowns = clusters, unknowns
 
 	tx, err := w.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
 	if err != nil {
@@ -280,6 +287,41 @@ func (w *worldMonitorPullWorker) cycle(ctx context.Context) (worldMonitorPullRes
 	}
 	result.Cursor = finalPosition
 	return result, nil
+}
+
+func analyzeWorldMonitorPullPage(page worldMonitorPullPage, now time.Time) (int, int, error) {
+	if len(page.RawPayload) == 0 {
+		return 0, 0, fmt.Errorf("provider page bytes are required")
+	}
+	observations := make([]worldmonitorintelligence.Observation, 0, len(page.Events))
+	for _, event := range page.Events {
+		freshness := worldmonitorintelligence.FreshnessUnknown
+		if event.PublicationTime != nil {
+			freshness = worldmonitorintelligence.FreshnessFresh
+			if now.Sub(event.PublicationTime.UTC()) > 24*time.Hour {
+				freshness = worldmonitorintelligence.FreshnessStale
+			}
+		}
+		eventType, _ := event.Provenance["event_type"].(string)
+		observations = append(observations, worldmonitorintelligence.Observation{
+			ID: event.EventID, SourceID: event.SourceID, SourceName: event.SourceName, EventType: eventType,
+			Title: event.Title, Summary: event.Summary, SourceURL: event.FeedURL, PublishedAt: event.PublicationTime,
+			ObservedAt: event.SourceTimestamp, CollectedAt: event.CollectedAt.UTC(), ProviderRev: "world-monitor-events/v1",
+			RawPayload: page.RawPayload, Freshness: freshness,
+		})
+	}
+	results, err := worldmonitorintelligence.Analyze(worldmonitorintelligence.PipelineInput{
+		Observations: observations, Now: now, VelocityWindow: time.Hour, BaselineWindow: 24 * time.Hour,
+		ReactionWindow: 15 * time.Minute, AdapterSpecs: worldmonitorintelligence.DefaultAdapterSpecs(),
+	})
+	if err != nil {
+		return 0, 0, err
+	}
+	unknowns := 0
+	for _, result := range results {
+		unknowns += len(result.Unknowns)
+	}
+	return len(results), unknowns, nil
 }
 
 type worldMonitorCursorDB interface {

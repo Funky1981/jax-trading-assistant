@@ -19,9 +19,9 @@ decision remains `NO_TRADE`.
 | Phase 01 — Canonical Contracts / Provenance / Replay | **COMPLETE / GO** |
 | Phase 02 — Provider / Data Platform | **COMPLETE / GO**, including durable raw storage closure |
 | Phase 03 — Core Financial Evidence | **COMPLETE / GO** |
-| Phase 04 — World Monitor Intelligence | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-04.07 — Evaluate ACLED/AIS/prediction-market evidence adapters** |
-| Next package | **WP-04.07 — Evaluate ACLED/AIS/prediction-market evidence adapters** |
+| Phase 04 — World Monitor Intelligence | **IMPLEMENTED / EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
+| Current implementation package | **Phase-04 gate handover** |
+| Next package | **External technical-lead GO PHASE 04; Phase 05 remains unauthorized** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -30,8 +30,8 @@ WP-03.06 has received independent technical-lead FINAL GO and is now COMPLETE /
 GO. The Phase-03 exit condition was demonstrated using a deterministic,
 source-linked AAPL/Apple evidence packet containing real market, SEC/company
 and Treasury macro/context evidence, immutable raw provenance and no
-model-memory dependency. Phase 03 is COMPLETE / GO. Phase 04 is authorised and
-implementation starts at WP-04.01.
+model-memory dependency. Phase 03 is COMPLETE / GO. Phase 04 is implemented
+with its exit demonstrated and its external gate review pending.
 
 ## Roadmap status vocabulary
 
@@ -110,12 +110,14 @@ remain future source-qualification questions. See
 Corrective packages such as WP-03.01A are closure history under their parent
 package, not new permanent roadmap phases.
 
-### Phase 04 — World Monitor Intelligence — AUTHORISED / IN PROGRESS
+### Phase 04 — World Monitor Intelligence — IMPLEMENTED / EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
 
 Phase 04 builds corroborated event intelligence from the existing World Monitor
 boundary while preserving raw evidence, provenance, temporal semantics,
 deterministic replay and downstream safety boundaries. Its current starting
-package is `WP-04.01 — Continuous durable collection and cursor semantics`.
+its seven authorised work packages. The exact exit condition is demonstrated
+by the reproducible internal verification record at
+`Docs/Jax-Roadmap-v2/04-world-monitor-intelligence/PHASE-04-INTERNAL-VERIFICATION.md`.
 
 From Phase 04 onward, Autonomous Development Mode permits Codex to complete one
 bounded package at a time with internal verification and self-review, then
@@ -224,6 +226,7 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 04 authorised/in progress**, beginning with
-WP-04.01. Phase 04 must demonstrate its exit condition and receive external
-technical-lead GO before Phase 05 begins.
+The current position is **Phase 04 implemented with its exit demonstrated;
+external gate review is pending**. Phase 05 remains unauthorized until the
+technical lead returns external `GO PHASE 04` or an explicitly recorded
+conditional decision.
