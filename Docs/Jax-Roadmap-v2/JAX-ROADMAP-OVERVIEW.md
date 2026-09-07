@@ -24,7 +24,8 @@ AAPL/Apple evidence packet containing real market, company and macro/context
 evidence, immutable raw provenance, a deterministic exit assertion and no
 model-memory dependency. Phase 04 — World Monitor Intelligence — is
 **COMPLETE / GO**, accepted by external GPT-5.6 Sol. Phase 05 — Deterministic
-Quant Core — is now **authorised/in progress**. See `Docs/ROADMAP.md`,
+Quant Core — has demonstrated its exit and is **pending external technical-lead
+review**. See `Docs/ROADMAP.md`,
 `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 
 ## Non-negotiable principles
@@ -68,7 +69,7 @@ Quant Core — is now **authorised/in progress**. See `Docs/ROADMAP.md`,
 
 **M2 — Observe:** Phases 01–04 complete. Jax can gather, normalize, validate and correlate real evidence with source health and provenance.
 
-**M3 — Analyse:** Phase 05 complete. Jax calculates reproducible quantitative and risk context from trusted data.
+**M3 — Analyse:** Phase 05 exit demonstrated. Jax calculates reproducible quantitative and risk context from trusted data; external phase review remains pending.
 
 **M4 — Recommend:** Phase 06 complete. Jax can produce evidence-backed WATCH / NO_TRADE / CANDIDATE-style recommendations with bull/bear cases, unknowns and invalidation conditions.
 

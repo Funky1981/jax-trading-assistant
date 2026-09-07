@@ -41,8 +41,8 @@ criteria remain binding.
 
 - Phases 00–03: `COMPLETE / GO`
 - Phase 04: `COMPLETE / GO`
-- Phase 05: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-05.01 — Quant service/library boundary and versioned request/response contract`
+- Phase 05: `EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`
+- Current package: `Phase-05 exit review handover`
 
 
 ## 2026-08-10 integrated roadmap change

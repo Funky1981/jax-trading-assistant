@@ -240,6 +240,6 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 05 authorised/in progress**, beginning with
-WP-05.01. Phase 05 must demonstrate its exit condition and receive external
+The current position is **Phase 05 exit demonstrated / external review pending**.
+Phase 05 has demonstrated its exit condition and must receive external
 technical-lead GO before Phase 06 begins.

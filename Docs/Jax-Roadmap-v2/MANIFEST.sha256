@@ -7,6 +7,7 @@
 09f1294709dfff17ca3ca0bcfb048ead253032b9a2dc944c32a59c85118c9670  governance/DEFINITION-OF-DONE.md
 0b48a55b51fc0f1e3ddc29ff4349d2927e8238fa3680f6c6f2bdcf344cb145a2  02-data-platform-provider-architecture/WP-02.01-provider-registry-capability-contract.md
 0cc13c7bf94c470e521ebd60a40ea1525530c701c98a4a749fa80a126c01793d  07-evaluation-replay-backtesting/WP-07.05-traditional-strategy-backtesting-adapter-evaluation.md
+0ddbeaef5b557bd57b6f3df48959585c1aba8b9bb2082cf48c46ff3aca07b8eb  JAX-ROADMAP-OVERVIEW.md
 0e01e003f7c829f6ef43ad3f88718245708188e4ede2122e6dddb1728ab98bf1  08-controlled-ai-tools-durable-research-agents/WP-08.07-research-memory-with-provenance.md
 0ef4c199825a689d7c4b13abd0aac68aa6d76bc1be4a77140ab6c10c194f85af  09-portfolio-intelligence-deterministic-risk/WP-09.01-canonical-portfolio-position-account-state.md
 104d3e64dd01ddeed9efa5994916fc9e27adae52beb9dd15fa4c3b3695673361  08-controlled-ai-tools-durable-research-agents/README.md
@@ -52,6 +53,7 @@
 529677414fd31996921d6be27f7daaacc50b2859e17cf7f24f910b08830708fd  13-optional-live-execution/WP-13.05-order-idempotency-and-reconciliation.md
 54c6cbea265507d81a9024be582c76c5662421d8baa79fdc4689fe20f8c7f277  05-deterministic-quant-core/WP-05.06-basic-risk-adjusted-metrics.md
 555abbdaafe26a305bc317d22c5a9a286fa4c98f0f48d6c340ab29a19ddbf0ab  08-controlled-ai-tools-durable-research-agents/GATE.md
+557b980cf07c090ff98e4a3a8e35399fa797ed1404d1fc345185784f31b1140c  README.md
 55b3d7606b3e97ff0409798bb844cfa434a3f2f532ac37262764f7885fd4040f  .gitattributes
 59e3b28b73c714f7d70c9152c11ede402e61f78af6cca8f1914e1437812f86ec  09-portfolio-intelligence-deterministic-risk/GATE.md
 5a7eb2e3577aa5f45ee752929421aaadf98bad592e2b4402cc964740b28890d3  02-data-platform-provider-architecture/REFERENCE-NOTES.md
@@ -108,7 +110,6 @@ a276f382dd1f76068b1053667387d2e75dcf273cfb49c175e0462167b38c8835  09-portfolio-i
 a2d0bed3f2d95325b4a1a6b2c4a7bd2a66b7d3b187adac5db6e60b3cc1dfa7f4  06-research-recommendation-engine/WP-06.03-bull-case-bear-case-contradiction-unknown-extraction.md
 a4cd6ea3ecfdf601d32bd09034f0e61b1044bcae8a377cb30a83f6673bdc773a  13-optional-live-execution/WP-13.08-small-capital-staged-rollout.md
 a8e158bdecaa992fb4e06dc580a2dd753aa1abeedd28cf3058d9e28735ff8ac2  governance/PHASE-REVIEW-HANDOVER.md
-ac50152b825c8c07425b96fc446eb70cb691b9980ebd6e5e4a67e29d8b39faf8  README.md
 ad4957571bf9107e5bc9c6935c484239f5f617fb7f9078e2a0cd60b527b2104f  12-advanced-quant-research/WP-12.06-concept-drift-and-rolling-retraining.md
 ad759a16b358402df7836974f7e663244c0b619a66c86b065a8de55b1801c409  05-deterministic-quant-core/WP-05.01-quant-service-library-boundary-and-versioned-request-response-contract.md
 b123306905a1419e60f019c5059f74ef5fbe3530a02e9ea7b18fe9a587853db5  12-advanced-quant-research/GATE.md
@@ -162,6 +163,5 @@ fb475ff9ac6a88f10f924ea688d636d512f1bf92a8f48e76158e636f5c4935e7  13-optional-li
 fb58d49f0b89fceadfafe7b15f97c34bffea3f649aa470e67a5603ae34f06a6f  references/SOURCE-INDEX.md
 fb5c68f10c21512c09b18f7692be887ff2eafc740e279a03019e8699e4fb2102  04-world-monitor-intelligence/WP-04.05-velocity-baseline-deviation-signals.md
 fcdc0c69a63e62174cf1bc10eace1124c40b651d2b8522272fcd945a224e7247  07-evaluation-replay-backtesting/GATE.md
-febaade7a59c2e401748c090392033b91dec4cc46df544307616a75fdfd60de1  JAX-ROADMAP-OVERVIEW.md
 ffd5d2d07d574dd1421c893f4532f53669e507c926c2e60467fe5dd1e6c6d776  04-world-monitor-intelligence/WP-04.03-entity-issuer-geography-extraction.md
 ffd73a5a1cbf680f205a77b16945a2d785a668c9e41ad42ffabea8d0da198027  00-current-issuer-asset-resolution/WP-00.02-run-frozen-v4-issuer-benchmark.md
