@@ -42,6 +42,25 @@ State `DEMONSTRATED` or `NOT DEMONSTRATED` and provide reproducible proof.
 - Accepted/non-blocking debt:
 - Potential roadmap issues:
 
+## ADVERSARIAL PHASE REVIEW
+
+Required for Phase 05 and every later phase before recommending GO:
+
+- Reviewer type: independent agent/subagent, or dedicated fresh review pass
+- Diff range reviewed: `PHASE_STARTING_HEAD..CURRENT_HEAD`
+- Production files reviewed:
+- Migrations reviewed:
+- Contracts/dependencies/configuration reviewed:
+- Tests/evidence reviewed:
+- Phase gate and acceptance criteria reread:
+- Blocking findings discovered:
+- Material non-blocking findings:
+- Fixes made and reverified:
+- Additional regression tests added:
+- Independent expected-value checks:
+- Final blocking finding count:
+- Final review result: `Adversarial phase review: PASS` or `NO-GO`
+
 ## Cost / external dependencies
 - New paid services:
 - Current spend:

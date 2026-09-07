@@ -29,6 +29,13 @@ Stop when the phase exit condition is demonstrated, a governance hard stop occur
 
 At phase completion return the structure in `PHASE-REVIEW-HANDOVER.md`. Do not begin the next phase without external GO.
 
+For Phase 05 and every later phase, complete the dedicated adversarial phase
+review required by `AUTONOMOUS-DEVELOPMENT-MODE.md` before returning that
+handover. Review the actual phase diff from starting HEAD through current HEAD,
+test the tests, independently check important expected values, correct all
+blocking findings, and include the review record in the handover. Do not claim
+an independent reviewer unless one genuinely ran.
+
 ## Context recovery
 
 If conversational context is lost, reconstruct state from `Docs/ROADMAP.md`, roadmap governance, current phase docs, evidence docs, recent local commits, tests and current repository state. Repository evidence is durable memory.

@@ -284,3 +284,20 @@ External technical-lead review moves from every work package to the phase bounda
 Hard stops include roadmap changes, paid dependency/account decisions, missing/rejected credentials, consequential architecture decisions, destructive data/Git actions, and live trading/execution authority changes.
 
 Model policy: GPT-5.6 Luna for default implementation; GPT-5.6 Sol for consequential decisions and phase review; GPT-5.6 Terra as optional bounded escalation when Luna materially struggles.
+
+## RD-2026-09-07-03 - Mandatory adversarial phase review
+
+- Date: 2026-09-07
+- Status: Applied
+- Applies from: Phase 05 onward
+
+### Decision
+
+Before any Phase-05-or-later handover for external technical-lead review, Codex
+must perform a dedicated adversarial phase review separate from package-level
+self-review. It must inspect the actual phase diff, challenge correctness,
+provenance, temporal semantics, persistence, contracts, tests, architecture,
+security/cost and trading safety, test the tests, and independently verify
+important expected values. All blocking findings must be corrected and
+reverified or reported as an explicit `NO-GO` blocker. A GO recommendation must
+state `Blocking findings remaining: 0` and `Adversarial phase review: PASS`.

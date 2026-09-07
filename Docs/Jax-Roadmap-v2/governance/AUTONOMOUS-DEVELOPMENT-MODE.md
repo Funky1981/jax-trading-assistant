@@ -36,6 +36,33 @@ External Sol technical-lead review is required when:
 
 At a normal phase boundary Codex stops and returns `PHASE-REVIEW-HANDOVER.md`. Codex must not start the next phase until the technical lead returns GO or accepted CONDITIONAL GO.
 
+## Mandatory adversarial phase review
+
+Before producing any phase handover for external technical-lead review from
+Phase 05 onward, Codex must perform a dedicated **ADVERSARIAL PHASE REVIEW**.
+This is separate from each work package's normal self-review. The review must
+inspect the actual `PHASE_STARTING_HEAD..CURRENT_HEAD` diff, including every
+production file, migration, contract, dependency, test, configuration and
+roadmap/evidence change, and must actively attempt to falsify correctness,
+provenance, temporal validity, persistence, contracts, testing, architecture,
+security/cost and trading safety.
+
+Where the runtime supports it, prefer a fresh independent reviewer context that
+did not implement the phase. If none is available, perform a dedicated fresh
+review pass and do not claim independent-agent review. Test the tests and
+independently verify important quantitative or deterministic expected values.
+
+The phase cannot be presented as ready for GO until every blocking finding has
+been corrected and reverified, or the phase is stopped with an explicit
+`NO-GO` blocker. The final handover must identify reviewer type, diff range,
+files and tests reviewed, findings, fixes, additional regressions, and final
+blocking-finding count. A GO recommendation requires:
+
+```text
+Blocking findings remaining: 0
+Adversarial phase review: PASS
+```
+
 ## Supersession rule
 
 While this mode is active, legacy wording in individual phase/package files such as "STOP after the handover", "do not begin the next work package", or "every work package requires independent external review" is interpreted as package-boundary discipline rather than an external-review requirement.

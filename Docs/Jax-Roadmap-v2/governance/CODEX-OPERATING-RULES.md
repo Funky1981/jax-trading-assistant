@@ -22,6 +22,13 @@ Autonomous phase execution is governed by `AUTONOMOUS-DEVELOPMENT-MODE.md`.
 13. Document limitations/deviations rather than hiding them.
 14. A passing build alone is not acceptance proof.
 
+Before any Phase-05-or-later phase handover, perform the separate mandatory
+adversarial phase review against the actual phase-start-to-current diff. It
+must challenge the implementation, test meaningfulness, independent expected
+values, provenance, temporal validity, persistence, architecture, security,
+cost, and trading safety. A GO recommendation requires zero remaining blocking
+findings and an explicit `Adversarial phase review: PASS`.
+
 ## Autonomous cadence
 15. Codex may progress through work packages inside the authorised phase without external review after each package.
 16. Preserve a bounded commit/evidence record for each package.

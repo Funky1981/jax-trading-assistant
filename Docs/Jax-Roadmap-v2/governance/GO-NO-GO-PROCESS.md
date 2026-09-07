@@ -31,6 +31,8 @@ The technical lead may still request package-level review at any time.
 - No hidden future-phase coupling
 - Repository hygiene
 - Accepted debt explicitly tracked
+- Dedicated adversarial phase review completed for Phase 05 and later
+- Actual phase diff reviewed; tests tested; important expected values checked independently
 
 ## Authority
 Codex cannot self-award external phase GO. Only external technical-lead review advances Jax into the next phase.

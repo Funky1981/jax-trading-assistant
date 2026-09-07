@@ -22,6 +22,8 @@ Internal state: `IMPLEMENTED / INTERNALLY VERIFIED`.
 A phase is complete only when:
 - all required work packages are internally verified;
 - no unresolved package blocker remains;
+- for Phase 05 and later, the dedicated adversarial phase review has completed;
+- for Phase 05 and later, the final adversarial review has zero blocking findings;
 - phase-level verification is reproducible;
 - the exact phase exit condition is demonstrated, not merely asserted;
 - safety and cost/dependency boundaries are known;
