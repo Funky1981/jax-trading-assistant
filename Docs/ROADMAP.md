@@ -25,9 +25,9 @@ decision remains `NO_TRADE`.
 | Phase 07 — Evaluation, Replay & Backtesting | **COMPLETE / GO** |
 | Phase 08 — Controlled AI Tools & Durable Research Agents | **COMPLETE / GO** |
 | Phase 09 — Portfolio Intelligence & Deterministic Risk | **COMPLETE / GO** |
-| Phase 10 — Workflow, HITL & Operational Safety | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-10.01 — State machine for recommendation → risk → approval → paper intent** |
-| Next package | **WP-10.01 — State machine for recommendation → risk → approval → paper intent** |
+| Phase 10 — Workflow, HITL & Operational Safety | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
+| Current implementation package | **Phase 10 exit demonstrated — external review pending** |
+| Next package | **None — stop for external Phase-10 review; Phase 11 NOT STARTED** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -180,7 +180,7 @@ verified; the exact Phase-08 exit condition is demonstrated by
 accepted Phase 08 as COMPLETE / GO. The inability to run Go race detection
 because `gcc` is unavailable remains a NON-BLOCKING ENVIRONMENTAL LIMITATION.
 
-### Phase 09 — Portfolio Intelligence & Deterministic Risk — EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
+### Phase 09 — Portfolio Intelligence & Deterministic Risk — COMPLETE / GO
 
 Phase 09 evaluates Phase-06 recommendations against canonical portfolio state
 and explicit deterministic risk policy. It does not grant approval or
@@ -191,7 +191,9 @@ external GPT-5.6 Sol as `GO PHASE 09`. The approved migration-number collision
 remediation retained historical migrations unchanged, moved the Phase-09
 migrations to `000059` and `000060`, and added complete-stream registry
 validation. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains the
-scientific status. Phase 10 is authorised and in progress.
+scientific status. The approved migration-number collision remediation is
+recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
+`EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`; Phase 11 is not started.
 
 ### Later roadmap — planned capability progression
 
@@ -294,7 +296,7 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 10 authorised / in progress**. Phase 09 remains
-complete/GO after approved migration remediation. Phase 10 must preserve the
-paper-intent-only boundary and receive external technical-lead GO before Phase
-11 begins.
+The current position is **Phase 10 exit demonstrated / external review pending**.
+Phase 09 remains complete/GO after approved migration remediation. Phase 10
+preserves the paper-intent-only boundary and must receive external
+technical-lead GO before Phase 11 begins.

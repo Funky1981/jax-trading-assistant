@@ -1,6 +1,6 @@
 # Phase 09 — Portfolio Intelligence & Deterministic Risk
 
-**Status:** **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
+**Status:** **COMPLETE / GO** (accepted by external GPT-5.6 Sol)
 
 ## Purpose
     Evaluate recommendations in the context of the user's actual portfolio and explicit risk policy.
@@ -38,4 +38,7 @@ The reproducible phase gate is `internal/modules/portfoliorisk/phase09_exit_test
 It demonstrates canonical synthetic portfolio identity, deterministic exposure,
 versioned policy, ACCEPT/AMEND/REJECT, descriptive position proposal, frozen
 stress analysis, reason-code audit reconstruction, stale/unknown fail-closed
-behaviour and no execution side effect. Phase 10 is not started.
+behaviour and no execution side effect. The approved migration remediation
+preserved historical migrations, moved the new Phase-09 migrations to 000059
+and 000060, and added complete-stream registry validation. Phase 10 exit is
+demonstrated and external review is pending; Phase 11 is not started.

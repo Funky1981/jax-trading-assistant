@@ -771,3 +771,29 @@ migration and Phase-09 verification passed. `MIGRATION BLOCKER RESOLVED`.
 
 Phase 10 is **AUTHORISED / IN PROGRESS** beginning at WP-10.01. Scientific
 status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE**.
+
+## RD-2026-09-07-07 - Phase 10 exit demonstrated / external review pending
+
+- Date: 2026-09-07
+- Phase: 10 - Workflow, HITL & Operational Safety
+- Status: Internally complete; external phase-gate review pending
+- Decision authority: Codex internal verification only; no GO self-awarded
+
+### Decision record
+
+WP-10.01 through WP-10.07 are implemented in bounded commits and the exact
+Phase-10 exit condition is demonstrated by
+`internal/modules/workflow/phase10_exit_test.go` plus the focused negative,
+recovery, audit, breaker, health and concurrency tests. The bounded workflow
+records explicit deterministic transitions from an accepted/amended Phase-09
+risk artifact through explicit human paper-only confirmation to an immutable
+inert `PAPER_INTENT`. It cannot create a paper/live broker order, broker call,
+trade, fill, approval outside the explicit HITL contract, or portfolio
+mutation.
+
+The Phase-09 migration collision remediation remains part of the accepted
+baseline: historical 000055/000056 migrations are unchanged, new Phase-09
+migrations are 000059/000060, and the complete-stream registry invariant
+passes. Phase 09 remains COMPLETE / GO. The scientific status remains
+**TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE**. Phase 11 is NOT
+STARTED.

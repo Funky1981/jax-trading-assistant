@@ -9,10 +9,10 @@
 - Phase 07 — Evaluation, Replay & Backtesting: **COMPLETE / GO**
 - Phase 08 — Controlled AI Tools & Durable Research Agents: **COMPLETE / GO**
 - Phase 09 — Portfolio Intelligence & Deterministic Risk: **COMPLETE / GO**
-- Phase 10 — Workflow, HITL & Operational Safety: **AUTHORISED / IN PROGRESS**
+- Phase 10 — Workflow, HITL & Operational Safety: **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **Phase 10 exit harness and adversarial review**
-- Next package: **Phase 10 exit harness and adversarial review**
+- Current implementation package: **Phase 10 exit demonstrated — external review pending**
+- Next package: **None — stop for external Phase-10 review; Phase 11 NOT STARTED**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
@@ -20,6 +20,10 @@ remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
 validated by `db/postgres/migrations/migration_registry_test.go`.
 
 Scientific status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE**.
+
+Phase 10 exit condition is demonstrated by
+`internal/modules/workflow/phase10_exit_test.go`. The phase handover must be
+reviewed externally before any Phase 11 work begins.
 
 ## Phase-05 autonomous scope
 
