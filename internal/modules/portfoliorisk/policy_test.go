@@ -61,7 +61,6 @@ func TestPolicyIdentityClaimCannotBeReusedForChangedContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	policy.MaximumGrossExposure = Limit(1)
-	policy.PolicyID = policy.PolicyID
 	if _, err := BuildRiskPolicy(policy); err == nil || !errors.Is(err, ErrPolicyIdentity) {
 		t.Fatalf("error=%v, want policy identity error", err)
 	}
