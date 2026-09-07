@@ -38,6 +38,7 @@ const (
 	ReasonRejectLeverageLimit         ReasonCode = "REJECT_LEVERAGE_LIMIT"
 	ReasonRejectInvalidRecommendation ReasonCode = "REJECT_INVALID_RECOMMENDATION"
 	ReasonRejectExecutionAuthority    ReasonCode = "REJECT_EXECUTION_AUTHORITY"
+	ReasonRejectNoCapacity            ReasonCode = "REJECT_NO_REMAINING_CAPACITY"
 )
 
 type RecommendationRiskInput struct {
@@ -66,12 +67,15 @@ type RiskDecision struct {
 	RequestedValue      float64         `json:"requested_value"`
 	ResultingValue      float64         `json:"resulting_value"`
 	ExecutionAuthority  string          `json:"execution_authority"`
+	QuantResultIDs      []string        `json:"quant_result_ids,omitempty"`
+	ScenarioID          string          `json:"scenario_id,omitempty"`
+	ProposalID          string          `json:"proposal_id,omitempty"`
 }
 
 // EvaluateRecommendation is deterministic policy arithmetic. Model confidence
 // is carried for provenance only and cannot override a failed rule.
 func EvaluateRecommendation(recommendation RecommendationRiskInput, snapshot PortfolioSnapshot, analytics ExposureAnalytics, policy RiskPolicy, evaluatedAt time.Time, maxAge time.Duration) RiskDecision {
-	result := RiskDecision{Algorithm: RiskDecisionAlgorithmV1, Outcome: DecisionReject, EvaluatedAt: evaluatedAt.UTC(), RecommendationID: recommendation.RecommendationID, PortfolioSnapshotID: snapshot.SnapshotID, AnalyticsID: analytics.AnalyticsID, PolicyID: policy.PolicyID, RequestedValue: recommendation.SignedMarketValue, ResultingValue: recommendation.SignedMarketValue, ExecutionAuthority: "NONE"}
+	result := RiskDecision{Algorithm: RiskDecisionAlgorithmV1, Outcome: DecisionReject, EvaluatedAt: evaluatedAt.UTC(), RecommendationID: recommendation.RecommendationID, PortfolioSnapshotID: snapshot.SnapshotID, AnalyticsID: analytics.AnalyticsID, PolicyID: policy.PolicyID, RequestedValue: recommendation.SignedMarketValue, ResultingValue: recommendation.SignedMarketValue, ExecutionAuthority: "NONE", QuantResultIDs: append([]string(nil), recommendation.QuantResultIDs...)}
 	if recommendation.ExecutionAuthority != "NONE" {
 		return finishDecision(result, ReasonRejectExecutionAuthority, "Phase-09 risk evaluation cannot grant execution authority")
 	}
@@ -142,6 +146,9 @@ func EvaluateRecommendation(recommendation RecommendationRiskInput, snapshot Por
 	if violatesLimit(canonicalPolicy.MaximumGrossExposure, newGross) || violatesLimit(canonicalPolicy.MaximumNetExposure, math.Abs(newNet)) {
 		reasons = append(reasons, ReasonAmendRiskBudget)
 	}
+	if canonicalPolicy.MinimumCash != nil && recommendation.SignedMarketValue > 0 && canonical.Cash.Value-recommendation.SignedMarketValue < *canonicalPolicy.MinimumCash {
+		reasons = append(reasons, ReasonAmendRiskBudget)
+	}
 	if len(reasons) == 0 {
 		result.Outcome, result.ReasonCodes, result.Explanations = DecisionAccept, []ReasonCode{ReasonAcceptWithinPolicy}, []string{"recommendation satisfies deterministic Phase-09 policy"}
 		return finishDecisionWithValue(result, recommendation.SignedMarketValue)
@@ -153,7 +160,7 @@ func EvaluateRecommendation(recommendation RecommendationRiskInput, snapshot Por
 		result.Outcome, result.ReasonCodes, result.Explanations = DecisionAmend, stableReasons(reasons), []string{"requested value was reduced to the deterministic remaining policy capacity"}
 		return finishDecisionWithValue(result, maxAllowable)
 	}
-	return finishDecision(result, ReasonRejectConcentrationLimit, "requested recommendation has no remaining policy capacity")
+	return finishDecision(result, rejectCodeForReasons(reasons), "requested recommendation has no remaining policy capacity")
 }
 
 func capRemaining(limit *float64, used float64, extra ...float64) float64 {
@@ -179,6 +186,17 @@ func stableReasons(reasons []ReasonCode) []ReasonCode {
 	sort.Slice(reasons, func(i, j int) bool { return reasons[i] < reasons[j] })
 	return reasons
 }
+func rejectCodeForReasons(reasons []ReasonCode) ReasonCode {
+	for _, reason := range reasons {
+		if reason == ReasonAmendRiskBudget {
+			return ReasonRejectInsufficientCapital
+		}
+	}
+	if len(reasons) > 0 && reasons[0] == ReasonAmendPositionCap {
+		return ReasonRejectConcentrationLimit
+	}
+	return ReasonRejectNoCapacity
+}
 func finishDecision(result RiskDecision, code ReasonCode, explanation string) RiskDecision {
 	result.Outcome = DecisionReject
 	result.ReasonCodes = []ReasonCode{code}
@@ -194,4 +212,13 @@ func finishDecisionWithValue(result RiskDecision, value float64) RiskDecision {
 	digest := sha256.Sum256(b)
 	result.DecisionID = "rdec_" + hex.EncodeToString(digest[:])
 	return result
+}
+
+func decisionIdentity(result RiskDecision) string {
+	copyResult := result
+	copyResult.DecisionID = ""
+	copyResult.EvaluatedAt = time.Time{}
+	b, _ := json.Marshal(copyResult)
+	digest := sha256.Sum256(b)
+	return "rdec_" + hex.EncodeToString(digest[:])
 }
