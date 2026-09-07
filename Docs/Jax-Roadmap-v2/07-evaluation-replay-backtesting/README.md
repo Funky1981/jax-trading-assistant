@@ -1,6 +1,6 @@
 # Phase 07 — Evaluation, Replay & Backtesting
 
-**Status:** **AUTHORISED / IN PROGRESS — WP-07.02 CURRENT**
+**Status:** **AUTHORISED / IN PROGRESS — WP-07.03 CURRENT**
 
 ## Purpose
     Prove whether Jax recommendations and strategies have value and remain reproducible before granting them more authority.

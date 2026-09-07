@@ -1,5 +1,20 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-10 - WP-07.02 internal verification
+
+- Date: 2026-09-07
+- Phase: 07 — Evaluation, Replay & Backtesting
+- Work package: WP-07.02 — Frozen benchmark registry
+- Status: Implemented / internally verified; WP-07.03 current
+- Decision authority: autonomous package verification under authorised Phase-07 scope
+
+WP-07.02 adds an immutable versioned benchmark registry with dataset/content
+hashes, split classification, fixed cases/timestamps, allowed evidence vintages,
+complete configuration freeze and provenance. Changed content cannot silently
+reuse a frozen identity; final holdout tuning is rejected. Focused tests pass.
+
+Evidence: `07-evaluation-replay-backtesting/WP-07.02-frozen-benchmark-registry.md`.
+
 ## RD-2026-09-07-09 - WP-07.01 internal verification
 
 - Date: 2026-09-07

@@ -28,8 +28,8 @@ Quant Core — is **COMPLETE / GO**, accepted by external GPT-5.6 Sol. Phase 06 
 Research & Recommendation Engine — is **COMPLETE / GO**, accepted by external
 GPT-5.6 Sol. Phase 07 — Evaluation, Replay & Backtesting — is **authorised / in
 progress**. See `Docs/ROADMAP.md`,
-`ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`. WP-07.01 is internally
-verified and the current package is WP-07.02.
+`ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`. WP-07.01 and WP-07.02
+are internally verified and the current package is WP-07.03.
 
 ## Non-negotiable principles
 
