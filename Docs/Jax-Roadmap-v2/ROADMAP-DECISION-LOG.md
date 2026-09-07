@@ -1,5 +1,24 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-25 - WP-08.07 internal verification
+
+- Date: 2026-09-07
+- Phase: 08 — Controlled AI Tools & Durable Research Agents
+- Work package: WP-08.07 — Research memory with provenance
+- Status: Implemented / internally verified; WP-08.08 current
+- Decision authority: autonomous package verification under authorised Phase-08 scope
+
+WP-08.07 adds complete exact validity keys and labelled provenance-preserving
+reuse. Material changes to objective/evidence/vintage/tool/prompt/output
+contract/provider/model/research/policy/quant/runtime dimensions produce a
+miss; stale, superseded and invalidated entries cannot be reused. Source
+evidence and model conclusions remain distinct. Additive Postgres persistence
+uses the existing boundary, while semantic result caching and vector storage
+remain disabled. Focused provenance, invalidation, freshness and lifecycle
+tests pass.
+
+Evidence: `08-controlled-ai-tools-durable-research-agents/WP-08.07-research-memory-with-provenance.md`.
+
 ## RD-2026-09-07-24 - WP-08.06 internal verification
 
 - Date: 2026-09-07
