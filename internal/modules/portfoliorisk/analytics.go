@@ -41,6 +41,21 @@ type ExposureAnalytics struct {
 	InputProvenance  []string       `json:"input_provenance"`
 }
 
+func (a ExposureAnalytics) Validate() error {
+	if a.Algorithm != ExposureAlgorithmV1 || a.SnapshotID == "" || a.AnalyticsID == "" || a.EvaluatedAt.IsZero() || a.EvaluatedAt.Location() != time.UTC || !finitePositive(a.Equity) || !finite(a.GrossExposure) || !finite(a.NetExposure) || !finite(a.LongExposure) || !finite(a.ShortExposure) || !finite(a.CashAllocation) {
+		return fmt.Errorf("invalid exposure analytics")
+	}
+	if a.AnalyticsID != exposureIdentity(a) {
+		return fmt.Errorf("exposure analytics identity does not match content")
+	}
+	for _, line := range a.Lines {
+		if line.InstrumentID == "" || !finite(line.MarketValue) || !finite(line.AbsoluteValue) || !finite(line.PortfolioWeight) {
+			return fmt.Errorf("invalid exposure line")
+		}
+	}
+	return nil
+}
+
 // CalculateExposure reuses Phase-05's signed-quantity definition and applies
 // it to canonical, provenance-bearing observations. It refuses unknown or
 // stale material facts instead of treating them as zero.
@@ -96,6 +111,9 @@ func CalculateExposure(snapshot PortfolioSnapshot, evaluatedAt time.Time, maxAge
 	}
 	result.CashAllocation = canonical.Cash.Value / canonical.Equity.Value
 	result.AnalyticsID = exposureIdentity(result)
+	if err := result.Validate(); err != nil {
+		return ExposureAnalytics{}, err
+	}
 	return result, nil
 }
 

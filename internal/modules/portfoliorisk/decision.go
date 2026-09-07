@@ -111,7 +111,7 @@ func EvaluateRecommendation(recommendation RecommendationRiskInput, snapshot Por
 	if *recommendation.RiskAllocation > valueOrZero(canonicalPolicy.MaximumRiskAllocation) && canonicalPolicy.MaximumRiskAllocation != nil {
 		return finishDecision(result, ReasonRejectLeverageLimit, "risk allocation exceeds policy")
 	}
-	if analytics.SnapshotID != canonical.SnapshotID || analytics.Algorithm == "" {
+	if analytics.SnapshotID != canonical.SnapshotID || analytics.Validate() != nil {
 		return finishDecision(result, ReasonRejectUnknownExposure, "analytics identity does not match portfolio snapshot")
 	}
 	if analytics.Equity <= 0 || !finite(analytics.GrossExposure) || !finite(analytics.NetExposure) {
@@ -124,54 +124,54 @@ func EvaluateRecommendation(recommendation RecommendationRiskInput, snapshot Por
 			break
 		}
 	}
-	proposedFinal := current + recommendation.SignedMarketValue
-	maxAllowable := math.Abs(recommendation.SignedMarketValue)
-	reasons := make([]ReasonCode, 0, 2)
-	// Calculate the maximum safe signed magnitude for a same-direction proposal.
-	if recommendation.SignedMarketValue > 0 {
-		maxAllowable = math.Min(maxAllowable, capRemaining(canonicalPolicy.MaximumPositionValue, math.Abs(current)))
-		maxAllowable = math.Min(maxAllowable, capRemaining(canonicalPolicy.MaximumConcentration, math.Abs(current), analytics.Equity))
-		maxAllowable = math.Min(maxAllowable, capRemaining(canonicalPolicy.MaximumGrossExposure, analytics.GrossExposure-math.Abs(current)))
-		maxAllowable = math.Min(maxAllowable, capRemaining(canonicalPolicy.MaximumNetExposure, analytics.NetExposure-current))
-		if canonical.Cash.Known && canonicalPolicy.MinimumCash != nil {
-			maxAllowable = math.Min(maxAllowable, math.Max(0, canonical.Cash.Value-*canonicalPolicy.MinimumCash))
-		}
-	}
-	newGross := analytics.GrossExposure - math.Abs(current) + math.Abs(proposedFinal)
-	newNet := analytics.NetExposure - current + proposedFinal
-	newConcentration := math.Abs(proposedFinal) / analytics.Equity
-	if violatesLimit(canonicalPolicy.MaximumPositionValue, math.Abs(proposedFinal)) || violatesLimit(canonicalPolicy.MaximumConcentration, newConcentration) {
-		reasons = append(reasons, ReasonAmendPositionCap)
-	}
-	if violatesLimit(canonicalPolicy.MaximumGrossExposure, newGross) || violatesLimit(canonicalPolicy.MaximumNetExposure, math.Abs(newNet)) {
-		reasons = append(reasons, ReasonAmendRiskBudget)
-	}
-	if canonicalPolicy.MinimumCash != nil && recommendation.SignedMarketValue > 0 && canonical.Cash.Value-recommendation.SignedMarketValue < *canonicalPolicy.MinimumCash {
-		reasons = append(reasons, ReasonAmendRiskBudget)
-	}
+	reasons := proposalViolations(current, recommendation.SignedMarketValue, analytics, canonicalPolicy, canonical.Cash.Value)
 	if len(reasons) == 0 {
 		result.Outcome, result.ReasonCodes, result.Explanations = DecisionAccept, []ReasonCode{ReasonAcceptWithinPolicy}, []string{"recommendation satisfies deterministic Phase-09 policy"}
 		return finishDecisionWithValue(result, recommendation.SignedMarketValue)
 	}
-	if maxAllowable > 0 && maxAllowable < math.Abs(recommendation.SignedMarketValue) {
-		if recommendation.SignedMarketValue < 0 {
-			maxAllowable = -maxAllowable
-		}
+	maxAllowable := boundedFeasibleMagnitude(current, recommendation.SignedMarketValue, analytics, canonicalPolicy, canonical.Cash.Value)
+	if maxAllowable > 0 {
 		result.Outcome, result.ReasonCodes, result.Explanations = DecisionAmend, stableReasons(reasons), []string{"requested value was reduced to the deterministic remaining policy capacity"}
-		return finishDecisionWithValue(result, maxAllowable)
+		return finishDecisionWithValue(result, math.Copysign(maxAllowable, recommendation.SignedMarketValue))
 	}
 	return finishDecision(result, rejectCodeForReasons(reasons), "requested recommendation has no remaining policy capacity")
 }
 
-func capRemaining(limit *float64, used float64, extra ...float64) float64 {
-	if limit == nil {
-		return math.Inf(1)
+func proposalViolations(current, requested float64, analytics ExposureAnalytics, policy RiskPolicy, cash float64) []ReasonCode {
+	finalValue := current + requested
+	newGross := analytics.GrossExposure - math.Abs(current) + math.Abs(finalValue)
+	newNet := analytics.NetExposure - current + finalValue
+	reasons := make([]ReasonCode, 0, 2)
+	if violatesLimit(policy.MaximumPositionValue, math.Abs(finalValue)) || violatesLimit(policy.MaximumConcentration, math.Abs(finalValue)/analytics.Equity) {
+		reasons = append(reasons, ReasonAmendPositionCap)
 	}
-	if len(extra) > 0 {
-		used = used + 0
-		return math.Max(0, *limit*extra[0]-used)
+	if violatesLimit(policy.MaximumGrossExposure, newGross) || violatesLimit(policy.MaximumNetExposure, math.Abs(newNet)) {
+		reasons = append(reasons, ReasonAmendRiskBudget)
 	}
-	return math.Max(0, *limit-used)
+	if policy.MinimumCash != nil && requested > 0 && cash-requested < *policy.MinimumCash {
+		reasons = append(reasons, ReasonAmendRiskBudget)
+	}
+	return stableReasons(reasons)
+}
+
+func boundedFeasibleMagnitude(current, requested float64, analytics ExposureAnalytics, policy RiskPolicy, cash float64) float64 {
+	target := math.Abs(requested)
+	if target == 0 || len(proposalViolations(current, 0, analytics, policy, cash)) > 0 {
+		return 0
+	}
+	low, high := 0.0, target
+	for i := 0; i < 64; i++ {
+		mid := (low + high) / 2
+		if len(proposalViolations(current, math.Copysign(mid, requested), analytics, policy, cash)) == 0 {
+			low = mid
+		} else {
+			high = mid
+		}
+	}
+	if low <= 1e-9 {
+		return 0
+	}
+	return math.Floor((low+1e-9)*1e6) / 1e6
 }
 func valueOrZero(value *float64) float64 {
 	if value == nil {
@@ -205,12 +205,7 @@ func finishDecision(result RiskDecision, code ReasonCode, explanation string) Ri
 }
 func finishDecisionWithValue(result RiskDecision, value float64) RiskDecision {
 	result.ResultingValue = value
-	copyResult := result
-	copyResult.DecisionID = ""
-	copyResult.EvaluatedAt = time.Time{}
-	b, _ := json.Marshal(copyResult)
-	digest := sha256.Sum256(b)
-	result.DecisionID = "rdec_" + hex.EncodeToString(digest[:])
+	result.DecisionID = decisionIdentity(result)
 	return result
 }
 

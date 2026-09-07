@@ -28,6 +28,9 @@ func (decision RiskDecision) Validate() error {
 	if decision.ExecutionAuthority != "NONE" {
 		return fmt.Errorf("risk decision cannot grant execution authority")
 	}
+	if (decision.Outcome == DecisionAccept || decision.Outcome == DecisionAmend) && (decision.RecommendationID == "" || decision.PortfolioSnapshotID == "" || decision.AnalyticsID == "" || decision.PolicyID == "") {
+		return fmt.Errorf("non-reject risk decision requires complete input identities")
+	}
 	if len(decision.ReasonCodes) == 0 || len(decision.Explanations) == 0 {
 		return fmt.Errorf("risk decision requires reason codes and explanations")
 	}

@@ -214,6 +214,9 @@ func (s PortfolioSnapshot) AssessFreshness(now time.Time, maxAge time.Duration) 
 		return FreshnessResult{Status: FreshnessUnknown, Reason: "freshness inputs are incomplete"}
 	}
 	now = now.UTC()
+	if s.AsOf.After(now) || s.CapturedAt.After(now) {
+		return FreshnessResult{Status: FreshnessUnknown, Reason: "portfolio timestamps are in the future"}
+	}
 	if !SupportedCurrency(s.Currency) {
 		return FreshnessResult{Status: FreshnessUnknown, Reason: "unsupported portfolio currency"}
 	}
@@ -226,6 +229,9 @@ func (s PortfolioSnapshot) AssessFreshness(now time.Time, maxAge time.Duration) 
 		}
 		if !p.Price.Known || !p.MarketValue.Known || p.ValuationAsOf.IsZero() {
 			return FreshnessResult{Status: FreshnessUnknown, Reason: fmt.Sprintf("position %d valuation is unknown", i)}
+		}
+		if p.ValuationAsOf.After(now) {
+			return FreshnessResult{Status: FreshnessUnknown, Reason: fmt.Sprintf("position %d valuation is in the future", i)}
 		}
 		if now.Sub(p.ValuationAsOf.UTC()) > maxAge {
 			return FreshnessResult{Status: FreshnessStale, Reason: fmt.Sprintf("position %d valuation exceeds freshness window", i)}

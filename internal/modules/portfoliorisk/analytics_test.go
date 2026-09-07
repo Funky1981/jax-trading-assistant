@@ -27,6 +27,18 @@ func TestCalculateExposureIsDeterministicAndSigned(t *testing.T) {
 	}
 }
 
+func TestDerivedAnalyticsIdentityCannotBeTampered(t *testing.T) {
+	snapshot := fixtureSnapshot()
+	analytics, err := CalculateExposure(snapshot, stateNow, 10*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	analytics.Lines[0].MarketValue = 1
+	if err := analytics.Validate(); err == nil {
+		t.Fatal("tampered analytics validated")
+	}
+}
+
 func TestExposureFailsClosedForUnknownAndStaleState(t *testing.T) {
 	tests := []struct {
 		name   string

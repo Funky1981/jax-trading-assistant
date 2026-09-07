@@ -69,7 +69,7 @@ func CalculateStress(snapshot PortfolioSnapshot, analytics ExposureAnalytics, sc
 	if err != nil {
 		return StressResult{}, err
 	}
-	if analytics.SnapshotID != canonical.SnapshotID || analytics.Equity != canonical.Equity.Value || !canonical.Equity.Known || canonical.Equity.Value <= 0 {
+	if analytics.SnapshotID != canonical.SnapshotID || analytics.Validate() != nil || analytics.Equity != canonical.Equity.Value || !canonical.Equity.Known || canonical.Equity.Value <= 0 {
 		return StressResult{}, fmt.Errorf("stress requires matching known portfolio analytics")
 	}
 	byInstrument := make(map[string]float64, len(analytics.Lines))
