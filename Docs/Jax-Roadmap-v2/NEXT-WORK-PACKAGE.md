@@ -6,7 +6,7 @@
 - Phase 04 — World Monitor Intelligence: **COMPLETE / GO**
 - Phase 05 — Deterministic Quant Core: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-05.05 — Liquidity/volume anomaly metrics**
+- Current implementation package: **WP-05.06 — Basic risk-adjusted metrics**
 
 ## Phase-05 autonomous scope
 

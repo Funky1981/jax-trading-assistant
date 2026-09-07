@@ -43,13 +43,13 @@ fb5c68f10c21512c09b18f7692be887ff2eafc740e279a03019e8699e4fb2102  04-world-monit
 ca59d8ba75857b52e04f45023bfa2854c2662345450ece0066766a70deb07d1c  04-world-monitor-intelligence/WP-04.06-market-reaction-correlation.md
 5d778a3b0f0a61dc7436b27099a6269a0a49e4a3cf7b06eb1257d8b04a554d3c  04-world-monitor-intelligence/WP-04.07-evaluate-acled-ais-prediction-market-evidence-adapters.md
 b59fa56396d40331b88b72b33c121e2b2d4282df9dc7e6b9c7dee73b0c8d1e07  05-deterministic-quant-core/GATE.md
-cf65614a58bfd223f26773ddf9f105771746ba3ce65af867a33bee97e308c44d  05-deterministic-quant-core/README.md
+b47befc3fb1724054b9669697687b464f52183dc310fbc8c8ed800f19f6ae152  05-deterministic-quant-core/README.md
 1e86ed547b5797e5c3a4104c2c99083981e4ac2f204e23fb27f8e3a4875c61e7  05-deterministic-quant-core/REFERENCE-NOTES.md
 ad759a16b358402df7836974f7e663244c0b619a66c86b065a8de55b1801c409  05-deterministic-quant-core/WP-05.01-quant-service-library-boundary-and-versioned-request-response-contract.md
 ce75921b129e78a320436c8d83366c4e8f6bfc23f8bb9fd898d251cb27d7667e  05-deterministic-quant-core/WP-05.02-returns-log-returns-and-benchmark-relative-performance.md
 73d5178f84a144122cdaa8ecd80ba369eafc75f7dd843bc05da6ae29c16c4a79  05-deterministic-quant-core/WP-05.03-volatility-atr-drawdown.md
 1eea9870ae65c8ba11b473bee869d0ad984f8c713960f255bce5ff3fbce79270  05-deterministic-quant-core/WP-05.04-correlation-beta-covariance.md
-90966d8f1457bc1eb201b74e3aa087577d42cbec85e50a61a40f55e940b4bb6e  05-deterministic-quant-core/WP-05.05-liquidity-volume-anomaly-metrics.md
+77a20974e8dbad209ac847e33c2cf8fea6ed814252815d1be9f99301b2e22c0b  05-deterministic-quant-core/WP-05.05-liquidity-volume-anomaly-metrics.md
 83a89e59501add65e89a6adf86c69bbb92d88006ccea20da4d40a6a7a696aea7  05-deterministic-quant-core/WP-05.06-basic-risk-adjusted-metrics.md
 632e83b60a55b091d3fd36c9fc6a30f4dd1a8708daad437a31a3d1abb8ebab67  05-deterministic-quant-core/WP-05.07-position-sizing-primitives.md
 61ad64b6a024a1e8508bc183bf4ca4b1cf3e0e5e60765063a10a0ae1601d5199  05-deterministic-quant-core/WP-05.08-portfolio-exposure-primitives.md
@@ -151,7 +151,7 @@ b911e13a99017972d66ed48e8a07e5877075b4c3b85e44375f9b3fe42611253d  governance/LLM
 6f5dd1424be87593037d79793a6306dba0c39124f3eb69b6b810da6adffab269  governance/MODEL-ROUTING-POLICY.md
 a8e158bdecaa992fb4e06dc580a2dd753aa1abeedd28cf3058d9e28735ff8ac2  governance/PHASE-REVIEW-HANDOVER.md
 febaade7a59c2e401748c090392033b91dec4cc46df544307616a75fdfd60de1  JAX-ROADMAP-OVERVIEW.md
-3d0fa077e97be386552c18ca0b4f3225cbb5ccbc83dc7eb3667238ec60e2f34d  NEXT-WORK-PACKAGE.md
+779daa3c419eb897a0f2e10f9bb22096c7003496371f4479d7765062ce9c60f5  NEXT-WORK-PACKAGE.md
 8ed8c512b4c277694239e477c96c3d5337a650e51cc092239b56933311308f5e  PHASE-INDEX.md
 ac50152b825c8c07425b96fc446eb70cb691b9980ebd6e5e4a67e29d8b39faf8  README.md
 e998837376ce43682d53e6968a2f5e80d69ba3f0b6b19ea670f0d6f2213cd1f0  references/DATA-SOURCE-STRATEGY.md

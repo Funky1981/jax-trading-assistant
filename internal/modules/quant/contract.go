@@ -34,6 +34,7 @@ type FrozenDataset struct {
 	Frequency             string    `json:"frequency"`
 	PriceAdjustmentPolicy string    `json:"price_adjustment_policy"`
 	SourceReference       string    `json:"source_reference"`
+	VolumeSource          string    `json:"volume_source"`
 	FrozenAt              time.Time `json:"frozen_at"`
 	Bars                  []Bar     `json:"bars"`
 	ContentSHA256         string    `json:"content_sha256"`
@@ -80,7 +81,16 @@ type Response struct {
 }
 
 func NewFrozenDataset(id, instrument, frequency, adjustment, source string, frozenAt time.Time, bars []Bar) (FrozenDataset, error) {
-	dataset := FrozenDataset{ID: id, ContractVersion: DatasetContractV1, Instrument: instrument, Frequency: frequency, PriceAdjustmentPolicy: adjustment, SourceReference: source, FrozenAt: frozenAt, Bars: cloneBars(bars)}
+	dataset := FrozenDataset{ID: id, ContractVersion: DatasetContractV1, Instrument: instrument, Frequency: frequency, PriceAdjustmentPolicy: adjustment, SourceReference: source, VolumeSource: "UNSPECIFIED", FrozenAt: frozenAt, Bars: cloneBars(bars)}
+	if err := dataset.validateWithoutDigest(); err != nil {
+		return FrozenDataset{}, err
+	}
+	dataset.ContentSHA256 = dataset.contentDigest()
+	return dataset, nil
+}
+
+func NewFrozenDatasetWithVolumeSource(id, instrument, frequency, adjustment, source, volumeSource string, frozenAt time.Time, bars []Bar) (FrozenDataset, error) {
+	dataset := FrozenDataset{ID: id, ContractVersion: DatasetContractV1, Instrument: instrument, Frequency: frequency, PriceAdjustmentPolicy: adjustment, SourceReference: source, VolumeSource: volumeSource, FrozenAt: frozenAt, Bars: cloneBars(bars)}
 	if err := dataset.validateWithoutDigest(); err != nil {
 		return FrozenDataset{}, err
 	}
@@ -104,6 +114,9 @@ func (dataset FrozenDataset) Validate() error {
 func (dataset FrozenDataset) validateWithoutDigest() error {
 	if strings.TrimSpace(dataset.ID) == "" || strings.TrimSpace(dataset.Instrument) == "" || strings.TrimSpace(dataset.SourceReference) == "" {
 		return fmt.Errorf("dataset ID, instrument, and source reference are required")
+	}
+	if dataset.VolumeSource != "UNSPECIFIED" && dataset.VolumeSource != "UNKNOWN" && dataset.VolumeSource != "SIP_CONSOLIDATED" && dataset.VolumeSource != "VENUE_SPECIFIC" && dataset.VolumeSource != "OTHER" {
+		return fmt.Errorf("volume source must be explicit")
 	}
 	if dataset.ContractVersion != DatasetContractV1 || strings.TrimSpace(dataset.Frequency) == "" {
 		return fmt.Errorf("dataset contract version and frequency are required")
@@ -146,9 +159,10 @@ func (dataset FrozenDataset) contentDigest() string {
 		Frequency             string    `json:"frequency"`
 		PriceAdjustmentPolicy string    `json:"price_adjustment_policy"`
 		SourceReference       string    `json:"source_reference"`
+		VolumeSource          string    `json:"volume_source"`
 		FrozenAt              time.Time `json:"frozen_at"`
 		Bars                  []Bar     `json:"bars"`
-	}{dataset.ContractVersion, dataset.Instrument, dataset.Frequency, dataset.PriceAdjustmentPolicy, dataset.SourceReference, dataset.FrozenAt.UTC(), dataset.Bars}
+	}{dataset.ContractVersion, dataset.Instrument, dataset.Frequency, dataset.PriceAdjustmentPolicy, dataset.SourceReference, dataset.VolumeSource, dataset.FrozenAt.UTC(), dataset.Bars}
 	bytes, _ := json.Marshal(canonical)
 	digest := sha256.Sum256(bytes)
 	return hex.EncodeToString(digest[:])
