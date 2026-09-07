@@ -31,7 +31,7 @@ included in the UI/API read model.
 | WP-06.04 | `1dbf523` | Research-only recommendation grammar and fail-closed eligibility |
 | WP-06.05 | `cbb2e3a` | Freshness and evidence sufficiency gates |
 | WP-06.06 | `e0cd407` | Explicitly uncalibrated confidence contract |
-| WP-06.07 | `359de13` | Deterministic UI/API read model and bounded provider boundary |
+| WP-06.07 | `359de13`, `39c5c79` | Deterministic UI/API read model, bounded provider boundary, final identity hardening and exit proof |
 
 ## Reproducible verification
 
@@ -53,7 +53,7 @@ implementation or proof.
 ## Adversarial review record
 
 The dedicated fresh review pass inspected the actual Phase-06 diff from
-`34deb6f..CURRENT_HEAD`, all production and test files in
+`34deb6f..HEAD`, all production and test files in
 `internal/modules/researchrecommendation`, roadmap status/evidence, the
 manifest, dependency/provider boundary and existing execution/approval
 packages. It reread the Phase-06 gate and every package acceptance criterion,
