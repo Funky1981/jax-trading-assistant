@@ -1,5 +1,20 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-27 - Resume budget integrity correction
+
+- Date: 2026-09-07
+- Phase: 08 — Controlled AI Tools & Durable Research Agents
+- Scope: WP-08.03 / WP-08.04 cross-package correction
+- Status: Corrected / internally verified; Phase-08 exit proof rerun
+- Decision authority: autonomous adversarial correction under authorised Phase-08 scope
+
+The phase review found that a resumed task could otherwise reuse a fresh
+in-memory budget controller. `NewBudgetControllerWithState` now restores
+checkpointed counters and task start time, and `Context` enforces the remaining
+wall-clock deadline. Checkpoint validation also requires UTC task start time,
+valid evidence identities, permitted tool tiers and known/ambiguous usage
+status. Regression tests and the full Phase-08 exit harness pass.
+
 ## RD-2026-09-07-26 - Phase 08 exit demonstrated / external review pending
 
 - Date: 2026-09-07

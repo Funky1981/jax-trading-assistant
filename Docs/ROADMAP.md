@@ -164,7 +164,8 @@ outputs remain evaluation artifacts and do not create approvals, orders, trades,
 fills or live execution authority. WP-07.01 through WP-07.08 are implemented and
 internally verified. External GPT-5.6 Sol accepted the demonstrated exit with
 `GO PHASE 07`; trading edge remains not demonstrated because the evidence is
-`EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE`.
+`EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE`. Canonical status remains:
+`TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`.
 
 ### Phase 08 — Controlled AI Tools & Durable Research Agents — EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
 

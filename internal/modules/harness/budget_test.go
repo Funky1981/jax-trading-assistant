@@ -75,6 +75,34 @@ func TestBudgetControllerRejectsModelTierAndCostOverruns(t *testing.T) {
 	}
 }
 
+func TestBudgetControllerRestoresConsumedStateAndHonorsTaskDeadline(t *testing.T) {
+	budget, err := NewResearchBudget(ResearchBudget{Version: "resume", MaxWallClock: time.Minute, ToolTimeout: time.Second, MaxSteps: 2, MaxToolCalls: 2, MaxModelCalls: 1, MaxRetries: 1, MaxInputTokens: 10, MaxOutputTokens: 10, MaxReasoningTokens: 10, MaximumModelTier: BudgetTierLocal, MaxEstimatedCostUSD: 1, MaxActualCostUSD: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now().UTC()
+	controller, err := NewBudgetControllerWithState(budget, BudgetState{Steps: 1, ToolCalls: 1}, started)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.ReserveToolCall(); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.ReserveToolCall(); err == nil {
+		t.Fatal("restored tool-call budget was not enforced")
+	}
+	if _, err := NewBudgetControllerWithState(budget, BudgetState{ToolCalls: 3}, started); err == nil {
+		t.Fatal("over-budget restored state was accepted")
+	}
+	expired, err := NewBudgetControllerWithState(budget, BudgetState{}, started.Add(-2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := expired.Context(context.Background()); err == nil {
+		t.Fatal("restored task deadline was not enforced")
+	}
+}
+
 func TestNormalizeProviderUsagePreservesReportedAndDerivedCost(t *testing.T) {
 	pricing := PricingSnapshot{Provider: "fixture", Model: "local", EffectiveAt: time.Date(2026, 9, 7, 18, 0, 0, 0, time.UTC), InputUSDPer1K: 1, CachedInputUSDPer1K: 0.1, OutputUSDPer1K: 2, ReasoningUSDPer1K: 3, Currency: "USD"}
 	input, cached, output, reasoning := 100, 20, 10, 5

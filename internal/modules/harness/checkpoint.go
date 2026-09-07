@@ -66,11 +66,12 @@ type ResearchTaskState struct {
 	Status            string                 `json:"status"`
 	FailureReason     string                 `json:"failure_reason,omitempty"`
 	CheckpointVersion int                    `json:"checkpoint_version"`
+	TaskStartedAt     time.Time              `json:"task_started_at"`
 	UpdatedAt         time.Time              `json:"updated_at"`
 }
 
 func (state ResearchTaskState) Validate() error {
-	if state.ContractVersion != ResearchCheckpointContractV1 || !validControlledID(state.TaskID) || strings.TrimSpace(state.Objective) == "" || len(state.Objective) > 4096 || strings.TrimSpace(state.PlanVersion) == "" || !schemaStringList(state.PlannedSteps) || len(state.PlannedSteps) > 32 || state.ReplanCount < 0 || state.ReplanCount > 8 || state.CriticCycles < 0 || state.CriticCycles > 3 || len(state.CompletedSteps) > len(state.PlannedSteps) || !schemaStringListOrEmpty(state.EvidenceIDs) || len(state.EvidenceIDs) > 512 || !schemaStringListOrEmpty(state.UnresolvedGaps) || len(state.UnresolvedGaps) > 64 || !schemaStringListOrEmpty(state.Contradictions) || len(state.Contradictions) > 64 || len(state.CurrentReport) > 128*1024 || len(state.ToolCallRecords) > 128 || len(state.ModelCallRecords) > 64 || state.CheckpointVersion < 1 || state.UpdatedAt.IsZero() || state.UpdatedAt.Location() != time.UTC {
+	if state.ContractVersion != ResearchCheckpointContractV1 || !validControlledID(state.TaskID) || strings.TrimSpace(state.Objective) == "" || len(state.Objective) > 4096 || strings.TrimSpace(state.PlanVersion) == "" || !schemaStringList(state.PlannedSteps) || len(state.PlannedSteps) > 32 || state.ReplanCount < 0 || state.ReplanCount > 8 || state.CriticCycles < 0 || state.CriticCycles > 3 || len(state.CompletedSteps) > len(state.PlannedSteps) || !schemaStringListOrEmpty(state.EvidenceIDs) || len(state.EvidenceIDs) > 512 || !schemaStringListOrEmpty(state.UnresolvedGaps) || len(state.UnresolvedGaps) > 64 || !schemaStringListOrEmpty(state.Contradictions) || len(state.Contradictions) > 64 || len(state.CurrentReport) > 128*1024 || len(state.ToolCallRecords) > 128 || len(state.ModelCallRecords) > 64 || state.CheckpointVersion < 1 || state.TaskStartedAt.IsZero() || state.TaskStartedAt.Location() != time.UTC || state.UpdatedAt.IsZero() || state.UpdatedAt.Location() != time.UTC || state.UpdatedAt.Before(state.TaskStartedAt) {
 		return fmt.Errorf("research task state is incomplete or unbounded")
 	}
 	if err := state.Budget.Validate(); err != nil {
@@ -97,6 +98,11 @@ func (state ResearchTaskState) Validate() error {
 		}
 		planned[stepID] = struct{}{}
 	}
+	for _, evidenceID := range state.EvidenceIDs {
+		if !validArgumentIdentifier(evidenceID) {
+			return fmt.Errorf("research state contains invalid evidence identity")
+		}
+	}
 	completed := make(map[string]struct{}, len(state.CompletedSteps))
 	for _, step := range state.CompletedSteps {
 		if _, exists := planned[step.StepID]; !exists {
@@ -111,7 +117,7 @@ func (state ResearchTaskState) Validate() error {
 		}
 	}
 	for _, record := range state.ToolCallRecords {
-		if record.ContractVersion != ControlledToolResultContractV1 || !validControlledToolID(record.ToolID) || strings.TrimSpace(record.ToolVersion) == "" || !validControlledID(record.RunID) || !validControlledID(record.StepID) || strings.TrimSpace(record.PermissionTier) == "" || strings.TrimSpace(record.OutputContract) == "" || len(record.Payload) == 0 || len(record.Payload) > 1024*1024 || !json.Valid(record.Payload) || !schemaStringList(record.EvidenceIDs) || len(record.EvidenceIDs) == 0 || strings.TrimSpace(record.Source) == "" || record.ObservedAt.IsZero() || record.ObservedAt.Location() != time.UTC || !record.Untrusted || record.ExecutionAuthority != "NONE" {
+		if record.ContractVersion != ControlledToolResultContractV1 || !validControlledToolID(record.ToolID) || strings.TrimSpace(record.ToolVersion) == "" || !validControlledID(record.RunID) || !validControlledID(record.StepID) || (record.PermissionTier != ToolPermissionEvidenceRead && record.PermissionTier != ToolPermissionDerivedRead && record.PermissionTier != ToolPermissionMemoryRead) || strings.TrimSpace(record.OutputContract) == "" || len(record.Payload) == 0 || len(record.Payload) > 1024*1024 || !json.Valid(record.Payload) || !schemaStringList(record.EvidenceIDs) || len(record.EvidenceIDs) == 0 || strings.TrimSpace(record.Source) == "" || record.ObservedAt.IsZero() || record.ObservedAt.Location() != time.UTC || !record.Untrusted || record.ExecutionAuthority != "NONE" {
 			return fmt.Errorf("checkpoint contains invalid or trusted tool record")
 		}
 		for _, evidenceID := range record.EvidenceIDs {
@@ -121,7 +127,7 @@ func (state ResearchTaskState) Validate() error {
 		}
 	}
 	for _, record := range state.ModelCallRecords {
-		if !validControlledID(record.CallID) || strings.TrimSpace(record.Provider) == "" || strings.TrimSpace(record.Model) == "" || strings.TrimSpace(record.PromptVersion) == "" || strings.TrimSpace(record.OutputContract) == "" || !validSHA256Usage(record.UsageRawSHA256) || record.CostStatus == "" {
+		if !validControlledID(record.CallID) || strings.TrimSpace(record.Provider) == "" || strings.TrimSpace(record.Model) == "" || strings.TrimSpace(record.PromptVersion) == "" || strings.TrimSpace(record.OutputContract) == "" || !validSHA256Usage(record.UsageRawSHA256) || (record.CostStatus != BudgetCostKnown && record.CostStatus != BudgetCostAmbiguous) {
 			return fmt.Errorf("checkpoint contains invalid model provenance")
 		}
 	}

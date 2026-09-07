@@ -192,7 +192,7 @@ func RunPhase08ExitHarness(ctx context.Context) (Phase08ExitProof, error) {
 		return Phase08ExitProof{}, err
 	}
 	toolPolicy := DefaultResearchPermissionPolicy()
-	state := ResearchTaskState{ContractVersion: ResearchCheckpointContractV1, TaskID: "task_phase08_proof", Objective: "Assess frozen evidence without making a trading decision", PlanVersion: "plan-v1", PlannedSteps: []string{"step_1"}, EvidenceIDs: []string{}, UnresolvedGaps: []string{"gap_corroboration"}, Contradictions: []string{"source timing differs"}, CurrentReport: "Provisional report", Budget: budget, Status: ResearchTaskRunning, CheckpointVersion: 1, UpdatedAt: time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)}
+	state := ResearchTaskState{ContractVersion: ResearchCheckpointContractV1, TaskID: "task_phase08_proof", Objective: "Assess frozen evidence without making a trading decision", PlanVersion: "plan-v1", PlannedSteps: []string{"step_1"}, EvidenceIDs: []string{}, UnresolvedGaps: []string{"gap_corroboration"}, Contradictions: []string{"source timing differs"}, CurrentReport: "Provisional report", Budget: budget, Status: ResearchTaskRunning, CheckpointVersion: 1, TaskStartedAt: time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC), UpdatedAt: time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)}
 	controller, err := NewBudgetController(budget)
 	if err != nil {
 		return Phase08ExitProof{}, err
@@ -232,6 +232,10 @@ func RunPhase08ExitHarness(ctx context.Context) (Phase08ExitProof, error) {
 		return Phase08ExitProof{}, fmt.Errorf("resume proof failed: %w", err)
 	}
 	state = loaded.State
+	controller, err = NewBudgetControllerWithState(loaded.State.Budget, loaded.State.BudgetState, loaded.State.TaskStartedAt)
+	if err != nil {
+		return Phase08ExitProof{}, err
+	}
 	if err := controller.ReserveToolCall(); err != nil {
 		return Phase08ExitProof{}, err
 	}
@@ -256,6 +260,10 @@ func RunPhase08ExitHarness(ctx context.Context) (Phase08ExitProof, error) {
 		return Phase08ExitProof{}, fmt.Errorf("failure checkpoint did not preserve evidence: %v", err)
 	}
 	state = failedLoaded.State
+	controller, err = NewBudgetControllerWithState(failedLoaded.State.Budget, failedLoaded.State.BudgetState, failedLoaded.State.TaskStartedAt)
+	if err != nil {
+		return Phase08ExitProof{}, err
+	}
 	state.Status = ResearchTaskRunning
 	state.FailureReason = ""
 	state.CheckpointVersion++

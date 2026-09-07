@@ -75,16 +75,30 @@ type BudgetState struct {
 }
 
 type BudgetController struct {
-	budget ResearchBudget
-	mu     sync.Mutex
-	state  BudgetState
+	budget    ResearchBudget
+	mu        sync.Mutex
+	state     BudgetState
+	startedAt time.Time
 }
 
 func NewBudgetController(budget ResearchBudget) (*BudgetController, error) {
 	if err := budget.Validate(); err != nil {
 		return nil, err
 	}
-	return &BudgetController{budget: budget}, nil
+	return &BudgetController{budget: budget, startedAt: time.Now().UTC()}, nil
+}
+
+func NewBudgetControllerWithState(budget ResearchBudget, state BudgetState, startedAt time.Time) (*BudgetController, error) {
+	if err := budget.Validate(); err != nil {
+		return nil, err
+	}
+	if startedAt.IsZero() || startedAt.Location() != time.UTC {
+		return nil, fmt.Errorf("task start time must be UTC")
+	}
+	if err := validateCheckpointBudgetState(budget, state); err != nil {
+		return nil, err
+	}
+	return &BudgetController{budget: budget, state: state, startedAt: startedAt}, nil
 }
 
 func (controller *BudgetController) Context(parent context.Context) (context.Context, context.CancelFunc, error) {
@@ -94,7 +108,15 @@ func (controller *BudgetController) Context(parent context.Context) (context.Con
 	if err := parent.Err(); err != nil {
 		return nil, nil, err
 	}
-	ctx, cancel := context.WithTimeout(parent, controller.budget.MaxWallClock)
+	remaining := controller.budget.MaxWallClock
+	if elapsed := time.Since(controller.startedAt); elapsed >= 0 {
+		if elapsed >= remaining {
+			cancel := func() {}
+			return nil, cancel, context.DeadlineExceeded
+		}
+		remaining -= elapsed
+	}
+	ctx, cancel := context.WithTimeout(parent, remaining)
 	return ctx, cancel, nil
 }
 
