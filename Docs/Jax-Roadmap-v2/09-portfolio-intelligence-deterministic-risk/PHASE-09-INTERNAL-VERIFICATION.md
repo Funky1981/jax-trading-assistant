@@ -30,3 +30,19 @@ mutation, and no approval/order/trade/fill or execution-authority mutation.
 
 Scientific status remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`.
 No real portfolio, broker, paid provider or credential integration was added.
+
+## Adversarial phase review
+
+- Reviewer type: dedicated fresh review pass.
+- Diff range reviewed: `69224644a8ac2d6d1cdb61894ea6c6a8c90604db..608c1259cc17205af35276739bdd84775e116fff`.
+- Production files, migrations, contracts, tests and safety boundaries were
+  reviewed for unknown-to-zero conversion, stale/future timestamps, signed
+  exposure errors, concentration denominators, correlation look-ahead, policy
+  bypass, confidence override, amendment overrun, proposal mutation, scenario
+  mutation, audit mismatch and execution-path reactivation.
+- Material findings fixed and regression-tested: analytics content is now
+  recomputed from canonical snapshot identity in risk consumers; future facts
+  cannot appear fresh; amendment search is sign-symmetric; cash-cap breach is
+  explicit; derived artifacts validate their content identity.
+- Blocking findings remaining: `0`.
+- Adversarial phase review: `PASS`.

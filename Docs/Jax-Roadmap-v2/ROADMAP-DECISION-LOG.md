@@ -22,7 +22,11 @@ Evidence: `internal/modules/portfoliorisk/phase09_exit_test.go` and
 Full tests and vet pass. Race detection remains a
 `NON-BLOCKING ENVIRONMENTAL LIMITATION` because `gcc` is unavailable; it has
 not passed. No paid service or credential was added. `TRADING EDGE NOT
-DEMONSTRATED / INSUFFICIENT SAMPLE` is preserved. Phase 10 is not started.
+DEMONSTRATED / INSUFFICIENT SAMPLE` is preserved. Fresh adversarial review over
+`69224644a8ac2d6d1cdb61894ea6c6a8c90604db..CURRENT_HEAD` found and fixed the
+analytics provenance-binding issue and related boundary issues. Blocking
+findings remaining: `0`. Adversarial phase review: `PASS`. Phase 10 is not
+started.
 
 ## RD-2026-09-07-28 - Phase 08 GO / Phase 09 authorized
 

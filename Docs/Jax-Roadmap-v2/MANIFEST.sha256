@@ -23,6 +23,7 @@
 214f8fd1e4c76468608db147b976c7b2c59febe16f5734a4b40f02cbd496faae  07-evaluation-replay-backtesting/WP-07.02-frozen-benchmark-registry.md
 2192b29b2fa77747c627932731c9f39548ad59fa129ad3f415efc585d1503cc1  00-current-issuer-asset-resolution/REFERENCE-NOTES.md
 219f398a6e7df492c5d8ddd98a2893c9d06762d412e992fad98d53c4249ab46b  13-optional-live-execution/REFERENCE-NOTES.md
+25aef6fb1aa34a2dc8e648b73f31079e53c6afa473cb4df4e741068341565ec9  ROADMAP-DECISION-LOG.md
 2b001ba5b81e55f6bf3d86ce9f2cc10aa47ddc7e03b01f8748b8a417400eaf46  07-evaluation-replay-backtesting/WP-07.03-model-prompt-algorithm-version-comparison.md
 2b05aed6fe7305fb831224fb8fcf9776d106629f7cd45e098b769f5cb0a64b29  06-research-recommendation-engine/PHASE-06-INTERNAL-VERIFICATION.md
 2c20a5e793dae121b250ec8427202d3db4f9d5c4dcadc36a07058ec5f807d535  NEXT-WORK-PACKAGE.md
@@ -68,7 +69,6 @@
 5ea998b7aae07b9fd69bb4ff37e06df5f3950a99e06a61b89daa82b18ea53421  03-core-financial-evidence/WP-03.06-evidence-quality-cross-source-checks.md
 5eba5ea23cb209afaa78378f134a090576bd3b5e9fd91c88f9b56f9fb85c5aab  02-data-platform-provider-architecture/WP-02.03-normalization-and-validation-pipeline.md
 5f52b0f6a865405a8d218dd63ce15fc407fe4c4d34558e55ed2f9ee0e91d0f0c  references/LLM-COST-CONTEXT-EFFICIENCY.md
-6155721ce7e7728823d3533f56c186039b9a8fed43afa646c64a8d05dcef5c19  09-portfolio-intelligence-deterministic-risk/PHASE-09-INTERNAL-VERIFICATION.md
 61fb05c6e1ff654886f7bdc87ae0b32a7e2ca1e16135fd101a4470b1d17d842c  13-optional-live-execution/GATE.md
 62ce02a9070f937868050c4634371f704448b2426303a38466313e803efa4461  10-workflow-hitl-operational-safety/README.md
 62ef46c9a00188fa93e440e64c9c5ff0fb3175c2e5aed1bcff4e3c5f06ddc18d  02-data-platform-provider-architecture/WP-02.06-data-source-qualification-registry.md
@@ -95,7 +95,6 @@
 89cd014bcd0ad4db5ead84bc6e9742df8e2cbd1edc50dbb918b8935d80f54d1d  JAX-ROADMAP-OVERVIEW.md
 8bd7de0c4e809279bfb1af56361859f483014aba0e92d328ad3963360e10a46e  09-portfolio-intelligence-deterministic-risk/WP-09.01-canonical-portfolio-position-account-state.md
 8c0ea84c2d8691ed9b22e1c6ec949887819dec258e91861599e3359666fa7b93  06-research-recommendation-engine/LLM-CONTEXT-BUDGET-REQUIREMENTS.md
-8e8e1ef1ee1c101a168bad4fce291312446cb056625184cd29e5a2e2713b2ca1  ROADMAP-DECISION-LOG.md
 8ed8c512b4c277694239e477c96c3d5337a650e51cc092239b56933311308f5e  PHASE-INDEX.md
 90ec2dbbcda76054f913fcab4562b92ad0645412190ec7362fda642246cb8e08  governance/AUTONOMOUS-DEVELOPMENT-MODE.md
 9846234b4cd4aa1697c8ede4dab05606f2534bd41473aa462a974dfafd89d7de  13-optional-live-execution/WP-13.07-live-observability-runbook.md
@@ -127,6 +126,7 @@ be91250aea6983f559e91ecc8bb2d0fc7926aa95bb5d025b8e8b37faee08f4f5  09-portfolio-i
 c0dae0828526cd54d61a8b7bee8a5213c271cc4933e143d11e5d3ad19569ad29  04-world-monitor-intelligence/README.md
 c34a673c20646b1386f1d0bfea7e27f4830aaa78be71b08309df0af3d8cb73a3  03-core-financial-evidence/GATE.md
 c3c82c8e2b3c6caa1eec6c01af42fdfd52b5b7567141e9ecd32f515d4731151f  03-core-financial-evidence/WP-03.02-sec-edgar-filings-and-xbrl-company-facts.md
+c3e4ec9ba8387871d179d8b215d36b65600f2a3895acf7dacb5be08cba798ccb  09-portfolio-intelligence-deterministic-risk/PHASE-09-INTERNAL-VERIFICATION.md
 c94019f22e4b039a7382914464d8bf11b17d3d949e18ef006b98ca35dce6ab84  01-canonical-contracts-provenance-audit/README.md
 ca379ef82ebd6a862c23e4d6899753e2a26101893193f777a647cc4cdac13534  13-optional-live-execution/WP-13.03-live-only-risk-limits.md
 ca59d8ba75857b52e04f45023bfa2854c2662345450ece0066766a70deb07d1c  04-world-monitor-intelligence/WP-04.06-market-reaction-correlation.md
