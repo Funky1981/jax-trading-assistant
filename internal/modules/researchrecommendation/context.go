@@ -82,6 +82,29 @@ type ContextPlan struct {
 	Budget                   ContextBudget    `json:"budget"`
 }
 
+func (plan ContextPlan) Validate() error {
+	if plan.ContractVersion != ContextBuilderContractV1 || !validIdentity("ctx_", plan.ID) || !validIdentity("epk_", plan.PacketID) || !validSHA256(plan.PacketContentFingerprint) || strings.TrimSpace(plan.TaskID) == "" || strings.TrimSpace(plan.Objective) == "" {
+		return fmt.Errorf("context plan contract, identity, task and packet fingerprint are required")
+	}
+	if err := plan.Budget.Validate(); err != nil {
+		return err
+	}
+	if plan.MaxInputTokens != plan.Budget.MaxInputTokens || plan.MaxOutputTokens != plan.Budget.MaxOutputTokens || plan.MaxReasoningTokens != plan.Budget.MaxReasoningTokens || plan.ModelTier != plan.Budget.MaximumModelTier || plan.EstimatedInputTokens < 0 || !finite(plan.EstimatedCostUSD) || plan.EstimatedCostUSD < 0 {
+		return fmt.Errorf("context plan budget and estimates are inconsistent")
+	}
+	if plan.Oversize {
+		if plan.OversizeDecision == "" || plan.OversizeDecision == "NONE" {
+			return fmt.Errorf("oversize context plan requires an abstention decision")
+		}
+	} else if plan.OversizeDecision != "NONE" {
+		return fmt.Errorf("complete context plan cannot carry an oversize decision")
+	}
+	if plan.ID != contextPlanID(plan) {
+		return fmt.Errorf("context plan ID does not match its content")
+	}
+	return nil
+}
+
 func BuildContext(task ResearchTask, packet EvidencePacket) (ContextPlan, error) {
 	if strings.TrimSpace(task.TaskID) == "" || strings.TrimSpace(task.Subject) == "" || strings.TrimSpace(task.Objective) == "" || strings.TrimSpace(task.RequiredOutput) == "" {
 		return ContextPlan{}, fmt.Errorf("research task identity, subject, objective, and required output are required")

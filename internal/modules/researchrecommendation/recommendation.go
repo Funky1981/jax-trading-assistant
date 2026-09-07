@@ -81,7 +81,9 @@ type ResearchRecommendation struct {
 	Disposition            RecommendationDisposition `json:"disposition"`
 	Thesis                 string                    `json:"thesis"`
 	ThesisEvidenceIDs      []string                  `json:"thesis_evidence_ids"`
+	BullCase               []ResearchClaim           `json:"bull_case"`
 	CounterEvidence        []ResearchClaim           `json:"counter_evidence"`
+	Contradictions         []ResearchClaim           `json:"contradictions"`
 	Unknowns               []ResearchUnknown         `json:"unknowns"`
 	InvalidationConditions []InvalidationCondition   `json:"invalidation_conditions"`
 	EvidenceIDs            []string                  `json:"evidence_ids"`
@@ -93,6 +95,9 @@ type ResearchRecommendation struct {
 }
 
 func BuildRecommendation(packet EvidencePacket, plan ContextPlan, research StructuredResearchOutput, eligibility EligibilityDecision, confidence ConfidenceAssessment, createdAt time.Time) (ResearchRecommendation, error) {
+	if createdAt.IsZero() || createdAt.Location() != time.UTC {
+		return ResearchRecommendation{}, fmt.Errorf("recommendation created_at must be a non-zero UTC timestamp")
+	}
 	if err := ValidateStructuredResearchOutput(plan, packet, research); err != nil {
 		return ResearchRecommendation{}, err
 	}
@@ -102,7 +107,7 @@ func BuildRecommendation(packet EvidencePacket, plan ContextPlan, research Struc
 	if err := confidence.Validate(); err != nil {
 		return ResearchRecommendation{}, err
 	}
-	recommendation := ResearchRecommendation{ContractVersion: ResearchRecommendationContractV1, Subject: packet.Subject, ResearchOutputID: research.ID, ContextPlanID: plan.ID, Disposition: eligibility.Disposition, Thesis: research.Thesis, ThesisEvidenceIDs: append([]string(nil), research.ThesisEvidenceIDs...), CounterEvidence: append([]ResearchClaim(nil), research.BearCase...), Unknowns: append([]ResearchUnknown(nil), research.Unknowns...), InvalidationConditions: append([]InvalidationCondition(nil), research.InvalidationConditions...), Eligibility: eligibility, Confidence: confidence, Authority: "RESEARCH_DECISION_SUPPORT", ExecutionAuthority: "NONE", CreatedAt: createdAt.UTC()}
+	recommendation := ResearchRecommendation{ContractVersion: ResearchRecommendationContractV1, Subject: packet.Subject, ResearchOutputID: research.ID, ContextPlanID: plan.ID, Disposition: eligibility.Disposition, Thesis: research.Thesis, ThesisEvidenceIDs: append([]string(nil), research.ThesisEvidenceIDs...), BullCase: append([]ResearchClaim(nil), research.BullCase...), CounterEvidence: append([]ResearchClaim(nil), research.BearCase...), Contradictions: append([]ResearchClaim(nil), research.Contradictions...), Unknowns: append([]ResearchUnknown(nil), research.Unknowns...), InvalidationConditions: append([]InvalidationCondition(nil), research.InvalidationConditions...), Eligibility: eligibility, Confidence: confidence, Authority: "RESEARCH_DECISION_SUPPORT", ExecutionAuthority: "NONE", CreatedAt: createdAt}
 	recommendation.EvidenceIDs = collectResearchEvidenceIDs(research)
 	recommendation.ID = deriveRecommendationID(recommendation)
 	if err := recommendation.Validate(packet, research); err != nil {

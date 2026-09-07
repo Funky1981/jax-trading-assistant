@@ -5,9 +5,9 @@
 - Phase 03 — Core Financial Evidence: **COMPLETE / GO**
 - Phase 04 — World Monitor Intelligence: **COMPLETE / GO**
 - Phase 05 — Deterministic Quant Core: **COMPLETE / GO**
-- Phase 06 — Research & Recommendation Engine: **AUTHORISED / IN PROGRESS**
+- Phase 06 — Research & Recommendation Engine: **EXIT DEMONSTRATED — ADVERSARIAL PHASE REVIEW IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-06.07 — UI/API read model for useful recommendations**
+- Current implementation package: **Phase 06 exit verification and adversarial review**
 
 ## Phase-05 autonomous scope
 
@@ -25,6 +25,13 @@ Codex may continue, one bounded package at a time, through:
 
 Stop when the Phase-05 exit condition is demonstrated or any governance
 hard-stop occurs. Do not begin Phase 06 without external `GO PHASE 05`.
+
+## Phase-06 exit verification
+
+The Phase-06 package sequence is complete. Demonstrate the Phase-06 exit
+condition, complete the mandatory adversarial phase review, and stop for the
+external technical-lead phase decision. Do not begin Phase 07 without external
+`GO PHASE 06`.
 
 ## Phase-05 exit condition
 

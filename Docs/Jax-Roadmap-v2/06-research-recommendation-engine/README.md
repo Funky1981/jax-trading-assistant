@@ -1,6 +1,6 @@
 # Phase 06 — Research & Recommendation Engine
 
-**Status:** **AUTHORISED / IN PROGRESS — WP-06.07 CURRENT**
+**Status:** **EXIT DEMONSTRATED — ADVERSARIAL PHASE REVIEW IN PROGRESS**
 
 ## Purpose
     Combine evidence, quantitative context and controlled AI reasoning into explainable recommendations without execution authority.
@@ -32,4 +32,5 @@ Research context must be bounded, provenance-preserving and built from task-rele
 ## Exit gate
 Jax can produce reproducible evidence-linked WATCH/NO_TRADE/CANDIDATE-style outputs with thesis, counter-evidence, unknowns, invalidation and data freshness; no order or approval state is created.
 
-See `GATE.md`. Every work package requires independent review before the next one starts.
+See `GATE.md`. The package sequence is complete; the phase exit proof and
+mandatory adversarial phase review must pass before the external phase handover.

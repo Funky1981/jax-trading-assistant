@@ -42,8 +42,8 @@ criteria remain binding.
 - Phases 00–03: `COMPLETE / GO`
 - Phase 04: `COMPLETE / GO`
 - Phase 05: `COMPLETE / GO`
-- Phase 06: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-06.01 — Define evidence packet contract`
+- Phase 06: `EXIT DEMONSTRATED — ADVERSARIAL PHASE REVIEW IN PROGRESS`
+- Current package: `Phase 06 exit verification and adversarial review`
 
 
 ## 2026-08-10 integrated roadmap change

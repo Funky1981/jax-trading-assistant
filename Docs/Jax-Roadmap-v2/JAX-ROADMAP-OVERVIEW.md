@@ -25,7 +25,9 @@ evidence, immutable raw provenance, a deterministic exit assertion and no
 model-memory dependency. Phase 04 — World Monitor Intelligence — is
 **COMPLETE / GO**, accepted by external GPT-5.6 Sol. Phase 05 — Deterministic
 Quant Core — is **COMPLETE / GO**, accepted by external GPT-5.6 Sol. Phase 06 —
-Research & Recommendation Engine — is **authorised/in progress**. See `Docs/ROADMAP.md`,
+Research & Recommendation Engine — has its package sequence complete and its
+exit proof demonstrated; mandatory adversarial review is in progress. See
+`Docs/ROADMAP.md`,
 `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 
 ## Non-negotiable principles
