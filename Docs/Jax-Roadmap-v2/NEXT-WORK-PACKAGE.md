@@ -11,8 +11,8 @@
 - Phase 09 — Portfolio Intelligence & Deterministic Risk: **COMPLETE / GO**
 - Phase 10 — Workflow, HITL & Operational Safety: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-10.01 — State machine for recommendation → risk → approval → paper intent**
-- Next package: **WP-10.01 — State machine for recommendation → risk → approval → paper intent**
+- Current implementation package: **WP-10.02 — Explicit confirmation / HITL contract**
+- Next package: **WP-10.02 — Explicit confirmation / HITL contract**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
