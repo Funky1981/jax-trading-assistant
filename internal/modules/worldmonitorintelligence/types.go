@@ -73,7 +73,7 @@ func (observation Observation) Validate() error {
 	if strings.TrimSpace(observation.Title) == "" {
 		return fmt.Errorf("observation %q has no title", observation.ID)
 	}
-	if observation.CollectedAt.IsZero() || observation.CollectedAt.Location() == time.Local {
+	if observation.CollectedAt.IsZero() || observation.CollectedAt.Location() != time.UTC {
 		return fmt.Errorf("observation %q requires a UTC collection timestamp", observation.ID)
 	}
 	if len(observation.RawPayload) == 0 {

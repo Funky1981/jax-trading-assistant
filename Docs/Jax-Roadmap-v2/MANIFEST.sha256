@@ -32,7 +32,7 @@ ddc3fcc2688ac5322077f756b8d10b46d870002c9b326f6978246efe491d68ed  03-core-financ
 e97edce1fdae272d9b48e6c2040646a6389ddbf36aa84ae2f2ae8ac3cb811d6c  03-core-financial-evidence/WP-03.05-treasury-eia-cboe-cftc-source-evaluation-and-first-approved-integrations.md
 5ea998b7aae07b9fd69bb4ff37e06df5f3950a99e06a61b89daa82b18ea53421  03-core-financial-evidence/WP-03.06-evidence-quality-cross-source-checks.md
 3915485bf90f5a1dade6cec4febd22172d7400964279e0839e36c621bcd1af94  04-world-monitor-intelligence/GATE.md
-b51feaf467cadceb08940b0e3b192530374b49ba5988f41ec9d97cffd5026bd3  04-world-monitor-intelligence/README.md
+8b533b31d519b627d5e2d76e3a25598f05456228b8e7c292f3c59b4ad63accf5  04-world-monitor-intelligence/README.md
 80cee52e8f66b72d3d33fb97f788784013104e07c67fa57f5f657f4b4ca18297  04-world-monitor-intelligence/REFERENCE-NOTES.md
 cb5c44bf0f362839f240f32d5b1b204ae53c75df4e1f9623600b5a8f59c2e591  04-world-monitor-intelligence/WP-04.01-continuous-durable-collection-and-cursor-semantics.md
 6aeb12928c9abdeed8d008735da4de6b470881caef8f32fa8aa476df1679cf7f  04-world-monitor-intelligence/WP-04.02-deduplication-event-clustering.md
@@ -40,7 +40,7 @@ ffd5d2d07d574dd1421c893f4532f53669e507c926c2e60467fe5dd1e6c6d776  04-world-monit
 2f41cb6ff269c03ae7ebc2832f201ce8217bcabb218814a9d6aa719209bd7e54  04-world-monitor-intelligence/WP-04.04-source-triangulation-and-confidence.md
 fb5c68f10c21512c09b18f7692be887ff2eafc740e279a03019e8699e4fb2102  04-world-monitor-intelligence/WP-04.05-velocity-baseline-deviation-signals.md
 ca59d8ba75857b52e04f45023bfa2854c2662345450ece0066766a70deb07d1c  04-world-monitor-intelligence/WP-04.06-market-reaction-correlation.md
-dcbd88a85d30537db24ec135900a4ce6413a71f0d66f6592fc34179195d7047f  04-world-monitor-intelligence/WP-04.07-evaluate-acled-ais-prediction-market-evidence-adapters.md
+5d778a3b0f0a61dc7436b27099a6269a0a49e4a3cf7b06eb1257d8b04a554d3c  04-world-monitor-intelligence/WP-04.07-evaluate-acled-ais-prediction-market-evidence-adapters.md
 b59fa56396d40331b88b72b33c121e2b2d4282df9dc7e6b9c7dee73b0c8d1e07  05-deterministic-quant-core/GATE.md
 92513d8a8bf6cedcd16e09f5e373f72e438667b27cdc555c9cb8cca2ba2ff7d8  05-deterministic-quant-core/README.md
 1e86ed547b5797e5c3a4104c2c99083981e4ac2f204e23fb27f8e3a4875c61e7  05-deterministic-quant-core/REFERENCE-NOTES.md

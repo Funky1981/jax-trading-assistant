@@ -48,3 +48,10 @@ func TestBuildClustersRejectsConflictingReplayAndSeparatesUnrelatedEvents(t *tes
 		t.Fatalf("single-source unknowns not explicit: %+v", clusters)
 	}
 }
+
+func TestObservationRejectsNonUTCTimestamps(t *testing.T) {
+	observation := Observation{ID: "event", SourceID: "source", Title: "Event", CollectedAt: time.Date(2026, 9, 7, 12, 0, 0, 0, time.FixedZone("offset", 3600)), RawPayload: []byte("raw"), Freshness: FreshnessFresh}
+	if err := observation.Validate(); err == nil {
+		t.Fatal("fixed-offset timestamp accepted as UTC")
+	}
+}
