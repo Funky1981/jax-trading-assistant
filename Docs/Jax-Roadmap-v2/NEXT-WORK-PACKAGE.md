@@ -9,7 +9,7 @@
 - Phase 07 — Evaluation, Replay & Backtesting: **COMPLETE / GO**
 - Phase 08 — Controlled AI Tools & Durable Research Agents: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-08.01 — Tool registry and JSON-schema validation**
+- Current implementation package: **WP-08.02 — Read-only tool permission tiers**
 
 ## Phase-05 autonomous scope
 

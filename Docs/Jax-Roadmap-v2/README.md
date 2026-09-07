@@ -45,7 +45,7 @@ criteria remain binding.
 - Phase 06: `COMPLETE / GO`
 - Phase 07: `COMPLETE / GO`
 - Phase 08: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-08.01 — Tool registry and JSON-schema validation`
+- Current package: `WP-08.02 — Read-only tool permission tiers`
 
 
 ## 2026-08-10 integrated roadmap change

@@ -1,5 +1,22 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-19 - WP-08.01 internal verification
+
+- Date: 2026-09-07
+- Phase: 08 — Controlled AI Tools & Durable Research Agents
+- Work package: WP-08.01 — Tool registry and JSON-schema validation
+- Status: Implemented / internally verified; WP-08.02 current
+- Decision authority: autonomous package verification under authorised Phase-08 scope
+
+WP-08.01 hardens the existing harness boundary with a versioned controlled-tool
+registry and bounded JSON argument validation. Definitions are explicitly
+read-only, provenance-required and handler-bound; unknown tools, duplicate or
+unsafe registrations, unsupported versions, malformed arguments, unknown
+fields, invalid enums/IDs/timestamps, oversized values and trailing JSON fail
+closed. No new runtime or dependency was introduced.
+
+Evidence: `08-controlled-ai-tools-durable-research-agents/WP-08.01-tool-registry-and-json-schema-validation.md`.
+
 ## RD-2026-09-07-18 - External Phase 07 GO / Phase 08 authorization
 
 - Date: 2026-09-07
