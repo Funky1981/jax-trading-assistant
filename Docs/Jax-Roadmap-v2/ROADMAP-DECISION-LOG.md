@@ -255,3 +255,32 @@ Evidence:
 - `../evidence/WP-02.04-FRESHNESS-TTL-LAST-KNOWN-GOOD-SEMANTICS.md`
 - `../evidence/WP-02.05-RATE-LIMIT-RETRY-BACKOFF-HEALTH-INSTRUMENTATION.md`
 - `../evidence/WP-02.06-DATA-SOURCE-QUALIFICATION-REGISTRY.md`
+
+## RD-2026-09-07-01 - Phase 03 GO
+
+- Date: 2026-09-07
+- Phase: 03 - Core Financial Evidence
+- Status: Accepted
+- Decision authority: independent technical-lead phase-gate decision
+
+### Decision
+
+Phase 03 is **GO PHASE 03**. The exit condition was demonstrated with a deterministic source-linked AAPL/Apple evidence packet containing real accepted market, company and macro/context evidence with raw acquisition provenance and no model-memory dependency.
+
+The final development market-evidence path used Alpaca as an explicit zero-cost development source. Financial Datasets remains an accepted provider option, but Phase-03 acceptance was not made contingent on paid development access.
+
+Remaining serious-backtesting market-data qualification, production licensing, corporate-action policy and historical knowability are future validation concerns and do not invalidate Phase-03 GO. Phase 04 is authorised at WP-04.01.
+
+## RD-2026-09-07-02 - Autonomous phase development mode
+
+- Date: 2026-09-07
+- Status: Accepted
+- Applies from: Phase 04 onward
+
+### Decision
+
+External technical-lead review moves from every work package to the phase boundary. Codex still implements packages sequentially, verifies/self-reviews them, and preserves bounded commits/evidence, but may continue automatically inside the authorised phase.
+
+Hard stops include roadmap changes, paid dependency/account decisions, missing/rejected credentials, consequential architecture decisions, destructive data/Git actions, and live trading/execution authority changes.
+
+Model policy: GPT-5.6 Luna for default implementation; GPT-5.6 Sol for consequential decisions and phase review; GPT-5.6 Terra as optional bounded escalation when Luna materially struggles.

@@ -1,26 +1,36 @@
 # GO / NO-GO Process
 
-The architecture reviewer checks the implementation handover against the package acceptance criteria and can inspect the repository if needed.
+## Review boundary
+
+The normal external architecture-review boundary is now the **phase gate**, not every individual work package. Work packages inside an authorised phase are implemented and internally self-reviewed by Codex under Autonomous Development Mode.
+
+The technical lead may still request package-level review at any time.
 
 ## Decisions
 
-**GO** — acceptance criteria are proven; no material unresolved defect blocks the next package.
+**GO PHASE NN** — package work is sufficiently proven, the phase exit condition is demonstrated, and no material unresolved defect blocks the next phase.
 
-**CONDITIONAL GO** — only non-blocking issues remain. Conditions must be written down with a specific follow-up owner/package.
+**CONDITIONAL GO PHASE NN** — only non-blocking issues remain; conditions are explicit and tracked.
 
-**NO-GO** — acceptance evidence is incomplete, an invariant is broken, tests do not prove the requirement, or implementation risk is materially higher than accepted.
+**NO-GO PHASE NN** — the exit condition is not demonstrated, an invariant is broken, verification is insufficient, or implementation risk is materially above threshold.
 
-**ROADMAP CHANGE** — new evidence shows the planned architecture, dependency or sequencing is wrong. Pause implementation and update the affected roadmap packages.
+**ROADMAP CHANGE** — evidence shows the planned architecture, dependency, acceptance condition or sequencing is wrong.
 
 ## Reviewer checklist
-
-- Scope discipline
+- Exit condition demonstrated, not asserted
+- Scope/phase discipline
 - Contract correctness
 - Determinism/replay where required
-- Data provenance and freshness where required
-- Negative/failure-path tests
-- Safety boundaries
-- Migration reversibility/compatibility where applicable
+- Provenance/freshness where required
+- Negative/failure-path verification
+- Point-in-time/backtest leakage controls
+- Safety/trading boundaries
+- Migration compatibility/reversibility where applicable
 - Observability/operator evidence
-- No hidden coupling to later phases
-- Working tree/repository hygiene
+- External dependency/cost decisions
+- No hidden future-phase coupling
+- Repository hygiene
+- Accepted debt explicitly tracked
+
+## Authority
+Codex cannot self-award external phase GO. Only external technical-lead review advances Jax into the next phase.

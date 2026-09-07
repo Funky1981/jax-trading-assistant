@@ -1,52 +1,53 @@
-# Codex Review Handover Template
+# Codex Work-Package Internal Handover Template
 
-Return this after **every** work package.
+This records an internally completed work package during Autonomous Development Mode. It keeps every package independently reviewable but is not normally an external stop point.
 
 ## Identity
 - Phase:
 - Work package:
 - Branch:
 - Starting commit:
-- Resulting commit (if committed):
+- Resulting commit:
 - Working-tree state:
-- Upstream / ahead-behind:
 
 ## Scope completed
-- Intended acceptance criteria:
-- What was implemented:
-- What was deliberately not implemented:
+- Acceptance criteria:
+- Implemented:
+- Deliberately not implemented:
+- Later-phase boundaries preserved:
 
 ## Files and data
 - Files changed:
 - Migrations:
-- Schema/API/contract changes:
+- Contract/schema/API changes:
 - Configuration changes:
 
 ## Verification
 - Tests added/changed:
-- Exact commands run:
-- Exact results:
-- Benchmarks/replay/evaluation results:
-- Manual verification performed:
+- Exact commands/results:
+- Negative/failure paths:
+- Live/integration verification:
+
+## Self-review
+- Material findings:
+- Corrections made:
+- Remaining non-blocking limitations:
+- Why progression inside the phase is safe:
 
 ## Safety and invariants
 - Paper/live state:
-- Execution/broker state:
-- Leverage/risk settings:
-- Append-only/audit invariants checked:
-- Any capability newly able to mutate trading state:
-
-## Deviations / risks
-- Deviations from package:
-- Known limitations:
-- Failing/flaky tests:
-- Open questions:
-- Follow-up debt:
+- Broker/execution state:
+- Candidate/order/trade mutation:
+- Credential exposure:
+- Paid dependency introduced:
 
 ## Acceptance evidence
 Map each acceptance criterion to concrete evidence.
 
-## Recommended reviewer decision
-Codex may state its view, but it has **no authority to progress**.
+## Internal package result
+Use one:
+- `IMPLEMENTED / INTERNALLY VERIFIED`
+- `BLOCKED`
+- `ROADMAP CHANGE REQUIRED`
 
-**STOP HERE. Do not begin the next roadmap work package. Return this handover to the architecture reviewer for GO / CONDITIONAL GO / NO-GO / ROADMAP CHANGE.**
+If internally verified, Codex may continue to the next work package inside the same authorised phase. If blocked or roadmap change is required, stop. At phase end use `PHASE-REVIEW-HANDOVER.md`.

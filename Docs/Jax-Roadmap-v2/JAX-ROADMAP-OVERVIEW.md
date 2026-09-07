@@ -18,17 +18,14 @@ Phase 01 established the source-backed Jax contract inventory, canonical domain 
 
 Phase 02 established the stable provider/capability boundary, exact-byte raw acquisition references, deterministic normalization and immutable provenance, explicit freshness/LKG semantics, bounded operational resilience and health, and evidence-backed role-specific source qualification. Its exit condition was demonstrated by an executable synthetic chain and a second provider/raw-schema adapter producing the same provider-neutral downstream canonical research projection.
 
-Phase 03 — Core Financial Evidence is **in progress**. WP-03.01 Market
-price/OHLCV, WP-03.02 SEC/EDGAR/XBRL, and WP-03.03 FRED/ALFRED macro
-observations and vintages are accepted **COMPLETE / GO**, including their
-documented temporal, vintage and evidence-closure work. The next package is
-`WP-03.04 — Economic Release / Calendar Ingestion`; it has not started and
-requires separate technical-lead authorization. See `Docs/ROADMAP.md`,
+As of 2026-09-07, Phase 00, Phase 01, Phase 02 and Phase 03 are **COMPLETE /
+GO**. Phase 03 demonstrated its exit condition with a real source-linked
+AAPL/Apple evidence packet containing real market, company and macro/context
+evidence, immutable raw provenance, a deterministic exit assertion and no
+model-memory dependency. Phase 04 — World Monitor Intelligence — is
+**authorised/in progress**, beginning with `WP-04.01 — Continuous durable
+collection and cursor semantics`. See `Docs/ROADMAP.md`,
 `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
-
-Current status supersession: WP-03.04 is accepted COMPLETE / GO. WP-03.05 is
-implemented and awaiting independent technical-lead review. WP-03.06 is not
-started.
 
 ## Non-negotiable principles
 
@@ -42,7 +39,7 @@ started.
 - Best tool for the job: no language restriction, but each language/runtime must map to a bounded architectural responsibility.
 - Build vs adopt: use established libraries/services where they solve commodity problems well; build Jax-specific differentiation around evidence synthesis, validation and controlled decision support.
 - Paper first: live execution is optional and remains a separately gated capability.
-- No silent progression: after every roadmap work package, Codex stops and produces the standard review handover. The architecture reviewer returns GO / CONDITIONAL GO / NO-GO / ROADMAP CHANGE.
+- Autonomous phase development: from Phase 04 onward, Codex completes bounded work packages sequentially with internal verification and self-review; external technical-lead review occurs at the phase gate or on a hard stop.
 - Fincept is a reference system, not a dependency or code donor. Concepts must be independently reimplemented or satisfied by external libraries/services after licensing and maturity review.
 
 
@@ -87,24 +84,31 @@ started.
 
 **M10 — Optional live:** Phase 13 is considered only after sustained paper evidence and explicit user decision.
 
+## Autonomous development from Phase 04
+
+`Phase GO -> Luna autonomous implementation package-by-package -> internal verification/self-review -> phase exit proof -> STOP -> Sol technical-lead review -> next Phase GO`
+
+Package acceptance criteria and phase gates remain binding. Hard stops are
+defined in `governance/AUTONOMOUS-DEVELOPMENT-MODE.md`.
+
 ## Review workflow
 
 Every numbered work package follows:
 
-`Roadmap package -> Codex implementation -> verification -> REVIEW HANDOVER -> STOP -> architecture review -> GO / CONDITIONAL GO / NO-GO / ROADMAP CHANGE`
+`Roadmap package -> Luna implementation -> verification/self-review -> bounded commit/evidence -> next package within the authorised phase`
 
-Codex must not start a subsequent package based on its own confidence.
+At the phase boundary, Codex returns `PHASE-REVIEW-HANDOVER.md` and must wait
+for external technical-lead GO before starting the next phase.
 
 See `governance/CODEX-REVIEW-HANDOVER.md` and `governance/GO-NO-GO-PROCESS.md`.
 
 ## How to use this pack
 
-1. Open the current phase `README.md`.
-2. Select the first incomplete work package.
-3. Give Codex that package file plus `governance/CODEX-OPERATING-RULES.md`.
-4. Codex completes only that package, verifies it, commits only if instructed by the user, then returns the standard review handover.
-5. Give that handover to the architecture reviewer.
-6. Proceed only after a GO or accepted CONDITIONAL GO.
+1. Read `Docs/ROADMAP.md` and the autonomous governance files.
+2. Open the current phase `README.md`, `GATE.md` and first incomplete work package.
+3. Codex completes only that package, verifies it, self-reviews it and records a bounded commit/evidence handover.
+4. Continue through the authorised phase until the exit condition is demonstrated or a hard stop occurs.
+5. Return `governance/PHASE-REVIEW-HANDOVER.md` for external technical-lead review.
 
 The roadmap is controlled but not immutable. If implementation evidence invalidates an assumption, use **ROADMAP CHANGE** rather than forcing later phases to fit a bad design.
 

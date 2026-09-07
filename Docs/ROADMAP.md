@@ -15,22 +15,23 @@ decision remains `NO_TRADE`.
 
 | Area | Status |
 | --- | --- |
-| Phase 00 — Event / Issuer Foundation | ✅ Accepted / complete |
-| Phase 01 — Canonical Contracts / Provenance / Replay | ✅ Accepted / complete |
-| Phase 02 — Provider / Data Platform | ✅ Accepted / complete, including durable raw storage closure |
-| Phase 03 — Core Financial Evidence | **IN PROGRESS** |
-| Current accepted package | WP-03.05 — Treasury / EIA / CBOE / CFTC Source Evaluation and First Approved Integrations (**COMPLETE / GO**) |
-| Current implementation package | **Phase-03 exit gate — EXIT CONDITION DEMONSTRATED / AWAITING TECHNICAL-LEAD GO** |
-| Next package | **Technical-lead Phase-03 exit-gate decision; Phase 04 not started** |
+| Phase 00 — Event / Issuer Foundation | **COMPLETE / GO** |
+| Phase 01 — Canonical Contracts / Provenance / Replay | **COMPLETE / GO** |
+| Phase 02 — Provider / Data Platform | **COMPLETE / GO**, including durable raw storage closure |
+| Phase 03 — Core Financial Evidence | **COMPLETE / GO** |
+| Phase 04 — World Monitor Intelligence | **AUTHORISED / IN PROGRESS** |
+| Current implementation package | **WP-04.01 — Continuous durable collection and cursor semantics** |
+| Next package | **WP-04.01 — Continuous durable collection and cursor semantics** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
 WP-03.04 and WP-03.05 have received independent technical-lead **FINAL GO**.
 WP-03.06 has received independent technical-lead FINAL GO and is now COMPLETE /
-GO. The Phase-03 exit condition has now been demonstrated using a zero-cost
-Alpaca Basic development market path, real SEC evidence and real Treasury
-macro evidence. Phase 03 remains in progress pending the technical-lead GO;
-Phase 04 is not authorized.
+GO. The Phase-03 exit condition was demonstrated using a deterministic,
+source-linked AAPL/Apple evidence packet containing real market, SEC/company
+and Treasury macro/context evidence, immutable raw provenance and no
+model-memory dependency. Phase 03 is COMPLETE / GO. Phase 04 is authorised and
+implementation starts at WP-04.01.
 
 ## Roadmap status vocabulary
 
@@ -81,7 +82,7 @@ foundation; it preserves exact bytes and append-only acquisition identity.
 Evidence: `Docs/evidence/WP-02.01-PROVIDER-REGISTRY-CAPABILITY-CONTRACT.md` through
 `Docs/evidence/WP-02.07-DURABLE-RAW-PAYLOAD-STORAGE.md`.
 
-### Phase 03 — Core Financial Evidence — IN PROGRESS
+### Phase 03 — Core Financial Evidence — COMPLETE / GO
 
 Phase 03 adds trustworthy market, company and macro evidence to the accepted
 platform. Its phase exit requires a source-linked evidence packet for a
@@ -109,6 +110,19 @@ remain future source-qualification questions. See
 Corrective packages such as WP-03.01A are closure history under their parent
 package, not new permanent roadmap phases.
 
+### Phase 04 — World Monitor Intelligence — AUTHORISED / IN PROGRESS
+
+Phase 04 builds corroborated event intelligence from the existing World Monitor
+boundary while preserving raw evidence, provenance, temporal semantics,
+deterministic replay and downstream safety boundaries. Its current starting
+package is `WP-04.01 — Continuous durable collection and cursor semantics`.
+
+From Phase 04 onward, Autonomous Development Mode permits Codex to complete one
+bounded package at a time with internal verification and self-review, then
+continue within the authorised phase. External technical-lead review occurs at
+the phase exit gate or on a hard stop. See
+`Docs/Jax-Roadmap-v2/governance/AUTONOMOUS-DEVELOPMENT-MODE.md`.
+
 ### Later roadmap — planned capability progression
 
 The detailed package material is retained in `Docs/Jax-Roadmap-v2/`. These are
@@ -129,7 +143,8 @@ future stages, not current authorization to implement them.
 | Phase 13 — Optional Live Execution | Consider a separately gated, human-approved live capability only after all prior evidence and safety gates pass. | Live is optional, not the assumed destination. Any constrained automation requires a later explicit decision and demonstrated guardrail performance. |
 
 No later phase is accepted merely because related code already exists. Each
-phase requires its own package reviews, evidence and technical-lead GO.
+phase requires its own package evidence, demonstrated exit condition and
+external technical-lead GO.
 
 ## Existing capabilities awaiting later integration/revalidation
 
@@ -209,5 +224,6 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase-03 exit-gate verification under review** after
-WP-03.06 COMPLETE / GO. Do not begin Phase 04 as part of this closure.
+The current position is **Phase 04 authorised/in progress**, beginning with
+WP-04.01. Phase 04 must demonstrate its exit condition and receive external
+technical-lead GO before Phase 05 begins.

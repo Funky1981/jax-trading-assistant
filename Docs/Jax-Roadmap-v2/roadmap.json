@@ -1,12 +1,17 @@
 {
   "name": "Jax Roadmap v2",
-  "generated_on": "2026-09-04",
+  "generated_on": "2026-09-07",
   "phases": 14,
-  "governance": "Per-work-package external architecture review required",
+  "governance": "Autonomous work-package execution within an authorised phase; external technical-lead review at phase gates and hard-stop decisions",
+  "development_model_policy": {
+    "implementation_default": "gpt-5.6-luna",
+    "decision_review_default": "gpt-5.6-sol",
+    "optional_mid_tier_escalation": "gpt-5.6-terra"
+  },
   "fincept_role": "Reference architecture/capability catalogue; no direct code copying",
   "live_execution": "Optional future gated phase only; not currently authorized",
-  "revision": "2026-09-04-roadmap-reconciliation-closure",
+  "revision": "2026-09-07-autonomous-phase-development-governance",
   "authoritative_roadmap": "Docs/ROADMAP.md",
   "llm_cost_context_efficiency": "Cross-cutting requirement integrated into Phases 06 and 08 plus governance",
-  "pack_status": "Supporting roadmap detail; Docs/ROADMAP.md is authoritative. Phases 00 through 02 are accepted/complete; Phase 03 exit condition is demonstrated and awaiting technical-lead GO; WP-03.01 through WP-03.06 are COMPLETE / GO; Phase 04 is not started"
+  "pack_status": "Supporting roadmap detail; Docs/ROADMAP.md is authoritative. Phases 00 through 03 are COMPLETE / GO. Phase 04 is authorised/in progress beginning at WP-04.01. Autonomous Development Mode is active from Phase 04 onward."
 }

@@ -1,24 +1,38 @@
-# Next Work Package
+# Current Autonomous Work Position
 
-Status: WP-03.05 COMPLETE / GO; WP-03.06 COMPLETE / GO; Phase-03 exit condition demonstrated / awaiting technical-lead GO
+## Status
 
-## Immediate next action - review the Phase-03 exit-gate demonstration
+- Phase 03 — Core Financial Evidence: **COMPLETE / GO**
+- Phase 04 — World Monitor Intelligence: **AUTHORISED / IN PROGRESS**
+- Autonomous Development Mode: **ACTIVE**
+- Current starting package: **WP-04.01 — Continuous durable collection and cursor semantics**
 
-Package: `WP-03.06 - Evidence-quality cross-source checks`
+## Phase-04 autonomous scope
 
-Path: `03-core-financial-evidence/WP-03.06-evidence-quality-cross-source-checks.md`
+Codex may continue, one bounded package at a time, through:
 
-Phase 00, Phase 01, and Phase 02 are complete. WP-03.01 through WP-03.05 are
-accepted **COMPLETE / GO**, with their evidence and temporal-semantics closures
-retained in `Docs/evidence/`. Phase 03 remains in progress. The technical lead
-issued **GO PHASE 02** on 2026-08-26, **FINAL GO** for WP-03.04, and **FINAL GO**
-for WP-03.05; subsequent package acceptance is recorded in the Phase 03
-evidence handovers.
+1. WP-04.01 — Continuous durable collection and cursor semantics
+2. WP-04.02 — Deduplication/event clustering
+3. WP-04.03 — Entity/issuer/geography extraction
+4. WP-04.04 — Source triangulation and confidence
+5. WP-04.05 — Velocity/baseline-deviation signals
+6. WP-04.06 — Market-reaction correlation
+7. WP-04.07 — Evaluate ACLED/AIS/prediction-market evidence adapters
 
-Phase 03 — Core Financial Evidence will populate the accepted data platform with the smallest high-value set of real market, corporate, and macro evidence required for useful US equity/ETF research. Its exit condition is a source-linked evidence packet for a representative US equity/ETF using real market, company, and macro evidence without relying on model memory.
+Stop when the Phase-04 exit condition is demonstrated or any governance hard
+stop occurs. Do not begin Phase 05 without external `GO PHASE 04`.
 
-WP-03.05 and WP-03.06 have received technical-lead FINAL GO. The bounded
-Phase-03 exit demonstration now constructs the real AAPL market/company/macro
-packet using explicit Alpaca Basic SIP market evidence, SEC evidence and
-Treasury evidence. The exit condition is demonstrated and awaits the
-technical-lead decision. Phase 04 is not authorized or started.
+## Phase-04 exit condition
+
+A replayed multi-source event is clustered, corroborated, linked to plausible
+instruments and accompanied by confidence/unknowns without creating a trade
+candidate automatically.
+
+The exit condition must be demonstrated, not merely asserted.
+
+## Governance
+
+Use `AUTONOMOUS-DEVELOPMENT-MODE.md`, `CODEX-OPERATING-RULES.md`,
+`MODEL-ROUTING-POLICY.md`, `CODEX-REVIEW-HANDOVER.md`,
+`PHASE-REVIEW-HANDOVER.md`, and `GO-NO-GO-PROCESS.md`.
+`Docs/ROADMAP.md` remains authoritative.

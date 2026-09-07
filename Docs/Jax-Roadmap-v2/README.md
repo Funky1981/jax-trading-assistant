@@ -5,12 +5,12 @@
 > package acceptance records and evidence navigation; do not use it as a second
 > roadmap authority.
 
-Start with `JAX-ROADMAP-OVERVIEW.md`.
+Start with `JAX-ROADMAP-OVERVIEW.md`, then read the active governance files
+and the current phase `README.md`, `GATE.md` and first incomplete package.
 
-Detailed package decisions are recorded in `ROADMAP-DECISION-LOG.md`; the first
-incomplete package awaiting technical-lead authorization is recorded in
-`NEXT-WORK-PACKAGE.md`. The human-facing current status is summarized in
-`Docs/ROADMAP.md`.
+Detailed package decisions are recorded in `ROADMAP-DECISION-LOG.md`; the
+current autonomous package is recorded in `NEXT-WORK-PACKAGE.md`. The
+human-facing current status is summarized in `Docs/ROADMAP.md`.
 
 This pack is intentionally implementation-oriented. Each phase contains:
 - `README.md` — purpose, prerequisites, scope and exit gate.
@@ -20,6 +20,28 @@ This pack is intentionally implementation-oriented. Each phase contains:
 Cross-cutting governance lives in `governance/`. Research and reference material lives in `references/`.
 
 This roadmap uses Fincept Terminal intensively as a capability/reference system, while explicitly avoiding dependency on Fincept source code. Every borrowed idea must pass implementation-maturity, licensing, fit and alternative-library checks.
+
+## Active execution model
+
+From Phase 04 onward Jax uses Autonomous Development Mode. Codex implements
+one bounded work package at a time, verifies and self-reviews it, creates a
+bounded local commit, then continues through the authorised phase. External
+technical-lead review normally occurs at the phase boundary. Legacy package
+files may still contain per-package external-stop wording; the active
+governance files supersede that cadence wording while package acceptance
+criteria remain binding.
+
+## Model routing
+
+- GPT-5.6 Luna — default implementation and verification model.
+- GPT-5.6 Sol — consequential architecture decisions and phase-level review.
+- GPT-5.6 Terra — optional bounded escalation when Luna materially struggles.
+
+## Current programme position
+
+- Phases 00–03: `COMPLETE / GO`
+- Phase 04: authorised/in progress
+- Current starting package: `WP-04.01 — Continuous durable collection and cursor semantics`
 
 
 ## 2026-08-10 integrated roadmap change
