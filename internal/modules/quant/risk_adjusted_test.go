@@ -34,3 +34,26 @@ func TestRiskAdjustedMetricsRejectsDegenerateDenominators(t *testing.T) {
 		t.Fatal("zero-drawdown Calmar accepted")
 	}
 }
+
+func TestRiskAdjustedSortinoUsesDownsideTargetNumerator(t *testing.T) {
+	dataset := returnsDataset(t, []float64{100, 110, 99, 118.8})
+	result, err := CalculateRiskAdjustedMetrics(dataset, 3, 1, 0.1, 0.1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	returns := []float64{0.1, -0.1, 0.2}
+	periodicTarget := 0.1
+	sum := 0.0
+	downsideSquares := 0.0
+	for _, value := range returns {
+		sum += value
+		shortfall := value - periodicTarget
+		if shortfall < 0 {
+			downsideSquares += shortfall * shortfall
+		}
+	}
+	expected := (sum/3 - periodicTarget) / math.Sqrt(downsideSquares/3)
+	if math.Abs(result.Values[1].Value-expected) > 1e-12 {
+		t.Fatalf("sortino=%v expected %v", result.Values[1].Value, expected)
+	}
+}

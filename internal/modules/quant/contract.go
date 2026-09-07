@@ -194,7 +194,7 @@ func (request Request) Validate() error {
 	}
 	seenInputs := map[string]struct{}{request.Dataset.ID: {}}
 	for _, input := range request.InputReferences {
-		if input.ID == "" || len(input.ContentSHA256) != sha256.Size*2 {
+		if input.ID == "" || !validSHA256(input.ContentSHA256) {
 			return fmt.Errorf("input references require an ID and SHA-256")
 		}
 		if _, exists := seenInputs[input.ID]; exists {
@@ -256,6 +256,14 @@ func (response Response) Validate(request Request) error {
 func finite(value float64) bool            { return !math.IsNaN(value) && !math.IsInf(value, 0) }
 func finitePositive(value float64) bool    { return finite(value) && value > 0 }
 func finiteNonNegative(value float64) bool { return finite(value) && value >= 0 }
+
+func validSHA256(value string) bool {
+	if len(value) != sha256.Size*2 || strings.ToLower(value) != value {
+		return false
+	}
+	_, err := hex.DecodeString(value)
+	return err == nil
+}
 
 func cloneBars(bars []Bar) []Bar { return append([]Bar(nil), bars...) }
 

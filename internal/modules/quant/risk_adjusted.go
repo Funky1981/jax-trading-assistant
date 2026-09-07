@@ -61,7 +61,8 @@ func CalculateRiskAdjustedMetrics(dataset FrozenDataset, window int, annualizati
 	}
 	periods := len(dataset.Bars) - 1
 	annualizedReturn := math.Pow(dataset.Bars[len(dataset.Bars)-1].Close/dataset.Bars[0].Close, annualizationFactor/float64(periods)) - 1
-	sortino := excessMean / downsideDeviation * math.Sqrt(annualizationFactor)
+	sortinoNumerator := mean(returns) - periodicTarget
+	sortino := sortinoNumerator / downsideDeviation * math.Sqrt(annualizationFactor)
 	calmar := annualizedReturn / math.Abs(maximumDrawdown)
 	values := []Value{{Metric: "sharpe", Value: sharpe, Unit: "ratio"}, {Metric: "sortino", Value: sortino, Unit: "ratio"}, {Metric: "calmar", Value: calmar, Unit: "ratio"}}
 	if !finite(sharpe) || !finite(sortino) || !finite(calmar) {

@@ -53,3 +53,12 @@ func TestFrozenDatasetRejectsLookalikeInvalidInputs(t *testing.T) {
 		t.Fatal("non-UTC timestamp accepted")
 	}
 }
+
+func TestRequestRejectsMalformedSecondaryInputDigest(t *testing.T) {
+	dataset := testDataset(t)
+	for _, digest := range []string{"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"} {
+		if _, err := NewRequestWithInputs("request", dataset, []InputReference{{ID: "benchmark", ContentSHA256: digest}}, "algorithm", "v1", nil); err == nil {
+			t.Fatalf("malformed input digest accepted: %q", digest)
+		}
+	}
+}
