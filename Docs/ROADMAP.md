@@ -21,9 +21,10 @@ decision remains `NO_TRADE`.
 | Phase 03 — Core Financial Evidence | **COMPLETE / GO** |
 | Phase 04 — World Monitor Intelligence | **COMPLETE / GO** |
 | Phase 05 — Deterministic Quant Core | **COMPLETE / GO** |
-| Phase 06 — Research & Recommendation Engine | **EXIT DEMONSTRATED — ADVERSARIAL PHASE REVIEW IN PROGRESS** |
-| Current implementation package | **Phase 06 exit verification and adversarial review** |
-| Next package | **External technical-lead phase review** |
+| Phase 06 — Research & Recommendation Engine | **COMPLETE / GO** |
+| Phase 07 — Evaluation, Replay & Backtesting | **AUTHORISED / IN PROGRESS** |
+| Current implementation package | **WP-07.01 — Historical event/research replay engine** |
+| Next package | **WP-07.01 — Historical event/research replay engine** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -142,15 +143,26 @@ orders, trades, fills or live execution authority. External technical-lead
 review accepted the demonstrated exit. The full internal record is
 `Docs/Jax-Roadmap-v2/05-deterministic-quant-core/PHASE-05-INTERNAL-VERIFICATION.md`.
 
-### Phase 06 — Research & Recommendation Engine — EXIT DEMONSTRATED — ADVERSARIAL PHASE REVIEW IN PROGRESS
+### Phase 06 — Research & Recommendation Engine — COMPLETE / GO
 
 Phase 06 combines accepted evidence and deterministic quant context with
 bounded, provenance-preserving research reasoning. Its outputs remain
 research-only `WATCH`, `NO_TRADE`, or `CANDIDATE` classifications with no
 approval, order, trade, fill, or live execution authority. The first package is
 `WP-06.01 — Define evidence packet contract` through `WP-06.07 — UI/API read
-model for useful recommendations` are implemented. Phase 06 must demonstrate
-its exit condition and receive external technical-lead GO before Phase 07.
+model for useful recommendations` are implemented. External GPT-5.6 Sol
+accepted the demonstrated exit condition with `GO PHASE 06`. The full internal
+record is `Docs/Jax-Roadmap-v2/06-research-recommendation-engine/PHASE-06-INTERNAL-VERIFICATION.md`.
+
+### Phase 07 — Evaluation, Replay & Backtesting — AUTHORISED / IN PROGRESS
+
+Phase 07 is validation-first: it evaluates whether research and candidate logic
+survive historical knowability, outcome-leakage, cost, walk-forward and
+falsification checks. It must be capable of disproving an apparent edge. Its
+outputs remain evaluation artifacts and do not create approvals, orders, trades,
+fills or live execution authority. The current package is `WP-07.01 — Historical
+event/research replay engine`; Phase 07 must demonstrate its exit condition and
+receive external technical-lead GO before Phase 08.
 
 ### Later roadmap — planned capability progression
 

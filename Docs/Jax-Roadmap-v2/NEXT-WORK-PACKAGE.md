@@ -5,9 +5,10 @@
 - Phase 03 — Core Financial Evidence: **COMPLETE / GO**
 - Phase 04 — World Monitor Intelligence: **COMPLETE / GO**
 - Phase 05 — Deterministic Quant Core: **COMPLETE / GO**
-- Phase 06 — Research & Recommendation Engine: **EXIT DEMONSTRATED — ADVERSARIAL PHASE REVIEW IN PROGRESS**
+- Phase 06 — Research & Recommendation Engine: **COMPLETE / GO**
+- Phase 07 — Evaluation, Replay & Backtesting: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **Phase 06 exit verification and adversarial review**
+- Current implementation package: **WP-07.01 — Historical event/research replay engine**
 
 ## Phase-05 autonomous scope
 
@@ -26,12 +27,16 @@ Codex may continue, one bounded package at a time, through:
 Stop when the Phase-05 exit condition is demonstrated or any governance
 hard-stop occurs. Do not begin Phase 06 without external `GO PHASE 05`.
 
-## Phase-06 exit verification
+## Phase-07 autonomous scope
 
-The Phase-06 package sequence is complete. Demonstrate the Phase-06 exit
-condition, complete the mandatory adversarial phase review, and stop for the
-external technical-lead phase decision. Do not begin Phase 07 without external
-`GO PHASE 06`.
+Codex may continue, one bounded package at a time, through WP-07.01 Historical
+event/research replay engine, WP-07.02 Frozen benchmark registry, WP-07.03
+Model/prompt/algorithm version comparison, WP-07.04 Recommendation outcome
+tracking, WP-07.05 Traditional strategy backtesting adapter evaluation, WP-07.06
+Transaction cost/slippage assumptions, WP-07.07 Walk-forward/out-of-sample
+protocol and WP-07.08 Operational replay tooling. Stop when the Phase-07 exit
+condition is demonstrated or a governance hard stop occurs. Do not begin Phase
+08 without external `GO PHASE 07`.
 
 ## Phase-05 exit condition
 

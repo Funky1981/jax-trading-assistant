@@ -42,8 +42,9 @@ criteria remain binding.
 - Phases 00–03: `COMPLETE / GO`
 - Phase 04: `COMPLETE / GO`
 - Phase 05: `COMPLETE / GO`
-- Phase 06: `EXIT DEMONSTRATED — ADVERSARIAL PHASE REVIEW IN PROGRESS`
-- Current package: `Phase 06 exit verification and adversarial review`
+- Phase 06: `COMPLETE / GO`
+- Phase 07: `AUTHORISED / IN PROGRESS`
+- Current package: `WP-07.01 — Historical event/research replay engine`
 
 
 ## 2026-08-10 integrated roadmap change

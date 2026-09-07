@@ -1,5 +1,21 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-08 - External Phase 06 GO / Phase 07 authorization
+
+- Date: 2026-09-07
+- Phase: 06 — Research & Recommendation Engine; 07 — Evaluation, Replay & Backtesting
+- Status: Phase 06 accepted COMPLETE / GO; Phase 07 authorised / in progress
+- Decision authority: explicit external GPT-5.6 Sol technical-lead decision supplied by the user
+
+External GPT-5.6 Sol accepted the complete Phase-06 handover, exit proof,
+full verification, security evidence and adversarial review with `GO PHASE 06`.
+Phase 06 is recorded COMPLETE / GO. Phase 07 is authorized through WP-07.08,
+beginning with WP-07.01. Phase 07 is validation-first and must not create
+approval, order, trade, fill or live execution state.
+
+Evidence: the supplied external Phase-06 review decision and
+`06-research-recommendation-engine/PHASE-06-INTERNAL-VERIFICATION.md`.
+
 ## RD-2026-09-07-06 - Phase 06 exit demonstration and adversarial review
 
 - Date: 2026-09-07
