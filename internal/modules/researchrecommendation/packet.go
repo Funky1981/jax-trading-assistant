@@ -109,7 +109,7 @@ func (packet EvidencePacket) Validate() error {
 	if err := packet.validateWithoutID(); err != nil {
 		return err
 	}
-	if !strings.HasPrefix(packet.ID, "epk_") || len(packet.ID) != len("epk_")+64 {
+	if !validIdentity("epk_", packet.ID) {
 		return fmt.Errorf("packet ID must be an epk_ SHA-256 identity")
 	}
 	if packet.ID != packet.derivedID() {
@@ -148,7 +148,7 @@ func (packet EvidencePacket) validateWithoutID() error {
 }
 
 func (item EvidenceItem) Validate() error {
-	if !strings.HasPrefix(item.Identity.ID, "epi_") || len(item.Identity.ID) != len("epi_")+64 {
+	if !validIdentity("epi_", item.Identity.ID) {
 		return fmt.Errorf("evidence item ID must be an epi_ SHA-256 identity")
 	}
 	switch item.Identity.Kind {
@@ -248,6 +248,10 @@ func validSHA256(value string) bool {
 	}
 	_, err := hex.DecodeString(value)
 	return err == nil
+}
+
+func validIdentity(prefix, value string) bool {
+	return strings.HasPrefix(value, prefix) && validSHA256(strings.TrimPrefix(value, prefix))
 }
 
 func finite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }
