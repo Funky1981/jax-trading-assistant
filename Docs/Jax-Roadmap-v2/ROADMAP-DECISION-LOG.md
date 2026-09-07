@@ -1,5 +1,23 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-22 - WP-08.04 internal verification
+
+- Date: 2026-09-07
+- Phase: 08 — Controlled AI Tools & Durable Research Agents
+- Work package: WP-08.04 — Durable research task/checkpoint state
+- Status: Implemented / internally verified; WP-08.05 current
+- Decision authority: autonomous package verification under authorised Phase-08 scope
+
+WP-08.04 adds the versioned durable checkpoint contract and additive Postgres
+JSONB persistence. Checkpoints are immutable content-addressed task/version
+records containing bounded plan progress, evidence and contradiction identity,
+tool/model provenance, report state, budgets and failure status. Resume builds
+minimum sufficient bounded context without transcript replay. Integrity checks
+reject corruption, unsupported state, stale/mutated plan membership, trusted
+tool records and over-budget state. Focused checkpoint and migration tests pass.
+
+Evidence: `08-controlled-ai-tools-durable-research-agents/WP-08.04-durable-research-task-checkpoint-state.md`.
+
 ## RD-2026-09-07-21 - WP-08.03 internal verification
 
 - Date: 2026-09-07
