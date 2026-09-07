@@ -237,11 +237,15 @@ func renderContext(task ResearchTask, packet EvidencePacket, items []EvidenceIte
 	builder.WriteString("[/JAX_CONTROL]\n")
 	for _, item := range items {
 		builder.WriteString("[UNTRUSTED_EVIDENCE id=" + item.Identity.ID + " kind=" + string(item.Identity.Kind) + " freshness=" + string(item.Identity.Freshness) + "]\n")
-		builder.WriteString("source_id=" + item.Identity.Source.SourceID + " provider=" + item.Identity.Source.Provider + " raw_reference=" + item.Identity.Source.RawReference + " raw_sha256=" + item.Identity.Source.RawContentSHA256 + "\n")
-		builder.WriteString("title=" + item.Rendering.Title + "\nsummary=" + item.Rendering.Summary + "\nexcerpt=" + item.Rendering.Excerpt + "\n")
+		builder.WriteString("source_id=" + escapeUntrusted(item.Identity.Source.SourceID) + " provider=" + escapeUntrusted(item.Identity.Source.Provider) + " raw_reference=" + escapeUntrusted(item.Identity.Source.RawReference) + " raw_sha256=" + item.Identity.Source.RawContentSHA256 + "\n")
+		builder.WriteString("title=" + escapeUntrusted(item.Rendering.Title) + "\nsummary=" + escapeUntrusted(item.Rendering.Summary) + "\nexcerpt=" + escapeUntrusted(item.Rendering.Excerpt) + "\n")
 		builder.WriteString("[/UNTRUSTED_EVIDENCE]\n")
 	}
 	return builder.String()
+}
+
+func escapeUntrusted(value string) string {
+	return strings.NewReplacer("[", "⟦", "]", "⟧").Replace(value)
 }
 
 func contextPlanID(plan ContextPlan) string {
