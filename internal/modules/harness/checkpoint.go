@@ -56,6 +56,7 @@ type ResearchTaskState struct {
 	EvidenceIDs       []string               `json:"evidence_ids"`
 	UnresolvedGaps    []string               `json:"unresolved_gaps"`
 	Contradictions    []string               `json:"contradictions"`
+	ReplanCount       int                    `json:"replan_count"`
 	CurrentReport     string                 `json:"current_report"`
 	ToolCallRecords   []ControlledToolResult `json:"tool_call_records"`
 	ModelCallRecords  []ModelCallRecord      `json:"model_call_records"`
@@ -68,7 +69,7 @@ type ResearchTaskState struct {
 }
 
 func (state ResearchTaskState) Validate() error {
-	if state.ContractVersion != ResearchCheckpointContractV1 || !validControlledID(state.TaskID) || strings.TrimSpace(state.Objective) == "" || len(state.Objective) > 4096 || strings.TrimSpace(state.PlanVersion) == "" || !schemaStringList(state.PlannedSteps) || len(state.PlannedSteps) > 32 || len(state.CompletedSteps) > len(state.PlannedSteps) || !schemaStringList(state.EvidenceIDs) || len(state.EvidenceIDs) > 512 || !schemaStringList(state.UnresolvedGaps) || len(state.UnresolvedGaps) > 64 || !schemaStringList(state.Contradictions) || len(state.Contradictions) > 64 || len(state.CurrentReport) > 128*1024 || len(state.ToolCallRecords) > 128 || len(state.ModelCallRecords) > 64 || state.CheckpointVersion < 1 || state.UpdatedAt.IsZero() || state.UpdatedAt.Location() != time.UTC {
+	if state.ContractVersion != ResearchCheckpointContractV1 || !validControlledID(state.TaskID) || strings.TrimSpace(state.Objective) == "" || len(state.Objective) > 4096 || strings.TrimSpace(state.PlanVersion) == "" || !schemaStringList(state.PlannedSteps) || len(state.PlannedSteps) > 32 || state.ReplanCount < 0 || state.ReplanCount > 8 || len(state.CompletedSteps) > len(state.PlannedSteps) || !schemaStringList(state.EvidenceIDs) || len(state.EvidenceIDs) > 512 || !schemaStringList(state.UnresolvedGaps) || len(state.UnresolvedGaps) > 64 || !schemaStringList(state.Contradictions) || len(state.Contradictions) > 64 || len(state.CurrentReport) > 128*1024 || len(state.ToolCallRecords) > 128 || len(state.ModelCallRecords) > 64 || state.CheckpointVersion < 1 || state.UpdatedAt.IsZero() || state.UpdatedAt.Location() != time.UTC {
 		return fmt.Errorf("research task state is incomplete or unbounded")
 	}
 	if err := state.Budget.Validate(); err != nil {
@@ -87,6 +88,9 @@ func (state ResearchTaskState) Validate() error {
 	}
 	planned := make(map[string]struct{}, len(state.PlannedSteps))
 	for _, stepID := range state.PlannedSteps {
+		if !validControlledID(stepID) {
+			return fmt.Errorf("research plan contains invalid step identity")
+		}
 		if _, exists := planned[stepID]; exists {
 			return fmt.Errorf("research plan contains duplicate step %q", stepID)
 		}

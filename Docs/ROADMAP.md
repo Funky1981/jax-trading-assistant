@@ -24,8 +24,8 @@ decision remains `NO_TRADE`.
 | Phase 06 — Research & Recommendation Engine | **COMPLETE / GO** |
 | Phase 07 — Evaluation, Replay & Backtesting | **COMPLETE / GO** |
 | Phase 08 — Controlled AI Tools & Durable Research Agents | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-08.05 — Adaptive gap-finding/replanning** |
-| Next package | **WP-08.05 — Adaptive gap-finding/replanning** |
+| Current implementation package | **WP-08.06 — Critic/reflection stage** |
+| Next package | **WP-08.06 — Critic/reflection stage** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -172,7 +172,7 @@ Phase 08 adds bounded read-only research tools, durable checkpointed tasks,
 explicit budgets, adaptive gap finding, critic/reflection, provenance-safe
 memory and evaluation. It must preserve deterministic recommendation, risk and
 execution gates. WP-08.01 is implemented and internally verified; the current
-package is `WP-08.05 — Adaptive gap-finding/replanning`. Do not begin Phase 09
+package is `WP-08.06 — Critic/reflection stage`. Do not begin Phase 09
 before external technical-lead GO.
 
 ### Later roadmap — planned capability progression

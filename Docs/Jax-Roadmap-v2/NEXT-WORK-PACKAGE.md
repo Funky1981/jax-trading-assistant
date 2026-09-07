@@ -9,7 +9,7 @@
 - Phase 07 — Evaluation, Replay & Backtesting: **COMPLETE / GO**
 - Phase 08 — Controlled AI Tools & Durable Research Agents: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-08.05 — Adaptive gap-finding/replanning**
+- Current implementation package: **WP-08.06 — Critic/reflection stage**
 
 ## Phase-05 autonomous scope
 

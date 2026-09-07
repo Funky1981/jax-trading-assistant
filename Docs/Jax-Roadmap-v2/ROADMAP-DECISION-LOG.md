@@ -1,5 +1,23 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-23 - WP-08.05 internal verification
+
+- Date: 2026-09-07
+- Phase: 08 — Controlled AI Tools & Durable Research Agents
+- Work package: WP-08.05 — Adaptive gap-finding/replanning
+- Status: Implemented / internally verified; WP-08.06 current
+- Decision authority: autonomous package verification under authorised Phase-08 scope
+
+WP-08.05 adds evidence-linked bounded gap and replan contracts. A replan can
+only add registered, version-matched, permitted read-only tool steps, while
+preserving the original objective, trigger evidence, plan history and
+checkpoint replan count. Explicit sufficient, insufficient, blocked and
+budget-exhausted outcomes prevent wandering; candidate work is rejected when
+the replan cap is exhausted. Focused positive, negative and injection-shaped
+tests pass.
+
+Evidence: `08-controlled-ai-tools-durable-research-agents/WP-08.05-adaptive-gap-finding-replanning.md`.
+
 ## RD-2026-09-07-22 - WP-08.04 internal verification
 
 - Date: 2026-09-07
