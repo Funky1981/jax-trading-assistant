@@ -8,7 +8,7 @@
 - Phase 06 — Research & Recommendation Engine: **COMPLETE / GO**
 - Phase 07 — Evaluation, Replay & Backtesting: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-07.06 — Transaction cost/slippage assumptions**
+- Current implementation package: **WP-07.07 — Walk-forward/out-of-sample protocol**
 
 ## Phase-05 autonomous scope
 

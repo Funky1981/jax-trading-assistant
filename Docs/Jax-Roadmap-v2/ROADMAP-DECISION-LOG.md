@@ -1,5 +1,21 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-14 - WP-07.06 internal verification
+
+- Date: 2026-09-07
+- Phase: 07 — Evaluation, Replay & Backtesting
+- Work package: WP-07.06 — Transaction cost/slippage assumptions
+- Status: Implemented / internally verified; WP-07.07 current
+- Decision authority: autonomous package verification under authorised Phase-07 scope
+
+WP-07.06 adds content-addressed transaction-cost and slippage assumptions and
+deterministic hypothetical BUY/SELL cost calculations. Commission, spread,
+slippage, impact and borrow components are explicit and arithmetic is checked.
+Silent zero-friction baselines are rejected; explicit diagnostic baselines are
+allowed. The result cannot create orders, fills or execution authority.
+
+Evidence: `07-evaluation-replay-backtesting/WP-07.06-transaction-cost-slippage-assumptions.md`.
+
 ## RD-2026-09-07-13 - WP-07.05 internal verification
 
 - Date: 2026-09-07
