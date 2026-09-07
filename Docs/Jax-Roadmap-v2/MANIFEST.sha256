@@ -62,6 +62,7 @@
 57f58401c9db8ea8c0ff9878740dc4721766a4fda71969a9e22197e2ea02c7cc  08-controlled-ai-tools-durable-research-agents/WP-08.07-research-memory-with-provenance.md
 59e3b28b73c714f7d70c9152c11ede402e61f78af6cca8f1914e1437812f86ec  09-portfolio-intelligence-deterministic-risk/GATE.md
 5a7eb2e3577aa5f45ee752929421aaadf98bad592e2b4402cc964740b28890d3  02-data-platform-provider-architecture/REFERENCE-NOTES.md
+5b4185a36d03ef1d1d585aecb02335489e5b7ed77cbd8be9d1148df1eb0a95cb  ROADMAP-DECISION-LOG.md
 5c457e928f40948c41b8c43c8496589afc219b5b1d84062fff38ad9c3b17657e  09-portfolio-intelligence-deterministic-risk/README.md
 5c699ffb35dec0a43d723cf52fd378a668a8456c0d79cd679c9463f4604fc3d9  12-advanced-quant-research/REFERENCE-NOTES.md
 5d08a13507f5c777228c30a19c76e2b2de8fe4190c8907f19138aa8f5f5f517f  NEXT-WORK-PACKAGE.md
@@ -101,7 +102,6 @@
 995717ae1c1c5f69346b6a9864757c6e2f7dc6ab24430b3443cbe76ce74fbb40  02-data-platform-provider-architecture/WP-02.05-rate-limit-retry-backoff-health-instrumentation.md
 9acfb0c5ac6164e9c1d8020f8381664a770c7e02a74863009ac055404c8a0edc  01-canonical-contracts-provenance-audit/WP-01.01-inventory-existing-jax-domain-contracts-before-adding-new-ones.md
 9ba9b630efc684216de28682848799b671023ede8ec258db89324d053f9096bf  11-high-fidelity-paper-trading/WP-11.08-long-duration-paper-soak-protocol.md
-9db8501eadcb9f3fbd990da06e32c9bc49e0fa664d5d031ac9f19f107cc3d577  ROADMAP-DECISION-LOG.md
 a0fba42019daec21dcfd1b99cda0e55fa5686a8a8427409d7d532088ac7f59a5  06-research-recommendation-engine/GATE.md
 a276f382dd1f76068b1053667387d2e75dcf273cfb49c175e0462167b38c8835  09-portfolio-intelligence-deterministic-risk/REFERENCE-NOTES.md
 a4cd6ea3ecfdf601d32bd09034f0e61b1044bcae8a377cb30a83f6673bdc773a  13-optional-live-execution/WP-13.08-small-capital-staged-rollout.md
