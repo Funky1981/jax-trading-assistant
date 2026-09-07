@@ -31,7 +31,7 @@ included in the UI/API read model.
 | WP-06.04 | `1dbf523` | Research-only recommendation grammar and fail-closed eligibility |
 | WP-06.05 | `cbb2e3a` | Freshness and evidence sufficiency gates |
 | WP-06.06 | `e0cd407` | Explicitly uncalibrated confidence contract |
-| WP-06.07 | `359de13`, `39c5c79` | Deterministic UI/API read model, bounded provider boundary, final identity hardening and exit proof |
+| WP-06.07 | `359de13`, `39c5c79`, `2e36e48` | Deterministic UI/API read model, bounded provider boundary, identity hardening, prompt-injection boundary and exit proof |
 
 ## Reproducible verification
 
@@ -75,6 +75,8 @@ Material findings corrected and reverified:
    It now checks packet/context/research/freshness/confidence identities,
    packet content fingerprint and selected/duplicate/omitted evidence
    references, while omitting raw response content.
+5. Embedded evidence delimiters could terminate the untrusted block. Bracket
+   markers are now neutralized and a prompt-injection regression test passes.
 
 Final result: **Adversarial phase review: PASS**. No unresolved blocking finding
 remains.

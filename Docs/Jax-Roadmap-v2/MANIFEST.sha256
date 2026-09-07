@@ -58,7 +58,7 @@ fa623c460e57ff976fee3b3cde0d424af1ab671475faae34978cafb1799384d3  05-determinist
 511260653cacfbc744f0923f1214a94ea9edacd2c55a3326f9bbe5b3c879784b  05-deterministic-quant-core/WP-05.09-library-evaluation-numpy-scipy-statsmodels-skfolio-riskfolio-where-justified.md
 a0fba42019daec21dcfd1b99cda0e55fa5686a8a8427409d7d532088ac7f59a5  06-research-recommendation-engine/GATE.md
 8c0ea84c2d8691ed9b22e1c6ec949887819dec258e91861599e3359666fa7b93  06-research-recommendation-engine/LLM-CONTEXT-BUDGET-REQUIREMENTS.md
-994b9f7435dcf89a6a81043a96d86e30d971a0073b3cbc883f5bd4ac758b3af3  06-research-recommendation-engine/PHASE-06-INTERNAL-VERIFICATION.md
+e1fd0a35d121a38675856b66c3b4ac40deb1935680a55316971ceda664459835  06-research-recommendation-engine/PHASE-06-INTERNAL-VERIFICATION.md
 562904aaf86d659cb645cb761721e286cfeee99ca66983d95377ede66c64d70b  06-research-recommendation-engine/README.md
 142cec0a8dcd409f1fa3078ce90b3a2ebd2773e60154fc258b2f175e71ccaf52  06-research-recommendation-engine/REFERENCE-NOTES.md
 1758b55d3d46db9ae6ccf93b018b72ceb59a33ee3f387cb0709ac4eb32ac90dc  06-research-recommendation-engine/WP-06.01-define-evidence-packet-contract.md
@@ -67,7 +67,7 @@ db0da496d6fff1165f047f5cba2263426eaaf7aa7cb5195e1739951507f9b76b  06-research-re
 d2c5cc676199ddad13d60036a968f8c8f6a8fba728cc613f40459c2ba4d70c30  06-research-recommendation-engine/WP-06.04-recommendation-grammar-and-eligibility-rules.md
 33c28befabe79c9400731859310cb55662a71a253b5d4aa5ab7bf65e792f8657  06-research-recommendation-engine/WP-06.05-freshness-evidence-sufficiency-gates.md
 f937ba069b063b340e32701b82427a2748c0a77b0ccfda7058d944507ebcaa93  06-research-recommendation-engine/WP-06.06-confidence-calibration-contract.md
-87c753efda0b662916e2db862bf3b3ec47617a916e6c0ef18f52cdfa0308688a  06-research-recommendation-engine/WP-06.07-ui-api-read-model-for-useful-recommendations.md
+36957d0665cea1fa9cccf9a2c0b70dafcbfc4ca846c86f98dce8168e8db4fdf1  06-research-recommendation-engine/WP-06.07-ui-api-read-model-for-useful-recommendations.md
 fcdc0c69a63e62174cf1bc10eace1124c40b651d2b8522272fcd945a224e7247  07-evaluation-replay-backtesting/GATE.md
 c9cdcd352ee83cccbf6d0aad065725cbf7d4019ea2bc3aaaad59d75fefc8849e  07-evaluation-replay-backtesting/README.md
 cf5c33002fb213e25cc5665d028c144bd885d4e757c6906730b00ec443b84fc4  07-evaluation-replay-backtesting/REFERENCE-NOTES.md
