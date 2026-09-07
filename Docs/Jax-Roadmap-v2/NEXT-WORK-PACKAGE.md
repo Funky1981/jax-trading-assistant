@@ -8,7 +8,7 @@
 - Phase 06 — Research & Recommendation Engine: **COMPLETE / GO**
 - Phase 07 — Evaluation, Replay & Backtesting: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-07.01 — Historical event/research replay engine**
+- Current implementation package: **WP-07.02 — Frozen benchmark registry**
 
 ## Phase-05 autonomous scope
 

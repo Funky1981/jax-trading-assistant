@@ -1,5 +1,21 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-09 - WP-07.01 internal verification
+
+- Date: 2026-09-07
+- Phase: 07 — Evaluation, Replay & Backtesting
+- Work package: WP-07.01 — Historical event/research replay engine
+- Status: Implemented / internally verified; WP-07.02 current
+- Decision authority: autonomous package verification under authorised Phase-07 scope
+
+WP-07.01 adds a versioned frozen historical-case boundary with explicit
+decision-time knowability, exact Phase-06 artifact reconstruction and fail-closed
+future-evidence checks. Focused success and leakage-negative tests pass. No
+fresh inference, current-state lookup, outcome mutation or trading state is
+introduced.
+
+Evidence: `07-evaluation-replay-backtesting/WP-07.01-historical-event-research-replay-engine.md`.
+
 ## RD-2026-09-07-08 - External Phase 06 GO / Phase 07 authorization
 
 - Date: 2026-09-07

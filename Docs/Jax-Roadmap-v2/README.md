@@ -44,7 +44,7 @@ criteria remain binding.
 - Phase 05: `COMPLETE / GO`
 - Phase 06: `COMPLETE / GO`
 - Phase 07: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-07.01 — Historical event/research replay engine`
+- Current package: `WP-07.02 — Frozen benchmark registry`
 
 
 ## 2026-08-10 integrated roadmap change
