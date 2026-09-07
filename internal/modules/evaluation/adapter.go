@@ -90,7 +90,7 @@ func NewBacktestAdapterAssessment(evaluatedAt time.Time, scope string, candidate
 }
 
 func (assessment BacktestAdapterAssessment) Validate() error {
-	if assessment.ContractVersion != BacktestAdapterAssessmentContractV1 || !validIdentity("assessment_", assessment.ID) || assessment.EvaluatedAt.IsZero() || assessment.EvaluatedAt.Location() != time.UTC || strings.TrimSpace(assessment.Scope) == "" || strings.TrimSpace(assessment.SelectedCandidateID) == "" || strings.TrimSpace(assessment.SelectionRationale) == "" || assessment.ExecutionAuthority != "NONE" || assessment.InferenceUsed || len(assessment.Candidates) == 0 || !strictSortedUnique(assessment.CandidateIDs) || !strictSortedUnique(assessment.RejectedAlternatives) {
+	if assessment.ContractVersion != BacktestAdapterAssessmentContractV1 || !validIdentity("assessment_", assessment.ID) || assessment.EvaluatedAt.IsZero() || assessment.EvaluatedAt.Location() != time.UTC || strings.TrimSpace(assessment.Scope) == "" || strings.TrimSpace(assessment.SelectedCandidateID) == "" || strings.TrimSpace(assessment.SelectionRationale) == "" || assessment.ExecutionAuthority != "NONE" || assessment.InferenceUsed || len(assessment.Candidates) == 0 || !strictSortedUnique(assessment.CandidateIDs) || !sortedUniqueOrEmpty(assessment.RejectedAlternatives) {
 		return fmt.Errorf("backtest adapter assessment requires deterministic bounded selection metadata")
 	}
 	if len(assessment.CandidateIDs) != len(assessment.Candidates) {
@@ -122,6 +122,10 @@ func (assessment BacktestAdapterAssessment) Validate() error {
 		return fmt.Errorf("backtest adapter assessment has inconsistent candidate identity or selection")
 	}
 	return nil
+}
+
+func sortedUniqueOrEmpty(values []string) bool {
+	return len(values) == 0 || strictSortedUnique(values)
 }
 
 func sameAdapterStrings(left, right []string) bool {
