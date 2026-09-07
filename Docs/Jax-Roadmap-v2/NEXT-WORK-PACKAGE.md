@@ -7,10 +7,11 @@
 - Phase 05 — Deterministic Quant Core: **COMPLETE / GO**
 - Phase 06 — Research & Recommendation Engine: **COMPLETE / GO**
 - Phase 07 — Evaluation, Replay & Backtesting: **COMPLETE / GO**
-- Phase 08 — Controlled AI Tools & Durable Research Agents: **AUTHORISED / IN PROGRESS**
+- Phase 08 — Controlled AI Tools & Durable Research Agents: **COMPLETE / GO**
+- Phase 09 — Portfolio Intelligence & Deterministic Risk: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **Phase 08 exit demonstrated — external technical-lead review pending**
-- Next package: **None — Phase 09 NOT STARTED**
+- Current implementation package: **WP-09.01 — Canonical portfolio/position/account state**
+- Next package: **WP-09.01 — Canonical portfolio/position/account state**
 
 ## Phase-05 autonomous scope
 

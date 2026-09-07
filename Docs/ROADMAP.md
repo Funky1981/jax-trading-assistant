@@ -23,9 +23,10 @@ decision remains `NO_TRADE`.
 | Phase 05 — Deterministic Quant Core | **COMPLETE / GO** |
 | Phase 06 — Research & Recommendation Engine | **COMPLETE / GO** |
 | Phase 07 — Evaluation, Replay & Backtesting | **COMPLETE / GO** |
-| Phase 08 — Controlled AI Tools & Durable Research Agents | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
-| Current implementation package | **Phase 08 exit demonstrated — external review pending** |
-| Next package | **None — Phase 09 NOT STARTED** |
+| Phase 08 — Controlled AI Tools & Durable Research Agents | **COMPLETE / GO** |
+| Phase 09 — Portfolio Intelligence & Deterministic Risk | **AUTHORISED / IN PROGRESS** |
+| Current implementation package | **WP-09.01 — Canonical portfolio/position/account state** |
+| Next package | **WP-09.01 — Canonical portfolio/position/account state** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -167,15 +168,23 @@ internally verified. External GPT-5.6 Sol accepted the demonstrated exit with
 `EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE`. Canonical status remains:
 `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`.
 
-### Phase 08 — Controlled AI Tools & Durable Research Agents — EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
+### Phase 08 — Controlled AI Tools & Durable Research Agents — COMPLETE / GO
 
 Phase 08 adds bounded read-only research tools, durable checkpointed tasks,
 explicit budgets, adaptive gap finding, critic/reflection, provenance-safe
 memory and evaluation. It must preserve deterministic recommendation, risk and
 execution gates. WP-08.01 through WP-08.08 are implemented and internally
 verified; the exact Phase-08 exit condition is demonstrated by
-`internal/modules/harness/evaluation_test.go`. Do not begin Phase 09 before
-external technical-lead GO.
+`internal/modules/harness/evaluation_test.go`. External GPT-5.6 Sol review
+accepted Phase 08 as COMPLETE / GO. The inability to run Go race detection
+because `gcc` is unavailable remains a NON-BLOCKING ENVIRONMENTAL LIMITATION.
+
+### Phase 09 — Portfolio Intelligence & Deterministic Risk — AUTHORISED / IN PROGRESS
+
+Phase 09 evaluates Phase-06 recommendations against canonical portfolio state
+and explicit deterministic risk policy. It does not grant approval or
+execution authority. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`
+remains the scientific status.
 
 ### Later roadmap — planned capability progression
 

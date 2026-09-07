@@ -1,5 +1,7 @@
 # Phase 09 — Portfolio Intelligence & Deterministic Risk
 
+**Status:** **AUTHORISED / IN PROGRESS — WP-09.01 CURRENT**
+
 ## Purpose
     Evaluate recommendations in the context of the user's actual portfolio and explicit risk policy.
 

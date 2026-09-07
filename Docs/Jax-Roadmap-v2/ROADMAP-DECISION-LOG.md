@@ -1,5 +1,20 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-28 - Phase 08 GO / Phase 09 authorized
+
+- Date: 2026-09-07
+- Phase: 08 -> 09 transition
+- Status: External GPT-5.6 Sol accepted Phase 08 as COMPLETE / GO; Phase 09 AUTHORISED / IN PROGRESS
+- Decision authority: external technical-lead review for Phase 08; autonomous implementation within Phase 09
+
+Phase 08's demonstrated bounded-researcher exit condition and dedicated
+adversarial review were accepted. The race-detection gap caused by unavailable
+`gcc` is retained as a `NON-BLOCKING ENVIRONMENTAL LIMITATION`; race detection
+has not passed and must be rerun when the toolchain supports it. Phase 09 starts
+at WP-09.01. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` is
+preserved; Phase 07/08 acceptance is not a profitability claim. Phase 10 is
+not authorized or started.
+
 ## RD-2026-09-07-27 - Resume budget integrity correction
 
 - Date: 2026-09-07

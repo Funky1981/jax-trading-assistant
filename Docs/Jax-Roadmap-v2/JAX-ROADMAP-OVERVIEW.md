@@ -29,8 +29,12 @@ Research & Recommendation Engine — is **COMPLETE / GO**, accepted by external
 GPT-5.6 Sol. Phase 07 — Evaluation, Replay & Backtesting — is **COMPLETE / GO**,
 accepted by external GPT-5.6 Sol. Its evidence still states
 `EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE`; no trading edge is claimed.
-Phase 08 — Controlled AI Tools & Durable Research Agents — is **authorised / in
-progress**, with the Phase-08 exit demonstrated and external review pending.
+Phase 08 — Controlled AI Tools & Durable Research Agents — is **COMPLETE / GO**,
+accepted by external GPT-5.6 Sol. Go race detection remains a
+`NON-BLOCKING ENVIRONMENTAL LIMITATION` because `gcc` is unavailable. Phase 09
+— Portfolio Intelligence & Deterministic Risk — is **AUTHORISED / IN PROGRESS**.
+The scientific status remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
+SAMPLE`.
 See `Docs/ROADMAP.md`,
 `ROADMAP-DECISION-LOG.md` and `NEXT-WORK-PACKAGE.md`.
 

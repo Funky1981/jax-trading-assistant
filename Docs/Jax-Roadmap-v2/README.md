@@ -44,8 +44,9 @@ criteria remain binding.
 - Phase 05: `COMPLETE / GO`
 - Phase 06: `COMPLETE / GO`
 - Phase 07: `COMPLETE / GO`
-- Phase 08: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-08.04 — Durable research task/checkpoint state`
+- Phase 08: `COMPLETE / GO`
+- Phase 09: `AUTHORISED / IN PROGRESS`
+- Current package: `WP-09.01 — Canonical portfolio/position/account state`
 
 
 ## 2026-08-10 integrated roadmap change
