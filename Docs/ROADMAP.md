@@ -20,9 +20,9 @@ decision remains `NO_TRADE`.
 | Phase 02 — Provider / Data Platform | **COMPLETE / GO**, including durable raw storage closure |
 | Phase 03 — Core Financial Evidence | **COMPLETE / GO** |
 | Phase 04 — World Monitor Intelligence | **COMPLETE / GO** |
-| Phase 05 — Deterministic Quant Core | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-05.09 — Library evaluation** |
-| Next package | **WP-05.09 — Library evaluation** |
+| Phase 05 — Deterministic Quant Core | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
+| Current implementation package | **Phase-05 exit review handover** |
+| Next package | **External Phase-05 technical-lead review** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -126,15 +126,18 @@ continue within the authorised phase. External technical-lead review occurs at
 the phase exit gate or on a hard stop. See
 `Docs/Jax-Roadmap-v2/governance/AUTONOMOUS-DEVELOPMENT-MODE.md`.
 
-### Phase 05 — Deterministic Quant Core — AUTHORISED / IN PROGRESS
+### Phase 05 — Deterministic Quant Core — EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
 
 Phase 05 provides deterministic numerical context for research and risk using
 frozen canonical datasets. It begins with
 `WP-05.01 — Quant service/library boundary and versioned request/response contract`.
-Its exit condition is: given a frozen canonical dataset, every core quant
-result is deterministic, versioned, tested against known values and
-independently reproducible. Phase-05 work must not create recommendations,
-candidates, approvals, orders, trades, fills or live execution authority.
+All nine authorised work packages are implemented and the exit condition is
+demonstrated by the frozen-fixture proof in
+`internal/modules/quant/phase05_exit_test.go`: every core quant result is
+deterministic, versioned, tested against known values and independently
+reproducible. Phase-05 work created no recommendations, candidates, approvals,
+orders, trades, fills or live execution authority. External technical-lead
+review is required before any later phase begins.
 
 ### Later roadmap — planned capability progression
 
