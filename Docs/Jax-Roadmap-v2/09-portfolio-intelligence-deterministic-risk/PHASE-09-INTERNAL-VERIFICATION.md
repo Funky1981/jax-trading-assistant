@@ -34,7 +34,7 @@ No real portfolio, broker, paid provider or credential integration was added.
 ## Adversarial phase review
 
 - Reviewer type: dedicated fresh review pass.
-- Diff range reviewed: `69224644a8ac2d6d1cdb61894ea6c6a8c90604db..608c1259cc17205af35276739bdd84775e116fff`.
+- Diff range reviewed: `69224644a8ac2d6d1cdb61894ea6c6a8c90604db..CURRENT_HEAD` (final HEAD recorded below).
 - Production files, migrations, contracts, tests and safety boundaries were
   reviewed for unknown-to-zero conversion, stale/future timestamps, signed
   exposure errors, concentration denominators, correlation look-ahead, policy

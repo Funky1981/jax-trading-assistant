@@ -42,6 +42,7 @@
 376f0e489fdecd24757b0a4d33ce2b048b2fe97a623f21e5703661ddcd44dd77  13-optional-live-execution/WP-13.06-emergency-kill-disable-paths.md
 3929a9b89edbda3a2dc279c1217602f0afd6936705f2558775404b6c0cb42b91  05-deterministic-quant-core/PHASE-05-INTERNAL-VERIFICATION.md
 3cd651b19b5ff8798f662298d9f8cd0252d7e45ed2a52f9568f9b948a429d5b9  11-high-fidelity-paper-trading/WP-11.06-broker-public-market-reconciliation.md
+3d3f54afe10795a5be2148a568ad281330312085b56f89fe6d378a1096d6a0a6  09-portfolio-intelligence-deterministic-risk/PHASE-09-INTERNAL-VERIFICATION.md
 3dae3d408484d0aea0cbacf01d18b8650be4fade7d4f9af8c0a8c1cc37961514  08-controlled-ai-tools-durable-research-agents/WP-08.05-adaptive-gap-finding-replanning.md
 3eda84f578d0db1805a24033f3b534ae646af4f42316de65f2fb577403ee232a  09-portfolio-intelligence-deterministic-risk/WP-09.06-stress-scenario-analysis.md
 4046762e47cf23939aea8030300cbe4b199ada8e95775033ca6d7d7fb454bd6c  01-canonical-contracts-provenance-audit/WP-01.02-define-canonical-instrument-issuer-event-evidence-observation-researchrun-quantresult-recommendation-contracts.md
@@ -126,7 +127,6 @@ be91250aea6983f559e91ecc8bb2d0fc7926aa95bb5d025b8e8b37faee08f4f5  09-portfolio-i
 c0dae0828526cd54d61a8b7bee8a5213c271cc4933e143d11e5d3ad19569ad29  04-world-monitor-intelligence/README.md
 c34a673c20646b1386f1d0bfea7e27f4830aaa78be71b08309df0af3d8cb73a3  03-core-financial-evidence/GATE.md
 c3c82c8e2b3c6caa1eec6c01af42fdfd52b5b7567141e9ecd32f515d4731151f  03-core-financial-evidence/WP-03.02-sec-edgar-filings-and-xbrl-company-facts.md
-c3e4ec9ba8387871d179d8b215d36b65600f2a3895acf7dacb5be08cba798ccb  09-portfolio-intelligence-deterministic-risk/PHASE-09-INTERNAL-VERIFICATION.md
 c94019f22e4b039a7382914464d8bf11b17d3d949e18ef006b98ca35dce6ab84  01-canonical-contracts-provenance-audit/README.md
 ca379ef82ebd6a862c23e4d6899753e2a26101893193f777a647cc4cdac13534  13-optional-live-execution/WP-13.03-live-only-risk-limits.md
 ca59d8ba75857b52e04f45023bfa2854c2662345450ece0066766a70deb07d1c  04-world-monitor-intelligence/WP-04.06-market-reaction-correlation.md
