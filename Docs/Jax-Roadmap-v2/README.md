@@ -44,7 +44,7 @@ criteria remain binding.
 - Phase 05: `COMPLETE / GO`
 - Phase 06: `COMPLETE / GO`
 - Phase 07: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-07.03 — Model/prompt/algorithm version comparison`
+- Current package: `WP-07.04 — Recommendation outcome tracking`
 
 
 ## 2026-08-10 integrated roadmap change

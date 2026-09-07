@@ -1,5 +1,21 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-11 - WP-07.03 internal verification
+
+- Date: 2026-09-07
+- Phase: 07 — Evaluation, Replay & Backtesting
+- Work package: WP-07.03 — Model/prompt/algorithm version comparison
+- Status: Implemented / internally verified; WP-07.04 current
+- Decision authority: autonomous package verification under authorised Phase-07 scope
+
+WP-07.03 adds controlled same-benchmark comparison artifacts for model, prompt,
+system, algorithm and policy versions. It records every variant tried and
+reported, requires complete case coverage, preserves explicit selection
+criteria and rejects holdout-touch state. Focused tests pass; no inference or
+model escalation was performed.
+
+Evidence: `07-evaluation-replay-backtesting/WP-07.03-model-prompt-algorithm-version-comparison.md`.
+
 ## RD-2026-09-07-10 - WP-07.02 internal verification
 
 - Date: 2026-09-07

@@ -23,8 +23,8 @@ decision remains `NO_TRADE`.
 | Phase 05 — Deterministic Quant Core | **COMPLETE / GO** |
 | Phase 06 — Research & Recommendation Engine | **COMPLETE / GO** |
 | Phase 07 — Evaluation, Replay & Backtesting | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-07.03 — Model/prompt/algorithm version comparison** |
-| Next package | **WP-07.03 — Model/prompt/algorithm version comparison** |
+| Current implementation package | **WP-07.04 — Recommendation outcome tracking** |
+| Next package | **WP-07.04 — Recommendation outcome tracking** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
