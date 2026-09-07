@@ -25,3 +25,16 @@ func TestWorldMonitorPullCursorMigrationDefinesDurablePosition(t *testing.T) {
 		}
 	}
 }
+
+func TestWorldMonitorPullPagesMigrationRetainsExactProviderBytes(t *testing.T) {
+	data, err := os.ReadFile("000056_world_monitor_pull_pages.up.sql")
+	if err != nil {
+		t.Fatalf("read migration: %v", err)
+	}
+	migration := string(data)
+	for _, fragment := range []string{"raw_payload BYTEA", "page_digest TEXT", "after_position BIGINT", "next_position BIGINT", "UNIQUE (consumer_name, source_endpoint_identity, after_position, page_digest)"} {
+		if !strings.Contains(migration, fragment) {
+			t.Fatalf("migration missing %q", fragment)
+		}
+	}
+}

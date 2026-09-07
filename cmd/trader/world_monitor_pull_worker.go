@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +19,7 @@ import (
 	"jax-trading-assistant/internal/modules/assetresolution"
 	"jax-trading-assistant/internal/modules/eventdecisions"
 	"jax-trading-assistant/internal/modules/instruments"
+	worldmonitorintelligence "jax-trading-assistant/internal/modules/worldmonitorintelligence"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -57,6 +60,7 @@ type worldMonitorPullPage struct {
 	Events     []worldMonitorPullEvent `json:"events"`
 	NextCursor string                  `json:"next_cursor"`
 	Count      int                     `json:"count"`
+	RawPayload []byte                  `json:"-"`
 }
 
 type worldMonitorPullWorker struct {
@@ -212,6 +216,18 @@ func (w *worldMonitorPullWorker) cycle(ctx context.Context) (worldMonitorPullRes
 
 	inbox := newWorldMonitorResearchInboxService(w.pool)
 	decisionStore := eventdecisions.NewStore(w.pool)
+	if len(page.RawPayload) == 0 {
+		return result, fmt.Errorf("World Monitor page has no retained provider bytes")
+	}
+	pageDigest := sha256.Sum256(page.RawPayload)
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO world_monitor_pull_pages
+			(consumer_name,source_endpoint_identity,after_position,next_position,event_count,page_digest,raw_payload,provider_schema_version,acquired_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+		ON CONFLICT (consumer_name,source_endpoint_identity,after_position,page_digest) DO NOTHING
+	`, worldMonitorPullConsumer, w.config.Endpoint, position, page.NextCursor, len(page.Events), fmt.Sprintf("%x", pageDigest[:]), page.RawPayload, "world-monitor-events/v1", w.now().UTC()); err != nil {
+		return result, fmt.Errorf("persist World Monitor provider page: %w", err)
+	}
 	for _, item := range page.Events {
 		trigger, err := worldMonitorPullTrigger(item)
 		if err != nil {
@@ -287,7 +303,10 @@ func loadWorldMonitorCursor(ctx context.Context, db worldMonitorCursorDB, endpoi
 }
 
 func (w *worldMonitorPullWorker) fetchPage(ctx context.Context, position int64) (worldMonitorPullPage, error) {
-	requestURL, _ := url.Parse(w.config.Endpoint)
+	requestURL, err := url.Parse(w.config.Endpoint)
+	if err != nil {
+		return worldMonitorPullPage{}, fmt.Errorf("parse World Monitor endpoint: %w", err)
+	}
 	query := requestURL.Query()
 	query.Set("after", strconv.FormatInt(position, 10))
 	query.Set("limit", strconv.Itoa(w.config.PageSize))
@@ -309,14 +328,22 @@ func (w *worldMonitorPullWorker) fetchPage(ctx context.Context, position int64) 
 		return worldMonitorPullPage{}, fmt.Errorf("World Monitor returned HTTP %d: %s", response.StatusCode, strings.TrimSpace(string(body[:min(len(body), 512)])))
 	}
 	var page worldMonitorPullPage
-	decoder := json.NewDecoder(strings.NewReader(string(body)))
+	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&page); err != nil {
 		return worldMonitorPullPage{}, fmt.Errorf("decode World Monitor page: %w", err)
 	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return worldMonitorPullPage{}, fmt.Errorf("decode World Monitor page: trailing JSON value")
+		}
+		return worldMonitorPullPage{}, fmt.Errorf("decode World Monitor page: trailing data: %w", err)
+	}
 	if err := validateWorldMonitorPage(page, position, w.config.PageSize); err != nil {
 		return worldMonitorPullPage{}, err
 	}
+	page.RawPayload = append([]byte(nil), body...)
 	return page, nil
 }
 
@@ -324,17 +351,12 @@ func validateWorldMonitorPage(page worldMonitorPullPage, after int64, pageSize i
 	if page.Count != len(page.Events) || len(page.Events) > pageSize {
 		return fmt.Errorf("invalid World Monitor page count")
 	}
-	previous := after
+	cursorEvents := make([]worldmonitorintelligence.CursorEvent, 0, len(page.Events))
 	for _, event := range page.Events {
-		sequence, err := strconv.ParseInt(event.PersistenceSeq, 10, 64)
-		if err != nil || sequence <= previous || strings.TrimSpace(event.EventID) == "" {
-			return fmt.Errorf("invalid or non-monotonic World Monitor persistence sequence %q", event.PersistenceSeq)
-		}
-		previous = sequence
+		cursorEvents = append(cursorEvents, worldmonitorintelligence.CursorEvent{EventID: event.EventID, PersistenceSeq: event.PersistenceSeq})
 	}
-	next, err := strconv.ParseInt(page.NextCursor, 10, 64)
-	if err != nil || next < after || (len(page.Events) > 0 && next != previous) || (len(page.Events) == 0 && next != after) {
-		return fmt.Errorf("invalid World Monitor next cursor %q", page.NextCursor)
+	if err := worldmonitorintelligence.ValidatePage(cursorEvents, page.NextCursor, after, pageSize); err != nil {
+		return fmt.Errorf("invalid World Monitor page cursor: %w", err)
 	}
 	return nil
 }

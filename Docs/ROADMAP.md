@@ -20,8 +20,8 @@ decision remains `NO_TRADE`.
 | Phase 02 — Provider / Data Platform | **COMPLETE / GO**, including durable raw storage closure |
 | Phase 03 — Core Financial Evidence | **COMPLETE / GO** |
 | Phase 04 — World Monitor Intelligence | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-04.01 — Continuous durable collection and cursor semantics** |
-| Next package | **WP-04.01 — Continuous durable collection and cursor semantics** |
+| Current implementation package | **WP-04.02 — Deduplication/event clustering** |
+| Next package | **WP-04.02 — Deduplication/event clustering** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.

@@ -54,7 +54,7 @@ func TestWorldMonitorFetchPageUsesCursorAndValidatesContract(t *testing.T) {
 	defer server.Close()
 	worker := worldMonitorPullWorker{config: worldMonitorPullConfig{Endpoint: server.URL, PageSize: 2}, httpClient: server.Client()}
 	page, err := worker.fetchPage(context.Background(), 7)
-	if err != nil || len(page.Events) != 1 || page.NextCursor != "8" {
+	if err != nil || len(page.Events) != 1 || page.NextCursor != "8" || len(page.RawPayload) == 0 {
 		t.Fatalf("page = %+v, err=%v", page, err)
 	}
 
@@ -66,6 +66,17 @@ func TestWorldMonitorFetchPageUsesCursorAndValidatesContract(t *testing.T) {
 	worker.httpClient = bad.Client()
 	if _, err := worker.fetchPage(context.Background(), 7); err == nil {
 		t.Fatal("expected non-monotonic page rejection")
+	}
+}
+
+func TestWorldMonitorFetchPageRejectsTrailingJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"events":[],"next_cursor":"0","count":0} {"unexpected":true}`))
+	}))
+	defer server.Close()
+	worker := worldMonitorPullWorker{config: worldMonitorPullConfig{Endpoint: server.URL, PageSize: 10}, httpClient: server.Client()}
+	if _, err := worker.fetchPage(context.Background(), 0); err == nil || !strings.Contains(err.Error(), "trailing") {
+		t.Fatalf("expected trailing JSON rejection, got %v", err)
 	}
 }
 
@@ -249,7 +260,7 @@ func requireWorldMonitorPullSchema(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	for _, table := range []string{"world_monitor_pull_cursors", "world_monitor_research_inbox", "genuine_event_decisions", "evidence_subjects", "evidence_subject_events", "evidence_subject_evaluations"} {
+	for _, table := range []string{"world_monitor_pull_cursors", "world_monitor_pull_pages", "world_monitor_research_inbox", "genuine_event_decisions", "evidence_subjects", "evidence_subject_events", "evidence_subject_evaluations"} {
 		var exists bool
 		if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil {
 			t.Fatalf("check %s: %v", table, err)

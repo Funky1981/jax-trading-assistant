@@ -5,7 +5,7 @@
 - Phase 03 — Core Financial Evidence: **COMPLETE / GO**
 - Phase 04 — World Monitor Intelligence: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current starting package: **WP-04.01 — Continuous durable collection and cursor semantics**
+- Current implementation package: **WP-04.02 — Deduplication/event clustering**
 
 ## Phase-04 autonomous scope
 

@@ -26,11 +26,19 @@ RSS/Atom feeds
   -> world_monitor_events (monotonic BIGSERIAL sequence)
   -> GET /api/v1/jax/events?after=<cursor>&limit=<1..250>
   -> jax-trader pull worker
+  -> exact provider page receipt (world_monitor_pull_pages)
   -> genuine event inbox/raw/normalized records
   -> deterministic NO_TRADE/WATCH/CANDIDATE decision
   -> world_monitor_pull_cursors in the same serializable transaction
   -> Evidence Inbox ordered by Jax received_at DESC
 ```
+
+The page receipt stores the exact successful HTTP entity bytes and their
+SHA-256 digest before JSON decoding. It is append-only and keyed by consumer,
+endpoint identity, starting cursor, and page digest. The decoded/normalized
+event representation is intentionally separate and must not be treated as a
+replacement for provider evidence. A malformed or trailing JSON response is
+rejected before the page can mutate the database.
 
 World Monitor never pushes or acknowledges Jax state. Jax fetches a page before
 opening its database transaction. It then locks and rechecks its durable cursor,
