@@ -40,6 +40,7 @@
 376f0e489fdecd24757b0a4d33ce2b048b2fe97a623f21e5703661ddcd44dd77  13-optional-live-execution/WP-13.06-emergency-kill-disable-paths.md
 3929a9b89edbda3a2dc279c1217602f0afd6936705f2558775404b6c0cb42b91  05-deterministic-quant-core/PHASE-05-INTERNAL-VERIFICATION.md
 3cd651b19b5ff8798f662298d9f8cd0252d7e45ed2a52f9568f9b948a429d5b9  11-high-fidelity-paper-trading/WP-11.06-broker-public-market-reconciliation.md
+3dd12150f86e7da4a98dcc2ca148ee32be3bd8918b1f52589eda6650646b2d87  JAX-ROADMAP-OVERVIEW.md
 4046762e47cf23939aea8030300cbe4b199ada8e95775033ca6d7d7fb454bd6c  01-canonical-contracts-provenance-audit/WP-01.02-define-canonical-instrument-issuer-event-evidence-observation-researchrun-quantresult-recommendation-contracts.md
 41b53ec2c385570cdf03a043c12fe7690af4f998d9cb75dc05deade8e6b714ae  02-data-platform-provider-architecture/WP-02.04-freshness-ttl-last-known-good-semantics.md
 41d121f8ae09ad1a34b5f200cad13604795bd46607d3692cf9ae50205701a312  governance/CODEX-OPERATING-RULES.md
@@ -92,12 +93,11 @@
 80cee52e8f66b72d3d33fb97f788784013104e07c67fa57f5f657f4b4ca18297  04-world-monitor-intelligence/REFERENCE-NOTES.md
 821cabe216403bfca872756adb5271bdaaf674dc9d69b2cb349e970da5d9be91  10-workflow-hitl-operational-safety/WP-10.03-permission-boundaries-for-destructive-tools.md
 88056ed77e660f4db0ee59f287ab70ccd827d93001ff426490a1b0c39aff553a  11-high-fidelity-paper-trading/README.md
+8b11a2b69cb3f09675b39a042e706821b374a4daf6afb3664cf7c66e0654c339  README.md
 8c0ea84c2d8691ed9b22e1c6ec949887819dec258e91861599e3359666fa7b93  06-research-recommendation-engine/LLM-CONTEXT-BUDGET-REQUIREMENTS.md
-8c4e9b12f3ad4a005b0cbe643d8db0fd3b0af59059c5ac67d87b6539c72ae484  NEXT-WORK-PACKAGE.md
 8c894f4615e33b31b8ceb68e910cfcb8e48e2dfc7e2156b0c06669d65e47778f  08-controlled-ai-tools-durable-research-agents/WP-08.02-read-only-tool-permission-tiers.md
 8ed8c512b4c277694239e477c96c3d5337a650e51cc092239b56933311308f5e  PHASE-INDEX.md
 90ec2dbbcda76054f913fcab4562b92ad0645412190ec7362fda642246cb8e08  governance/AUTONOMOUS-DEVELOPMENT-MODE.md
-975ea242155a60563fab67ca6e9cba7ee20b397fdf1ff3d2d021b0739899410d  07-evaluation-replay-backtesting/WP-07.07-walk-forward-out-of-sample-protocol.md
 9846234b4cd4aa1697c8ede4dab05606f2534bd41473aa462a974dfafd89d7de  13-optional-live-execution/WP-13.07-live-observability-runbook.md
 9867d3be3d34d2fd8657160292f22e21270e517fd103e069fa0607622f40ff56  12-advanced-quant-research/README.md
 990b7429f5bc2e8c557cc69e3e69a349aacc0d7fb1222ddba807ba6ccdf78cd9  04-world-monitor-intelligence/GATE.md
@@ -120,6 +120,7 @@ b911e13a99017972d66ed48e8a07e5877075b4c3b85e44375f9b3fe42611253d  governance/LLM
 b9f38d53d72be49392b4ce1bfd35b2898919c9a7e70a58dab86ab64f3bceb5c9  12-advanced-quant-research/WP-12.07-experiment-registry-and-rejection-criteria.md
 bc1c1a123c38806343ee7558f1918a7b3bcd960f1f2117ef7834dc8892869265  07-evaluation-replay-backtesting/WP-07.05-traditional-strategy-backtesting-adapter-evaluation.md
 bc388ea5d7b17e4fee6ca5fbfeb16f073db7a9a3265f5162dbf9ddd05bdf8101  11-high-fidelity-paper-trading/WP-11.07-paper-outcome-attribution.md
+bec5fa706c71babf4e2c747febdbf9ce73274538251115bd2072f7d601cb4f9b  NEXT-WORK-PACKAGE.md
 c0dae0828526cd54d61a8b7bee8a5213c271cc4933e143d11e5d3ad19569ad29  04-world-monitor-intelligence/README.md
 c34a673c20646b1386f1d0bfea7e27f4830aaa78be71b08309df0af3d8cb73a3  03-core-financial-evidence/GATE.md
 c3c82c8e2b3c6caa1eec6c01af42fdfd52b5b7567141e9ecd32f515d4731151f  03-core-financial-evidence/WP-03.02-sec-edgar-filings-and-xbrl-company-facts.md
@@ -133,7 +134,6 @@ cf5c33002fb213e25cc5665d028c144bd885d4e757c6906730b00ec443b84fc4  07-evaluation-
 d04f54d3562853979b0477d72f494c844852e3966990105f2e3a7ff75977d01c  09-portfolio-intelligence-deterministic-risk/WP-09.07-risk-reason-codes-and-audit.md
 d09c43c442b3fffbc7cf18db64efdceac3c3c7b2e5e8d60fd6fbe6977643c014  13-optional-live-execution/WP-13.01-live-broker-adapter-selection.md
 d0f6cf770fe140dfed8820720d713b24b8f1db8dedd519f56bc6aa8c5cb3e7dd  10-workflow-hitl-operational-safety/WP-10.07-operator-health-observability.md
-d2c377c03e25d295bea2a4574fa65aed2a48d7797aaf80901451889f8c9c0be2  ROADMAP-DECISION-LOG.md
 d2c5cc676199ddad13d60036a968f8c8f6a8fba728cc613f40459c2ba4d70c30  06-research-recommendation-engine/WP-06.04-recommendation-grammar-and-eligibility-rules.md
 d2fc939af5d443aba414a73db111f1cac2a1c4a96f335575b2d5d8402c4416c3  08-controlled-ai-tools-durable-research-agents/REFERENCE-NOTES.md
 d419ddc4b935be3188270fce8c6ff3b4f87e9238938fb9f78759396ccd40b322  08-controlled-ai-tools-durable-research-agents/WP-08.05-adaptive-gap-finding-replanning.md
@@ -145,17 +145,17 @@ db0da496d6fff1165f047f5cba2263426eaaf7aa7cb5195e1739951507f9b76b  06-research-re
 db3cdb87205fd925d863eff4504c88e75e64a80ff8423db8a22969c3b8320d19  ROADMAP-CHANGE-2026-08-10-LLM-COST-CONTEXT-EFFICIENCY.md
 dba49ded6cf39a54b1f8943a0bcd36e6e60df765e61350ac8b0f5a1ffffa7483  01-canonical-contracts-provenance-audit/WP-01.03-define-provenance-version-identity-and-immutable-evidence-references.md
 dbfbe142897b87d2139abd0082873805300f23f66b3ec5ee13af7f06b8babd62  06-research-recommendation-engine/README.md
-dc6ff2417f275d74a0d45f5b5abca1165419868e12624871c43b6c21ab7a3492  README.md
 dcd580672af386207f1a8f8e6a7ba9e2cae2d8795765cdbdb70c92036fda0137  12-advanced-quant-research/WP-12.01-qlib-rd-agent-suitability-spike.md
+ddb89d9f434d936e3b2970900f9df1df107071a5905f9bea70413cf6d18bb4ed  ROADMAP-DECISION-LOG.md
 ddc3fcc2688ac5322077f756b8d10b46d870002c9b326f6978246efe491d68ed  03-core-financial-evidence/WP-03.03-fred-alfred-macro-observations-and-vintages.md
 e067f9604f5d9fb4e4464b7edd9bcddd0277a68a54d46891a9e6c02a750a65a7  03-core-financial-evidence/README.md
+e09b761a7daeec15ee918ba437800cf134f409de8aa6693d16b334ed66d1d78b  07-evaluation-replay-backtesting/WP-07.07-walk-forward-out-of-sample-protocol.md
 e3a741dbaf93e45f89f1ad57b26f75bd0a742e7b1b21a060782ca280c831a464  10-workflow-hitl-operational-safety/REFERENCE-NOTES.md
 e572feb20300d9c0faf5d3cd4dc6797c0015f7e0763e98ac0abb3bdbaf742783  05-deterministic-quant-core/LIBRARY-EVALUATION.md
 e8e495b3277642bec8123c6168e55e0ab521b386c9515cc060b87a01d6805a44  governance/CODEX-AUTONOMOUS-MASTER-PROMPT.md
 e97edce1fdae272d9b48e6c2040646a6389ddbf36aa84ae2f2ae8ac3cb811d6c  03-core-financial-evidence/WP-03.05-treasury-eia-cboe-cftc-source-evaluation-and-first-approved-integrations.md
 e998837376ce43682d53e6968a2f5e80d69ba3f0b6b19ea670f0d6f2213cd1f0  references/DATA-SOURCE-STRATEGY.md
 ed8a276f6641c28d6165e7b3b0162a10e57711362addb021c6e68dda3599e67b  08-controlled-ai-tools-durable-research-agents/LLM-COST-CONTEXT-EFFICIENCY-REQUIREMENTS.md
-ee90d11950aa1678300357d5e5aeed9a5056336fc125169024a8f36d5e7f714f  JAX-ROADMAP-OVERVIEW.md
 f1ce60feb02f424faac4cbcfca42ae297d0d398f4304d7a98790d6ddbef5f843  07-evaluation-replay-backtesting/WP-07.06-transaction-cost-slippage-assumptions.md
 f2ef5ffd41dc1612fd9d60898c12ae6bd834d35f708dd701617aa0ce2586f361  governance/CODEX-REVIEW-HANDOVER.md
 f937ba069b063b340e32701b82427a2748c0a77b0ccfda7058d944507ebcaa93  06-research-recommendation-engine/WP-06.06-confidence-calibration-contract.md

@@ -1,5 +1,21 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-15 - WP-07.07 internal verification
+
+- Date: 2026-09-07
+- Phase: 07 — Evaluation, Replay & Backtesting
+- Work package: WP-07.07 — Walk-forward/out-of-sample protocol
+- Status: Implemented / internally verified; WP-07.08 current
+- Decision authority: autonomous package verification under authorised Phase-07 scope
+
+WP-07.07 adds a deterministic walk-forward protocol bound to frozen benchmark
+identities and explicit candidate/cost versions. It requires development,
+validation and out-of-sample windows, decision-time containment, chronological
+separation with purge/embargo, configuration freeze before OOS, and prohibits
+OOS/final-holdout tuning. Focused leakage-negative tests pass.
+
+Evidence: `07-evaluation-replay-backtesting/WP-07.07-walk-forward-out-of-sample-protocol.md`.
+
 ## RD-2026-09-07-14 - WP-07.06 internal verification
 
 - Date: 2026-09-07

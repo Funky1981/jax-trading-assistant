@@ -44,7 +44,7 @@ criteria remain binding.
 - Phase 05: `COMPLETE / GO`
 - Phase 06: `COMPLETE / GO`
 - Phase 07: `AUTHORISED / IN PROGRESS`
-- Current package: `WP-07.07 — Walk-forward/out-of-sample protocol`
+- Current package: `WP-07.08 — Operational replay tooling`
 
 
 ## 2026-08-10 integrated roadmap change

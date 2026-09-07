@@ -8,7 +8,7 @@
 - Phase 06 — Research & Recommendation Engine: **COMPLETE / GO**
 - Phase 07 — Evaluation, Replay & Backtesting: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-07.07 — Walk-forward/out-of-sample protocol**
+- Current implementation package: **WP-07.08 — Operational replay tooling**
 
 ## Phase-05 autonomous scope
 
