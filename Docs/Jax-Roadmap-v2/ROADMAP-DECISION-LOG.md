@@ -1,5 +1,22 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-20 - WP-08.02 internal verification
+
+- Date: 2026-09-07
+- Phase: 08 — Controlled AI Tools & Durable Research Agents
+- Work package: WP-08.02 — Read-only tool permission tiers
+- Status: Implemented / internally verified; WP-08.03 current
+- Decision authority: autonomous package verification under authorised Phase-08 scope
+
+WP-08.02 adds a versioned research permission policy and controlled invocation
+boundary. Only declared read-only evidence/derived/memory tiers are allowed;
+external data is denied by default; execution and arbitrary-system capabilities
+are explicitly forbidden. Outputs require provenance and remain untrusted data,
+including injection-shaped content. Focused permission, safety and injection
+tests pass.
+
+Evidence: `08-controlled-ai-tools-durable-research-agents/WP-08.02-read-only-tool-permission-tiers.md`.
+
 ## RD-2026-09-07-19 - WP-08.01 internal verification
 
 - Date: 2026-09-07

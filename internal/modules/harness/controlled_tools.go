@@ -100,13 +100,36 @@ type ControlledToolSpec struct {
 	Timeout             time.Duration         `json:"timeout"`
 	CostClass           string                `json:"cost_class"`
 	Provider            string                `json:"provider"`
+	ExternalData        bool                  `json:"external_data"`
 	ProvenanceBehaviour string                `json:"provenance_behaviour"`
 	Deterministic       bool                  `json:"deterministic"`
 	ReadOnly            bool                  `json:"read_only"`
 	Handler             ControlledToolHandler `json:"-"`
 }
 
-type ControlledToolHandler func(context.Context, json.RawMessage) (json.RawMessage, error)
+type ControlledToolHandler func(context.Context, json.RawMessage) (ControlledToolOutput, error)
+
+type ControlledToolOutput struct {
+	Payload     json.RawMessage `json:"payload"`
+	EvidenceIDs []string        `json:"evidence_ids"`
+	Source      string          `json:"source"`
+	ObservedAt  time.Time       `json:"observed_at"`
+}
+
+func (output ControlledToolOutput) Validate(spec ControlledToolSpec) error {
+	if len(output.Payload) == 0 || len(output.Payload) > 1024*1024 || !json.Valid(output.Payload) || strings.TrimSpace(output.Source) == "" || output.ObservedAt.IsZero() || output.ObservedAt.Location() != time.UTC || len(output.EvidenceIDs) == 0 || !schemaStringList(output.EvidenceIDs) {
+		return fmt.Errorf("controlled tool output requires bounded JSON, source, UTC observation and sorted evidence IDs")
+	}
+	for _, evidenceID := range output.EvidenceIDs {
+		if !validArgumentIdentifier(evidenceID) {
+			return fmt.Errorf("controlled tool output has invalid evidence ID")
+		}
+	}
+	if strings.TrimSpace(spec.OutputContract) == "" {
+		return fmt.Errorf("controlled tool output has no declared contract")
+	}
+	return nil
+}
 
 func (spec ControlledToolSpec) Validate() error {
 	if !validControlledToolID(spec.ID) || strings.TrimSpace(spec.Version) == "" || strings.TrimSpace(spec.Description) == "" || strings.TrimSpace(spec.OutputContract) == "" || spec.Timeout <= 0 || spec.Timeout > 5*time.Minute || strings.TrimSpace(spec.Provider) == "" || spec.ProvenanceBehaviour != ToolProvenanceRequired || !spec.ReadOnly || spec.Handler == nil {
@@ -198,6 +221,50 @@ func (registry *ControlledToolRegistry) All() []ControlledToolSpec {
 		result = append(result, registry.tools[id])
 	}
 	return result
+}
+
+const ControlledToolResultContractV1 = "jax.controlled_tool_result/v1"
+
+type ControlledToolResult struct {
+	ContractVersion    string          `json:"contract_version"`
+	ToolID             string          `json:"tool_id"`
+	ToolVersion        string          `json:"tool_version"`
+	RunID              string          `json:"run_id"`
+	StepID             string          `json:"step_id"`
+	PermissionTier     string          `json:"permission_tier"`
+	OutputContract     string          `json:"output_contract"`
+	Payload            json.RawMessage `json:"payload"`
+	EvidenceIDs        []string        `json:"evidence_ids"`
+	Source             string          `json:"source"`
+	ObservedAt         time.Time       `json:"observed_at"`
+	Untrusted          bool            `json:"untrusted"`
+	ExecutionAuthority string          `json:"execution_authority"`
+}
+
+func (registry *ControlledToolRegistry) Invoke(ctx context.Context, policy ResearchPermissionPolicy, request ControlledToolRequest) (ControlledToolResult, error) {
+	spec, err := request.Validate(registry)
+	if err != nil {
+		return ControlledToolResult{}, err
+	}
+	if err := policy.Allows(spec); err != nil {
+		return ControlledToolResult{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return ControlledToolResult{}, err
+	}
+	toolCtx, cancel := context.WithTimeout(ctx, spec.Timeout)
+	defer cancel()
+	output, err := spec.Handler(toolCtx, request.Args)
+	if err != nil {
+		if toolCtx.Err() != nil {
+			return ControlledToolResult{}, fmt.Errorf("controlled tool %s failed or timed out: %w", spec.ID, toolCtx.Err())
+		}
+		return ControlledToolResult{}, fmt.Errorf("controlled tool %s failed: %w", spec.ID, err)
+	}
+	if err := output.Validate(spec); err != nil {
+		return ControlledToolResult{}, err
+	}
+	return ControlledToolResult{ContractVersion: ControlledToolResultContractV1, ToolID: spec.ID, ToolVersion: spec.Version, RunID: request.RunID, StepID: request.StepID, PermissionTier: spec.PermissionTier, OutputContract: spec.OutputContract, Payload: append(json.RawMessage(nil), output.Payload...), EvidenceIDs: append([]string(nil), output.EvidenceIDs...), Source: output.Source, ObservedAt: output.ObservedAt, Untrusted: true, ExecutionAuthority: "NONE"}, nil
 }
 
 func validateJSONArguments(schema JSONSchema, raw json.RawMessage) error {
