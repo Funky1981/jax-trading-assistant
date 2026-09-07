@@ -39,6 +39,27 @@ func TestDerivedAnalyticsIdentityCannotBeTampered(t *testing.T) {
 	}
 }
 
+func TestDerivedAnalyticsCannotBeReboundToSameSnapshot(t *testing.T) {
+	snapshot := fixtureSnapshot()
+	analytics, err := CalculateExposure(snapshot, stateNow, 10*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	analytics.Lines = nil
+	analytics.AnalyticsID = exposureIdentity(analytics)
+	if analytics.Validate() != nil {
+		t.Fatal("test analytics should be internally content-valid")
+	}
+	policy, err := BuildRiskPolicy(fixturePolicy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := EvaluateRecommendation(recommendation(5000), snapshot, analytics, policy, stateNow, 10*time.Minute)
+	if result.Outcome == DecisionAccept {
+		t.Fatal("fabricated analytics was accepted")
+	}
+}
+
 func TestExposureFailsClosedForUnknownAndStaleState(t *testing.T) {
 	tests := []struct {
 		name   string

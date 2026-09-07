@@ -65,8 +65,12 @@ func CalculatePositionProposal(input PositionProposalInput, snapshot PortfolioSn
 	if input.RiskAllocation == nil || !finiteLimit(input.RiskAllocation) || *input.RiskAllocation <= 0 || *input.RiskAllocation > 1 {
 		return PositionProposal{}, fmt.Errorf("proposal requires explicit risk allocation in (0,1]")
 	}
-	if analytics.SnapshotID != canonical.SnapshotID || analytics.Equity <= 0 {
+	if analytics.SnapshotID != canonical.SnapshotID || analytics.Validate() != nil || analytics.Equity <= 0 {
 		return PositionProposal{}, fmt.Errorf("proposal analytics identity or equity is unknown")
+	}
+	derivedAnalytics, analyticsErr := CalculateExposure(canonical, analytics.EvaluatedAt, time.Duration(analytics.FreshnessWindowSeconds)*time.Second)
+	if analyticsErr != nil || derivedAnalytics.AnalyticsID != analytics.AnalyticsID {
+		return PositionProposal{}, fmt.Errorf("proposal analytics is not reproducibly derived from portfolio snapshot")
 	}
 	if freshness := canonical.AssessFreshness(evaluatedAt, maxAge); freshness.Status != FreshnessFresh {
 		return PositionProposal{}, fmt.Errorf("proposal cannot use %s portfolio: %s", freshness.Status, freshness.Reason)

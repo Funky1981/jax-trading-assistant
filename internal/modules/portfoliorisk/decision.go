@@ -114,6 +114,10 @@ func EvaluateRecommendation(recommendation RecommendationRiskInput, snapshot Por
 	if analytics.SnapshotID != canonical.SnapshotID || analytics.Validate() != nil {
 		return finishDecision(result, ReasonRejectUnknownExposure, "analytics identity does not match portfolio snapshot")
 	}
+	derivedAnalytics, analyticsErr := CalculateExposure(canonical, analytics.EvaluatedAt, time.Duration(analytics.FreshnessWindowSeconds)*time.Second)
+	if analyticsErr != nil || derivedAnalytics.AnalyticsID != analytics.AnalyticsID {
+		return finishDecision(result, ReasonRejectUnknownExposure, "analytics content is not reproducibly derived from portfolio snapshot")
+	}
 	if analytics.Equity <= 0 || !finite(analytics.GrossExposure) || !finite(analytics.NetExposure) {
 		return finishDecision(result, ReasonRejectUnknownExposure, "analytics denominator or exposure is unknown")
 	}

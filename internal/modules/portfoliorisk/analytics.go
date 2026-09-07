@@ -25,24 +25,25 @@ type ExposureLine struct {
 }
 
 type ExposureAnalytics struct {
-	AnalyticsID      string         `json:"analytics_id"`
-	Algorithm        string         `json:"algorithm"`
-	SnapshotID       string         `json:"snapshot_id"`
-	EvaluatedAt      time.Time      `json:"evaluated_at"`
-	ValuationBasis   string         `json:"valuation_basis"`
-	Equity           float64        `json:"equity"`
-	CashAllocation   float64        `json:"cash_allocation"`
-	GrossExposure    float64        `json:"gross_exposure"`
-	NetExposure      float64        `json:"net_exposure"`
-	LongExposure     float64        `json:"long_exposure"`
-	ShortExposure    float64        `json:"short_exposure"`
-	MaxConcentration float64        `json:"max_concentration"`
-	Lines            []ExposureLine `json:"lines"`
-	InputProvenance  []string       `json:"input_provenance"`
+	AnalyticsID            string         `json:"analytics_id"`
+	Algorithm              string         `json:"algorithm"`
+	SnapshotID             string         `json:"snapshot_id"`
+	EvaluatedAt            time.Time      `json:"evaluated_at"`
+	FreshnessWindowSeconds int64          `json:"freshness_window_seconds"`
+	ValuationBasis         string         `json:"valuation_basis"`
+	Equity                 float64        `json:"equity"`
+	CashAllocation         float64        `json:"cash_allocation"`
+	GrossExposure          float64        `json:"gross_exposure"`
+	NetExposure            float64        `json:"net_exposure"`
+	LongExposure           float64        `json:"long_exposure"`
+	ShortExposure          float64        `json:"short_exposure"`
+	MaxConcentration       float64        `json:"max_concentration"`
+	Lines                  []ExposureLine `json:"lines"`
+	InputProvenance        []string       `json:"input_provenance"`
 }
 
 func (a ExposureAnalytics) Validate() error {
-	if a.Algorithm != ExposureAlgorithmV1 || a.SnapshotID == "" || a.AnalyticsID == "" || a.EvaluatedAt.IsZero() || a.EvaluatedAt.Location() != time.UTC || !finitePositive(a.Equity) || !finite(a.GrossExposure) || !finite(a.NetExposure) || !finite(a.LongExposure) || !finite(a.ShortExposure) || !finite(a.CashAllocation) {
+	if a.Algorithm != ExposureAlgorithmV1 || a.SnapshotID == "" || a.AnalyticsID == "" || a.EvaluatedAt.IsZero() || a.EvaluatedAt.Location() != time.UTC || a.FreshnessWindowSeconds <= 0 || !finitePositive(a.Equity) || !finite(a.GrossExposure) || !finite(a.NetExposure) || !finite(a.LongExposure) || !finite(a.ShortExposure) || !finite(a.CashAllocation) {
 		return fmt.Errorf("invalid exposure analytics")
 	}
 	if a.AnalyticsID != exposureIdentity(a) {
@@ -96,7 +97,7 @@ func CalculateExposure(snapshot PortfolioSnapshot, evaluatedAt time.Time, maxAge
 		lines = append(lines, line)
 	}
 	sort.Slice(lines, func(i, j int) bool { return lines[i].InstrumentID < lines[j].InstrumentID })
-	result := ExposureAnalytics{Algorithm: ExposureAlgorithmV1, SnapshotID: canonical.SnapshotID, EvaluatedAt: evaluatedAt.UTC(), ValuationBasis: canonical.ValuationBasis, Equity: canonical.Equity.Value, Lines: lines, InputProvenance: append([]string(nil), canonical.Provenance...)}
+	result := ExposureAnalytics{Algorithm: ExposureAlgorithmV1, SnapshotID: canonical.SnapshotID, EvaluatedAt: evaluatedAt.UTC(), FreshnessWindowSeconds: int64(maxAge / time.Second), ValuationBasis: canonical.ValuationBasis, Equity: canonical.Equity.Value, Lines: lines, InputProvenance: append([]string(nil), canonical.Provenance...)}
 	for _, line := range lines {
 		result.GrossExposure += line.AbsoluteValue
 		result.NetExposure += line.MarketValue

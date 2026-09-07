@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 const StressAlgorithmV1 = "jax.portfolio.stress_scenario/v1"
@@ -71,6 +72,10 @@ func CalculateStress(snapshot PortfolioSnapshot, analytics ExposureAnalytics, sc
 	}
 	if analytics.SnapshotID != canonical.SnapshotID || analytics.Validate() != nil || analytics.Equity != canonical.Equity.Value || !canonical.Equity.Known || canonical.Equity.Value <= 0 {
 		return StressResult{}, fmt.Errorf("stress requires matching known portfolio analytics")
+	}
+	derivedAnalytics, analyticsErr := CalculateExposure(canonical, analytics.EvaluatedAt, time.Duration(analytics.FreshnessWindowSeconds)*time.Second)
+	if analyticsErr != nil || derivedAnalytics.AnalyticsID != analytics.AnalyticsID {
+		return StressResult{}, fmt.Errorf("stress analytics is not reproducibly derived from portfolio snapshot")
 	}
 	byInstrument := make(map[string]float64, len(analytics.Lines))
 	for _, line := range analytics.Lines {
