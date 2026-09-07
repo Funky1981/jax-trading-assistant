@@ -4,9 +4,10 @@
 
 - Phase 03 — Core Financial Evidence: **COMPLETE / GO**
 - Phase 04 — World Monitor Intelligence: **COMPLETE / GO**
-- Phase 05 — Deterministic Quant Core: **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
+- Phase 05 — Deterministic Quant Core: **COMPLETE / GO**
+- Phase 06 — Research & Recommendation Engine: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **Phase-05 exit review handover**
+- Current implementation package: **WP-06.01 — Define evidence packet contract**
 
 ## Phase-05 autonomous scope
 

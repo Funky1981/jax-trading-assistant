@@ -1,5 +1,7 @@
 # Phase 06 — Research & Recommendation Engine
 
+**Status:** **AUTHORISED / IN PROGRESS — WP-06.01 CURRENT**
+
 ## Purpose
     Combine evidence, quantitative context and controlled AI reasoning into explainable recommendations without execution authority.
 

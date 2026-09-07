@@ -1,5 +1,22 @@
 # Roadmap Decision Log
 
+## RD-2026-09-07-05 - Phase 05 GO / Phase 06 authorization
+
+- Date: 2026-09-07
+- Phase: 05 — Deterministic Quant Core; 06 — Research & Recommendation Engine
+- Status: Phase 05 accepted COMPLETE / GO; Phase 06 authorized / in progress
+- Decision authority: explicit external GPT-5.6 Sol technical-lead decision supplied by the user
+
+External GPT-5.6 Sol accepted the Phase-05 handover, deterministic exit proof,
+full verification, and adversarial phase review with `GO PHASE 05`. Phase 05 is
+recorded COMPLETE / GO. The same decision authorizes the sequential Phase-06
+work-package scope beginning at `WP-06.01 — Define evidence packet contract`.
+Phase 06 remains research-only and must not create approvals, orders, trades,
+fills, or live execution authority.
+
+Evidence: `05-deterministic-quant-core/PHASE-05-INTERNAL-VERIFICATION.md` and
+the supplied external Phase-05 review decision.
+
 ## RD-2026-09-07-01 - Zero-cost market evidence closure
 
 - Date: 2026-09-07

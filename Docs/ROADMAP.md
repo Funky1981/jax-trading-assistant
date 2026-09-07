@@ -20,9 +20,10 @@ decision remains `NO_TRADE`.
 | Phase 02 — Provider / Data Platform | **COMPLETE / GO**, including durable raw storage closure |
 | Phase 03 — Core Financial Evidence | **COMPLETE / GO** |
 | Phase 04 — World Monitor Intelligence | **COMPLETE / GO** |
-| Phase 05 — Deterministic Quant Core | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
-| Current implementation package | **Phase-05 exit review handover** |
-| Next package | **External Phase-05 technical-lead review** |
+| Phase 05 — Deterministic Quant Core | **COMPLETE / GO** |
+| Phase 06 — Research & Recommendation Engine | **AUTHORISED / IN PROGRESS** |
+| Current implementation package | **WP-06.01 — Define evidence packet contract** |
+| Next package | **WP-06.01 — Define evidence packet contract** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -126,7 +127,7 @@ continue within the authorised phase. External technical-lead review occurs at
 the phase exit gate or on a hard stop. See
 `Docs/Jax-Roadmap-v2/governance/AUTONOMOUS-DEVELOPMENT-MODE.md`.
 
-### Phase 05 — Deterministic Quant Core — EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
+### Phase 05 — Deterministic Quant Core — COMPLETE / GO
 
 Phase 05 provides deterministic numerical context for research and risk using
 frozen canonical datasets. It begins with
@@ -135,10 +136,20 @@ All nine authorised work packages are implemented and the exit condition is
 demonstrated by the frozen-fixture proof in
 `internal/modules/quant/phase05_exit_test.go`: every core quant result is
 deterministic, versioned, tested against known values and independently
-reproducible. Phase-05 work created no recommendations, candidates, approvals,
+reproducible. External GPT-5.6 Sol accepted the Phase-05 handover and returned
+`GO PHASE 05`; Phase 05 is therefore COMPLETE / GO. Phase-05 work created no recommendations, candidates, approvals,
 orders, trades, fills or live execution authority. External technical-lead
-review is required before any later phase begins. The full internal record is
+review accepted the demonstrated exit. The full internal record is
 `Docs/Jax-Roadmap-v2/05-deterministic-quant-core/PHASE-05-INTERNAL-VERIFICATION.md`.
+
+### Phase 06 — Research & Recommendation Engine — AUTHORISED / IN PROGRESS
+
+Phase 06 combines accepted evidence and deterministic quant context with
+bounded, provenance-preserving research reasoning. Its outputs remain
+research-only `WATCH`, `NO_TRADE`, or `CANDIDATE` classifications with no
+approval, order, trade, fill, or live execution authority. The first package is
+`WP-06.01 — Define evidence packet contract`; Phase 06 must demonstrate its
+own exit condition and receive external technical-lead GO before Phase 07.
 
 ### Later roadmap — planned capability progression
 

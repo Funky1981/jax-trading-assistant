@@ -41,8 +41,9 @@ criteria remain binding.
 
 - Phases 00–03: `COMPLETE / GO`
 - Phase 04: `COMPLETE / GO`
-- Phase 05: `EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`
-- Current package: `Phase-05 exit review handover`
+- Phase 05: `COMPLETE / GO`
+- Phase 06: `AUTHORISED / IN PROGRESS`
+- Current package: `WP-06.01 — Define evidence packet contract`
 
 
 ## 2026-08-10 integrated roadmap change
