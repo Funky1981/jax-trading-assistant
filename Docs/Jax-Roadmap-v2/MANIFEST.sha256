@@ -30,6 +30,7 @@
 2d6723bca89f3643e8923e24b67bdc1b6789c64555d47d8967e910fd393dd7d2  05-deterministic-quant-core/WP-05.07-position-sizing-primitives.md
 2dcd50914a26f86988f3a9627bd859bc8bd65a7cbffac4993229663abc7dbebb  09-portfolio-intelligence-deterministic-risk/README.md
 2f41cb6ff269c03ae7ebc2832f201ce8217bcabb218814a9d6aa719209bd7e54  04-world-monitor-intelligence/WP-04.04-source-triangulation-and-confidence.md
+307e8fecb7567823d0da8599d712cdce4ec1f53bef3da6dbf1c5c5e9cdc9f774  10-workflow-hitl-operational-safety/PHASE-10-INTERNAL-VERIFICATION.md
 318a2284e63614c695f4ae84c42e71248d67f22dc42a355aa371c35e5377c10b  references/DECISION-LOG-TEMPLATE.md
 31b02aa21ad65b466e7b8d7ffa231ea5d5ebee4cf06ac629aff0f45b3844e995  11-high-fidelity-paper-trading/WP-11.02-paper-venue-order-matcher.md
 32b48326521e809b910cc33fe670cc97dc648234e28b5210b433c0ae48053487  13-optional-live-execution/README.md
@@ -151,7 +152,6 @@ dbfbe142897b87d2139abd0082873805300f23f66b3ec5ee13af7f06b8babd62  06-research-re
 dc820bf397d3b56fcaecd50b70d8a3ebd4753635918368b6391d362245e671f9  10-workflow-hitl-operational-safety/WP-10.05-IMPLEMENTATION-EVIDENCE.md
 dcd580672af386207f1a8f8e6a7ba9e2cae2d8795765cdbdb70c92036fda0137  12-advanced-quant-research/WP-12.01-qlib-rd-agent-suitability-spike.md
 ddc3fcc2688ac5322077f756b8d10b46d870002c9b326f6978246efe491d68ed  03-core-financial-evidence/WP-03.03-fred-alfred-macro-observations-and-vintages.md
-df9d94e26cf5d1f7558ec5baaf0fce9a3db7a8bd85bf4cb5255e92b939f1da40  10-workflow-hitl-operational-safety/PHASE-10-INTERNAL-VERIFICATION.md
 e01e96baf77a7cdb9daadec0284181a657688182e06a2798573c1621695a5fe4  08-controlled-ai-tools-durable-research-agents/WP-08.06-critic-reflection-stage.md
 e067f9604f5d9fb4e4464b7edd9bcddd0277a68a54d46891a9e6c02a750a65a7  03-core-financial-evidence/README.md
 e09b761a7daeec15ee918ba437800cf134f409de8aa6693d16b334ed66d1d78b  07-evaluation-replay-backtesting/WP-07.07-walk-forward-out-of-sample-protocol.md

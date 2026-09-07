@@ -20,8 +20,8 @@ effect. Phase 11 has not started.
 - Phase-10 starting head after migration remediation: `b4ae0bbfad85adf3d0f8ae03e767512395472b95`.
 - Package commits: `2e5288a` (WP-10.01), `e1121e5` (WP-10.02/10.03/10.04 persistence),
   `9b3cf39` (WP-10.05), `5000069` (WP-10.06), `fcad20d` (WP-10.07 and exit
-  harness), `dfc9178` (adversarial integrity hardening), plus the final bounded
-  evidence/status commit recorded at handover.
+  harness), `dfc9178` (adversarial integrity hardening), and `978b15c` (final
+  evidence/status and concurrency verification).
 - Branch: `capability-reset`.
 - Scientific status: `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`.
 
