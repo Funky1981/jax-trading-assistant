@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -81,7 +82,7 @@ func CreatePaperOrder(request CreateOrderRequest) (PaperOrder, error) {
 	if request.Workflow.Confirmation.ConfirmationID == "" || request.Workflow.Confirmation.BrokerExecutionAllowed || request.Workflow.Confirmation.LiveTradingAllowed {
 		return PaperOrder{}, ErrLiveExecutionDisabled
 	}
-	if request.InstrumentID == "" || request.InstrumentID != request.PaperIntent.InstrumentID || request.InstrumentID != request.Workflow.Confirmation.InstrumentID || (request.PaperIntent.Direction != "LONG" && request.PaperIntent.Direction != "SHORT") || !finitePositive(request.Quantity) || !finitePositive(request.ReferencePrice) || request.Quantity*request.ReferencePrice > request.PaperIntent.DescriptiveValue {
+	if request.InstrumentID == "" || request.InstrumentID != request.PaperIntent.InstrumentID || request.InstrumentID != request.Workflow.Confirmation.InstrumentID || request.PaperIntent.RecommendationID != request.Workflow.RecommendationID || request.PaperIntent.RiskDecisionID != request.Workflow.RiskDecisionID || request.PaperIntent.Direction != request.Workflow.Confirmation.Direction || (request.PaperIntent.Direction != "LONG" && request.PaperIntent.Direction != "SHORT") || !finitePositive(request.Quantity) || !finitePositive(request.ReferencePrice) || request.Quantity*request.ReferencePrice > request.PaperIntent.DescriptiveValue {
 		return PaperOrder{}, ErrInvalidArtifact
 	}
 	if request.Quantity < request.Venue.MinimumQuantity || (!request.Venue.SupportsFractionalQty && request.Quantity != float64(int64(request.Quantity))) {
@@ -105,7 +106,7 @@ func CreatePaperOrder(request CreateOrderRequest) (PaperOrder, error) {
 }
 
 func (order PaperOrder) Validate() error {
-	if order.ContractVersion != OrderContractVersion || order.Environment != EnvironmentPaper || order.VenueID == "" || order.PaperIntentID == "" || order.WorkflowID == "" || order.RecommendationID == "" || order.RiskDecisionID == "" || order.ConfirmationID == "" || order.InstrumentID == "" || (order.Direction != "LONG" && order.Direction != "SHORT") || !finitePositive(order.Quantity) || !finiteNonNegative(order.RemainingQuantity) || !finiteNonNegative(order.FilledQuantity) || order.FilledQuantity+order.RemainingQuantity != order.Quantity || order.OrderType.Validate() != nil || order.CreatedAt.IsZero() || order.ActivatesAt.IsZero() || order.CreatedAt.Location() != time.UTC || order.ActivatesAt.Location() != time.UTC || order.ActivatesAt.Before(order.CreatedAt) || order.CostModelID == "" {
+	if order.ContractVersion != OrderContractVersion || order.Environment != EnvironmentPaper || order.VenueID == "" || order.PaperIntentID == "" || order.WorkflowID == "" || order.RecommendationID == "" || order.RiskDecisionID == "" || order.ConfirmationID == "" || order.InstrumentID == "" || (order.Direction != "LONG" && order.Direction != "SHORT") || !finitePositive(order.Quantity) || !finiteNonNegative(order.RemainingQuantity) || !finiteNonNegative(order.FilledQuantity) || math.Abs(order.FilledQuantity+order.RemainingQuantity-order.Quantity) > quantityTolerance || order.OrderType.Validate() != nil || order.CreatedAt.IsZero() || order.ActivatesAt.IsZero() || order.CreatedAt.Location() != time.UTC || order.ActivatesAt.Location() != time.UTC || order.ActivatesAt.Before(order.CreatedAt) || order.CostModelID == "" {
 		return ErrInvalidArtifact
 	}
 	if order.Status == OrderNew && order.FilledQuantity != 0 || order.Status == OrderFilled && order.RemainingQuantity != 0 || order.Status == OrderPartiallyFilled && (order.FilledQuantity == 0 || order.RemainingQuantity == 0) {

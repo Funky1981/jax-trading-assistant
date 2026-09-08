@@ -57,6 +57,22 @@ func TestPaperLedgerRejectsCapitalShortAndUnknownPriceViolations(t *testing.T) {
 	}
 }
 
+func TestRestorePaperLedgerRejectsStateThatDoesNotMatchEvents(t *testing.T) {
+	now := time.Date(2026, 9, 8, 10, 0, 0, 0, time.UTC)
+	ledger, err := NewPaperLedger("paper-account", "USD", 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ledger.ApplyFill(testFill("restore", "LONG", 1, 100, 0, now)); err != nil {
+		t.Fatal(err)
+	}
+	tampered := ledger.Snapshot()
+	tampered.Cash = 1
+	if _, err := RestorePaperLedger(tampered); err == nil {
+		t.Fatal("tampered ledger restored")
+	}
+}
+
 func testFill(id, direction string, quantity, price, fee float64, at time.Time) PaperFill {
 	fill := PaperFill{ContractVersion: FillContractVersion, FillID: id, OrderID: "order-" + id, PaperIntentID: "intent-" + id, WorkflowID: "workflow-" + id, InstrumentID: "AAPL", Direction: direction, Quantity: quantity, Price: price, FilledAt: at, TickID: "tick-" + id, Costs: CostBreakdown{ModelID: "cost-v1", Commission: fee, ExecutedPrice: price}}
 	fill.FillID = fillIdentity(fill)

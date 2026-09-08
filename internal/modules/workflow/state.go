@@ -150,6 +150,9 @@ func (workflow Workflow) Validate() error {
 	if err := workflow.Binding().Validate(); err != nil {
 		return err
 	}
+	if workflow.WorkflowID != workflowIdentity(workflow.Binding()) {
+		return fmt.Errorf("workflow identity does not match binding")
+	}
 	if !validState(workflow.State) || workflow.Revision == 0 {
 		return fmt.Errorf("workflow state or revision is invalid")
 	}

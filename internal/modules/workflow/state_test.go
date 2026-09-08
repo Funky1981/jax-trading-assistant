@@ -34,6 +34,19 @@ func TestStateMachineBindsRiskAndRejectsInvalidJumps(t *testing.T) {
 	}
 }
 
+func TestWorkflowRejectsBindingIdentitySubstitution(t *testing.T) {
+	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	store := NewStore()
+	workflow, err := store.Create(context.Background(), CreateRequest{RiskDecision: acceptedRiskDecision(t, now), Now: now, IdempotencyKey: "identity-check"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	workflow.RecommendationID = "substituted-recommendation"
+	if err := workflow.Validate(); err == nil {
+		t.Fatal("workflow accepted substituted binding")
+	}
+}
+
 func TestStateMachineAuditIsAtomicAndRetriesAreIdempotent(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)

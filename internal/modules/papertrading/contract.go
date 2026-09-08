@@ -25,6 +25,7 @@ const (
 	SoakProtocolVersion       = "jax.paper.soak/v1"
 	ExecutionAuthorityNone    = "NONE"
 	ExecutionStatusNotLive    = "PAPER_ONLY"
+	quantityTolerance         = 1e-9
 )
 
 var (

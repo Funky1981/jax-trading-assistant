@@ -114,6 +114,32 @@ func TestPaperVenueConsumesLiquidityAndSupportsCancellation(t *testing.T) {
 	}
 }
 
+func TestPaperVenueRestoresFractionalStateWithoutDuplicateTick(t *testing.T) {
+	now := time.Date(2026, 9, 8, 10, 0, 0, 0, time.UTC)
+	wf, intent := approvedPaperArtifacts(t, now)
+	contract, costs := DefaultPaperCapabilityContract(), DefaultCostModel()
+	venue, err := NewPaperVenue(contract, costs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	order, err := venue.Submit(CreateOrderRequest{Workflow: wf, PaperIntent: intent, Venue: contract, CostModel: costs, InstrumentID: "AAPL", Quantity: .3, ReferencePrice: 100, OrderType: OrderMarket, CreatedAt: now, IdempotencyKey: "fractional"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tick := MarketTick{TickID: "fractional-tick", InstrumentID: "AAPL", Bid: 99, Ask: 101, Last: 100, AvailableQuantity: .3, Timestamp: now.Add(2 * time.Second), ReceivedAt: now.Add(2 * time.Second), Session: SessionOpen, Source: "fixture"}
+	fills, err := venue.ProcessTick(tick)
+	if err != nil || len(fills) != 1 || venue.Snapshot().Orders[order.OrderID].Status != OrderFilled {
+		t.Fatalf("fractional fill = %#v, %v", fills, err)
+	}
+	restarted, err := RestorePaperVenue(venue.Snapshot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fills, err := restarted.ProcessTick(tick); err != nil || len(fills) != 0 {
+		t.Fatalf("restored duplicate fill = %#v, %v", fills, err)
+	}
+}
+
 func approvedPaperArtifacts(t *testing.T, now time.Time) (workflow.Workflow, workflow.PaperIntent) {
 	t.Helper()
 	store := workflow.NewStore()

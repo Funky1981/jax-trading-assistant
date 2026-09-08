@@ -80,6 +80,44 @@ func RestorePaperLedger(account PaperAccount) (*PaperLedger, error) {
 		previous = event.OccurredAt
 		ledger.applied[event.FillID] = event
 	}
+	replayed := PaperAccount{AccountID: account.AccountID, ContractVersion: LedgerContractVersion, Environment: EnvironmentPaper, Currency: account.Currency, InitialCash: account.InitialCash, Cash: account.InitialCash, Equity: account.InitialCash, Positions: map[string]LedgerPosition{}, Events: []LedgerEvent{}}
+	for _, event := range account.Events {
+		position := replayed.Positions[event.InstrumentID]
+		notional := event.Price * event.Quantity
+		var cashDelta, realized float64
+		if event.Direction == "LONG" {
+			cashDelta = -(notional + event.Fee)
+			if replayed.Cash+cashDelta < 0 {
+				return nil, ErrInvalidArtifact
+			}
+			newQuantity := position.Quantity + event.Quantity
+			position = LedgerPosition{InstrumentID: event.InstrumentID, Quantity: newQuantity, AverageCost: (position.Quantity*position.AverageCost + notional) / newQuantity}
+			replayed.Positions[event.InstrumentID] = position
+		} else {
+			if position.Quantity < event.Quantity {
+				return nil, ErrInvalidArtifact
+			}
+			cashDelta = notional - event.Fee
+			realized = (event.Price - position.AverageCost) * event.Quantity
+			position.Quantity -= event.Quantity
+			if position.Quantity == 0 {
+				delete(replayed.Positions, event.InstrumentID)
+			} else {
+				replayed.Positions[event.InstrumentID] = position
+			}
+		}
+		if math.Abs(cashDelta-event.CashDelta) > quantityTolerance || math.Abs(realized-event.RealizedPnL) > quantityTolerance {
+			return nil, ErrInvalidArtifact
+		}
+		replayed.Cash += cashDelta
+		replayed.RealizedPnL += realized
+		replayed.Fees += event.Fee
+		replayed.Equity = replayed.Cash + positionValue(replayed.Positions)
+		replayed.Events = append(replayed.Events, event)
+	}
+	if !accountsMatch(replayed, account) {
+		return nil, ErrInvalidArtifact
+	}
 	ledger.account = cloneAccount(account)
 	return ledger, nil
 }

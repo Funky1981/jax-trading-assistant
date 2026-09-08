@@ -67,6 +67,9 @@ func Reconcile(input ReconciliationInput, checkedAt time.Time) ReconciliationRes
 			add(ReasonInvalidMarketData, err.Error())
 		}
 	}
+	if checkedAt.IsZero() || checkedAt.Location() != time.UTC {
+		add(ReasonInvalidMarketData, "reconciliation timestamp must be UTC")
+	}
 	fillByOrder := map[string]float64{}
 	seenFills := map[string]bool{}
 	for fillID, fill := range input.VenueSnapshot.Fills {
@@ -80,6 +83,11 @@ func Reconcile(input ReconciliationInput, checkedAt time.Time) ReconciliationRes
 		seenFills[fill.FillID] = true
 		if _, ok := input.VenueSnapshot.Orders[fill.OrderID]; !ok {
 			add(ReasonMissingOrder, "fill references a missing order")
+		} else {
+			order := input.VenueSnapshot.Orders[fill.OrderID]
+			if fill.PaperIntentID != order.PaperIntentID || fill.WorkflowID != order.WorkflowID || fill.InstrumentID != order.InstrumentID || fill.Direction != order.Direction {
+				add(ReasonWorkflowMismatch, "fill provenance does not match its order")
+			}
 		}
 		fillByOrder[fill.OrderID] += fill.Quantity
 	}

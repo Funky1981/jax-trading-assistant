@@ -49,6 +49,18 @@ func TestReconcileRequiresRecoveryForCorruptState(t *testing.T) {
 	if !containsReason(result.ReasonCodes, ReasonInvalidMarketData) {
 		t.Fatalf("stale market reconciliation = %#v", result)
 	}
+	snapshot := venue.Snapshot()
+	for id, fill := range snapshot.Fills {
+		fill.WorkflowID = "wrong-workflow"
+		fill.FillID = fillIdentity(fill)
+		delete(snapshot.Fills, id)
+		snapshot.Fills[fill.FillID] = fill
+		break
+	}
+	result = Reconcile(ReconciliationInput{VenueSnapshot: snapshot, Account: ledger.Snapshot()}, now)
+	if !containsReason(result.ReasonCodes, ReasonWorkflowMismatch) {
+		t.Fatalf("provenance mismatch not retained: %#v", result)
+	}
 }
 
 func containsReason(reasons []ReasonCode, wanted ReasonCode) bool {

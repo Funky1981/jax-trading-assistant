@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -91,6 +92,15 @@ func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
 			return nil, ErrInvalidArtifact
 		}
 		venue.fills[id] = fill
+	}
+	filledByOrder := make(map[string]float64)
+	for _, fill := range snapshot.Fills {
+		filledByOrder[fill.OrderID] += fill.Quantity
+	}
+	for id, order := range snapshot.Orders {
+		if filledByOrder[id] > order.Quantity || math.Abs(filledByOrder[id]-order.FilledQuantity) > quantityTolerance {
+			return nil, ErrInvalidArtifact
+		}
 	}
 	for key, fingerprint := range snapshot.ProcessedTicks {
 		if key == "" || fingerprint == "" {
@@ -200,6 +210,9 @@ func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped b
 		}
 		order.FilledQuantity += quantity
 		order.RemainingQuantity -= quantity
+		if order.RemainingQuantity <= quantityTolerance {
+			order.RemainingQuantity = 0
+		}
 		if order.RemainingQuantity == 0 {
 			order.Status = OrderFilled
 		} else {
