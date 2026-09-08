@@ -12,8 +12,8 @@
 - Phase 10 — Workflow, HITL & Operational Safety: **COMPLETE / CONDITIONAL GO**
 - Phase 11 — High-Fidelity Paper Trading: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-11.02 — Paper venue/order matcher**
-- Next package: **WP-11.02 — Paper venue/order matcher**
+- Current implementation package: **WP-11.03 — Fees/spread/slippage/latency model**
+- Next package: **WP-11.03 — Fees/spread/slippage/latency model**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
