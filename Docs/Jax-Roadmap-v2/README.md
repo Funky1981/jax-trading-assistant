@@ -47,9 +47,10 @@ criteria remain binding.
 - Phase 08: `COMPLETE / GO`
 - Phase 09: `COMPLETE / GO`
 - Phase 10: `COMPLETE / CONDITIONAL GO`
-- Phase 11: `EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`
-- Current package: `Phase 11 exit demonstrated — external review pending`
-- Phase 12: `NOT STARTED`
+- Phase 11: `COMPLETE / CONDITIONAL GO`
+- Current package: `Phase 12 prerequisite gate — NOT READY`
+- Phase 12: `NOT AUTHORISED / PREREQUISITES NOT SATISFIED`
+- Phase 13: `NOT STARTED`
 
 
 ## 2026-08-10 integrated roadmap change

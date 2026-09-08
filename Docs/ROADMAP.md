@@ -26,9 +26,9 @@ decision remains `NO_TRADE`.
 | Phase 08 — Controlled AI Tools & Durable Research Agents | **COMPLETE / GO** |
 | Phase 09 — Portfolio Intelligence & Deterministic Risk | **COMPLETE / GO** |
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / CONDITIONAL GO** |
-| Phase 11 — High-Fidelity Paper Trading | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
-| Current implementation package | **Phase 11 exit demonstrated — external review pending** |
-| Next package | **None — stop for external Phase-11 review; Phase 12 NOT STARTED** |
+| Phase 11 — High-Fidelity Paper Trading | **COMPLETE / CONDITIONAL GO** |
+| Current implementation package | **Phase 12 prerequisite gate — NOT READY** |
+| Next package | **None — Phase 12 not authorised; prerequisites outstanding** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -194,9 +194,11 @@ migrations to `000059` and `000060`, and added complete-stream registry
 validation. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains the
 scientific status. The approved migration-number collision remediation is
 recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
-`EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`; Phase 11 is not started.
+`COMPLETE / CONDITIONAL GO`; Phase 11 is `COMPLETE / CONDITIONAL GO` with race
+verification outstanding. Phase 12 is not authorised because its prerequisites
+are not satisfied.
 
-### Phase 11 — High-Fidelity Paper Trading — EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
+### Phase 11 — High-Fidelity Paper Trading — COMPLETE / CONDITIONAL GO
 
 Phase 11 provides an isolated deterministic paper venue, versioned execution
 costs, partial-fill and session semantics, event-derived paper ledger,
@@ -205,8 +207,20 @@ capability gate is demonstrated by
 `internal/modules/papertrading/phase11_exit_test.go` using accelerated frozen
 fixtures. This is not real elapsed forward-paper evidence and does not prove
 trading edge. Phase 10 remains **COMPLETE / CONDITIONAL GO** with
-`RACE DETECTOR VERIFICATION REQUIRED BEFORE GO PHASE 11`; race detection is
-still unavailable in the current environment. Phase 12 is not started.
+`RACE DETECTOR NOT VERIFIED — ENVIRONMENTAL LIMITATION`; race detection is
+still unavailable in the current environment. Actual forward-paper evidence
+remains 0 days / 0 orders. Phase 12 prerequisites are not satisfied and Phase
+12 is not authorised.
+
+### Phase 12 — Advanced Quant Research — NOT READY
+
+Phase-07 GO is satisfied, but the remaining Phase-12 prerequisites are not:
+the available historical data is **INSUFFICIENT** for leakage-safe advanced
+quantitative research, and no already-authorised explicit falsifiable Phase-12
+hypothesis was found. Only WP-12 templates/examples and test fixtures exist;
+they are not authorization. No paid data has been purchased and WP-12.01 has
+not started. See `Docs/Jax-Roadmap-v2/12-advanced-quant-research/PHASE-12-
+PREREQUISITE-REVIEW.md`.
 
 ### Later roadmap — planned capability progression
 
@@ -309,8 +323,8 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 11 exit demonstrated / external review pending**
-after external `CONDITIONAL GO PHASE 10`. Phase 10 is complete/conditional GO;
-its race-detector condition remains open because the current environment lacks
-cgo/gcc. Phase 11 remains paper-only and must not enable live execution.
-Phase 12 is not started.
+The current position is **Phase 12 prerequisite gate — NOT READY** after
+external `CONDITIONAL GO PHASE 11`. Phase 10 remains complete/conditional GO
+with its race-detector condition open because the current environment lacks
+cgo/gcc. Phase 11 remains paper-only; actual forward-paper evidence is 0 days
+/ 0 orders. Phase 12 is not authorised and has not started.

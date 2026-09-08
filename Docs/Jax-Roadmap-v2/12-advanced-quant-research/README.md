@@ -1,5 +1,7 @@
 # Phase 12 — Advanced Quant Research
 
+**Status:** **NOT READY — PREREQUISITES NOT SATISFIED**
+
 ## Purpose
     Add factor, ML and automated hypothesis capabilities only where conventional analysis has a validated research need.
 

@@ -10,10 +10,10 @@
 - Phase 08 — Controlled AI Tools & Durable Research Agents: **COMPLETE / GO**
 - Phase 09 — Portfolio Intelligence & Deterministic Risk: **COMPLETE / GO**
 - Phase 10 — Workflow, HITL & Operational Safety: **COMPLETE / CONDITIONAL GO**
-- Phase 11 — High-Fidelity Paper Trading: **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
+- Phase 11 — High-Fidelity Paper Trading: **COMPLETE / CONDITIONAL GO**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **Phase 11 exit demonstrated — external review pending**
-- Next package: **None — stop for external Phase-11 review; Phase 12 NOT STARTED**
+- Current implementation package: **Phase 12 prerequisite gate — NOT READY**
+- Next package: **None — Phase 12 not authorised; prerequisites outstanding**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
@@ -25,9 +25,14 @@ Scientific status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE*
 Phase 10 exit condition is accepted as demonstrated by external review. Its
 condition remains **RACE DETECTOR VERIFICATION REQUIRED BEFORE GO PHASE 11**;
 the current environment lacks cgo/gcc. Phase 11 implementation is authorised
-and has demonstrated its capability gate. Race verification must be attempted
-again before its handover. The proof uses accelerated synthetic fixtures;
-actual elapsed forward-paper evidence is zero.
+and has demonstrated its capability gate. The tracked race condition remains
+open because the environment lacks cgo/gcc. The proof uses accelerated
+synthetic fixtures; actual elapsed forward-paper evidence is zero days and the
+actual forward-paper order sample is zero.
+
+Phase 12 prerequisite review: historical data is **INSUFFICIENT** and no
+already-authorised explicit falsifiable research hypothesis was found. Phase
+12 is **NOT AUTHORISED / NOT READY**; WP-12.01 must not begin.
 
 ## Phase-05 autonomous scope
 

@@ -1,5 +1,35 @@
 # Roadmap Decision Log
 
+## RD-2026-09-08-04 - Phase 12 prerequisite review — not ready
+
+- Date: 2026-09-08
+- Phase: 12 — Advanced Quant Research
+- Status: `NOT READY / NOT AUTHORISED`
+- Decision authority: autonomous prerequisite verification; no Phase-12 start
+
+Phase 11 is recorded as `COMPLETE / CONDITIONAL GO` under the external
+technical-lead decision. The inherited race-detector condition remains open:
+`RACE DETECTOR NOT VERIFIED — ENVIRONMENTAL LIMITATION`. Actual forward-paper
+evidence remains 0 days / 0 orders, and `TRADING EDGE NOT DEMONSTRATED /
+INSUFFICIENT SAMPLE` is unchanged.
+
+Phase-07 GO is satisfied. Prerequisite A is `INSUFFICIENT`: the repository's
+available dataset catalog contains only four narrow OHLCV fixtures — AAPL
+daily 22 rows, AAPL minute 2,729 rows, SPY daily 120 rows and SPY minute 500
+rows. The repository does not demonstrate the breadth, history, point-in-time
+fundamental/macro coverage, corporate-action treatment, delisted universe,
+survivorship controls, licensing record or train/validation/OOS coverage
+needed for advanced research. The SPY historical fixtures are sourced from an
+`ib-bridge-paper` development path.
+
+Prerequisite B is `NO AUTHORISED EXPLICIT HYPOTHESIS`. The search found the
+generic hypothesis template, documentation examples such as `hyp_swing_001`,
+and golden test fixtures such as `hyp_commodity_dislocation`; none is a
+Phase-12 authorization or an accepted decision promoting a falsifiable
+advanced-quant hypothesis. No hypothesis was invented or promoted. WP-12.01
+and all later Phase-12 packages remain unstarted. No paid data or dependency
+is authorized or required by this review. Phase 13 is NOT STARTED.
+
 ## RD-2026-09-08-03 - Phase 11 exit demonstrated / external review pending
 
 - Date: 2026-09-08
