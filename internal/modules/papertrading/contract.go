@@ -44,6 +44,7 @@ var (
 	ErrReconciliationRequired = errors.New("paper reconciliation is required")
 	ErrOrderNotFound          = errors.New("paper order not found")
 	ErrInvalidOrderTransition = errors.New("paper order transition is invalid")
+	ErrPaperExecutionBlocked  = errors.New("paper execution is blocked by safety state")
 )
 
 type Environment string

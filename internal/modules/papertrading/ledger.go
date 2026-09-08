@@ -67,6 +67,23 @@ func NewPaperLedger(accountID, currency string, initialCash float64) (*PaperLedg
 	return &PaperLedger{account: PaperAccount{AccountID: accountID, ContractVersion: LedgerContractVersion, Environment: EnvironmentPaper, Currency: currency, InitialCash: initialCash, Cash: initialCash, Equity: initialCash, Positions: map[string]LedgerPosition{}, Events: []LedgerEvent{}}, applied: map[string]LedgerEvent{}}, nil
 }
 
+func RestorePaperLedger(account PaperAccount) (*PaperLedger, error) {
+	ledger, err := NewPaperLedger(account.AccountID, account.Currency, account.InitialCash)
+	if err != nil || account.ContractVersion != LedgerContractVersion || account.Environment != EnvironmentPaper || !finiteNonNegative(account.Cash) || !finite(account.Equity) || !finite(account.RealizedPnL) || !finiteNonNegative(account.Fees) || account.Positions == nil {
+		return nil, ErrInvalidArtifact
+	}
+	previous := time.Time{}
+	for _, event := range account.Events {
+		if err := event.Validate(); err != nil || (!previous.IsZero() && event.OccurredAt.Before(previous)) {
+			return nil, ErrInvalidArtifact
+		}
+		previous = event.OccurredAt
+		ledger.applied[event.FillID] = event
+	}
+	ledger.account = cloneAccount(account)
+	return ledger, nil
+}
+
 func (ledger *PaperLedger) ApplyFill(fill PaperFill) (PaperAccount, error) {
 	if err := fill.Validate(); err != nil {
 		return PaperAccount{}, err

@@ -40,7 +40,6 @@
 33c28befabe79c9400731859310cb55662a71a253b5d4aa5ab7bf65e792f8657  06-research-recommendation-engine/WP-06.05-freshness-evidence-sufficiency-gates.md
 340a43487055acf1ca592d3b00852c68b72cea4825da2e18a4b80eeaeea2ddac  references/RESEARCH-NOTES.md
 36957d0665cea1fa9cccf9a2c0b70dafcbfc4ca846c86f98dce8168e8db4fdf1  06-research-recommendation-engine/WP-06.07-ui-api-read-model-for-useful-recommendations.md
-369f813533794ed503e9a15e06d80a246a62acc9e781fd0704533269f610013b  NEXT-WORK-PACKAGE.md
 36a04ec99e9bde26143cc5e0896d62ff14a53e7bd1f92412162ced64a2f456b0  02-data-platform-provider-architecture/README.md
 373482b1072f6e5f13d3cad94c5730b97e26bf022edcafd48dd55016bc9fd06b  10-workflow-hitl-operational-safety/GATE.md
 376f0e489fdecd24757b0a4d33ce2b048b2fe97a623f21e5703661ddcd44dd77  13-optional-live-execution/WP-13.06-emergency-kill-disable-paths.md
@@ -166,6 +165,7 @@ e3a741dbaf93e45f89f1ad57b26f75bd0a742e7b1b21a060782ca280c831a464  10-workflow-hi
 e3f8f647de22a915ecb9be749b52b33b3d45f1eec1d017ca6dc4ad62c75fad1d  09-portfolio-intelligence-deterministic-risk/PHASE-09-INTERNAL-VERIFICATION.md
 e4e352eabf32afdd232b6b351411f0657683b7c1949b4a694ca4534131f56914  11-high-fidelity-paper-trading/WP-11.07-IMPLEMENTATION-EVIDENCE.md
 e572feb20300d9c0faf5d3cd4dc6797c0015f7e0763e98ac0abb3bdbaf742783  05-deterministic-quant-core/LIBRARY-EVALUATION.md
+e61eca610927b837dd251f29a1a358abc275a48e37ba847a401d7b4e7120191e  NEXT-WORK-PACKAGE.md
 e8e495b3277642bec8123c6168e55e0ab521b386c9515cc060b87a01d6805a44  governance/CODEX-AUTONOMOUS-MASTER-PROMPT.md
 e97edce1fdae272d9b48e6c2040646a6389ddbf36aa84ae2f2ae8ac3cb811d6c  03-core-financial-evidence/WP-03.05-treasury-eia-cboe-cftc-source-evaluation-and-first-approved-integrations.md
 e998837376ce43682d53e6968a2f5e80d69ba3f0b6b19ea670f0d6f2213cd1f0  references/DATA-SOURCE-STRATEGY.md
@@ -180,6 +180,7 @@ faeb43a98ba654f1b7e38f70e8fa0f32bd2d7fd532bcf5d82341f58eb461458d  references/EXT
 fb475ff9ac6a88f10f924ea688d636d512f1bf92a8f48e76158e636f5c4935e7  13-optional-live-execution/WP-13.02-credential-session-security.md
 fb58d49f0b89fceadfafe7b15f97c34bffea3f649aa470e67a5603ae34f06a6f  references/SOURCE-INDEX.md
 fb5c68f10c21512c09b18f7692be887ff2eafc740e279a03019e8699e4fb2102  04-world-monitor-intelligence/WP-04.05-velocity-baseline-deviation-signals.md
+fb8c5bbd2e3bdd375d7d77992bda957e30ebd0b6d3b244d365b7a6af533e0257  11-high-fidelity-paper-trading/WP-11.08-IMPLEMENTATION-EVIDENCE.md
 fcdc0c69a63e62174cf1bc10eace1124c40b651d2b8522272fcd945a224e7247  07-evaluation-replay-backtesting/GATE.md
 ffd5d2d07d574dd1421c893f4532f53669e507c926c2e60467fe5dd1e6c6d776  04-world-monitor-intelligence/WP-04.03-entity-issuer-geography-extraction.md
 ffd73a5a1cbf680f205a77b16945a2d785a668c9e41ad42ffabea8d0da198027  00-current-issuer-asset-resolution/WP-00.02-run-frozen-v4-issuer-benchmark.md

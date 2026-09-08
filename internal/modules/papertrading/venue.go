@@ -33,10 +33,13 @@ func (fill PaperFill) Validate() error {
 }
 
 type VenueSnapshot struct {
-	Contract  CapabilityContract    `json:"contract"`
-	CostModel CostModel             `json:"cost_model"`
-	Orders    map[string]PaperOrder `json:"orders"`
-	Fills     map[string]PaperFill  `json:"fills"`
+	Contract       CapabilityContract    `json:"contract"`
+	CostModel      CostModel             `json:"cost_model"`
+	Orders         map[string]PaperOrder `json:"orders"`
+	Fills          map[string]PaperFill  `json:"fills"`
+	ProcessedTicks map[string]string     `json:"processed_ticks"`
+	CommandKeys    map[string]string     `json:"command_keys"`
+	LastTick       time.Time             `json:"last_tick"`
 }
 
 type PaperVenue struct {
@@ -59,6 +62,53 @@ func NewPaperVenue(contract CapabilityContract, costModel CostModel) (*PaperVenu
 		return nil, err
 	}
 	return &PaperVenue{contract: contract, costModel: costModel, orders: map[string]PaperOrder{}, fills: map[string]PaperFill{}, intentOrders: map[string]string{}, processedTicks: map[string]string{}, commandKeys: map[string]string{}}, nil
+}
+
+func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
+	venue, err := NewPaperVenue(snapshot.Contract, snapshot.CostModel)
+	if err != nil {
+		return nil, err
+	}
+	if snapshot.Orders == nil || snapshot.Fills == nil || snapshot.ProcessedTicks == nil || snapshot.CommandKeys == nil {
+		return nil, ErrInvalidArtifact
+	}
+	for id, order := range snapshot.Orders {
+		if id != order.OrderID || order.Validate() != nil {
+			return nil, ErrInvalidArtifact
+		}
+		if prior, exists := venue.intentOrders[order.PaperIntentID]; exists && prior != id {
+			return nil, ErrIdempotencyConflict
+		}
+		venue.orders[id] = order
+		venue.intentOrders[order.PaperIntentID] = id
+	}
+	for id, fill := range snapshot.Fills {
+		if id != fill.FillID || fill.Validate() != nil {
+			return nil, ErrInvalidArtifact
+		}
+		order, exists := venue.orders[fill.OrderID]
+		if !exists || fill.Quantity > order.Quantity {
+			return nil, ErrInvalidArtifact
+		}
+		venue.fills[id] = fill
+	}
+	for key, fingerprint := range snapshot.ProcessedTicks {
+		if key == "" || fingerprint == "" {
+			return nil, ErrInvalidArtifact
+		}
+		venue.processedTicks[key] = fingerprint
+	}
+	for key, fingerprint := range snapshot.CommandKeys {
+		if key == "" || fingerprint == "" {
+			return nil, ErrInvalidArtifact
+		}
+		venue.commandKeys[key] = fingerprint
+	}
+	if !snapshot.LastTick.IsZero() && snapshot.LastTick.Location() != time.UTC {
+		return nil, ErrInvalidArtifact
+	}
+	venue.lastTick = snapshot.LastTick
+	return venue, nil
 }
 
 func (venue *PaperVenue) Submit(request CreateOrderRequest) (PaperOrder, error) {
@@ -86,6 +136,13 @@ func (venue *PaperVenue) Submit(request CreateOrderRequest) (PaperOrder, error) 
 }
 
 func (venue *PaperVenue) ProcessTick(tick MarketTick) ([]PaperFill, error) {
+	return venue.ProcessTickWithSafety(tick, false)
+}
+
+func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped bool) ([]PaperFill, error) {
+	if breakerTripped {
+		return nil, ErrPaperExecutionBlocked
+	}
 	if err := tick.Validate(venue.contract.MaxQuoteAge); err != nil {
 		return nil, err
 	}
@@ -228,7 +285,15 @@ func (venue *PaperVenue) Snapshot() VenueSnapshot {
 	for id, fill := range venue.fills {
 		fills[id] = fill
 	}
-	return VenueSnapshot{Contract: venue.contract, CostModel: venue.costModel, Orders: orders, Fills: fills}
+	processed := make(map[string]string, len(venue.processedTicks))
+	for key, value := range venue.processedTicks {
+		processed[key] = value
+	}
+	commands := make(map[string]string, len(venue.commandKeys))
+	for key, value := range venue.commandKeys {
+		commands[key] = value
+	}
+	return VenueSnapshot{Contract: venue.contract, CostModel: venue.costModel, Orders: orders, Fills: fills, ProcessedTicks: processed, CommandKeys: commands, LastTick: venue.lastTick}
 }
 
 func fillIdentity(fill PaperFill) string {
