@@ -34,6 +34,7 @@
 2f41cb6ff269c03ae7ebc2832f201ce8217bcabb218814a9d6aa719209bd7e54  04-world-monitor-intelligence/WP-04.04-source-triangulation-and-confidence.md
 307e8fecb7567823d0da8599d712cdce4ec1f53bef3da6dbf1c5c5e9cdc9f774  10-workflow-hitl-operational-safety/PHASE-10-INTERNAL-VERIFICATION.md
 318a2284e63614c695f4ae84c42e71248d67f22dc42a355aa371c35e5377c10b  references/DECISION-LOG-TEMPLATE.md
+319944d64c06e7da45f3bb6ed3ef2894dfd4db5b9094e812923f3341e162bb99  NEXT-WORK-PACKAGE.md
 31b02aa21ad65b466e7b8d7ffa231ea5d5ebee4cf06ac629aff0f45b3844e995  11-high-fidelity-paper-trading/WP-11.02-paper-venue-order-matcher.md
 32b48326521e809b910cc33fe670cc97dc648234e28b5210b433c0ae48053487  13-optional-live-execution/README.md
 3339bdb4be2511787b00f77bd01adcc10b357f6f24a0c16988436e0247b6a155  00-current-issuer-asset-resolution/WP-00.01-fix-benchmark-manifest-execution-gate.md
@@ -100,6 +101,7 @@
 7e79c6aba1541b38aec0eb87b21b846cfa048de6a8ecf01698a03754ed0ea159  09-portfolio-intelligence-deterministic-risk/WP-09.02-exposure-concentration-correlation-analytics.md
 80cee52e8f66b72d3d33fb97f788784013104e07c67fa57f5f657f4b4ca18297  04-world-monitor-intelligence/REFERENCE-NOTES.md
 821cabe216403bfca872756adb5271bdaaf674dc9d69b2cb349e970da5d9be91  10-workflow-hitl-operational-safety/WP-10.03-permission-boundaries-for-destructive-tools.md
+826e06794254e4f2be2e9f5abb8426af81406b57c247bb1afd4d8cd0d75ee689  11-high-fidelity-paper-trading/WP-11.06-IMPLEMENTATION-EVIDENCE.md
 88056ed77e660f4db0ee59f287ab70ccd827d93001ff426490a1b0c39aff553a  11-high-fidelity-paper-trading/README.md
 8bd7de0c4e809279bfb1af56361859f483014aba0e92d328ad3963360e10a46e  09-portfolio-intelligence-deterministic-risk/WP-09.01-canonical-portfolio-position-account-state.md
 8c0ea84c2d8691ed9b22e1c6ec949887819dec258e91861599e3359666fa7b93  06-research-recommendation-engine/LLM-CONTEXT-BUDGET-REQUIREMENTS.md
@@ -128,7 +130,6 @@ b59fa56396d40331b88b72b33c121e2b2d4282df9dc7e6b9c7dee73b0c8d1e07  05-determinist
 b5dc590fc8e796e628c37e9d05f486d8ff6361754f8a51846765c5dc941518a1  07-evaluation-replay-backtesting/README.md
 b6f19ce9ff0c1060c5a359321661d7deb499b3857ed41ecab7a32f6c598b5364  07-evaluation-replay-backtesting/WP-07.01-historical-event-research-replay-engine.md
 b911e13a99017972d66ed48e8a07e5877075b4c3b85e44375f9b3fe42611253d  governance/LLM-COST-BUDGET-GATE.md
-b916ea17f2282523fa13116d553169ed018f5dbab2765a1581308ff1733b4d92  NEXT-WORK-PACKAGE.md
 b9f38d53d72be49392b4ce1bfd35b2898919c9a7e70a58dab86ab64f3bceb5c9  12-advanced-quant-research/WP-12.07-experiment-registry-and-rejection-criteria.md
 bc1c1a123c38806343ee7558f1918a7b3bcd960f1f2117ef7834dc8892869265  07-evaluation-replay-backtesting/WP-07.05-traditional-strategy-backtesting-adapter-evaluation.md
 bc388ea5d7b17e4fee6ca5fbfeb16f073db7a9a3265f5162dbf9ddd05bdf8101  11-high-fidelity-paper-trading/WP-11.07-paper-outcome-attribution.md
