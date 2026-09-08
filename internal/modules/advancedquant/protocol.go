@@ -256,7 +256,7 @@ func (r *FrozenOOSRun) Freeze(config ExperimentConfig) error {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.Frozen {
+	if r.frozen {
 		return fmt.Errorf("OOS configuration is already frozen")
 	}
 	r.config = cloneExperimentConfig(config)
