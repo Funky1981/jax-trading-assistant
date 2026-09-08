@@ -1,8 +1,8 @@
 # Phase 12 Internal Verification — Advanced Quant Research
 
-**Status:** COMPLETE / INTERNALLY VERIFIED — RESEARCH ONLY  
-**Hypothesis:** `HYP-EVENT-001A`  
-**Dataset:** `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-v1`  
+**Status:** COMPLETE / INTERNALLY VERIFIED — RESEARCH ONLY
+**Hypothesis:** `HYP-EVENT-001A`
+**Dataset:** `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-v1`
 **Dataset manifest:** `db2b454793e50f28c34c9c2a7d91f798741936528752de7bd27cb52072a4864d`
 
 ## Package commits
