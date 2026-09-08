@@ -42,6 +42,8 @@ var (
 	ErrInsufficientCapital    = errors.New("paper account has insufficient capital")
 	ErrOverfill               = errors.New("paper fill exceeds remaining quantity")
 	ErrReconciliationRequired = errors.New("paper reconciliation is required")
+	ErrOrderNotFound          = errors.New("paper order not found")
+	ErrInvalidOrderTransition = errors.New("paper order transition is invalid")
 )
 
 type Environment string

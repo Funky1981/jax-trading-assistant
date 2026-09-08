@@ -47,6 +47,7 @@ type PaperVenue struct {
 	fills          map[string]PaperFill
 	intentOrders   map[string]string
 	processedTicks map[string]string
+	commandKeys    map[string]string
 	lastTick       time.Time
 }
 
@@ -57,7 +58,7 @@ func NewPaperVenue(contract CapabilityContract, costModel CostModel) (*PaperVenu
 	if err := costModel.Validate(); err != nil {
 		return nil, err
 	}
-	return &PaperVenue{contract: contract, costModel: costModel, orders: map[string]PaperOrder{}, fills: map[string]PaperFill{}, intentOrders: map[string]string{}, processedTicks: map[string]string{}}, nil
+	return &PaperVenue{contract: contract, costModel: costModel, orders: map[string]PaperOrder{}, fills: map[string]PaperFill{}, intentOrders: map[string]string{}, processedTicks: map[string]string{}, commandKeys: map[string]string{}}, nil
 }
 
 func (venue *PaperVenue) Submit(request CreateOrderRequest) (PaperOrder, error) {
@@ -88,6 +89,9 @@ func (venue *PaperVenue) ProcessTick(tick MarketTick) ([]PaperFill, error) {
 	if err := tick.Validate(venue.contract.MaxQuoteAge); err != nil {
 		return nil, err
 	}
+	if tick.Session == SessionUnknown {
+		return nil, ErrMarketUnknown
+	}
 	venue.mu.Lock()
 	defer venue.mu.Unlock()
 	if prior, ok := venue.processedTicks[tick.TickID]; ok {
@@ -115,12 +119,13 @@ func (venue *PaperVenue) ProcessTick(tick MarketTick) ([]PaperFill, error) {
 	}
 	sort.Strings(ids)
 	var fills []PaperFill
+	available := tick.AvailableQuantity
 	for _, id := range ids {
 		order := venue.orders[id]
 		if order.Status != OrderActive && order.Status != OrderPartiallyFilled {
 			continue
 		}
-		quantity := min(order.RemainingQuantity, tick.AvailableQuantity)
+		quantity := min(order.RemainingQuantity, available)
 		if quantity <= 0 || !venue.matches(order, tick) {
 			continue
 		}
@@ -146,8 +151,47 @@ func (venue *PaperVenue) ProcessTick(tick MarketTick) ([]PaperFill, error) {
 		venue.orders[id] = order
 		venue.fills[fill.FillID] = fill
 		fills = append(fills, fill)
+		available -= quantity
 	}
 	return fills, nil
+}
+
+type CancelRequest struct {
+	OrderID        string    `json:"order_id"`
+	IdempotencyKey string    `json:"idempotency_key"`
+	Now            time.Time `json:"now"`
+}
+
+func (venue *PaperVenue) Cancel(request CancelRequest) (PaperOrder, error) {
+	if request.OrderID == "" || request.IdempotencyKey == "" || request.Now.IsZero() || request.Now.Location() != time.UTC {
+		return PaperOrder{}, ErrInvalidArtifact
+	}
+	venue.mu.Lock()
+	defer venue.mu.Unlock()
+	fingerprint := valueFingerprint(struct {
+		OrderID string
+		Now     time.Time
+	}{request.OrderID, request.Now})
+	if prior, ok := venue.commandKeys[request.IdempotencyKey]; ok {
+		if prior != fingerprint {
+			return PaperOrder{}, ErrIdempotencyConflict
+		}
+		return venue.orders[request.OrderID], nil
+	}
+	order, ok := venue.orders[request.OrderID]
+	if !ok {
+		return PaperOrder{}, ErrOrderNotFound
+	}
+	if order.Status == OrderFilled || order.Status == OrderCancelled || order.Status == OrderRejected {
+		return PaperOrder{}, ErrInvalidOrderTransition
+	}
+	if request.Now.Before(order.CreatedAt) {
+		return PaperOrder{}, ErrInvalidOrderTransition
+	}
+	order.Status = OrderCancelled
+	venue.orders[request.OrderID] = order
+	venue.commandKeys[request.IdempotencyKey] = fingerprint
+	return order, nil
 }
 
 func (venue *PaperVenue) activateOrdersLocked(at time.Time) {
@@ -196,7 +240,11 @@ func fillIdentity(fill PaperFill) string {
 }
 
 func tickFingerprint(tick MarketTick) string {
-	data, _ := json.Marshal(tick)
+	return valueFingerprint(tick)
+}
+
+func valueFingerprint(value any) string {
+	data, _ := json.Marshal(value)
 	digest := sha256.Sum256(data)
 	return hex.EncodeToString(digest[:])
 }

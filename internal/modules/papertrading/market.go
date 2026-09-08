@@ -19,10 +19,10 @@ type MarketTick struct {
 }
 
 func (tick MarketTick) Validate(maxAge time.Duration) error {
-	if tick.TickID == "" || tick.InstrumentID == "" || tick.Source == "" || tick.Session == SessionUnknown {
-		return fmt.Errorf("%w: tick identity or session is unknown", ErrInvalidMarketData)
+	if tick.TickID == "" || tick.InstrumentID == "" || tick.Source == "" {
+		return fmt.Errorf("%w: tick identity is unknown", ErrInvalidMarketData)
 	}
-	if tick.Session != SessionOpen && tick.Session != SessionClosed {
+	if tick.Session != SessionOpen && tick.Session != SessionClosed && tick.Session != SessionUnknown {
 		return fmt.Errorf("%w: unsupported session", ErrInvalidMarketData)
 	}
 	if !finitePositive(tick.Bid) || !finitePositive(tick.Ask) || !finitePositive(tick.Last) || tick.Bid > tick.Ask || !finiteNonNegative(tick.AvailableQuantity) {

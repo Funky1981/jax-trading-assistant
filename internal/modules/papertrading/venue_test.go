@@ -64,8 +64,53 @@ func TestPaperVenueRejectsLiveUnknownStaleAndUnsupportedPaths(t *testing.T) {
 	unknown.Timestamp = now.Add(time.Second)
 	unknown.ReceivedAt = unknown.Timestamp
 	unknown.Session = SessionUnknown
-	if _, err := venue.ProcessTick(unknown); err == nil {
+	if _, err := venue.ProcessTick(unknown); err != ErrMarketUnknown {
 		t.Fatal("unknown session accepted")
+	}
+}
+
+func TestPaperVenueConsumesLiquidityAndSupportsCancellation(t *testing.T) {
+	now := time.Date(2026, 9, 8, 10, 0, 0, 0, time.UTC)
+	wf, intent := approvedPaperArtifacts(t, now)
+	contract := DefaultPaperCapabilityContract()
+	costs := DefaultCostModel()
+	venue, err := NewPaperVenue(contract, costs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	order, err := venue.Submit(CreateOrderRequest{Workflow: wf, PaperIntent: intent, Venue: contract, CostModel: costs, InstrumentID: "AAPL", Quantity: 10, ReferencePrice: 100, OrderType: OrderMarket, CreatedAt: now, IdempotencyKey: "partial-order"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed := MarketTick{TickID: "closed", InstrumentID: "AAPL", Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 4, Timestamp: now.Add(2 * time.Second), ReceivedAt: now.Add(2 * time.Second), Session: SessionClosed, Source: "fixture"}
+	if fills, err := venue.ProcessTick(closed); err != nil || len(fills) != 0 {
+		t.Fatalf("closed-session fill = %#v, %v", fills, err)
+	}
+	first := closed
+	first.TickID, first.Session = "partial-1", SessionOpen
+	first.Timestamp, first.ReceivedAt = now.Add(3*time.Second), now.Add(3*time.Second)
+	fills, err := venue.ProcessTick(first)
+	if err != nil || len(fills) != 1 || fills[0].Quantity != 4 {
+		t.Fatalf("first partial fill = %#v, %v", fills, err)
+	}
+	second := first
+	second.TickID = "partial-2"
+	second.Timestamp, second.ReceivedAt = now.Add(4*time.Second), now.Add(4*time.Second)
+	fills, err = venue.ProcessTick(second)
+	if err != nil || len(fills) != 1 || fills[0].Quantity != 4 {
+		t.Fatalf("second partial fill limited by available liquidity = %#v, %v", fills, err)
+	}
+	if got := venue.Snapshot().Orders[order.OrderID]; got.Status != OrderPartiallyFilled || got.FilledQuantity != 8 || got.RemainingQuantity != 2 {
+		t.Fatalf("partial order state = %#v", got)
+	}
+	if _, err := venue.Cancel(CancelRequest{OrderID: order.OrderID, IdempotencyKey: "cancel-partial", Now: now.Add(5 * time.Second)}); err != nil {
+		t.Fatal(err)
+	}
+	third := second
+	third.TickID = "after-cancel"
+	third.Timestamp, third.ReceivedAt = now.Add(6*time.Second), now.Add(6*time.Second)
+	if fills, err := venue.ProcessTick(third); err != nil || len(fills) != 0 {
+		t.Fatalf("cancelled order filled = %#v, %v", fills, err)
 	}
 }
 
