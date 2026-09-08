@@ -54,6 +54,29 @@ func TestProtocolEnforcesFrozenPartitionsAndOOSOnce(t *testing.T) {
 	}
 }
 
+func TestFrozenOOSRunCopiesConfigurationAtFreeze(t *testing.T) {
+	p := testProtocol(t)
+	observations := testObservations(t, p)
+	parameters := map[string]string{"minimum_evidence_quality": "0.8"}
+	config, err := NewExperimentConfig(ExperimentConfig{ProtocolID: p.ID, HypothesisID: p.HypothesisID, Target: "5-day SPY-relative return", Baseline: "DIRECTION_ONLY", Algorithm: "evidence-quality-threshold-v1", Parameters: parameters, Seed: 7})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := &FrozenOOSRun{}
+	if err := run.Freeze(config); err != nil {
+		t.Fatal(err)
+	}
+	parameters["minimum_evidence_quality"] = "0"
+	config.Parameters["minimum_evidence_quality"] = "0"
+	result, err := run.ScoreOOS(observations, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ObservationCount != 1 {
+		t.Fatalf("frozen OOS configuration was externally mutated: %+v", result)
+	}
+}
+
 func TestProtocolRejectsHoldoutAndFutureDerivedObservation(t *testing.T) {
 	p := testProtocol(t)
 	o := testObservations(t, p)[0]

@@ -244,10 +244,10 @@ func score(experimentID string, observations []ResearchObservation, partition Pa
 // change is accepted, and ScoreOOS can execute only once.
 type FrozenOOSRun struct {
 	mu        sync.Mutex
-	Config    ExperimentConfig
-	Frozen    bool
-	OOSScored bool
-	Result    MetricResult
+	config    ExperimentConfig
+	frozen    bool
+	oosScored bool
+	result    MetricResult
 }
 
 func (r *FrozenOOSRun) Freeze(config ExperimentConfig) error {
@@ -259,30 +259,42 @@ func (r *FrozenOOSRun) Freeze(config ExperimentConfig) error {
 	if r.Frozen {
 		return fmt.Errorf("OOS configuration is already frozen")
 	}
-	r.Config = config
-	r.Frozen = true
+	r.config = cloneExperimentConfig(config)
+	r.frozen = true
 	return nil
 }
 
 func (r *FrozenOOSRun) ScoreOOS(observations []ResearchObservation, protocol ResearchProtocol) (MetricResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if !r.Frozen {
+	if !r.frozen {
 		return MetricResult{}, fmt.Errorf("OOS configuration must be frozen before scoring")
 	}
-	if r.OOSScored {
+	if r.oosScored {
 		return MetricResult{}, fmt.Errorf("formal OOS may be scored only once")
 	}
-	if err := protocol.Validate(); err != nil || protocol.ID != r.Config.ProtocolID {
+	if err := protocol.Validate(); err != nil || protocol.ID != r.config.ProtocolID {
 		return MetricResult{}, fmt.Errorf("OOS protocol does not match the frozen experiment configuration")
 	}
-	result, err := ScoreEvidenceConditioned(r.Config.ID, observations, PartitionOOS, protocol, qualityThreshold(r.Config))
+	result, err := ScoreEvidenceConditioned(r.config.ID, observations, PartitionOOS, protocol, qualityThreshold(r.config))
 	if err != nil {
 		return MetricResult{}, err
 	}
-	r.Result = result
-	r.OOSScored = true
+	r.result = result
+	r.oosScored = true
 	return result, nil
+}
+
+func cloneExperimentConfig(config ExperimentConfig) ExperimentConfig {
+	clone := config
+	clone.FeatureIDs = append([]string(nil), config.FeatureIDs...)
+	if config.Parameters != nil {
+		clone.Parameters = make(map[string]string, len(config.Parameters))
+		for key, value := range config.Parameters {
+			clone.Parameters[key] = value
+		}
+	}
+	return clone
 }
 
 func qualityThreshold(config ExperimentConfig) float64 {
