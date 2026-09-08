@@ -27,8 +27,8 @@ decision remains `NO_TRADE`.
 | Phase 09 — Portfolio Intelligence & Deterministic Risk | **COMPLETE / GO** |
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / CONDITIONAL GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / CONDITIONAL GO** |
-| Current implementation package | **Phase 12 prerequisite gate — NOT READY** |
-| Next package | **None — Phase 12 not authorised; prerequisites outstanding** |
+| Current implementation package | **PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS** |
+| Next package | **None — Phase 12 not authorised; readiness decision required** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -212,15 +212,16 @@ still unavailable in the current environment. Actual forward-paper evidence
 remains 0 days / 0 orders. Phase 12 prerequisites are not satisfied and Phase
 12 is not authorised.
 
-### Phase 12 — Advanced Quant Research — NOT READY
+### Phase 12 Readiness — Historical Data & Research Hypothesis — NOT READY
 
 Phase-07 GO is satisfied, but the remaining Phase-12 prerequisites are not:
 the available historical data is **INSUFFICIENT** for leakage-safe advanced
 quantitative research, and no already-authorised explicit falsifiable Phase-12
 hypothesis was found. Only WP-12 templates/examples and test fixtures exist;
 they are not authorization. No paid data has been purchased and WP-12.01 has
-not started. See `Docs/Jax-Roadmap-v2/12-advanced-quant-research/PHASE-12-
-PREREQUISITE-REVIEW.md`.
+not started. The bounded readiness assessment is recorded in
+`Docs/Jax-Roadmap-v2/12-advanced-quant-research/PHASE-12-READINESS-DECISION-
+PACK.md`. Phase 13 is not started.
 
 ### Later roadmap — planned capability progression
 

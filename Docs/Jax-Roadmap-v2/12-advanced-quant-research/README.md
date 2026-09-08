@@ -2,6 +2,12 @@
 
 **Status:** **NOT READY — PREREQUISITES NOT SATISFIED**
 
+The active bounded stage is `PHASE 12 READINESS — HISTORICAL DATA & RESEARCH
+HYPOTHESIS`. It is a documentation/design assessment, not Phase-12
+implementation. See `PHASE-12-READINESS-DECISION-PACK.md`. WP-12.01 must not
+begin until sufficient clean historical data and an authorised explicit
+falsifiable hypothesis are independently accepted.
+
 ## Purpose
     Add factor, ML and automated hypothesis capabilities only where conventional analysis has a validated research need.
 

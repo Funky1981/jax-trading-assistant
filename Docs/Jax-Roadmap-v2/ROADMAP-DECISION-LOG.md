@@ -1,5 +1,37 @@
 # Roadmap Decision Log
 
+## RD-2026-09-08-05 - Phase 12 readiness remediation — not ready
+
+- Date: 2026-09-08
+- Stage: `PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS`
+- Phase: 12 — Advanced Quant Research
+- Status: `PHASE 12 NOT READY / NOT AUTHORISED`
+- Decision authority: bounded readiness assessment; no Phase-12 implementation
+
+The accepted Phase-11 state remains `COMPLETE / CONDITIONAL GO`; race-detector
+verification is still outstanding because the current environment lacks a usable
+`gcc`/cgo toolchain. Actual forward-paper evidence remains 0 days / 0 orders and
+the scientific status remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
+SAMPLE`.
+
+The readiness pack independently assessed the two remaining Phase-12
+prerequisites. Historical data is `INSUFFICIENT`: the current catalog contains
+only four narrow OHLCV fixtures (AAPL daily 22 rows, AAPL minute 2,729 rows, SPY
+daily 120 rows and SPY minute 500 rows), with no demonstrated clean broad panel,
+point-in-time universe, delisted coverage, corporate-action policy or complete
+train/validation/OOS evidence. No `AUTHORISED EXPLICIT RESEARCH HYPOTHESIS` was
+found; templates, documentation examples and golden fixtures are not
+authorization.
+
+The bounded pack defines a first-experiment data standard, inventories existing
+providers, records source/cost/licensing gaps, and provides four candidate
+hypotheses. `HYP-EVENT-001` is a technical recommendation only and is not
+authorized. No data was purchased or downloaded, no credential was requested,
+and no runtime/provider/ML/recommendation code was changed. WP-12.01 and Phase
+13 remain unstarted. The next decision requires external selection and
+authorization of a falsifiable hypothesis plus independent acceptance of a
+sufficient clean dataset.
+
 ## RD-2026-09-08-04 - Phase 12 prerequisite review — not ready
 
 - Date: 2026-09-08

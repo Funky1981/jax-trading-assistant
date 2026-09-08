@@ -48,9 +48,12 @@ criteria remain binding.
 - Phase 09: `COMPLETE / GO`
 - Phase 10: `COMPLETE / CONDITIONAL GO`
 - Phase 11: `COMPLETE / CONDITIONAL GO`
-- Current package: `Phase 12 prerequisite gate — NOT READY`
+- Current package: `PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS`
 - Phase 12: `NOT AUTHORISED / PREREQUISITES NOT SATISFIED`
 - Phase 13: `NOT STARTED`
+
+The readiness decision pack records the current data inventory, gap matrix,
+source/cost options and candidate hypotheses. It does not authorize WP-12.01.
 
 
 ## 2026-08-10 integrated roadmap change
