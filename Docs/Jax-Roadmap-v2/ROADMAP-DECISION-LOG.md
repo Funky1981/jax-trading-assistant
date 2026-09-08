@@ -1,5 +1,33 @@
 # Roadmap Decision Log
 
+## RD-2026-09-08-08 - Phase 12 authorization and internal completion
+
+- Date: 2026-09-08
+- Stage: `PHASE 12 — ADVANCED QUANT RESEARCH`
+- Status: `COMPLETE / INTERNALLY VERIFIED — RESEARCH ONLY`
+- Hypothesis: `HYP-EVENT-001A — SEC evidence-backed issuer-event reaction`
+- Decision authority: external authorization recorded; phase-level review pending
+
+Phase 12 was externally authorized after acceptance of Phase-07 GO, the
+HYP-EVENT-001A data-readiness gate and the explicit falsifiable hypothesis.
+WP-12.01 through WP-12.08 are implemented in the existing Jax Go architecture.
+No Qlib/RD-Agent runtime, ML dependency, hosted inference, paid service or new
+credential was introduced.
+
+The phase exit condition is demonstrated at capability level: advanced model
+selection is validation-only, formal OOS is one-way and non-holdout, features
+carry event-time knowability, falsification/trial evidence is retained, drift
+and failure states are explicit, and the promotion gate cannot mutate
+recommendation logic. The phase harness uses synthetic event-time-safe fixture
+labels; the real HYP-EVENT-001A panel has no materialized direction assessment,
+so no real HYP performance or edge claim is made.
+
+No advanced model was promoted. Promotion remains closed for the sealed 2025
+holdout, unresolved current-ticker survivorship and zero actual forward-paper
+evidence. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`, `0 DAYS / 0
+ORDERS`, `SOAK INFRASTRUCTURE DEMONSTRATED` and outstanding race-detector
+verification remain preserved. Phase 13 is not started.
+
 ## RD-2026-09-08-07 - HYP-EVENT-001A historical-data readiness — gate demonstrated
 
 - Date: 2026-09-08

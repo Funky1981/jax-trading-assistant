@@ -12,8 +12,8 @@
 - Phase 10 — Workflow, HITL & Operational Safety: **COMPLETE / CONDITIONAL GO**
 - Phase 11 — High-Fidelity Paper Trading: **COMPLETE / CONDITIONAL GO**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS**
-- Next package: **External review of the HYP-EVENT-001A dataset gate — no WP implementation**
+- Current implementation package: **PHASE 12 — ADVANCED QUANT RESEARCH (RESEARCH ONLY)**
+- Next package: **External review of Phase-12 evidence; Phase 13 not started**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
@@ -30,13 +30,15 @@ open because the environment lacks cgo/gcc. The proof uses accelerated
 synthetic fixtures; actual elapsed forward-paper evidence is zero days and the
 actual forward-paper order sample is zero.
 
-Phase 12 readiness review: **HYP-EVENT-001A is AUTHORISED for data readiness
-and baseline research design**. The bounded dataset gate is **DEMONSTRATED**
-for initial research and is ready for external Phase-12 authorisation.
+Phase 12 is **AUTHORISED / IN PROGRESS** for bounded research of
+**HYP-EVENT-001A**. WP-12.01 through WP-12.08 are internally verified. The
+phase exit condition is demonstrated at capability level; no advanced model was
+promoted and the promotion gate remains closed.
 The bounded readiness decision pack is
 `12-advanced-quant-research/PHASE-12-READINESS-DECISION-PACK.md`. Phase 12 is
-**NOT AUTHORISED FOR WP IMPLEMENTATION until external review**; WP-12.01 must
-not begin.
+Phase-12 implementation is complete internally; external phase review remains
+required before any later phase. No result has recommendation or execution
+authority.
 The readiness handover is
 `12-advanced-quant-research/HYP-EVENT-001A-HISTORICAL-DATA-READINESS-HANDOVER.md`.
 Phase 13 remains **NOT STARTED**.

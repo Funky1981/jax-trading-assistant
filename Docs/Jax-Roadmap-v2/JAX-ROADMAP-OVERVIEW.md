@@ -41,10 +41,10 @@ CONDITIONAL GO**, accepted by external GPT-5.6 Sol with race verification still
 required before Phase 11 GO because cgo/gcc is unavailable. Phase 11 is
 **COMPLETE / CONDITIONAL GO** after WP-11.01 through WP-11.08 and its
 accelerated exit harness; the race-detector condition remains open. Phase 12
-is **NOT READY / NOT AUTHORISED** because its historical-data and
-explicit-hypothesis prerequisites were not demonstrated. The active bounded
-stage is **PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS**; its
-decision pack is documentation/design only and does not authorize WP-12.01.
+is **COMPLETE / INTERNALLY VERIFIED** for bounded research of
+`HYP-EVENT-001A`; its data-readiness gate was accepted and the implementation
+uses the existing Jax Go architecture. No advanced model was promoted and no
+recommendation logic changed.
 Phase 11 preserves
 the paper-only boundary and does not claim trading edge.
 The scientific status remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT

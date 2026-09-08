@@ -27,8 +27,8 @@ decision remains `NO_TRADE`.
 | Phase 09 — Portfolio Intelligence & Deterministic Risk | **COMPLETE / GO** |
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / CONDITIONAL GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / CONDITIONAL GO** |
-| Current implementation package | **PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS** |
-| Next package | **External review of the HYP-EVENT-001A dataset gate — no WP implementation** |
+| Current implementation package | **PHASE 12 — ADVANCED QUANT RESEARCH (RESEARCH ONLY)** |
+| Next package | **External review of Phase-12 evidence; Phase 13 not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -195,10 +195,9 @@ validation. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains the
 scientific status. The approved migration-number collision remediation is
 recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
 `COMPLETE / CONDITIONAL GO`; Phase 11 is `COMPLETE / CONDITIONAL GO` with race
-verification outstanding. Phase 12 is not authorised for WP implementation
-pending external review of the demonstrated HYP-EVENT-001A dataset gate.
-HYP-EVENT-001A is authorised only for bounded historical-data readiness and
-baseline research design; no Phase-12 implementation has started.
+verification outstanding. Phase 12 is authorised and internally verified for
+bounded research of HYP-EVENT-001A. No advanced model was promoted, no
+recommendation logic changed, and the Phase-12 promotion gate remains closed.
 
 ### Phase 11 — High-Fidelity Paper Trading — COMPLETE / CONDITIONAL GO
 
@@ -211,16 +210,18 @@ fixtures. This is not real elapsed forward-paper evidence and does not prove
 trading edge. Phase 10 remains **COMPLETE / CONDITIONAL GO** with
 `RACE DETECTOR NOT VERIFIED — ENVIRONMENTAL LIMITATION`; race detection is
 still unavailable in the current environment. Actual forward-paper evidence
-remains 0 days / 0 orders. Phase 12 prerequisites are not satisfied and Phase
-12 is not authorised.
+remains 0 days / 0 orders. Phase 12 is research-only and internally verified;
+Phase 13 has not started.
 
-### Phase 12 Readiness — Historical Data & Research Hypothesis — DATASET GATE DEMONSTRATED
+### Phase 12 — Advanced Quant Research — COMPLETE / INTERNALLY VERIFIED
 
 Phase-07 GO is satisfied and **HYP-EVENT-001A** is authorised for data readiness
 and baseline research design only. The bounded SEC 8-K plus Alpaca SIP dataset
 gate is **SUFFICIENT for initial HYP-EVENT-001A research**; survivorship and
-corporate-action limitations remain explicit. No paid data has been purchased
-and WP-12.01 has not started. The bounded readiness
+corporate-action limitations remain explicit. The eight Phase-12 contracts and
+exit harness are internally verified. No advanced model was promoted, no paid
+data or hosted inference was used, and recommendation logic was unchanged. The
+bounded readiness
 assessment is recorded in
 `Docs/Jax-Roadmap-v2/12-advanced-quant-research/PHASE-12-READINESS-DECISION-
 PACK.md`; the resulting handover is in
@@ -328,11 +329,11 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 12 historical data readiness — IN PROGRESS**
+The current position is **Phase 12 advanced quant research — COMPLETE / INTERNALLY VERIFIED**
 after external `CONDITIONAL GO PHASE 11`. HYP-EVENT-001A is authorised for data
 readiness and baseline research design only; the dataset gate is demonstrated
-for initial research and awaits external Phase-12 authorisation. Phase 10 remains complete/
+for initial research. Phase 10 remains complete/
 conditional GO with its race-detector condition open because the current
 environment lacks cgo/gcc. Phase 11 remains paper-only; actual forward-paper
-evidence is 0 days / 0 orders. Phase 12 implementation is not authorised and
-has not started.
+evidence is 0 days / 0 orders. Phase 12 remains research-only and Phase 13 has
+not started.
