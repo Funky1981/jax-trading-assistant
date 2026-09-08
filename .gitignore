@@ -31,6 +31,10 @@ Thumbs.db
 .sesskey
 .env
 **/.env
+
+# Private, locally acquired HYP-EVENT-001A research data; never commit raw
+# provider payloads or derived market-data panels.
+data/datasets/hyp-event-001a/
 .playwright-mcp/
 *.png
 config/providers.local.json

@@ -28,7 +28,7 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / CONDITIONAL GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / CONDITIONAL GO** |
 | Current implementation package | **PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS** |
-| Next package | **Historical data qualification for HYP-EVENT-001A — bounded readiness only** |
+| Next package | **External review of the HYP-EVENT-001A dataset gate — no WP implementation** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -196,8 +196,9 @@ scientific status. The approved migration-number collision remediation is
 recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
 `COMPLETE / CONDITIONAL GO`; Phase 11 is `COMPLETE / CONDITIONAL GO` with race
 verification outstanding. Phase 12 is not authorised for WP implementation
-because its dataset prerequisite is not satisfied. HYP-EVENT-001A is authorised
-only for bounded historical-data readiness and baseline research design.
+pending external review of the demonstrated HYP-EVENT-001A dataset gate.
+HYP-EVENT-001A is authorised only for bounded historical-data readiness and
+baseline research design; no Phase-12 implementation has started.
 
 ### Phase 11 — High-Fidelity Paper Trading — COMPLETE / CONDITIONAL GO
 
@@ -213,12 +214,13 @@ still unavailable in the current environment. Actual forward-paper evidence
 remains 0 days / 0 orders. Phase 12 prerequisites are not satisfied and Phase
 12 is not authorised.
 
-### Phase 12 Readiness — Historical Data & Research Hypothesis — NOT READY
+### Phase 12 Readiness — Historical Data & Research Hypothesis — DATASET GATE DEMONSTRATED
 
 Phase-07 GO is satisfied and **HYP-EVENT-001A** is authorised for data readiness
-and baseline research design only. The available historical data is still
-**INSUFFICIENT** for leakage-safe advanced quantitative research. No paid data
-has been purchased and WP-12.01 has not started. The bounded readiness
+and baseline research design only. The bounded SEC 8-K plus Alpaca SIP dataset
+gate is **SUFFICIENT for initial HYP-EVENT-001A research**; survivorship and
+corporate-action limitations remain explicit. No paid data has been purchased
+and WP-12.01 has not started. The bounded readiness
 assessment is recorded in
 `Docs/Jax-Roadmap-v2/12-advanced-quant-research/PHASE-12-READINESS-DECISION-
 PACK.md`; the resulting handover is in
@@ -328,7 +330,8 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
 
 The current position is **Phase 12 historical data readiness — IN PROGRESS**
 after external `CONDITIONAL GO PHASE 11`. HYP-EVENT-001A is authorised for data
-readiness and baseline research design only. Phase 10 remains complete/
+readiness and baseline research design only; the dataset gate is demonstrated
+for initial research and awaits external Phase-12 authorisation. Phase 10 remains complete/
 conditional GO with its race-detector condition open because the current
 environment lacks cgo/gcc. Phase 11 remains paper-only; actual forward-paper
 evidence is 0 days / 0 orders. Phase 12 implementation is not authorised and

@@ -3,13 +3,14 @@
 **Date:** 2026-09-08  
 **Repository:** `C:\Projects\Jax\jax-trading-assistant`  
 **Branch:** `capability-reset`  
-**Assessment HEAD:** `5ebb3a9c6409cd354d5859fcb81d788e40c637be`  
+**Assessment HEAD:** `06cd57e16f4d0057a9d3c24723fc51bc916dc9dd`
 **Working tree at assessment start:** clean  
 **Upstream:** `origin/capability-reset`; 0 behind / 105 ahead
 
 ## Decision
 
-**PHASE 12 NOT READY.** This document records the bounded readiness stage
+**PHASE 12 IMPLEMENTATION NOT YET AUTHORISED.** This document records the
+bounded readiness stage
 `PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS`. It is not Phase-12
 implementation and does not authorize WP-12.01, model training, a new runtime,
 Qlib, RD-Agent, a feature store, a provider integration or a data purchase.
@@ -17,8 +18,8 @@ Qlib, RD-Agent, a feature store, a provider integration or a data purchase.
 | Phase-12 prerequisite | Result | Evidence |
 |---|---|---|
 | Phase-07 GO | Satisfied | Phase-07 exit/evaluation evidence; scientific status remains `EXPLICIT_OOS_SINGLE_CASE_INSUFFICIENT_SAMPLE`. |
-| Sufficient clean historical data | **INSUFFICIENT** | The catalog contains only four narrow fixtures: AAPL daily 22 rows, AAPL 1-minute 2,729 rows, SPY daily 120 rows and SPY 1-minute 500 rows. |
-| Authorised explicit falsifiable hypothesis | **NOT FOUND** | Only a blank template, documentation examples and test fixtures were found; none is an accepted Phase-12 decision. |
+| Sufficient clean historical data | **DEMONSTRATED for initial HYP-EVENT-001A research** | Versioned local SEC 8-K plus Alpaca SIP daily panel: 1,059 qualifying events, 60 issuers, 120 sealed 2025 holdout observations; survivorship and corporate-action limitations remain explicit. |
+| Authorised explicit falsifiable hypothesis | **FOUND** | External review authorised `HYP-EVENT-001A — SEC evidence-backed issuer-event reaction` for data readiness and baseline research design only. |
 
 The scientific conclusion remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
 SAMPLE**. Actual forward-paper evidence remains **0 DAYS / 0 ORDERS**. Phase-10
@@ -267,7 +268,7 @@ Deferred future candidates — regime detection, GEX/options positioning, Auctio
 Market Theory, volume profile, order flow, session behaviour and dynamic market
 structure — remain deferred and are not promoted by this pack.
 
-## Technical recommendation — NOT AUTHORISED
+## Technical recommendation — DATASET GATE COMPLETE / IMPLEMENTATION NOT AUTHORISED
 
 The external technical lead has now selected and authorized **HYP-EVENT-001A**
 for data readiness and baseline research design only. It is not authorization to
@@ -284,7 +285,8 @@ recommendation-logic change follows from this recommendation.
 
 ## Minimum viable research dataset
 
-For HYP-EVENT-001A, subject to the authorized research contract and data gate:
+For HYP-EVENT-001A, the data gate is now demonstrated subject to the authorized
+research contract; implementation remains externally gated:
 
 - A frozen liquid US equity/ETF universe, initially proposed at 100–300 names,
   with explicit inclusion date, point-in-time membership or a clearly labelled
@@ -380,11 +382,13 @@ forward evidence or claim a trading edge.
 
 ## Recommended next roadmap action
 
-Keep **Phase 12 NOT READY / NOT AUTHORISED** and continue the bounded readiness
-stage until the two prerequisites are independently demonstrated:
+The two readiness prerequisites are now independently demonstrated for the
+registered initial experiment. Record the dataset handover for external review
+and keep **Phase 12 implementation NOT AUTHORISED** until that review accepts
+the gate:
 
-- **SUFFICIENT CLEAN HISTORICAL DATA** for a selected, frozen hypothesis; and
-- **AUTHORISED EXPLICIT RESEARCH HYPOTHESIS** with a falsifiable contract.
+- **SUFFICIENT CLEAN HISTORICAL DATA** for `HYP-EVENT-001A`; and
+- **AUTHORISED EXPLICIT RESEARCH HYPOTHESIS** with its falsifiable contract.
 
 Only after both are accepted should external review authorize WP-12.01. Phase 13
 remains **NOT STARTED**.

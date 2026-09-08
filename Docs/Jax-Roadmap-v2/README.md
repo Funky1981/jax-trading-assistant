@@ -49,13 +49,14 @@ criteria remain binding.
 - Phase 10: `COMPLETE / CONDITIONAL GO`
 - Phase 11: `COMPLETE / CONDITIONAL GO`
 - Current package: `PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS`
-- Phase 12: `NOT AUTHORISED / PREREQUISITES NOT SATISFIED`
+- Phase 12: `READINESS GATE DEMONSTRATED / EXTERNAL AUTHORISATION REQUIRED`
 - Phase 13: `NOT STARTED`
 
 The readiness decision pack records the current data inventory, gap matrix,
 source/cost options and candidate hypotheses. `HYP-EVENT-001A` is now
-authorised for data readiness and baseline research design only. The dataset
-gate remains incomplete and does not authorize WP-12.01.
+authorised for data readiness and baseline research design only. The bounded
+dataset gate is now demonstrated for initial research and is ready for
+external Phase-12 authorisation; WP-12.01 remains unauthorized.
 
 
 ## 2026-08-10 integrated roadmap change

@@ -1,5 +1,37 @@
 # Roadmap Decision Log
 
+## RD-2026-09-08-07 - HYP-EVENT-001A historical-data readiness — gate demonstrated
+
+- Date: 2026-09-08
+- Stage: `PHASE 12 HISTORICAL DATA READINESS — IN PROGRESS`
+- Hypothesis: `HYP-EVENT-001A — SEC evidence-backed issuer-event reaction`
+- Status: `SUFFICIENT CLEAN HISTORICAL DATA — READY FOR EXTERNAL PHASE-12 AUTHORISATION`
+- Decision authority: bounded readiness implementation; external Phase-12 review remains required
+
+The previously authorised hypothesis was registered and the repository’s
+existing root `.env` loading convention was used without changing or exposing
+secret values. `ALPACA_API_KEY`, `ALPACA_API_SECRET`, `SEC_USER_AGENT` and
+`SEC_CONTACT` were present. Level-1 Alpaca SIP and SEC EDGAR qualification,
+including a temporal cross-check, passed before bounded acquisition.
+
+The frozen local/private dataset is
+`hyp-event-001a-sec-8k-alpaca-sip-2016-2025-v1` with content-manifest SHA-256
+`db2b454793e50f28c34c9c2a7d91f798741936528752de7bd27cb52072a4864d`. It
+contains 1,059 qualifying deduplicated exact 8-K events across 60 issuers,
+154,674 raw market rows, 120 qualifying 2025 holdout observations and a
+maximum issuer share of approximately 1.79%. The holdout is sealed and no
+outcomes were calculated.
+
+The result meets the readiness floors for initial research only. Current-ticker
+survivorship, incomplete demonstrated delisted/rename reconstruction,
+acceptance timestamp as the available public-availability proxy and pending
+field-level corporate-action reconciliation remain explicit limitations. No
+paid data, new account or new credential was introduced. The migration/runtime
+system and recommendation logic were not changed. `TRADING EDGE NOT
+DEMONSTRATED / INSUFFICIENT SAMPLE`, 0 days / 0 orders of actual forward paper
+evidence and outstanding race-detector verification remain preserved. WP-12.01
+and Phase 13 remain unstarted.
+
 ## RD-2026-09-08-06 - HYP-EVENT-001A data-readiness authorization — insufficient
 
 - Date: 2026-09-08
