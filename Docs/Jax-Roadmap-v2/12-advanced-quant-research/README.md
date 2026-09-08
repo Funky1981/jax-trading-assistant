@@ -1,11 +1,13 @@
 # Phase 12 — Advanced Quant Research
 
-**Status:** **COMPLETE / INTERNALLY VERIFIED — RESEARCH ONLY**
+**Status:** **COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED**
 
-The prerequisites for `HYP-EVENT-001A` were accepted for bounded research and
-all eight package contracts are internally verified. See the phase verification
-record and final review handover. No result has recommendation, paper-execution
-or live-execution authority.
+The prerequisites for `HYP-EVENT-001A` were accepted for real scientific
+evaluation and all eight package contracts are internally verified. Real
+direction labels and performance results remain outstanding because the frozen
+panel contains no filing bodies or admissible materialised direction labels.
+See the phase verification record. No result has recommendation,
+paper-execution or live-execution authority.
 
 ## Purpose
     Add factor, ML and automated hypothesis capabilities only where conventional analysis has a validated research need.

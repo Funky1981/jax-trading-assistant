@@ -25,9 +25,9 @@ decision remains `NO_TRADE`.
 | Phase 07 — Evaluation, Replay & Backtesting | **COMPLETE / GO** |
 | Phase 08 — Controlled AI Tools & Durable Research Agents | **COMPLETE / GO** |
 | Phase 09 — Portfolio Intelligence & Deterministic Risk | **COMPLETE / GO** |
-| Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / CONDITIONAL GO** |
-| Phase 11 — High-Fidelity Paper Trading | **COMPLETE / CONDITIONAL GO** |
-| Current implementation package | **PHASE 12 — ADVANCED QUANT RESEARCH (RESEARCH ONLY)** |
+| Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
+| Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
+| Current implementation package | **PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION** |
 | Next package | **External review of Phase-12 evidence; Phase 13 not started** |
 
 The current package context is the `capability-reset` sequence. Package
@@ -194,13 +194,15 @@ migrations to `000059` and `000060`, and added complete-stream registry
 validation. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains the
 scientific status. The approved migration-number collision remediation is
 recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
-`COMPLETE / CONDITIONAL GO`; its required workflow and paper-trading race tests
+`COMPLETE / GO`; its required workflow and paper-trading race tests
 passed in the existing Docker toolchain, while native Windows cgo remains
-unavailable. Phase 12 is complete and internally verified for bounded research
-of HYP-EVENT-001A. No advanced model was promoted, no
-recommendation logic changed, and the Phase-12 promotion gate remains closed.
+unavailable. Phase 11 is `COMPLETE / GO`; actual forward-paper evidence remains
+0 days / 0 orders. Phase 12 is `COMPLETE / CONDITIONAL GO` with the condition
+that the real HYP-EVENT-001A scientific evaluation is still required. No real
+direction labels or performance results exist, no recommendation logic
+changed, and the Phase-12 promotion gate remains closed.
 
-### Phase 11 — High-Fidelity Paper Trading — COMPLETE / CONDITIONAL GO
+### Phase 11 — High-Fidelity Paper Trading — COMPLETE / GO
 
 Phase 11 provides an isolated deterministic paper venue, versioned execution
 costs, partial-fill and session semantics, event-derived paper ledger,
@@ -208,20 +210,22 @@ reconciliation, outcome attribution and a six-month soak protocol. The exact
 capability gate is demonstrated by
 `internal/modules/papertrading/phase11_exit_test.go` using accelerated frozen
 fixtures. This is not real elapsed forward-paper evidence and does not prove
-trading edge. Phase 10 remains **COMPLETE / CONDITIONAL GO**.
+trading edge. Phase 10 remains **COMPLETE / GO**.
 The required workflow and paper-trading race tests passed in the existing Docker
 toolchain; native Windows cgo remains unavailable. Actual forward-paper evidence
 remains 0 days / 0 orders. Phase 12 is research-only and internally verified;
 Phase 13 has not started.
 
-### Phase 12 — Advanced Quant Research — COMPLETE / INTERNALLY VERIFIED
+### Phase 12 — Advanced Quant Research — COMPLETE / CONDITIONAL GO
 
-Phase-07 GO is satisfied and **HYP-EVENT-001A** is authorised for bounded
-research. The bounded SEC 8-K plus Alpaca SIP dataset
+Phase-07 GO is satisfied and **HYP-EVENT-001A** is authorised for real
+scientific evaluation. The bounded SEC 8-K plus Alpaca SIP dataset
 gate is **SUFFICIENT for initial HYP-EVENT-001A research**; survivorship and
 corporate-action limitations remain explicit. The eight Phase-12 contracts and
-exit harness are internally verified. No advanced model was promoted, no paid
-data or hosted inference was used, and recommendation logic was unchanged. The
+exit harness are internally verified. No real direction labels or performance
+results have been generated because the frozen panel contains no filing bodies
+or admissible historical direction artifacts. No advanced model was promoted,
+no paid data or hosted inference was used, and recommendation logic was unchanged. The
 bounded readiness
 assessment is recorded in
 `Docs/Jax-Roadmap-v2/12-advanced-quant-research/PHASE-12-READINESS-DECISION-
@@ -330,10 +334,11 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 12 advanced quant research — COMPLETE / INTERNALLY VERIFIED**
-after external `CONDITIONAL GO PHASE 11`. HYP-EVENT-001A is authorised for
-bounded research; the dataset gate is demonstrated for initial research. Phase 10 remains complete/
-conditional GO; its required workflow and paper-trading race tests passed in the
-existing Docker toolchain, while native cgo remains unavailable. Phase 11 remains paper-only; actual forward-paper
-evidence is 0 days / 0 orders. Phase 12 remains research-only and Phase 13 has
-not started.
+The current position is **Phase 12 advanced quant research — COMPLETE /
+CONDITIONAL GO** after external `GO PHASE 10`, `GO PHASE 11` and
+`CONDITIONAL GO PHASE 12`. HYP-EVENT-001A is authorised for real scientific
+evaluation; the dataset gate is demonstrated for initial research. Phase 10
+and Phase 11 are complete/GO, with actual forward-paper evidence of 0 days / 0
+orders. Real direction labels and performance results remain outstanding; the
+current evaluation is stopped at the hosted inference/data-evidence cost gate.
+Phase 12 remains research-only and Phase 13 has not started.

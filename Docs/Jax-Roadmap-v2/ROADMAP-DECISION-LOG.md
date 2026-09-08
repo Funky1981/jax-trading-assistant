@@ -1,5 +1,30 @@
 # Roadmap Decision Log
 
+## RD-2026-09-08-10 - Phase 10/11 GO and Phase 12 scientific condition
+
+- Date: 2026-09-08
+- Stage: `PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION`
+- Status: `COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED`
+- Decision: external technical-lead `GO PHASE 10`, `GO PHASE 11`,
+  `CONDITIONAL GO PHASE 12`
+- Hypothesis: `HYP-EVENT-001A — SEC evidence-backed issuer-event reaction`
+
+The supplied external decision is recorded. Phase 10 and Phase 11 are now
+`COMPLETE / GO`; actual forward-paper evidence remains `0 DAYS / 0 ORDERS`.
+Phase 12 remains research-only and conditional on completing the real
+HYP-EVENT-001A scientific evaluation. The frozen dataset identity is verified,
+but its SEC panel contains metadata and item codes rather than filing bodies,
+and no suitable immutable historical direction labels exist. The existing
+unversioned keyword helper is not an admissible historical classifier.
+
+The development/validation/OOS evaluation is therefore stopped before any
+outcome analysis at the hosted inference/data-evidence cost gate. No bulk
+hosted inference, new filing-body acquisition, 2024 outcome scoring or 2025
+holdout outcome access occurred. No recommendation logic, paper history or
+execution authority changed. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
+SAMPLE` and `Phase 13 — NOT STARTED` remain in force. External resolution is
+required before any inference spend or frozen-dataset evidence extension.
+
 ## RD-2026-09-08-09 - Phase 12 internal completion and race verification
 
 - Date: 2026-09-08

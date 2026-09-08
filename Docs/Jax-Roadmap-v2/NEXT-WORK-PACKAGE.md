@@ -9,11 +9,11 @@
 - Phase 07 — Evaluation, Replay & Backtesting: **COMPLETE / GO**
 - Phase 08 — Controlled AI Tools & Durable Research Agents: **COMPLETE / GO**
 - Phase 09 — Portfolio Intelligence & Deterministic Risk: **COMPLETE / GO**
-- Phase 10 — Workflow, HITL & Operational Safety: **COMPLETE / CONDITIONAL GO**
-- Phase 11 — High-Fidelity Paper Trading: **COMPLETE / CONDITIONAL GO**
+- Phase 10 — Workflow, HITL & Operational Safety: **COMPLETE / GO**
+- Phase 11 — High-Fidelity Paper Trading: **COMPLETE / GO**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **PHASE 12 — ADVANCED QUANT RESEARCH (RESEARCH ONLY)**
-- Next package: **External review of Phase-12 evidence; Phase 13 not started**
+- Current implementation package: **PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION**
+- Next package: **Hosted inference/data-evidence cost decision; Phase 13 not started**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
@@ -32,14 +32,16 @@ demonstrated its capability gate using accelerated synthetic fixtures; actual
 elapsed forward-paper evidence is zero days and the actual forward-paper order
 sample is zero.
 
-Phase 12 is **COMPLETE / INTERNALLY VERIFIED — RESEARCH ONLY** for bounded
-research of **HYP-EVENT-001A**. WP-12.01 through WP-12.08 are internally
-verified. The phase exit condition is demonstrated at capability level; no
-advanced model was promoted and the promotion gate remains closed.
+Phase 12 is **COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED**
+for **HYP-EVENT-001A**. The engineering contracts are internally verified, but
+real direction labels and experiment results do not yet exist. The frozen
+dataset has no filing bodies and no admissible historical direction artifacts;
+the current stop is the hosted inference/data-evidence cost gate. WP-12.01 is
+not started and the promotion gate remains closed.
 The bounded readiness decision pack is
-`12-advanced-quant-research/PHASE-12-READINESS-DECISION-PACK.md`. Phase 12 is
-Phase-12 implementation is complete internally; external phase review remains
-required before any later phase. No result has recommendation or execution
+`12-advanced-quant-research/PHASE-12-READINESS-DECISION-PACK.md`. The prior
+Phase-12 engineering contracts are complete internally; the real scientific
+evaluation remains outstanding and no result has recommendation or execution
 authority.
 The readiness handover is
 `12-advanced-quant-research/HYP-EVENT-001A-HISTORICAL-DATA-READINESS-HANDOVER.md`.

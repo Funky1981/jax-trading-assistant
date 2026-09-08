@@ -1,6 +1,6 @@
 # Phase 12 Internal Verification — Advanced Quant Research
 
-**Status:** COMPLETE / INTERNALLY VERIFIED — RESEARCH ONLY
+**Status:** COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED
 **Hypothesis:** `HYP-EVENT-001A`
 **Dataset:** `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-v1`
 **Dataset manifest:** `db2b454793e50f28c34c9c2a7d91f798741936528752de7bd27cb52072a4864d`
@@ -50,11 +50,13 @@ and evidence-conditioned baselines, validation selection, a single frozen 2024
 OOS capability run, stability/falsification checks, registry recording and drift
 monitoring. It demonstrates deterministic reproducibility and failure paths.
 
-The private HYP-EVENT-001A panel contains no materialized historical direction
-assessment (`DirectionStatus` remains data-readiness-only). No bulk hosted-model
-classification was run and no additional inference cost was incurred. Therefore
-no real HYP-EVENT-001A performance, effect size or scientific OOS conclusion is
-claimed by this phase.
+The private HYP-EVENT-001A panel contains no filing bodies and no materialized
+historical direction assessment (`DirectionStatus` remains data-readiness-only).
+No bulk hosted-model classification was run and no additional inference cost
+was incurred. The existing unversioned keyword helper is not an admissible
+historical classifier. Therefore no real HYP-EVENT-001A performance, effect
+size, falsification result or scientific OOS conclusion is claimed. Real
+evaluation is stopped at the hosted inference/data-evidence cost gate.
 
 No advanced model was trained or promoted. The promotion gate is deterministically
 `PROMOTION_CLOSED` because the final holdout is sealed, survivorship remains

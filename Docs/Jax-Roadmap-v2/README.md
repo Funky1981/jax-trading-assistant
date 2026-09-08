@@ -46,17 +46,18 @@ criteria remain binding.
 - Phase 07: `COMPLETE / GO`
 - Phase 08: `COMPLETE / GO`
 - Phase 09: `COMPLETE / GO`
-- Phase 10: `COMPLETE / CONDITIONAL GO`
-- Phase 11: `COMPLETE / CONDITIONAL GO`
-- Current package: `PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS`
-- Phase 12: `READINESS GATE DEMONSTRATED / EXTERNAL AUTHORISATION REQUIRED`
+- Phase 10: `COMPLETE / GO`
+- Phase 11: `COMPLETE / GO`
+- Current package: `PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION`
+- Phase 12: `COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED`
 - Phase 13: `NOT STARTED`
 
-The readiness decision pack records the current data inventory, gap matrix,
-source/cost options and candidate hypotheses. `HYP-EVENT-001A` is now
-authorised for data readiness and baseline research design only. The bounded
-dataset gate is now demonstrated for initial research and is ready for
-external Phase-12 authorisation; WP-12.01 remains unauthorized.
+`HYP-EVENT-001A` is authorised for its real historical scientific evaluation.
+The implementation contracts remain research-only; no real direction labels,
+performance results or falsification results have yet been generated. The
+current frozen dataset contains SEC metadata but no filing bodies or suitable
+materialised direction labels, so the evaluation is stopped at the hosted
+inference/data-evidence cost gate. WP-12.01 and Phase 13 are not started.
 
 
 ## 2026-08-10 integrated roadmap change

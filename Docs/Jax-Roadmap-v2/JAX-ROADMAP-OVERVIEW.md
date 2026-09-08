@@ -36,17 +36,19 @@ accepted by external GPT-5.6 Sol. Go race detection remains a
 **COMPLETE / GO**, accepted by external GPT-5.6 Sol. The approved
 migration-number collision remediation retained historical migrations unchanged,
 moved the Phase-09 migrations to `000059` and `000060`, and added
-complete-stream uniqueness/pair/order validation. Phase 10 is **COMPLETE /
-CONDITIONAL GO**, accepted by external GPT-5.6 Sol. Native Windows cgo remains
+complete-stream uniqueness/pair/order validation. Phase 10 is **COMPLETE / GO**,
+accepted by external GPT-5.6 Sol. Native Windows cgo remains
 unavailable, but the existing Docker toolchain passed the required workflow and
 paper-trading race tests. Phase 11 is
-**COMPLETE / CONDITIONAL GO** after WP-11.01 through WP-11.08 and its
+**COMPLETE / GO** after WP-11.01 through WP-11.08 and its
 accelerated exit harness; its tested race condition is resolved in the existing
 Docker environment. Phase 12
-is **COMPLETE / INTERNALLY VERIFIED** for bounded research of
+is **COMPLETE / CONDITIONAL GO** for the real scientific evaluation of
 `HYP-EVENT-001A`; its data-readiness gate was accepted and the implementation
-uses the existing Jax Go architecture. No advanced model was promoted and no
-recommendation logic changed.
+uses the existing Jax Go architecture. Real direction labels and performance
+results remain outstanding because the frozen panel has no filing bodies or
+admissible materialised direction labels. No advanced model was promoted and
+no recommendation logic changed.
 Phase 11 preserves
 the paper-only boundary and does not claim trading edge.
 The scientific status remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
