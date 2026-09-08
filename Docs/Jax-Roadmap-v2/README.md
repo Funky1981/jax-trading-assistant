@@ -55,9 +55,10 @@ criteria remain binding.
 `HYP-EVENT-001A` is authorised for its real historical scientific evaluation.
 The implementation contracts remain research-only; no real direction labels,
 performance results or falsification results have yet been generated. The
-current frozen dataset contains SEC metadata but no filing bodies or suitable
-materialised direction labels, so the evaluation is stopped at the hosted
-inference/data-evidence cost gate. WP-12.01 and Phase 13 are not started.
+the derived evidence dataset now contains immutable SEC filing-time packets and
+the direction contract is frozen, but no real direction labels or suitable
+materialised historical classifications exist. The evaluation is stopped at
+the hosted-inference cost gate; WP-12.01 and Phase 13 are not started.
 
 
 ## 2026-08-10 integrated roadmap change

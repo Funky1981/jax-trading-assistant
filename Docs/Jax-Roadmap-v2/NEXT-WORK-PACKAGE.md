@@ -34,9 +34,10 @@ sample is zero.
 
 Phase 12 is **COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED**
 for **HYP-EVENT-001A**. The engineering contracts are internally verified, but
-real direction labels and experiment results do not yet exist. The frozen
-dataset has no filing bodies and no admissible historical direction artifacts;
-the current stop is the hosted inference/data-evidence cost gate. WP-12.01 is
+real direction labels and experiment results do not yet exist. The derived
+dataset now contains immutable SEC filing-time packets and the direction
+contract is frozen, but no admissible historical direction artifacts have been
+materialised; the current stop is the hosted inference cost gate. WP-12.01 is
 not started and the promotion gate remains closed.
 The bounded readiness decision pack is
 `12-advanced-quant-research/PHASE-12-READINESS-DECISION-PACK.md`. The prior

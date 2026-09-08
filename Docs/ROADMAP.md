@@ -198,9 +198,14 @@ recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
 passed in the existing Docker toolchain, while native Windows cgo remains
 unavailable. Phase 11 is `COMPLETE / GO`; actual forward-paper evidence remains
 0 days / 0 orders. Phase 12 is `COMPLETE / CONDITIONAL GO` with the condition
-that the real HYP-EVENT-001A scientific evaluation is still required. No real
-direction labels or performance results exist, no recommendation logic
-changed, and the Phase-12 promotion gate remains closed.
+that the real HYP-EVENT-001A scientific evaluation is still required. The
+approved evidence extension now provides immutable SEC accession-time packets
+in the private derived dataset `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-
+evidence-v2`, with 1,059/1,059 primary matches and zero retrieval failures.
+The event-direction contract is frozen, but no direction labels or performance
+results exist, no recommendation logic changed, and the Phase-12 promotion
+gate remains closed. The current hosted-inference spend ceiling is $0 pending
+external cost-gate review.
 
 ### Phase 11 — High-Fidelity Paper Trading — COMPLETE / GO
 
@@ -222,10 +227,11 @@ Phase-07 GO is satisfied and **HYP-EVENT-001A** is authorised for real
 scientific evaluation. The bounded SEC 8-K plus Alpaca SIP dataset
 gate is **SUFFICIENT for initial HYP-EVENT-001A research**; survivorship and
 corporate-action limitations remain explicit. The eight Phase-12 contracts and
-exit harness are internally verified. No real direction labels or performance
-results have been generated because the frozen panel contains no filing bodies
-or admissible historical direction artifacts. No advanced model was promoted,
-no paid data or hosted inference was used, and recommendation logic was unchanged. The
+exit harness are internally verified. An immutable SEC accession-time evidence
+extension and frozen event-direction contract are now prepared, but no real
+direction labels or performance results have been generated. No advanced model
+was promoted, no paid data or hosted inference was used, and recommendation
+logic was unchanged. The
 bounded readiness
 assessment is recorded in
 `Docs/Jax-Roadmap-v2/12-advanced-quant-research/PHASE-12-READINESS-DECISION-
@@ -340,5 +346,6 @@ CONDITIONAL GO** after external `GO PHASE 10`, `GO PHASE 11` and
 evaluation; the dataset gate is demonstrated for initial research. Phase 10
 and Phase 11 are complete/GO, with actual forward-paper evidence of 0 days / 0
 orders. Real direction labels and performance results remain outstanding; the
-current evaluation is stopped at the hosted inference/data-evidence cost gate.
+immutable SEC evidence extension and direction contract are prepared, and the
+current evaluation is stopped at the hosted inference cost gate.
 Phase 12 remains research-only and Phase 13 has not started.

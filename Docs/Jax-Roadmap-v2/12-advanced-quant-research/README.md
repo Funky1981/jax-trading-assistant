@@ -3,9 +3,10 @@
 **Status:** **COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED**
 
 The prerequisites for `HYP-EVENT-001A` were accepted for real scientific
-evaluation and all eight package contracts are internally verified. Real
-direction labels and performance results remain outstanding because the frozen
-panel contains no filing bodies or admissible materialised direction labels.
+evaluation and all eight package contracts are internally verified. The frozen
+panel now has an immutable SEC filing-time evidence extension; real direction
+labels and performance results remain outstanding because no admissible
+historical classifications have been materialised.
 See the phase verification record. No result has recommendation,
 paper-execution or live-execution authority.
 

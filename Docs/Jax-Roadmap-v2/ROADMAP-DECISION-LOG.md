@@ -1055,3 +1055,41 @@ migrations are 000059/000060, and the complete-stream registry invariant
 passes. Phase 09 remains COMPLETE / GO. The scientific status remains
 **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE**. Phase 11 is NOT
 STARTED.
+## RD-2026-09-08-11 - HYP-EVENT-001A SEC evidence extension and hosted-inference cost gate
+
+- Date: 2026-09-08
+- Phase: 12 - Advanced Quant Research
+- Status: Evidence extension complete; external cost decision pending
+- Decision authority: external GPT-5.6 Sol roadmap-change approval; no hosted inference authorized by this record
+
+### Decision record
+
+The approved roadmap change extended the immutable HYP-EVENT-001A research
+panel with SEC accession-time evidence packets. The accepted parent dataset
+`hyp-event-001a-sec-8k-alpaca-sip-2016-2025-v1` remains unchanged and retains
+manifest SHA-256
+`db2b454793e50f28c34c9c2a7d91f798741936528752de7bd27cb52072a4864d`. The new
+private derived dataset is
+`hyp-event-001a-sec-8k-alpaca-sip-2016-2025-evidence-v2` with manifest SHA-256
+`967dfcb18eff8b6a3f4ec39fedd3898537446a284dc2a868631926dc1f41408c`.
+
+The acquisition rule retains each accession's complete index inventory,
+primary Form 8-K and all same-accession textual documents selected by stable
+metadata, while excluding non-semantic support files and duplicate aggregate
+submission text. Coverage is 1,059 packets, 1,059 primary matches, 10,731
+inventory rows, 2,418 selected raw documents and zero retrieval failures. 2024
+is semantically sealed until classifier freeze; 2025 is hash/inventory-only
+and sealed for semantic and outcome use.
+
+The frozen direction contract is `jax.hyp-event-001a.direction/v1` with prompt
+identity
+`d0b09acf412eb73ff97fc2e9bd5f4fc609dc57d5bd1dbd17d57f986b158d4143`. No
+direction labels, OOS outcomes or hosted inference were run. Current spend is
+$0. The measured 2016-2024 planning workload is 939 events and 12,859,803
+estimated evidence tokens; one event crosses the provider's >272K pricing
+threshold, none exceeds context, base cost is approximately $2.98 and the
+one-retry maximum envelope is approximately $5.97. A separate external cost
+decision is required before any paid call.
+
+Scientific status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
+SAMPLE**. Phase 13 remains NOT STARTED.

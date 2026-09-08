@@ -50,13 +50,21 @@ and evidence-conditioned baselines, validation selection, a single frozen 2024
 OOS capability run, stability/falsification checks, registry recording and drift
 monitoring. It demonstrates deterministic reproducibility and failure paths.
 
-The private HYP-EVENT-001A panel contains no filing bodies and no materialized
-historical direction assessment (`DirectionStatus` remains data-readiness-only).
-No bulk hosted-model classification was run and no additional inference cost
-was incurred. The existing unversioned keyword helper is not an admissible
-historical classifier. Therefore no real HYP-EVENT-001A performance, effect
-size, falsification result or scientific OOS conclusion is claimed. Real
-evaluation is stopped at the hosted inference/data-evidence cost gate.
+The private HYP-EVENT-001A panel has been extended with immutable SEC
+accession-time evidence packets in the derived local dataset
+`hyp-event-001a-sec-8k-alpaca-sip-2016-2025-evidence-v2`, bound to the accepted
+parent manifest. Coverage is 1,059/1,059 primary documents, 10,731 inventory
+rows, 2,418 selected raw text documents and zero retrieval failures. The 2024
+content remains semantically sealed until classifier freeze and 2025 remains
+hash/inventory-only and sealed for semantic/outcome use. The direction contract
+`jax.hyp-event-001a.direction/v1` is frozen with prompt identity
+`d0b09acf412eb73ff97fc2e9bd5f4fc609dc57d5bd1dbd17d57f986b158d4143`; no bulk
+hosted-model classification was run and no inference cost was incurred. The
+existing unversioned keyword helper remains inadmissible. No real
+HYP-EVENT-001A performance, effect size, falsification result or scientific OOS
+conclusion is claimed. The current stop is the hosted-inference cost gate;
+the proposed one-time maximum envelope is $6.00, while the active ceiling is
+$0.
 
 No advanced model was trained or promoted. The promotion gate is deterministically
 `PROMOTION_CLOSED` because the final holdout is sealed, survivorship remains
