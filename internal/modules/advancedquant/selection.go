@@ -106,6 +106,16 @@ func (r ModelSelectionResult) Validate() error {
 	if r.SelectionID != selectionID(r) {
 		return fmt.Errorf("selection identity does not match result")
 	}
+	seen := map[string]struct{}{}
+	for _, candidateID := range r.CandidateIDs {
+		if !validHashID(candidateID, "model_") {
+			return fmt.Errorf("candidate identity is invalid")
+		}
+		if _, ok := seen[candidateID]; ok {
+			return fmt.Errorf("candidate identities are duplicated")
+		}
+		seen[candidateID] = struct{}{}
+	}
 	return nil
 }
 

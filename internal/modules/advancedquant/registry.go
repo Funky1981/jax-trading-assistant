@@ -84,7 +84,7 @@ func (r *ExperimentRegistry) Register(record ExperimentRecord) error {
 	if existing, ok := r.records[record.ID]; ok && !sameJSON(existing, record) {
 		return fmt.Errorf("experiment registry identity collision")
 	}
-	r.records[record.ID] = record
+	r.records[record.ID] = cloneExperimentRecord(record)
 	return nil
 }
 
@@ -93,7 +93,7 @@ func (r *ExperimentRegistry) List() []ExperimentRecord {
 	defer r.mu.RUnlock()
 	out := make([]ExperimentRecord, 0, len(r.records))
 	for _, record := range r.records {
-		out = append(out, record)
+		out = append(out, cloneExperimentRecord(record))
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
@@ -179,4 +179,18 @@ func outcomeID(o ResearchOutcome) string {
 	b, _ := json.Marshal(o)
 	d := sha256.Sum256(b)
 	return "outcome12_" + hex.EncodeToString(d[:])
+}
+
+func cloneExperimentRecord(record ExperimentRecord) ExperimentRecord {
+	clone := record
+	clone.FeatureIDs = append([]string(nil), record.FeatureIDs...)
+	clone.Horizons = append([]int(nil), record.Horizons...)
+	clone.Partitions = append([]Partition(nil), record.Partitions...)
+	if record.Parameters != nil {
+		clone.Parameters = make(map[string]string, len(record.Parameters))
+		for key, value := range record.Parameters {
+			clone.Parameters[key] = value
+		}
+	}
+	return clone
 }

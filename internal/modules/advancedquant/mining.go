@@ -85,7 +85,7 @@ func (l *TrialLedger) Add(trial FactorTrial) error {
 	if existing, ok := l.trials[trial.ID]; ok && !sameJSON(existing, trial) {
 		return fmt.Errorf("factor trial identity collision")
 	}
-	l.trials[trial.ID] = trial
+	l.trials[trial.ID] = cloneTrial(trial)
 	return nil
 }
 
@@ -94,7 +94,7 @@ func (l *TrialLedger) List() []FactorTrial {
 	defer l.mu.RUnlock()
 	out := make([]FactorTrial, 0, len(l.trials))
 	for _, trial := range l.trials {
-		out = append(out, trial)
+		out = append(out, cloneTrial(trial))
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
@@ -214,4 +214,16 @@ func trialID(t FactorTrial) string {
 	b, _ := json.Marshal(t)
 	d := sha256.Sum256(b)
 	return "trial_" + hex.EncodeToString(d[:])
+}
+
+func cloneTrial(trial FactorTrial) FactorTrial {
+	clone := trial
+	clone.FeatureIDs = append([]string(nil), trial.FeatureIDs...)
+	if trial.Parameters != nil {
+		clone.Parameters = make(map[string]string, len(trial.Parameters))
+		for key, value := range trial.Parameters {
+			clone.Parameters[key] = value
+		}
+	}
+	return clone
 }

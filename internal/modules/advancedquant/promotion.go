@@ -57,7 +57,7 @@ func EvaluatePromotion(evidence PromotionEvidence) (PromotionResult, error) {
 }
 
 func (r PromotionResult) Validate() error {
-	if r.ContractVersion != PromotionContractV1 || !validHashID(r.ID, "promote_") || (r.Status != PromotionClosed && r.Status != PromotionEligible) || r.RecommendationMutationAllowed || len(r.ReasonCodes) == 0 {
+	if r.ContractVersion != PromotionContractV1 || !validHashID(r.ID, "promote_") || (r.Status != PromotionClosed && r.Status != PromotionEligible) || r.RecommendationMutationAllowed || len(r.ReasonCodes) == 0 || strings.TrimSpace(r.Evidence.HypothesisID) == "" || strings.TrimSpace(r.Evidence.ExperimentID) == "" || strings.TrimSpace(r.Evidence.DatasetID) == "" || !validSHA256(r.Evidence.DatasetHash) || r.Evidence.ForwardPaperDays < 0 || r.Evidence.ForwardPaperOrders < 0 {
 		return fmt.Errorf("promotion result is invalid or grants recommendation mutation")
 	}
 	if r.ID != promotionID(r) {

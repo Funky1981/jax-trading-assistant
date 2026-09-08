@@ -196,7 +196,7 @@ func (s *FeatureStore) Put(feature Feature) error {
 	if existing, ok := s.items[feature.ID]; ok && !reflect.DeepEqual(existing, feature) {
 		return fmt.Errorf("feature identity collision")
 	}
-	s.items[feature.ID] = feature
+	s.items[feature.ID] = cloneFeature(feature)
 	return nil
 }
 
@@ -207,7 +207,7 @@ func (s *FeatureStore) Get(id string) (Feature, error) {
 	if !ok {
 		return Feature{}, fmt.Errorf("feature %q not found", id)
 	}
-	return feature, nil
+	return cloneFeature(feature), nil
 }
 
 func (s *FeatureStore) List() []Feature {
@@ -215,7 +215,7 @@ func (s *FeatureStore) List() []Feature {
 	defer s.mu.RUnlock()
 	out := make([]Feature, 0, len(s.items))
 	for _, feature := range s.items {
-		out = append(out, feature)
+		out = append(out, cloneFeature(feature))
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
@@ -252,6 +252,22 @@ func factorID(f FactorDefinition) string {
 	b, _ := json.Marshal(f)
 	digest := sha256.Sum256(b)
 	return "factor_" + hex.EncodeToString(digest[:])
+}
+
+func cloneFeature(feature Feature) Feature {
+	clone := feature
+	clone.SourceIdentities = append([]string(nil), feature.SourceIdentities...)
+	if feature.Parameters != nil {
+		clone.Parameters = make(map[string]string, len(feature.Parameters))
+		for key, value := range feature.Parameters {
+			clone.Parameters[key] = value
+		}
+	}
+	if feature.Value != nil {
+		value := *feature.Value
+		clone.Value = &value
+	}
+	return clone
 }
 
 func finite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }

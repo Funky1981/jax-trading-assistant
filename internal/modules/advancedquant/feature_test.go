@@ -32,8 +32,14 @@ func TestFeatureContractBindsKnowabilityAndProvenance(t *testing.T) {
 	if err := store.Put(f); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := store.Get(f.ID); err != nil || got.ID != f.ID {
+	got, err := store.Get(f.ID)
+	if err != nil || got.ID != f.ID {
 		t.Fatalf("stored feature lookup failed: got=%+v err=%v", got, err)
+	}
+	*got.Value = 99
+	gotAgain, err := store.Get(f.ID)
+	if err != nil || *gotAgain.Value != 1 {
+		t.Fatalf("store exposed mutable feature value: %+v err=%v", gotAgain, err)
 	}
 }
 
