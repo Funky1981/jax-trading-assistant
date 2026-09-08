@@ -28,7 +28,7 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / CONDITIONAL GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / CONDITIONAL GO** |
 | Current implementation package | **PHASE 12 READINESS — HISTORICAL DATA & RESEARCH HYPOTHESIS** |
-| Next package | **None — Phase 12 not authorised; readiness decision required** |
+| Next package | **Historical data qualification for HYP-EVENT-001A — bounded readiness only** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -195,8 +195,9 @@ validation. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains the
 scientific status. The approved migration-number collision remediation is
 recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
 `COMPLETE / CONDITIONAL GO`; Phase 11 is `COMPLETE / CONDITIONAL GO` with race
-verification outstanding. Phase 12 is not authorised because its prerequisites
-are not satisfied.
+verification outstanding. Phase 12 is not authorised for WP implementation
+because its dataset prerequisite is not satisfied. HYP-EVENT-001A is authorised
+only for bounded historical-data readiness and baseline research design.
 
 ### Phase 11 — High-Fidelity Paper Trading — COMPLETE / CONDITIONAL GO
 
@@ -214,14 +215,15 @@ remains 0 days / 0 orders. Phase 12 prerequisites are not satisfied and Phase
 
 ### Phase 12 Readiness — Historical Data & Research Hypothesis — NOT READY
 
-Phase-07 GO is satisfied, but the remaining Phase-12 prerequisites are not:
-the available historical data is **INSUFFICIENT** for leakage-safe advanced
-quantitative research, and no already-authorised explicit falsifiable Phase-12
-hypothesis was found. Only WP-12 templates/examples and test fixtures exist;
-they are not authorization. No paid data has been purchased and WP-12.01 has
-not started. The bounded readiness assessment is recorded in
+Phase-07 GO is satisfied and **HYP-EVENT-001A** is authorised for data readiness
+and baseline research design only. The available historical data is still
+**INSUFFICIENT** for leakage-safe advanced quantitative research. No paid data
+has been purchased and WP-12.01 has not started. The bounded readiness
+assessment is recorded in
 `Docs/Jax-Roadmap-v2/12-advanced-quant-research/PHASE-12-READINESS-DECISION-
-PACK.md`. Phase 13 is not started.
+PACK.md`; the resulting handover is in
+`Docs/Jax-Roadmap-v2/12-advanced-quant-research/HYP-EVENT-001A-HISTORICAL-
+DATA-READINESS-HANDOVER.md`. Phase 13 is not started.
 
 ### Later roadmap — planned capability progression
 
@@ -324,8 +326,10 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 12 prerequisite gate — NOT READY** after
-external `CONDITIONAL GO PHASE 11`. Phase 10 remains complete/conditional GO
-with its race-detector condition open because the current environment lacks
-cgo/gcc. Phase 11 remains paper-only; actual forward-paper evidence is 0 days
-/ 0 orders. Phase 12 is not authorised and has not started.
+The current position is **Phase 12 historical data readiness — IN PROGRESS**
+after external `CONDITIONAL GO PHASE 11`. HYP-EVENT-001A is authorised for data
+readiness and baseline research design only. Phase 10 remains complete/
+conditional GO with its race-detector condition open because the current
+environment lacks cgo/gcc. Phase 11 remains paper-only; actual forward-paper
+evidence is 0 days / 0 orders. Phase 12 implementation is not authorised and
+has not started.

@@ -1,5 +1,35 @@
 # Roadmap Decision Log
 
+## RD-2026-09-08-06 - HYP-EVENT-001A data-readiness authorization — insufficient
+
+- Date: 2026-09-08
+- Stage: `PHASE 12 HISTORICAL DATA READINESS — IN PROGRESS`
+- Hypothesis: `HYP-EVENT-001A — SEC evidence-backed issuer-event reaction`
+- Status: `AUTHORISED FOR DATA READINESS AND BASELINE RESEARCH DESIGN`
+- Phase-12 implementation: `NOT AUTHORISED`
+- Decision authority: external GPT-5.6 Sol technical-lead review
+
+The authorized research question is whether timestamped material SEC 8-K events,
+directionally classified from information available at the time, show more
+consistent subsequent SPY-relative returns when evidence quality is stronger.
+The frozen initial design uses 2016–2025, next regular-session open entry, a
+5-trading-day primary horizon, 1/3-day diagnostics, SPY benchmark, null and
+direction-only baselines, frozen Phase-11 costs and a sealed 2025 holdout.
+
+Level-1 qualification did not pass. Alpaca is disabled with no configured API
+key, secret or feed, so no entitlement/SIP/history/adjustment qualification was
+possible. The SEC adapter requires configured `SEC_USER_AGENT` and `SEC_CONTACT`
+and neither is present; no live SEC request was made. Existing SEC/marketdata
+contract tests passed. No large acquisition occurred.
+
+The historical-data result is `INSUFFICIENT`: no HYP-EVENT-001A dataset exists,
+no event panel was acquired, and survivorship, delisted coverage,
+corporate-action treatment, event timing and panel-level quality metrics remain
+unproven. Actual forward-paper evidence remains 0 days / 0 orders, race-detector
+verification remains outstanding, and `TRADING EDGE NOT DEMONSTRATED /
+INSUFFICIENT SAMPLE` is preserved. WP-12.01, Phase-12 runtime work and Phase 13
+remain unstarted.
+
 ## RD-2026-09-08-05 - Phase 12 readiness remediation — not ready
 
 - Date: 2026-09-08

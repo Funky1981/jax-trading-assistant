@@ -53,7 +53,9 @@ criteria remain binding.
 - Phase 13: `NOT STARTED`
 
 The readiness decision pack records the current data inventory, gap matrix,
-source/cost options and candidate hypotheses. It does not authorize WP-12.01.
+source/cost options and candidate hypotheses. `HYP-EVENT-001A` is now
+authorised for data readiness and baseline research design only. The dataset
+gate remains incomplete and does not authorize WP-12.01.
 
 
 ## 2026-08-10 integrated roadmap change

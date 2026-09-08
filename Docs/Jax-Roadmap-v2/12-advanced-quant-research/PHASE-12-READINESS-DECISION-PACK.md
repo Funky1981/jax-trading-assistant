@@ -170,7 +170,7 @@ analysis remain external decisions to freeze before implementation.
 These are a shortlist for external selection. None is promoted into Phase-12
 scope.
 
-### HYP-EVENT-001 — Evidence-backed issuer-event reaction
+### HYP-EVENT-001A — Evidence-backed issuer-event reaction
 
 **Question/rationale:** After a source-backed, issuer-resolved material event
 with a pre-defined direction/surprise and corroboration quality, does the next
@@ -269,11 +269,11 @@ structure — remain deferred and are not promoted by this pack.
 
 ## Technical recommendation — NOT AUTHORISED
 
-Recommend that the external technical lead select **HYP-EVENT-001** for the
-first experiment, subject to a separate authorization and frozen research
-contract. Begin with a deterministic event study and its meaningful baselines;
-advanced ML is not warranted unless it later demonstrates reproducible OOS value
-over those baselines.
+The external technical lead has now selected and authorized **HYP-EVENT-001A**
+for data readiness and baseline research design only. It is not authorization to
+implement Phase 12. Begin with a deterministic event study and its meaningful
+baselines only after the dataset gate passes; advanced ML is not warranted
+unless it later demonstrates reproducible OOS value over those baselines.
 
 This is preferred because it reuses Jax’s strongest differentiators (event
 intelligence, issuer resolution, evidence provenance, contradiction/unknown
@@ -284,7 +284,7 @@ recommendation-logic change follows from this recommendation.
 
 ## Minimum viable research dataset
 
-For HYP-EVENT-001, subject to lead approval and pre-registration:
+For HYP-EVENT-001A, subject to the authorized research contract and data gate:
 
 - A frozen liquid US equity/ETF universe, initially proposed at 100–300 names,
   with explicit inclusion date, point-in-time membership or a clearly labelled
