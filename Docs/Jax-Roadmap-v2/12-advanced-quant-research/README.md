@@ -1,12 +1,12 @@
 # Phase 12 — Advanced Quant Research
 
-**Status:** **NOT READY — PREREQUISITES NOT SATISFIED**
+**Status:** **AUTHORISED / IN PROGRESS — RESEARCH ONLY**
 
 The active bounded stage is `PHASE 12 READINESS — HISTORICAL DATA & RESEARCH
 HYPOTHESIS`. It is a documentation/design assessment, not Phase-12
-implementation. See `PHASE-12-READINESS-DECISION-PACK.md`. WP-12.01 must not
-begin until sufficient clean historical data and an authorised explicit
-falsifiable hypothesis are independently accepted.
+implementation. The prerequisites for `HYP-EVENT-001A` are accepted for bounded
+research. See the readiness handover and `PHASE-12-READINESS-DECISION-PACK.md`.
+No result has recommendation, paper-execution or live-execution authority.
 
 ## Purpose
     Add factor, ML and automated hypothesis capabilities only where conventional analysis has a validated research need.
