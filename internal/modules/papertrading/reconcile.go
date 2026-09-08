@@ -146,6 +146,11 @@ func accountsMatch(expected, actual PaperAccount) bool {
 			return false
 		}
 	}
+	for index, event := range expected.Events {
+		if event != actual.Events[index] {
+			return false
+		}
+	}
 	return true
 }
 

@@ -63,6 +63,27 @@ func TestReconcileRequiresRecoveryForCorruptState(t *testing.T) {
 	}
 }
 
+func TestReconcileRejectsTamperedLedgerEventStream(t *testing.T) {
+	now := time.Date(2026, 9, 8, 10, 0, 0, 0, time.UTC)
+	venue, _ := filledVenue(t, now)
+	ledger, err := NewPaperLedger("paper-account", "USD", 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fill := range venue.Snapshot().Fills {
+		if _, err := ledger.ApplyFill(fill); err != nil {
+			t.Fatal(err)
+		}
+	}
+	corrupt := ledger.Snapshot()
+	corrupt.Events[0].CashDelta += 1
+	corrupt.Events[0].EventID = ledgerEventIdentity(corrupt.Events[0])
+	result := Reconcile(ReconciliationInput{VenueSnapshot: venue.Snapshot(), Account: corrupt}, now)
+	if result.Status != ReconciliationRequired || !containsReason(result.ReasonCodes, ReasonLedgerMismatch) {
+		t.Fatalf("tampered ledger event stream = %#v", result)
+	}
+}
+
 func containsReason(reasons []ReasonCode, wanted ReasonCode) bool {
 	for _, reason := range reasons {
 		if reason == wanted {
