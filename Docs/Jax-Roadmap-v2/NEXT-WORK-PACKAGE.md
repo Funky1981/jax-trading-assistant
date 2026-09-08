@@ -12,8 +12,8 @@
 - Phase 10 — Workflow, HITL & Operational Safety: **COMPLETE / CONDITIONAL GO**
 - Phase 11 — High-Fidelity Paper Trading: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **WP-11.06 — Broker/public-market reconciliation**
-- Next package: **WP-11.06 — Broker/public-market reconciliation**
+- Current implementation package: **WP-11.07 — Paper outcome attribution**
+- Next package: **WP-11.07 — Paper outcome attribution**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and

@@ -34,13 +34,13 @@
 2f41cb6ff269c03ae7ebc2832f201ce8217bcabb218814a9d6aa719209bd7e54  04-world-monitor-intelligence/WP-04.04-source-triangulation-and-confidence.md
 307e8fecb7567823d0da8599d712cdce4ec1f53bef3da6dbf1c5c5e9cdc9f774  10-workflow-hitl-operational-safety/PHASE-10-INTERNAL-VERIFICATION.md
 318a2284e63614c695f4ae84c42e71248d67f22dc42a355aa371c35e5377c10b  references/DECISION-LOG-TEMPLATE.md
-319944d64c06e7da45f3bb6ed3ef2894dfd4db5b9094e812923f3341e162bb99  NEXT-WORK-PACKAGE.md
 31b02aa21ad65b466e7b8d7ffa231ea5d5ebee4cf06ac629aff0f45b3844e995  11-high-fidelity-paper-trading/WP-11.02-paper-venue-order-matcher.md
 32b48326521e809b910cc33fe670cc97dc648234e28b5210b433c0ae48053487  13-optional-live-execution/README.md
 3339bdb4be2511787b00f77bd01adcc10b357f6f24a0c16988436e0247b6a155  00-current-issuer-asset-resolution/WP-00.01-fix-benchmark-manifest-execution-gate.md
 33c28befabe79c9400731859310cb55662a71a253b5d4aa5ab7bf65e792f8657  06-research-recommendation-engine/WP-06.05-freshness-evidence-sufficiency-gates.md
 340a43487055acf1ca592d3b00852c68b72cea4825da2e18a4b80eeaeea2ddac  references/RESEARCH-NOTES.md
 36957d0665cea1fa9cccf9a2c0b70dafcbfc4ca846c86f98dce8168e8db4fdf1  06-research-recommendation-engine/WP-06.07-ui-api-read-model-for-useful-recommendations.md
+369f813533794ed503e9a15e06d80a246a62acc9e781fd0704533269f610013b  NEXT-WORK-PACKAGE.md
 36a04ec99e9bde26143cc5e0896d62ff14a53e7bd1f92412162ced64a2f456b0  02-data-platform-provider-architecture/README.md
 373482b1072f6e5f13d3cad94c5730b97e26bf022edcafd48dd55016bc9fd06b  10-workflow-hitl-operational-safety/GATE.md
 376f0e489fdecd24757b0a4d33ce2b048b2fe97a623f21e5703661ddcd44dd77  13-optional-live-execution/WP-13.06-emergency-kill-disable-paths.md
@@ -164,6 +164,7 @@ e09b761a7daeec15ee918ba437800cf134f409de8aa6693d16b334ed66d1d78b  07-evaluation-
 e2bf11de673708f077639bff26462e5af4d3ba3f464c14c1cd5536e8631c72a1  11-high-fidelity-paper-trading/WP-11.03-IMPLEMENTATION-EVIDENCE.md
 e3a741dbaf93e45f89f1ad57b26f75bd0a742e7b1b21a060782ca280c831a464  10-workflow-hitl-operational-safety/REFERENCE-NOTES.md
 e3f8f647de22a915ecb9be749b52b33b3d45f1eec1d017ca6dc4ad62c75fad1d  09-portfolio-intelligence-deterministic-risk/PHASE-09-INTERNAL-VERIFICATION.md
+e4e352eabf32afdd232b6b351411f0657683b7c1949b4a694ca4534131f56914  11-high-fidelity-paper-trading/WP-11.07-IMPLEMENTATION-EVIDENCE.md
 e572feb20300d9c0faf5d3cd4dc6797c0015f7e0763e98ac0abb3bdbaf742783  05-deterministic-quant-core/LIBRARY-EVALUATION.md
 e8e495b3277642bec8123c6168e55e0ab521b386c9515cc060b87a01d6805a44  governance/CODEX-AUTONOMOUS-MASTER-PROMPT.md
 e97edce1fdae272d9b48e6c2040646a6389ddbf36aa84ae2f2ae8ac3cb811d6c  03-core-financial-evidence/WP-03.05-treasury-eia-cboe-cftc-source-evaluation-and-first-approved-integrations.md
