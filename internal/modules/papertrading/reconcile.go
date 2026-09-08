@@ -146,8 +146,19 @@ func accountsMatch(expected, actual PaperAccount) bool {
 			return false
 		}
 	}
-	for index, event := range expected.Events {
-		if event != actual.Events[index] {
+	expectedEvents := make(map[string]LedgerEvent, len(expected.Events))
+	for _, event := range expected.Events {
+		expectedEvents[event.EventID] = event
+	}
+	actualEvents := make(map[string]LedgerEvent, len(actual.Events))
+	for _, event := range actual.Events {
+		actualEvents[event.EventID] = event
+	}
+	if len(expectedEvents) != len(expected.Events) || len(actualEvents) != len(actual.Events) || len(expectedEvents) != len(actualEvents) {
+		return false
+	}
+	for eventID, event := range expectedEvents {
+		if event != actualEvents[eventID] {
 			return false
 		}
 	}
