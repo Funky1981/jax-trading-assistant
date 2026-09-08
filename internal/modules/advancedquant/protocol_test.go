@@ -66,6 +66,11 @@ func TestProtocolRejectsHoldoutAndFutureDerivedObservation(t *testing.T) {
 	if err := o.Validate(p); err == nil {
 		t.Fatal("same-event entry was accepted")
 	}
+	o = testObservations(t, p)[0]
+	o.ExitAt = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := o.Validate(p); err == nil {
+		t.Fatal("outcome crossing its partition boundary was accepted")
+	}
 	if _, err := ScoreDirectionOnly("exp_test", []ResearchObservation{o}, PartitionFinalHoldout, p); err == nil {
 		t.Fatal("holdout scoring was accepted")
 	}

@@ -33,6 +33,16 @@ func TestPromotionGateFailsClosedOnMissingEvidenceAndDetectsTampering(t *testing
 	if err := result.Validate(); err == nil {
 		t.Fatal("tampered promotion result was accepted")
 	}
+	result, err = EvaluatePromotion(PromotionEvidence{HypothesisID: "HYP", ExperimentID: "exp", DatasetID: "data", DatasetHash: "db2b454793e50f28c34c9c2a7d91f798741936528752de7bd27cb52072a4864d", BaselineBeaten: true, Reproducible: true, LeakageReviewPassed: true, CostSensitivityPassed: true, DriftMonitoringDefined: true, FailureBehaviourDefined: true, SurvivorshipControlled: true, FinalHoldoutSealed: false, ForwardPaperDays: 10, ForwardPaperOrders: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result.ReasonCodes = []string{"SEPARATE_RECOMMENDATION_REVIEW_REQUIRED"}
+	result.ID = promotionID(result)
+	result.Status = PromotionClosed
+	if err := result.Validate(); err == nil {
+		t.Fatal("eligible evidence with inconsistent closed status was accepted")
+	}
 }
 
 func containsAll(have, want []string) bool {

@@ -47,31 +47,10 @@ func EvaluatePromotion(evidence PromotionEvidence) (PromotionResult, error) {
 	if strings.TrimSpace(evidence.HypothesisID) == "" || strings.TrimSpace(evidence.ExperimentID) == "" || strings.TrimSpace(evidence.DatasetID) == "" || !validSHA256(evidence.DatasetHash) || evidence.ForwardPaperDays < 0 || evidence.ForwardPaperOrders < 0 {
 		return PromotionResult{}, fmt.Errorf("promotion evidence is incomplete")
 	}
-	result := PromotionResult{ContractVersion: PromotionContractV1, Status: PromotionEligible, Evidence: evidence, RecommendationMutationAllowed: false, ReasonCodes: []string{}}
-	if evidence.FinalHoldoutSealed {
+	result := PromotionResult{ContractVersion: PromotionContractV1, Status: PromotionEligible, Evidence: evidence, RecommendationMutationAllowed: false}
+	result.ReasonCodes = promotionReasonCodes(evidence)
+	if len(result.ReasonCodes) != 1 || result.ReasonCodes[0] != "SEPARATE_RECOMMENDATION_REVIEW_REQUIRED" {
 		result.Status = PromotionClosed
-		result.ReasonCodes = append(result.ReasonCodes, "FINAL_HOLDOUT_SEALED")
-	}
-	if !evidence.SurvivorshipControlled {
-		result.Status = PromotionClosed
-		result.ReasonCodes = append(result.ReasonCodes, "SURVIVORSHIP_LIMITATION")
-	}
-	if evidence.ForwardPaperDays == 0 || evidence.ForwardPaperOrders == 0 {
-		result.Status = PromotionClosed
-		result.ReasonCodes = append(result.ReasonCodes, "NO_FORWARD_PAPER_EVIDENCE")
-	}
-	checks := []struct {
-		ok   bool
-		code string
-	}{{evidence.BaselineBeaten, "BASELINE_NOT_BEATEN"}, {evidence.Reproducible, "NOT_REPRODUCIBLE"}, {evidence.LeakageReviewPassed, "LEAKAGE_REVIEW_FAILED"}, {evidence.CostSensitivityPassed, "COST_SENSITIVITY_FAILED"}, {evidence.DriftMonitoringDefined, "DRIFT_MONITORING_MISSING"}, {evidence.FailureBehaviourDefined, "FAILURE_BEHAVIOUR_MISSING"}}
-	for _, check := range checks {
-		if !check.ok {
-			result.Status = PromotionClosed
-			result.ReasonCodes = append(result.ReasonCodes, check.code)
-		}
-	}
-	if result.Status == PromotionEligible {
-		result.ReasonCodes = append(result.ReasonCodes, "SEPARATE_RECOMMENDATION_REVIEW_REQUIRED")
 	}
 	result.ID = promotionID(result)
 	return result, nil
@@ -84,7 +63,45 @@ func (r PromotionResult) Validate() error {
 	if r.ID != promotionID(r) {
 		return fmt.Errorf("promotion result identity does not match evidence")
 	}
+	expected := promotionReasonCodes(r.Evidence)
+	if len(expected) != len(r.ReasonCodes) {
+		return fmt.Errorf("promotion reason codes do not match evidence")
+	}
+	for index := range expected {
+		if expected[index] != r.ReasonCodes[index] {
+			return fmt.Errorf("promotion reason code mismatch")
+		}
+	}
+	if (len(expected) == 1 && expected[0] == "SEPARATE_RECOMMENDATION_REVIEW_REQUIRED") != (r.Status == PromotionEligible) {
+		return fmt.Errorf("promotion status does not match reason codes")
+	}
 	return nil
+}
+
+func promotionReasonCodes(evidence PromotionEvidence) []string {
+	codes := []string{}
+	if evidence.FinalHoldoutSealed {
+		codes = append(codes, "FINAL_HOLDOUT_SEALED")
+	}
+	if !evidence.SurvivorshipControlled {
+		codes = append(codes, "SURVIVORSHIP_LIMITATION")
+	}
+	if evidence.ForwardPaperDays == 0 || evidence.ForwardPaperOrders == 0 {
+		codes = append(codes, "NO_FORWARD_PAPER_EVIDENCE")
+	}
+	checks := []struct {
+		ok   bool
+		code string
+	}{{evidence.BaselineBeaten, "BASELINE_NOT_BEATEN"}, {evidence.Reproducible, "NOT_REPRODUCIBLE"}, {evidence.LeakageReviewPassed, "LEAKAGE_REVIEW_FAILED"}, {evidence.CostSensitivityPassed, "COST_SENSITIVITY_FAILED"}, {evidence.DriftMonitoringDefined, "DRIFT_MONITORING_MISSING"}, {evidence.FailureBehaviourDefined, "FAILURE_BEHAVIOUR_MISSING"}}
+	for _, check := range checks {
+		if !check.ok {
+			codes = append(codes, check.code)
+		}
+	}
+	if len(codes) == 0 {
+		return []string{"SEPARATE_RECOMMENDATION_REVIEW_REQUIRED"}
+	}
+	return codes
 }
 
 func promotionID(r PromotionResult) string {

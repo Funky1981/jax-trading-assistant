@@ -129,6 +129,11 @@ func (o ResearchObservation) Validate(protocol ResearchProtocol) error {
 	if !observationInWindow(o, protocol) {
 		return fmt.Errorf("observation does not belong to its declared protocol partition")
 	}
+	for _, window := range protocol.Windows {
+		if window.Name == o.Partition && dateOnly(o.ExitAt).After(dateOnly(window.End)) {
+			return fmt.Errorf("observation outcome crosses its partition boundary")
+		}
+	}
 	return nil
 }
 
@@ -200,6 +205,9 @@ func ScoreEvidenceConditioned(experimentID string, observations []ResearchObserv
 }
 
 func score(experimentID string, observations []ResearchObservation, partition Partition, protocol ResearchProtocol, include func(ResearchObservation) bool) (MetricResult, error) {
+	if err := protocol.Validate(); err != nil {
+		return MetricResult{}, err
+	}
 	if strings.TrimSpace(experimentID) == "" || partition == PartitionFinalHoldout {
 		return MetricResult{}, fmt.Errorf("score requires an experiment and non-holdout partition")
 	}
@@ -265,6 +273,9 @@ func (r *FrozenOOSRun) ScoreOOS(observations []ResearchObservation, protocol Res
 	if r.OOSScored {
 		return MetricResult{}, fmt.Errorf("formal OOS may be scored only once")
 	}
+	if err := protocol.Validate(); err != nil || protocol.ID != r.Config.ProtocolID {
+		return MetricResult{}, fmt.Errorf("OOS protocol does not match the frozen experiment configuration")
+	}
 	result, err := ScoreEvidenceConditioned(r.Config.ID, observations, PartitionOOS, protocol, qualityThreshold(r.Config))
 	if err != nil {
 		return MetricResult{}, err
@@ -292,6 +303,11 @@ func observationInWindow(o ResearchObservation, p ResearchProtocol) bool {
 		}
 	}
 	return false
+}
+
+func dateOnly(value time.Time) time.Time {
+	value = value.UTC()
+	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 func protocolID(p ResearchProtocol) string {
