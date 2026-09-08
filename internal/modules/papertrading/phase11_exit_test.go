@@ -1,6 +1,7 @@
 package papertrading
 
 import (
+	"sort"
 	"testing"
 	"time"
 )
@@ -40,7 +41,20 @@ func TestPhase11ExitHarness(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, fill := range venue.Snapshot().Fills {
+	fillSnapshot := venue.Snapshot().Fills
+	fillIDs := make([]string, 0, len(fillSnapshot))
+	for fillID := range fillSnapshot {
+		fillIDs = append(fillIDs, fillID)
+	}
+	sort.Slice(fillIDs, func(i, j int) bool {
+		left, right := fillSnapshot[fillIDs[i]], fillSnapshot[fillIDs[j]]
+		if left.FilledAt.Equal(right.FilledAt) {
+			return left.FillID < right.FillID
+		}
+		return left.FilledAt.Before(right.FilledAt)
+	})
+	for _, fillID := range fillIDs {
+		fill := fillSnapshot[fillID]
 		if _, err := account.ApplyFill(fill); err != nil {
 			t.Fatal(err)
 		}
