@@ -1,5 +1,6 @@
 01a999fb9582c228a70a9ce2f4d31ea7403b715f414d85d7dab87aeaec6d3c90  10-workflow-hitl-operational-safety/WP-10.06-crash-recovery-and-reconciliation-states.md
 035b65038527af9130ce15917d6c6a1bc5f7e034d2f155e11495bb3c199ad21b  02-data-platform-provider-architecture/GATE.md
+04844372a409f8fb0c5ec8b3da0a0cc18bb3ac8556988c2ee3d3b609f57cdba0  11-high-fidelity-paper-trading/PHASE-11-INTERNAL-VERIFICATION.md
 06465aa45191437b7fb0e602c09e93f3ddb74ff36b2b5321ed314ae3f5dddb52  11-high-fidelity-paper-trading/WP-11.04-partial-fill-and-market-hours-semantics-where-relevant.md
 07d42db210ea008fc602cb7d87aada788f3dbbf490f924a4d4c61a68d22b120b  07-evaluation-replay-backtesting/WP-07.04-recommendation-outcome-tracking.md
 084b9471a8d46cf44be1e6aa54564298f8ec0faa6f6b04616a366e58dd72c26a  03-core-financial-evidence/WP-03.04-economic-release-calendar-ingestion.md
@@ -9,7 +10,6 @@
 0c64553533ed1c97c5b7bbdb025a54bb8b0733fe29b59eccb7e5081702fc94b5  08-controlled-ai-tools-durable-research-agents/WP-08.02-read-only-tool-permission-tiers.md
 0d36e96f37d4e989edf30b4125752f175b38bd0ea1095dc2196953e2f43d1b9a  08-controlled-ai-tools-durable-research-agents/README.md
 0fb17c9dd86900148410a1115e56571beb959775247e22ceebdfa894697384f4  09-portfolio-intelligence-deterministic-risk/WP-09.03-risk-budget-policy.md
-106863129113e18b4b79c02638e89709a3c97a7af980bcd315aa4827186b79d6  JAX-ROADMAP-OVERVIEW.md
 107f9b4379632f0024b48dee400f74d414a1a5ba22ef7fba0486156226c45208  01-canonical-contracts-provenance-audit/GATE.md
 117c2900bcecd6d8713065960bb0e01371c7cfc222878a6536a98b29181ffe80  11-high-fidelity-paper-trading/WP-11.01-IMPLEMENTATION-EVIDENCE.md
 142cec0a8dcd409f1fa3078ce90b3a2ebd2773e60154fc258b2f175e71ccaf52  06-research-recommendation-engine/REFERENCE-NOTES.md
@@ -28,7 +28,6 @@
 219f398a6e7df492c5d8ddd98a2893c9d06762d412e992fad98d53c4249ab46b  13-optional-live-execution/REFERENCE-NOTES.md
 2b001ba5b81e55f6bf3d86ce9f2cc10aa47ddc7e03b01f8748b8a417400eaf46  07-evaluation-replay-backtesting/WP-07.03-model-prompt-algorithm-version-comparison.md
 2b05aed6fe7305fb831224fb8fcf9776d106629f7cd45e098b769f5cb0a64b29  06-research-recommendation-engine/PHASE-06-INTERNAL-VERIFICATION.md
-2b0def7537066e66dc6e921a9d26c5848feb19691d56c4347ecf6064e49d7f17  ROADMAP-DECISION-LOG.md
 2d6723bca89f3643e8923e24b67bdc1b6789c64555d47d8967e910fd393dd7d2  05-deterministic-quant-core/WP-05.07-position-sizing-primitives.md
 2dcd50914a26f86988f3a9627bd859bc8bd65a7cbffac4993229663abc7dbebb  09-portfolio-intelligence-deterministic-risk/README.md
 2f41cb6ff269c03ae7ebc2832f201ce8217bcabb218814a9d6aa719209bd7e54  04-world-monitor-intelligence/WP-04.04-source-triangulation-and-confidence.md
@@ -43,6 +42,7 @@
 36a04ec99e9bde26143cc5e0896d62ff14a53e7bd1f92412162ced64a2f456b0  02-data-platform-provider-architecture/README.md
 373482b1072f6e5f13d3cad94c5730b97e26bf022edcafd48dd55016bc9fd06b  10-workflow-hitl-operational-safety/GATE.md
 376f0e489fdecd24757b0a4d33ce2b048b2fe97a623f21e5703661ddcd44dd77  13-optional-live-execution/WP-13.06-emergency-kill-disable-paths.md
+38e83350a288f65fe5a55ea571bee78715e3c4a49e0709ed505f4d41109ac27c  ROADMAP-DECISION-LOG.md
 3929a9b89edbda3a2dc279c1217602f0afd6936705f2558775404b6c0cb42b91  05-deterministic-quant-core/PHASE-05-INTERNAL-VERIFICATION.md
 3cd651b19b5ff8798f662298d9f8cd0252d7e45ed2a52f9568f9b948a429d5b9  11-high-fidelity-paper-trading/WP-11.06-broker-public-market-reconciliation.md
 3dae3d408484d0aea0cbacf01d18b8650be4fade7d4f9af8c0a8c1cc37961514  08-controlled-ai-tools-durable-research-agents/WP-08.05-adaptive-gap-finding-replanning.md
@@ -55,11 +55,11 @@
 45fa3481f142d80177fd5d3a9df4c43e6a88724e6ee02464182e5ae962c42555  12-advanced-quant-research/WP-12.04-factor-mining-and-stability-tests.md
 464db13315e9ca1b6109654d03af753d7cec6aaaa13702cdedb1e5d39e5fb0b2  00-current-issuer-asset-resolution/README.md
 473fc420efd2bd8dd9d3778dd19929dac6e9a2517f939da0cceffa892300120e  11-high-fidelity-paper-trading/WP-11.05-IMPLEMENTATION-EVIDENCE.md
+47b3588f97db4dc76314b0ead359fdea2cb3c640e9826b0856eddb8ebbc1cefa  roadmap.json
 4992bb35041d2daf76c7caf11457950fd4506b16f0dfcc0a2a4ded2ec29c97da  01-canonical-contracts-provenance-audit/REFERENCE-NOTES.md
 4c28f38435878ad610c9cac9db7543fca7ab1ceee8ca4f0f6686592069e4f2b3  11-high-fidelity-paper-trading/WP-11.05-position-account-ledger.md
 4db91c53dd57402c1d6ca165721d9a56bde9b4d88145c3347d6be0867dc6d168  10-workflow-hitl-operational-safety/WP-10.01-state-machine-for-recommendation-risk-approval-paper-intent.md
 511260653cacfbc744f0923f1214a94ea9edacd2c55a3326f9bbe5b3c879784b  05-deterministic-quant-core/WP-05.09-library-evaluation-numpy-scipy-statsmodels-skfolio-riskfolio-where-justified.md
-51e423fb1d751f8666a8027538ee72d18d6f51b84bc9db29a19f721c0d123b60  README.md
 529677414fd31996921d6be27f7daaacc50b2859e17cf7f24f910b08830708fd  13-optional-live-execution/WP-13.05-order-idempotency-and-reconciliation.md
 54c6cbea265507d81a9024be582c76c5662421d8baa79fdc4689fe20f8c7f277  05-deterministic-quant-core/WP-05.06-basic-risk-adjusted-metrics.md
 555abbdaafe26a305bc317d22c5a9a286fa4c98f0f48d6c340ab29a19ddbf0ab  08-controlled-ai-tools-durable-research-agents/GATE.md
@@ -82,6 +82,7 @@
 6438f99a5251fa576406b98882f15003535b24ad8bff37e711cc63d59f595cc8  10-workflow-hitl-operational-safety/WP-10.02-IMPLEMENTATION-EVIDENCE.md
 676ea398cea5bf4bf76eec8d862922dfd3fb13bfe5bbbe077bef3953f5ef2481  00-current-issuer-asset-resolution/WP-00.03-analyse-failures-and-harden-deterministic-resolution.md
 6826ef030ed3063c92dccb475a686afaeb2fce787c727297134235e7aee19515  10-workflow-hitl-operational-safety/WP-10.07-IMPLEMENTATION-EVIDENCE.md
+68a64b8e528193c810e8d1d080ed448180d69669e2e6ecd5d6f5284231185622  JAX-ROADMAP-OVERVIEW.md
 6aeb12928c9abdeed8d008735da4de6b470881caef8f32fa8aa476df1679cf7f  04-world-monitor-intelligence/WP-04.02-deduplication-event-clustering.md
 6b21ca16f647af95100f73f70921a4746e385ef4486672feeb9ddaec72a2bd25  03-core-financial-evidence/WP-03.01-market-price-ohlcv-provider-hardening.md
 6f5dd1424be87593037d79793a6306dba0c39124f3eb69b6b810da6adffab269  governance/MODEL-ROUTING-POLICY.md
@@ -99,9 +100,10 @@
 7d52fd1fab2887fc0ac15947cc24273b0192c05e04a3da466e342f97e7c130d2  00-current-issuer-asset-resolution/WP-00.04-freeze-phase-00-evidence-baseline.md
 7e79c6aba1541b38aec0eb87b21b846cfa048de6a8ecf01698a03754ed0ea159  09-portfolio-intelligence-deterministic-risk/WP-09.02-exposure-concentration-correlation-analytics.md
 80cee52e8f66b72d3d33fb97f788784013104e07c67fa57f5f657f4b4ca18297  04-world-monitor-intelligence/REFERENCE-NOTES.md
+812b771972c053fb97a529f40e01884a33444ea70264a33ed988a6aa6ce25f83  NEXT-WORK-PACKAGE.md
+81ce3a3a70f9cb0ab52284913b122f568b761ca91551bda36eca47fc82b0f93e  README.md
 821cabe216403bfca872756adb5271bdaaf674dc9d69b2cb349e970da5d9be91  10-workflow-hitl-operational-safety/WP-10.03-permission-boundaries-for-destructive-tools.md
 826e06794254e4f2be2e9f5abb8426af81406b57c247bb1afd4d8cd0d75ee689  11-high-fidelity-paper-trading/WP-11.06-IMPLEMENTATION-EVIDENCE.md
-88056ed77e660f4db0ee59f287ab70ccd827d93001ff426490a1b0c39aff553a  11-high-fidelity-paper-trading/README.md
 8bd7de0c4e809279bfb1af56361859f483014aba0e92d328ad3963360e10a46e  09-portfolio-intelligence-deterministic-risk/WP-09.01-canonical-portfolio-position-account-state.md
 8c0ea84c2d8691ed9b22e1c6ec949887819dec258e91861599e3359666fa7b93  06-research-recommendation-engine/LLM-CONTEXT-BUDGET-REQUIREMENTS.md
 8ed8c512b4c277694239e477c96c3d5337a650e51cc092239b56933311308f5e  PHASE-INDEX.md
@@ -114,6 +116,7 @@
 9ba9b630efc684216de28682848799b671023ede8ec258db89324d053f9096bf  11-high-fidelity-paper-trading/WP-11.08-long-duration-paper-soak-protocol.md
 a0fba42019daec21dcfd1b99cda0e55fa5686a8a8427409d7d532088ac7f59a5  06-research-recommendation-engine/GATE.md
 a276f382dd1f76068b1053667387d2e75dcf273cfb49c175e0462167b38c8835  09-portfolio-intelligence-deterministic-risk/REFERENCE-NOTES.md
+a3354e96ed2232bb9911dc27fb29ccecf8d4e486d987ef5f00d7fb72909f9a2a  11-high-fidelity-paper-trading/README.md
 a4cd6ea3ecfdf601d32bd09034f0e61b1044bcae8a377cb30a83f6673bdc773a  13-optional-live-execution/WP-13.08-small-capital-staged-rollout.md
 a5668974082ec2d277162b01bee6badab750301d88d5f81abb49aa587436a6eb  11-high-fidelity-paper-trading/WP-11.04-IMPLEMENTATION-EVIDENCE.md
 a8e158bdecaa992fb4e06dc580a2dd753aa1abeedd28cf3058d9e28735ff8ac2  governance/PHASE-REVIEW-HANDOVER.md
@@ -133,7 +136,6 @@ b9f38d53d72be49392b4ce1bfd35b2898919c9a7e70a58dab86ab64f3bceb5c9  12-advanced-qu
 bc1c1a123c38806343ee7558f1918a7b3bcd960f1f2117ef7834dc8892869265  07-evaluation-replay-backtesting/WP-07.05-traditional-strategy-backtesting-adapter-evaluation.md
 bc388ea5d7b17e4fee6ca5fbfeb16f073db7a9a3265f5162dbf9ddd05bdf8101  11-high-fidelity-paper-trading/WP-11.07-paper-outcome-attribution.md
 be91250aea6983f559e91ecc8bb2d0fc7926aa95bb5d025b8e8b37faee08f4f5  09-portfolio-intelligence-deterministic-risk/WP-09.04-deterministic-recommendation-risk-checks.md
-c0a681a3b7dbf2a196a39a01174a541173c0ee740d554e9f33f07463e82dc2fa  roadmap.json
 c0dae0828526cd54d61a8b7bee8a5213c271cc4933e143d11e5d3ad19569ad29  04-world-monitor-intelligence/README.md
 c34a673c20646b1386f1d0bfea7e27f4830aaa78be71b08309df0af3d8cb73a3  03-core-financial-evidence/GATE.md
 c3c82c8e2b3c6caa1eec6c01af42fdfd52b5b7567141e9ecd32f515d4731151f  03-core-financial-evidence/WP-03.02-sec-edgar-filings-and-xbrl-company-facts.md
@@ -165,7 +167,6 @@ e3a741dbaf93e45f89f1ad57b26f75bd0a742e7b1b21a060782ca280c831a464  10-workflow-hi
 e3f8f647de22a915ecb9be749b52b33b3d45f1eec1d017ca6dc4ad62c75fad1d  09-portfolio-intelligence-deterministic-risk/PHASE-09-INTERNAL-VERIFICATION.md
 e4e352eabf32afdd232b6b351411f0657683b7c1949b4a694ca4534131f56914  11-high-fidelity-paper-trading/WP-11.07-IMPLEMENTATION-EVIDENCE.md
 e572feb20300d9c0faf5d3cd4dc6797c0015f7e0763e98ac0abb3bdbaf742783  05-deterministic-quant-core/LIBRARY-EVALUATION.md
-e61eca610927b837dd251f29a1a358abc275a48e37ba847a401d7b4e7120191e  NEXT-WORK-PACKAGE.md
 e8e495b3277642bec8123c6168e55e0ab521b386c9515cc060b87a01d6805a44  governance/CODEX-AUTONOMOUS-MASTER-PROMPT.md
 e97edce1fdae272d9b48e6c2040646a6389ddbf36aa84ae2f2ae8ac3cb811d6c  03-core-financial-evidence/WP-03.05-treasury-eia-cboe-cftc-source-evaluation-and-first-approved-integrations.md
 e998837376ce43682d53e6968a2f5e80d69ba3f0b6b19ea670f0d6f2213cd1f0  references/DATA-SOURCE-STRATEGY.md

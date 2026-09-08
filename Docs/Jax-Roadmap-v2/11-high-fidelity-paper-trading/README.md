@@ -1,5 +1,7 @@
 # Phase 11 — High-Fidelity Paper Trading
 
+**Status:** **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
+
 ## Purpose
     Simulate execution realistically enough to judge the end-to-end system before considering live trading.
 

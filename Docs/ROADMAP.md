@@ -26,9 +26,9 @@ decision remains `NO_TRADE`.
 | Phase 08 — Controlled AI Tools & Durable Research Agents | **COMPLETE / GO** |
 | Phase 09 — Portfolio Intelligence & Deterministic Risk | **COMPLETE / GO** |
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / CONDITIONAL GO** |
-| Phase 11 — High-Fidelity Paper Trading | **AUTHORISED / IN PROGRESS** |
-| Current implementation package | **WP-11.01 — Broker adapter capability contract** |
-| Next package | **WP-11.01 — Broker adapter capability contract** |
+| Phase 11 — High-Fidelity Paper Trading | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
+| Current implementation package | **Phase 11 exit demonstrated — external review pending** |
+| Next package | **None — stop for external Phase-11 review; Phase 12 NOT STARTED** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -196,6 +196,18 @@ scientific status. The approved migration-number collision remediation is
 recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
 `EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`; Phase 11 is not started.
 
+### Phase 11 — High-Fidelity Paper Trading — EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING
+
+Phase 11 provides an isolated deterministic paper venue, versioned execution
+costs, partial-fill and session semantics, event-derived paper ledger,
+reconciliation, outcome attribution and a six-month soak protocol. The exact
+capability gate is demonstrated by
+`internal/modules/papertrading/phase11_exit_test.go` using accelerated frozen
+fixtures. This is not real elapsed forward-paper evidence and does not prove
+trading edge. Phase 10 remains **COMPLETE / CONDITIONAL GO** with
+`RACE DETECTOR VERIFICATION REQUIRED BEFORE GO PHASE 11`; race detection is
+still unavailable in the current environment. Phase 12 is not started.
+
 ### Later roadmap — planned capability progression
 
 The detailed package material is retained in `Docs/Jax-Roadmap-v2/`. These are
@@ -297,8 +309,8 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 11 authorised / in progress** after external
-`CONDITIONAL GO PHASE 10`. Phase 10 is complete/conditional GO; its race
-detector condition remains open because the current environment lacks cgo/gcc.
-Phase 11 may implement isolated paper execution, but must not enable live
-execution and must attempt race verification again before its phase handover.
+The current position is **Phase 11 exit demonstrated / external review pending**
+after external `CONDITIONAL GO PHASE 10`. Phase 10 is complete/conditional GO;
+its race-detector condition remains open because the current environment lacks
+cgo/gcc. Phase 11 remains paper-only and must not enable live execution.
+Phase 12 is not started.

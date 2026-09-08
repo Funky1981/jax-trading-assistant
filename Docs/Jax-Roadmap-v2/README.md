@@ -45,9 +45,11 @@ criteria remain binding.
 - Phase 06: `COMPLETE / GO`
 - Phase 07: `COMPLETE / GO`
 - Phase 08: `COMPLETE / GO`
-- Phase 09: `EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`
-- Current package: `Phase 09 exit demonstrated — external review pending`
-- Phase 10: `NOT STARTED`
+- Phase 09: `COMPLETE / GO`
+- Phase 10: `COMPLETE / CONDITIONAL GO`
+- Phase 11: `EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING`
+- Current package: `Phase 11 exit demonstrated — external review pending`
+- Phase 12: `NOT STARTED`
 
 
 ## 2026-08-10 integrated roadmap change

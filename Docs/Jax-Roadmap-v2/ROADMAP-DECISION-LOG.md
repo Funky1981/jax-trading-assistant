@@ -1,5 +1,32 @@
 # Roadmap Decision Log
 
+## RD-2026-09-08-03 - Phase 11 exit demonstrated / external review pending
+
+- Date: 2026-09-08
+- Phase: 11 — High-Fidelity Paper Trading
+- Status: Internally complete; external phase-gate review pending
+- Decision authority: autonomous phase verification; no self-awarded GO
+
+WP-11.01 through WP-11.08 are implemented in bounded commits. The exact
+Phase-11 capability gate is demonstrated by
+`internal/modules/papertrading/phase11_exit_test.go`: an approved Phase-10
+paper intent becomes a provenance-bound paper order, deterministic cost and
+latency rules apply, partial fills update the isolated event-derived ledger,
+reconciliation detects corruption, attribution separates execution effects,
+restart/idempotent replay does not duplicate fills, breakers block processing,
+and no live path or real portfolio mutation exists.
+
+A final adversarial pass identified and corrected a same-length tampered
+ledger-event-stream reconciliation gap in `0d1ab24`/`ecfd6f5`. It also found
+map-iteration nondeterminism in the exit harness and corrected it in `450f85c`.
+The focused tests and exit harness were rerun after each correction.
+
+The soak result is **SOAK INFRASTRUCTURE DEMONSTRATED** using accelerated
+synthetic fixtures. Actual elapsed forward-paper evidence and real paper
+recommendation/order sample are both zero. `TRADING EDGE NOT DEMONSTRATED /
+INSUFFICIENT SAMPLE` remains unchanged. Phase 10 remains COMPLETE / CONDITIONAL
+GO with race verification required before Phase 11 GO; Phase 12 is NOT STARTED.
+
 ## RD-2026-09-08-02 - WP-11.01 implementation
 
 - Date: 2026-09-08
