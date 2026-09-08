@@ -194,9 +194,10 @@ migrations to `000059` and `000060`, and added complete-stream registry
 validation. `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains the
 scientific status. The approved migration-number collision remediation is
 recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
-`COMPLETE / CONDITIONAL GO`; Phase 11 is `COMPLETE / CONDITIONAL GO` with race
-verification outstanding. Phase 12 is authorised and internally verified for
-bounded research of HYP-EVENT-001A. No advanced model was promoted, no
+`COMPLETE / CONDITIONAL GO`; its required workflow and paper-trading race tests
+passed in the existing Docker toolchain, while native Windows cgo remains
+unavailable. Phase 12 is complete and internally verified for bounded research
+of HYP-EVENT-001A. No advanced model was promoted, no
 recommendation logic changed, and the Phase-12 promotion gate remains closed.
 
 ### Phase 11 — High-Fidelity Paper Trading — COMPLETE / CONDITIONAL GO
@@ -207,16 +208,16 @@ reconciliation, outcome attribution and a six-month soak protocol. The exact
 capability gate is demonstrated by
 `internal/modules/papertrading/phase11_exit_test.go` using accelerated frozen
 fixtures. This is not real elapsed forward-paper evidence and does not prove
-trading edge. Phase 10 remains **COMPLETE / CONDITIONAL GO** with
-`RACE DETECTOR NOT VERIFIED — ENVIRONMENTAL LIMITATION`; race detection is
-still unavailable in the current environment. Actual forward-paper evidence
+trading edge. Phase 10 remains **COMPLETE / CONDITIONAL GO**.
+The required workflow and paper-trading race tests passed in the existing Docker
+toolchain; native Windows cgo remains unavailable. Actual forward-paper evidence
 remains 0 days / 0 orders. Phase 12 is research-only and internally verified;
 Phase 13 has not started.
 
 ### Phase 12 — Advanced Quant Research — COMPLETE / INTERNALLY VERIFIED
 
-Phase-07 GO is satisfied and **HYP-EVENT-001A** is authorised for data readiness
-and baseline research design only. The bounded SEC 8-K plus Alpaca SIP dataset
+Phase-07 GO is satisfied and **HYP-EVENT-001A** is authorised for bounded
+research. The bounded SEC 8-K plus Alpaca SIP dataset
 gate is **SUFFICIENT for initial HYP-EVENT-001A research**; survivorship and
 corporate-action limitations remain explicit. The eight Phase-12 contracts and
 exit harness are internally verified. No advanced model was promoted, no paid
@@ -330,10 +331,9 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   authorization for live trading or autonomous execution.
 
 The current position is **Phase 12 advanced quant research — COMPLETE / INTERNALLY VERIFIED**
-after external `CONDITIONAL GO PHASE 11`. HYP-EVENT-001A is authorised for data
-readiness and baseline research design only; the dataset gate is demonstrated
-for initial research. Phase 10 remains complete/
-conditional GO with its race-detector condition open because the current
-environment lacks cgo/gcc. Phase 11 remains paper-only; actual forward-paper
+after external `CONDITIONAL GO PHASE 11`. HYP-EVENT-001A is authorised for
+bounded research; the dataset gate is demonstrated for initial research. Phase 10 remains complete/
+conditional GO; its required workflow and paper-trading race tests passed in the
+existing Docker toolchain, while native cgo remains unavailable. Phase 11 remains paper-only; actual forward-paper
 evidence is 0 days / 0 orders. Phase 12 remains research-only and Phase 13 has
 not started.

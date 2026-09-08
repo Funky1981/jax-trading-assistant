@@ -37,10 +37,12 @@ accepted by external GPT-5.6 Sol. Go race detection remains a
 migration-number collision remediation retained historical migrations unchanged,
 moved the Phase-09 migrations to `000059` and `000060`, and added
 complete-stream uniqueness/pair/order validation. Phase 10 is **COMPLETE /
-CONDITIONAL GO**, accepted by external GPT-5.6 Sol with race verification still
-required before Phase 11 GO because cgo/gcc is unavailable. Phase 11 is
+CONDITIONAL GO**, accepted by external GPT-5.6 Sol. Native Windows cgo remains
+unavailable, but the existing Docker toolchain passed the required workflow and
+paper-trading race tests. Phase 11 is
 **COMPLETE / CONDITIONAL GO** after WP-11.01 through WP-11.08 and its
-accelerated exit harness; the race-detector condition remains open. Phase 12
+accelerated exit harness; its tested race condition is resolved in the existing
+Docker environment. Phase 12
 is **COMPLETE / INTERNALLY VERIFIED** for bounded research of
 `HYP-EVENT-001A`; its data-readiness gate was accepted and the implementation
 uses the existing Jax Go architecture. No advanced model was promoted and no

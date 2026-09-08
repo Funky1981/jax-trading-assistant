@@ -18,6 +18,7 @@
 | WP-12.07 experiment registry | `833630a` | Immutable variants and deterministic rejection outcomes |
 | WP-12.08 promotion gate | `d3b6a64` | Fail-closed promotion with no recommendation mutation |
 | Adversarial hardening | `58291db` | Partition-crossing and promotion-consistency regressions |
+| Artifact immutability hardening | `921704e`, `7617279`, `532bf22` | Defensive copies and sealed frozen OOS configuration |
 
 ## Architecture and scientific boundary
 
@@ -79,7 +80,12 @@ promotion closure with `RecommendationMutationAllowed=false`.
   mutation is created by Phase 12.
 - `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains unchanged.
 - Actual forward-paper evidence remains `0 DAYS / 0 ORDERS`.
-- `RACE DETECTOR VERIFICATION OUTSTANDING` remains due unavailable gcc/cgo.
+- Native-host race detection remains unavailable because gcc/cgo is absent. The
+  required existing Docker environment was subsequently used successfully:
+  `CGO_ENABLED=1 go test -race ./internal/modules/workflow
+  ./internal/modules/papertrading -count=1` passed. This resolves the tracked
+  Phase-10/11 race-verification condition for the tested packages; it is not a
+  claim that native Windows tooling has cgo enabled.
 - Current-ticker survivorship and corporate-action limitations remain; promotion
   is closed until independently resolved.
 
@@ -88,6 +94,7 @@ promotion closure with `RecommendationMutationAllowed=false`.
 - `go test ./internal/modules/advancedquant -count=1`
 - `go test ./... -count=1`
 - `go vet ./...`
+- `docker run ... golang:1.26.6 ... go test -race ./internal/modules/workflow ./internal/modules/papertrading -count=1`
 - `git diff --check`
 - roadmap JSON and manifest validation
 

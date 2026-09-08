@@ -22,18 +22,20 @@ validated by `db/postgres/migrations/migration_registry_test.go`.
 
 Scientific status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE**.
 
-Phase 10 exit condition is accepted as demonstrated by external review. Its
-condition remains **RACE DETECTOR VERIFICATION REQUIRED BEFORE GO PHASE 11**;
-the current environment lacks cgo/gcc. Phase 11 implementation is authorised
-and has demonstrated its capability gate. The tracked race condition remains
-open because the environment lacks cgo/gcc. The proof uses accelerated
-synthetic fixtures; actual elapsed forward-paper evidence is zero days and the
-actual forward-paper order sample is zero.
+Phase 10 exit condition is accepted as demonstrated by external review. Native
+Windows cgo remains unavailable, but the existing Docker toolchain ran
+`CGO_ENABLED=1 go test -race ./internal/modules/workflow
+./internal/modules/papertrading -count=1` successfully. The tested Phase-10/11
+race-verification condition is therefore resolved in that existing environment;
+this is not a claim that native Windows tooling has cgo enabled. Phase 11 has
+demonstrated its capability gate using accelerated synthetic fixtures; actual
+elapsed forward-paper evidence is zero days and the actual forward-paper order
+sample is zero.
 
-Phase 12 is **AUTHORISED / IN PROGRESS** for bounded research of
-**HYP-EVENT-001A**. WP-12.01 through WP-12.08 are internally verified. The
-phase exit condition is demonstrated at capability level; no advanced model was
-promoted and the promotion gate remains closed.
+Phase 12 is **COMPLETE / INTERNALLY VERIFIED — RESEARCH ONLY** for bounded
+research of **HYP-EVENT-001A**. WP-12.01 through WP-12.08 are internally
+verified. The phase exit condition is demonstrated at capability level; no
+advanced model was promoted and the promotion gate remains closed.
 The bounded readiness decision pack is
 `12-advanced-quant-research/PHASE-12-READINESS-DECISION-PACK.md`. Phase 12 is
 Phase-12 implementation is complete internally; external phase review remains

@@ -1,5 +1,29 @@
 # Roadmap Decision Log
 
+## RD-2026-09-08-09 - Phase 12 internal completion and race verification
+
+- Date: 2026-09-08
+- Stage: `PHASE 12 — ADVANCED QUANT RESEARCH`
+- Status: `COMPLETE / INTERNALLY VERIFIED — RESEARCH ONLY`
+- Hypothesis: `HYP-EVENT-001A — SEC evidence-backed issuer-event reaction`
+- Decision authority: external Phase-12 review remains required
+
+WP-12.01 through WP-12.08 are implemented in the existing Jax Go architecture.
+The capability exit condition is demonstrated by the Phase-12 harness: feature
+knowability, sealed-holdout enforcement, validation-only selection, one-way OOS,
+trial/falsification retention, drift/failure states and a fail-closed promotion
+gate. No real HYP-EVENT-001A direction labels or performance outcomes were
+generated, no advanced model was trained or promoted, and recommendation logic
+was not changed. The 2025 holdout remains sealed.
+
+The required existing-container command
+`CGO_ENABLED=1 go test -race ./internal/modules/workflow
+./internal/modules/papertrading -count=1` passed. Native Windows cgo remains
+unavailable; the result is limited to the tested packages and is not a claim of
+native-host race verification. Actual forward-paper evidence remains `0 DAYS /
+0 ORDERS`; `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains
+unchanged. Phase 13 is not started.
+
 ## RD-2026-09-08-08 - Phase 12 authorization and internal completion
 
 - Date: 2026-09-08
