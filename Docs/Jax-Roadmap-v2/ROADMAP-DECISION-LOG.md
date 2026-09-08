@@ -1,5 +1,35 @@
 # Roadmap Decision Log
 
+## RD-2026-09-08-02 - WP-11.01 implementation
+
+- Date: 2026-09-08
+- Phase: 11 — High-Fidelity Paper Trading
+- Status: Implemented / internally verified
+- Decision authority: autonomous implementation under external Phase-10 conditional GO
+
+WP-11.01 establishes the provider-neutral capability contract for the isolated
+paper domain. Environment, supported order types, precision, market-hours,
+quote-age, partial-fill, account/position/status and reconciliation
+capabilities are explicit and versioned. Unknown mode and unsupported
+capabilities fail closed. No live adapter, broker credential, paid dependency
+or execution authority was introduced. Phase-10 race verification remains
+open and is required before a Phase-11 GO recommendation.
+
+## RD-2026-09-08-01 - Phase 10 conditional GO / Phase 11 authorization
+
+- Date: 2026-09-08
+- Phase: 10 -> 11 transition
+- Status: External technical-lead `CONDITIONAL GO PHASE 10`; Phase 11 authorised/in progress
+- Decision authority: external GPT-5.6 Sol technical-lead review
+
+Phase 10 is accepted as **COMPLETE / CONDITIONAL GO**. Its exact workflow
+exit condition and migration remediation were accepted. The remaining
+condition is `RACE DETECTOR VERIFICATION REQUIRED BEFORE GO PHASE 11`; the
+available Windows Go environment still lacks cgo/gcc, so race verification is
+not claimed as passed. Phase 11 is authorised beginning at WP-11.01. The
+scientific status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
+SAMPLE**. Live execution remains disabled.
+
 ## RD-2026-09-07-29 - Phase 09 exit demonstrated / external review pending
 
 - Date: 2026-09-07

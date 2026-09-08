@@ -25,9 +25,10 @@ decision remains `NO_TRADE`.
 | Phase 07 — Evaluation, Replay & Backtesting | **COMPLETE / GO** |
 | Phase 08 — Controlled AI Tools & Durable Research Agents | **COMPLETE / GO** |
 | Phase 09 — Portfolio Intelligence & Deterministic Risk | **COMPLETE / GO** |
-| Phase 10 — Workflow, HITL & Operational Safety | **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING** |
-| Current implementation package | **Phase 10 exit demonstrated — external review pending** |
-| Next package | **None — stop for external Phase-10 review; Phase 11 NOT STARTED** |
+| Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / CONDITIONAL GO** |
+| Phase 11 — High-Fidelity Paper Trading | **AUTHORISED / IN PROGRESS** |
+| Current implementation package | **WP-11.01 — Broker adapter capability contract** |
+| Next package | **WP-11.01 — Broker adapter capability contract** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -296,7 +297,8 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 10 exit demonstrated / external review pending**.
-Phase 09 remains complete/GO after approved migration remediation. Phase 10
-preserves the paper-intent-only boundary and must receive external
-technical-lead GO before Phase 11 begins.
+The current position is **Phase 11 authorised / in progress** after external
+`CONDITIONAL GO PHASE 10`. Phase 10 is complete/conditional GO; its race
+detector condition remains open because the current environment lacks cgo/gcc.
+Phase 11 may implement isolated paper execution, but must not enable live
+execution and must attempt race verification again before its phase handover.

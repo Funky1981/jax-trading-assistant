@@ -36,9 +36,11 @@ accepted by external GPT-5.6 Sol. Go race detection remains a
 **COMPLETE / GO**, accepted by external GPT-5.6 Sol. The approved
 migration-number collision remediation retained historical migrations unchanged,
 moved the Phase-09 migrations to `000059` and `000060`, and added
-complete-stream uniqueness/pair/order validation. Phase 10 is **EXIT
-DEMONSTRATED / EXTERNAL REVIEW PENDING** after WP-10.01 through WP-10.07 and
-the phase exit harness. Phase 11 is **NOT STARTED**.
+complete-stream uniqueness/pair/order validation. Phase 10 is **COMPLETE /
+CONDITIONAL GO**, accepted by external GPT-5.6 Sol with race verification still
+required before Phase 11 GO because cgo/gcc is unavailable. Phase 11 is
+**AUTHORISED / IN PROGRESS**, beginning with WP-11.01. Phase 11 must preserve
+the paper-only boundary and must not claim trading edge.
 The scientific status remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
 SAMPLE`.
 See `Docs/ROADMAP.md`,

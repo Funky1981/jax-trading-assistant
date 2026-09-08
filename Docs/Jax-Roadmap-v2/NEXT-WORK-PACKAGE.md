@@ -9,10 +9,11 @@
 - Phase 07 — Evaluation, Replay & Backtesting: **COMPLETE / GO**
 - Phase 08 — Controlled AI Tools & Durable Research Agents: **COMPLETE / GO**
 - Phase 09 — Portfolio Intelligence & Deterministic Risk: **COMPLETE / GO**
-- Phase 10 — Workflow, HITL & Operational Safety: **EXIT DEMONSTRATED / EXTERNAL REVIEW PENDING**
+- Phase 10 — Workflow, HITL & Operational Safety: **COMPLETE / CONDITIONAL GO**
+- Phase 11 — High-Fidelity Paper Trading: **AUTHORISED / IN PROGRESS**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **Phase 10 exit demonstrated — external review pending**
-- Next package: **None — stop for external Phase-10 review; Phase 11 NOT STARTED**
+- Current implementation package: **WP-11.01 — Broker adapter capability contract**
+- Next package: **WP-11.01 — Broker adapter capability contract**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
@@ -21,9 +22,10 @@ validated by `db/postgres/migrations/migration_registry_test.go`.
 
 Scientific status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE**.
 
-Phase 10 exit condition is demonstrated by
-`internal/modules/workflow/phase10_exit_test.go`. The phase handover must be
-reviewed externally before any Phase 11 work begins.
+Phase 10 exit condition is accepted as demonstrated by external review. Its
+condition remains **RACE DETECTOR VERIFICATION REQUIRED BEFORE GO PHASE 11**;
+the current environment lacks cgo/gcc. Phase 11 implementation is authorised
+and must attempt race verification again before its handover.
 
 ## Phase-05 autonomous scope
 
