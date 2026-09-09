@@ -4,7 +4,9 @@
 
 - Repository: `C:\Projects\Jax\jax-trading-assistant`
 - Branch: `capability-reset`
+- Final HEAD: `ccf3944afb72e6f3e0b85f085a7b259c067932e4`
 - Scientific artifact: private `scientific-results-v3/report.json`
+- Scientific artifact SHA-256: `50f8622f8013708f0879c43c8eded4030f448fcfcd450d3c3b5ed3c3d4a7bac4`
 - Parent dataset: `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-v1`
 - Parent manifest SHA-256: `db2b454793e50f28c34c9c2a7d91f798741936528752de7bd27cb52072a4864d`
 - Evidence dataset: `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-evidence-v2`
@@ -97,11 +99,14 @@ recommendation logic changed, and no paper/live authority changed.
 ## Verification and adversarial review
 
 The corrected harness enforces UTC session-open/close timestamps, exact parent
-and evidence identities, non-holdout labels, one-way OOS artifact creation and
-the complete registered falsification plan. Focused classifier, experiment,
-hypevidence and advancedquant tests pass. Full repository verification and
-the final adversarial review are recorded at the final commit and must have
-zero blocking findings before external review.
+and evidence identities, non-holdout labels, raw-only traversal of sealed
+post-2024 market rows, one-way OOS artifact creation and the complete
+registered falsification plan. Focused classifier, experiment, hypevidence and
+advancedquant tests pass. At final HEAD `ccf3944`, `go test ./... -count=1`,
+`go vet ./...`, focused golden/replay/contract tests, `git diff --check` and
+192-entry manifest validation pass. Fresh adversarial review found zero
+blocking findings: `Blocking findings remaining: 0`; `Adversarial scientific
+review: PASS`.
 
 The accepted Phase-10/11 race result remains the existing Docker verification:
 `CGO_ENABLED=1 go test -race ./internal/modules/workflow
