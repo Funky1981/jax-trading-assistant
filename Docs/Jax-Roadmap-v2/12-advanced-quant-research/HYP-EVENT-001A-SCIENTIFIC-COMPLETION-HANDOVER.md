@@ -4,7 +4,7 @@
 
 - Repository: `C:\Projects\Jax\jax-trading-assistant`
 - Branch: `capability-reset`
-- Final HEAD: `ccf3944afb72e6f3e0b85f085a7b259c067932e4`
+- Final HEAD: `6413ab1cae4f934f218471e736d3781c1d40547b`
 - Scientific artifact: private `scientific-results-v3/report.json`
 - Scientific artifact SHA-256: `50f8622f8013708f0879c43c8eded4030f448fcfcd450d3c3b5ed3c3d4a7bac4`
 - Parent dataset: `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-v1`
