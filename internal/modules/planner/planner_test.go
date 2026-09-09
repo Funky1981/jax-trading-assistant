@@ -61,6 +61,18 @@ func TestServiceRejectsInvalidConfidenceAndUnboundedSteps(t *testing.T) {
 	}
 }
 
+func TestServiceRejectsInvalidInferenceMetadata(t *testing.T) {
+	result := validResult()
+	result.Inference = &InferenceMetadata{Provider: "litellm", Model: "local-small", InputTokens: -1}
+	service, err := NewService(fakeProvider{result: result})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Plan(context.Background(), Request{Symbol: "AAPL"}); !errors.Is(err, ErrInvalidResult) {
+		t.Fatalf("invalid inference metadata was accepted: %v", err)
+	}
+}
+
 func TestServiceHonorsCancellation(t *testing.T) {
 	service, err := NewService(fakeProvider{result: validResult()})
 	if err != nil {

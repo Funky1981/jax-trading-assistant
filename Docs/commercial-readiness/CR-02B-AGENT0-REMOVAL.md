@@ -63,10 +63,40 @@ symbol, bounded context, constraints, recalled memory and strategy signals.
 unbounded fields, non-finite confidence, and authority-bearing action labels
 such as `APPROVE`, `EXECUTE`, `ORDER`, `BROKER`, `SUBMIT` and `TRADE`.
 
-The current provider is `DeterministicProvider`, a zero-cost local provider
-whose bounded output is `HOLD`. No hosted inference or paid API call is part of
-CR-02B. The Jax ToolRunner remains a separate bounded boundary and does not
-execute arbitrary planner steps.
+The current default provider is `DeterministicProvider`, a zero-cost local
+provider whose bounded output is `HOLD`. A selectable `ModelProvider` now
+adapts the existing Jax `llmcontext.LiteLLMClient` transport to the same
+Planner contract. It sends only bounded planner context and a strict output
+schema; it receives no tool catalog or execution API. No hosted inference or
+paid API call is part of CR-02B. The Jax ToolRunner remains a separate bounded
+boundary and does not execute arbitrary planner steps.
+
+`NewConfiguredPlanner` selects deterministic/offline mode when
+`JAX_PLANNER_PROVIDER` is absent or explicitly `deterministic`/`offline`. The
+model-backed route is opt-in with `JAX_PLANNER_PROVIDER=litellm` and requires
+the existing `AI_GATEWAY_BASE_URL` and `AI_GATEWAY_API_KEY` configuration plus
+an optional `JAX_PLANNER_MODEL`/`AI_DEFAULT_MODEL`. Missing or unknown
+configuration fails closed; there is no silent fallback from a failed model
+request to a deterministic result.
+
+## CR-02B native-planner capability closure
+
+The final capability closure is:
+
+- `JAX-NATIVE AI PLANNING CAPABILITY PRESERVED`: YES;
+- `REAL LLM-BACKED PLANNING CAPABILITY PRESERVED`: YES, through the existing
+  Jax LiteLLM transport and the opt-in `ModelProvider`;
+- `DETERMINISTIC ZERO-COST TEST PROVIDER RETAINED`: YES;
+- structured JSON is decoded with unknown-field rejection and then passed
+  through the existing planner validation, including forbidden authority
+  actions and bounded fields;
+- provider failures, malformed JSON, invalid schema results, unsafe actions,
+  invalid confidence, and missing model configuration fail closed;
+- provider/model identity and available usage metadata are retained in planner
+  results and orchestration audit records;
+- all capability tests use fakes/local fixtures; hosted inference spend was
+  `$0.00`;
+- Agent0 remains removed and `AGENT0 IS NOT PART OF THE SUPPORTED JAX RUNTIME`.
 
 Orchestration audit identity is now `Provider=jax-planner` and
 `Model=jax-planner/v1`; observability uses `planner_plan`. No Agent0 Execute

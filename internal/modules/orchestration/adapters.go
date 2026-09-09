@@ -3,7 +3,10 @@ package orchestration
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
+	"jax-trading-assistant/internal/modules/llmcontext"
 	"jax-trading-assistant/internal/modules/planner"
 	"jax-trading-assistant/libs/contracts"
 	"jax-trading-assistant/libs/utcp"
@@ -67,9 +70,50 @@ func (m *MemoryClientAdapter) Retain(ctx context.Context, bank string, item cont
 	return resp.ID, nil
 }
 
-// NewPlanner creates the local Jax-owned advisory planner.
+// NewPlanner creates the deterministic local Jax-owned advisory planner.
 func NewPlanner() (*planner.Service, error) {
 	return planner.NewService(planner.DeterministicProvider{})
+}
+
+// NewConfiguredPlanner selects the deterministic provider by default. The
+// model-backed route is explicit and reuses the existing Jax LiteLLM
+// transport; a failed model route never falls back silently to deterministic
+// output.
+func NewConfiguredPlanner(lookup func(string) (string, bool)) (*planner.Service, error) {
+	if lookup == nil {
+		lookup = os.LookupEnv
+	}
+	provider := strings.ToLower(strings.TrimSpace(lookupValue(lookup, "JAX_PLANNER_PROVIDER")))
+	switch provider {
+	case "", "deterministic", "offline":
+		return NewPlanner()
+	case "litellm":
+		baseURL := strings.TrimSpace(lookupValue(lookup, "AI_GATEWAY_BASE_URL"))
+		apiKey := strings.TrimSpace(lookupValue(lookup, "AI_GATEWAY_API_KEY"))
+		if baseURL == "" || apiKey == "" {
+			return nil, fmt.Errorf("planner: litellm provider requires AI_GATEWAY_BASE_URL and AI_GATEWAY_API_KEY")
+		}
+		model := strings.TrimSpace(lookupValue(lookup, "JAX_PLANNER_MODEL"))
+		if model == "" {
+			model = strings.TrimSpace(lookupValue(lookup, "AI_DEFAULT_MODEL"))
+		}
+		if model == "" {
+			model = "local-small"
+		}
+		client := llmcontext.NewLiteLLMClient(llmcontext.LiteLLMConfig{BaseURL: baseURL, APIKey: apiKey})
+		modelProvider, err := planner.NewModelProvider(client, "litellm", model)
+		if err != nil {
+			return nil, err
+		}
+		return planner.NewService(modelProvider)
+	default:
+		return nil, fmt.Errorf("planner: unknown JAX_PLANNER_PROVIDER %q", provider)
+	}
+}
+
+func lookupValue(lookup func(string) (string, bool), key string) string {
+	value, _ := lookup(key)
+	return value
 }
 
 // ToolRunnerImpl implements the ToolRunner interface

@@ -105,11 +105,12 @@ func main() {
 	}
 	log.Printf("memory client -> %s", cfg.MemoryServiceURL)
 
-	nativePlanner, err := orchestration.NewPlanner()
+	nativePlanner, err := orchestration.NewConfiguredPlanner(os.LookupEnv)
 	if err != nil {
 		log.Fatalf("failed to create Jax planner: %v", err)
 	}
-	log.Printf("Jax planner -> %s", planner.ContractVersion)
+	plannerIdentity := nativePlanner.Identity()
+	log.Printf("Jax planner -> provider=%s model=%s contract=%s", plannerIdentity.Provider, plannerIdentity.Model, planner.ContractVersion)
 
 	toolRunner := orchestration.NewToolRunner()
 	registry := strategies.NewRegistry()

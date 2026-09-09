@@ -167,15 +167,16 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 	if s.audit != nil {
 		flowID := observability.FlowIDFromContext(ctx)
 		runInfo := observability.RunInfoFromContext(ctx)
+		plannerIdentity := planner.IdentityOf(s.planner)
 		valid, trace := audit.ValidatePlanShape(plannerResult.Summary, plannerResult.Action, plannerResult.Confidence, plannerResult.Steps)
 		decisionID, _ := s.audit.LogAIDecision(ctx, audit.AIDecisionRecord{
 			RunID:       runInfo.RunID,
 			FlowID:      flowID,
 			Role:        "planner",
-			Provider:    "jax-planner",
-			Model:       planner.ContractVersion,
+			Provider:    plannerIdentity.Provider,
+			Model:       plannerIdentity.Model,
 			Prompt:      map[string]any{"context": planReq.Context, "constraints": planReq.Constraints, "symbol": planReq.Symbol},
-			Response:    map[string]any{"summary": plannerResult.Summary, "steps": plannerResult.Steps, "action": plannerResult.Action, "confidence": plannerResult.Confidence, "reasoning": plannerResult.ReasoningNotes},
+			Response:    map[string]any{"summary": plannerResult.Summary, "steps": plannerResult.Steps, "action": plannerResult.Action, "confidence": plannerResult.Confidence, "reasoning": plannerResult.ReasoningNotes, "inference": plannerResult.Inference},
 			SchemaValid: valid,
 			Decision:    plannerResult.Action,
 			Reasoning:   plannerResult.ReasoningNotes,
