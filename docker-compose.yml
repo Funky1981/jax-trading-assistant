@@ -2,7 +2,6 @@ name: jax-trading-assistant
 
 services:
   # Memory now lives behind the research runtime on port 8091.
-  # agent0-service sends MEMORY_SERVICE_URL → jax-research:8091
 
   ib-bridge:
     build:
@@ -28,37 +27,6 @@ services:
       timeout: 10s
       start_period: 40s
       retries: 3
-
-  agent0-service:
-    build:
-      context: ./services/agent0-service
-      dockerfile: Dockerfile
-    environment:
-      HOST: 0.0.0.0
-      PORT: 8093
-      LOG_LEVEL: ${AGENT0_LOG_LEVEL:-INFO}
-      # LLM Provider Configuration (default: Ollama - FREE)
-      AGENT0_LLM_PROVIDER: ${AGENT0_LLM_PROVIDER:-ollama}
-      AGENT0_OLLAMA_HOST: ${AGENT0_OLLAMA_HOST:-http://host.docker.internal:11434}
-      AGENT0_OLLAMA_MODEL: ${AGENT0_OLLAMA_MODEL:-phi3:3.8b}
-      AGENT0_OPENAI_MODEL: ${AGENT0_OPENAI_MODEL:-gpt-4o-mini}
-      AGENT0_ANTHROPIC_MODEL: ${AGENT0_ANTHROPIC_MODEL:-claude-3-haiku-20240307}
-      # Service connections
-      AGENT0_MEMORY_SERVICE_URL: http://jax-research:8091
-      AGENT0_MEMORY_BANK: trades
-      AGENT0_IB_BRIDGE_URL: http://ib-bridge:8092
-    ports:
-      - "8093:8093"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      - ib-bridge
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8093/ready')"]
-      interval: 30s
-      timeout: 10s
-      start_period: 40s
-      retries: 5
 
   db-migrate:
     build:
@@ -181,7 +149,6 @@ services:
       DATABASE_URL: postgresql://jax:jax@postgres:5432/jax
       JAX_RUNTIME_MODE: ${JAX_RESEARCH_RUNTIME_MODE:-research}
       JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-false}
-      AGENT0_SERVICE_URL: ${AGENT0_SERVICE_URL:-http://agent0-service:8093}
       MEMORY_SERVICE_URL: http://jax-research:8091/tools
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -197,8 +164,6 @@ services:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
-      agent0-service:
-        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8091/ready || exit 1"]
       interval: 30s

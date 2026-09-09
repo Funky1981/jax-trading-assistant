@@ -31,7 +31,6 @@ Expected core services:
 - Trader runtime: `http://localhost:8100/health`
 - Research runtime: `http://localhost:8091/health`
 - IB bridge: `http://localhost:8092/health`
-- Agent0 service: `http://localhost:8093/health`
 
 Check health:
 
@@ -40,7 +39,6 @@ Invoke-RestMethod http://localhost:8081/health
 Invoke-RestMethod http://localhost:8100/health
 Invoke-RestMethod http://localhost:8091/health
 Invoke-RestMethod http://localhost:8092/health
-Invoke-RestMethod http://localhost:8093/health
 ```
 
 The same command starts the frontend. Open:

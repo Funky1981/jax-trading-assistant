@@ -14,7 +14,6 @@ flowchart LR
 
   subgraph EXT["External Services"]
     IBB["ib-bridge :8092"]
-    AGENT0["agent0-service :8093"]
     PG["postgres :5433"]
   end
 
@@ -27,9 +26,7 @@ flowchart LR
   TRADER --> RESEARCH
   TRADER --> IBB
   TRADER --> PG
-  RESEARCH --> AGENT0
   RESEARCH --> PG
-  AGENT0 --> IBB
 
   TRADER -. metrics .-> PROM
   RESEARCH -. metrics .-> PROM
@@ -39,5 +36,6 @@ flowchart LR
 ## Notes
 
 - The old `services/jax-*` runtime graph is superseded by `cmd/trader` + `cmd/research`.
-- `ib-bridge` and `agent0-service` are retained external boundaries.
+- `ib-bridge` is the retained external market-connectivity boundary; planning
+  is owned by the in-process Jax planner.
 - For operational commands and troubleshooting, use `Docs/SETUP/QUICKSTART.md`, `Docs/OPERATIONS/OPERATIONS.md`, and `Docs/OPERATIONS/DEBUGGING.md`.

@@ -40,16 +40,6 @@ try {
     Write-Host "OFFLINE - $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Test Agent0
-Write-Host "Agent0 AI: " -NoNewline
-try {
-    $response = Invoke-RestMethod -Uri "http://localhost:8093/health" -TimeoutSec 2
-    Write-Host "ONLINE" -ForegroundColor Green
-    Write-Host "  Provider: $($response.llm_provider) ($($response.llm_cost))" -ForegroundColor Gray
-} catch {
-    Write-Host "OFFLINE - $($_.Exception.Message)" -ForegroundColor Red
-}
-
 # Test JAX API
 Write-Host "JAX API: " -NoNewline
 try {

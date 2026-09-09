@@ -36,7 +36,6 @@ Core runtime services:
 - `jax-trader` (`http://localhost:8081/health`, runtime port `8100`)
 - `jax-research` (`http://localhost:8091/health`)
 - `ib-bridge` (`http://localhost:8092/health`)
-- `agent0-service` (`http://localhost:8093/health`)
 
 Frontend URL: `http://localhost:5173`
 
@@ -58,7 +57,6 @@ Use this only when the backend is already running and you want to restart the fr
 curl http://localhost:8081/health
 curl http://localhost:8091/health
 curl http://localhost:8092/health
-curl http://localhost:8093/health
 ```
 
 ## Authentication (Optional)
@@ -76,7 +74,6 @@ Optional first-user bootstrap:
 docker compose logs -f jax-trader
 docker compose logs -f jax-research
 docker compose logs -f ib-bridge
-docker compose logs -f agent0-service
 ```
 
 ## Stop Stack

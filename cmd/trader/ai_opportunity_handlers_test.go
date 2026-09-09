@@ -41,9 +41,9 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 		Symbol:     "SOXX",
 		Action:     "BUY",
 		Confidence: 0.64,
-		Reasoning:  "Agent0 sees semiconductor ETF momentum with manageable paper risk.",
+		Reasoning:  "Jax review sees semiconductor ETF momentum with manageable paper risk.",
 		Risk:       "medium",
-		Source:     "agent0_manual_review",
+		Source:     "jax_manual_review",
 	}
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/suggestions/promote", bytes.NewReader(body))
@@ -167,7 +167,7 @@ func TestAISuggestionPromoteRejectsWatchOnlySuggestion(t *testing.T) {
 		"confidence":0.7,
 		"reasoning":"watch only",
 		"risk":"low",
-		"source":"agent0_manual_review"
+		"source":"jax_manual_review"
 	}`))
 	rec := httptest.NewRecorder()
 

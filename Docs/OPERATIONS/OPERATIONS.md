@@ -9,7 +9,6 @@ Invoke-RestMethod http://localhost:8081/health   # jax-trader frontend API
 Invoke-RestMethod http://localhost:8100/health   # jax-trader runtime
 Invoke-RestMethod http://localhost:8091/health   # jax-research
 Invoke-RestMethod http://localhost:8092/health   # ib-bridge
-Invoke-RestMethod http://localhost:8093/health   # agent0-service
 ```
 
 ## Runtime Mode Guard
@@ -198,7 +197,6 @@ docker compose restart jax-trader
 docker compose logs -f jax-trader
 docker compose logs -f jax-research
 docker compose logs -f ib-bridge
-docker compose logs -f agent0-service
 ```
 
 SLO targets and alert thresholds are defined in `Docs/SLO_ALERTS.md`.

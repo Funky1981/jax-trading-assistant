@@ -2,7 +2,6 @@ go 1.25.4
 
 use (
 	.
-	./libs/agent0
 	./libs/backtest
 	./libs/contracts
 	./libs/database

@@ -22,7 +22,7 @@ Use this map to trace calls and configs.
 
 - Contract shape drift between API handler and orchestrator client.
 - Provider URL/env mismatch in runtime config.
-- Partial availability of Memory, Agent0, and Jax-native tool backends.
+- Partial availability of Memory, the Jax planner, and Jax-native tool backends.
 
 ## Fast Diagnostic Commands
 

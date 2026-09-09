@@ -86,7 +86,6 @@ $env:OPENAI_API_KEY = "<key>"
    - `8081` trader API
    - `8091` research (`/health` and `/ready`)
    - `8092` ib-bridge
-   - `8093` agent0-service
 2. API smoke:
    - `/api/v1/signals`
    - `/api/v1/artifacts`
@@ -185,10 +184,9 @@ Expected: each step returns data without 4xx/5xx errors. Vector recall result co
 1. Dual embedding providers must stay release-gated until both local and openai paths are proven in the deployed stack.
    - Current implementation: [`cmd/research/memory_proxy.go`](/c:/Projects/jax-trading-assistant/cmd/research/memory_proxy.go) now selects `EMBEDDING_PROVIDER=local|openai`; [`libs/pgmemory/embedding.go`](/c:/Projects/jax-trading-assistant/libs/pgmemory/embedding.go) validates provider-specific config and keeps Postgres + pgvector as the storage path.
    - Remaining release impact: both providers still need full stack verification and promotion evidence before the blocker can be closed.
-2. `agent0-service` memory failures must stay fail-fast in verification.
-   - Current implementation: [`services/agent0-service/agent.py`](/c:/Projects/jax-trading-assistant/services/agent0-service/agent.py) now raises on memory recall failures instead of silently converting them to `[]`, but the deployed stack still needs verification that those failures surface cleanly.
+2. Historical Agent0 memory-service checks are retired by CR-02B. The supported
+   runtime now uses the Jax-owned in-process planner and memory boundary.
 3. Silent default bank behavior has been removed, but explicit bank wiring remains release-critical.
-   - Current implementation: [`services/agent0-service/config.py`](/c:/Projects/jax-trading-assistant/services/agent0-service/config.py) no longer defaults `memory_bank`; release verification still needs to prove every caller and environment sets the intended bank explicitly.
 4. Runtime/deploy contract must be re-verified end to end.
    - Current implementation updates [`docker-compose.yml`](/c:/Projects/jax-trading-assistant/docker-compose.yml), [`.env.example`](/c:/Projects/jax-trading-assistant/.env.example), [`start.ps1`](/c:/Projects/jax-trading-assistant/start.ps1), [`Docs/OPERATIONS/DEBUGGING.md`](/c:/Projects/jax-trading-assistant/Docs/OPERATIONS/DEBUGGING.md), and [`scripts/smoke-memory.ps1`](/c:/Projects/jax-trading-assistant/scripts/smoke-memory.ps1) for local-by-default embeddings, but release still depends on stack verification with those settings.
 5. DB hardening migration is not proven applied in every target environment.
@@ -223,8 +221,8 @@ Expected: each step returns data without 4xx/5xx errors. Vector recall result co
    - `openai` provider: require `OPENAI_API_KEY`; validate `OPENAI_BASE_URL` if set; keep `EMBEDDING_MODEL` optional with a default.
    - Add readiness/health reporting for selected mode and memory-store readiness.
 3. Close the silent-failure and silent-default paths around memory consumers.
-   - Update [`services/agent0-service/agent.py`](/c:/Projects/jax-trading-assistant/services/agent0-service/agent.py) so release smoke does not pass when memory is unavailable but silently replaced with an empty result.
-   - Require explicit bank wiring in release-critical callers instead of relying on implicit defaults from [`services/agent0-service/config.py`](/c:/Projects/jax-trading-assistant/services/agent0-service/config.py) or hard-coded orchestration defaults.
+    - Keep memory failures fail-fast in the supported Jax research runtime.
+    - Require explicit bank wiring in release-critical callers instead of relying on implicit defaults.
 4. Update docker/dev stack configuration.
    - Set `EMBEDDING_PROVIDER=local` in local compose and bootstrap flows.
    - Keep `OPENAI_API_KEY`, `OPENAI_BASE_URL`, and `EMBEDDING_MODEL` as optional dev overrides and required only for `EMBEDDING_PROVIDER=openai`.
@@ -238,7 +236,7 @@ Expected: each step returns data without 4xx/5xx errors. Vector recall result co
 6. Update release docs and operator runbooks.
    - Refresh [`Docs/TESTING/TEST_PLAN.md`](/c:/Projects/jax-trading-assistant/Docs/TESTING/TEST_PLAN.md), [`Docs/OPERATIONS/DEBUGGING.md`](/c:/Projects/jax-trading-assistant/Docs/OPERATIONS/DEBUGGING.md), and release checklists so they describe both modes and the exact startup validation rules.
 7. Re-run the release gate.
-   - Re-verify memory migrations, research/trader/agent0 health, local-mode smoke, remote-mode smoke, and the trader soak checks before removing the blockers.
+    - Re-verify memory migrations, research/trader health, local-mode smoke, remote-mode smoke, and the trader soak checks before removing the blockers.
 
 ### 4. Acceptance criteria
 
@@ -246,10 +244,10 @@ Expected: each step returns data without 4xx/5xx errors. Vector recall result co
 - `EMBEDDING_PROVIDER=openai` fails fast before port bind when `OPENAI_API_KEY` is missing.
 - `EMBEDDING_PROVIDER=openai` starts successfully with valid `OPENAI_API_KEY` and OpenAI-compatible endpoint settings and passes the same memory smoke flow.
 - Startup logs, `/health`, and readiness checks agree on the selected embedding provider and memory readiness state.
-- `agent0-service` no longer masks broken memory connectivity as an empty-success path during release smoke.
+- The retired Agent0 memory path is not part of the supported release surface.
 - Release-critical callers do not rely on implicit bank defaults; wrong or missing bank selection returns an explicit error.
 - `schema_migrations` and live DB inspection prove both memory migrations are applied and constraints/indexes exist.
-- `jax-trader`, `jax-research`, and `agent0-service` remain healthy under `docker compose up -d` and through the pre-production soak window.
+- `jax-trader` and `jax-research` remain healthy under `docker compose up -d` and through the pre-production soak window.
 
 ### 5. Final go/no-go after these fixes
 

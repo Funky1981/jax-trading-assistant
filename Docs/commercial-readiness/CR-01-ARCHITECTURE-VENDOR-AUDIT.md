@@ -10,6 +10,10 @@ Scope: CR-01 audit and cleanup plan only. No major removals or runtime behaviour
 > the supported runtime by the bounded CR-02A cleanup. This document remains
 > the CR-01 pre-removal audit record; see
 > `Docs/commercial-readiness/CR-02A-DEXTER-REMOVAL.md` for the resulting state.
+>
+> Superseded current-state note (CR-02B, 2026-09-09): Agent0 was subsequently
+> removed from the supported runtime after the Jax-owned planner replacement;
+> see `Docs/commercial-readiness/CR-02B-AGENT0-REMOVAL.md`.
 
 ## Executive summary
 

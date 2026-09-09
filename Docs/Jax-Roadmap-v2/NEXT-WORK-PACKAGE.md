@@ -12,8 +12,8 @@
 - Phase 10 — Workflow, HITL & Operational Safety: **COMPLETE / GO**
 - Phase 11 — High-Fidelity Paper Trading: **COMPLETE / GO**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **CR-02A — DEXTER COMPLETE REMOVAL**
-- Next package: **External review of CR-02A; CR-02B/CR-02C not started**
+- Current implementation package: **CR-02B — JAX-NATIVE PLANNER + COMPLETE AGENT0 REMOVAL**
+- Next package: **External review of CR-02B; CR-02C/CR-02D not started**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
@@ -45,8 +45,10 @@ The prior readiness and cost-gate handovers remain historical evidence. The
 scientific completion handover is
 `12-advanced-quant-research/HYP-EVENT-001A-SCIENTIFIC-COMPLETION-HANDOVER.md`.
 Commercial-readiness CR-01 is complete as the retained audit record. CR-02A is
-the bounded Dexter removal; its implementation record is
-`Docs/commercial-readiness/CR-02A-DEXTER-REMOVAL.md`. CR-02B/CR-02C have not
+the bounded Dexter removal and CR-02B is the authorized Jax-native planner and
+Agent0 removal; their implementation records are
+`Docs/commercial-readiness/CR-02A-DEXTER-REMOVAL.md` and
+`Docs/commercial-readiness/CR-02B-AGENT0-REMOVAL.md`. CR-02C/CR-02D have not
 started and Phase 13 remains **NOT STARTED / BLOCKED BY CLEANUP GATE**.
 
 ## Phase-05 autonomous scope

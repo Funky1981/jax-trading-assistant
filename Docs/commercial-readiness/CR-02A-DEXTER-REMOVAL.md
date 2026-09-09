@@ -7,6 +7,11 @@ Starting HEAD: `831537c13e68ce12824c90b202bc8a29e4e77a90`
 Scope: bounded removal of Dexter and Dexter-only Jax seams. CR-02B and CR-02C
 were not started.
 
+> Historical current-state note (CR-02B, 2026-09-09): this record describes the
+> pre-Agent0-removal state and remains immutable evidence for CR-02A. Agent0 was
+> subsequently replaced by the Jax-owned planner and removed from the supported
+> runtime; see `CR-02B-AGENT0-REMOVAL.md`.
+
 ## Result
 
 **DEXTER IS NOT PART OF THE SUPPORTED JAX RUNTIME.**

@@ -1,3 +1,0 @@
--r requirements.txt
-
-# Add local-only test and tooling dependencies here as the service grows.

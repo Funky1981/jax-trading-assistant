@@ -28,10 +28,10 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
-| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02A DEXTER REMOVAL** |
+| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02B JAX-NATIVE PLANNER / AGENT0 REMOVAL** |
 | Phase 13 — Optional Live Execution | **NOT STARTED / BLOCKED BY CLEANUP GATE** |
-| Current implementation package | **CR-02A — DEXTER COMPLETE REMOVAL** |
-| Next package | **External review of CR-02A; CR-02B/CR-02C not started** |
+| Current implementation package | **CR-02B — JAX-NATIVE PLANNER + COMPLETE AGENT0 REMOVAL** |
+| Next package | **External review of CR-02B; CR-02C/CR-02D not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -237,17 +237,19 @@ candidate only; no advanced model was trained or promoted, no paid data was
 added, and recommendation logic was unchanged. HYP-EVENT-001A remains
 `NOT VALIDATED`; Phase 13 is blocked by the commercial-readiness cleanup gate.
 
-### Commercial-readiness cleanup gate — CR-02A IN PROGRESS
+### Commercial-readiness cleanup gate — CR-02B IN PROGRESS
 
-CR-01's audit is complete and retained as the pre-removal record. CR-02A is the
-bounded Dexter removal authorized by that audit. It removes the embedded Dexter
-tree, Jax-side Dexter client/integration, stale provider/configuration seams and
-Dexter-only UTCP/ingest contracts while retaining shared Jax capabilities. The
-canonical removal record is
-`Docs/commercial-readiness/CR-02A-DEXTER-REMOVAL.md`.
+CR-01's audit and CR-02A's Dexter removal are retained as historical cleanup
+records. CR-02B is the bounded Agent0 removal authorized by the external
+technical-lead decision. It replaces the supported planning capability with the
+small Jax-owned advisory planner and removes the Agent0 source, service,
+client, active configuration, Compose, scripts and frontend-only suggestion
+surface. The canonical removal record is
+`Docs/commercial-readiness/CR-02B-AGENT0-REMOVAL.md`.
 
-Phase 13 remains **NOT STARTED / BLOCKED BY THE CLEANUP GATE**. CR-02 may begin
-only after external technical-lead review of each bounded cleanup decision.
+Phase 13 remains **NOT STARTED / BLOCKED BY THE CLEANUP GATE**. CR-02C/CR-02D
+may begin only after external technical-lead review of each bounded cleanup
+decision.
 `HYP-EVENT-001A` remains **NOT VALIDATED** and
 `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains unchanged.
 

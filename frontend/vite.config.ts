@@ -46,11 +46,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: () => '/health',
       },
-      '/agent0': {
-        target: 'http://localhost:8093',
-        changeOrigin: true,
-        rewrite: (requestPath) => requestPath.replace(/^\/agent0/, ''),
-      },
       '/diagnostics/research/health': {
         target: 'http://localhost:8091',
         changeOrigin: true,

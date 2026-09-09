@@ -15,7 +15,6 @@ export const API_CONFIG = {
   RESEARCH_SERVICE: RESEARCH_DIAGNOSTICS_BASE_PATH,
   MEMORY_SERVICE: RESEARCH_DIAGNOSTICS_BASE_PATH,
   IB_BRIDGE: devProxyBaseUrl(import.meta.env.VITE_IB_BRIDGE_URL, 'http://localhost:8092'),
-  AGENT0_SERVICE: devProxyBaseUrl(import.meta.env.VITE_AGENT0_SERVICE_URL, 'http://localhost:8093', '/agent0'),
 } as const;
 
 export const HEALTH_PROBE_URLS: Record<string, string> = import.meta.env.DEV
@@ -38,9 +37,6 @@ export const ENDPOINTS = {
   STRATEGIES: '/api/strategies',
   RISK_METRICS: '/api/risk/metrics',
   METRICS_EVENTS: '/api/metrics/events',
-  AI_SUGGEST: '/suggest',
-  AI_CONFIG: '/config',
-  AI_HEALTH: '/health',
   IB_STATUS: '/status',
   IB_ACCOUNTS: '/accounts',
   IB_POSITIONS: '/positions',

@@ -103,7 +103,7 @@ func promoteAISuggestion(ctx context.Context, pool *pgxpool.Pool, req aiSuggesti
 	}
 	source := strings.TrimSpace(req.Source)
 	if source == "" {
-		source = "agent0_manual_review"
+		source = "jax_manual_review"
 	}
 	expiresAt := time.Now().UTC().Add(worldMonitorCandidateTTL)
 

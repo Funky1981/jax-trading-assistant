@@ -11,9 +11,10 @@ The active platform is an ADR-0012 modular-monolith topology with two Go runtime
 - `cmd/research`
   - Orchestration, research/backtest, memory tool paths.
   - HTTP port `8091`.
-- External boundaries
+- External boundary
   - `services/ib-bridge` on `8092`
-  - `services/agent0-service` on `8093`
+- In-process advisory boundary
+  - `internal/modules/planner` (`jax-planner/v1`)
 
 ## Repository Layout (Current)
 
@@ -26,9 +27,9 @@ cmd/
 internal/
   modules/, domain/, integrations/, providers/
 libs/
-  auth/, marketdata/, utcp/, agent0/, ...
+  auth/, marketdata/, utcp/, ...
 services/
-  ib-bridge/, agent0-service/
+  ib-bridge/
 frontend/
 db/postgres/migrations/
 scripts/
@@ -39,7 +40,8 @@ scripts/
 - Trader must stay deterministic and avoid research-only imports.
 - Artifact loading/promotion must remain approval-state driven.
 - Trust-gate evidence (Gate2 replay + Gate3 promotion) is required for validation transitions.
-- External Python services remain explicit boundaries unless changed by ADR.
+- External Python services remain explicit boundaries unless changed by ADR;
+  Agent0 was removed under CR-02B and is not a supported runtime dependency.
 
 ## Genuine event decision boundary
 

@@ -31,11 +31,9 @@ jobs:
           
           # Forbidden packages for production trader
           FORBIDDEN=(
-            "jax-trading-assistant/libs/agent0"
             "jax-trading-assistant/libs/dexter"  
             "jax-trading-assistant/internal/modules/backtest"
             "jax-trading-assistant/cmd/research"
-            "github.com/agent0"
           )
           
           VIOLATIONS_FOUND=0
@@ -63,8 +61,6 @@ jobs:
             echo ""
             echo "Research runtime (cmd/research) can use:"
             echo "  ✅ All trader packages"
-            echo "  ✅ libs/agent0"
-            echo "  ✅ libs/dexter"
             echo "  ✅ internal/modules/backtest"
             echo ""
             exit 1

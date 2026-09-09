@@ -19,7 +19,6 @@ Write-Host "Scanning: cmd/trader" -ForegroundColor Gray
 
 # Packages that must NEVER appear in cmd/trader's dependency tree
 $denied = @(
-    "jax-trading-assistant/libs/agent0",
     "jax-trading-assistant/internal/modules/orchestration"  # orchestration is research-domain
 )
 

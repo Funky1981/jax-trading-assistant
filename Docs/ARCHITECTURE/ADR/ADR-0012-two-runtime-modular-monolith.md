@@ -3,6 +3,9 @@
 Dexter references in this ADR describe the superseded pre-removal architecture.
 Dexter is not part of the supported Jax runtime. See
 `Docs/commercial-readiness/CR-02A-DEXTER-REMOVAL.md` for the removal record.
+Agent0 references below likewise describe the superseded pre-CR-02B design;
+the supported runtime now uses `internal/modules/planner` and no Agent0 service,
+client or vendored tree. See `Docs/commercial-readiness/CR-02B-AGENT0-REMOVAL.md`.
 
 # ADR-0012: Consolidate Jax into a modular monolith with Trader + Research runtimes
 

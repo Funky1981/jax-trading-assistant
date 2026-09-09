@@ -16,7 +16,6 @@ curl http://localhost:8081/health
 curl http://localhost:8100/health
 curl http://localhost:8091/health
 curl http://localhost:8092/health
-curl http://localhost:8093/health
 ```
 
 ## Common Issues
@@ -27,7 +26,7 @@ curl http://localhost:8093/health
 docker compose build --no-cache
 docker compose up -d postgres
 docker compose up db-migrate
-docker compose up -d ib-bridge agent0-service
+docker compose up -d ib-bridge
 docker compose up -d jax-research jax-trader
 docker compose ps
 ```
@@ -66,7 +65,6 @@ Recommended local env:
 - `DATABASE_URL=postgresql://jax:jax@localhost:5433/jax`
 - `JAX_ORCHESTRATOR_URL=http://localhost:8091`
 - `IB_BRIDGE_URL=http://localhost:8092`
-- `AGENT0_SERVICE_URL=http://localhost:8093`
 - `EMBEDDING_PROVIDER=local` (required in `JAX_RUNTIME_MODE=dev|test`; default local dev/test memory embeddings)
 - `OPENAI_API_KEY=...` (required only when `EMBEDDING_PROVIDER=openai`)
 

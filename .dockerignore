@@ -1,5 +1,4 @@
 # Third-party / vendored repos not needed for Go builds
-Agent0/
 dexter/
 
 # Frontend build artefacts

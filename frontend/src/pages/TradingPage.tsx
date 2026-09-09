@@ -12,7 +12,6 @@ import {
   TradeBlotterPanel,
   PriceChartPanel,
   StrategyMonitorPanel,
-  AIAssistantPanel,
   SignalsQueuePanel,
 } from '@/components/dashboard';
 import { HelpHint } from '@/components/ui/help-hint';
@@ -291,15 +290,6 @@ export function TradingPage() {
           </DashboardPanel>
         )}
 
-        {/* Row 5: AI Assistant (full width) */}
-        {!isSimple && (
-          <DashboardPanel colSpan={3}>
-            <AIAssistantPanel
-              isOpen={panelStates.aiAssistant}
-              onToggle={() => togglePanel('aiAssistant')}
-            />
-          </DashboardPanel>
-        )}
       </DashboardGrid>
     </div>
   );

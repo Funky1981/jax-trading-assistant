@@ -8,7 +8,7 @@ This guide covers IB Gateway/TWS setup and how `ib-bridge` is wired into the cur
 
 - `ib-bridge` service: `http://localhost:8092/health`
 - `jax-trader` uses `IB_BRIDGE_URL` for market/execution integration
-- `agent0-service` also references `ib-bridge` for planning context
+- Research planning is in-process; `ib-bridge` remains the isolated market-connectivity boundary.
 
 ## Quick Start (Paper Trading)
 

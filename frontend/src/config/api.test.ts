@@ -8,7 +8,6 @@ describe('dev API config', () => {
       '/diagnostics/research/v1/memory/banks',
     );
     expect(buildUrl('IB_BRIDGE', '/quotes/SPY')).toBe('/quotes/SPY');
-    expect(buildUrl('AGENT0_SERVICE', '/suggest')).toBe('/agent0/suggest');
   });
 
   it('uses proxied health endpoints in dev mode', () => {

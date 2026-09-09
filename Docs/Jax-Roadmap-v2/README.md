@@ -48,9 +48,9 @@ criteria remain binding.
 - Phase 09: `COMPLETE / GO`
 - Phase 10: `COMPLETE / GO`
 - Phase 11: `COMPLETE / GO`
-- Current package: `CR-02A — DEXTER COMPLETE REMOVAL`
+- Current package: `CR-02B — JAX-NATIVE PLANNER + COMPLETE AGENT0 REMOVAL`
 - Phase 12: `COMPLETE / GO — HYP-EVENT-001A NOT VALIDATED`
-- Commercial-readiness cleanup: `IN PROGRESS — CR-02A`
+- Commercial-readiness cleanup: `IN PROGRESS — CR-02B`
 - Phase 13: `NOT STARTED / BLOCKED BY CLEANUP GATE`
 
 `HYP-EVENT-001A` has completed its real historical scientific evaluation. The
@@ -59,8 +59,9 @@ development/validation selection, one formal 2024 OOS score and retained
 falsification results. The conditioned comparison remains research-only and
 promotion is closed because the 2025 holdout is sealed and survivorship is
 unresolved. WP-12.01 was assessed without adopting a new runtime. CR-01 is a
-documentation-only commercial-readiness audit; CR-02 removals have not started
-and Phase 13 is blocked by the cleanup gate.
+documentation-only commercial-readiness audit; CR-02A removed Dexter and CR-02B
+is the active Agent0 removal package. Phase 13 remains blocked by the cleanup
+gate.
 
 
 ## 2026-08-10 integrated roadmap change

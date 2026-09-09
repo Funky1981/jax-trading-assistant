@@ -9,8 +9,8 @@
 ## Snapshot
 
 - **Active runtime layout**: `cmd/trader` serves deterministic runtime plus frontend API surface; `cmd/research` serves orchestration/research and memory tools.
-- **External service boundaries retained**: `services/ib-bridge` and `services/agent0-service`.
-- **Core stack target**: `jax-trader` (8081/8100), `jax-research` (8091), `ib-bridge` (8092), `agent0-service` (8093), frontend dev server (5173).
+- **External service boundary retained**: `services/ib-bridge`.
+- **Core stack target**: `jax-trader` (8081/8100), `jax-research` (8091), `ib-bridge` (8092), frontend dev server (5173); planning is in-process.
 - **Product truth**: Jax is an event-driven trading research assistant. See `Docs/JAX_PRODUCT_CHARTER.md`.
 - **Capability truth**: current capability status lives in `Docs/CAPABILITY_MATRIX.md`.
 

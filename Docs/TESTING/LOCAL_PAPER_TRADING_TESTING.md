@@ -41,7 +41,6 @@ Do not set `ALLOW_LIVE_TRADING=true` for local validation.
 - Trader ready endpoint: `http://localhost:8100/ready`
 - Research service: `http://localhost:8091`
 - IB paper bridge: `http://localhost:8092`
-- Agent0 service: `http://localhost:8093`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3001`
 
@@ -50,7 +49,7 @@ Do not set `ALLOW_LIVE_TRADING=true` for local validation.
 The full platform test writes reports under `Docs/runs/` and checks:
 
 - Auth bootstrap login
-- Trader, research, IB bridge, and Agent0 health
+- Trader, research, and IB bridge health
 - Read-only API smoke checks for signals, artifacts, testing status, readiness, runs, AI decisions, ETF instruments, trading pilot status, and robust performance
 - Full Go verification
 - Golden replay verification

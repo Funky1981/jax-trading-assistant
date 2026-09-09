@@ -1,5 +1,18 @@
 # Roadmap Decision Log
 
+## RD-2026-09-09-17 — CR-02B Jax-native planner and complete Agent0 removal
+
+- Decision state: **IMPLEMENTATION IN PROGRESS — EXTERNAL CR-02B REVIEW REQUIRED**.
+- Scope: replace the supported Agent0 planning dependency with the small
+  Jax-owned advisory planner, then remove Agent0 source, service, client,
+  active configuration and obsolete frontend/deployment seams.
+- Boundary: the planner is advisory-only; it cannot approve, execute, invoke a
+  broker, create orders, mutate portfolio state or run unrestricted tools.
+- Safety: `ALLOW_LIVE_TRADING=false`, `BROKER_EXECUTION_ALLOWED=false`, live
+  worker disabled and maximum leverage `1x` remain unchanged.
+- Scientific status: `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`;
+  Phase 13 remains `NOT STARTED / BLOCKED BY CLEANUP GATE`.
+
 ## RD-2026-09-09-16 — CR-02A Dexter complete removal
 
 - Decision state: **IMPLEMENTATION COMPLETE — EXTERNAL CR-02A REVIEW REQUIRED**.

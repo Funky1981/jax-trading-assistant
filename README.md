@@ -19,12 +19,11 @@ Jax uses a **modular monolith** with two runtime entrypoints (ADR-0012):
 | Runtime | Port | Role |
 |---------|------|------|
 | `cmd/trader` | 8100 | Deterministic trade execution — loads approved strategy artifacts only |
-| `cmd/research` | 8091 | Orchestration pipeline — Agent0, memory, and Jax-native tools |
+| `cmd/research` | 8091 | Jax-owned orchestration, advisory planner, memory, and native tools |
 
 External boundaries kept as separate processes:
 - **jax-trader frontend API** (8081) — REST API served from `cmd/trader`
 - **ib-bridge** (8092) — Interactive Brokers Gateway adapter
-- **agent0-service** (8093) — LLM/AI agent
 
 ## Quick Start
 

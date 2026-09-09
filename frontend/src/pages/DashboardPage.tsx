@@ -7,7 +7,6 @@ import {
   WatchlistPanel,
   PositionsPanel,
   RiskSummaryPanel,
-  AIAssistantPanel,
   SignalsQueuePanel,
 } from '@/components/dashboard';
 import { HelpHint } from '@/components/ui/help-hint';
@@ -158,12 +157,6 @@ export function DashboardPage() {
           />
         </DashboardPanel>
 
-        <DashboardPanel colSpan={3}>
-          <AIAssistantPanel
-            isOpen={panelStates.aiAssistant}
-            onToggle={() => togglePanel('aiAssistant')}
-          />
-        </DashboardPanel>
       </DashboardGrid>
     </div>
   );

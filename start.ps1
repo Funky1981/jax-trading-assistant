@@ -119,8 +119,7 @@ $requiredImages = @(
     "jax-trading-assistant-db-migrate",
     "jax-trading-assistant-jax-trader",
     "jax-trading-assistant-jax-research",
-    "jax-trading-assistant-ib-bridge",
-    "jax-trading-assistant-agent0-service"
+    "jax-trading-assistant-ib-bridge"
 )
 $needsBuild = $env:JAX_BUILD -eq "true"
 if (-not $needsBuild) {
@@ -198,7 +197,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # Start other services
 Write-Host "  Starting core services..." -ForegroundColor Gray
-docker compose up -d --no-build jax-trader jax-research ib-bridge agent0-service prometheus grafana 2>$null
+docker compose up -d --no-build jax-trader jax-research ib-bridge prometheus grafana 2>$null
 
 # Wait for services to be ready
 Write-Host "`nWaiting for services to be ready..." -ForegroundColor Yellow
@@ -208,7 +207,6 @@ Start-Sleep -Seconds 10
 $apiHealthy = $false
 $researchHealthy = $false
 $bridgeHealthy = $false
-$agentHealthy = $false
 
 for ($i = 1; $i -le 6; $i++) {
     try {
@@ -226,12 +224,7 @@ for ($i = 1; $i -le 6; $i++) {
         if ($bridgeResponse.StatusCode -eq 200) { $bridgeHealthy = $true }
     } catch { }
 
-    try {
-        $agentResponse = Invoke-WebRequest -Uri "http://localhost:8093/ready" -TimeoutSec 2 -UseBasicParsing -ErrorAction SilentlyContinue
-        if ($agentResponse.StatusCode -eq 200) { $agentHealthy = $true }
-    } catch { }
-
-    if ($apiHealthy -and $researchHealthy -and $bridgeHealthy -and $agentHealthy) {
+    if ($apiHealthy -and $researchHealthy -and $bridgeHealthy) {
         Write-Host "Backend services are ready!" -ForegroundColor Green
         break
     }
@@ -242,7 +235,7 @@ for ($i = 1; $i -le 6; $i++) {
     }
 }
 
-if (-not ($apiHealthy -and $researchHealthy -and $bridgeHealthy -and $agentHealthy)) {
+if (-not ($apiHealthy -and $researchHealthy -and $bridgeHealthy)) {
     Write-Host "Backend services may not be fully ready, continuing anyway..." -ForegroundColor Yellow
 }
 

@@ -23,7 +23,6 @@ $env:ALLOW_LIVE_TRADING="false"
 Invoke-RestMethod http://localhost:8081/health
 Invoke-RestMethod http://localhost:8091/health
 Invoke-RestMethod http://localhost:8092/health
-Invoke-RestMethod http://localhost:8093/health
 ```
 
 3. Capture latest platform evidence:

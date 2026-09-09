@@ -20,7 +20,7 @@ Use these instructions as the default behavior for all coding tasks in this repo
 - First-party areas:
   - `services/`, `libs/`, `internal/`, `frontend/`, `tests/`, `tools/`, `db/`, `config/`, `Docs/`
 - Treat as vendored/external unless explicitly requested:
-  - `Agent0/`, `dexter/`
+  - historical/archive trees and vendored material unless the task explicitly authorizes changes
 
 ## Skill-to-Task Routing (Use as Playbooks)
 

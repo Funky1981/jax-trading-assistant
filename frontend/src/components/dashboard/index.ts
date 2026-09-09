@@ -9,5 +9,4 @@ export { PriceChartPanel } from './PriceChartPanel';
 export { StrategyMonitorPanel } from './StrategyMonitorPanel';
 export { MemoryBrowserPanel } from './MemoryBrowserPanel';
 export { MetricsPanel } from './MetricsPanel';
-export { AIAssistantPanel } from './AIAssistantPanel';
 export { SignalsQueuePanel } from './SignalsQueuePanel';
