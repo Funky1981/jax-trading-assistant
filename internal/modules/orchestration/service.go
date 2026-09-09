@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"jax-trading-assistant/internal/modules/audit"
-	"jax-trading-assistant/libs/agent0"
+	"jax-trading-assistant/internal/modules/planner"
 	"jax-trading-assistant/libs/contracts"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/strategies"
@@ -19,12 +19,6 @@ type MemoryClient interface {
 	Retain(ctx context.Context, bank string, item contracts.MemoryItem) (contracts.MemoryID, error)
 }
 
-// Agent0Client interface for AI planning
-type Agent0Client interface {
-	Plan(ctx context.Context, req agent0.PlanRequest) (agent0.PlanResponse, error)
-	Execute(ctx context.Context, req agent0.ExecuteRequest) (agent0.ExecuteResponse, error)
-}
-
 // ToolRunner interface for executing tools based on AI plans
 type ToolRunner interface {
 	Execute(ctx context.Context, plan PlanResult) ([]ToolRun, error)
@@ -33,17 +27,17 @@ type ToolRunner interface {
 // Service provides orchestration functionality
 type Service struct {
 	memory     MemoryClient
-	agent      Agent0Client
+	planner    planner.Planner
 	tools      ToolRunner
 	strategies *strategies.Registry
 	audit      *audit.Service
 }
 
 // NewService creates a new orchestration service
-func NewService(memory MemoryClient, agent Agent0Client, tools ToolRunner, strategyRegistry *strategies.Registry) *Service {
+func NewService(memory MemoryClient, p planner.Planner, tools ToolRunner, strategyRegistry *strategies.Registry) *Service {
 	return &Service{
 		memory:     memory,
-		agent:      agent,
+		planner:    p,
 		tools:      tools,
 		strategies: strategyRegistry,
 	}
@@ -64,23 +58,10 @@ type OrchestrationRequest struct {
 	Tags        []string
 }
 
-// PlanInput contains inputs for Agent0 planning
-type PlanInput struct {
-	Symbol      string
-	Context     string
-	Constraints map[string]any
-	Memories    []contracts.MemoryItem
-	Signals     []strategies.Signal
-}
-
-// PlanResult contains the AI plan result
-type PlanResult struct {
-	Summary        string
-	Steps          []string
-	Action         string
-	Confidence     float64
-	ReasoningNotes string
-}
+// PlanInput and PlanResult are compatibility aliases for the Jax-owned
+// planner contract.
+type PlanInput = planner.Request
+type PlanResult = planner.Result
 
 // ToolRun represents a tool execution result
 type ToolRun struct {
@@ -108,8 +89,8 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 		runErr = fmt.Errorf("orchestrator: memory client required")
 		return OrchestrationResult{}, runErr
 	}
-	if s.agent == nil {
-		runErr = fmt.Errorf("orchestrator: agent required")
+	if s.planner == nil {
+		runErr = fmt.Errorf("orchestrator: planner required")
 		return OrchestrationResult{}, runErr
 	}
 	if s.tools == nil {
@@ -151,7 +132,7 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 		}
 	}
 
-	// 3. Build context for Agent0
+	// 3. Build bounded context for the Jax-owned planner.
 	contextBuilder := strings.Builder{}
 	contextBuilder.WriteString(req.UserContext)
 	if len(memories) > 0 {
@@ -167,64 +148,48 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 				i+1, sig.Symbol, sig.Type, sig.EntryPrice, sig.Confidence))
 		}
 	}
-	agentMemories := []agent0.Memory{}
-	for _, mem := range memories {
-		agentMemories = append(agentMemories, agent0.Memory{
-			Summary: mem.Summary,
-			Type:    mem.Type,
-			Symbol:  mem.Symbol,
-			Tags:    mem.Tags,
-			Data:    mem.Data,
-		})
-	}
-
-	planReq := agent0.PlanRequest{
+	planReq := planner.Request{
 		Context:     contextBuilder.String(),
 		Symbol:      req.Symbol,
 		Constraints: req.Constraints,
-		Memories:    agentMemories,
+		Memories:    memories,
+		Signals:     signals,
 	}
 
 	planStart := time.Now()
-	agentPlan, err := s.agent.Plan(ctx, planReq)
+	plannerResult, err := s.planner.Plan(ctx, planReq)
 	if err != nil {
 		runErr = err
 		return OrchestrationResult{}, err
 	}
-	observability.RecordAgent0Plan(ctx, time.Since(planStart), len(agentPlan.Steps), agentPlan.Confidence, nil)
+	observability.RecordPlannerPlan(ctx, time.Since(planStart), len(plannerResult.Steps), plannerResult.Confidence, nil)
 
 	if s.audit != nil {
 		flowID := observability.FlowIDFromContext(ctx)
 		runInfo := observability.RunInfoFromContext(ctx)
-		valid, trace := audit.ValidatePlanShape(agentPlan.Summary, agentPlan.Action, agentPlan.Confidence, agentPlan.Steps)
+		valid, trace := audit.ValidatePlanShape(plannerResult.Summary, plannerResult.Action, plannerResult.Confidence, plannerResult.Steps)
 		decisionID, _ := s.audit.LogAIDecision(ctx, audit.AIDecisionRecord{
 			RunID:       runInfo.RunID,
 			FlowID:      flowID,
 			Role:        "planner",
-			Provider:    "agent0",
-			Model:       "agent0-plan",
+			Provider:    "jax-planner",
+			Model:       planner.ContractVersion,
 			Prompt:      map[string]any{"context": planReq.Context, "constraints": planReq.Constraints, "symbol": planReq.Symbol},
-			Response:    map[string]any{"summary": agentPlan.Summary, "steps": agentPlan.Steps, "action": agentPlan.Action, "confidence": agentPlan.Confidence, "reasoning": agentPlan.ReasoningNotes},
+			Response:    map[string]any{"summary": plannerResult.Summary, "steps": plannerResult.Steps, "action": plannerResult.Action, "confidence": plannerResult.Confidence, "reasoning": plannerResult.ReasoningNotes},
 			SchemaValid: valid,
-			Decision:    agentPlan.Action,
-			Reasoning:   agentPlan.ReasoningNotes,
+			Decision:    plannerResult.Action,
+			Reasoning:   plannerResult.ReasoningNotes,
 			RuleTrace:   trace,
 		})
 		_ = s.audit.LogAIAcceptance(ctx, decisionID, valid, "schema_validator", "plan schema validation", trace)
 		if !valid {
-			runErr = fmt.Errorf("agent plan failed schema validation")
+			runErr = fmt.Errorf("planner result failed schema validation")
 			return OrchestrationResult{}, runErr
 		}
 	}
 
 	// 4. Build plan result
-	plan := PlanResult{
-		Summary:        agentPlan.Summary,
-		Steps:          agentPlan.Steps,
-		Action:         agentPlan.Action,
-		Confidence:     agentPlan.Confidence,
-		ReasoningNotes: agentPlan.ReasoningNotes,
-	}
+	plan := plannerResult
 
 	// 5. Execute tools based on plan
 	toolRuns, err := s.tools.Execute(ctx, plan)

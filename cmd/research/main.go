@@ -1,11 +1,11 @@
 // cmd/research is the Research Runtime for jax-trading-assistant.
-// It hosts the orchestration pipeline (Agent0, memory, and Jax-native tools) in-process.
+// It hosts the Jax-owned orchestration pipeline, memory, and Jax-native tools in-process.
 //
 // It preserves the prior orchestration HTTP surface so the frontend API layer
 // does not need a contract change.
 //
 // ADR-0012 Phase 5: one of the two authoritative runtimes.
-// import rule: cmd/research MAY import libs/agent0 and libs/utcp.
+// import rule: cmd/research MAY import internal planner/orchestration and libs/utcp.
 package main
 
 import (
@@ -25,6 +25,7 @@ import (
 
 	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/internal/modules/orchestration"
+	"jax-trading-assistant/internal/modules/planner"
 	"jax-trading-assistant/libs/middleware"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/pgmemory"
@@ -47,7 +48,6 @@ type Config struct {
 	DatabaseURL      string
 	Port             string
 	MemoryServiceURL string
-	Agent0ServiceURL string
 	// DatasetDir is the directory for the L03 dataset catalog (catalog.json).
 	DatasetDir  string
 	RuntimeMode runtimepolicy.Mode
@@ -105,16 +105,16 @@ func main() {
 	}
 	log.Printf("memory client -> %s", cfg.MemoryServiceURL)
 
-	agentClient, err := orchestration.NewAgent0Client(cfg.Agent0ServiceURL)
+	nativePlanner, err := orchestration.NewPlanner()
 	if err != nil {
-		log.Fatalf("failed to create Agent0 client: %v", err)
+		log.Fatalf("failed to create Jax planner: %v", err)
 	}
-	log.Printf("agent0 client -> %s", cfg.Agent0ServiceURL)
+	log.Printf("Jax planner -> %s", planner.ContractVersion)
 
 	toolRunner := orchestration.NewToolRunner()
 	registry := strategies.NewRegistry()
 
-	orchSvc := orchestration.NewService(memoryClient, agentClient, toolRunner, registry)
+	orchSvc := orchestration.NewService(memoryClient, nativePlanner, toolRunner, registry)
 	orchSvc = orchSvc.WithAudit(audit.New(db))
 
 	// L04: backtest engine + dataset registry
@@ -140,8 +140,8 @@ func main() {
 	registerRoutes(mux, orchSvc, db, btDeps, researchRunner, memInfo)
 
 	// ADR-0012 Phase 6: in-process memory proxy.
-	// agent0-service can now point MEMORY_SERVICE_URL at jax-research:8091.
-	// Backed by Postgres + pgvector; fails fast if db is unavailable (already
+	// The in-process memory proxy is backed by Postgres + pgvector and fails
+	// fast if db is unavailable (already
 	// validated above).
 	registerMemoryRoutes(mux, memStore)
 
@@ -566,7 +566,6 @@ func loadConfig() (Config, error) {
 		DatabaseURL:      envOrDefault("DATABASE_URL", "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"),
 		Port:             envOrDefault("PORT", "8091"),
 		MemoryServiceURL: envOrDefault("MEMORY_SERVICE_URL", "http://localhost:8091/tools"),
-		Agent0ServiceURL: envOrDefault("AGENT0_SERVICE_URL", "http://agent0-service:8093"),
 		DatasetDir:       envOrDefault("DATASET_DIR", "data/datasets"),
 		RuntimeMode:      mode,
 	}, nil

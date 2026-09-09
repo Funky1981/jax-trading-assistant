@@ -87,9 +87,9 @@ func RecordResearchQuery(ctx context.Context, service string, duration time.Dura
 	LogEvent(ctx, "info", "metric", fields)
 }
 
-func RecordAgent0Plan(ctx context.Context, duration time.Duration, steps int, confidence float64, err error) {
+func RecordPlannerPlan(ctx context.Context, duration time.Duration, steps int, confidence float64, err error) {
 	fields := map[string]any{
-		"name":       "agent0_plan",
+		"name":       "planner_plan",
 		"latency_ms": duration.Milliseconds(),
 		"steps":      steps,
 		"confidence": confidence,

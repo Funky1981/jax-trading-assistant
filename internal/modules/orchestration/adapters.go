@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"jax-trading-assistant/libs/agent0"
+	"jax-trading-assistant/internal/modules/planner"
 	"jax-trading-assistant/libs/contracts"
 	"jax-trading-assistant/libs/utcp"
 )
@@ -67,29 +67,9 @@ func (m *MemoryClientAdapter) Retain(ctx context.Context, bank string, item cont
 	return resp.ID, nil
 }
 
-// Agent0ClientAdapter adapts agent0.Client to Agent0Client interface
-type Agent0ClientAdapter struct {
-	client *agent0.Client
-}
-
-// NewAgent0Client creates a new Agent0 client adapter
-func NewAgent0Client(agent0ServiceURL string) (*Agent0ClientAdapter, error) {
-	client, err := agent0.New(agent0ServiceURL)
-	if err != nil {
-		return nil, fmt.Errorf("create Agent0 client: %w", err)
-	}
-
-	return &Agent0ClientAdapter{client: client}, nil
-}
-
-// Plan creates an AI plan
-func (a *Agent0ClientAdapter) Plan(ctx context.Context, req agent0.PlanRequest) (agent0.PlanResponse, error) {
-	return a.client.Plan(ctx, req)
-}
-
-// Execute executes an AI plan
-func (a *Agent0ClientAdapter) Execute(ctx context.Context, req agent0.ExecuteRequest) (agent0.ExecuteResponse, error) {
-	return a.client.Execute(ctx, req)
+// NewPlanner creates the local Jax-owned advisory planner.
+func NewPlanner() (*planner.Service, error) {
+	return planner.NewService(planner.DeterministicProvider{})
 }
 
 // ToolRunnerImpl implements the ToolRunner interface

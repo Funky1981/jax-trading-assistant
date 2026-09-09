@@ -145,22 +145,22 @@ func TestRecordResearchQuery(t *testing.T) {
 	}
 }
 
-func TestRecordAgent0Plan(t *testing.T) {
+func TestRecordPlannerPlan(t *testing.T) {
 	ctx := WithRunInfo(context.Background(), RunInfo{
 		RunID:  "agent_999",
 		Symbol: "NVDA",
 	})
 
 	result := captureLog(func() {
-		RecordAgent0Plan(ctx, 1200*time.Millisecond, 5, 0.92, nil)
+		RecordPlannerPlan(ctx, 1200*time.Millisecond, 5, 0.92, nil)
 	})
 
 	if result == nil {
 		t.Fatal("expected JSON log output")
 	}
 
-	if result["name"] != "agent0_plan" {
-		t.Errorf("expected name=agent0_plan, got %v", result["name"])
+	if result["name"] != "planner_plan" {
+		t.Errorf("expected name=planner_plan, got %v", result["name"])
 	}
 
 	if result["steps"] != float64(5) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"jax-trading-assistant/libs/agent0"
+	"jax-trading-assistant/internal/modules/planner"
 	"jax-trading-assistant/libs/contracts"
 	"jax-trading-assistant/libs/strategies"
 )
@@ -38,27 +38,19 @@ func (m *fakeMemory) Retain(ctx context.Context, bank string, item contracts.Mem
 	return "mem-123", nil
 }
 
-// fakeAgent implements Agent0Client interface for testing
-type fakeAgent struct {
-	lastPlanRequest agent0.PlanRequest
+// fakePlanner implements the Jax-owned Planner interface for testing.
+type fakePlanner struct {
+	lastPlanRequest planner.Request
 }
 
-func (a *fakeAgent) Plan(ctx context.Context, req agent0.PlanRequest) (agent0.PlanResponse, error) {
+func (a *fakePlanner) Plan(ctx context.Context, req planner.Request) (planner.Result, error) {
 	a.lastPlanRequest = req
-	return agent0.PlanResponse{
+	return planner.Result{
 		Summary:        "Hold position on " + req.Symbol,
 		Steps:          []string{"Analyze market", "Review position"},
-		Action:         "hold",
+		Action:         "HOLD",
 		Confidence:     0.75,
 		ReasoningNotes: "Market conditions stable",
-	}, nil
-}
-
-func (a *fakeAgent) Execute(ctx context.Context, req agent0.ExecuteRequest) (agent0.ExecuteResponse, error) {
-	return agent0.ExecuteResponse{
-		Success:   true,
-		Summary:   "Executed",
-		ToolCalls: []agent0.ToolCall{},
 	}, nil
 }
 
@@ -74,11 +66,11 @@ func (t *fakeTools) Execute(ctx context.Context, plan PlanResult) ([]ToolRun, er
 
 func TestService_BasicOrchestration(t *testing.T) {
 	memory := &fakeMemory{}
-	agent := &fakeAgent{}
+	planner := &fakePlanner{}
 	tools := &fakeTools{}
 	registry := strategies.NewRegistry()
 
-	service := NewService(memory, agent, tools, registry)
+	service := NewService(memory, planner, tools, registry)
 
 	result, err := service.Orchestrate(context.Background(), OrchestrationRequest{
 		Bank:        "trades",
@@ -100,14 +92,14 @@ func TestService_BasicOrchestration(t *testing.T) {
 		t.Errorf("expected recall bank 'trades', got '%s'", memory.lastRecallBank)
 	}
 
-	// Verify agent plan was invoked
-	if agent.lastPlanRequest.Symbol != "AAPL" {
-		t.Errorf("expected symbol AAPL, got %s", agent.lastPlanRequest.Symbol)
+	// Verify the Jax planner was invoked.
+	if planner.lastPlanRequest.Symbol != "AAPL" {
+		t.Errorf("expected symbol AAPL, got %s", planner.lastPlanRequest.Symbol)
 	}
 
 	// Verify plan result
-	if result.Plan.Action != "hold" {
-		t.Errorf("expected action 'hold', got '%s'", result.Plan.Action)
+	if result.Plan.Action != "HOLD" {
+		t.Errorf("expected action 'HOLD', got '%s'", result.Plan.Action)
 	}
 	if result.Plan.Confidence != 0.75 {
 		t.Errorf("expected confidence 0.75, got %.2f", result.Plan.Confidence)
@@ -128,11 +120,11 @@ func TestService_BasicOrchestration(t *testing.T) {
 }
 
 func TestService_RequiresMemoryClient(t *testing.T) {
-	agent := &fakeAgent{}
+	planner := &fakePlanner{}
 	tools := &fakeTools{}
 	registry := strategies.NewRegistry()
 
-	service := NewService(nil, agent, tools, registry)
+	service := NewService(nil, planner, tools, registry)
 
 	_, err := service.Orchestrate(context.Background(), OrchestrationRequest{
 		Bank:   "trades",
@@ -147,7 +139,7 @@ func TestService_RequiresMemoryClient(t *testing.T) {
 	}
 }
 
-func TestService_RequiresAgentClient(t *testing.T) {
+func TestService_RequiresPlanner(t *testing.T) {
 	memory := &fakeMemory{}
 	tools := &fakeTools{}
 	registry := strategies.NewRegistry()
@@ -160,19 +152,19 @@ func TestService_RequiresAgentClient(t *testing.T) {
 	})
 
 	if err == nil {
-		t.Error("expected error when agent client is nil")
+		t.Error("expected error when planner is nil")
 	}
-	if !containsStr(err.Error(), "agent required") {
-		t.Errorf("expected 'agent required' error, got: %v", err)
+	if !containsStr(err.Error(), "planner required") {
+		t.Errorf("expected 'planner required' error, got: %v", err)
 	}
 }
 
 func TestService_RequiresToolRunner(t *testing.T) {
 	memory := &fakeMemory{}
-	agent := &fakeAgent{}
+	planner := &fakePlanner{}
 	registry := strategies.NewRegistry()
 
-	service := NewService(memory, agent, nil, registry)
+	service := NewService(memory, planner, nil, registry)
 
 	_, err := service.Orchestrate(context.Background(), OrchestrationRequest{
 		Bank:   "trades",
@@ -189,11 +181,11 @@ func TestService_RequiresToolRunner(t *testing.T) {
 
 func TestService_RequiresBank(t *testing.T) {
 	memory := &fakeMemory{}
-	agent := &fakeAgent{}
+	planner := &fakePlanner{}
 	tools := &fakeTools{}
 	registry := strategies.NewRegistry()
 
-	service := NewService(memory, agent, tools, registry)
+	service := NewService(memory, planner, tools, registry)
 
 	_, err := service.Orchestrate(context.Background(), OrchestrationRequest{
 		Bank:   "",
@@ -210,11 +202,11 @@ func TestService_RequiresBank(t *testing.T) {
 
 func TestService_RequiresSymbol(t *testing.T) {
 	memory := &fakeMemory{}
-	agent := &fakeAgent{}
+	planner := &fakePlanner{}
 	tools := &fakeTools{}
 	registry := strategies.NewRegistry()
 
-	service := NewService(memory, agent, tools, registry)
+	service := NewService(memory, planner, tools, registry)
 
 	_, err := service.Orchestrate(context.Background(), OrchestrationRequest{
 		Bank:   "trades",
