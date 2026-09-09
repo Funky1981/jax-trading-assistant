@@ -146,8 +146,8 @@ func NewDeepSeekDiagnosticClient(config DeepSeekDiagnosticConfig, transport HTTP
 	return &DeepSeekDiagnosticClient{
 		config: config, http: transport, returned: map[string]bool{}, fingerprints: map[string]bool{}, finishReasons: map[string]bool{},
 		failures: []HostedProviderFailure{},
-		budget: newExperimentBudget(config.BudgetCeilingMicros, config.CacheMissPriceMicrosPerMillion,
-			config.CacheHitPriceMicrosPerMillion, config.CacheMissPriceMicrosPerMillion, config.OutputPriceMicrosPerMillion),
+		budget: newExperimentBudget(config.Runtime.Model, config.BudgetCeilingMicros, config.CacheMissPriceMicrosPerMillion,
+			config.CacheHitPriceMicrosPerMillion, config.CacheMissPriceMicrosPerMillion, config.OutputPriceMicrosPerMillion, false),
 	}
 }
 

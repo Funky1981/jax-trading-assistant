@@ -49,9 +49,14 @@ research states. Rolling windows require training to end before evaluation.
 
 The authorized GPT-5.6 Luna run completed with the frozen direction contract
 and produced 939 unique 2016–2024 direction records: 483 `POSITIVE`, 162
-`NEGATIVE`, 259 `NEUTRAL` and 35 `INSUFFICIENT_EVIDENCE`. Accounted usage was
-12,721,590 input tokens (99,989 cached), 126,229 output tokens and zero
-reasoning tokens, for `$2.677034` against the authorized `$4.50` ceiling.
+`NEGATIVE`, 259 `NEUTRAL` and 35 `INSUFFICIENT_EVIDENCE`. Persisted
+successful-response usage was 12,721,590 input tokens (99,989 cached),
+126,229 output tokens and zero reasoning tokens. The historical `$2.677034`
+is preserved as `ORIGINAL INTERNAL COST ESTIMATE`. Request-level recomputation
+of those persisted responses is `$2.678539`, but three retry calls lack
+retained provider usage, so the complete HYP-EVENT cost and the user-reported
+`$3.34` dashboard total remain unresolved. See
+`PHASE-12-SCIENTIFIC-CLOSURE-FORENSIC.md`.
 
 The private immutable report is
 `data/datasets/hyp-event-001a/scientific-results-v3/report.json`. It contains

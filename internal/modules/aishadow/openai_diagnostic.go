@@ -383,11 +383,12 @@ type HostedExperimentSnapshot struct {
 }
 
 type HostedCostBreakdown struct {
-	UncachedInputUSD string `json:"uncached_input_usd"`
-	CachedInputUSD   string `json:"cached_input_usd"`
-	CacheWriteUSD    string `json:"cache_write_usd"`
-	OutputUSD        string `json:"output_usd"`
-	TotalUSD         string `json:"total_usd"`
+	UncachedInputUSD        string `json:"uncached_input_usd"`
+	CachedInputUSD          string `json:"cached_input_usd"`
+	CacheWriteUSD           string `json:"cache_write_usd"`
+	OutputUSD               string `json:"output_usd"`
+	LongContextSurchargeUSD string `json:"long_context_surcharge_usd,omitempty"`
+	TotalUSD                string `json:"total_usd"`
 }
 
 type HostedPricingPlan struct {
@@ -396,6 +397,9 @@ type HostedPricingPlan struct {
 	CacheMissInputUSDPerMillionTokens string `json:"cache_miss_input_usd_per_million_tokens,omitempty"`
 	CacheWriteUSDPerMillionTokens     string `json:"cache_write_usd_per_million_tokens"`
 	OutputUSDPerMillionTokens         string `json:"output_usd_per_million_tokens"`
+	ScheduleVersion                   string `json:"schedule_version,omitempty"`
+	CheckedDate                       string `json:"checked_date,omitempty"`
+	LongContextThresholdTokens        int    `json:"long_context_threshold_tokens,omitempty"`
 	Source                            string `json:"source"`
 }
 
@@ -424,7 +428,7 @@ func NewOpenAIDiagnosticClient(config OpenAIDiagnosticConfig, transport HTTPDoer
 	}
 	return &OpenAIDiagnosticClient{
 		config: config, http: transport, returned: map[string]bool{}, fingerprints: map[string]bool{}, failures: []HostedProviderFailure{},
-		budget: newExperimentBudget(config.BudgetCeilingMicros, config.InputPriceMicrosPerMillion, config.CachedInputPriceMicrosPerMillion, config.CacheWritePriceMicrosPerMillion, config.OutputPriceMicrosPerMillion),
+		budget: newExperimentBudget(config.Runtime.Model, config.BudgetCeilingMicros, config.InputPriceMicrosPerMillion, config.CachedInputPriceMicrosPerMillion, config.CacheWritePriceMicrosPerMillion, config.OutputPriceMicrosPerMillion, true),
 	}
 }
 
@@ -587,6 +591,9 @@ func (c *OpenAIDiagnosticClient) ExperimentSnapshot() HostedExperimentSnapshot {
 			CachedInputUSDPerMillionTokens: formatUSDMicros(c.config.CachedInputPriceMicrosPerMillion),
 			CacheWriteUSDPerMillionTokens:  formatUSDMicros(c.config.CacheWritePriceMicrosPerMillion),
 			OutputUSDPerMillionTokens:      formatUSDMicros(c.config.OutputPriceMicrosPerMillion),
+			ScheduleVersion:                OpenAIPricingScheduleVersion(c.config.Runtime.Model),
+			CheckedDate:                    OpenAILunaPricingCheckedDate,
+			LongContextThresholdTokens:     OpenAILongContextThresholdTokens,
 			Source:                         OpenAIDiagnosticPricingSource,
 		},
 		BudgetCeilingUSD: formatUSDMicros(c.config.BudgetCeilingMicros), ActualCalculableCostUSD: formatUSDMicros(budget.actualMicros),
@@ -858,20 +865,22 @@ func (e BudgetGuardError) Error() string {
 func (BudgetGuardError) FatalExperimentStop() bool { return true }
 
 type experimentBudget struct {
-	mu                     sync.Mutex
-	ceilingMicros          int64
-	inputPriceMicros       int64
-	cachedInputPriceMicros int64
-	cacheWritePriceMicros  int64
-	outputPriceMicros      int64
-	reservedMicros         int64
-	actualMicros           int64
-	ambiguousMicros        int64
-	uncachedInputMicros    int64
-	cachedInputMicros      int64
-	cacheWriteMicros       int64
-	outputMicros           int64
-	usage                  ProviderUsage
+	mu                         sync.Mutex
+	ceilingMicros              int64
+	inputPriceMicros           int64
+	cachedInputPriceMicros     int64
+	cacheWritePriceMicros      int64
+	outputPriceMicros          int64
+	reservedMicros             int64
+	actualMicros               int64
+	ambiguousMicros            int64
+	uncachedInputMicros        int64
+	cachedInputMicros          int64
+	cacheWriteMicros           int64
+	outputMicros               int64
+	longContextSurchargeMicros int64
+	usage                      ProviderUsage
+	pricing                    OpenAIPricingSchedule
 }
 
 type experimentBudgetSnapshot struct {
@@ -882,19 +891,24 @@ type experimentBudgetSnapshot struct {
 	costs           HostedCostBreakdown
 }
 
-func newExperimentBudget(ceiling, inputPrice, cachedInputPrice, cacheWritePrice, outputPrice int64) *experimentBudget {
+func newExperimentBudget(model string, ceiling, inputPrice, cachedInputPrice, cacheWritePrice, outputPrice int64, openAILongContextPricing bool) *experimentBudget {
+	threshold := int(^uint(0) >> 1)
+	if openAILongContextPricing {
+		threshold = OpenAILongContextThresholdTokens
+	}
 	return &experimentBudget{
 		ceilingMicros: ceiling, inputPriceMicros: inputPrice, cachedInputPriceMicros: cachedInputPrice,
 		cacheWritePriceMicros: cacheWritePrice, outputPriceMicros: outputPrice,
+		pricing: OpenAIPricingSchedule{Version: OpenAIPricingScheduleVersion(model), CheckedDate: OpenAILunaPricingCheckedDate, Model: model,
+			InputPriceMicrosPerMillion: inputPrice, CachedPriceMicrosPerMillion: cachedInputPrice,
+			CacheWritePriceMicrosPerMillion: cacheWritePrice, OutputPriceMicrosPerMillion: outputPrice,
+			LongContextThresholdTokens: threshold, LongContextInputNumerator: 2, LongContextInputDenominator: 1,
+			LongContextOutputNumerator: 3, LongContextOutputDenominator: 2},
 	}
 }
 
 func (b *experimentBudget) estimateCost(inputTokens, outputTokens int) int64 {
-	worstInputPrice := b.inputPriceMicros
-	if b.cacheWritePriceMicros > worstInputPrice {
-		worstInputPrice = b.cacheWritePriceMicros
-	}
-	return tokenCostMicros(inputTokens, worstInputPrice) + tokenCostMicros(outputTokens, b.outputPriceMicros)
+	return EstimateOpenAIRequestCost(b.pricing.Model, inputTokens, outputTokens, b.pricing)
 }
 
 func (b *experimentBudget) reserve(amount int64) error {
@@ -927,23 +941,21 @@ func (b *experimentBudget) finishSuccess(reserved int64, usage ProviderUsage) er
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.reservedMicros = maxInt64(b.reservedMicros-reserved, 0)
-	baseInputTokens := usage.InputTokens - usage.CachedTokens - usage.CacheWriteTokens
-	if usage.CacheMissTokens > 0 || usage.InputTokens == usage.CachedTokens+usage.CacheMissTokens {
-		baseInputTokens = usage.CacheMissTokens
+	cost, err := CalculateOpenAIRequestCost(OpenAIRequestUsage{Model: b.pricing.Model, Usage: usage}, b.pricing)
+	if err != nil {
+		return err
 	}
-	if baseInputTokens < 0 {
-		baseInputTokens = 0
-	}
-	uncachedInputCost := tokenCostMicros(baseInputTokens, b.inputPriceMicros)
+	uncachedInputCost := tokenCostMicros(cost.UncachedInputTokens, b.inputPriceMicros)
 	cachedInputCost := tokenCostMicros(usage.CachedTokens, b.cachedInputPriceMicros)
 	cacheWriteCost := tokenCostMicros(usage.CacheWriteTokens, b.cacheWritePriceMicros)
 	outputCost := tokenCostMicros(usage.OutputTokens, b.outputPriceMicros)
-	actual := uncachedInputCost + cachedInputCost + cacheWriteCost + outputCost
+	actual := cost.TotalCostMicros
 	b.actualMicros += actual
 	b.uncachedInputMicros += uncachedInputCost
 	b.cachedInputMicros += cachedInputCost
 	b.cacheWriteMicros += cacheWriteCost
 	b.outputMicros += outputCost
+	b.longContextSurchargeMicros += cost.LongContextSurchargeMicros
 	b.usage.InputTokens += usage.InputTokens
 	b.usage.CachedTokens += usage.CachedTokens
 	b.usage.CacheMissTokens += usage.CacheMissTokens
@@ -965,7 +977,7 @@ func (b *experimentBudget) snapshot() experimentBudgetSnapshot {
 		actualMicros: b.actualMicros, ambiguousMicros: b.ambiguousMicros, remainingMicros: remaining, usage: b.usage,
 		costs: HostedCostBreakdown{
 			UncachedInputUSD: formatUSDMicros(b.uncachedInputMicros), CachedInputUSD: formatUSDMicros(b.cachedInputMicros),
-			CacheWriteUSD: formatUSDMicros(b.cacheWriteMicros), OutputUSD: formatUSDMicros(b.outputMicros), TotalUSD: formatUSDMicros(b.actualMicros),
+			CacheWriteUSD: formatUSDMicros(b.cacheWriteMicros), OutputUSD: formatUSDMicros(b.outputMicros), LongContextSurchargeUSD: formatUSDMicros(b.longContextSurchargeMicros), TotalUSD: formatUSDMicros(b.actualMicros),
 		},
 	}
 }

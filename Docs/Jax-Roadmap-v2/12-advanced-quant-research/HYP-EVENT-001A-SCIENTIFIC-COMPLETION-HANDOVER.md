@@ -51,11 +51,14 @@ maximum of one bounded retry. The run produced 939 unique labels:
 | NEUTRAL | 259 |
 | INSUFFICIENT_EVIDENCE | 35 |
 
-The accounted usage was 12,721,590 input tokens including 99,989 cached tokens,
-126,229 output tokens and 0 reasoning tokens. Accounted cost was `$2.677034`
-against the authorized `$4.50` hard ceiling. Three bounded validation retries
-were retained in the result-attempt metadata. No Alpaca data, returns, SPY
-data, credentials or 2025 semantics were sent to the provider.
+The persisted successful-response usage was 12,721,590 input tokens including
+99,989 cached tokens, 126,229 output tokens and 0 reasoning tokens. The
+historical `$2.677034` is preserved as `ORIGINAL INTERNAL COST ESTIMATE`.
+The later request-level recomputation is `$2.678539` for the 939 persisted
+responses, but three bounded validation retries lack retained provider usage,
+so the complete HYP-EVENT cost remains unresolved. See
+`PHASE-12-SCIENTIFIC-CLOSURE-FORENSIC.md`. No Alpaca data, returns, SPY data,
+credentials or 2025 semantics were sent to the provider.
 
 ## Experiment results
 

@@ -17,6 +17,12 @@ NEGATIVE 162, NEUTRAL 259, INSUFFICIENT_EVIDENCE 35), with 3 bounded output
 validation retries and accounted provider usage cost of `$2.677034`, below the
 authorized `$4.50` ceiling. No 2025 event semantics or outcomes were used.
 
+A later closure forensic preserves `$2.677034` as `ORIGINAL INTERNAL COST
+ESTIMATE`, recomputes `$2.678539` for the 939 retained provider responses, and
+leaves the complete HYP-EVENT cost unresolved because three retry calls lack
+retained usage. See
+`12-advanced-quant-research/PHASE-12-SCIENTIFIC-CLOSURE-FORENSIC.md`.
+
 The immutable scientific artifact is
 `data/datasets/hyp-event-001a/scientific-results-v3/report.json` (private and
 ignored by Git). It contains 645 valid market/event observations after the

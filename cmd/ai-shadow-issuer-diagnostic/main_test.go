@@ -37,7 +37,8 @@ func (p *commandR3MockProvider) ExperimentSnapshot() aishadow.HostedExperimentSn
 		MaxOutputTokensPerRequest: p.config.MaxOutputTokens, BudgetCeilingUSD: "0.30", RequestCount: p.calls,
 		Pricing: aishadow.HostedPricingPlan{
 			InputUSDPerMillionTokens: inputPrice, CachedInputUSDPerMillionTokens: cachedPrice, CacheWriteUSDPerMillionTokens: cacheWritePrice,
-			OutputUSDPerMillionTokens: outputPrice, Source: aishadow.OpenAIDiagnosticPricingSource,
+			OutputUSDPerMillionTokens: outputPrice, ScheduleVersion: aishadow.OpenAIPricingScheduleVersion(p.config.Runtime.Model), CheckedDate: aishadow.OpenAILunaPricingCheckedDate,
+			LongContextThresholdTokens: aishadow.OpenAILongContextThresholdTokens, Source: aishadow.OpenAIDiagnosticPricingSource,
 		},
 	}
 }

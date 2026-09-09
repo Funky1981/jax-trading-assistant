@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"jax-trading-assistant/internal/modules/aishadow"
 	"jax-trading-assistant/internal/modules/hypevidence"
 )
 
@@ -73,7 +74,8 @@ type usage struct {
 	OutputTokens int `json:"output_tokens"`
 	TotalTokens  int `json:"total_tokens"`
 	InputDetails struct {
-		CachedTokens int `json:"cached_tokens"`
+		CachedTokens     int `json:"cached_tokens"`
+		CacheWriteTokens int `json:"cache_write_tokens"`
 	} `json:"input_tokens_details"`
 	OutputDetails struct {
 		ReasoningTokens int `json:"reasoning_tokens"`
@@ -96,27 +98,43 @@ type apiResponse struct {
 }
 
 type resultRecord struct {
-	ContractVersion      string    `json:"contract_version"`
-	HypothesisID         string    `json:"hypothesis_id"`
-	EventID              string    `json:"event_id"`
-	Symbol               string    `json:"symbol"`
-	Accession            string    `json:"accession"`
-	EvidencePacketSHA256 string    `json:"evidence_packet_sha256"`
-	AvailabilityCutoff   time.Time `json:"availability_cutoff"`
-	Direction            string    `json:"direction"`
-	ReasonCode           string    `json:"reason_code"`
-	EvidenceAnchors      []string  `json:"evidence_anchors"`
-	ClassifierVersion    string    `json:"classifier_version"`
-	PromptVersion        string    `json:"prompt_version"`
-	Provider             string    `json:"provider"`
-	Model                string    `json:"model"`
-	InferenceTimestamp   time.Time `json:"inference_timestamp"`
-	RawResponseSHA256    string    `json:"raw_response_sha256"`
-	RequestID            string    `json:"request_id"`
-	ResponseID           string    `json:"response_id"`
-	AttemptNumber        int       `json:"attempt_number"`
-	Usage                usage     `json:"usage"`
-	AccountedCostMicros  int64     `json:"accounted_cost_micros"`
+	ContractVersion      string                     `json:"contract_version"`
+	HypothesisID         string                     `json:"hypothesis_id"`
+	EventID              string                     `json:"event_id"`
+	Symbol               string                     `json:"symbol"`
+	Accession            string                     `json:"accession"`
+	EvidencePacketSHA256 string                     `json:"evidence_packet_sha256"`
+	AvailabilityCutoff   time.Time                  `json:"availability_cutoff"`
+	Direction            string                     `json:"direction"`
+	ReasonCode           string                     `json:"reason_code"`
+	EvidenceAnchors      []string                   `json:"evidence_anchors"`
+	ClassifierVersion    string                     `json:"classifier_version"`
+	PromptVersion        string                     `json:"prompt_version"`
+	Provider             string                     `json:"provider"`
+	Model                string                     `json:"model"`
+	InferenceTimestamp   time.Time                  `json:"inference_timestamp"`
+	RawResponseSHA256    string                     `json:"raw_response_sha256"`
+	RequestID            string                     `json:"request_id"`
+	ResponseID           string                     `json:"response_id"`
+	AttemptNumber        int                        `json:"attempt_number"`
+	Usage                usage                      `json:"usage"`
+	AccountedCostMicros  int64                      `json:"accounted_cost_micros"`
+	CostBreakdown        aishadow.OpenAIRequestCost `json:"cost_breakdown,omitempty"`
+	PricingSchedule      string                     `json:"pricing_schedule,omitempty"`
+	PricingCheckedDate   string                     `json:"pricing_checked_date,omitempty"`
+}
+
+type providerUsageAudit struct {
+	ContractVersion string                     `json:"contract_version"`
+	HypothesisID    string                     `json:"hypothesis_id"`
+	EventID         string                     `json:"event_id"`
+	Accession       string                     `json:"accession"`
+	RequestID       string                     `json:"request_id"`
+	ResponseID      string                     `json:"response_id"`
+	Model           string                     `json:"model"`
+	AttemptNumber   int                        `json:"attempt_number"`
+	Usage           aishadow.ProviderUsage     `json:"usage"`
+	Cost            aishadow.OpenAIRequestCost `json:"cost"`
 }
 
 type runSummary struct {
@@ -136,6 +154,7 @@ type runSummary struct {
 	Failures              int    `json:"failures"`
 	InputTokens           int    `json:"input_tokens"`
 	CachedTokens          int    `json:"cached_tokens"`
+	CacheWriteTokens      int    `json:"cache_write_tokens"`
 	OutputTokens          int    `json:"output_tokens"`
 	ReasoningTokens       int    `json:"reasoning_tokens"`
 	TotalTokens           int    `json:"total_tokens"`
@@ -146,15 +165,16 @@ type runSummary struct {
 }
 
 type classifier struct {
-	client      *http.Client
-	apiKey      string
-	outputPath  string
-	summaryPath string
-	resultPath  string
-	spentMicros int64
-	usage       usage
-	retries     int
-	failures    int
+	client         *http.Client
+	apiKey         string
+	outputPath     string
+	summaryPath    string
+	resultPath     string
+	usageAuditPath string
+	spentMicros    int64
+	usage          usage
+	retries        int
+	failures       int
 }
 
 func main() {
@@ -198,9 +218,10 @@ func run(stage, outDir, evidenceDir, eventsPath string) error {
 		return errors.New("no eligible events selected")
 	}
 	c := &classifier{client: &http.Client{Timeout: 120 * time.Second}, apiKey: key,
-		outputPath:  filepath.Join(outDir, "run-summary-"+stage+".json"),
-		summaryPath: filepath.Join(outDir, "run-summary-"+stage+".json"),
-		resultPath:  filepath.Join(outDir, "results-"+stage+".jsonl")}
+		outputPath:     filepath.Join(outDir, "run-summary-"+stage+".json"),
+		summaryPath:    filepath.Join(outDir, "run-summary-"+stage+".json"),
+		resultPath:     filepath.Join(outDir, "results-"+stage+".jsonl"),
+		usageAuditPath: filepath.Join(outDir, "provider-usage-"+stage+".jsonl")}
 	known, err := loadExistingResults(c.resultPath)
 	if err != nil {
 		return err
@@ -245,6 +266,7 @@ func run(stage, outDir, evidenceDir, eventsPath string) error {
 	summary.Failures = c.failures
 	summary.InputTokens = c.usage.InputTokens
 	summary.CachedTokens = c.usage.InputDetails.CachedTokens
+	summary.CacheWriteTokens = c.usage.InputDetails.CacheWriteTokens
 	summary.OutputTokens = c.usage.OutputTokens
 	summary.ReasoningTokens = c.usage.OutputDetails.ReasoningTokens
 	summary.TotalTokens = c.usage.TotalTokens
@@ -282,7 +304,7 @@ func (c *classifier) classify(ev event, evidenceDir string) (resultRecord, int, 
 		if !c.canReserve(user, contract.SystemPrompt, schema) {
 			return resultRecord{}, attempt - 1, errBudget
 		}
-		response, raw, err := c.call(contract.SystemPrompt, user, schema, ev.EventID, attempt)
+		response, raw, err := c.call(contract.SystemPrompt, user, schema, ev.EventID, ev.Accession, attempt)
 		if err != nil {
 			return resultRecord{}, attempt - 1, err
 		}
@@ -292,7 +314,11 @@ func (c *classifier) classify(ev event, evidenceDir string) (resultRecord, int, 
 			validationErr = validateClassification(parsed, packet, text)
 			if validationErr == nil {
 				now := time.Now().UTC()
-				return resultRecord{ContractVersion: hypevidence.DirectionContractVersion, HypothesisID: "HYP-EVENT-001A", EventID: ev.EventID, Symbol: ev.Symbol, Accession: ev.Accession, EvidencePacketSHA256: packet.PacketSHA256, AvailabilityCutoff: mustTime(packet.AvailabilityCutoff), Direction: parsed.Direction, ReasonCode: parsed.ReasonCode, EvidenceAnchors: parsed.EvidenceAnchors, ClassifierVersion: hypevidence.DirectionContractVersion, PromptVersion: hypevidence.PromptIdentity(), Provider: providerName, Model: modelName, InferenceTimestamp: now, RawResponseSHA256: sha256Hex([]byte(raw)), RequestID: response.requestID, ResponseID: response.id, AttemptNumber: attempt, Usage: response.usage, AccountedCostMicros: costMicros(response.usage)}, attempt - 1, nil
+				cost, costErr := requestCost(response.usage, response.id, ev.EventID, attempt)
+				if costErr != nil {
+					return resultRecord{}, attempt - 1, costErr
+				}
+				return resultRecord{ContractVersion: hypevidence.DirectionContractVersion, HypothesisID: "HYP-EVENT-001A", EventID: ev.EventID, Symbol: ev.Symbol, Accession: ev.Accession, EvidencePacketSHA256: packet.PacketSHA256, AvailabilityCutoff: mustTime(packet.AvailabilityCutoff), Direction: parsed.Direction, ReasonCode: parsed.ReasonCode, EvidenceAnchors: parsed.EvidenceAnchors, ClassifierVersion: hypevidence.DirectionContractVersion, PromptVersion: hypevidence.PromptIdentity(), Provider: providerName, Model: modelName, InferenceTimestamp: now, RawResponseSHA256: sha256Hex([]byte(raw)), RequestID: response.requestID, ResponseID: response.id, AttemptNumber: attempt, Usage: response.usage, AccountedCostMicros: cost.TotalCostMicros, CostBreakdown: cost, PricingSchedule: aishadow.OpenAILunaPricingScheduleV1, PricingCheckedDate: aishadow.OpenAILunaPricingCheckedDate}, attempt - 1, nil
 			}
 		}
 		if attempt == 1+maxRetries {
@@ -307,7 +333,7 @@ type callResponse struct {
 	usage         usage
 }
 
-func (c *classifier) call(system, user string, schema map[string]any, eventID string, attempt int) (callResponse, string, error) {
+func (c *classifier) call(system, user string, schema map[string]any, eventID, accession string, attempt int) (callResponse, string, error) {
 	payload := map[string]any{"model": modelName, "input": []any{map[string]any{"role": "system", "content": system}, map[string]any{"role": "user", "content": user}}, "reasoning": map[string]string{"effort": "none"}, "max_output_tokens": maxOutputTokens, "store": false, "text": map[string]any{"format": map[string]any{"type": "json_schema", "name": "jax_hyp_event_direction_v1", "strict": true, "schema": schema}}}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -343,21 +369,31 @@ func (c *classifier) call(system, user string, schema map[string]any, eventID st
 	if decoded.Usage.InputTokens <= 0 || decoded.Usage.OutputTokens <= 0 || decoded.Usage.TotalTokens < decoded.Usage.InputTokens+decoded.Usage.OutputTokens {
 		return callResponse{}, "", errors.New("provider usage is incomplete")
 	}
-	text, err := responseText(decoded)
-	if err != nil {
-		return callResponse{}, "", err
+	requestID := resp.Header.Get("x-request-id")
+	actual, costErr := requestCost(decoded.Usage, requestID, eventID, attempt)
+	if costErr != nil {
+		return callResponse{}, "", costErr
 	}
-	actual := costMicros(decoded.Usage)
-	if c.spentMicros+actual > budgetMicros {
+	if c.spentMicros+actual.TotalCostMicros > budgetMicros {
 		return callResponse{}, "", errBudget
 	}
-	c.spentMicros += actual
+	c.spentMicros += actual.TotalCostMicros
 	c.usage.InputTokens += decoded.Usage.InputTokens
 	c.usage.OutputTokens += decoded.Usage.OutputTokens
 	c.usage.TotalTokens += decoded.Usage.TotalTokens
 	c.usage.InputDetails.CachedTokens += decoded.Usage.InputDetails.CachedTokens
+	c.usage.InputDetails.CacheWriteTokens += decoded.Usage.InputDetails.CacheWriteTokens
 	c.usage.OutputDetails.ReasoningTokens += decoded.Usage.OutputDetails.ReasoningTokens
-	return callResponse{id: decoded.ID, requestID: resp.Header.Get("x-request-id"), usage: decoded.Usage}, text, nil
+	if c.usageAuditPath != "" {
+		if err := appendJSONLine(c.usageAuditPath, providerUsageAudit{ContractVersion: "jax.hyp-event-001a.provider-usage/v1", HypothesisID: "HYP-EVENT-001A", EventID: eventID, Accession: accession, RequestID: requestID, ResponseID: decoded.ID, Model: decoded.Model, AttemptNumber: attempt, Usage: toProviderUsage(decoded.Usage), Cost: actual}); err != nil {
+			return callResponse{}, "", fmt.Errorf("persist provider usage audit: %w", err)
+		}
+	}
+	text, err := responseText(decoded)
+	if err != nil {
+		return callResponse{}, "", err
+	}
+	return callResponse{id: decoded.ID, requestID: requestID, usage: decoded.Usage}, text, nil
 }
 
 func (c *classifier) canReserve(user, system string, schema map[string]any) bool {
@@ -367,27 +403,28 @@ func (c *classifier) canReserve(user, system string, schema map[string]any) bool
 }
 
 func estimatedCost(input, output int) int64 {
-	inputRate := inputPrice
-	outputRate := outputPrice
-	if input > largeInputCut {
-		inputRate *= 2
-		outputRate = outputRate * 3 / 2
-	}
-	return int64(input)*inputRate/1_000_000 + int64(output)*outputRate/1_000_000
+	return aishadow.EstimateOpenAIRequestCost(modelName, input, output, lunaPricing())
 }
 
 func costMicros(u usage) int64 {
-	uncached := u.InputTokens - u.InputDetails.CachedTokens
-	if uncached < 0 {
-		uncached = 0
+	cost, err := requestCost(u, "", "", 0)
+	if err != nil {
+		return 0
 	}
-	inputRate := inputPrice
-	outputRate := outputPrice
-	if u.InputTokens > largeInputCut {
-		inputRate *= 2
-		outputRate = outputRate * 3 / 2
-	}
-	return int64(uncached)*inputRate/1_000_000 + int64(u.InputDetails.CachedTokens)*cachePrice/1_000_000 + int64(u.OutputTokens)*outputRate/1_000_000
+	return cost.TotalCostMicros
+}
+
+func toProviderUsage(u usage) aishadow.ProviderUsage {
+	uncached := u.InputTokens - u.InputDetails.CachedTokens - u.InputDetails.CacheWriteTokens
+	return aishadow.ProviderUsage{InputTokens: u.InputTokens, CachedTokens: u.InputDetails.CachedTokens, CacheMissTokens: uncached, CacheWriteTokens: u.InputDetails.CacheWriteTokens, OutputTokens: u.OutputTokens, ReasoningTokens: u.OutputDetails.ReasoningTokens, TotalTokens: u.TotalTokens}
+}
+
+func lunaPricing() aishadow.OpenAIPricingSchedule {
+	return aishadow.OpenAIPricingSchedule{Version: aishadow.OpenAILunaPricingScheduleV1, CheckedDate: aishadow.OpenAILunaPricingCheckedDate, Model: modelName, InputPriceMicrosPerMillion: inputPrice, CachedPriceMicrosPerMillion: cachePrice, CacheWritePriceMicrosPerMillion: inputPrice * 5 / 4, OutputPriceMicrosPerMillion: outputPrice, LongContextThresholdTokens: largeInputCut, LongContextInputNumerator: 2, LongContextInputDenominator: 1, LongContextOutputNumerator: 3, LongContextOutputDenominator: 2}
+}
+
+func requestCost(u usage, requestID, eventID string, attempt int) (aishadow.OpenAIRequestCost, error) {
+	return aishadow.CalculateOpenAIRequestCost(aishadow.OpenAIRequestUsage{RequestID: requestID, EventID: eventID, AttemptNumber: attempt, Model: modelName, Usage: toProviderUsage(u)}, lunaPricing())
 }
 
 func responseText(r apiResponse) (string, error) {
