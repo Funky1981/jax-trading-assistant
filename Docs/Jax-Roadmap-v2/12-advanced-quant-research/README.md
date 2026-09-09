@@ -1,14 +1,16 @@
 # Phase 12 — Advanced Quant Research
 
-**Status:** **COMPLETE / CONDITIONAL GO — SCIENTIFIC EVALUATION COMPLETE; PROMOTION CLOSED**
+**Status:** **COMPLETE / CONDITIONAL GO — FINAL SCIENTIFIC GOVERNANCE CLOSURE; PROMOTION CLOSED**
 
 The prerequisites for `HYP-EVENT-001A` were accepted and the real deterministic
 event study has completed. The frozen panel has an immutable SEC filing-time
 evidence extension, 939 event-time direction records, and an immutable
 development/validation/2024 OOS result artifact. Promotion remains closed:
 the 2025 holdout is sealed, survivorship is unresolved, and no forward-paper
-evidence exists. See the scientific completion handover and phase verification
-record. No result has recommendation, paper-execution or live-execution
+evidence exists. HYP-EVENT-001A is recorded as `NOT VALIDATED`; its observed
+2024 figures are `EXPLORATORY 2024 RESULT — NOT VALIDATED` because the formal
+OOS admission sequence was not recorded. See the final scientific governance
+closure. No result has recommendation, paper-execution or live-execution
 authority.
 
 ## Purpose

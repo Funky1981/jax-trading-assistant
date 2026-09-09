@@ -66,11 +66,13 @@ also pass.
 
 ### Required closure status
 
-**API COST ACCOUNTING: UNRESOLVED**
+**API COST ACCOUNTING: IMPLEMENTATION CORRECTED; HISTORICAL BILLING NOT RECONCILABLE**
 
-The reusable calculator defect is fixed, but exact dashboard reconciliation is
-not possible without the missing retry-level provider usage or a provider
-usage export that can identify the HYP-EVENT requests. Phase 12 must remain
-conditional until this closure is resolved. The original `$2.677034` value is
-preserved as `ORIGINAL INTERNAL COST ESTIMATE`; it must not be presented as
-the complete experiment cost.
+The reusable calculator defect is fixed and regression-tested. The corrected
+retained-response total is `$2.678539`; it is not presented as the complete
+experiment bill. Exact historical provider billing cannot be reconstructed
+from the retained artifacts because three retry calls lack usage records and
+the dashboard total cannot be partitioned to HYP-EVENT. The approved
+disposition is to preserve that limitation rather than invent a reconciliation
+or run additional inference. The original `$2.677034` value is preserved as
+`ORIGINAL INTERNAL COST ESTIMATE`.

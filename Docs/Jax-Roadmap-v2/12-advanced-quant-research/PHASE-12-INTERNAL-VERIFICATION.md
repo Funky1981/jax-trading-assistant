@@ -1,6 +1,6 @@
 # Phase 12 Internal Verification — Advanced Quant Research
 
-**Status:** COMPLETE / CONDITIONAL GO — SCIENTIFIC EVALUATION COMPLETE; PROMOTION CLOSED
+**Status:** COMPLETE / CONDITIONAL GO — FINAL SCIENTIFIC GOVERNANCE CLOSURE; PROMOTION CLOSED
 **Hypothesis:** `HYP-EVENT-001A`
 **Dataset:** `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-v1`
 **Dataset manifest:** `db2b454793e50f28c34c9c2a7d91f798741936528752de7bd27cb52072a4864d`
@@ -31,8 +31,11 @@ The feature contract binds event, dataset, source, availability timestamp,
 calculation timestamp, algorithm/version, parameters and `KNOWN`, `UNKNOWN` or
 `NOT_ELIGIBLE` state. The experiment protocol freezes the dataset, hypothesis,
 partitions, horizons, benchmark, metric and cost-model identity. Formal OOS is
-2024 and can be scored only once after configuration freeze. The 2025 final
-holdout is rejected by the framework and was not read for outcomes.
+2024 and can be scored only once after a valid admission record and candidate
+freeze. The 2025 final holdout is rejected by the framework and was not read
+for outcomes. The historical HYP run did not persist the required progression
+admission record; its 2024 result is therefore `EXPLORATORY 2024 RESULT — NOT
+VALIDATED`, not formal/pristine OOS evidence.
 
 The registered falsification suite covers shuffled labels/dates, placebo dates,
 quality permutation, source removal, issuer/event clustering, liquidity
@@ -53,25 +56,33 @@ and produced 939 unique 2016–2024 direction records: 483 `POSITIVE`, 162
 successful-response usage was 12,721,590 input tokens (99,989 cached),
 126,229 output tokens and zero reasoning tokens. The historical `$2.677034`
 is preserved as `ORIGINAL INTERNAL COST ESTIMATE`. Request-level recomputation
-of those persisted responses is `$2.678539`, but three retry calls lack
-retained provider usage, so the complete HYP-EVENT cost and the user-reported
-`$3.34` dashboard total remain unresolved. See
+of those persisted responses is `$2.678539`. Exact historical provider billing
+is not reconstructable because three retry calls lack retained usage and the
+user-reported `$3.34` dashboard total cannot be partitioned to HYP-EVENT. The
+corrected implementation and accepted limitation are recorded in
 `PHASE-12-SCIENTIFIC-CLOSURE-FORENSIC.md`.
 
 The private immutable report is
 `data/datasets/hyp-event-001a/scientific-results-v3/report.json`. It contains
-645 valid observations: 391 development, 162 validation and 92 formal 2024
-OOS. The candidate was frozen before OOS and the report retains 22
-falsification records across the registered plan. The conditioned 2024
-cost-adjusted descriptive mean is `0.00853903` versus `0.00419212` for
-direction-only; this is a research result only, not evidence of profitability
-or proven edge. Promotion is `PROMOTION_CLOSED` because 2025 is sealed,
+645 valid observations: 391 development, 162 validation and 92 exploratory
+2024 observations. The report retains 22 falsification records across the
+registered plan. The observed 2024 conditioned cost-adjusted mean is
+`0.00853903` versus `0.00419212` for direction-only; this is exploratory,
+not validated evidence and not evidence of profitability or proven edge.
+Promotion is `PROMOTION_CLOSED` because 2025 is sealed,
 survivorship is unresolved and forward-paper evidence is zero.
 
 The exit harness runs a synthetic event-time-safe fixture through direction-only
-and evidence-conditioned baselines, validation selection, a single frozen 2024
-OOS capability run, stability/falsification checks, registry recording and drift
+and evidence-conditioned baselines, validation selection, a gated formal-OOS
+capability run, stability/falsification checks, registry recording and drift
 monitoring. It demonstrates deterministic reproducibility and failure paths.
+
+The final governance hardening adds a content-bound OOS admission record,
+one-way contamination lifecycle, exact-identity classifier qualification gate,
+durable provider-attempt usage requirements, and typed analysis-population
+reporting with selection-bias flags. HYP-EVENT-001A remains `NOT VALIDATED`
+because its historical admission and qualification evidence are incomplete;
+the observed 2024 values are retained and are not rerun.
 
 The private HYP-EVENT-001A panel has been extended with immutable SEC
 accession-time evidence packets in the derived local dataset

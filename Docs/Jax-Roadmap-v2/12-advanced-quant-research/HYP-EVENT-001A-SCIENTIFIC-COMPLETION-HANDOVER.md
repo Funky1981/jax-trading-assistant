@@ -16,7 +16,7 @@
 
 - Phase 10: `COMPLETE / GO`.
 - Phase 11: `COMPLETE / GO`.
-- Phase 12: `COMPLETE / CONDITIONAL GO — SCIENTIFIC EVALUATION COMPLETE`.
+- Phase 12: `COMPLETE / CONDITIONAL GO — FINAL SCIENTIFIC GOVERNANCE CLOSURE`.
 - Phase 13: `NOT STARTED`.
 - Actual forward-paper evidence: `0 DAYS / 0 ORDERS`.
 - Scientific status: `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`.
@@ -55,21 +55,24 @@ The persisted successful-response usage was 12,721,590 input tokens including
 99,989 cached tokens, 126,229 output tokens and 0 reasoning tokens. The
 historical `$2.677034` is preserved as `ORIGINAL INTERNAL COST ESTIMATE`.
 The later request-level recomputation is `$2.678539` for the 939 persisted
-responses, but three bounded validation retries lack retained provider usage,
-so the complete HYP-EVENT cost remains unresolved. See
-`PHASE-12-SCIENTIFIC-CLOSURE-FORENSIC.md`. No Alpaca data, returns, SPY data,
-credentials or 2025 semantics were sent to the provider.
+responses. Exact historical provider billing is not reconstructable because
+three bounded validation retries lack retained provider usage and the
+dashboard total cannot be partitioned to HYP-EVENT. The reusable accounting
+implementation is corrected; see `PHASE-12-SCIENTIFIC-CLOSURE-FORENSIC.md`.
+No Alpaca data, returns, SPY data, credentials or 2025 semantics were sent to
+the provider.
 
 ## Experiment results
 
 The immutable report records 645 valid observations: 391 development, 162
-validation and 92 formal 2024 OOS; 294 rows were skipped for missing market
-coverage or a window crossing the frozen year boundary. The deterministic
+validation and 92 exploratory 2024 observations; 294 rows were excluded from
+directional analysis primarily because their classifier state was NEUTRAL or
+INSUFFICIENT_EVIDENCE, not because of missing market coverage. The deterministic
 direction-only and evidence-quality-conditioned baselines were both evaluated
 with `cost_phase11_v1`. The conditioned threshold was `anchor_count / 5`,
 capped at 1, with threshold `0.8`.
 
-The formal 2024 cost-adjusted descriptive means were:
+The observed 2024 exploratory cost-adjusted means were:
 
 | Candidate | Observations | Mean cost-adjusted signed return | Hit rate |
 |---|---:|---:|---:|
@@ -82,7 +85,7 @@ results only. The report explicitly makes no IID significance claim and
 retains issuer-cluster, deduplication, cost-stress and other sensitivity
 diagnostics.
 
-The candidate was frozen before formal OOS as experiment
+The artifact records candidate freeze as experiment
 `exp_c08c8bf01dc4c29b0f2c657057ab0dc12e9736d551d7a1f215ccf8dcfea9d258`.
 The report retains 22 falsification records across the 11 registered tests and
 both development/validation partitions, including label/date shuffles,
@@ -91,8 +94,8 @@ liquidity sensitivity, cost stress, regime split and top-issuer exclusion.
 
 ## Scientific decision
 
-The 2024 conditioned comparison is retained as a
-`PROMISING RESEARCH CANDIDATE — NOT PROMOTED`. This is not a claim of
+The 2024 conditioned comparison is retained as
+`EXPLORATORY RESULT — NOT VALIDATED`. This is not a claim of
 profitability, statistical edge, production readiness or live readiness.
 Promotion is deterministically `PROMOTION_CLOSED` because the 2025 holdout is
 sealed, the accepted dataset remains current-ticker/survivorship limited, and

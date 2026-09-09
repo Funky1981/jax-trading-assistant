@@ -25,6 +25,22 @@ func testObservations(t *testing.T, p ResearchProtocol) []ResearchObservation {
 	return []ResearchObservation{{EventID: "evt_1", IssuerID: "issuer_1", Partition: PartitionOOS, EventAt: event, EntryAt: entry, ExitAt: entry.Add(5 * 24 * time.Hour), PredictedDirection: 1, EvidenceQuality: .9, BenchmarkRelativeReturn: .04, CostAdjustedReturn: .03}, {EventID: "evt_2", IssuerID: "issuer_2", Partition: PartitionOOS, EventAt: event.Add(24 * time.Hour), EntryAt: entry.Add(24 * time.Hour), ExitAt: entry.Add(10 * 24 * time.Hour), PredictedDirection: -1, EvidenceQuality: .2, BenchmarkRelativeReturn: .01, CostAdjustedReturn: 0}, {EventID: "evt_3", IssuerID: "issuer_3", Partition: PartitionValidation, EventAt: time.Date(2022, 2, 1, 15, 0, 0, 0, time.UTC), EntryAt: time.Date(2022, 2, 2, 14, 0, 0, 0, time.UTC), ExitAt: time.Date(2022, 2, 9, 14, 0, 0, 0, time.UTC), PredictedDirection: 1, EvidenceQuality: .8, BenchmarkRelativeReturn: .02, CostAdjustedReturn: .01}}
 }
 
+func testAdmission(t *testing.T, p ResearchProtocol, config ExperimentConfig) OOSAdmission {
+	t.Helper()
+	base := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	admission, err := NewOOSAdmission(OOSAdmission{
+		HypothesisID: config.HypothesisID, DatasetID: "dataset", ClassifierID: "classifier_v1", ProtocolID: config.ProtocolID,
+		DevelopmentResultID: "dev_result", ValidationResultID: "val_result", FalsificationSuiteID: "falsifications_v1", CandidateID: config.ID,
+		ProgressionRuleID: "progression_rule_v1", ProgressionDecisionID: "decision_v1", ProgressionDecision: ProgressionProceedToOOS,
+		CandidateFreezeID: config.ID, OOSPartitionID: p.ID + ":OOS", DevelopmentCompleted: base, ValidationCompleted: base.Add(24 * time.Hour),
+		FalsificationCompleted: base.Add(48 * time.Hour), DecisionAt: base.Add(72 * time.Hour), CandidateFrozenAt: base.Add(96 * time.Hour),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return admission
+}
+
 func TestProtocolEnforcesFrozenPartitionsAndOOSOnce(t *testing.T) {
 	p := testProtocol(t)
 	observations := testObservations(t, p)
@@ -36,7 +52,7 @@ func TestProtocolEnforcesFrozenPartitionsAndOOSOnce(t *testing.T) {
 	if _, err := run.ScoreOOS(observations, p); err == nil {
 		t.Fatal("unfrozen OOS was scored")
 	}
-	if err := run.Freeze(config); err != nil {
+	if err := run.FreezeWithAdmission(config, testAdmission(t, p, config)); err != nil {
 		t.Fatal(err)
 	}
 	result, err := run.ScoreOOS(observations, p)
@@ -63,7 +79,7 @@ func TestFrozenOOSRunCopiesConfigurationAtFreeze(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := &FrozenOOSRun{}
-	if err := run.Freeze(config); err != nil {
+	if err := run.FreezeWithAdmission(config, testAdmission(t, p, config)); err != nil {
 		t.Fatal(err)
 	}
 	parameters["minimum_evidence_quality"] = "0"

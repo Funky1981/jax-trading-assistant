@@ -243,11 +243,13 @@ func score(experimentID string, observations []ResearchObservation, partition Pa
 // FrozenOOSRun enforces one-way OOS use: once frozen, no feature/configuration
 // change is accepted, and ScoreOOS can execute only once.
 type FrozenOOSRun struct {
-	mu        sync.Mutex
-	config    ExperimentConfig
-	frozen    bool
-	oosScored bool
-	result    MetricResult
+	mu           sync.Mutex
+	config       ExperimentConfig
+	admission    OOSAdmission
+	hasAdmission bool
+	frozen       bool
+	oosScored    bool
+	result       MetricResult
 }
 
 func (r *FrozenOOSRun) Freeze(config ExperimentConfig) error {
@@ -264,17 +266,47 @@ func (r *FrozenOOSRun) Freeze(config ExperimentConfig) error {
 	return nil
 }
 
+// FreezeWithAdmission is the only path that makes a run eligible for formal
+// OOS. A plain Freeze is retained for configuration construction and tests,
+// but ScoreOOS fails closed unless the complete immutable admission record is
+// present.
+func (r *FrozenOOSRun) FreezeWithAdmission(config ExperimentConfig, admission OOSAdmission) error {
+	if err := admission.Validate(); err != nil {
+		return err
+	}
+	if admission.State != OOSAdmissible {
+		return fmt.Errorf("OOS admission must be admissible before freeze")
+	}
+	if admission.CandidateID != config.ID || admission.ProtocolID != config.ProtocolID || admission.HypothesisID != config.HypothesisID {
+		return fmt.Errorf("OOS admission does not bind to frozen experiment")
+	}
+	if err := r.Freeze(config); err != nil {
+		return err
+	}
+	r.mu.Lock()
+	r.admission = admission
+	r.hasAdmission = true
+	r.mu.Unlock()
+	return nil
+}
+
 func (r *FrozenOOSRun) ScoreOOS(observations []ResearchObservation, protocol ResearchProtocol) (MetricResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if !r.frozen {
 		return MetricResult{}, fmt.Errorf("OOS configuration must be frozen before scoring")
 	}
+	if !r.hasAdmission || r.admission.State != OOSAdmissible {
+		return MetricResult{}, fmt.Errorf("formal OOS requires an immutable admissible progression record")
+	}
 	if r.oosScored {
 		return MetricResult{}, fmt.Errorf("formal OOS may be scored only once")
 	}
 	if err := protocol.Validate(); err != nil || protocol.ID != r.config.ProtocolID {
 		return MetricResult{}, fmt.Errorf("OOS protocol does not match the frozen experiment configuration")
+	}
+	if err := r.admission.Open(time.Now().UTC()); err != nil {
+		return MetricResult{}, err
 	}
 	result, err := ScoreEvidenceConditioned(r.config.ID, observations, PartitionOOS, protocol, qualityThreshold(r.config))
 	if err != nil {
@@ -283,6 +315,33 @@ func (r *FrozenOOSRun) ScoreOOS(observations []ResearchObservation, protocol Res
 	r.result = result
 	r.oosScored = true
 	return result, nil
+}
+
+func (r *FrozenOOSRun) AdmissionState() OOSAdmissionState {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.hasAdmission {
+		return OOSSealed
+	}
+	return r.admission.State
+}
+
+func (r *FrozenOOSRun) MarkExploratoryOnly(reason string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.hasAdmission {
+		return fmt.Errorf("no OOS admission exists")
+	}
+	return r.admission.MarkExploratoryOnly(reason)
+}
+
+func (r *FrozenOOSRun) MarkContaminated(reason string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.hasAdmission {
+		return fmt.Errorf("no OOS admission exists")
+	}
+	return r.admission.MarkContaminated(reason)
 }
 
 func cloneExperimentConfig(config ExperimentConfig) ExperimentConfig {

@@ -1,10 +1,32 @@
 # Roadmap Decision Log
 
-## RD-2026-09-09-12 - HYP-EVENT-001A real scientific evaluation completed
+## RD-2026-09-09-13 - Phase 12 final scientific governance closure
+
+- Date: 2026-09-09
+- Stage: `PHASE 12 — FINAL SCIENTIFIC GOVERNANCE CLOSURE`
+- Status: `COMPLETE / CONDITIONAL GO — HYP-EVENT-001A NOT VALIDATED`
+- Decision authority: external technical-lead conditional closure decision
+
+The historical API-cost discrepancy is closed as an accounting disposition:
+`ORIGINAL INTERNAL COST ESTIMATE = $2.677034`, `CORRECTED RETAINED-RESPONSE
+COST = $2.678539`, and `EXACT HISTORICAL PROVIDER-BILLED HYP COST = NOT
+RECONCILABLE FROM RETAINED EVIDENCE`. No additional hosted inference or spend
+was authorised.
+
+The HYP-EVENT-001A 2024 values remain retained but are corrected to
+`EXPLORATORY 2024 RESULT — NOT VALIDATED`; the required historical OOS
+admission sequence was not recorded. The final hardening adds deterministic
+OOS admission and contamination states, exact classifier qualification gating,
+durable provider-attempt usage, typed population/exclusion reporting and
+selection-bias safeguards. HYP-EVENT-001A is `NOT VALIDATED`; promotion is
+`PROMOTION_CLOSED`; the 2025 holdout remains sealed; Phase 13 remains
+`NOT STARTED`.
+
+## RD-2026-09-09-12 - HYP-EVENT-001A real scientific evaluation completed (superseded)
 
 - Date: 2026-09-09
 - Stage: `PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION`
-- Status: `COMPLETE / CONDITIONAL GO — PROMOTION CLOSED`
+- Status: `HISTORICAL RECORD — SUPERSEDED BY FINAL SCIENTIFIC GOVERNANCE CLOSURE`
 - Decision authority: external conditional Phase-12 authorization; final phase
   review remains external
 - Hypothesis: `HYP-EVENT-001A — SEC evidence-backed issuer-event reaction`
@@ -19,19 +41,22 @@ authorized `$4.50` ceiling. No 2025 event semantics or outcomes were used.
 
 A later closure forensic preserves `$2.677034` as `ORIGINAL INTERNAL COST
 ESTIMATE`, recomputes `$2.678539` for the 939 retained provider responses, and
-leaves the complete HYP-EVENT cost unresolved because three retry calls lack
-retained usage. See
+records exact historical provider billing as not reconstructable because three
+retry calls lack retained usage and the dashboard total cannot be partitioned
+to HYP-EVENT. See
 `12-advanced-quant-research/PHASE-12-SCIENTIFIC-CLOSURE-FORENSIC.md`.
 
 The immutable scientific artifact is
 `data/datasets/hyp-event-001a/scientific-results-v3/report.json` (private and
 ignored by Git). It contains 645 valid market/event observations after the
-frozen market-window rules: 391 development, 162 validation and 92 formal 2024
-OOS. The candidate was frozen before OOS; costs are bound to
+frozen market-window rules: 391 development, 162 validation and 92 historical
+2024 observations. The prior report described these as formal OOS, but the
+final forensic found no persisted progression admission sequence; the values
+are now `EXPLORATORY 2024 RESULT — NOT VALIDATED`. Costs are bound to
 `cost_phase11_v1`; the full registered falsification plan is retained. The
-conditioned candidate exceeded direction-only on the formal 2024 descriptive
-cost-adjusted mean, but this is retained only as a `PROMISING RESEARCH
-CANDIDATE — NOT PROMOTED`; it is not a profitability or trading-edge claim.
+conditioned candidate exceeded direction-only on the historical 2024 descriptive
+cost-adjusted mean, but final governance corrects this to an `EXPLORATORY 2024
+RESULT — NOT VALIDATED`; it is not a profitability or trading-edge claim.
 
 Promotion remains `PROMOTION_CLOSED` because the 2025 final holdout is sealed,
 current-ticker survivorship/delisted coverage is unresolved, and actual

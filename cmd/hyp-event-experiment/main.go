@@ -93,37 +93,38 @@ type falsification struct {
 	Detail           string  `json:"detail"`
 }
 type report struct {
-	ContractVersion            string          `json:"contract_version"`
-	HypothesisID               string          `json:"hypothesis_id"`
-	DatasetID                  string          `json:"dataset_id"`
-	DatasetManifestSHA256      string          `json:"dataset_manifest_sha256"`
-	EvidenceDatasetID          string          `json:"evidence_dataset_id"`
-	EvidenceManifestSHA256     string          `json:"evidence_manifest_sha256"`
-	ProtocolID                 string          `json:"protocol_id"`
-	PrimaryMetric              string          `json:"primary_metric"`
-	PrimaryHorizon             int             `json:"primary_horizon_days"`
-	SecondaryHorizons          []int           `json:"secondary_horizons_days"`
-	Benchmark                  string          `json:"benchmark"`
-	EntryRule                  string          `json:"entry_rule"`
-	CostModelID                string          `json:"cost_model_id"`
-	QualityThreshold           float64         `json:"quality_threshold"`
-	LabelCounts                map[string]int  `json:"label_counts"`
-	ObservationCount           map[string]int  `json:"observation_counts"`
-	DirectionResultRows        int             `json:"direction_result_rows"`
-	Development                []metric        `json:"development_metrics"`
-	Validation                 []metric        `json:"validation_metrics"`
-	FrozenCandidate            map[string]any  `json:"frozen_oos_candidate"`
-	OOS                        []metric        `json:"oos_metrics"`
-	Falsifications             []falsification `json:"falsifications"`
-	TrialCount                 int             `json:"trial_count"`
-	PromotionStatus            string          `json:"promotion_status"`
-	ScientificConclusion       string          `json:"scientific_conclusion"`
-	FinalHoldout               string          `json:"final_holdout"`
-	StatisticalProtocol        map[string]any  `json:"statistical_protocol"`
-	FalsificationPlan          []string        `json:"falsification_plan"`
-	RecommendationLogicChanged bool            `json:"recommendation_logic_changed"`
-	ExecutionAuthorityChanged  bool            `json:"execution_authority_changed"`
-	GeneratedAt                string          `json:"generated_at"`
+	ContractVersion            string                          `json:"contract_version"`
+	HypothesisID               string                          `json:"hypothesis_id"`
+	DatasetID                  string                          `json:"dataset_id"`
+	DatasetManifestSHA256      string                          `json:"dataset_manifest_sha256"`
+	EvidenceDatasetID          string                          `json:"evidence_dataset_id"`
+	EvidenceManifestSHA256     string                          `json:"evidence_manifest_sha256"`
+	ProtocolID                 string                          `json:"protocol_id"`
+	PrimaryMetric              string                          `json:"primary_metric"`
+	PrimaryHorizon             int                             `json:"primary_horizon_days"`
+	SecondaryHorizons          []int                           `json:"secondary_horizons_days"`
+	Benchmark                  string                          `json:"benchmark"`
+	EntryRule                  string                          `json:"entry_rule"`
+	CostModelID                string                          `json:"cost_model_id"`
+	QualityThreshold           float64                         `json:"quality_threshold"`
+	LabelCounts                map[string]int                  `json:"label_counts"`
+	ObservationCount           map[string]int                  `json:"observation_counts"`
+	Population                 advancedquant.PopulationSummary `json:"population"`
+	DirectionResultRows        int                             `json:"direction_result_rows"`
+	Development                []metric                        `json:"development_metrics"`
+	Validation                 []metric                        `json:"validation_metrics"`
+	FrozenCandidate            map[string]any                  `json:"frozen_oos_candidate"`
+	OOS                        []metric                        `json:"oos_metrics"`
+	Falsifications             []falsification                 `json:"falsifications"`
+	TrialCount                 int                             `json:"trial_count"`
+	PromotionStatus            string                          `json:"promotion_status"`
+	ScientificConclusion       string                          `json:"scientific_conclusion"`
+	FinalHoldout               string                          `json:"final_holdout"`
+	StatisticalProtocol        map[string]any                  `json:"statistical_protocol"`
+	FalsificationPlan          []string                        `json:"falsification_plan"`
+	RecommendationLogicChanged bool                            `json:"recommendation_logic_changed"`
+	ExecutionAuthorityChanged  bool                            `json:"execution_authority_changed"`
+	GeneratedAt                string                          `json:"generated_at"`
 }
 
 func main() {
@@ -160,9 +161,14 @@ func run(eventsPath, marketDir, labelsDir, out string) error {
 	if err != nil {
 		return err
 	}
-	obs, skipped := buildObservations(events, labels, markets)
+	obs, exclusionReasons := buildObservations(events, labels, markets)
 	if len(obs) == 0 {
 		return errors.New("no valid observations")
+	}
+	populationRecords := buildPopulationRecords(events, labels, obs, exclusionReasons)
+	population, err := advancedquant.BuildPopulationSummary(populationRecords)
+	if err != nil {
+		return fmt.Errorf("analysis population: %w", err)
 	}
 	protocol, err := newProtocol()
 	if err != nil {
@@ -207,12 +213,12 @@ func run(eventsPath, marketDir, labelsDir, out string) error {
 	candidate["primary_metric"] = "5_DAY_BENCHMARK_RELATIVE_DIRECTIONAL_RETURN"
 	frozen := candidate
 	fals := runFalsifications(dev, val)
-	r := report{ContractVersion: "jax.hyp-event-001a.scientific-result/v1", HypothesisID: "HYP-EVENT-001A", DatasetID: datasetID, DatasetManifestSHA256: manifestSHA, EvidenceDatasetID: evidenceID, EvidenceManifestSHA256: evidenceSHA, ProtocolID: protocol.ID, PrimaryMetric: "5_DAY_BENCHMARK_RELATIVE_DIRECTIONAL_RETURN", PrimaryHorizon: 5, SecondaryHorizons: []int{1, 3}, Benchmark: "SPY", EntryRule: "NEXT_REGULAR_US_EQUITY_SESSION_OPEN_STRICTLY_AFTER_SEC_AVAILABILITY", CostModelID: costModelID, QualityThreshold: qualityThreshold, LabelCounts: labelCounts(labels), ObservationCount: map[string]int{"total": len(obs), "skipped_missing_market_or_window": skipped, "development": len(dev), "validation": len(val), "oos_2024": len(oos)}, DirectionResultRows: len(labels), Development: development, Validation: validation, FrozenCandidate: frozen, OOS: []metric{metricFromAdvanced("direction-only", "OOS", oosBase), metricFromAdvanced("evidence-conditioned", "OOS", oosConditioned)}, Falsifications: fals, TrialCount: 2, PromotionStatus: "PROMOTION_CLOSED", ScientificConclusion: conclusion(validation, oosBase, oosConditioned), FinalHoldout: "SEALED — no 2025 outcome values loaded or scored; integrity only", StatisticalProtocol: map[string]any{"primary_comparison": "evidence-conditioned versus direction-only", "primary_horizon": "5 trading days", "secondary_horizons": []int{1, 3}, "metric": "mean signed SPY-relative return and mean cost-adjusted return", "cost_model": costModelID, "selection": "development for construction; validation for selection; candidate frozen before one 2024 OOS", "dependence": "issuer-cluster sensitivity and deduplication diagnostics retained; naive IID inference not claimed", "uncertainty": "descriptive point estimates; no significance claim", "holdout": "2025 sealed"}, FalsificationPlan: append([]string(nil), registeredFalsificationPlan...), RecommendationLogicChanged: false, ExecutionAuthorityChanged: false, GeneratedAt: time.Now().UTC().Format(time.RFC3339)}
+	r := report{ContractVersion: "jax.hyp-event-001a.scientific-result/v1", HypothesisID: "HYP-EVENT-001A", DatasetID: datasetID, DatasetManifestSHA256: manifestSHA, EvidenceDatasetID: evidenceID, EvidenceManifestSHA256: evidenceSHA, ProtocolID: protocol.ID, PrimaryMetric: "5_DAY_BENCHMARK_RELATIVE_DIRECTIONAL_RETURN", PrimaryHorizon: 5, SecondaryHorizons: []int{1, 3}, Benchmark: "SPY", EntryRule: "NEXT_REGULAR_US_EQUITY_SESSION_OPEN_STRICTLY_AFTER_SEC_AVAILABILITY", CostModelID: costModelID, QualityThreshold: qualityThreshold, LabelCounts: labelCounts(labels), ObservationCount: map[string]int{"source_events": population.Counts.SourceEvents, "classified": population.Counts.ClassifiedEvents, "directional": population.Counts.DirectionalEvents, "evidence_conditioned": population.Counts.EvidenceConditioned, "return_eligible": population.Counts.ReturnEligibleEvents, "analysis": population.Counts.AnalysisEvents, "development": len(dev), "validation": len(val), "oos_2024": len(oos)}, Population: population, DirectionResultRows: len(labels), Development: development, Validation: validation, FrozenCandidate: frozen, OOS: []metric{metricFromAdvanced("direction-only", "OOS", oosBase), metricFromAdvanced("evidence-conditioned", "OOS", oosConditioned)}, Falsifications: fals, TrialCount: 2, PromotionStatus: "PROMOTION_CLOSED", ScientificConclusion: conclusion(validation, oosBase, oosConditioned), FinalHoldout: "SEALED — no 2025 outcome values loaded or scored; integrity only", StatisticalProtocol: map[string]any{"primary_comparison": "evidence-conditioned versus direction-only", "primary_horizon": "5 trading days", "secondary_horizons": []int{1, 3}, "metric": "mean signed SPY-relative return and mean cost-adjusted return", "cost_model": costModelID, "selection": "development for construction; validation for selection; candidate frozen before one 2024 OOS", "dependence": "issuer-cluster sensitivity and deduplication diagnostics retained; naive IID inference not claimed", "uncertainty": "descriptive point estimates; no significance claim", "holdout": "2025 sealed"}, FalsificationPlan: append([]string(nil), registeredFalsificationPlan...), RecommendationLogicChanged: false, ExecutionAuthorityChanged: false, GeneratedAt: time.Now().UTC().Format(time.RFC3339)}
 	_ = markets
 	if err := writeJSON(out, r); err != nil {
 		return err
 	}
-	fmt.Printf("observations=%d skipped=%d development=%d validation=%d oos_2024=%d oos_direction_cost_adjusted=%.8f oos_conditioned_cost_adjusted=%.8f promotion=%s\n", len(obs), skipped, len(dev), len(val), len(oos), oosBase.MeanCostAdjustedReturn, oosConditioned.MeanCostAdjustedReturn, r.PromotionStatus)
+	fmt.Printf("observations=%d development=%d validation=%d oos_2024=%d oos_direction_cost_adjusted=%.8f oos_conditioned_cost_adjusted=%.8f promotion=%s\n", len(obs), len(dev), len(val), len(oos), oosBase.MeanCostAdjustedReturn, oosConditioned.MeanCostAdjustedReturn, r.PromotionStatus)
 	return nil
 }
 
@@ -348,29 +354,31 @@ func decodePreHoldoutBars(raw []byte, symbol string) ([]bar, error) {
 	return rows, nil
 }
 
-func buildObservations(events []event, labels map[string]label, markets map[string][]bar) ([]observation, int) {
+func buildObservations(events []event, labels map[string]label, markets map[string][]bar) ([]observation, map[string][]advancedquant.ExclusionReason) {
 	out := []observation{}
-	skipped := 0
+	exclusions := map[string][]advancedquant.ExclusionReason{}
+	skip := func(eventID string, reason advancedquant.ExclusionReason) {
+		exclusions[eventID] = append(exclusions[eventID], reason)
+	}
 	for _, e := range events {
 		l, ok := labels[e.EventID]
 		if !ok || (l.Direction != hypevidence.DirectionPositive && l.Direction != hypevidence.DirectionNegative) {
-			skipped++
 			continue
 		}
 		inst, ok := markets[e.Symbol]
 		spy := markets["SPY"]
 		if !ok {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionSymbolUnavailable)
 			continue
 		}
 		cut, err := time.ParseInLocation("01/02/2006 15:04:05", e.Acceptance, time.UTC)
 		if err != nil {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionOther)
 			continue
 		}
 		entry := nextEntry(inst, cut)
 		if entry < 0 {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionSessionIncomplete)
 			continue
 		}
 		dates := make([]string, 0, primaryHorizon)
@@ -378,32 +386,32 @@ func buildObservations(events []event, labels map[string]label, markets map[stri
 			dates = append(dates, sessionDate(inst[i].Time))
 		}
 		if len(dates) != primaryHorizon {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionSessionIncomplete)
 			continue
 		}
 		exitDate := dates[len(dates)-1]
 		if exitDate[:4] != fmt.Sprintf("%04d", cut.Year()) {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionSessionIncomplete)
 			continue
 		}
 		entryBar := inst[entry]
 		exitBar, ok := barOnDate(inst, exitDate)
 		if !ok {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionMarketUnavailable)
 			continue
 		}
 		spyEntry, ok := barOnDate(spy, dates[0])
 		if !ok {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionBenchmarkUnavailable)
 			continue
 		}
 		spyExit, ok := barOnDate(spy, exitDate)
 		if !ok {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionBenchmarkUnavailable)
 			continue
 		}
 		if entryBar.Open <= 0 || exitBar.Close <= 0 || spyEntry.Open <= 0 || spyExit.Close <= 0 {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionMarketUnavailable)
 			continue
 		}
 		dir := 1
@@ -417,12 +425,12 @@ func buildObservations(events []event, labels map[string]label, markets map[stri
 		friction := 0.0014 + 0.01/entryBar.Open
 		entryAt, err := sessionOpenUTC(dates[0])
 		if err != nil {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionOther)
 			continue
 		}
 		exitAt, err := sessionCloseUTC(exitDate)
 		if err != nil {
-			skipped++
+			skip(e.EventID, advancedquant.ExclusionOther)
 			continue
 		}
 		issuerID := e.CIK
@@ -431,7 +439,57 @@ func buildObservations(events []event, labels map[string]label, markets map[stri
 		}
 		out = append(out, observation{EventID: e.EventID, IssuerID: issuerID, Symbol: e.Symbol, Year: cut.Year(), EventAt: cut, EntryAt: entryAt.UTC(), ExitAt: exitAt.UTC(), EntryDate: dates[0], ExitDate: exitDate, PredictedDirection: dir, AnchorCount: len(l.Anchors), EvidenceQuality: quality, InstrumentReturn: instrumentReturn, BenchmarkReturn: benchmarkReturn, BenchmarkRelative: relative, CostAdjusted: relative - friction})
 	}
-	return out, skipped
+	return out, exclusions
+}
+
+func buildPopulationRecords(events []event, labels map[string]label, observations []observation, exclusions map[string][]advancedquant.ExclusionReason) []advancedquant.PopulationRecord {
+	returnEligible := map[string]observation{}
+	for _, observation := range observations {
+		returnEligible[observation.EventID] = observation
+	}
+	records := make([]advancedquant.PopulationRecord, 0, len(events))
+	for _, e := range events {
+		issuer := e.CIK
+		if issuer == "" {
+			issuer = e.Symbol
+		}
+		record := advancedquant.PopulationRecord{EventID: e.EventID, IssuerID: issuer, Partition: partitionForYear(e.Acceptance), ExclusionReasons: append([]advancedquant.ExclusionReason(nil), exclusions[e.EventID]...)}
+		label, ok := labels[e.EventID]
+		record.ClassifierState = "CLASSIFIER_RESULT_MISSING"
+		if ok {
+			record.ClassifierState = label.Direction
+			record.Classified = true
+			switch label.Direction {
+			case hypevidence.DirectionPositive, hypevidence.DirectionNegative:
+				record.Directional = true
+				if math.Min(float64(len(label.Anchors))/5, 1) >= qualityThreshold {
+					record.EvidenceConditioned = true
+				} else {
+					record.ExclusionReasons = append(record.ExclusionReasons, advancedquant.ExclusionEvidenceThreshold)
+				}
+			case hypevidence.DirectionNeutral:
+				record.ExclusionReasons = append(record.ExclusionReasons, advancedquant.ExclusionNonDirectionalNeutral)
+			default:
+				record.ExclusionReasons = append(record.ExclusionReasons, advancedquant.ExclusionClassifierAbstention)
+			}
+		} else {
+			record.ExclusionReasons = append(record.ExclusionReasons, advancedquant.ExclusionClassifierResultMissing)
+		}
+		if _, ok := returnEligible[e.EventID]; ok {
+			record.ReturnEligible = true
+			record.AnalysisIncluded = true
+		}
+		records = append(records, record)
+	}
+	return records
+}
+
+func partitionForYear(acceptance string) advancedquant.Partition {
+	t, err := time.ParseInLocation("01/02/2006 15:04:05", acceptance, time.UTC)
+	if err != nil {
+		return advancedquant.PartitionDevelopment
+	}
+	return partition(t.Year())
 }
 func nextEntry(rows []bar, cut time.Time) int {
 	loc, _ := time.LoadLocation("America/New_York")

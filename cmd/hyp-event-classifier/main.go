@@ -182,18 +182,24 @@ func main() {
 	outDir := flag.String("out", "data/datasets/hyp-event-001a/classifications-v1", "private output directory")
 	evidenceDir := flag.String("evidence", "data/datasets/hyp-event-001a/evidence-v2", "private evidence dataset")
 	eventsPath := flag.String("events", "data/datasets/hyp-event-001a/dataset-2016-2025-sip-sec-v1/normalized/events-qualified.json", "private parent event panel")
+	qualificationPath := flag.String("qualification-artifact", "data/datasets/hyp-event-001a/classifications-v1/qualification-artifact.json", "immutable qualification artifact required for bulk inference")
 	flag.Parse()
 	if *stage != "qualification" && *stage != "full" {
 		fatal("stage must be qualification or full")
 	}
-	if err := run(*stage, *outDir, *evidenceDir, *eventsPath); err != nil {
+	if err := run(*stage, *outDir, *evidenceDir, *eventsPath, *qualificationPath); err != nil {
 		fatal(err.Error())
 	}
 }
 
-func run(stage, outDir, evidenceDir, eventsPath string) error {
+func run(stage, outDir, evidenceDir, eventsPath, qualificationPath string) error {
 	if err := (hypevidence.DefaultDirectionClassifierContract()).Validate(); err != nil {
 		return fmt.Errorf("direction contract: %w", err)
+	}
+	if stage == "full" {
+		if err := requireQualification(qualificationPath); err != nil {
+			return err
+		}
 	}
 	key, source, err := configuredAPIKey()
 	if err != nil {
@@ -226,9 +232,13 @@ func run(stage, outDir, evidenceDir, eventsPath string) error {
 	if err != nil {
 		return err
 	}
-	priorCost := loadResultCost(c.resultPath)
+	priorCost, err := loadPriorCost(c.resultPath, c.usageAuditPath)
+	if err != nil {
+		return err
+	}
 	if stage == "full" {
 		qualificationPath := filepath.Join(outDir, "results-qualification.jsonl")
+		qualificationAuditPath := filepath.Join(outDir, "provider-usage-qualification.jsonl")
 		qualificationKnown, qualificationErr := loadExistingResults(qualificationPath)
 		if qualificationErr != nil {
 			return qualificationErr
@@ -236,7 +246,11 @@ func run(stage, outDir, evidenceDir, eventsPath string) error {
 		for eventID := range qualificationKnown {
 			known[eventID] = true
 		}
-		priorCost += loadResultCost(qualificationPath)
+		qualificationCost, err := loadPriorCost(qualificationPath, qualificationAuditPath)
+		if err != nil {
+			return err
+		}
+		priorCost += qualificationCost
 	}
 	c.spentMicros = priorCost
 	started := time.Now().UTC()
@@ -275,6 +289,20 @@ func run(stage, outDir, evidenceDir, eventsPath string) error {
 		return err
 	}
 	fmt.Printf("stage=%s requested=%d completed=%d retries=%d failures=%d input_tokens=%d output_tokens=%d cost_usd=%.6f stop=%s\n", stage, summary.Requested, summary.Completed, summary.Retries, summary.Failures, summary.InputTokens, summary.OutputTokens, float64(summary.ActualCostMicros)/1_000_000, summary.StopReason)
+	return nil
+}
+
+func requireQualification(path string) error {
+	artifact, err := hypevidence.LoadQualificationArtifact(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("bulk inference denied: qualification artifact unavailable")
+		}
+		return fmt.Errorf("bulk inference denied: qualification artifact invalid")
+	}
+	if err := artifact.Compatible(hypevidence.DirectionContractVersion, hypevidence.PromptIdentity(), providerName, modelName); err != nil {
+		return fmt.Errorf("bulk inference denied: %w", err)
+	}
 	return nil
 }
 
@@ -374,9 +402,6 @@ func (c *classifier) call(system, user string, schema map[string]any, eventID, a
 	if costErr != nil {
 		return callResponse{}, "", costErr
 	}
-	if c.spentMicros+actual.TotalCostMicros > budgetMicros {
-		return callResponse{}, "", errBudget
-	}
 	c.spentMicros += actual.TotalCostMicros
 	c.usage.InputTokens += decoded.Usage.InputTokens
 	c.usage.OutputTokens += decoded.Usage.OutputTokens
@@ -388,6 +413,9 @@ func (c *classifier) call(system, user string, schema map[string]any, eventID, a
 		if err := appendJSONLine(c.usageAuditPath, providerUsageAudit{ContractVersion: "jax.hyp-event-001a.provider-usage/v1", HypothesisID: "HYP-EVENT-001A", EventID: eventID, Accession: accession, RequestID: requestID, ResponseID: decoded.ID, Model: decoded.Model, AttemptNumber: attempt, Usage: toProviderUsage(decoded.Usage), Cost: actual}); err != nil {
 			return callResponse{}, "", fmt.Errorf("persist provider usage audit: %w", err)
 		}
+	}
+	if c.spentMicros > budgetMicros {
+		return callResponse{}, "", errBudget
 	}
 	text, err := responseText(decoded)
 	if err != nil {
@@ -735,6 +763,42 @@ func loadExistingResults(path string) (map[string]bool, error) {
 		}
 	}
 	return out, s.Err()
+}
+
+func loadPriorCost(resultPath, auditPath string) (int64, error) {
+	if total, exists, err := loadProviderUsageCost(auditPath); err != nil {
+		return 0, err
+	} else if exists {
+		return total, nil
+	}
+	return loadResultCost(resultPath), nil
+}
+
+func loadProviderUsageCost(path string) (int64, bool, error) {
+	f, err := os.Open(path)
+	if os.IsNotExist(err) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+	defer f.Close()
+	var total int64
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		var audit providerUsageAudit
+		if err := json.Unmarshal(s.Bytes(), &audit); err != nil {
+			return 0, true, fmt.Errorf("invalid provider usage audit: %w", err)
+		}
+		if audit.Cost.TotalCostMicros < 0 {
+			return 0, true, errors.New("provider usage audit has negative cost")
+		}
+		total += audit.Cost.TotalCostMicros
+	}
+	if err := s.Err(); err != nil {
+		return 0, true, err
+	}
+	return total, true, nil
 }
 
 func loadResultCost(path string) int64 {

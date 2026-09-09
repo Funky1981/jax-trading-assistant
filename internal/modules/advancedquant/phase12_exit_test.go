@@ -84,7 +84,7 @@ func TestPhase12ExitGate(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := &FrozenOOSRun{}
-	if err := run.Freeze(config); err != nil {
+	if err := run.FreezeWithAdmission(config, testAdmission(t, protocol, config)); err != nil {
 		t.Fatal(err)
 	}
 	oos, err := run.ScoreOOS(observations, protocol)
