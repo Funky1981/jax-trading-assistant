@@ -98,9 +98,10 @@ The final capability closure is:
   `$0.00`;
 - Agent0 remains removed and `AGENT0 IS NOT PART OF THE SUPPORTED JAX RUNTIME`.
 
-Orchestration audit identity is now `Provider=jax-planner` and
-`Model=jax-planner/v1`; observability uses `planner_plan`. No Agent0 Execute
-interface remains in supported orchestration.
+For the deterministic default, orchestration audit identity is
+`Provider=jax-planner` and `Model=jax-planner/v1`; model-backed runs retain the
+truthful selected provider/model identity. Observability uses `planner_plan`.
+No Agent0 Execute interface remains in supported orchestration.
 
 ## Safety and data boundaries
 
