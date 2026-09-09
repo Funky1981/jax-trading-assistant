@@ -48,17 +48,19 @@ criteria remain binding.
 - Phase 09: `COMPLETE / GO`
 - Phase 10: `COMPLETE / GO`
 - Phase 11: `COMPLETE / GO`
-- Current package: `PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION`
-- Phase 12: `COMPLETE / CONDITIONAL GO — SCIENTIFIC EVALUATION COMPLETE; PROMOTION CLOSED`
-- Phase 13: `NOT STARTED`
+- Current package: `CR-01 — ARCHITECTURE / VENDOR / DEPENDENCY / OWNERSHIP AUDIT`
+- Phase 12: `COMPLETE / GO — HYP-EVENT-001A NOT VALIDATED`
+- Commercial-readiness cleanup: `IN PROGRESS — CR-01`
+- Phase 13: `NOT STARTED / BLOCKED BY CLEANUP GATE`
 
 `HYP-EVENT-001A` has completed its real historical scientific evaluation. The
 private result artifact contains 939 event-time direction records, frozen
 development/validation selection, one formal 2024 OOS score and retained
 falsification results. The conditioned comparison remains research-only and
 promotion is closed because the 2025 holdout is sealed and survivorship is
-unresolved. WP-12.01 was assessed without adopting a new runtime; Phase 13 is
-not started.
+unresolved. WP-12.01 was assessed without adopting a new runtime. CR-01 is a
+documentation-only commercial-readiness audit; CR-02 removals have not started
+and Phase 13 is blocked by the cleanup gate.
 
 
 ## 2026-08-10 integrated roadmap change

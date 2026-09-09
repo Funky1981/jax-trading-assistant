@@ -1,5 +1,32 @@
 # Roadmap Decision Log
 
+## RD-2026-09-09-14 - Commercial-readiness CR-01 audit opened
+
+- Date: 2026-09-09
+- Stage: `JAX COMMERCIAL-READINESS CLEANUP — CR-01`
+- Status: `IN PROGRESS — ARCHITECTURE / VENDOR / DEPENDENCY / OWNERSHIP AUDIT`
+- Decision authority: external `GO PHASE 12` recorded; CR-01 evidence prepared
+  for external review
+
+Phase 12 is recorded as `COMPLETE / GO` at the roadmap capability gate, while
+`HYP-EVENT-001A` remains `NOT VALIDATED`. `TRADING EDGE NOT DEMONSTRATED /
+INSUFFICIENT SAMPLE`, `Phase 10 COMPLETE / GO`, `Phase 11 COMPLETE / GO`, and
+`ACTUAL FORWARD PAPER EVIDENCE = 0 DAYS / 0 ORDERS` remain unchanged.
+
+CR-01 inventories the supported Go-led runtime, Agent0, Dexter, LiteLLM,
+provider/data-source surfaces, external repository coupling, embedded source
+trees, OSS manifests, configuration, Compose and legacy/archive boundaries.
+It records strategic `KEEP` / `CONSOLIDATE` / `REMOVE` / `DEFER` decisions and
+an ordered CR-02 plan. No major removal, destructive migration, provider
+change, credential change or runtime behaviour change was made.
+
+`Blocking CR-01 audit findings remaining: 0`. Formal licence/data-rights review,
+ownership/notice completion, sibling World Monitor deployment validation and
+contract-preserving CR-02 implementation remain required. Phase 13 is
+`NOT STARTED / BLOCKED BY CLEANUP GATE`.
+
+Evidence: `Docs/commercial-readiness/CR-01-ARCHITECTURE-VENDOR-AUDIT.md`.
+
 ## RD-2026-09-09-13 - Phase 12 final scientific governance closure
 
 - Date: 2026-09-09

@@ -12,8 +12,8 @@
 - Phase 10 — Workflow, HITL & Operational Safety: **COMPLETE / GO**
 - Phase 11 — High-Fidelity Paper Trading: **COMPLETE / GO**
 - Autonomous Development Mode: **ACTIVE**
-- Current implementation package: **PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION**
-- Next package: **External review of HYP-EVENT-001A scientific evidence; Phase 13 not started**
+- Current implementation package: **CR-01 — ARCHITECTURE / VENDOR / DEPENDENCY / OWNERSHIP AUDIT**
+- Next package: **External review of CR-01; CR-02 removals not started**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
@@ -32,8 +32,8 @@ demonstrated its capability gate using accelerated synthetic fixtures; actual
 elapsed forward-paper evidence is zero days and the actual forward-paper order
 sample is zero.
 
-Phase 12 is **COMPLETE / CONDITIONAL GO — SCIENTIFIC EVALUATION COMPLETE;
-PROMOTION CLOSED** for **HYP-EVENT-001A**. The real frozen Luna direction
+Phase 12 is **COMPLETE / GO — HYP-EVENT-001A NOT VALIDATED** at the roadmap
+capability gate; promotion remains closed. The real frozen Luna direction
 assessment produced 939 unique 2016–2024 labels and the deterministic event
 study produced development, validation and one formal 2024 OOS artifact.
 The 2024 conditioned comparison is retained as a research candidate only;
@@ -44,7 +44,9 @@ Phase 13 is not started.
 The prior readiness and cost-gate handovers remain historical evidence. The
 scientific completion handover is
 `12-advanced-quant-research/HYP-EVENT-001A-SCIENTIFIC-COMPLETION-HANDOVER.md`.
-All results remain research-only and Phase 13 remains **NOT STARTED**.
+Commercial-readiness CR-01 is now **IN PROGRESS**; its audit is
+`Docs/commercial-readiness/CR-01-ARCHITECTURE-VENDOR-AUDIT.md`. CR-02 removals
+have not started and Phase 13 remains **NOT STARTED / BLOCKED BY CLEANUP GATE**.
 
 ## Phase-05 autonomous scope
 

@@ -27,8 +27,11 @@ decision remains `NO_TRADE`.
 | Phase 09 — Portfolio Intelligence & Deterministic Risk | **COMPLETE / GO** |
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
-| Current implementation package | **PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION** |
-| Next package | **External review of HYP-EVENT-001A scientific evidence; Phase 13 not started** |
+| Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
+| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-01 AUDIT** |
+| Phase 13 — Optional Live Execution | **NOT STARTED / BLOCKED BY CLEANUP GATE** |
+| Current implementation package | **CR-01 — ARCHITECTURE / VENDOR / DEPENDENCY / OWNERSHIP AUDIT** |
+| Next package | **External review of CR-01; CR-02 removals not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -197,8 +200,8 @@ recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
 `COMPLETE / GO`; its required workflow and paper-trading race tests
 passed in the existing Docker toolchain, while native Windows cgo remains
 unavailable. Phase 11 is `COMPLETE / GO`; actual forward-paper evidence remains
-0 days / 0 orders. Phase 12 is `COMPLETE / CONDITIONAL GO` with the real
-HYP-EVENT-001A scientific evaluation complete for external review. The
+0 days / 0 orders. Phase 12 is `COMPLETE / GO` at the roadmap capability gate;
+HYP-EVENT-001A remains `NOT VALIDATED`. The
 approved evidence extension now provides immutable SEC accession-time packets
 in the private derived dataset `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-
 evidence-v2`, with 1,059/1,059 primary matches and zero retrieval failures.
@@ -223,7 +226,7 @@ toolchain; native Windows cgo remains unavailable. Actual forward-paper evidence
 remains 0 days / 0 orders. Phase 12 is research-only and internally verified;
 Phase 13 has not started.
 
-### Phase 12 — Advanced Quant Research — COMPLETE / CONDITIONAL GO
+### Phase 12 — Advanced Quant Research — COMPLETE / GO
 
 Phase-07 GO is satisfied and **HYP-EVENT-001A** has completed its real
 scientific evaluation. The immutable SEC evidence extension and frozen
@@ -231,7 +234,20 @@ event-direction contract were used with the authorized Luna run. The
 development/validation/2024 OOS artifact and registered falsification records
 are retained privately. The 2024 conditioned comparison is a research
 candidate only; no advanced model was trained or promoted, no paid data was
-added, and recommendation logic was unchanged. Phase 13 is not started.
+added, and recommendation logic was unchanged. HYP-EVENT-001A remains
+`NOT VALIDATED`; Phase 13 is blocked by the commercial-readiness cleanup gate.
+
+### Commercial-readiness cleanup gate — CR-01 IN PROGRESS
+
+CR-01 is a documentation-only architecture, vendor, dependency and ownership
+audit. It does not remove Agent0, Dexter, LiteLLM, providers, archives or
+services. The canonical audit is
+`Docs/commercial-readiness/CR-01-ARCHITECTURE-VENDOR-AUDIT.md`.
+
+Phase 13 remains **NOT STARTED / BLOCKED BY THE CLEANUP GATE**. CR-02 may begin
+only after external technical-lead review of the bounded removal/consolidation
+plan. `HYP-EVENT-001A` remains **NOT VALIDATED** and
+`TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains unchanged.
 
 ### Later roadmap — planned capability progression
 
@@ -334,12 +350,10 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Phase 12 advanced quant research — COMPLETE /
-CONDITIONAL GO** after external `GO PHASE 10`, `GO PHASE 11` and
-`CONDITIONAL GO PHASE 12`. HYP-EVENT-001A is authorised for real scientific
-evaluation; the dataset gate is demonstrated for initial research. Phase 10
-and Phase 11 are complete/GO, with actual forward-paper evidence of 0 days / 0
-orders. Real direction labels and performance results remain outstanding; the
-immutable SEC evidence extension and direction contract are prepared, and the
-current evaluation is stopped at the hosted inference cost gate.
-Phase 12 remains research-only and Phase 13 has not started.
+The current position is **Commercial-Readiness Cleanup CR-01 — IN PROGRESS**
+after external `GO PHASE 12`. Phase 12 is complete/GO at its roadmap capability
+gate, but HYP-EVENT-001A remains `NOT VALIDATED`; this is not a trading-edge or
+profitability claim. Phase 10 and Phase 11 are complete/GO, with actual
+forward-paper evidence of 0 days / 0 orders. The CR-01 audit is documentation
+only; CR-02 removals have not started. Phase 13 remains
+`NOT STARTED / BLOCKED BY CLEANUP GATE`.
