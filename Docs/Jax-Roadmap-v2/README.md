@@ -49,16 +49,16 @@ criteria remain binding.
 - Phase 10: `COMPLETE / GO`
 - Phase 11: `COMPLETE / GO`
 - Current package: `PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION`
-- Phase 12: `COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED`
+- Phase 12: `COMPLETE / CONDITIONAL GO — SCIENTIFIC EVALUATION COMPLETE; PROMOTION CLOSED`
 - Phase 13: `NOT STARTED`
 
-`HYP-EVENT-001A` is authorised for its real historical scientific evaluation.
-The implementation contracts remain research-only; no real direction labels,
-performance results or falsification results have yet been generated. The
-the derived evidence dataset now contains immutable SEC filing-time packets and
-the direction contract is frozen, but no real direction labels or suitable
-materialised historical classifications exist. The evaluation is stopped at
-the hosted-inference cost gate; WP-12.01 and Phase 13 are not started.
+`HYP-EVENT-001A` has completed its real historical scientific evaluation. The
+private result artifact contains 939 event-time direction records, frozen
+development/validation selection, one formal 2024 OOS score and retained
+falsification results. The conditioned comparison remains research-only and
+promotion is closed because the 2025 holdout is sealed and survivorship is
+unresolved. WP-12.01 was assessed without adopting a new runtime; Phase 13 is
+not started.
 
 
 ## 2026-08-10 integrated roadmap change

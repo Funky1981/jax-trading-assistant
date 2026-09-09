@@ -1,6 +1,6 @@
 # Phase 12 Internal Verification — Advanced Quant Research
 
-**Status:** COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED
+**Status:** COMPLETE / CONDITIONAL GO — SCIENTIFIC EVALUATION COMPLETE; PROMOTION CLOSED
 **Hypothesis:** `HYP-EVENT-001A`
 **Dataset:** `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-v1`
 **Dataset manifest:** `db2b454793e50f28c34c9c2a7d91f798741936528752de7bd27cb52072a4864d`
@@ -45,6 +45,24 @@ research states. Rolling windows require training to end before evaluation.
 
 ## Results and promotion
 
+### Real HYP-EVENT-001A completion (2026-09-09)
+
+The authorized GPT-5.6 Luna run completed with the frozen direction contract
+and produced 939 unique 2016–2024 direction records: 483 `POSITIVE`, 162
+`NEGATIVE`, 259 `NEUTRAL` and 35 `INSUFFICIENT_EVIDENCE`. Accounted usage was
+12,721,590 input tokens (99,989 cached), 126,229 output tokens and zero
+reasoning tokens, for `$2.677034` against the authorized `$4.50` ceiling.
+
+The private immutable report is
+`data/datasets/hyp-event-001a/scientific-results-v3/report.json`. It contains
+645 valid observations: 391 development, 162 validation and 92 formal 2024
+OOS. The candidate was frozen before OOS and the report retains 22
+falsification records across the registered plan. The conditioned 2024
+cost-adjusted descriptive mean is `0.00853903` versus `0.00419212` for
+direction-only; this is a research result only, not evidence of profitability
+or proven edge. Promotion is `PROMOTION_CLOSED` because 2025 is sealed,
+survivorship is unresolved and forward-paper evidence is zero.
+
 The exit harness runs a synthetic event-time-safe fixture through direction-only
 and evidence-conditioned baselines, validation selection, a single frozen 2024
 OOS capability run, stability/falsification checks, registry recording and drift
@@ -54,17 +72,13 @@ The private HYP-EVENT-001A panel has been extended with immutable SEC
 accession-time evidence packets in the derived local dataset
 `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-evidence-v2`, bound to the accepted
 parent manifest. Coverage is 1,059/1,059 primary documents, 10,731 inventory
-rows, 2,418 selected raw text documents and zero retrieval failures. The 2024
-content remains semantically sealed until classifier freeze and 2025 remains
-hash/inventory-only and sealed for semantic/outcome use. The direction contract
-`jax.hyp-event-001a.direction/v1` is frozen with prompt identity
-`d0b09acf412eb73ff97fc2e9bd5f4fc609dc57d5bd1dbd17d57f986b158d4143`; no bulk
-hosted-model classification was run and no inference cost was incurred. The
-existing unversioned keyword helper remains inadmissible. No real
-HYP-EVENT-001A performance, effect size, falsification result or scientific OOS
-conclusion is claimed. The current stop is the hosted-inference cost gate;
-the proposed one-time maximum envelope is $6.00, while the active ceiling is
-$0.
+rows, 2,418 selected raw text documents and zero retrieval failures. The 2025
+partition remains hash/inventory-only and sealed for semantic/outcome use. The
+direction contract `jax.hyp-event-001a.direction/v1` is frozen with prompt
+identity `d0b09acf412eb73ff97fc2e9bd5f4fc609dc57d5bd1dbd17d57f986b158d4143`.
+The authorized hosted classification and real scientific evaluation are
+recorded above; the earlier zero-spend cost gate is historical. The existing
+unversioned keyword helper remains inadmissible.
 
 No advanced model was trained or promoted. The promotion gate is deterministically
 `PROMOTION_CLOSED` because the final holdout is sealed, survivorship remains

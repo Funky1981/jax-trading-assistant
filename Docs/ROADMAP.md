@@ -28,7 +28,7 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
 | Current implementation package | **PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION** |
-| Next package | **External review of Phase-12 evidence; Phase 13 not started** |
+| Next package | **External review of HYP-EVENT-001A scientific evidence; Phase 13 not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -197,15 +197,17 @@ recorded in `Docs/Jax-Roadmap-v2/ROADMAP-DECISION-LOG.md`. Phase 10 is
 `COMPLETE / GO`; its required workflow and paper-trading race tests
 passed in the existing Docker toolchain, while native Windows cgo remains
 unavailable. Phase 11 is `COMPLETE / GO`; actual forward-paper evidence remains
-0 days / 0 orders. Phase 12 is `COMPLETE / CONDITIONAL GO` with the condition
-that the real HYP-EVENT-001A scientific evaluation is still required. The
+0 days / 0 orders. Phase 12 is `COMPLETE / CONDITIONAL GO` with the real
+HYP-EVENT-001A scientific evaluation complete for external review. The
 approved evidence extension now provides immutable SEC accession-time packets
 in the private derived dataset `hyp-event-001a-sec-8k-alpaca-sip-2016-2025-
 evidence-v2`, with 1,059/1,059 primary matches and zero retrieval failures.
-The event-direction contract is frozen, but no direction labels or performance
-results exist, no recommendation logic changed, and the Phase-12 promotion
-gate remains closed. The current hosted-inference spend ceiling is $0 pending
-external cost-gate review.
+The event-direction contract is frozen; 939 unique 2016–2024 labels and a
+development/validation/2024 OOS artifact are retained privately. The conditioned
+2024 result is research-only, promotion remains closed, and no recommendation
+logic changed. The scientific completion handover is in
+`Docs/Jax-Roadmap-v2/12-advanced-quant-research/HYP-EVENT-001A-SCIENTIFIC-
+COMPLETION-HANDOVER.md`.
 
 ### Phase 11 — High-Fidelity Paper Trading — COMPLETE / GO
 
@@ -223,21 +225,13 @@ Phase 13 has not started.
 
 ### Phase 12 — Advanced Quant Research — COMPLETE / CONDITIONAL GO
 
-Phase-07 GO is satisfied and **HYP-EVENT-001A** is authorised for real
-scientific evaluation. The bounded SEC 8-K plus Alpaca SIP dataset
-gate is **SUFFICIENT for initial HYP-EVENT-001A research**; survivorship and
-corporate-action limitations remain explicit. The eight Phase-12 contracts and
-exit harness are internally verified. An immutable SEC accession-time evidence
-extension and frozen event-direction contract are now prepared, but no real
-direction labels or performance results have been generated. No advanced model
-was promoted, no paid data or hosted inference was used, and recommendation
-logic was unchanged. The
-bounded readiness
-assessment is recorded in
-`Docs/Jax-Roadmap-v2/12-advanced-quant-research/PHASE-12-READINESS-DECISION-
-PACK.md`; the resulting handover is in
-`Docs/Jax-Roadmap-v2/12-advanced-quant-research/HYP-EVENT-001A-HISTORICAL-
-DATA-READINESS-HANDOVER.md`. Phase 13 is not started.
+Phase-07 GO is satisfied and **HYP-EVENT-001A** has completed its real
+scientific evaluation. The immutable SEC evidence extension and frozen
+event-direction contract were used with the authorized Luna run. The
+development/validation/2024 OOS artifact and registered falsification records
+are retained privately. The 2024 conditioned comparison is a research
+candidate only; no advanced model was trained or promoted, no paid data was
+added, and recommendation logic was unchanged. Phase 13 is not started.
 
 ### Later roadmap — planned capability progression
 

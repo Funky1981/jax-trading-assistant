@@ -13,7 +13,7 @@
 - Phase 11 — High-Fidelity Paper Trading: **COMPLETE / GO**
 - Autonomous Development Mode: **ACTIVE**
 - Current implementation package: **PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION**
-- Next package: **Hosted inference/data-evidence cost decision; Phase 13 not started**
+- Next package: **External review of HYP-EVENT-001A scientific evidence; Phase 13 not started**
 
 The approved Phase-09 migration remediation is complete. Historical migrations
 remain immutable; the Phase-09 migrations are `000059_portfolio_snapshots` and
@@ -32,21 +32,19 @@ demonstrated its capability gate using accelerated synthetic fixtures; actual
 elapsed forward-paper evidence is zero days and the actual forward-paper order
 sample is zero.
 
-Phase 12 is **COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED**
-for **HYP-EVENT-001A**. The engineering contracts are internally verified, but
-real direction labels and experiment results do not yet exist. The derived
-dataset now contains immutable SEC filing-time packets and the direction
-contract is frozen, but no admissible historical direction artifacts have been
-materialised; the current stop is the hosted inference cost gate. WP-12.01 is
-not started and the promotion gate remains closed.
-The bounded readiness decision pack is
-`12-advanced-quant-research/PHASE-12-READINESS-DECISION-PACK.md`. The prior
-Phase-12 engineering contracts are complete internally; the real scientific
-evaluation remains outstanding and no result has recommendation or execution
-authority.
-The readiness handover is
-`12-advanced-quant-research/HYP-EVENT-001A-HISTORICAL-DATA-READINESS-HANDOVER.md`.
-Phase 13 remains **NOT STARTED**.
+Phase 12 is **COMPLETE / CONDITIONAL GO — SCIENTIFIC EVALUATION COMPLETE;
+PROMOTION CLOSED** for **HYP-EVENT-001A**. The real frozen Luna direction
+assessment produced 939 unique 2016–2024 labels and the deterministic event
+study produced development, validation and one formal 2024 OOS artifact.
+The 2024 conditioned comparison is retained as a research candidate only;
+the 2025 holdout remains sealed, survivorship remains unresolved, and no
+recommendation logic changed. The scientific completion handover is
+`12-advanced-quant-research/HYP-EVENT-001A-SCIENTIFIC-COMPLETION-HANDOVER.md`.
+Phase 13 is not started.
+The prior readiness and cost-gate handovers remain historical evidence. The
+scientific completion handover is
+`12-advanced-quant-research/HYP-EVENT-001A-SCIENTIFIC-COMPLETION-HANDOVER.md`.
+All results remain research-only and Phase 13 remains **NOT STARTED**.
 
 ## Phase-05 autonomous scope
 

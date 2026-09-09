@@ -1,5 +1,38 @@
 # Roadmap Decision Log
 
+## RD-2026-09-09-12 - HYP-EVENT-001A real scientific evaluation completed
+
+- Date: 2026-09-09
+- Stage: `PHASE 12 — REAL HYP-EVENT-001A SCIENTIFIC EVALUATION`
+- Status: `COMPLETE / CONDITIONAL GO — PROMOTION CLOSED`
+- Decision authority: external conditional Phase-12 authorization; final phase
+  review remains external
+- Hypothesis: `HYP-EVENT-001A — SEC evidence-backed issuer-event reaction`
+
+The authorized GPT-5.6 Luna hosted-inference run completed using the frozen
+`jax.hyp-event-001a.direction/v1` contract and prompt identity
+`d0b09acf412eb73ff97fc2e9bd5f4fc609dc57d5bd1dbd17d57f986b158d4143`.
+It produced 939 unique 2016–2024 event direction records (POSITIVE 483,
+NEGATIVE 162, NEUTRAL 259, INSUFFICIENT_EVIDENCE 35), with 3 bounded output
+validation retries and accounted provider usage cost of `$2.677034`, below the
+authorized `$4.50` ceiling. No 2025 event semantics or outcomes were used.
+
+The immutable scientific artifact is
+`data/datasets/hyp-event-001a/scientific-results-v3/report.json` (private and
+ignored by Git). It contains 645 valid market/event observations after the
+frozen market-window rules: 391 development, 162 validation and 92 formal 2024
+OOS. The candidate was frozen before OOS; costs are bound to
+`cost_phase11_v1`; the full registered falsification plan is retained. The
+conditioned candidate exceeded direction-only on the formal 2024 descriptive
+cost-adjusted mean, but this is retained only as a `PROMISING RESEARCH
+CANDIDATE — NOT PROMOTED`; it is not a profitability or trading-edge claim.
+
+Promotion remains `PROMOTION_CLOSED` because the 2025 final holdout is sealed,
+current-ticker survivorship/delisted coverage is unresolved, and actual
+forward-paper evidence remains `0 DAYS / 0 ORDERS`. Recommendation logic,
+paper history, portfolio state and execution authority are unchanged. Phase 10
+and Phase 11 remain `COMPLETE / GO`; Phase 13 remains `NOT STARTED`.
+
 ## RD-2026-09-08-10 - Phase 10/11 GO and Phase 12 scientific condition
 
 - Date: 2026-09-08

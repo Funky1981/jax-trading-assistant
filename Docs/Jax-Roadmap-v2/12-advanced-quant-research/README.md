@@ -1,14 +1,15 @@
 # Phase 12 — Advanced Quant Research
 
-**Status:** **COMPLETE / CONDITIONAL GO — REAL SCIENTIFIC EVALUATION REQUIRED**
+**Status:** **COMPLETE / CONDITIONAL GO — SCIENTIFIC EVALUATION COMPLETE; PROMOTION CLOSED**
 
-The prerequisites for `HYP-EVENT-001A` were accepted for real scientific
-evaluation and all eight package contracts are internally verified. The frozen
-panel now has an immutable SEC filing-time evidence extension; real direction
-labels and performance results remain outstanding because no admissible
-historical classifications have been materialised.
-See the phase verification record. No result has recommendation,
-paper-execution or live-execution authority.
+The prerequisites for `HYP-EVENT-001A` were accepted and the real deterministic
+event study has completed. The frozen panel has an immutable SEC filing-time
+evidence extension, 939 event-time direction records, and an immutable
+development/validation/2024 OOS result artifact. Promotion remains closed:
+the 2025 holdout is sealed, survivorship is unresolved, and no forward-paper
+evidence exists. See the scientific completion handover and phase verification
+record. No result has recommendation, paper-execution or live-execution
+authority.
 
 ## Purpose
     Add factor, ML and automated hypothesis capabilities only where conventional analysis has a validated research need.

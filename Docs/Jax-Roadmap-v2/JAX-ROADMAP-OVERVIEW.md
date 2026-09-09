@@ -46,9 +46,9 @@ Docker environment. Phase 12
 is **COMPLETE / CONDITIONAL GO** for the real scientific evaluation of
 `HYP-EVENT-001A`; its data-readiness gate was accepted and the implementation
 uses the existing Jax Go architecture. Real direction labels and performance
-results remain outstanding because no direction classifications have been
-materialised; the immutable SEC filing-time evidence extension is prepared.
-No advanced model was promoted and
+results and falsification records are now retained in a single frozen
+2024 OOS artifact; the immutable SEC filing-time evidence extension is
+complete. No advanced model was promoted and
 no recommendation logic changed.
 Phase 11 preserves
 the paper-only boundary and does not claim trading edge.
