@@ -15,7 +15,7 @@ func TestMemoryToolJSON_Golden(t *testing.T) {
 		Tags:    []string{"earnings"},
 		Summary: "Entered on earnings gap.",
 		Data:    map[string]any{"confidence": 0.72},
-		Source:  &MemorySource{System: "dexter"},
+		Source:  &MemorySource{System: "jax-research"},
 	}
 
 	req := MemoryRetainRequest{Bank: "trades", Item: item}
@@ -23,10 +23,10 @@ func TestMemoryToolJSON_Golden(t *testing.T) {
 	recOut := MemoryRecallResponse{Items: []MemoryItem{item}}
 	refOut := MemoryReflectResponse{Items: []MemoryItem{item}}
 
-	assertJSONEqual(t, req, `{"bank":"trades","item":{"ts":"2025-01-01T00:00:00Z","type":"decision","symbol":"AAPL","tags":["earnings"],"summary":"Entered on earnings gap.","data":{"confidence":0.72},"source":{"system":"dexter"}}}`)
+	assertJSONEqual(t, req, `{"bank":"trades","item":{"ts":"2025-01-01T00:00:00Z","type":"decision","symbol":"AAPL","tags":["earnings"],"summary":"Entered on earnings gap.","data":{"confidence":0.72},"source":{"system":"jax-research"}}}`)
 	assertJSONEqual(t, retOut, `{"id":"mem_123"}`)
-	assertJSONEqual(t, recOut, `{"items":[{"ts":"2025-01-01T00:00:00Z","type":"decision","symbol":"AAPL","tags":["earnings"],"summary":"Entered on earnings gap.","data":{"confidence":0.72},"source":{"system":"dexter"}}]}`)
-	assertJSONEqual(t, refOut, `{"items":[{"ts":"2025-01-01T00:00:00Z","type":"decision","symbol":"AAPL","tags":["earnings"],"summary":"Entered on earnings gap.","data":{"confidence":0.72},"source":{"system":"dexter"}}]}`)
+	assertJSONEqual(t, recOut, `{"items":[{"ts":"2025-01-01T00:00:00Z","type":"decision","symbol":"AAPL","tags":["earnings"],"summary":"Entered on earnings gap.","data":{"confidence":0.72},"source":{"system":"jax-research"}}]}`)
+	assertJSONEqual(t, refOut, `{"items":[{"ts":"2025-01-01T00:00:00Z","type":"decision","symbol":"AAPL","tags":["earnings"],"summary":"Entered on earnings gap.","data":{"confidence":0.72},"source":{"system":"jax-research"}}]}`)
 }
 
 func assertJSONEqual(t *testing.T, got any, expected string) {

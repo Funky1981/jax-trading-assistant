@@ -12,7 +12,7 @@ func TestValidateMemoryItem_Valid(t *testing.T) {
 		Summary: "Entered on earnings gap with tight stop.",
 		Tags:    []string{"earnings", "gap"},
 		Data:    map[string]any{"confidence": 0.62},
-		Source:  &MemorySource{System: "dexter"},
+		Source:  &MemorySource{System: "jax-research"},
 	}
 
 	if err := ValidateMemoryItem(item); err != nil {
@@ -31,7 +31,7 @@ func TestValidateMemoryItem_MissingRequiredFields(t *testing.T) {
 				TS:      time.Now().UTC(),
 				Summary: "summary",
 				Data:    map[string]any{"a": 1},
-				Source:  &MemorySource{System: "dexter"},
+				Source:  &MemorySource{System: "jax-research"},
 			},
 		},
 		{
@@ -40,7 +40,7 @@ func TestValidateMemoryItem_MissingRequiredFields(t *testing.T) {
 				TS:     time.Now().UTC(),
 				Type:   "decision",
 				Data:   map[string]any{"a": 1},
-				Source: &MemorySource{System: "dexter"},
+				Source: &MemorySource{System: "jax-research"},
 			},
 		},
 		{
@@ -49,7 +49,7 @@ func TestValidateMemoryItem_MissingRequiredFields(t *testing.T) {
 				TS:      time.Now().UTC(),
 				Type:    "decision",
 				Summary: "summary",
-				Source:  &MemorySource{System: "dexter"},
+				Source:  &MemorySource{System: "jax-research"},
 			},
 		},
 		{
@@ -75,7 +75,7 @@ func TestValidateMemoryItem_InvalidTimestamp(t *testing.T) {
 		Type:    "decision",
 		Summary: "summary",
 		Data:    map[string]any{"a": 1},
-		Source:  &MemorySource{System: "dexter"},
+		Source:  &MemorySource{System: "jax-research"},
 	}
 
 	if err := ValidateMemoryItem(item); err == nil {
@@ -95,7 +95,7 @@ func TestValidateMemoryItem_TagsValidation(t *testing.T) {
 		Summary: "summary",
 		Tags:    []string{"Earnings"},
 		Data:    map[string]any{"a": 1},
-		Source:  &MemorySource{System: "dexter"},
+		Source:  &MemorySource{System: "jax-research"},
 	}
 
 	if err := ValidateMemoryItem(item); err == nil {

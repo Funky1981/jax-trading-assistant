@@ -6,6 +6,11 @@ Branch at audit start: `capability-reset`
 Starting HEAD: `33147d5e509a3ded67b60a1d085e81972931eb67`  
 Scope: CR-01 audit and cleanup plan only. No major removals or runtime behaviour changes were made.
 
+> Superseded current-state note (CR-02A, 2026-09-09): Dexter was removed from
+> the supported runtime by the bounded CR-02A cleanup. This document remains
+> the CR-01 pre-removal audit record; see
+> `Docs/commercial-readiness/CR-02A-DEXTER-REMOVAL.md` for the resulting state.
+
 ## Executive summary
 
 Jax's supported application path is a Go-led modular monolith with a Go trader,

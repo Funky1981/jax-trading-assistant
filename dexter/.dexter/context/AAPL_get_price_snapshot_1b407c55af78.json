@@ -1,0 +1,23 @@
+{
+  "toolName": "get_price_snapshot",
+  "args": {
+    "ticker": "AAPL"
+  },
+  "toolDescription": "AAPL price snapshot",
+  "timestamp": "2026-01-22T14:23:39.645Z",
+  "taskId": 1,
+  "queryId": "a85d0669e7b0",
+  "sourceUrls": [
+    "https://api.financialdatasets.ai/prices/snapshot/?ticker=AAPL"
+  ],
+  "result": {
+    "ticker": "AAPL",
+    "price": 249.42,
+    "day_change": 1.64,
+    "day_change_percent": 0.66,
+    "volume": 561074,
+    "time": "2026-01-22T14:23:00Z",
+    "time_milliseconds": 1769091780000,
+    "market_cap": 3703701291910
+  }
+}

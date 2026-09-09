@@ -26,7 +26,7 @@ cmd/
 internal/
   modules/, domain/, integrations/, providers/
 libs/
-  auth/, marketdata/, utcp/, agent0/, dexter/, ...
+  auth/, marketdata/, utcp/, agent0/, ...
 services/
   ib-bridge/, agent0-service/
 frontend/

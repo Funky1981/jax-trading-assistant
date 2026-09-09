@@ -1,3 +1,9 @@
+# Historical architecture note (CR-02A, 2026-09-09)
+
+Dexter references in this ADR describe the superseded pre-removal architecture.
+Dexter is not part of the supported Jax runtime. See
+`Docs/commercial-readiness/CR-02A-DEXTER-REMOVAL.md` for the removal record.
+
 # ADR-0012: Consolidate Jax into a modular monolith with Trader + Research runtimes
 
 - Status: **APPROVED - IMPLEMENTATION PHASE**

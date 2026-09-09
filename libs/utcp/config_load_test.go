@@ -21,7 +21,7 @@ func TestLoadProvidersConfig_Valid(t *testing.T) {
 	path := writeTempFile(t, "providers.json", `{
   "providers": [
     { "id": "risk", "transport": "local" },
-    { "id": "dexter", "transport": "http", "endpoint": "http://localhost:3000/tools" }
+    { "id": "memory", "transport": "http", "endpoint": "http://localhost:8091/tools" }
   ]
 }`)
 
@@ -51,7 +51,7 @@ func TestLoadProvidersConfig_DuplicateProviderID(t *testing.T) {
 func TestLoadProvidersConfig_HTTPMissingEndpoint(t *testing.T) {
 	path := writeTempFile(t, "providers.json", `{
   "providers": [
-    { "id": "dexter", "transport": "http" }
+    { "id": "memory", "transport": "http" }
   ]
 }`)
 

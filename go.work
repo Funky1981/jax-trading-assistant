@@ -6,7 +6,6 @@ use (
 	./libs/backtest
 	./libs/contracts
 	./libs/database
-	./libs/dexter
 	./libs/ingest
 	./libs/marketdata
 	./libs/observability

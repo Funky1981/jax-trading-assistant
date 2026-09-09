@@ -48,9 +48,9 @@ criteria remain binding.
 - Phase 09: `COMPLETE / GO`
 - Phase 10: `COMPLETE / GO`
 - Phase 11: `COMPLETE / GO`
-- Current package: `CR-01 — ARCHITECTURE / VENDOR / DEPENDENCY / OWNERSHIP AUDIT`
+- Current package: `CR-02A — DEXTER COMPLETE REMOVAL`
 - Phase 12: `COMPLETE / GO — HYP-EVENT-001A NOT VALIDATED`
-- Commercial-readiness cleanup: `IN PROGRESS — CR-01`
+- Commercial-readiness cleanup: `IN PROGRESS — CR-02A`
 - Phase 13: `NOT STARTED / BLOCKED BY CLEANUP GATE`
 
 `HYP-EVENT-001A` has completed its real historical scientific evaluation. The

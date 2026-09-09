@@ -168,7 +168,7 @@ services:
       retries: 3
 
   # ── ADR-0012 Phase 5: Jax Research Runtime (cmd/research) ───────────────────
-  # Research runtime: orchestration pipeline plus memory and Dexter integration.
+  # Research runtime: orchestration pipeline plus memory and Jax-native tools.
   # Preserves the prior orchestration API on port 8091.
   jax-research:
     build:
@@ -182,7 +182,6 @@ services:
       JAX_RUNTIME_MODE: ${JAX_RESEARCH_RUNTIME_MODE:-research}
       JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-false}
       AGENT0_SERVICE_URL: ${AGENT0_SERVICE_URL:-http://agent0-service:8093}
-      DEXTER_SERVICE_URL: ${DEXTER_SERVICE_URL:-}
       MEMORY_SERVICE_URL: http://jax-research:8091/tools
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

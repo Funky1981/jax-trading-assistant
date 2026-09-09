@@ -125,7 +125,7 @@ func TestRecordResearchQuery(t *testing.T) {
 	})
 
 	result := captureLog(func() {
-		RecordResearchQuery(ctx, "dexter", 500*time.Millisecond, nil)
+		RecordResearchQuery(ctx, "jax-research", 500*time.Millisecond, nil)
 	})
 
 	if result == nil {
@@ -136,8 +136,8 @@ func TestRecordResearchQuery(t *testing.T) {
 		t.Errorf("expected name=research_query, got %v", result["name"])
 	}
 
-	if result["service"] != "dexter" {
-		t.Errorf("expected service=dexter, got %v", result["service"])
+	if result["service"] != "jax-research" {
+		t.Errorf("expected service=jax-research, got %v", result["service"])
 	}
 
 	if result["success"] != true {

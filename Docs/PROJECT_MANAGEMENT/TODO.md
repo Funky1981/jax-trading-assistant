@@ -10,7 +10,7 @@ This list is based on the live codebase on branch `work` as of 2026-03-05. It tr
   - Login now uses persisted `auth_users` credentials (bcrypt + lockout policy).
 - [x] Finish market-data provider gaps in [`libs/marketdata/ib/provider.go`](/c:/Projects/jax-trading%20assistant/libs/marketdata/ib/provider.go) and [`libs/marketdata/provider_polygon.go`](/c:/Projects/jax-trading%20assistant/libs/marketdata/provider_polygon.go).
 - [x] Reduce N+1 approval lookups in artifact listing APIs.
-- [x] Stabilize Agent0 and Dexter mock adapters as deterministic test shims.
+- [x] Stabilize the Agent0 mock adapter as a deterministic test shim.
 - [x] Remove docs/runtime contract drift in core operator docs (`QUICKSTART`, `STATUS`, `ROADMAP`, `PROJECT_OVERVIEW`).
 
 ## High Priority

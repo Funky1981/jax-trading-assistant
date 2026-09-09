@@ -1,5 +1,17 @@
 # Roadmap Decision Log
 
+## RD-2026-09-09-16 — CR-02A Dexter complete removal
+
+- Decision state: **IMPLEMENTATION COMPLETE — EXTERNAL CR-02A REVIEW REQUIRED**.
+- Scope: remove the embedded Dexter runtime, Jax-side Dexter client/integration,
+  stale active configuration and Dexter-only UTCP/ingest contracts.
+- Safety: Agent0, shared Jax tools, market-data providers, risk controls,
+  execution-disabled invariants and historical/archive evidence remain intact.
+- Resulting invariant: **DEXTER IS NOT PART OF THE SUPPORTED JAX RUNTIME**.
+- CR-02B Agent0 removal/consolidation and CR-02C broader vendor/dependency
+  cleanup are not started. Phase 13 remains blocked by the cleanup gate.
+
+
 ## RD-2026-09-09-14 - Commercial-readiness CR-01 audit opened
 
 - Date: 2026-09-09

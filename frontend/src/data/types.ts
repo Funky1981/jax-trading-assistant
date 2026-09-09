@@ -170,7 +170,6 @@ export interface OrchestrationRequest {
   constraints: Record<string, unknown>;
   userContext: string;
   tags: string[];
-  researchQueries?: string[];
 }
 
 export interface OrchestrationResult {

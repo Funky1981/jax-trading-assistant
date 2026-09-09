@@ -28,10 +28,10 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
-| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-01 AUDIT** |
+| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02A DEXTER REMOVAL** |
 | Phase 13 — Optional Live Execution | **NOT STARTED / BLOCKED BY CLEANUP GATE** |
-| Current implementation package | **CR-01 — ARCHITECTURE / VENDOR / DEPENDENCY / OWNERSHIP AUDIT** |
-| Next package | **External review of CR-01; CR-02 removals not started** |
+| Current implementation package | **CR-02A — DEXTER COMPLETE REMOVAL** |
+| Next package | **External review of CR-02A; CR-02B/CR-02C not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -237,16 +237,18 @@ candidate only; no advanced model was trained or promoted, no paid data was
 added, and recommendation logic was unchanged. HYP-EVENT-001A remains
 `NOT VALIDATED`; Phase 13 is blocked by the commercial-readiness cleanup gate.
 
-### Commercial-readiness cleanup gate — CR-01 IN PROGRESS
+### Commercial-readiness cleanup gate — CR-02A IN PROGRESS
 
-CR-01 is a documentation-only architecture, vendor, dependency and ownership
-audit. It does not remove Agent0, Dexter, LiteLLM, providers, archives or
-services. The canonical audit is
-`Docs/commercial-readiness/CR-01-ARCHITECTURE-VENDOR-AUDIT.md`.
+CR-01's audit is complete and retained as the pre-removal record. CR-02A is the
+bounded Dexter removal authorized by that audit. It removes the embedded Dexter
+tree, Jax-side Dexter client/integration, stale provider/configuration seams and
+Dexter-only UTCP/ingest contracts while retaining shared Jax capabilities. The
+canonical removal record is
+`Docs/commercial-readiness/CR-02A-DEXTER-REMOVAL.md`.
 
 Phase 13 remains **NOT STARTED / BLOCKED BY THE CLEANUP GATE**. CR-02 may begin
-only after external technical-lead review of the bounded removal/consolidation
-plan. `HYP-EVENT-001A` remains **NOT VALIDATED** and
+only after external technical-lead review of each bounded cleanup decision.
+`HYP-EVENT-001A` remains **NOT VALIDATED** and
 `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains unchanged.
 
 ### Later roadmap — planned capability progression

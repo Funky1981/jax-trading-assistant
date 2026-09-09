@@ -53,7 +53,7 @@ The system integrates with external Python services where appropriate:
 ## Architecture Guardrails
 
 - Trader must stay deterministic and must not import research-only dependencies.
-- Research runtime integrates Agent0, Dexter, and the in-process Postgres memory system.
+- Research runtime integrates Agent0, Jax-native tools, and the in-process Postgres memory system.
 - Artifact promotion requires trust-gate evidence (Gate2 deterministic replay + Gate3 promotion checks).
 - External Python services remain explicit boundaries; do not collapse them without ADR-level change.
 

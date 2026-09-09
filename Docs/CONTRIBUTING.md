@@ -19,14 +19,6 @@ To install `golangci-lint`:
 
 - `go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest`
 
-### Dexter (vendored)
-
-From `dexter/`:
-
-- Install: `bun install`
-- Tests: `bun test`
-- Typecheck: `bun run typecheck`
-
 ### Platform Validation (Backend + Frontend + API smoke)
 
 - Quick gate: `.\scripts\test-platform.ps1 -Mode quick`

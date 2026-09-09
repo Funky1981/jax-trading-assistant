@@ -15,7 +15,7 @@ Use this map to route requests quickly.
 ## Usually Out of Scope Unless Explicitly Requested
 
 - `Agent0/` (vendored)
-- `dexter/` (vendored)
+- Dexter was removed by CR-02A; historical Dexter material is retained only in archives and cleanup evidence.
 - `Docs/archive/` (historical)
 - `node_modules/` and binary artifacts
 

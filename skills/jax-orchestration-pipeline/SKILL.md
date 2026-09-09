@@ -13,7 +13,7 @@ Trace orchestration behavior quickly without guessing across service boundaries.
    - API path in `services/jax-api/...handlers_orchestration_v1.go`
    - signal path in `services/jax-signal-generator/internal/orchestrator/client.go`
 2. Follow downstream clients in orchestrator composition:
-   - memory, Agent0, Dexter clients and provider config
+   - memory, Agent0, Jax-native tools and provider config
 3. Validate request/response contracts at each hop before editing internals.
 4. Preserve payload shape unless coordinated with all consumers.
 5. Run focused tests and smoke checks after changes.

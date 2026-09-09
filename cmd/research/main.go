@@ -1,11 +1,11 @@
 // cmd/research is the Research Runtime for jax-trading-assistant.
-// It hosts the orchestration pipeline (Agent0, memory, Dexter) in-process.
+// It hosts the orchestration pipeline (Agent0, memory, and Jax-native tools) in-process.
 //
 // It preserves the prior orchestration HTTP surface so the frontend API layer
 // does not need a contract change.
 //
 // ADR-0012 Phase 5: one of the two authoritative runtimes.
-// import rule: cmd/research MAY import libs/agent0, libs/dexter, libs/utcp.
+// import rule: cmd/research MAY import libs/agent0 and libs/utcp.
 package main
 
 import (
@@ -48,7 +48,6 @@ type Config struct {
 	Port             string
 	MemoryServiceURL string
 	Agent0ServiceURL string
-	DexterServiceURL string
 	// DatasetDir is the directory for the L03 dataset catalog (catalog.json).
 	DatasetDir  string
 	RuntimeMode runtimepolicy.Mode
@@ -112,23 +111,10 @@ func main() {
 	}
 	log.Printf("agent0 client -> %s", cfg.Agent0ServiceURL)
 
-	var dexterAdapter *orchestration.DexterClientAdapter
-	if cfg.DexterServiceURL != "" {
-		dexterAdapter, err = orchestration.NewDexterClient(cfg.DexterServiceURL)
-		if err != nil {
-			log.Printf("warning: Dexter unavailable (%v) - continuing without research tools", err)
-		} else {
-			log.Printf("dexter client -> %s", cfg.DexterServiceURL)
-		}
-	}
-
-	toolRunner := orchestration.NewToolRunner(dexterAdapter)
+	toolRunner := orchestration.NewToolRunner()
 	registry := strategies.NewRegistry()
 
 	orchSvc := orchestration.NewService(memoryClient, agentClient, toolRunner, registry)
-	if dexterAdapter != nil {
-		orchSvc = orchSvc.WithDexter(dexterAdapter)
-	}
 	orchSvc = orchSvc.WithAudit(audit.New(db))
 
 	// L04: backtest engine + dataset registry
@@ -581,7 +567,6 @@ func loadConfig() (Config, error) {
 		Port:             envOrDefault("PORT", "8091"),
 		MemoryServiceURL: envOrDefault("MEMORY_SERVICE_URL", "http://localhost:8091/tools"),
 		Agent0ServiceURL: envOrDefault("AGENT0_SERVICE_URL", "http://agent0-service:8093"),
-		DexterServiceURL: envOrDefault("DEXTER_SERVICE_URL", ""),
 		DatasetDir:       envOrDefault("DATASET_DIR", "data/datasets"),
 		RuntimeMode:      mode,
 	}, nil

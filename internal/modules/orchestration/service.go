@@ -9,7 +9,6 @@ import (
 	"jax-trading-assistant/internal/modules/audit"
 	"jax-trading-assistant/libs/agent0"
 	"jax-trading-assistant/libs/contracts"
-	"jax-trading-assistant/libs/dexter"
 	"jax-trading-assistant/libs/observability"
 	"jax-trading-assistant/libs/strategies"
 )
@@ -26,12 +25,6 @@ type Agent0Client interface {
 	Execute(ctx context.Context, req agent0.ExecuteRequest) (agent0.ExecuteResponse, error)
 }
 
-// DexterClient interface for research operations
-type DexterClient interface {
-	ResearchCompany(ctx context.Context, input dexter.ResearchCompanyInput) (dexter.ResearchCompanyOutput, error)
-	CompareCompanies(ctx context.Context, input dexter.CompareCompaniesInput) (dexter.CompareCompaniesOutput, error)
-}
-
 // ToolRunner interface for executing tools based on AI plans
 type ToolRunner interface {
 	Execute(ctx context.Context, plan PlanResult) ([]ToolRun, error)
@@ -41,7 +34,6 @@ type ToolRunner interface {
 type Service struct {
 	memory     MemoryClient
 	agent      Agent0Client
-	dexter     DexterClient
 	tools      ToolRunner
 	strategies *strategies.Registry
 	audit      *audit.Service
@@ -57,12 +49,6 @@ func NewService(memory MemoryClient, agent Agent0Client, tools ToolRunner, strat
 	}
 }
 
-// WithDexter adds Dexter research capabilities
-func (s *Service) WithDexter(dexter DexterClient) *Service {
-	s.dexter = dexter
-	return s
-}
-
 func (s *Service) WithAudit(auditSvc *audit.Service) *Service {
 	s.audit = auditSvc
 	return s
@@ -70,13 +56,12 @@ func (s *Service) WithAudit(auditSvc *audit.Service) *Service {
 
 // OrchestrationRequest defines the input for orchestration
 type OrchestrationRequest struct {
-	Bank            string
-	Symbol          string
-	Strategy        string
-	Constraints     map[string]any
-	UserContext     string
-	Tags            []string
-	ResearchQueries []string // Optional: Questions for Dexter research
+	Bank        string
+	Symbol      string
+	Strategy    string
+	Constraints map[string]any
+	UserContext string
+	Tags        []string
 }
 
 // PlanInput contains inputs for Agent0 planning
@@ -166,21 +151,7 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 		}
 	}
 
-	// 3. Dexter research (if enabled and queries provided)
-	var research *dexter.ResearchCompanyOutput
-	if s.dexter != nil && len(req.ResearchQueries) > 0 {
-		researchStart := time.Now()
-		res, err := s.dexter.ResearchCompany(ctx, dexter.ResearchCompanyInput{
-			Ticker:    req.Symbol,
-			Questions: req.ResearchQueries,
-		})
-		observability.RecordResearchQuery(ctx, "dexter", time.Since(researchStart), err)
-		if err == nil {
-			research = &res
-		}
-	}
-
-	// 4. Build context for Agent0
+	// 3. Build context for Agent0
 	contextBuilder := strings.Builder{}
 	contextBuilder.WriteString(req.UserContext)
 	if len(memories) > 0 {
@@ -196,20 +167,6 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 				i+1, sig.Symbol, sig.Type, sig.EntryPrice, sig.Confidence))
 		}
 	}
-	if research != nil {
-		contextBuilder.WriteString("\n\nDexter research:\n")
-		contextBuilder.WriteString(fmt.Sprintf("Summary: %s\n", research.Summary))
-		if len(research.KeyPoints) > 0 {
-			contextBuilder.WriteString("Key points:\n")
-			for i, point := range research.KeyPoints {
-				contextBuilder.WriteString(fmt.Sprintf("  %d. %s\n", i+1, point))
-			}
-		}
-		if len(research.Metrics) > 0 {
-			contextBuilder.WriteString(fmt.Sprintf("Metrics: %v\n", research.Metrics))
-		}
-	}
-
 	agentMemories := []agent0.Memory{}
 	for _, mem := range memories {
 		agentMemories = append(agentMemories, agent0.Memory{
@@ -260,7 +217,7 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 		}
 	}
 
-	// 5. Build plan result
+	// 4. Build plan result
 	plan := PlanResult{
 		Summary:        agentPlan.Summary,
 		Steps:          agentPlan.Steps,
@@ -269,14 +226,14 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 		ReasoningNotes: agentPlan.ReasoningNotes,
 	}
 
-	// 6. Execute tools based on plan
+	// 5. Execute tools based on plan
 	toolRuns, err := s.tools.Execute(ctx, plan)
 	if err != nil {
 		runErr = err
 		return OrchestrationResult{}, err
 	}
 
-	// 7. Retain decision to memory
+	// 6. Retain decision to memory
 	retainedData := map[string]any{
 		"inputs": req.Constraints,
 		"plan": map[string]any{
@@ -288,14 +245,6 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 		"tools":           toolRuns,
 		"signals":         summarizeSignals(signals),
 	}
-	if research != nil {
-		retainedData["research"] = map[string]any{
-			"summary":    research.Summary,
-			"key_points": research.KeyPoints,
-			"metrics":    research.Metrics,
-		}
-	}
-
 	retained := contracts.MemoryItem{
 		TS:      time.Now().UTC(),
 		Type:    "decision",

@@ -3,11 +3,9 @@ package orchestration
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"jax-trading-assistant/libs/agent0"
 	"jax-trading-assistant/libs/contracts"
-	"jax-trading-assistant/libs/dexter"
 	"jax-trading-assistant/libs/utcp"
 )
 
@@ -94,47 +92,17 @@ func (a *Agent0ClientAdapter) Execute(ctx context.Context, req agent0.ExecuteReq
 	return a.client.Execute(ctx, req)
 }
 
-// DexterClientAdapter adapts dexter.Client to DexterClient interface
-type DexterClientAdapter struct {
-	client *dexter.Client
-}
-
-// NewDexterClient creates a new Dexter client adapter
-func NewDexterClient(dexterServiceURL string) (*DexterClientAdapter, error) {
-	client, err := dexter.New(dexterServiceURL)
-	if err != nil {
-		return nil, fmt.Errorf("create Dexter client: %w", err)
-	}
-
-	return &DexterClientAdapter{client: client}, nil
-}
-
-// ResearchCompany performs company research
-func (d *DexterClientAdapter) ResearchCompany(ctx context.Context, input dexter.ResearchCompanyInput) (dexter.ResearchCompanyOutput, error) {
-	return d.client.ResearchCompany(ctx, input)
-}
-
-// CompareCompanies compares multiple companies
-func (d *DexterClientAdapter) CompareCompanies(ctx context.Context, input dexter.CompareCompaniesInput) (dexter.CompareCompaniesOutput, error) {
-	return d.client.CompareCompanies(ctx, input)
-}
-
 // ToolRunnerImpl implements the ToolRunner interface
-type ToolRunnerImpl struct {
-	dexter *DexterClientAdapter
-}
+type ToolRunnerImpl struct{}
 
 // NewToolRunner creates a new tool runner
-func NewToolRunner(dexter *DexterClientAdapter) *ToolRunnerImpl {
-	return &ToolRunnerImpl{dexter: dexter}
+func NewToolRunner() *ToolRunnerImpl {
+	return &ToolRunnerImpl{}
 }
 
 // Execute executes tools based on the AI plan
 func (t *ToolRunnerImpl) Execute(ctx context.Context, plan PlanResult) ([]ToolRun, error) {
-	// For now, we don't execute tools automatically
-	// In the future, this could parse plan.Steps and execute required tools
-	log.Printf("tool execution requested for plan: %s", plan.Summary)
-
-	// Return empty tool runs for now
+	// Tool execution remains a separate, bounded Jax-native capability boundary.
+	// This runner intentionally does not infer or execute arbitrary plan steps.
 	return []ToolRun{}, nil
 }

@@ -17,7 +17,7 @@ func TestMemoryItemJSON_Golden(t *testing.T) {
 		Tags:    []string{"earnings"},
 		Summary: "Entered on earnings gap.",
 		Data:    map[string]any{"confidence": 0.72},
-		Source:  &MemorySource{System: "dexter"},
+		Source:  &MemorySource{System: "jax-research"},
 	}
 
 	raw, err := json.MarshalIndent(item, "", "  ")
