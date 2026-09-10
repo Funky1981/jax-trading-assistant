@@ -1695,9 +1695,6 @@ func buildBackfillCandleFetcherFromEnv() candleFetcher {
 	if raw := strings.TrimSpace(os.Getenv("POLYGON_API_KEY")); raw != "" {
 		providers = append(providers, marketdata.ProviderConfig{Name: marketdata.ProviderPolygon, APIKey: raw, Enabled: true, Priority: len(providers) + 1})
 	}
-	if raw := strings.TrimSpace(os.Getenv("FINANCIAL_DATASETS_API_KEY")); raw != "" {
-		providers = append(providers, marketdata.ProviderConfig{Name: marketdata.ProviderFinancialDatasets, APIKey: raw, Enabled: true, Priority: len(providers) + 1})
-	}
 	if len(providers) == 0 {
 		return nil
 	}

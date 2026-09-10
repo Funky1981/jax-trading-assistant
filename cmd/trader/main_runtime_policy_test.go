@@ -49,7 +49,7 @@ func TestRequireApprovedStrategiesAllowsEmptyRegistryOutsidePaperAndLive(t *test
 func TestRequireEventProvidersFailsInPaperModeWhenCredentialsMissing(t *testing.T) {
 	t.Parallel()
 
-	err := requireEventProviders(runtimepolicy.ModePaper, false, false)
+	err := requireEventProviders(runtimepolicy.ModePaper, false)
 	if err == nil {
 		t.Fatal("expected paper mode to fail when event providers are missing")
 	}
@@ -68,7 +68,7 @@ func TestRequireEventProvidersAllowsMissingCredentialsOutsideStrictModes(t *test
 		t.Run(string(mode), func(t *testing.T) {
 			t.Parallel()
 
-			if err := requireEventProviders(mode, false, false); err != nil {
+			if err := requireEventProviders(mode, false); err != nil {
 				t.Fatalf("expected missing event providers to be tolerated in %s mode: %v", mode, err)
 			}
 		})

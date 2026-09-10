@@ -106,9 +106,6 @@ services:
       POLYGON_AUTH_MODE: ${POLYGON_AUTH_MODE:-}
       MASSIVE_API_KEY: ${MASSIVE_API_KEY:-}
       MASSIVE_BASE_URL: ${MASSIVE_BASE_URL:-}
-      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
-      NEWSAPI_KEY: ${NEWSAPI_KEY:-}
-      FINANCIAL_DATASETS_API_KEY: ${FINANCIAL_DATASETS_API_KEY:-}
       # Jax Assistant LLM (optional — falls back to advisory replies if not set)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}

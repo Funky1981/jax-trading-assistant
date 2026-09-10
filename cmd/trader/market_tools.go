@@ -102,14 +102,6 @@ func marketDataProviderConfigs(ibBridgeURL string) []marketdata.ProviderConfig {
 			Enabled:  true,
 		})
 	}
-	if fdKey := strings.TrimSpace(os.Getenv("FINANCIAL_DATASETS_API_KEY")); fdKey != "" {
-		providers = append(providers, marketdata.ProviderConfig{
-			Name:     marketdata.ProviderFinancialDatasets,
-			APIKey:   fdKey,
-			Priority: 7,
-			Enabled:  true,
-		})
-	}
 	return providers
 }
 
@@ -427,8 +419,6 @@ type eventAggregator struct {
 	polygonKey    string
 	polygonBase   string
 	polygonBearer bool
-	finnhubKey    string
-	newsApiKey    string
 	failClosed    bool
 	calendarStore *calendar.Store
 	store         *eventStore
@@ -456,8 +446,6 @@ func newEventAggregator(httpClient *http.Client, pool *pgxpool.Pool) *eventAggre
 		polygonKey:    polygonKey,
 		polygonBase:   polygonBase,
 		polygonBearer: polygonBearer,
-		finnhubKey:    strings.TrimSpace(os.Getenv("FINNHUB_API_KEY")),
-		newsApiKey:    strings.TrimSpace(os.Getenv("NEWSAPI_KEY")),
 		failClosed:    strings.EqualFold(os.Getenv("APP_ENV"), "production") || strings.EqualFold(os.Getenv("ENV"), "production"),
 		calendarStore: store,
 		store:         newEventStore(pool),
@@ -475,48 +463,18 @@ func (e *eventAggregator) getEarnings(ctx context.Context, symbol string, limit 
 		}
 		return out, nil
 	}
-	if out, err := e.getFinnhubEarnings(ctx, symbol, limit); err == nil && len(out) > 0 {
-		if pErr := e.store.SaveEarnings(ctx, symbol, "finnhub", out); pErr != nil {
-			observability.LogEvent(ctx, "warn", "events.persist_earnings_failed", map[string]any{
-				"symbol": symbol,
-				"source": "finnhub",
-				"error":  pErr.Error(),
-			})
-		}
-		return out, nil
-	}
 	if e.failClosed {
 		return nil, errors.New("earnings provider unavailable and fail-closed is enabled")
 	}
 	return []utcp.EarningsEntry{}, nil
 }
 
-func (e *eventAggregator) getNews(ctx context.Context, symbol string, limit int, fromRaw, toRaw string) ([]utcp.NewsEntry, error) {
+func (e *eventAggregator) getNews(ctx context.Context, symbol string, limit int, _ string, _ string) ([]utcp.NewsEntry, error) {
 	if out, err := e.getPolygonNews(ctx, symbol, limit); err == nil && len(out) > 0 {
 		if pErr := e.store.SaveNews(ctx, symbol, "polygon", out); pErr != nil {
 			observability.LogEvent(ctx, "warn", "events.persist_news_failed", map[string]any{
 				"symbol": symbol,
 				"source": "polygon",
-				"error":  pErr.Error(),
-			})
-		}
-		return out, nil
-	}
-	if out, err := e.getFinnhubNews(ctx, symbol, limit, fromRaw, toRaw); err == nil && len(out) > 0 {
-		if pErr := e.store.SaveNews(ctx, symbol, "finnhub", out); pErr != nil {
-			observability.LogEvent(ctx, "warn", "events.persist_news_failed", map[string]any{
-				"symbol": symbol,
-				"source": "finnhub",
-				"error":  pErr.Error(),
-			})
-		}
-		return out, nil
-	}
-	if out, err := e.getNewsAPI(ctx, symbol, limit, fromRaw, toRaw); err == nil && len(out) > 0 {
-		if pErr := e.store.SaveNews(ctx, symbol, "newsapi", out); pErr != nil {
-			observability.LogEvent(ctx, "warn", "events.persist_news_failed", map[string]any{
-				"symbol": symbol,
-				"source": "newsapi",
 				"error":  pErr.Error(),
 			})
 		}
@@ -569,44 +527,6 @@ func (e *eventAggregator) getPolygonEarnings(ctx context.Context, symbol string,
 	return out, nil
 }
 
-func (e *eventAggregator) getFinnhubEarnings(ctx context.Context, symbol string, limit int) ([]utcp.EarningsEntry, error) {
-	if e.finnhubKey == "" {
-		return nil, errors.New("finnhub key missing")
-	}
-	now := time.Now().UTC()
-	from := now.AddDate(-1, 0, 0).Format("2006-01-02")
-	to := now.AddDate(0, 1, 0).Format("2006-01-02")
-	u := fmt.Sprintf("https://finnhub.io/api/v1/calendar/earnings?symbol=%s&from=%s&to=%s&token=%s",
-		url.QueryEscape(symbol), from, to, url.QueryEscape(e.finnhubKey))
-	var payload struct {
-		EarningsCalendar []struct {
-			Date        string  `json:"date"`
-			EPSActual   float64 `json:"epsActual"`
-			EPSEstimate float64 `json:"epsEstimate"`
-		} `json:"earningsCalendar"`
-	}
-	if err := e.fetchJSON(ctx, u, &payload); err != nil {
-		return nil, err
-	}
-	out := make([]utcp.EarningsEntry, 0, min(limit, len(payload.EarningsCalendar)))
-	for _, row := range payload.EarningsCalendar {
-		if len(out) >= limit {
-			break
-		}
-		sp := 0.0
-		if row.EPSEstimate != 0 {
-			sp = ((row.EPSActual - row.EPSEstimate) / row.EPSEstimate) * 100
-		}
-		out = append(out, utcp.EarningsEntry{
-			Date:        row.Date,
-			EPSActual:   row.EPSActual,
-			EPSEstimate: row.EPSEstimate,
-			SurprisePct: sp,
-		})
-	}
-	return out, nil
-}
-
 func (e *eventAggregator) getPolygonNews(ctx context.Context, symbol string, limit int) ([]utcp.NewsEntry, error) {
 	if e.polygonKey == "" {
 		return nil, errors.New("polygon key missing")
@@ -648,123 +568,6 @@ func (e *eventAggregator) getPolygonNews(ctx context.Context, symbol string, lim
 		})
 	}
 	return out, nil
-}
-
-func (e *eventAggregator) getFinnhubNews(ctx context.Context, symbol string, limit int, fromRaw, toRaw string) ([]utcp.NewsEntry, error) {
-	if e.finnhubKey == "" {
-		return nil, errors.New("finnhub key missing")
-	}
-	now := time.Now().UTC()
-	from := now.AddDate(0, 0, -7).Format("2006-01-02")
-	to := now.Format("2006-01-02")
-	if strings.TrimSpace(fromRaw) != "" {
-		from = strings.TrimSpace(fromRaw)
-	}
-	if strings.TrimSpace(toRaw) != "" {
-		to = strings.TrimSpace(toRaw)
-	}
-	u := fmt.Sprintf("https://finnhub.io/api/v1/company-news?symbol=%s&from=%s&to=%s&token=%s",
-		url.QueryEscape(symbol), url.QueryEscape(from), url.QueryEscape(to), url.QueryEscape(e.finnhubKey))
-	var payload []struct {
-		Datetime int64  `json:"datetime"`
-		Headline string `json:"headline"`
-		Summary  string `json:"summary"`
-		URL      string `json:"url"`
-		Source   string `json:"source"`
-		Category string `json:"category"`
-	}
-	if err := e.fetchJSON(ctx, u, &payload); err != nil {
-		return nil, err
-	}
-	out := make([]utcp.NewsEntry, 0, min(limit, len(payload)))
-	for i := range payload {
-		if len(out) >= limit {
-			break
-		}
-		out = append(out, utcp.NewsEntry{
-			Timestamp: time.Unix(payload[i].Datetime, 0).UTC(),
-			Headline:  payload[i].Headline,
-			Summary:   payload[i].Summary,
-			URL:       payload[i].URL,
-			Source:    payload[i].Source,
-			Category:  payload[i].Category,
-		})
-	}
-	return out, nil
-}
-
-func (e *eventAggregator) getNewsAPI(ctx context.Context, symbol string, limit int, fromRaw, toRaw string) ([]utcp.NewsEntry, error) {
-	if e.newsApiKey == "" {
-		return nil, errors.New("newsapi key missing")
-	}
-	endpoint := "https://newsapi.org/v2/everything"
-	u, _ := url.Parse(endpoint)
-	q := u.Query()
-	q.Set("q", symbol)
-	q.Set("sortBy", "publishedAt")
-	q.Set("pageSize", strconv.Itoa(limit))
-	q.Set("language", "en")
-	if strings.TrimSpace(fromRaw) != "" {
-		q.Set("from", strings.TrimSpace(fromRaw))
-	}
-	if strings.TrimSpace(toRaw) != "" {
-		q.Set("to", strings.TrimSpace(toRaw))
-	}
-	u.RawQuery = q.Encode()
-
-	var payload struct {
-		Status   string `json:"status"`
-		Articles []struct {
-			Source struct {
-				Name string `json:"name"`
-			} `json:"source"`
-			Author      string `json:"author"`
-			Title       string `json:"title"`
-			Description string `json:"description"`
-			URL         string `json:"url"`
-			PublishedAt string `json:"publishedAt"`
-		} `json:"articles"`
-	}
-	if err := e.fetchNewsAPIJSON(ctx, u.String(), &payload); err != nil {
-		return nil, err
-	}
-	out := make([]utcp.NewsEntry, 0, len(payload.Articles))
-	for _, row := range payload.Articles {
-		ts, _ := time.Parse(time.RFC3339, strings.TrimSpace(row.PublishedAt))
-		if ts.IsZero() {
-			ts = time.Now().UTC()
-		}
-		out = append(out, utcp.NewsEntry{
-			Timestamp: ts.UTC(),
-			Headline:  row.Title,
-			Summary:   row.Description,
-			URL:       row.URL,
-			Source:    row.Source.Name,
-			Category:  "company_news",
-		})
-		if len(out) >= limit {
-			break
-		}
-	}
-	return out, nil
-}
-
-func (e *eventAggregator) fetchNewsAPIJSON(ctx context.Context, endpoint string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("X-Api-Key", e.newsApiKey)
-	resp, err := e.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return fmt.Errorf("newsapi HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
-	}
-	return json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(out)
 }
 
 func (e *eventAggregator) getCalendarMacro(limit int) []utcp.NewsEntry {

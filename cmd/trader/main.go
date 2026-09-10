@@ -383,15 +383,14 @@ func validateEventProviderReadiness(ctx context.Context, db *pgxpool.Pool, regis
 	}
 
 	hasPolygon := strings.TrimSpace(os.Getenv("POLYGON_API_KEY")) != ""
-	hasFinnhub := strings.TrimSpace(os.Getenv("FINNHUB_API_KEY")) != ""
-	if hasPolygon || hasFinnhub {
+	if hasPolygon {
 		return nil
 	}
 
-	if err := requireEventProviders(mode, hasPolygon, hasFinnhub); err != nil {
+	if err := requireEventProviders(mode, hasPolygon); err != nil {
 		return err
 	}
-	log.Printf("event provider warning: enabled event-dependent strategies but no POLYGON_API_KEY/FINNHUB_API_KEY; running degraded outside production")
+	log.Printf("event provider warning: enabled event-dependent strategies but no POLYGON_API_KEY; running degraded outside production")
 	return nil
 }
 

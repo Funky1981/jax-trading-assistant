@@ -145,12 +145,12 @@ func requireApprovedStrategies(mode runtimepolicy.Mode, loaded int) error {
 	return nil
 }
 
-func requireEventProviders(mode runtimepolicy.Mode, hasPolygon, hasFinnhub bool) error {
-	if hasPolygon || hasFinnhub {
+func requireEventProviders(mode runtimepolicy.Mode, hasPolygon bool) error {
+	if hasPolygon {
 		return nil
 	}
 	if mode.EnforceStrictProviderPolicy() {
-		return fmt.Errorf("enabled event-dependent strategies require POLYGON_API_KEY or FINNHUB_API_KEY in %s mode", mode)
+		return fmt.Errorf("enabled event-dependent strategies require POLYGON_API_KEY in %s mode", mode)
 	}
 	return nil
 }
