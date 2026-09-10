@@ -57,7 +57,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-jax}:${POSTGRES_PASSWORD:-jax}@postgres:5432/${POSTGRES_DB:-jax}?sslmode=disable}
       JAX_RUNTIME_MODE: ${JAX_TRADER_RUNTIME_MODE:-paper}
-      JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-false}
+      JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-true}
       ALLOW_LIVE_TRADING: ${ALLOW_LIVE_TRADING:-false}
       # Preserve absence as an empty value so the read-only safety projection
       # can fail closed as Unknown outside explicitly configured environments.
@@ -73,6 +73,9 @@ services:
       AUTH_BOOTSTRAP_USERNAME: ${AUTH_BOOTSTRAP_USERNAME:-}
       AUTH_BOOTSTRAP_PASSWORD: ${AUTH_BOOTSTRAP_PASSWORD:-}
       AUTH_BOOTSTRAP_ROLE: ${AUTH_BOOTSTRAP_ROLE:-admin}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}
       CORS_ALLOWED_METHODS: ${CORS_ALLOWED_METHODS:-GET,POST,PUT,DELETE,OPTIONS}
       CORS_ALLOWED_HEADERS: ${CORS_ALLOWED_HEADERS:-Content-Type,Authorization}
@@ -143,7 +146,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-jax}:${POSTGRES_PASSWORD:-jax}@postgres:5432/${POSTGRES_DB:-jax}?sslmode=disable}
       JAX_RUNTIME_MODE: ${JAX_RESEARCH_RUNTIME_MODE:-research}
-      JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-false}
+      JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-true}
       MEMORY_SERVICE_URL: http://jax-research:8091/tools
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
