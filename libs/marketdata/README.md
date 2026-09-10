@@ -114,6 +114,5 @@ go get github.com/redis/go-redis/v9
 $env:POLYGON_API_KEY = "your-polygon-key"
 $env:ALPACA_API_KEY = "your-alpaca-key"
 $env:ALPACA_API_SECRET = "your-alpaca-secret"
-$env:REDIS_URL = "localhost:6379"
 
 ```

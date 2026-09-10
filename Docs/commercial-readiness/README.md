@@ -11,3 +11,6 @@ commercial distribution.
   LiteLLM consolidation evidence.
 - `CR-02D-DATA-VENDOR-CONSOLIDATION.md` — market, news and data vendor
   inventory, dependency proof and scoped consolidation evidence.
+- `CR-02E-CONFIG-COMPOSE-CONSOLIDATION.md` — canonical environment ownership,
+  safe defaults, Compose profiles, service boundaries and stale configuration
+  removal.

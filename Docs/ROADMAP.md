@@ -28,10 +28,10 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
-| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02B JAX-NATIVE PLANNER / AGENT0 REMOVAL** |
+| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02E CONFIGURATION & COMPOSE CONSOLIDATION** |
 | Phase 13 — Optional Live Execution | **NOT STARTED / BLOCKED BY CLEANUP GATE** |
-| Current implementation package | **CR-02B — JAX-NATIVE PLANNER + COMPLETE AGENT0 REMOVAL** |
-| Next package | **External review of CR-02B; CR-02C/CR-02D not started** |
+| Current implementation package | **CR-02E — ENVIRONMENT / COMPOSE / CONFIGURATION CONSOLIDATION** |
+| Next package | **External review of CR-02E; CR-02F/CR-02G not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -238,19 +238,17 @@ candidate only; no advanced model was trained or promoted, no paid data was
 added, and recommendation logic was unchanged. HYP-EVENT-001A remains
 `NOT VALIDATED`; Phase 13 is blocked by the commercial-readiness cleanup gate.
 
-### Commercial-readiness cleanup gate — CR-02B IN PROGRESS
+### Commercial-readiness cleanup gate — CR-02E IN PROGRESS
 
-CR-01's audit and CR-02A's Dexter removal are retained as historical cleanup
-records. CR-02B is the bounded Agent0 removal authorized by the external
-technical-lead decision. It replaces the supported planning capability with the
-small Jax-owned advisory planner and removes the Agent0 source, service,
-client, active configuration, Compose, scripts and frontend-only suggestion
-surface. The canonical removal record is
-`Docs/commercial-readiness/CR-02B-AGENT0-REMOVAL.md`.
+CR-01 through CR-02D are retained as accepted bounded cleanup records. CR-02E
+consolidates the supported environment ownership model, moves observability and
+the separate World Monitor integration behind explicit Compose profiles, removes
+the conflicting standalone Postgres Compose stack and removes stale active
+configuration. The canonical record is
+`Docs/commercial-readiness/CR-02E-CONFIG-COMPOSE-CONSOLIDATION.md`.
 
-Phase 13 remains **NOT STARTED / BLOCKED BY THE CLEANUP GATE**. CR-02C/CR-02D
-may begin only after external technical-lead review of each bounded cleanup
-decision.
+CR-02E is implementation complete and awaits external review. CR-02F and CR-02G
+have not started. Phase 13 remains **NOT STARTED / BLOCKED BY THE CLEANUP GATE**.
 `HYP-EVENT-001A` remains **NOT VALIDATED** and
 `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains unchanged.
 
@@ -355,12 +353,13 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is Commercial-Readiness Cleanup CR-02D — implementation
+The current position is Commercial-Readiness Cleanup CR-02E — implementation
 complete and external review required, after external GO decisions for
-Phase 12, CR-01, CR-02A, CR-02B and CR-02C. CR-02D removed duplicate/dead
-market/news runtime fallbacks while retaining the justified Alpaca, Polygon,
-IB, official macro/evidence and separate World Monitor boundaries. HYP-EVENT-001A
-evidence and the sealed 2025 holdout remain unchanged. This is not a
-trading-edge or profitability claim. Phase 10 and Phase 11 remain complete/GO,
-with actual forward-paper evidence of 0 days / 0 orders. CR-02E is not started
-and Phase 13 remains `NOT STARTED / BLOCKED BY CLEANUP GATE`.
+Phase 12 and CR-01 through CR-02D. CR-02E consolidated the root configuration
+contract, made observability and World Monitor explicit optional Compose
+profiles, removed the conflicting standalone Postgres stack, and removed stale
+active configuration. HYP-EVENT-001A evidence and the sealed 2025 holdout
+remain unchanged. This is not a trading-edge or profitability claim. Phase 10
+and Phase 11 remain complete/GO, with actual forward-paper evidence of 0 days /
+0 orders. CR-02F and CR-02G are not started and Phase 13 remains
+`NOT STARTED / BLOCKED BY CLEANUP GATE`.

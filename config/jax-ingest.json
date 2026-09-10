@@ -24,10 +24,5 @@
     "api_key": "",
     "api_secret": "",
     "tier": "free"
-  },
-  "cache": {
-    "enabled": true,
-    "redis_url": "localhost:6379",
-    "ttl": 300
   }
 }

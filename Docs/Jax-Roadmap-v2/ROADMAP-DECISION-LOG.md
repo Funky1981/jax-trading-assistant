@@ -1239,3 +1239,32 @@ The HYP-EVENT-001A parent/evidence datasets and sealed 2025 holdout were not
 modified. Safety remains `ALLOW_LIVE_TRADING=false`,
 `BROKER_EXECUTION_ALLOWED=false`, live worker disabled and maximum leverage 1x.
 CR-02E is NOT STARTED and Phase 13 remains NOT STARTED / BLOCKED BY CLEANUP GATE.
+
+## RD-2026-09-10-02 - CR-02E configuration and Compose consolidation
+
+- Date: 2026-09-10
+- Work package: Commercial-readiness CR-02E
+- Status: Implementation complete; external review required
+- Decision authority: previously granted CR-02E implementation authorization;
+  no external GO self-awarded
+
+The supported configuration model now has one root `.env`/Compose ownership
+boundary, with direct process readers using the same canonical names. Trader
+and research runtime selectors are explicitly mapped to process-owned
+`JAX_RUNTIME_MODE`; live/broker execution remains false, the worker remains
+disabled and maximum leverage remains 1x. World Monitor remains a separate
+user-owned component behind the `world-monitor` profile, and Prometheus/Grafana
+are behind the `observability` profile. Core Jax no longer depends on the
+World Monitor sibling checkout.
+
+The conflicting standalone Postgres Compose stack was removed and Makefile,
+README and migration instructions now target root Compose. Stale Redis,
+knowledge-database, frontend alias, removed-vendor and old scrape configuration
+was removed from active examples and wiring. Historical and reproducibility
+artifacts remain preserved. Supported Compose profile combinations validate.
+
+CR-02A = GO, CR-02B = GO, CR-02C = GO, CR-02D = GO, CR-02E = IMPLEMENTATION
+COMPLETE / EXTERNAL REVIEW REQUIRED. CR-02F and CR-02G are NOT STARTED. Phase
+13 remains NOT STARTED / BLOCKED BY CLEANUP GATE. Scientific status remains
+TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE; actual forward-paper
+evidence remains 0 DAYS / 0 ORDERS.

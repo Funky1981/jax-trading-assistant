@@ -9,6 +9,12 @@ Invoke-RestMethod http://localhost:8081/health   # jax-trader frontend API
 Invoke-RestMethod http://localhost:8100/health   # jax-trader runtime
 Invoke-RestMethod http://localhost:8091/health   # jax-research
 Invoke-RestMethod http://localhost:8092/health   # ib-bridge
+
+# Optional observability dashboards:
+docker compose --profile observability up -d prometheus grafana
+
+# Optional separate World Monitor integration (requires its sibling checkout):
+docker compose --profile world-monitor up -d worldmonitor-postgres worldmonitor-events
 ```
 
 ## Runtime Mode Guard
