@@ -18,12 +18,14 @@ import (
 // registerChatRoutes wires the assistant chat endpoints.
 // The assistant is advisory only and cannot execute or approve trades.
 func registerChatRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool) {
-	// NewOpenAIChatClientFromEnv returns a typed nil (*OpenAIChatClient) when no
-	// API key is configured. Assigning a typed nil directly to an interface gives
-	// a non-nil interface value, which causes a nil-pointer panic inside Complete.
-	// Explicitly convert to the interface type so the nil check in Service works.
+	// NewChatClientFromEnv returns nil when deterministic/offline mode is
+	// selected. Assigning a typed nil directly to an interface gives a non-nil
+	// interface value, so the constructor returns the interface directly.
+	//
+	// The chat model is advisory only and remains behind the shared Jax-owned
+	// inference transport.
 	var llm chatmod.LLMClient
-	if c := chatmod.NewOpenAIChatClientFromEnv(); c != nil {
+	if c := chatmod.NewChatClientFromEnv(); c != nil {
 		var logger llmcontext.UsageLogger
 		if pool != nil {
 			logger = llmcontext.NewPGXUsageLogger(pgxPoolExec{pool: pool})

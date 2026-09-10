@@ -7,7 +7,7 @@ type RoutingConfig struct {
 }
 
 func DefaultRoutingConfig() RoutingConfig {
-	local := ModelRoute{ModelAlias: "local-small", Provider: "litellm", ProviderModel: "ollama/local-small", Enabled: true}
+	local := ModelRoute{ModelAlias: "local-small", Provider: "jax-inference", ProviderModel: "local-small", Enabled: true}
 	return RoutingConfig{Routes: map[TaskType]ModelRoute{
 		TaskEventClassification:          local,
 		TaskETFMapping:                   local,

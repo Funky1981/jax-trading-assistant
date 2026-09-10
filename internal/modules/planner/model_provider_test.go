@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"jax-trading-assistant/internal/modules/inference"
 	"jax-trading-assistant/internal/modules/llmcontext"
 )
 
@@ -34,7 +35,7 @@ func newModelProvider(t *testing.T, response string) (*ModelProvider, *fakeModel
 		CachedTokens:  3,
 		ActualCostUSD: 0.0012,
 	}}
-	provider, err := NewModelProvider(client, "litellm", "local-small")
+	provider, err := NewModelProvider(client, "openai", "local-small")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,10 +53,10 @@ func TestModelProviderReturnsValidatedAdvisoryResultAndMetadata(t *testing.T) {
 	if result.Action != "HOLD" || result.Confidence != 0.7 {
 		t.Fatalf("unexpected result: %+v", result)
 	}
-	if result.Inference == nil || result.Inference.Provider != "litellm" || result.Inference.Model != "local-small" || result.Inference.CachedInputTokens != 3 {
+	if result.Inference == nil || result.Inference.Provider != "openai" || result.Inference.Model != "local-small" || result.Inference.CachedInputTokens != 3 {
 		t.Fatalf("missing truthful inference metadata: %+v", result.Inference)
 	}
-	if client.pkg.Provider != "litellm" || client.pkg.Model != "local-small" || client.pkg.ResponseSchema == "" {
+	if client.pkg.Provider != "openai" || client.pkg.Model != "local-small" || client.pkg.ResponseSchema == "" {
 		t.Fatalf("model transport was not configured with provider metadata/schema: %+v", client.pkg)
 	}
 	if client.pkg.DynamicContext == "" || client.pkg.CacheablePrefix == "" {
@@ -80,7 +81,7 @@ func TestModelProviderRejectsMalformedOrUnsafeResponses(t *testing.T) {
 
 func TestModelProviderFailsClosedOnTransportError(t *testing.T) {
 	client := &fakeModelClient{err: errors.New("provider unavailable")}
-	provider, err := NewModelProvider(client, "litellm", "local-small")
+	provider, err := NewModelProvider(client, "openai", "local-small")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,12 +103,12 @@ func TestModelProviderRejectsUnboundedRequestBeforeTransport(t *testing.T) {
 func TestModelProviderIdentity(t *testing.T) {
 	provider, _ := newModelProvider(t, validModelJSON)
 	identity := provider.Identity()
-	if identity.Provider != "litellm" || identity.Model != "local-small" {
+	if identity.Provider != "openai" || identity.Model != "local-small" {
 		t.Fatalf("unexpected identity: %+v", identity)
 	}
 }
 
-func TestModelProviderUsesExistingLiteLLMTransportWithoutTools(t *testing.T) {
+func TestModelProviderUsesJaxOwnedOpenAITransportWithoutTools(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/chat/completions" {
 			t.Fatalf("unexpected transport path: %s", r.URL.Path)
@@ -131,8 +132,15 @@ func TestModelProviderUsesExistingLiteLLMTransportWithoutTools(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := llmcontext.NewLiteLLMClient(llmcontext.LiteLLMConfig{BaseURL: server.URL, APIKey: "virtual-test-key"})
-	provider, err := NewModelProvider(client, "litellm", "local-small")
+	transport, err := inference.NewOpenAIClient(inference.Config{Provider: inference.ProviderOpenAI, BaseURL: server.URL, APIKey: "test-key", Model: "local-small"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := llmcontext.NewInferenceProvider(transport, "openai", "local-small")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := NewModelProvider(client, "openai", "local-small")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +148,7 @@ func TestModelProviderUsesExistingLiteLLMTransportWithoutTools(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Inference == nil || result.Inference.InputTokens != 12 || result.Inference.OutputTokens != 7 {
+	if result.Inference == nil || result.Inference.Provider != "openai" || result.Inference.InputTokens != 12 || result.Inference.OutputTokens != 7 {
 		t.Fatalf("transport usage was not retained: %+v", result.Inference)
 	}
 }

@@ -12,7 +12,7 @@ func TestPGXUsageLoggerRecordsPlannedAndActual(t *testing.T) {
 	err := logger.RecordPlanned(PromptPackage{
 		TaskType:              TaskApprovalSummary,
 		Model:                 "local-small",
-		Provider:              "litellm",
+		Provider:              "jax-inference",
 		EstimatedInputTokens:  10,
 		EstimatedOutputTokens: 4,
 		EstimatedCostUSD:      0.001,

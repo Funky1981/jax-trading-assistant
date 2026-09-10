@@ -1,17 +1,14 @@
 package chat
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"jax-trading-assistant/internal/modules/harness"
+	"jax-trading-assistant/internal/modules/inference"
 	"jax-trading-assistant/libs/chattools"
 )
 
@@ -55,143 +52,79 @@ type openAIToolCallResponse struct {
 	} `json:"function"`
 }
 
-// OpenAIChatClient calls any OpenAI-compatible chat completions endpoint.
-// Set OPENAI_API_KEY and optionally OPENAI_BASE_URL (default: api.openai.com).
-// Set OPENAI_MODEL to override the default model (default: gpt-4o-mini).
+// OpenAIChatClient is retained as the compatibility name for the chat
+// adapter. Its transport is the Jax-owned inference client and may be backed
+// by OpenAI or local Ollama according to explicit configuration.
 type OpenAIChatClient struct {
 	baseURL string
 	apiKey  string
 	model   string
-	http    *http.Client
+	client  inference.Client
 }
 
-// NewOpenAIChatClientFromEnv creates a client from environment variables.
-// Returns nil if OPENAI_API_KEY is not set.
+// NewOpenAIChatClientFromEnv creates an explicitly selected OpenAI chat
+// client. It returns nil unless JAX_MODEL_PROVIDER=openai and the existing
+// OpenAI configuration is valid. The name remains for source compatibility.
 func NewOpenAIChatClientFromEnv() *OpenAIChatClient {
-	gatewayKey := strings.TrimSpace(os.Getenv("AI_GATEWAY_API_KEY"))
-	gatewayBase := strings.TrimSpace(os.Getenv("AI_GATEWAY_BASE_URL"))
-	if gatewayKey != "" && gatewayBase != "" {
-		model := strings.TrimSpace(os.Getenv("AI_DEFAULT_MODEL"))
-		if model == "" {
-			model = strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
-		}
-		if model == "" {
-			model = "local-small"
-		}
-		return &OpenAIChatClient{
-			baseURL: strings.TrimRight(gatewayBase, "/"),
-			apiKey:  gatewayKey,
-			model:   model,
-			http:    &http.Client{Timeout: 30 * time.Second},
-		}
-	}
-
-	key := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
-	if key == "" || !envBool("AI_ALLOW_DIRECT_PROVIDER", false) {
+	config, err := inference.ConfigFromEnv(os.LookupEnv)
+	if err != nil || config.Provider != inference.ProviderOpenAI {
 		return nil
 	}
-	base := os.Getenv("OPENAI_BASE_URL")
-	if base == "" {
-		base = "https://api.openai.com"
+	client, err := inference.NewClient(config)
+	if err != nil {
+		return nil
 	}
-	model := os.Getenv("OPENAI_MODEL")
-	if model == "" {
-		model = "gpt-4o-mini"
-	}
-	return &OpenAIChatClient{
-		baseURL: base,
-		apiKey:  key,
-		model:   model,
-		http:    &http.Client{Timeout: 30 * time.Second},
-	}
+	return &OpenAIChatClient{baseURL: config.BaseURL, apiKey: config.APIKey, model: config.Model, client: client}
 }
 
-// Complete sends msgs to the chat completions endpoint and returns reply text plus any requested tool calls.
+// NewChatClientFromEnv selects the shared Jax model transport for chat. The
+// deterministic default returns nil so the chat service uses its safe local
+// advisory fallback rather than silently making a paid request.
+func NewChatClientFromEnv() LLMClient {
+	config, err := inference.ConfigFromEnv(os.LookupEnv)
+	if err != nil || config.Provider == inference.ProviderDeterministic {
+		return nil
+	}
+	client, err := inference.NewClient(config)
+	if err != nil {
+		return nil
+	}
+	return &OpenAIChatClient{baseURL: config.BaseURL, apiKey: config.APIKey, model: config.Model, client: client}
+}
+
+// Complete sends a bounded request through the shared Jax inference client
+// and returns advisory reply text plus tool calls for the separate Jax
+// harness to validate and execute under its own policy.
 func (c *OpenAIChatClient) Complete(ctx context.Context, msgs []LLMMessage) (string, []harness.ToolCall, error) {
-	if c == nil {
+	if c == nil || c.client == nil {
 		return "", nil, fmt.Errorf("llm client not configured")
 	}
-
-	type chatMsg struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}
-	type request struct {
-		Model       string                 `json:"model"`
-		Messages    []chatMsg              `json:"messages"`
-		Tools       []openAIToolDefinition `json:"tools,omitempty"`
-		ToolChoice  string                 `json:"tool_choice,omitempty"`
-		MaxTokens   int                    `json:"max_tokens"`
-		Temperature float64                `json:"temperature"`
-	}
-	type choice struct {
-		Message struct {
-			Content   json.RawMessage          `json:"content"`
-			ToolCalls []openAIToolCallResponse `json:"tool_calls"`
-		} `json:"message"`
-	}
-	type response struct {
-		Choices []choice `json:"choices"`
-		Error   *struct {
-			Message string `json:"message"`
-		} `json:"error,omitempty"`
-	}
-
-	chatMsgs := make([]chatMsg, 0, len(msgs))
+	chatMsgs := make([]inference.Message, 0, len(msgs))
 	for _, m := range msgs {
-		chatMsgs = append(chatMsgs, chatMsg(m))
+		chatMsgs = append(chatMsgs, inference.Message{Role: m.Role, Content: m.Content})
 	}
-
-	body, err := json.Marshal(request{
-		Model:       c.model,
-		Messages:    chatMsgs,
-		Tools:       openAIToolDefs(),
-		ToolChoice:  "auto",
-		MaxTokens:   800,
-		Temperature: 0.3,
-	})
+	defs := openAIToolDefs()
+	tools := make([]inference.ToolDefinition, 0, len(defs))
+	for _, def := range defs {
+		properties := make(map[string]any, len(def.Function.Parameters.Properties))
+		for key, field := range def.Function.Parameters.Properties {
+			properties[key] = map[string]any{"type": field.Type}
+		}
+		params := map[string]any{"type": def.Function.Parameters.Type, "properties": properties}
+		if len(def.Function.Parameters.Required) > 0 {
+			params["required"] = def.Function.Parameters.Required
+		}
+		tools = append(tools, inference.ToolDefinition{Name: def.Function.Name, Description: def.Function.Description, Parameters: params})
+	}
+	response, err := c.client.Complete(ctx, inference.Request{Model: c.model, Messages: chatMsgs, Tools: tools, ToolChoice: "auto", MaxTokens: 800, Temperature: 0.3})
 	if err != nil {
-		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: marshal: %w", err)
+		return "", nil, fmt.Errorf("chat model provider: %w", err)
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/chat/completions", bytes.NewReader(body))
-	if err != nil {
-		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: new request: %w", err)
+	calls := make([]harness.ToolCall, 0, len(response.ToolCalls))
+	for _, call := range response.ToolCalls {
+		calls = append(calls, harness.ToolCall{Name: call.Name, Args: call.Arguments})
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: HTTP: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: read body: %w", err)
-	}
-
-	var result response
-	if err := json.Unmarshal(respBytes, &result); err != nil {
-		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: decode: %w", err)
-	}
-	if result.Error != nil {
-		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: API error: %s", result.Error.Message)
-	}
-	if len(result.Choices) == 0 {
-		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: empty choices")
-	}
-
-	content, err := decodeAssistantContent(result.Choices[0].Message.Content)
-	if err != nil {
-		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: decode content: %w", err)
-	}
-	toolCalls, err := decodeToolCalls(result.Choices[0].Message.ToolCalls)
-	if err != nil {
-		return "", nil, fmt.Errorf("OpenAIChatClient.Complete: decode tool calls: %w", err)
-	}
-	return content, toolCalls, nil
+	return response.Text, calls, nil
 }
 
 func openAIToolDefs() []openAIToolDefinition {

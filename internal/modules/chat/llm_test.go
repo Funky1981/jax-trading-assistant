@@ -59,48 +59,45 @@ func TestOpenAIToolDefsMatchesSharedCatalog(t *testing.T) {
 	}
 }
 
-func TestNewOpenAIChatClientFromEnvPrefersAIGateway(t *testing.T) {
-	t.Setenv("OPENAI_API_KEY", "")
-	t.Setenv("OPENAI_BASE_URL", "")
-	t.Setenv("OPENAI_MODEL", "")
-	t.Setenv("AI_GATEWAY_BASE_URL", "http://home-server:4000")
-	t.Setenv("AI_GATEWAY_API_KEY", "virtual-key")
-	t.Setenv("AI_DEFAULT_MODEL", "local-small")
+func TestNewOpenAIChatClientFromEnvRequiresExplicitJaxProviderSelection(t *testing.T) {
+	t.Setenv("JAX_MODEL_PROVIDER", "openai")
+	t.Setenv("JAX_MODEL_API_KEY", "test-key")
+	t.Setenv("JAX_MODEL_BASE_URL", "http://model.test")
+	t.Setenv("JAX_MODEL_MODEL", "local-small")
 
 	client := NewOpenAIChatClientFromEnv()
 	if client == nil {
-		t.Fatal("expected gateway-backed client")
+		t.Fatal("expected explicitly selected OpenAI client")
 	}
-	if client.baseURL != "http://home-server:4000" || client.apiKey != "virtual-key" || client.model != "local-small" {
+	if client.baseURL != "http://model.test" || client.apiKey != "test-key" || client.model != "local-small" {
 		t.Fatalf("unexpected client config: %#v", client)
 	}
 }
 
-func TestNewOpenAIChatClientFromEnvBlocksDirectProviderByDefault(t *testing.T) {
-	t.Setenv("AI_GATEWAY_BASE_URL", "")
-	t.Setenv("AI_GATEWAY_API_KEY", "")
-	t.Setenv("AI_ALLOW_DIRECT_PROVIDER", "")
+func TestNewOpenAIChatClientFromEnvDefaultsToOffline(t *testing.T) {
+	t.Setenv("JAX_MODEL_PROVIDER", "")
+	t.Setenv("JAX_MODEL_API_KEY", "")
 	t.Setenv("OPENAI_API_KEY", "direct-key")
 	t.Setenv("OPENAI_BASE_URL", "")
 
 	if client := NewOpenAIChatClientFromEnv(); client != nil {
-		t.Fatalf("expected direct provider to be blocked by default, got %#v", client)
+		t.Fatalf("expected offline default, got %#v", client)
 	}
 }
 
-func TestNewOpenAIChatClientFromEnvAllowsDirectProviderWhenExplicit(t *testing.T) {
-	t.Setenv("AI_GATEWAY_BASE_URL", "")
-	t.Setenv("AI_GATEWAY_API_KEY", "")
-	t.Setenv("AI_ALLOW_DIRECT_PROVIDER", "true")
-	t.Setenv("OPENAI_API_KEY", "direct-key")
-	t.Setenv("OPENAI_BASE_URL", "https://api.openai.com")
-	t.Setenv("OPENAI_MODEL", "gpt-test")
+func TestNewChatClientFromEnvSupportsOllama(t *testing.T) {
+	t.Setenv("JAX_MODEL_PROVIDER", "ollama")
+	t.Setenv("JAX_MODEL_BASE_URL", "http://ollama.test")
+	t.Setenv("JAX_MODEL_MODEL", "qwen-test")
 
-	client := NewOpenAIChatClientFromEnv()
-	if client == nil {
-		t.Fatal("expected explicitly allowed direct provider client")
+	client, ok := NewChatClientFromEnv().(*OpenAIChatClient)
+	if !ok {
+		t.Fatal("expected shared model chat client")
 	}
-	if client.baseURL != "https://api.openai.com" || client.model != "gpt-test" {
+	if client == nil {
+		t.Fatal("expected explicitly selected Ollama client")
+	}
+	if client.baseURL != "http://ollama.test" || client.model != "qwen-test" {
 		t.Fatalf("unexpected direct provider client config: %#v", client)
 	}
 }

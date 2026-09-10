@@ -154,12 +154,14 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
-      # Jax planner: deterministic by default; LiteLLM is explicit opt-in.
+      # Jax model transport: deterministic by default; networked providers
+      # require explicit provider selection and provider-specific config.
       JAX_PLANNER_PROVIDER: ${JAX_PLANNER_PROVIDER:-deterministic}
       JAX_PLANNER_MODEL: ${JAX_PLANNER_MODEL:-}
-      AI_GATEWAY_BASE_URL: ${AI_GATEWAY_BASE_URL:-}
-      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
-      AI_DEFAULT_MODEL: ${AI_DEFAULT_MODEL:-}
+      JAX_MODEL_PROVIDER: ${JAX_MODEL_PROVIDER:-deterministic}
+      JAX_MODEL_BASE_URL: ${JAX_MODEL_BASE_URL:-}
+      JAX_MODEL_MODEL: ${JAX_MODEL_MODEL:-}
+      JAX_MODEL_API_KEY: ${JAX_MODEL_API_KEY:-}
       PORT: "8091"
     ports:
       - "8091:8091"

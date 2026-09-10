@@ -7,4 +7,5 @@ commercial distribution.
 
 - `CR-01-ARCHITECTURE-VENDOR-AUDIT.md` — current architecture, provider,
   dependency, ownership and cleanup-plan audit.
-
+- `CR-02C-AI-PROVIDER-CONSOLIDATION.md` — Jax-owned inference boundary and
+  LiteLLM consolidation evidence.

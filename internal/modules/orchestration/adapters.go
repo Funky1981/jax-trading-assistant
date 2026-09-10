@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"jax-trading-assistant/internal/modules/inference"
 	"jax-trading-assistant/internal/modules/llmcontext"
 	"jax-trading-assistant/internal/modules/planner"
 	"jax-trading-assistant/libs/contracts"
@@ -75,10 +76,9 @@ func NewPlanner() (*planner.Service, error) {
 	return planner.NewService(planner.DeterministicProvider{})
 }
 
-// NewConfiguredPlanner selects the deterministic provider by default. The
-// model-backed route is explicit and reuses the existing Jax LiteLLM
-// transport; a failed model route never falls back silently to deterministic
-// output.
+// NewConfiguredPlanner selects the deterministic provider by default. A
+// networked provider is explicit and uses the Jax-owned inference transport;
+// a failed model route never falls back silently to deterministic output.
 func NewConfiguredPlanner(lookup func(string) (string, bool)) (*planner.Service, error) {
 	if lookup == nil {
 		lookup = os.LookupEnv
@@ -87,21 +87,26 @@ func NewConfiguredPlanner(lookup func(string) (string, bool)) (*planner.Service,
 	switch provider {
 	case "", "deterministic", "offline":
 		return NewPlanner()
-	case "litellm":
-		baseURL := strings.TrimSpace(lookupValue(lookup, "AI_GATEWAY_BASE_URL"))
-		apiKey := strings.TrimSpace(lookupValue(lookup, "AI_GATEWAY_API_KEY"))
-		if baseURL == "" || apiKey == "" {
-			return nil, fmt.Errorf("planner: litellm provider requires AI_GATEWAY_BASE_URL and AI_GATEWAY_API_KEY")
+	case "openai", "ollama":
+		config, err := inference.ConfigFromEnv(lookup)
+		if err != nil {
+			return nil, err
 		}
+		config.Provider = inference.Provider(provider)
 		model := strings.TrimSpace(lookupValue(lookup, "JAX_PLANNER_MODEL"))
 		if model == "" {
-			model = strings.TrimSpace(lookupValue(lookup, "AI_DEFAULT_MODEL"))
+			model = config.Model
 		}
-		if model == "" {
-			model = "local-small"
+		config.Model = model
+		client, err := inference.NewClient(config)
+		if err != nil {
+			return nil, fmt.Errorf("planner: configure %s provider: %w", provider, err)
 		}
-		client := llmcontext.NewLiteLLMClient(llmcontext.LiteLLMConfig{BaseURL: baseURL, APIKey: apiKey})
-		modelProvider, err := planner.NewModelProvider(client, "litellm", model)
+		contextProvider, err := llmcontext.NewInferenceProvider(client, provider, model)
+		if err != nil {
+			return nil, err
+		}
+		modelProvider, err := planner.NewModelProvider(contextProvider, provider, model)
 		if err != nil {
 			return nil, err
 		}

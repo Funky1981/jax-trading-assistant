@@ -1,5 +1,9 @@
 # Jax Commercial-Readiness CR-02B — Jax-Native Planner + Complete Agent0 Removal
 
+> Current-state note (CR-02C, 2026-09-10): the planner's former LiteLLM
+> transport was replaced by the shared Jax-owned inference boundary. The
+> LiteLLM-specific references below are retained as historical CR-02B evidence.
+
 Date: 2026-09-09
 Repository: `C:\Projects\Jax\jax-trading-assistant`
 Branch: `capability-reset`

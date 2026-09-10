@@ -63,7 +63,7 @@ func TestServiceRejectsInvalidConfidenceAndUnboundedSteps(t *testing.T) {
 
 func TestServiceRejectsInvalidInferenceMetadata(t *testing.T) {
 	result := validResult()
-	result.Inference = &InferenceMetadata{Provider: "litellm", Model: "local-small", InputTokens: -1}
+	result.Inference = &InferenceMetadata{Provider: "openai", Model: "local-small", InputTokens: -1}
 	service, err := NewService(fakeProvider{result: result})
 	if err != nil {
 		t.Fatal(err)

@@ -74,14 +74,14 @@ func TestPostgresPromptCacheWritesAuditableEntry(t *testing.T) {
 	pkg := PromptPackage{
 		TaskType:        TaskHistoricalSummary,
 		Model:           "local-small",
-		Provider:        "litellm",
+		Provider:        "jax-inference",
 		CacheablePrefix: "static",
 		DynamicContext:  "historical",
 		CorrelationID:   "corr-cache",
 	}
 
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO llm_prompt_cache")).
-		WithArgs(sqlmock.AnyArg(), TaskHistoricalSummary, "litellm", "local-small", "corr-cache", sqlmock.AnyArg(), "cached", 10, 2, sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(sqlmock.AnyArg(), TaskHistoricalSummary, "jax-inference", "local-small", "corr-cache", sqlmock.AnyArg(), "cached", 10, 2, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	if err := store.Put(context.Background(), pkg, LLMResult{Text: "cached", InputTokens: 10, OutputTokens: 2}, time.Hour); err != nil {

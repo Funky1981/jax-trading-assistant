@@ -24,18 +24,18 @@ func TestNewConfiguredPlannerDefaultsToDeterministic(t *testing.T) {
 	}
 }
 
-func TestNewConfiguredPlannerSelectsExistingLiteLLMTransport(t *testing.T) {
+func TestNewConfiguredPlannerSelectsJaxOwnedOpenAITransport(t *testing.T) {
 	service, err := NewConfiguredPlanner(lookupValues(map[string]string{
-		"JAX_PLANNER_PROVIDER": "litellm",
-		"AI_GATEWAY_BASE_URL":  "http://gateway.test",
-		"AI_GATEWAY_API_KEY":   "virtual-test-key",
-		"AI_DEFAULT_MODEL":     "local-small",
+		"JAX_PLANNER_PROVIDER": "openai",
+		"JAX_MODEL_BASE_URL":   "http://model.test",
+		"JAX_MODEL_API_KEY":    "test-key",
+		"JAX_PLANNER_MODEL":    "local-small",
 	}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	identity := service.Identity()
-	if identity.Provider != "litellm" || identity.Model != "local-small" {
+	if identity.Provider != "openai" || identity.Model != "local-small" {
 		t.Fatalf("unexpected configured identity: %+v", identity)
 	}
 }
@@ -47,7 +47,7 @@ func TestNewConfiguredPlannerRejectsUnknownProvider(t *testing.T) {
 }
 
 func TestNewConfiguredPlannerRejectsIncompleteModelConfiguration(t *testing.T) {
-	if _, err := NewConfiguredPlanner(lookupValues(map[string]string{"JAX_PLANNER_PROVIDER": "litellm"})); err == nil {
+	if _, err := NewConfiguredPlanner(lookupValues(map[string]string{"JAX_PLANNER_PROVIDER": "openai"})); err == nil {
 		t.Fatal("incomplete model configuration was accepted")
 	}
 }

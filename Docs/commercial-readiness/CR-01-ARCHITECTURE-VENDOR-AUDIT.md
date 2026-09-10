@@ -14,6 +14,11 @@ Scope: CR-01 audit and cleanup plan only. No major removals or runtime behaviour
 > Superseded current-state note (CR-02B, 2026-09-09): Agent0 was subsequently
 > removed from the supported runtime after the Jax-owned planner replacement;
 > see `Docs/commercial-readiness/CR-02B-AGENT0-REMOVAL.md`.
+>
+> Superseded current-state note (CR-02C, 2026-09-10): the optional LiteLLM
+> gateway and its Jax-specific client were removed after the shared Jax-owned
+> inference boundary was verified; see
+> `Docs/commercial-readiness/CR-02C-AI-PROVIDER-CONSOLIDATION.md`.
 
 ## Executive summary
 

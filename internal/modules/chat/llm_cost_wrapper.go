@@ -38,8 +38,8 @@ func NewCostManagedLLMClient(base LLMClient, config CostManagedConfig) LLMClient
 	provider := &chatProviderAdapter{base: base}
 	route := llmcontext.ModelRoute{
 		ModelAlias:     "local-small",
-		Provider:       "litellm",
-		ProviderModel:  "chat-gateway",
+		Provider:       "jax-inference",
+		ProviderModel:  "chat",
 		Enabled:        true,
 		InputUSDPer1K:  0.001,
 		OutputUSDPer1K: 0.001,

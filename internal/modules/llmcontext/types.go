@@ -84,6 +84,9 @@ type MemoryArtifact struct {
 
 type LLMResult struct {
 	CorrelationID string
+	RequestID     string
+	Provider      string
+	Model         string
 	Text          string
 	InputTokens   int
 	OutputTokens  int
