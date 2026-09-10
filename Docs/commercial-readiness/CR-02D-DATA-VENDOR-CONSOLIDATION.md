@@ -221,6 +221,13 @@ research-only compatibility adapter; it is not a supported default runtime
 provider. EIA and CFTC remain deferred and were not implemented. CR-02E is the
 next cleanup/review package and was not started.
 
+Migration `000010_event_data_foundation` remains unchanged because it is part
+of the immutable migration history and may be referenced by persisted events.
+Forward migration `000068_retire_redundant_event_source` marks its historical
+`finnhub` source row disabled and retired without deleting it. The migration
+registry remains unique and ordered, and historical provider parsing remains
+available only for compatibility/replay rather than active acquisition.
+
 Current roadmap state:
 
 - CR-02A = GO.
@@ -229,4 +236,3 @@ Current roadmap state:
 - CR-02D = IMPLEMENTATION COMPLETE — EXTERNAL REVIEW REQUIRED.
 - CR-02E = NOT STARTED.
 - Phase 13 = NOT STARTED / BLOCKED BY CLEANUP GATE.
-
