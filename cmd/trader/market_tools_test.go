@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	providercontract "jax-trading-assistant/libs/contracts/provider"
+	"jax-trading-assistant/libs/marketdata"
 )
 
 type marketToolsRawPayloadStoreProbe struct{}
@@ -33,6 +34,27 @@ func TestNewMarketToolsPrefersIBBridgeForFrontendMarketData(t *testing.T) {
 	}
 	if providers[0] != "ib-bridge" {
 		t.Fatalf("expected ib-bridge first, got %q", providers[0])
+	}
+	if providers[1] != "alpaca" || providers[2] != "polygon" {
+		t.Fatalf("unexpected active market provider chain: %v", providers)
+	}
+}
+
+func TestMarketDataProviderConfigsExcludeRetiredVendorPaths(t *testing.T) {
+	t.Setenv("ALPACA_API_KEY", "alpaca-key")
+	t.Setenv("ALPACA_API_SECRET", "alpaca-secret")
+	t.Setenv("POLYGON_API_KEY", "polygon-key")
+	t.Setenv("MASSIVE_API_KEY", "massive-key")
+	t.Setenv("FINANCIAL_DATASETS_API_KEY", "financial-datasets-key")
+
+	providers := marketDataProviderConfigs("")
+	if len(providers) != 2 {
+		t.Fatalf("expected only Alpaca and canonical Polygon providers, got %d: %v", len(providers), providers)
+	}
+	for _, provider := range providers {
+		if provider.Name != marketdata.ProviderAlpaca && provider.Name != marketdata.ProviderPolygon {
+			t.Fatalf("retired provider entered active trader chain: %q", provider.Name)
+		}
 	}
 }
 
