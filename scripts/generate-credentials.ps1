@@ -20,7 +20,7 @@ function Generate-SecurePassword {
 }
 
 # Script configuration
-$EnvFile = Join-Path $PSScriptRoot "..\..env"
+$EnvFile = Join-Path $PSScriptRoot "..\.env"
 $EnvExampleFile = Join-Path $PSScriptRoot "..\.env.example"
 
 Write-Host "================================================" -ForegroundColor Cyan
@@ -43,7 +43,6 @@ if (Test-Path $EnvFile) {
 Write-Host "Generating cryptographically secure credentials..." -ForegroundColor Green
 
 $PostgresPassword = Generate-SecurePassword -Length 32
-$RedisPassword = Generate-SecurePassword -Length 32
 $JwtSecret = Generate-SecurePassword -Length 64
 
 # Create .env file content
@@ -57,11 +56,6 @@ POSTGRES_USER=jax
 POSTGRES_PASSWORD=$PostgresPassword
 POSTGRES_DB=jax
 DATABASE_URL=postgresql://jax:$PostgresPassword@postgres:5432/jax
-KNOWLEDGE_DATABASE_URL=postgresql://jax:$PostgresPassword@postgres:5432/jax_knowledge
-
-# Redis Configuration (optional - for future use)
-REDIS_PASSWORD=$RedisPassword
-REDIS_URL=redis://:$RedisPassword@redis:6379/0
 
 # JWT Authentication
 JWT_SECRET=$JwtSecret
@@ -79,14 +73,6 @@ CORS_ALLOW_CREDENTIALS=true
 RATE_LIMIT_REQUESTS_PER_MINUTE=100
 RATE_LIMIT_REQUESTS_PER_HOUR=1000
 RATE_LIMIT_ENABLED=true
-
-# API Configuration
-API_PORT=8081
-API_HOST=0.0.0.0
-
-# Default Admin Credentials (change after first login!)
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD_HASH=
 
 # Application Environment
 ENVIRONMENT=development
@@ -118,10 +104,6 @@ Write-Host ""
 Write-Host "JWT Secret:" -ForegroundColor Yellow
 Write-Host "  Secret: $($JwtSecret.Substring(0, 16))..." -ForegroundColor Gray
 Write-Host ""
-Write-Host "Redis Password:" -ForegroundColor Yellow
-Write-Host "  Password: $($RedisPassword.Substring(0, 8))..." -ForegroundColor Gray
-Write-Host ""
-
 # Display security instructions
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host "  Security Instructions" -ForegroundColor Cyan
