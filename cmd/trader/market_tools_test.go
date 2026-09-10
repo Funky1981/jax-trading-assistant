@@ -44,8 +44,6 @@ func TestMarketDataProviderConfigsExcludeRetiredVendorPaths(t *testing.T) {
 	t.Setenv("ALPACA_API_KEY", "alpaca-key")
 	t.Setenv("ALPACA_API_SECRET", "alpaca-secret")
 	t.Setenv("POLYGON_API_KEY", "polygon-key")
-	t.Setenv("MASSIVE_API_KEY", "massive-key")
-	t.Setenv("FINANCIAL_DATASETS_API_KEY", "financial-datasets-key")
 
 	providers := marketDataProviderConfigs("")
 	if len(providers) != 2 {
