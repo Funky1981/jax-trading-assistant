@@ -31,6 +31,20 @@ func TestConfigFromEnvRejectsUnknownProvider(t *testing.T) {
 	}
 }
 
+func TestConfigFromEnvDoesNotCrossProviderModelNames(t *testing.T) {
+	values := map[string]string{"JAX_MODEL_PROVIDER": "ollama", "OPENAI_MODEL": "hosted-model"}
+	cfg, err := ConfigFromEnv(func(key string) (string, bool) {
+		value, ok := values[key]
+		return value, ok
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Model != "qwen2.5:7b" {
+		t.Fatalf("OpenAI model leaked into Ollama config: %+v", cfg)
+	}
+}
+
 func TestOpenAIClientUsesJaxOwnedTransportAndRetainsUsage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/chat/completions" || r.Header.Get("Authorization") != "Bearer test-key" {

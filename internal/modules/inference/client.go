@@ -98,9 +98,6 @@ func ConfigFromEnv(lookup func(string) (string, bool)) (Config, error) {
 		provider = ProviderDeterministic
 	}
 	model := strings.TrimSpace(value(lookup, "JAX_MODEL_MODEL"))
-	if model == "" {
-		model = strings.TrimSpace(value(lookup, "OPENAI_MODEL"))
-	}
 	baseURL := strings.TrimSpace(value(lookup, "JAX_MODEL_BASE_URL"))
 	apiKey := strings.TrimSpace(value(lookup, "JAX_MODEL_API_KEY"))
 	switch provider {
@@ -109,6 +106,9 @@ func ConfigFromEnv(lookup func(string) (string, bool)) (Config, error) {
 			model = "local-small"
 		}
 	case ProviderOpenAI:
+		if model == "" {
+			model = strings.TrimSpace(value(lookup, "OPENAI_MODEL"))
+		}
 		if baseURL == "" {
 			baseURL = strings.TrimSpace(value(lookup, "OPENAI_BASE_URL"))
 		}
