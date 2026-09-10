@@ -108,9 +108,10 @@ without relying on model memory.
 | WP-03.05 — Treasury / EIA / CBOE / CFTC source evaluation and first approved integrations | **COMPLETE / GO** | `Docs/evidence/WP-03.05-TREASURY-EIA-CBOE-CFTC-SOURCE-EVALUATION.md` |
 | WP-03.06 — Evidence-quality / cross-source checks | **COMPLETE / GO** | `Docs/evidence/WP-03.06-EVIDENCE-QUALITY-CROSS-SOURCE-CHECKS.md` |
 
-The paid Financial Datasets option remains accepted but is not required for
-Phase-03 development acceptance. Its configured external credential returned
-HTTP 401, so the bounded closure uses explicit Alpaca Basic SIP evidence as a
+The Financial Datasets implementation remains available only as an explicit
+research-compatibility adapter; it is not part of supported trader-runtime
+acquisition and is not loaded by the current Compose/runtime configuration.
+The bounded Phase-03 closure uses explicit Alpaca Basic SIP evidence as a
 zero-cost development source. Alpaca is not thereby approved for production or
 serious backtesting; feed completeness, corporate-action handling and licensing
 remain future source-qualification questions. See
