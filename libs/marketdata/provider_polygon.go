@@ -26,9 +26,6 @@ type PolygonProvider struct {
 func NewPolygonProvider(config ProviderConfig) (*PolygonProvider, error) {
 	client := polygon.New(config.APIKey)
 	baseURL := strings.TrimSpace(os.Getenv("POLYGON_BASE_URL"))
-	if baseURL == "" {
-		baseURL = strings.TrimSpace(os.Getenv("MASSIVE_BASE_URL"))
-	}
 	if baseURL != "" {
 		client.Client.HTTP.SetBaseURL(strings.TrimRight(baseURL, "/"))
 	}

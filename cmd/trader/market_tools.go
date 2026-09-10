@@ -89,9 +89,6 @@ func marketDataProviderConfigs(ibBridgeURL string) []marketdata.ProviderConfig {
 		})
 	}
 	polygonKey := strings.TrimSpace(os.Getenv("POLYGON_API_KEY"))
-	if polygonKey == "" {
-		polygonKey = strings.TrimSpace(os.Getenv("MASSIVE_API_KEY"))
-	}
 	if polygonKey != "" &&
 		!strings.EqualFold(strings.TrimSpace(os.Getenv("POLYGON_ENABLED")), "false") {
 		providers = append(providers, marketdata.ProviderConfig{
@@ -428,19 +425,12 @@ func newEventAggregator(httpClient *http.Client, pool *pgxpool.Pool) *eventAggre
 	storeDir := envStr("CALENDAR_STORE_DIR", "data/calendar")
 	store, _ := calendar.OpenStore(storeDir)
 	polygonKey := strings.TrimSpace(os.Getenv("POLYGON_API_KEY"))
-	massiveKey := strings.TrimSpace(os.Getenv("MASSIVE_API_KEY"))
-	if polygonKey == "" {
-		polygonKey = massiveKey
-	}
 	polygonBase := strings.TrimSpace(os.Getenv("POLYGON_BASE_URL"))
-	if polygonBase == "" {
-		polygonBase = strings.TrimSpace(os.Getenv("MASSIVE_BASE_URL"))
-	}
 	if polygonBase == "" {
 		polygonBase = "https://api.polygon.io"
 	}
 	polygonAuthMode := strings.ToLower(strings.TrimSpace(os.Getenv("POLYGON_AUTH_MODE")))
-	polygonBearer := polygonAuthMode == "bearer" || massiveKey != "" || strings.Contains(polygonBase, "massive.com")
+	polygonBearer := polygonAuthMode == "bearer"
 	return &eventAggregator{
 		httpClient:    httpClient,
 		polygonKey:    polygonKey,

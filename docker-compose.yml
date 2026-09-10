@@ -104,8 +104,6 @@ services:
       POLYGON_API_KEY: ${POLYGON_API_KEY:-}
       POLYGON_BASE_URL: ${POLYGON_BASE_URL:-}
       POLYGON_AUTH_MODE: ${POLYGON_AUTH_MODE:-}
-      MASSIVE_API_KEY: ${MASSIVE_API_KEY:-}
-      MASSIVE_BASE_URL: ${MASSIVE_BASE_URL:-}
       # Jax Assistant LLM (optional — falls back to advisory replies if not set)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
