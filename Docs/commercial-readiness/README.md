@@ -9,3 +9,5 @@ commercial distribution.
   dependency, ownership and cleanup-plan audit.
 - `CR-02C-AI-PROVIDER-CONSOLIDATION.md` — Jax-owned inference boundary and
   LiteLLM consolidation evidence.
+- `CR-02D-DATA-VENDOR-CONSOLIDATION.md` — market, news and data vendor
+  inventory, dependency proof and scoped consolidation evidence.

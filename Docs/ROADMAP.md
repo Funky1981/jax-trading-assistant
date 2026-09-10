@@ -354,10 +354,12 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is **Commercial-Readiness Cleanup CR-01 — IN PROGRESS**
-after external `GO PHASE 12`. Phase 12 is complete/GO at its roadmap capability
-gate, but HYP-EVENT-001A remains `NOT VALIDATED`; this is not a trading-edge or
-profitability claim. Phase 10 and Phase 11 are complete/GO, with actual
-forward-paper evidence of 0 days / 0 orders. The CR-01 audit is documentation
-only; CR-02 removals have not started. Phase 13 remains
-`NOT STARTED / BLOCKED BY CLEANUP GATE`.
+The current position is Commercial-Readiness Cleanup CR-02D — implementation
+complete and external review required, after external GO decisions for
+Phase 12, CR-01, CR-02A, CR-02B and CR-02C. CR-02D removed duplicate/dead
+market/news runtime fallbacks while retaining the justified Alpaca, Polygon,
+IB, official macro/evidence and separate World Monitor boundaries. HYP-EVENT-001A
+evidence and the sealed 2025 holdout remain unchanged. This is not a
+trading-edge or profitability claim. Phase 10 and Phase 11 remain complete/GO,
+with actual forward-paper evidence of 0 days / 0 orders. CR-02E is not started
+and Phase 13 remains `NOT STARTED / BLOCKED BY CLEANUP GATE`.

@@ -1209,3 +1209,33 @@ decision is required before any paid call.
 
 Scientific status remains **TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
 SAMPLE**. Phase 13 remains NOT STARTED.
+
+## RD-2026-09-10-01 - CR-02D data vendor consolidation
+
+- Date: 2026-09-10
+- Work package: Commercial-readiness CR-02D
+- Status: Implementation complete; external review required
+- Decision authority: previously granted CR-02D implementation authorization;
+  no external GO self-awarded
+
+### Decision record
+
+The active data-vendor estate was traced before removal. Interactive Brokers
+remains isolated for the broker/account and market-data bridge; Alpaca remains
+the accepted HYP-EVENT-001A historical daily/benchmark source; Polygon remains
+the canonical optional current market/earnings/news adapter; SEC, FRED/ALFRED,
+BLS, Treasury and CBOE remain retained official evidence sources; World Monitor
+remains a separate user-owned component; and Telegram remains optional operator
+notification infrastructure.
+
+Finnhub and NewsAPI were duplicate fallback paths behind Polygon and were
+removed from active runtime, Compose, readiness and example configuration.
+Financial Datasets was removed from default trader/backfill wiring but its
+hardened research-only adapter was retained for explicit compatibility. Massive
+was proven to be an alias path to the Polygon adapter; its active environment
+aliases were removed so the active identity is unambiguously `polygon`.
+
+The HYP-EVENT-001A parent/evidence datasets and sealed 2025 holdout were not
+modified. Safety remains `ALLOW_LIVE_TRADING=false`,
+`BROKER_EXECUTION_ALLOWED=false`, live worker disabled and maximum leverage 1x.
+CR-02E is NOT STARTED and Phase 13 remains NOT STARTED / BLOCKED BY CLEANUP GATE.
