@@ -1,22 +1,24 @@
 ﻿# Database Setup and Operations
 
-This directory contains the Postgres database configuration, schema migrations, and operational scripts for Jax Trading Assistant.
+This directory contains the Postgres schema migrations and operational notes for
+Jax Trading Assistant. The supported Postgres service is owned by the root
+`docker-compose.yml`; the former standalone database Compose file was retired
+because it used a conflicting database, credential and port contract.
 
 ## Quick Start
 
 ### 1. Start Postgres
 
 ```powershell
-cd db/postgres
-docker-compose up -d
+docker compose up -d postgres
 
 ```
 
-This starts Postgres 16 with:
-- Database: `jaxdb`
-- User: `jaxuser`
-- Password: `jaxpass`
-- Port: `5432`
+This starts the root development Postgres service with:
+- Database: `jax`
+- User: `jax`
+- Password: the value configured by `POSTGRES_PASSWORD` (development default: `jax`)
+- Host port: `5433`
 - Persistent volume for data
 
 ### 2. Run Migrations
@@ -37,7 +39,7 @@ This applies all pending migrations from `db/postgres/migrations/`.
 
 # Connect to database
 
-docker exec -it jax-postgres psql -U jaxuser -d jaxdb
+docker compose exec postgres psql -U jax -d jax
 
 # List tables
 
@@ -148,7 +150,7 @@ Performance-optimized indexes for common query patterns:
 ### Environment Variable
 
 ```powershell
-$env:DATABASE_URL = "postgres://jaxuser:jaxpass@localhost:5432/jaxdb?sslmode=disable"
+$env:DATABASE_URL = "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"
 
 ```
 
@@ -160,7 +162,7 @@ Use the `libs/database` package for production-ready connection management:
 import "jax-trading-assistant/libs/database"
 
 config := database.DefaultConfig()
-config.DSN = "postgres://jaxuser:jaxpass@localhost:5432/jaxdb?sslmode=disable"
+config.DSN = "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"
 
 db, err := database.ConnectWithMigrations(ctx, config, "file://db/postgres/migrations")
 
@@ -181,11 +183,11 @@ Default pool settings:
 
 # Backup to file
 
-docker exec jax-postgres pg_dump -U jaxuser -d jaxdb -F c -f /tmp/jaxdb_backup.dump
+docker compose exec postgres pg_dump -U jax -d jax -F c -f /tmp/jax_backup.dump
 
 # Copy backup out of container
 
-docker cp jax-postgres:/tmp/jaxdb_backup.dump ./backups/jaxdb_$(Get-Date -Format 'yyyyMMdd_HHmmss').dump
+docker compose cp postgres:/tmp/jax_backup.dump ./backups/jax_$(Get-Date -Format 'yyyyMMdd_HHmmss').dump
 
 ```
 
@@ -195,11 +197,11 @@ docker cp jax-postgres:/tmp/jaxdb_backup.dump ./backups/jaxdb_$(Get-Date -Format
 
 # Copy backup into container
 
-docker cp ./backups/jaxdb_backup.dump jax-postgres:/tmp/restore.dump
+docker compose cp ./backups/jax_backup.dump postgres:/tmp/restore.dump
 
 # Restore from file
 
-docker exec jax-postgres pg_restore -U jaxuser -d jaxdb -c /tmp/restore.dump
+docker compose exec postgres pg_restore -U jax -d jax -c /tmp/restore.dump
 
 ```
 
@@ -211,15 +213,15 @@ docker exec jax-postgres pg_restore -U jaxuser -d jaxdb -c /tmp/restore.dump
 
 # Check if Postgres is running
 
-docker ps | Select-String jax-postgres
+docker compose ps postgres
 
 # Check logs
 
-docker logs jax-postgres
+docker compose logs postgres
 
 # Restart container
 
-docker-compose restart postgres
+docker compose restart postgres
 
 ```
 
@@ -249,11 +251,11 @@ If migrations fail mid-way, the migration version may be marked "dirty":
 
 # Stop and remove container + volume
 
-docker-compose down -v
+docker compose down -v
 
 # Start fresh
 
-docker-compose up -d
+docker compose up -d postgres
 
 # Re-run migrations
 

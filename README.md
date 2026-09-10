@@ -66,5 +66,5 @@ Postgres schema: `db/postgres/schema.sql`.
 
 Quick local Postgres:
 
-- `docker compose -f db/postgres/docker-compose.yml up -d`
-- Apply schema from `db/postgres/schema.sql`
+- `docker compose up -d postgres`
+- Apply migrations with `docker compose up db-migrate` or `./scripts/migrate.ps1 up`

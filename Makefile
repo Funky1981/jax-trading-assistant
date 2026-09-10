@@ -27,10 +27,10 @@ fmt:
 	gofmt -w .
 
 up:
-	docker compose -f db/postgres/docker-compose.yml up -d
+	docker compose up -d postgres
 
 down:
-	docker compose -f db/postgres/docker-compose.yml down
+	docker compose stop postgres
 
 # Knowledge Base targets
 knowledge-up:

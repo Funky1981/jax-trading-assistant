@@ -55,8 +55,8 @@ param(
 $MigrationsPath = "db/postgres/migrations"
 $DatabaseURL = $env:DATABASE_URL
 if (-not $DatabaseURL) {
-    $DatabaseURL = "postgres://jaxuser:jaxpass@localhost:5432/jaxdb?sslmode=disable"
-    Write-Host "Using default DATABASE_URL: $DatabaseURL" -ForegroundColor Yellow
+    $DatabaseURL = "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"
+    Write-Host "Using the development DATABASE_URL default for root Compose Postgres (localhost:5433)." -ForegroundColor Yellow
 }
 
 # Check if migrate CLI is installed
