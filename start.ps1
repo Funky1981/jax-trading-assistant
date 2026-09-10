@@ -5,7 +5,8 @@ param(
     [switch]$Build,
     [ValidateSet("none", "quick", "full")]
     [string]$TestMode = "none",
-    [switch]$NoBrowser
+    [switch]$NoBrowser,
+    [switch]$Observability
 )
 
 $ErrorActionPreference = "Continue"
@@ -197,7 +198,11 @@ if ($LASTEXITCODE -ne 0) {
 
 # Start other services
 Write-Host "  Starting core services..." -ForegroundColor Gray
-docker compose up -d --no-build jax-trader jax-research ib-bridge prometheus grafana 2>$null
+docker compose up -d --no-build jax-trader jax-research ib-bridge 2>$null
+if ($Observability.IsPresent) {
+    Write-Host "  Starting optional observability services..." -ForegroundColor Gray
+    docker compose --profile observability up -d --no-build prometheus grafana 2>$null
+}
 
 # Wait for services to be ready
 Write-Host "`nWaiting for services to be ready..." -ForegroundColor Yellow

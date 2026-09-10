@@ -33,7 +33,7 @@ services:
       context: .
       dockerfile: cmd/db-migrate/Dockerfile
     environment:
-      DATABASE_URL: postgresql://jax:jax@postgres:5432/jax?sslmode=disable
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-jax}:${POSTGRES_PASSWORD:-jax}@postgres:5432/${POSTGRES_DB:-jax}?sslmode=disable}
       MIGRATIONS_DIR: /migrations
     volumes:
       - ./db/postgres/migrations:/migrations:ro
@@ -55,7 +55,7 @@ services:
         VERSION: "${VERSION:-0.1.0}"
         BUILD_TIME: "${BUILD_TIME:-unknown}"
     environment:
-      DATABASE_URL: postgresql://jax:jax@postgres:5432/jax
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-jax}:${POSTGRES_PASSWORD:-jax}@postgres:5432/${POSTGRES_DB:-jax}?sslmode=disable}
       JAX_RUNTIME_MODE: ${JAX_TRADER_RUNTIME_MODE:-paper}
       JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-false}
       ALLOW_LIVE_TRADING: ${ALLOW_LIVE_TRADING:-false}
@@ -88,8 +88,10 @@ services:
       CANDLE_BACKFILL: ${CANDLE_BACKFILL:-250}
       EXECUTION_ENABLED: ${EXECUTION_ENABLED:-false}
       EXECUTION_INSTRUCTION_WORKER_ENABLED: ${EXECUTION_INSTRUCTION_WORKER_ENABLED:-false}
-      WORLD_MONITOR_PULL_ENABLED: ${WORLD_MONITOR_PULL_ENABLED:-true}
-      WORLD_MONITOR_EVENTS_URL: ${WORLD_MONITOR_EVENTS_URL:-http://worldmonitor-events:8082/api/v1/jax/events}
+      # World Monitor is a separate optional component. Core Jax remains
+      # healthy and startable when its sibling checkout is absent.
+      WORLD_MONITOR_PULL_ENABLED: ${WORLD_MONITOR_PULL_ENABLED:-false}
+      WORLD_MONITOR_EVENTS_URL: ${WORLD_MONITOR_EVENTS_URL:-}
       WORLD_MONITOR_PULL_INTERVAL_SECONDS: ${WORLD_MONITOR_PULL_INTERVAL_SECONDS:-30}
       WORLD_MONITOR_PULL_TIMEOUT_SECONDS: ${WORLD_MONITOR_PULL_TIMEOUT_SECONDS:-10}
       WORLD_MONITOR_PULL_PAGE_SIZE: ${WORLD_MONITOR_PULL_PAGE_SIZE:-100}
@@ -121,8 +123,6 @@ services:
         condition: service_healthy
       ib-bridge:
         condition: service_started
-      worldmonitor-events:
-        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8100/ready || exit 1"]
       interval: 30s
@@ -141,7 +141,7 @@ services:
         VERSION: "${VERSION:-0.1.0}"
         BUILD_TIME: "${BUILD_TIME:-unknown}"
     environment:
-      DATABASE_URL: postgresql://jax:jax@postgres:5432/jax
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-jax}:${POSTGRES_PASSWORD:-jax}@postgres:5432/${POSTGRES_DB:-jax}?sslmode=disable}
       JAX_RUNTIME_MODE: ${JAX_RESEARCH_RUNTIME_MODE:-research}
       JAX_REQUIRE_EXPLICIT_RUNTIME_MODE: ${JAX_REQUIRE_EXPLICIT_RUNTIME_MODE:-false}
       MEMORY_SERVICE_URL: http://jax-research:8091/tools
@@ -215,6 +215,7 @@ services:
       retries: 5
 
   prometheus:
+    profiles: ["observability"]
     image: prom/prometheus:latest
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -225,6 +226,7 @@ services:
       - jax-research
 
   grafana:
+    profiles: ["observability"]
     image: grafana/grafana:latest
     ports:
       - "3001:3000"
@@ -234,12 +236,13 @@ services:
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
 
   worldmonitor-events:
+    profiles: ["world-monitor"]
     build:
       context: ../Jax-World-News-Monitor
       dockerfile: Dockerfile.jax-integration
     image: worldmonitor-jax-integration:latest
     environment:
-      WORLD_MONITOR_DATABASE_URL: postgresql://worldmonitor:worldmonitor@worldmonitor-postgres:5432/worldmonitor
+      WORLD_MONITOR_DATABASE_URL: ${WORLD_MONITOR_DATABASE_URL:-postgresql://worldmonitor:worldmonitor@worldmonitor-postgres:5432/worldmonitor}
       WORLD_MONITOR_INTEGRATION_PORT: "8082"
       WORLD_MONITOR_COLLECT_INTERVAL_MS: ${WORLD_MONITOR_COLLECT_INTERVAL_MS:-300000}
       WORLD_MONITOR_FEED_TIMEOUT_MS: ${WORLD_MONITOR_FEED_TIMEOUT_MS:-10000}
@@ -258,6 +261,7 @@ services:
       retries: 5
 
   worldmonitor-postgres:
+    profiles: ["world-monitor"]
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: worldmonitor
