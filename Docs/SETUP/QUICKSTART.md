@@ -3,8 +3,8 @@
 ## Prerequisites
 
 - Docker Desktop
-- Node.js 20+
-- Go 1.25.4 (optional for local Go runs; matches the supported workspace/CI
+- Node.js 22+
+- Go 1.26.8 (optional for local Go runs; matches the supported workspace/CI
   toolchain)
 
 ## Start Everything

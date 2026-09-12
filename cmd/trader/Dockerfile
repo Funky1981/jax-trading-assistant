@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.25.4-alpine@sha256:d3f0cf7723f3429e3f9ed846243970b20a2de7bae6a5b66fc5914e228d831bbb AS builder
+FROM golang:1.26.8-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates
@@ -33,10 +33,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     ./cmd/trader
 
 # Runtime stage
-FROM alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1
+FROM alpine:3.23@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates tzdata wget
+RUN apk add --no-cache ca-certificates tzdata
+RUN apk upgrade --no-cache
 
 # Create non-root user
 RUN addgroup -S jax && adduser -S jax -G jax
@@ -47,18 +48,9 @@ WORKDIR /app
 COPY --from=builder /trader /app/trader
 COPY config/ /app/config/
 
-# Include Go toolchain + module cache + source for in-container trust-gate tests.
-COPY --from=builder /usr/local/go /usr/local/go
-COPY --from=builder /go/pkg/mod /go/pkg/mod
-COPY go.mod go.sum go.work* /app/src/
-COPY libs/ /app/src/libs/
-COPY internal/ /app/src/internal/
-COPY tools/ /app/src/tools/
-COPY cmd/ /app/src/cmd/
-COPY tests/ /app/src/tests/
-
-ENV GOPATH=/go
-ENV PATH="/usr/local/go/bin:${PATH}"
+# The commercial runtime contains only the application and its configuration.
+# Trust-gate source execution remains a development/test concern and is
+# intentionally not bundled with the shipped trader image.
 
 # Change ownership
 RUN chown -R jax:jax /app

@@ -1,6 +1,6 @@
 module jax-trading-assistant
 
-go 1.25.0
+go 1.26.0
 
 replace jax-trading-assistant/libs/contracts => ./libs/contracts
 
@@ -29,8 +29,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/shopspring/decimal v1.3.1
-	golang.org/x/crypto v0.51.0
-	golang.org/x/net v0.55.0
+	golang.org/x/crypto v0.56.0
+	golang.org/x/net v0.57.0
 	jax-trading-assistant/libs/backtest v0.0.0
 	jax-trading-assistant/libs/contracts v0.0.0
 	jax-trading-assistant/libs/database v0.0.0
@@ -61,8 +61,8 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/polygon-io/client-go v1.16.4 // indirect
 	github.com/sony/gobreaker/v2 v2.0.0 // indirect
-	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/text v0.39.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 	jax-trading-assistant/libs/resilience v0.0.0 // indirect
 )

@@ -8,6 +8,13 @@ ENV PIP_DEFAULT_TIMEOUT=120 \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Keep the runtime image current and remove installer-only tooling from the
+# shipped bridge. The bridge does not install packages at runtime.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall -y pip setuptools wheel
+
 # Copy application code
 COPY . .
 
