@@ -301,11 +301,15 @@ The CR-02F exact pushed SHA proved the tracked clean-checkout Go/frontend CI
 path. In this CR-02G run, `npm ci`, lint, typecheck, 155 Vitest tests, build and
 44 E2E tests passed from the current tracked source without a pre-running
 developer server; 7 runtime-only cases were intentionally skipped by the
-existing fixture contract. Go test/vet passed from the current tree. A complete
+existing fixture contract. Go test/vet passed from the current working tree.
+A tracked-only Windows clone could not complete because one historical document
+path exceeds the host filename-length limit; a tar archive checkout also exposed
+platform line-ending sensitivity in frozen byte-hash tests. These are
+reproducibility findings, not reasons to weaken evidence hashes. A complete
 fresh Docker rebuild was attempted but Docker's Go module-download step stalled;
-therefore **CLEAN-CHECKOUT BUILD = CONDITIONAL**, pending a network-capable
-release environment. No ignored data, secret or sibling World Monitor checkout
-is required for core frontend/Go tests.
+therefore **CLEAN-CHECKOUT BUILD = CONDITIONAL**, pending a path-length-safe,
+network-capable release environment. Private ignored evidence is intentionally
+required by some historical forensic tests and is not a commercial build input.
 
 ## Safety verification
 
