@@ -16,5 +16,8 @@ commercial distribution.
   removal.
 - `CR-02F-DEPENDENCY-LICENCE-SBOM.md` — dependency inventory, vulnerability
   audit, reproducibility, SBOM generation and licence/notice review flags.
+- `CR-02G-FINAL-COMMERCIAL-READINESS-VALIDATION.md` — final architecture,
+  distribution boundary, security, licence/data-rights and reproducibility
+  validation. This remains an external-review record, not legal clearance.
 - `../../THIRD_PARTY_NOTICES.md` — machine-supported direct runtime notice
   inventory.

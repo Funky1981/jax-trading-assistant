@@ -1324,3 +1324,34 @@ explicit skip rather than treating absent private evidence as an application
 failure. No runtime SBOM scope, research artifact, provider, or safety
 boundary changed. CR-02G remains `NOT STARTED`; Phase 13 remains
 `NOT STARTED / BLOCKED BY CLEANUP GATE`.
+
+## RD-2026-09-12-05 - CR-02G final commercial-readiness validation
+
+- Date: 2026-09-12
+- Work package: Commercial-readiness CR-02G final architecture, distribution
+  and commercial-readiness validation
+- Status: Implementation complete; external review required
+- CR-02A through CR-02F: `GO`
+- CR-02G: `IMPLEMENTATION COMPLETE — EXTERNAL REVIEW REQUIRED`
+- CR-02F exact-SHA CI evidence remains the last remote CI proof; no CR-02G push
+  was performed.
+- Phase 13: `NOT STARTED / BLOCKED BY CLEANUP GATE`
+
+The final post-cleanup architecture was reconstructed from the current tree.
+Core Jax remains independent of the World Monitor sibling checkout and optional
+observability. Active legacy vendor/gateway seams remain absent; archives and
+historical evidence are preserved. The commercial distribution boundary
+excludes private scientific datasets, archives, optional observability and the
+separate World Monitor component. Deterministic/offline AI remains the safe
+default, live/broker execution remains disabled, and no scientific result or
+2025 holdout was changed.
+
+CR-02G local validation passed Go tests/vet, frontend install/lint/typecheck/
+tests/build/E2E, Compose configuration, the Docker-based race check, secret
+scan and CycloneDX generation. Runtime frontend audit remains 0 high/critical;
+container scans show unresolved findings requiring release disposition, while
+the root application licence, `gofinance/ib` LGPL/static-linking interpretation,
+provider data/API terms, production secret-manager selection and development
+frontend advisories remain explicit owner/legal/deployment decisions. The
+cleanup/architecture gate is conditional and the commercial-release gate is
+blocked. No CR-02G remote CI result exists because push is not authorized.

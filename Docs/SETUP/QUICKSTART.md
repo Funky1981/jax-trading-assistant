@@ -4,7 +4,8 @@
 
 - Docker Desktop
 - Node.js 20+
-- Go 1.22+ (optional for local Go runs)
+- Go 1.25.4 (optional for local Go runs; matches the supported workspace/CI
+  toolchain)
 
 ## Start Everything
 

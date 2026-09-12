@@ -354,13 +354,12 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is Commercial-Readiness Cleanup CR-02F — implementation
+The current position is Commercial-Readiness Cleanup CR-02G — implementation
 complete and external review required, after external GO decisions for
-Phase 12 and CR-01 through CR-02E. CR-02E consolidated the root configuration
-contract, made observability and World Monitor explicit optional Compose
-profiles, removed the conflicting standalone Postgres stack, and removed stale
-active configuration. HYP-EVENT-001A evidence and the sealed 2025 holdout
-remain unchanged. This is not a trading-edge or profitability claim. Phase 10
-and Phase 11 remain complete/GO, with actual forward-paper evidence of 0 days /
-0 orders. CR-02G is not started and Phase 13 remains
-`NOT STARTED / BLOCKED BY CLEANUP GATE`.
+Phase 12 and CR-01 through CR-02F. CR-02G records the final architecture,
+distribution boundary, security, licence/data-rights and clean-checkout
+validation. HYP-EVENT-001A evidence and the sealed 2025 holdout remain
+unchanged. This is not a trading-edge or profitability claim. Phase 10 and
+Phase 11 remain complete/GO, with actual forward-paper evidence of 0 days / 0
+orders. Phase 13 remains `NOT STARTED / BLOCKED BY CLEANUP GATE` pending
+external CR-02G review.
