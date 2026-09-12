@@ -2,7 +2,6 @@ package marketdata
 
 import (
 	"errors"
-	"time"
 )
 
 // ProviderType represents supported market data providers
@@ -19,7 +18,6 @@ const (
 // Config holds market data client configuration
 type Config struct {
 	Providers []ProviderConfig
-	Cache     CacheConfig
 	Symbols   []string
 }
 
@@ -42,23 +40,11 @@ type ProviderConfig struct {
 	IBBridgeURL string // Base URL of the Python IB bridge, e.g. "http://ib-bridge:8092"
 }
 
-// CacheConfig holds caching configuration
-type CacheConfig struct {
-	Enabled  bool
-	RedisURL string
-	TTL      time.Duration
-}
-
 // DefaultConfig returns a Config with sensible defaults
 func DefaultConfig() *Config {
 	return &Config{
 		Providers: []ProviderConfig{},
-		Cache: CacheConfig{
-			Enabled:  true,
-			RedisURL: "localhost:6379",
-			TTL:      5 * time.Minute,
-		},
-		Symbols: []string{},
+		Symbols:   []string{},
 	}
 }
 
@@ -82,10 +68,6 @@ func (c *Config) Validate() error {
 		if p.Priority == 0 {
 			c.Providers[i].Priority = i + 1
 		}
-	}
-
-	if c.Cache.TTL == 0 {
-		c.Cache.TTL = 5 * time.Minute
 	}
 
 	return nil

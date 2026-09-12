@@ -1700,7 +1700,6 @@ func buildBackfillCandleFetcherFromEnv() candleFetcher {
 	}
 	client, err := marketdata.NewClient(&marketdata.Config{
 		Providers: providers,
-		Cache:     marketdata.CacheConfig{Enabled: false, TTL: 5 * time.Minute},
 	})
 	if err != nil {
 		return nil

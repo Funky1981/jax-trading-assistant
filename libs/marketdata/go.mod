@@ -6,7 +6,6 @@ require (
 	github.com/alpacahq/alpaca-trade-api-go/v3 v3.3.0
 	github.com/gofinance/ib v0.0.0-20190131202149-a7abd0c5d772
 	github.com/polygon-io/client-go v1.16.4
-	github.com/redis/go-redis/v9 v9.4.0
 	jax-trading-assistant/libs/contracts v0.0.0
 	jax-trading-assistant/libs/resilience v0.0.0
 )
@@ -17,8 +16,6 @@ replace jax-trading-assistant/libs/resilience => ../resilience
 
 require (
 	cloud.google.com/go v0.121.6 // indirect
-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-playground/form/v4 v4.2.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect

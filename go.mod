@@ -28,7 +28,9 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
+	github.com/shopspring/decimal v1.3.1
 	golang.org/x/crypto v0.45.0
+	golang.org/x/net v0.47.0
 	jax-trading-assistant/libs/backtest v0.0.0
 	jax-trading-assistant/libs/contracts v0.0.0
 	jax-trading-assistant/libs/database v0.0.0
@@ -42,8 +44,6 @@ require (
 require (
 	cloud.google.com/go v0.121.6 // indirect
 	github.com/alpacahq/alpaca-trade-api-go/v3 v3.3.0 // indirect
-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-playground/form/v4 v4.2.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -60,10 +60,7 @@ require (
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/polygon-io/client-go v1.16.4 // indirect
-	github.com/redis/go-redis/v9 v9.4.0 // indirect
-	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sony/gobreaker/v2 v2.0.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect

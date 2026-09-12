@@ -21,10 +21,9 @@ type Provider interface {
 	HealthCheck(ctx context.Context) error
 }
 
-// Client aggregates multiple providers with fallback and caching
+// Client aggregates multiple providers with explicit fallback.
 type Client struct {
 	providers []Provider
-	cache     *Cache
 	config    *Config
 }
 
@@ -37,16 +36,6 @@ func NewClient(config *Config) (*Client, error) {
 	client := &Client{
 		providers: make([]Provider, 0, len(config.Providers)),
 		config:    config,
-	}
-
-	// Initialize cache if enabled
-	if config.Cache.Enabled {
-		cache, err := NewCache(config.Cache)
-		if err != nil {
-			log.Printf("failed to initialize cache: %v", err)
-		} else {
-			client.cache = cache
-		}
 	}
 
 	// Initialize providers in priority order
@@ -95,24 +84,13 @@ func NewClient(config *Config) (*Client, error) {
 	return client, nil
 }
 
-// GetQuote fetches a quote with provider fallback and caching
+// GetQuote fetches a quote with provider fallback.
 func (c *Client) GetQuote(ctx context.Context, symbol string) (*Quote, error) {
-	// Try cache first
-	if c.cache != nil {
-		if quote, err := c.cache.GetQuote(ctx, symbol); err == nil && quote != nil {
-			return quote, nil
-		}
-	}
-
 	// Try providers in priority order
 	var lastErr error
 	for _, provider := range c.providers {
 		quote, err := provider.GetQuote(ctx, symbol)
 		if err == nil {
-			// Cache successful result
-			if c.cache != nil {
-				_ = c.cache.SetQuote(ctx, quote)
-			}
 			return quote, nil
 		}
 		lastErr = err
@@ -128,22 +106,11 @@ func (c *Client) GetQuote(ctx context.Context, symbol string) (*Quote, error) {
 
 // GetCandles fetches historical candles with provider fallback
 func (c *Client) GetCandles(ctx context.Context, symbol string, timeframe Timeframe, limit int) ([]Candle, error) {
-	// Try cache first
-	if c.cache != nil {
-		if candles, err := c.cache.GetCandles(ctx, symbol, timeframe, limit); err == nil && len(candles) > 0 {
-			return candles, nil
-		}
-	}
-
 	// Try providers in priority order
 	var lastErr error
 	for _, provider := range c.providers {
 		candles, err := provider.GetCandles(ctx, symbol, timeframe, limit)
 		if err == nil && len(candles) > 0 {
-			// Cache successful result
-			if c.cache != nil {
-				_ = c.cache.SetCandles(ctx, symbol, timeframe, candles)
-			}
 			return candles, nil
 		}
 		lastErr = err
@@ -158,8 +125,7 @@ func (c *Client) GetCandles(ctx context.Context, symbol string, timeframe Timefr
 }
 
 // GetCandlesWithSource fetches directly from configured providers and returns
-// the provider that supplied the observations. It deliberately bypasses the
-// cache because cached candles do not retain provider provenance.
+// the provider that supplied the observations.
 func (c *Client) GetCandlesWithSource(ctx context.Context, symbol string, timeframe Timeframe, limit int) ([]Candle, string, error) {
 	var lastErr error
 	for _, provider := range c.providers {
@@ -217,9 +183,6 @@ func (c *Client) HealthCheck(ctx context.Context) map[string]error {
 
 // Close closes the client and cleanup resources
 func (c *Client) Close() error {
-	if c.cache != nil {
-		return c.cache.Close()
-	}
 	return nil
 }
 
