@@ -160,7 +160,7 @@ func (s PortfolioSnapshot) Validate() error {
 		if strings.TrimSpace(p.InstrumentID) == "" || !finiteNonZero(p.SignedQuantity) {
 			return fmt.Errorf("%w: position %d requires a finite non-zero signed quantity and instrument", ErrInvalidSnapshot, i)
 		}
-		if !currencyPattern.MatchString(strings.ToUpper(strings.TrimSpace(p.Currency))) || p.Currency != "" && strings.ToUpper(strings.TrimSpace(p.Currency)) != strings.ToUpper(strings.TrimSpace(s.Currency)) {
+		if !currencyPattern.MatchString(strings.ToUpper(strings.TrimSpace(p.Currency))) || p.Currency != "" && !strings.EqualFold(strings.TrimSpace(p.Currency), strings.TrimSpace(s.Currency)) {
 			return fmt.Errorf("%w: position %d currency must match portfolio currency", ErrInvalidSnapshot, i)
 		}
 		if err := validateObserved(p.Price, fmt.Sprintf("position %d price", i)); err != nil {

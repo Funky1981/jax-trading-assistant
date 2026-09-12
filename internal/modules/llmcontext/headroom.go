@@ -121,7 +121,7 @@ func (t HeadroomTrial) call(ctx context.Context, text string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("headroom request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return "", fmt.Errorf("headroom response read: %w", err)

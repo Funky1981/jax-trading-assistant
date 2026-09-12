@@ -12,7 +12,7 @@ import (
 
 func TestPostgresUsageLoggerRecordPlannedInsertsUsageLog(t *testing.T) {
 	db, mock := newMockDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	logger := NewPostgresUsageLogger(db)
 
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO llm_usage_logs")).
@@ -68,7 +68,7 @@ func TestPostgresUsageLoggerRecordPlannedInsertsUsageLog(t *testing.T) {
 
 func TestPostgresUsageLoggerRecordActualUpdatesUsageLog(t *testing.T) {
 	db, mock := newMockDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	logger := NewPostgresUsageLogger(db)
 
 	mock.ExpectExec(regexp.QuoteMeta("UPDATE llm_usage_logs")).
@@ -92,7 +92,7 @@ func TestPostgresUsageLoggerRecordActualUpdatesUsageLog(t *testing.T) {
 
 func TestPostgresUsageLoggerUpsertRollup(t *testing.T) {
 	db, mock := newMockDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	logger := NewPostgresUsageLogger(db)
 	from := time.Date(2026, 6, 4, 0, 0, 0, 0, time.UTC)
 	to := from.Add(24 * time.Hour)

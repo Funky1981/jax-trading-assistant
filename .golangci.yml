@@ -1,5 +1,22 @@
 version: "2"
 
 run:
-  timeout: 5m
+  # The supported workspace lint includes the root module plus nested modules;
+  # cold CI package discovery/compilation needs more than the former ceiling.
+  timeout: 10m
   tests: true
+
+# Historical/archive sources and frozen AI-shadow implementation inputs are
+# validated by their own replay/hash tests and are not supported lint targets.
+# Active root-module and workspace packages remain covered by CI.
+linters:
+  exclusions:
+    paths:
+      - ^archive/
+      - ^Docs/plans/Completed/
+      - ^frontend/node_modules/
+      - ^internal/modules/aishadow/benchmark_c1f\.go$
+      - ^internal/modules/aishadow/c1f2_offline_freeze\.go$
+      - ^internal/modules/aishadow/terra_challenger_authorization\.go$
+      - ^internal/modules/aishadow/terra_challenger_rubric\.go$
+      - ^internal/modules/aishadow/terra_challenger_scoring\.go$

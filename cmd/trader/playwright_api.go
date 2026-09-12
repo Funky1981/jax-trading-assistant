@@ -188,7 +188,7 @@ func callPlaywrightAgent(runnerURL, spec string, started time.Time) *playwrightR
 			Output:      "playwright-agent unreachable: " + err.Error() + "\n\nEnsure scripts/playwright-agent.js is running (start.ps1 starts it automatically).",
 		}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 512*1024))
 

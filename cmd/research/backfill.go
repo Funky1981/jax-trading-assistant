@@ -1527,7 +1527,7 @@ func (s *sqlBackfillStore) LoadEventStudyInputs(ctx context.Context, eventIDs []
 		for rows.Next() {
 			var c marketdata.Candle
 			if err := rows.Scan(&c.Symbol, &c.Timestamp, &c.Open, &c.High, &c.Low, &c.Close, &c.Volume, &c.VWAP); err != nil {
-				rows.Close()
+				_ = rows.Close()
 				return nil, nil, err
 			}
 			candles[symbol] = append(candles[symbol], c)

@@ -87,7 +87,7 @@ func sseHandler() http.HandlerFunc {
 		defer globalBroker.unsubscribe(ch)
 
 		// Send an initial ping so the browser knows the stream is live.
-		fmt.Fprintf(w, "event: connected\ndata: {}\n\n")
+		_, _ = fmt.Fprintf(w, "event: connected\ndata: {}\n\n")
 		flusher.Flush()
 
 		ticker := time.NewTicker(30 * time.Second)
@@ -99,7 +99,7 @@ func sseHandler() http.HandlerFunc {
 				return
 			case <-ticker.C:
 				// keepalive comment
-				fmt.Fprintf(w, ": keepalive\n\n")
+				_, _ = fmt.Fprintf(w, ": keepalive\n\n")
 				flusher.Flush()
 			case evt, ok := <-ch:
 				if !ok {
@@ -109,7 +109,7 @@ func sseHandler() http.HandlerFunc {
 				if err != nil {
 					continue
 				}
-				fmt.Fprintf(w, "event: %s\ndata: %s\n\n", evt.Type, b)
+				_, _ = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", evt.Type, b)
 				flusher.Flush()
 			}
 		}

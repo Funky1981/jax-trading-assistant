@@ -55,8 +55,8 @@ func (r *Registry) WriteText(w io.Writer) {
 
 	for _, m := range ms {
 		d := m.desc()
-		fmt.Fprintf(w, "# HELP %s %s\n", d.name, d.help)
-		fmt.Fprintf(w, "# TYPE %s %s\n", d.name, d.mtype)
+		_, _ = fmt.Fprintf(w, "# HELP %s %s\n", d.name, d.help)
+		_, _ = fmt.Fprintf(w, "# TYPE %s %s\n", d.name, d.mtype)
 		m.writeText(w)
 	}
 }
@@ -172,7 +172,7 @@ func (c *Counter) writeText(w io.Writer) {
 	sort.Slice(rows, func(i, j int) bool { return rows[i].labels.labelKey() < rows[j].labels.labelKey() })
 	for _, r := range rows {
 		v := math.Float64frombits(atomic.LoadUint64(&r.value))
-		fmt.Fprintf(w, "%s%s %s\n", c.d.name, r.labels.format(), formatFloat(v))
+		_, _ = fmt.Fprintf(w, "%s%s %s\n", c.d.name, r.labels.format(), formatFloat(v))
 	}
 }
 
@@ -251,7 +251,7 @@ func (g *Gauge) writeText(w io.Writer) {
 	sort.Slice(rows, func(i, j int) bool { return rows[i].labels.labelKey() < rows[j].labels.labelKey() })
 	for _, r := range rows {
 		v := math.Float64frombits(atomic.LoadUint64(&r.value))
-		fmt.Fprintf(w, "%s%s %s\n", g.d.name, r.labels.format(), formatFloat(v))
+		_, _ = fmt.Fprintf(w, "%s%s %s\n", g.d.name, r.labels.format(), formatFloat(v))
 	}
 }
 
@@ -342,13 +342,13 @@ func (h *Histogram) writeText(w io.Writer) {
 		// matching buckets), so output them directly.
 		for i, ub := range h.bounds {
 			cnt := atomic.LoadInt64(&r.buckets[i])
-			fmt.Fprintf(w, "%s_bucket%s %d\n", h.d.name, insertLE(prefix, formatFloat(ub)), cnt)
+			_, _ = fmt.Fprintf(w, "%s_bucket%s %d\n", h.d.name, insertLE(prefix, formatFloat(ub)), cnt)
 		}
 		// +Inf bucket = total count.
 		cnt := atomic.LoadInt64(&r.count)
-		fmt.Fprintf(w, "%s_bucket%s %d\n", h.d.name, insertLE(prefix, "+Inf"), cnt)
-		fmt.Fprintf(w, "%s_sum%s %s\n", h.d.name, lf, formatFloat(r.sum))
-		fmt.Fprintf(w, "%s_count%s %d\n", h.d.name, lf, cnt)
+		_, _ = fmt.Fprintf(w, "%s_bucket%s %d\n", h.d.name, insertLE(prefix, "+Inf"), cnt)
+		_, _ = fmt.Fprintf(w, "%s_sum%s %s\n", h.d.name, lf, formatFloat(r.sum))
+		_, _ = fmt.Fprintf(w, "%s_count%s %d\n", h.d.name, lf, cnt)
 	}
 }
 

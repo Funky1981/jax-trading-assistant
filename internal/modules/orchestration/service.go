@@ -138,14 +138,14 @@ func (s *Service) Orchestrate(ctx context.Context, req OrchestrationRequest) (Or
 	if len(memories) > 0 {
 		contextBuilder.WriteString("\n\nRecalled memories:\n")
 		for i, mem := range memories {
-			contextBuilder.WriteString(fmt.Sprintf("%d. %s (type=%s)\n", i+1, mem.Summary, mem.Type))
+			fmt.Fprintf(&contextBuilder, "%d. %s (type=%s)\n", i+1, mem.Summary, mem.Type)
 		}
 	}
 	if len(signals) > 0 {
 		contextBuilder.WriteString("\n\nStrategy signals:\n")
 		for i, sig := range signals {
-			contextBuilder.WriteString(fmt.Sprintf("%d. %s: %s at %.2f (confidence: %.2f)\n",
-				i+1, sig.Symbol, sig.Type, sig.EntryPrice, sig.Confidence))
+			fmt.Fprintf(&contextBuilder, "%d. %s: %s at %.2f (confidence: %.2f)\n",
+				i+1, sig.Symbol, sig.Type, sig.EntryPrice, sig.Confidence)
 		}
 	}
 	planReq := planner.Request{

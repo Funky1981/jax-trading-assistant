@@ -92,7 +92,7 @@ func startMarketIngester(ctx context.Context, pool *pgxpool.Pool) {
 		log.Printf("market ingester: failed to create client: %v — skipping", err)
 		return
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	observability.LogEvent(ctx, "info", "ingester.started", map[string]any{
 		"symbols":  len(cfg.Symbols),

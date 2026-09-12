@@ -415,31 +415,6 @@ func ensureEventSource(ctx context.Context, db pgx.Tx, sourceID, sourceName, pro
 	return nil
 }
 
-func (s *eventStore) ensureSource(ctx context.Context, sourceID, sourceName, providerType string) error {
-	if s == nil || s.pool == nil {
-		return nil
-	}
-	if strings.TrimSpace(sourceName) == "" {
-		sourceName = strings.ToUpper(strings.TrimSpace(sourceID))
-	}
-	if strings.TrimSpace(providerType) == "" {
-		providerType = "external"
-	}
-	_, err := s.pool.Exec(ctx, `
-		INSERT INTO event_sources (id, display_name, provider_type, enabled, priority, metadata)
-		VALUES ($1, $2, $3, TRUE, 100, '{}'::jsonb)
-		ON CONFLICT (id)
-		DO UPDATE SET
-			display_name = EXCLUDED.display_name,
-			provider_type = EXCLUDED.provider_type,
-			updated_at = NOW()
-	`, sourceID, sourceName, providerType)
-	if err != nil {
-		return fmt.Errorf("upsert event source %q: %w", sourceID, err)
-	}
-	return nil
-}
-
 func (s *eventStore) logAudit(ctx context.Context, flowID, eventID string, in persistEventInput) {
 	if s == nil || s.pool == nil {
 		return

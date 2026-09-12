@@ -305,14 +305,6 @@ func normalizedSymbols(values []string) []string {
 	sort.Strings(out)
 	return out
 }
-func containsAny(text string, values []string) bool {
-	for _, value := range values {
-		if strings.Contains(text, strings.ToLower(value)) {
-			return true
-		}
-	}
-	return false
-}
 func containsPhraseAny(text string, values []string) bool {
 	for _, value := range values {
 		if wholePhrase(text, value) {

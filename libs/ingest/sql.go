@@ -89,7 +89,7 @@ func StoreCandles(ctx context.Context, db *sql.DB, candles []CandleData) error {
 	if err != nil {
 		return fmt.Errorf("prepare candle statement: %w", err)
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	for _, candle := range candles {
 		_, err := stmt.ExecContext(ctx,

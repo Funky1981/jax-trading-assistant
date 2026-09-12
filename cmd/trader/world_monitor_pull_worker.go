@@ -218,13 +218,13 @@ func (w *worldMonitorPullWorker) cycle(ctx context.Context) (worldMonitorPullRes
 		return result, err
 	}
 	if lockedPosition != position {
-		return result, fmt.Errorf("World Monitor cursor changed concurrently from %d to %d", position, lockedPosition)
+		return result, fmt.Errorf("world monitor cursor changed concurrently from %d to %d", position, lockedPosition)
 	}
 
 	inbox := newWorldMonitorResearchInboxService(w.pool)
 	decisionStore := eventdecisions.NewStore(w.pool)
 	if len(page.RawPayload) == 0 {
-		return result, fmt.Errorf("World Monitor page has no retained provider bytes")
+		return result, fmt.Errorf("world monitor page has no retained provider bytes")
 	}
 	pageDigest := sha256.Sum256(page.RawPayload)
 	if _, err := tx.Exec(ctx, `
@@ -245,7 +245,7 @@ func (w *worldMonitorPullWorker) cycle(ctx context.Context) (worldMonitorPullRes
 			return result, fmt.Errorf("ingest World Monitor sequence %s: %w", item.PersistenceSeq, err)
 		}
 		if receipt.Status == worldMonitorInboxStatusRejected || receipt.InboxID == "" {
-			return result, fmt.Errorf("World Monitor sequence %s rejected: %s", item.PersistenceSeq, receipt.RejectionReason)
+			return result, fmt.Errorf("world monitor sequence %s rejected: %s", item.PersistenceSeq, receipt.RejectionReason)
 		}
 		if receipt.Duplicate {
 			result.Duplicates++
@@ -361,13 +361,13 @@ func (w *worldMonitorPullWorker) fetchPage(ctx context.Context, position int64) 
 	if err != nil {
 		return worldMonitorPullPage{}, fmt.Errorf("fetch World Monitor page: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
 	if err != nil {
 		return worldMonitorPullPage{}, fmt.Errorf("read World Monitor page: %w", err)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return worldMonitorPullPage{}, fmt.Errorf("World Monitor returned HTTP %d: %s", response.StatusCode, strings.TrimSpace(string(body[:min(len(body), 512)])))
+		return worldMonitorPullPage{}, fmt.Errorf("world monitor returned HTTP %d: %s", response.StatusCode, strings.TrimSpace(string(body[:min(len(body), 512)])))
 	}
 	var page worldMonitorPullPage
 	decoder := json.NewDecoder(bytes.NewReader(body))
@@ -405,7 +405,7 @@ func validateWorldMonitorPage(page worldMonitorPullPage, after int64, pageSize i
 
 func worldMonitorPullTrigger(item worldMonitorPullEvent) (worldMonitorResearchTrigger, error) {
 	if item.CollectedAt.IsZero() || strings.TrimSpace(item.Title) == "" || strings.TrimSpace(item.EventID) == "" {
-		return worldMonitorResearchTrigger{}, fmt.Errorf("World Monitor event %q is missing required persisted fields", item.EventID)
+		return worldMonitorResearchTrigger{}, fmt.Errorf("world monitor event %q is missing required persisted fields", item.EventID)
 	}
 	publication := item.CollectedAt
 	publicationSupplied := false

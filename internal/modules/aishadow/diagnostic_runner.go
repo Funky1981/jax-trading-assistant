@@ -539,7 +539,7 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 	if requireCredential && !config.APIKey.present() {
 		return PreparedDiagnostic{}, fmt.Errorf("missing required hosted diagnostic configuration: %s", OpenAIDiagnosticAPIKeyEnv)
 	}
-	if !supportedOpenAIDiagnosticModel(config.Runtime.Model) && !(config.Runtime.Model == OpenAIDiagnosticTerraModel && config.ExperimentID == C1F3TerraChallengerExperimentID) {
+	if !supportedOpenAIDiagnosticModel(config.Runtime.Model) && (config.Runtime.Model != OpenAIDiagnosticTerraModel || config.ExperimentID != C1F3TerraChallengerExperimentID) {
 		return PreparedDiagnostic{}, fmt.Errorf("unsupported OpenAI diagnostic model %q", config.Runtime.Model)
 	}
 	if err := validateOpenAIExperimentCell(config.ExperimentID, config.Runtime.Model, config.OutputContractMode); err != nil {
@@ -607,7 +607,7 @@ func prepareHostedDiagnostic(paths DiagnosticPaths, config OpenAIDiagnosticConfi
 			return PreparedDiagnostic{}, fmt.Errorf("inspect Terra challenger evidence namespace: %w", err)
 		}
 		if !collisionFree {
-			return PreparedDiagnostic{}, fmt.Errorf("Terra challenger evidence namespace already contains execution evidence")
+			return PreparedDiagnostic{}, fmt.Errorf("terra challenger evidence namespace already contains execution evidence")
 		}
 	}
 	firstRequest, err := diagnosticInitialRequest(config, prepared.Manifest.Events[0].Input, prepared.ProxyExposures)

@@ -204,7 +204,7 @@ FROM trades
 	if err != nil {
 		return ListTradesOutput{}, fmt.Errorf("storage.list_trades: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out ListTradesOutput
 	for rows.Next() {

@@ -51,10 +51,6 @@ type bar struct {
 	Close float64 `json:"c"`
 	Time  string  `json:"t"`
 }
-type marketFile struct {
-	Bars map[string][]bar `json:"bars"`
-}
-
 type observation struct {
 	EventID            string    `json:"event_id"`
 	IssuerID           string    `json:"issuer_id"`

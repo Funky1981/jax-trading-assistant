@@ -241,7 +241,7 @@ func (r *Registry) load() error {
 	if err != nil {
 		return fmt.Errorf("dataset: open catalog %q: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var list []Dataset
 	if err := json.NewDecoder(f).Decode(&list); err != nil {
@@ -271,14 +271,17 @@ func (r *Registry) save() error {
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(list); err != nil {
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp)
 		return fmt.Errorf("dataset: encode catalog: %w", err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("dataset: close catalog tmp: %w", err)
+	}
 
 	if err := os.Rename(tmp, r.catalogPath()); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("dataset: rename catalog: %w", err)
 	}
 	return nil
@@ -293,7 +296,7 @@ func hashAndCount(filePath string) (hash string, count int, err error) {
 	if err != nil {
 		return "", 0, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	r := csv.NewReader(io.TeeReader(f, h))
@@ -336,7 +339,7 @@ func LoadCSV(filePath, symbol string) (*CSVDataSource, error) {
 	if err != nil {
 		return nil, fmt.Errorf("dataset.LoadCSV: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	r := csv.NewReader(f)
 

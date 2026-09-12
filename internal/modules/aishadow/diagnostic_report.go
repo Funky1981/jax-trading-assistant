@@ -257,9 +257,10 @@ func evaluateDiagnosticCase(event DiagnosticEvent, run DiagnosticCaseRun, resolv
 	predicted := run.Result.Parsed
 	evaluation.IssuerCorrect = issuerMatchesLabel(event, predicted, resolver)
 	evaluation.SemanticCorrect = predicted.MappingStatus == event.Label.MappingStatus
-	if predicted.MappingStatus == "DIRECT" {
+	switch predicted.MappingStatus {
+	case "DIRECT":
 		evaluation.SemanticCorrect = evaluation.SemanticCorrect && evaluation.IssuerCorrect
-	} else if predicted.MappingStatus == "PROXY" {
+	case "PROXY":
 		evaluation.SemanticCorrect = evaluation.SemanticCorrect && predicted.ProxyExposure == event.Label.ProxyExposure
 	}
 	evaluation.ResolutionCorrect = resolutionMatchesLabel(event, run.Result.Resolution, resolver)
@@ -316,9 +317,10 @@ func accumulateResolution(metrics *DiagnosticResolutionMetrics, event Diagnostic
 		}
 	}
 	if evaluation.IssuerCorrect {
-		if resolution.Status == assetresolution.StatusResolved {
+		switch resolution.Status {
+		case assetresolution.StatusResolved:
 			metrics.CorrectIssuerResolved++
-		} else if resolution.Status == assetresolution.StatusUnresolved {
+		case assetresolution.StatusUnresolved:
 			metrics.CorrectIssuerUnresolved++
 		}
 	}
@@ -402,7 +404,7 @@ func evaluateRepeatability(manifest DiagnosticManifest, reports []DiagnosticRepe
 				correctValues = append(correctValues, caseEvaluation.SemanticCorrect && caseEvaluation.ResolutionCorrect)
 				variation.Repetitions = append(variation.Repetitions, DiagnosticVariationOutput{Repetition: repetition + 1, ValidationStatus: runs[repetition].Result.ValidationStatus, ModelClassification: outputs[repetition], DeterministicResolution: resolutions[repetition], Correct: correctValues[repetition]})
 			}
-			correctnessChanging := !(correctValues[0] == correctValues[1] && correctValues[1] == correctValues[2])
+			correctnessChanging := correctValues[0] != correctValues[1] || correctValues[1] != correctValues[2]
 			if correctnessChanging {
 				variation.Classification = append(variation.Classification, "correctness-changing variation")
 				result.CorrectnessChangingEvents++

@@ -1277,30 +1277,30 @@ func writePaperReadinessReport(summary map[string]any) {
 	}
 	var md strings.Builder
 	md.WriteString("# Paper Readiness\n\n")
-	md.WriteString(fmt.Sprintf("- generated: %s\n", time.Now().UTC().Format(time.RFC3339)))
-	md.WriteString(fmt.Sprintf("- status: %s\n", toString(summary["status"])))
-	md.WriteString(fmt.Sprintf("- ready: %v\n", summary["ready"]))
-	md.WriteString(fmt.Sprintf("- passed_required_gates: %v/10\n", summary["passedGateCount"]))
-	md.WriteString(fmt.Sprintf("- failed_gates: %v\n", summary["failedGateCount"]))
-	md.WriteString(fmt.Sprintf("- skipped_gates: %v\n", summary["skippedGateCount"]))
-	md.WriteString(fmt.Sprintf("- not_started_gates: %v\n", summary["notStartedGateCount"]))
-	md.WriteString(fmt.Sprintf("- runtime_probe_failures: %v\n", summary["runtimeProbeFailures"]))
-	md.WriteString(fmt.Sprintf("- paper_sessions_observed: %v\n", summary["paperSessionsObserved"]))
-	md.WriteString(fmt.Sprintf("- shadow_parity_required: %v\n", summary["shadowParityRequired"]))
-	md.WriteString(fmt.Sprintf("- shadow_parity_satisfied: %v\n", summary["shadowParitySatisfied"]))
+	fmt.Fprintf(&md, "- generated: %s\n", time.Now().UTC().Format(time.RFC3339))
+	fmt.Fprintf(&md, "- status: %s\n", toString(summary["status"]))
+	fmt.Fprintf(&md, "- ready: %v\n", summary["ready"])
+	fmt.Fprintf(&md, "- passed_required_gates: %v/10\n", summary["passedGateCount"])
+	fmt.Fprintf(&md, "- failed_gates: %v\n", summary["failedGateCount"])
+	fmt.Fprintf(&md, "- skipped_gates: %v\n", summary["skippedGateCount"])
+	fmt.Fprintf(&md, "- not_started_gates: %v\n", summary["notStartedGateCount"])
+	fmt.Fprintf(&md, "- runtime_probe_failures: %v\n", summary["runtimeProbeFailures"])
+	fmt.Fprintf(&md, "- paper_sessions_observed: %v\n", summary["paperSessionsObserved"])
+	fmt.Fprintf(&md, "- shadow_parity_required: %v\n", summary["shadowParityRequired"])
+	fmt.Fprintf(&md, "- shadow_parity_satisfied: %v\n", summary["shadowParitySatisfied"])
 	if etf, ok := summary["etfPhase1Readiness"].(map[string]any); ok {
 		md.WriteString("\n## ETF Phase-1 Readiness\n")
-		md.WriteString(fmt.Sprintf("- status: %s\n", toString(etf["status"])))
-		md.WriteString(fmt.Sprintf("- ready: %v\n", etf["ready"]))
-		md.WriteString(fmt.Sprintf("- catalog_version: %s\n", toString(etf["catalogVersion"])))
-		md.WriteString(fmt.Sprintf("- entry_workflow: %s\n", toString(etf["entryWorkflow"])))
-		md.WriteString(fmt.Sprintf("- paper_only: %v\n", etf["paperOnly"]))
-		md.WriteString(fmt.Sprintf("- manual_entries_blocked: %v\n", etf["manualEntriesBlocked"]))
-		md.WriteString(fmt.Sprintf("- live_trading_blocked: %v\n", etf["liveTradingBlocked"]))
+		fmt.Fprintf(&md, "- status: %s\n", toString(etf["status"]))
+		fmt.Fprintf(&md, "- ready: %v\n", etf["ready"])
+		fmt.Fprintf(&md, "- catalog_version: %s\n", toString(etf["catalogVersion"]))
+		fmt.Fprintf(&md, "- entry_workflow: %s\n", toString(etf["entryWorkflow"]))
+		fmt.Fprintf(&md, "- paper_only: %v\n", etf["paperOnly"])
+		fmt.Fprintf(&md, "- manual_entries_blocked: %v\n", etf["manualEntriesBlocked"])
+		fmt.Fprintf(&md, "- live_trading_blocked: %v\n", etf["liveTradingBlocked"])
 		if stages, ok := etf["stages"].([]map[string]any); ok {
 			md.WriteString("\n### ETF Rollout Stages\n")
 			for _, stage := range stages {
-				md.WriteString(fmt.Sprintf("- %s: passed=%v\n", toString(stage["name"]), stage["passed"]))
+				fmt.Fprintf(&md, "- %s: passed=%v\n", toString(stage["name"]), stage["passed"])
 			}
 		}
 		if signoffs, ok := etf["signoffs"].(map[string]bool); ok {
@@ -1311,14 +1311,14 @@ func writePaperReadinessReport(summary map[string]any) {
 			sort.Strings(keys)
 			md.WriteString("\n### ETF Sign-Off\n")
 			for _, key := range keys {
-				md.WriteString(fmt.Sprintf("- %s: %v\n", key, signoffs[key]))
+				fmt.Fprintf(&md, "- %s: %v\n", key, signoffs[key])
 			}
 		}
 	}
 	md.WriteString("\n## Gates\n")
 	if gates, ok := summary["gateStatuses"].([]map[string]any); ok {
 		for _, gate := range gates {
-			md.WriteString(fmt.Sprintf("- %s: %s\n", toString(gate["gate"]), toString(gate["status"])))
+			fmt.Fprintf(&md, "- %s: %s\n", toString(gate["gate"]), toString(gate["status"]))
 		}
 	}
 	if probes, ok := summary["runtimeProbes"].(map[string]map[string]any); ok {
@@ -1330,10 +1330,10 @@ func writePaperReadinessReport(summary map[string]any) {
 		md.WriteString("\n## Runtime Probes\n")
 		for _, key := range keys {
 			probe := probes[key]
-			md.WriteString(fmt.Sprintf("- %s: ok=%v status_code=%v url=%s\n",
-				key, probe["ok"], probe["statusCode"], toString(probe["url"])))
+			fmt.Fprintf(&md, "- %s: ok=%v status_code=%v url=%s\n",
+				key, probe["ok"], probe["statusCode"], toString(probe["url"]))
 			if errText := toString(probe["error"]); errText != "" {
-				md.WriteString(fmt.Sprintf("  error: %s\n", errText))
+				fmt.Fprintf(&md, "  error: %s\n", errText)
 			}
 		}
 	}
@@ -2640,17 +2640,17 @@ func writeTestingArtifactReport(pool *pgxpool.Pool, gate, testType string, summa
 	_ = os.MkdirAll(dir, 0o755)
 	file := filepath.FromSlash(relPath)
 	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("# %s\n\n", testType))
-	buf.WriteString(fmt.Sprintf("- gate: %s\n", gate))
-	buf.WriteString(fmt.Sprintf("- status: %s\n", toString(summary["status"])))
-	buf.WriteString(fmt.Sprintf("- ts: %s\n\n", time.Now().UTC().Format(time.RFC3339)))
+	fmt.Fprintf(&buf, "# %s\n\n", testType)
+	fmt.Fprintf(&buf, "- gate: %s\n", gate)
+	fmt.Fprintf(&buf, "- status: %s\n", toString(summary["status"]))
+	fmt.Fprintf(&buf, "- ts: %s\n\n", time.Now().UTC().Format(time.RFC3339))
 	commands, _ := summary["commands"].([]map[string]any)
 	for i, cmd := range commands {
-		buf.WriteString(fmt.Sprintf("## Command %d\n\n", i+1))
-		buf.WriteString(fmt.Sprintf("- command: `%s`\n", toString(cmd["command"])))
-		buf.WriteString(fmt.Sprintf("- status: %s\n", toString(cmd["status"])))
-		buf.WriteString(fmt.Sprintf("- exitCode: %s\n", toString(cmd["exitCode"])))
-		buf.WriteString(fmt.Sprintf("- durationMs: %s\n\n", toString(cmd["durationMs"])))
+		fmt.Fprintf(&buf, "## Command %d\n\n", i+1)
+		fmt.Fprintf(&buf, "- command: `%s`\n", toString(cmd["command"]))
+		fmt.Fprintf(&buf, "- status: %s\n", toString(cmd["status"]))
+		fmt.Fprintf(&buf, "- exitCode: %s\n", toString(cmd["exitCode"]))
+		fmt.Fprintf(&buf, "- durationMs: %s\n\n", toString(cmd["durationMs"]))
 		buf.WriteString("```text\n")
 		buf.WriteString(toString(cmd["output"]))
 		buf.WriteString("\n```\n\n")
@@ -2738,7 +2738,7 @@ func writeDataReconCSV(pool *pgxpool.Pool, dir string) {
 		if err := rows.Scan(&symbol, &day, &bars); err != nil {
 			continue
 		}
-		out.WriteString(fmt.Sprintf("%s,%s,%d\n", sanitizeCSV(symbol), day.Format("2006-01-02"), bars))
+		fmt.Fprintf(&out, "%s,%s,%d\n", sanitizeCSV(symbol), day.Format("2006-01-02"), bars)
 	}
 	_ = os.WriteFile(file, []byte(out.String()), 0o644)
 
@@ -2778,8 +2778,8 @@ func writeDataReconCSV(pool *pgxpool.Pool, dir string) {
 		case runHash != snapHash:
 			status = "hash_mismatch"
 		}
-		dsOut.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s\n",
-			sanitizeCSV(runID), sanitizeCSV(datasetID), sanitizeCSV(runHash), sanitizeCSV(snapHash), sanitizeCSV(status)))
+		fmt.Fprintf(&dsOut, "%s,%s,%s,%s,%s\n",
+			sanitizeCSV(runID), sanitizeCSV(datasetID), sanitizeCSV(runHash), sanitizeCSV(snapHash), sanitizeCSV(status))
 	}
 	_ = os.WriteFile(datasetFile, []byte(dsOut.String()), 0o644)
 }
@@ -2862,7 +2862,7 @@ func writePnLReconFiles(pool *pgxpool.Pool, dir string, summary map[string]any) 
 		_ = os.WriteFile(correctionsFile, []byte("trade_id,delta,reason,source,created_at,error\n,,,,,database pool unavailable\n"), 0o644)
 		var md strings.Builder
 		md.WriteString("# pnl_recon\n\n")
-		md.WriteString(fmt.Sprintf("- generated: %s\n", time.Now().UTC().Format(time.RFC3339)))
+		fmt.Fprintf(&md, "- generated: %s\n", time.Now().UTC().Format(time.RFC3339))
 		md.WriteString("- rows: 0\n")
 		md.WriteString("- corrections: 0\n")
 		md.WriteString("- corrections_total: 0\n")
@@ -2898,8 +2898,8 @@ func writePnLReconFiles(pool *pgxpool.Pool, dir string, summary map[string]any) 
 		if err := rows.Scan(&tradeID, &symbol, &side, &qty, &price, &status); err != nil {
 			continue
 		}
-		out.WriteString(fmt.Sprintf("%s,%s,%s,%.4f,%.6f,%s\n",
-			sanitizeCSV(tradeID), sanitizeCSV(symbol), sanitizeCSV(side), qty, price, sanitizeCSV(status)))
+		fmt.Fprintf(&out, "%s,%s,%s,%.4f,%.6f,%s\n",
+			sanitizeCSV(tradeID), sanitizeCSV(symbol), sanitizeCSV(side), qty, price, sanitizeCSV(status))
 		count++
 	}
 	_ = os.WriteFile(csvFile, []byte(out.String()), 0o644)
@@ -2927,8 +2927,8 @@ func writePnLReconFiles(pool *pgxpool.Pool, dir string, summary map[string]any) 
 			if err := corrRows.Scan(&tradeID, &delta, &reason, &source, &createdAt); err != nil {
 				continue
 			}
-			corrOut.WriteString(fmt.Sprintf("%s,%.6f,%s,%s,%s\n",
-				sanitizeCSV(tradeID), delta, sanitizeCSV(reason), sanitizeCSV(source), createdAt.UTC().Format(time.RFC3339)))
+			fmt.Fprintf(&corrOut, "%s,%.6f,%s,%s,%s\n",
+				sanitizeCSV(tradeID), delta, sanitizeCSV(reason), sanitizeCSV(source), createdAt.UTC().Format(time.RFC3339))
 			correctionsCount++
 			correctionsTotal += delta
 		}
@@ -2937,11 +2937,11 @@ func writePnLReconFiles(pool *pgxpool.Pool, dir string, summary map[string]any) 
 
 	var md strings.Builder
 	md.WriteString("# pnl_recon\n\n")
-	md.WriteString(fmt.Sprintf("- generated: %s\n", time.Now().UTC().Format(time.RFC3339)))
-	md.WriteString(fmt.Sprintf("- rows: %d\n", count))
-	md.WriteString(fmt.Sprintf("- corrections: %d\n", correctionsCount))
-	md.WriteString(fmt.Sprintf("- corrections_total: %.4f\n", correctionsTotal))
-	md.WriteString(fmt.Sprintf("- status: %s\n", toString(summary["status"])))
+	fmt.Fprintf(&md, "- generated: %s\n", time.Now().UTC().Format(time.RFC3339))
+	fmt.Fprintf(&md, "- rows: %d\n", count)
+	fmt.Fprintf(&md, "- corrections: %d\n", correctionsCount)
+	fmt.Fprintf(&md, "- corrections_total: %.4f\n", correctionsTotal)
+	fmt.Fprintf(&md, "- status: %s\n", toString(summary["status"]))
 	_ = os.WriteFile(filepath.Join(dir, "pnl_recon.md"), []byte(md.String()), 0o644)
 }
 
@@ -2996,8 +2996,8 @@ func writeFlattenViolations(pool *pgxpool.Pool, dir string) {
 		if err := rows.Scan(&tradeID, &instanceID, &symbol, &createdLocal, &flattenAt); err != nil {
 			continue
 		}
-		out.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s\n",
-			sanitizeCSV(tradeID), sanitizeCSV(instanceID), sanitizeCSV(symbol), sanitizeCSV(createdLocal), sanitizeCSV(flattenAt)))
+		fmt.Fprintf(&out, "%s,%s,%s,%s,%s\n",
+			sanitizeCSV(tradeID), sanitizeCSV(instanceID), sanitizeCSV(symbol), sanitizeCSV(createdLocal), sanitizeCSV(flattenAt))
 	}
 	_ = os.WriteFile(csvFile, []byte(out.String()), 0o644)
 }

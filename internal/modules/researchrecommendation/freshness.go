@@ -3,7 +3,6 @@ package researchrecommendation
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -183,11 +182,4 @@ func (decision FreshnessDecision) Validate() error {
 		return fmt.Errorf("freshness decision has unsupported state")
 	}
 	return nil
-}
-
-func freshnessReason(decision FreshnessDecision) string {
-	if decision.Sufficient {
-		return "freshness and evidence sufficiency passed"
-	}
-	return strings.Join(decision.ReasonCodes, ",")
 }

@@ -108,7 +108,7 @@ func collectGenuineCandles(ctx context.Context, pool *pgxpool.Pool, fetcher sour
 	if err != nil {
 		return result, fmt.Errorf("begin candle persistence: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 	for _, c := range prepared {
 		_, err = tx.Exec(ctx, `INSERT INTO candles (symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,regular_trading_hours,market_data_classification,adjusted_state,provider_timezone,ingested_at)
 			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())

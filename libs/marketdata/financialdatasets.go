@@ -199,7 +199,7 @@ func (p *FinancialDatasetsProvider) fetchJSON(ctx context.Context, endpoint stri
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
 		return fmt.Errorf("financial-datasets HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))

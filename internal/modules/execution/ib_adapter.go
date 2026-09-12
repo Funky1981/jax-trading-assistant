@@ -39,7 +39,7 @@ func (c *IBClient) GetAccount(ctx context.Context) (*BrokerAccountInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -103,7 +103,7 @@ func (c *IBClient) PlaceOrder(ctx context.Context, order *BrokerOrderRequest) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to place order: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Success bool   `json:"success"`
@@ -135,7 +135,7 @@ func (c *IBClient) GetOrderStatus(ctx context.Context, orderID int) (*BrokerOrde
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order status: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -181,7 +181,7 @@ func (c *IBClient) GetPositions(ctx context.Context) (*BrokerPositionsResponse, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get positions: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

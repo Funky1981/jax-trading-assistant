@@ -39,7 +39,9 @@ func buildCSV(t *testing.T, header []string, rows [][]string) string {
 		_ = w.Write(r)
 	}
 	w.Flush()
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	return p
 }
 

@@ -32,7 +32,7 @@ func NewProvider(config Config, client *http.Client) (*Provider, error) {
 
 func RegisterProvider(registry *providercontract.Registry) error {
 	if registry == nil {
-		return errors.New("Treasury provider registry is required")
+		return errors.New("treasury provider registry is required")
 	}
 	return registry.Register(ProviderDefinition())
 }
@@ -67,16 +67,16 @@ func ProviderDefinition() providercontract.ProviderDefinition {
 func (provider *Provider) AcquireYear(ctx context.Context, deps Dependencies, request YearRequest) (YearResult, error) {
 	result := YearResult{RequestedYear: request.Year, Completeness: macroevidence.CompletenessIncomplete}
 	if request.Year < 1990 || request.Year > 9999 {
-		return result, errors.New("Treasury yield curve year is outside the documented coverage")
+		return result, errors.New("treasury yield curve year is outside the documented coverage")
 	}
 	if strings.TrimSpace(string(request.PayloadID)) == "" {
-		return result, errors.New("Treasury yield curve payload ID is required")
+		return result, errors.New("treasury yield curve payload ID is required")
 	}
 	if err := request.Retention.Validate(); err != nil {
 		return result, err
 	}
 	if deps.Registry == nil || deps.Executor == nil || deps.Store == nil {
-		return result, errors.New("Treasury acquisition path is not fully configured")
+		return result, errors.New("treasury acquisition path is not fully configured")
 	}
 	operation := providercontract.Operation{ContractVersion: providercontract.OperationContractV1, Provider: ProviderIdentity, CapabilityID: providercontract.CapabilityMacroObservation, Kind: providercontract.OperationReadFetch, RetrySafety: providercontract.RetrySafetyRepeatable}
 	execution, err := deps.Executor.Execute(ctx, operation, func(attemptCtx context.Context, _ providercontract.AttemptContext) providercontract.ProviderAttemptResult {
@@ -112,7 +112,7 @@ func (provider *Provider) fetch(ctx context.Context, year int) providercontract.
 	endpoint := strings.TrimRight(provider.config.BaseURL, "/") + "/resource-center/data-chart-center/interest-rates/pages/xml"
 	parsed, err := url.Parse(endpoint)
 	if err != nil {
-		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureMalformedRequest, Cause: errors.New("Treasury endpoint is malformed")}}
+		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureMalformedRequest, Cause: errors.New("treasury endpoint is malformed")}}
 	}
 	query := parsed.Query()
 	query.Set("data", "daily_treasury_yield_curve")
@@ -120,31 +120,31 @@ func (provider *Provider) fetch(ctx context.Context, year int) providercontract.
 	parsed.RawQuery = query.Encode()
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
 	if err != nil {
-		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureMalformedRequest, Cause: errors.New("Treasury request could not be constructed")}}
+		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureMalformedRequest, Cause: errors.New("treasury request could not be constructed")}}
 	}
 	request.Header.Set("Accept", "text/xml, application/xml")
 	response, err := provider.client.Do(request)
 	if err != nil {
 		failure := providercontract.ClassifyTransportError(ctx, err)
-		failure.Cause = errors.New("Treasury transport request failed")
+		failure.Cause = errors.New("treasury transport request failed")
 		return providercontract.ProviderAttemptResult{Failure: &failure}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{HTTPStatus: response.StatusCode, RetryAfter: response.Header.Get("Retry-After")}}
 	}
 	mediaType := strings.TrimSpace(strings.Split(response.Header.Get("Content-Type"), ";")[0])
 	if mediaType != "text/xml" && mediaType != "application/xml" {
-		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureProviderPayloadParse, Cause: errors.New("Treasury response media type is not XML")}}
+		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureProviderPayloadParse, Cause: errors.New("treasury response media type is not XML")}}
 	}
 	body, err := io.ReadAll(io.LimitReader(response.Body, provider.config.MaxResponseBytes+1))
 	if err != nil {
 		failure := providercontract.ClassifyTransportError(ctx, err)
-		failure.Cause = errors.New("Treasury response could not be read")
+		failure.Cause = errors.New("treasury response could not be read")
 		return providercontract.ProviderAttemptResult{Failure: &failure}
 	}
 	if len(body) == 0 || int64(len(body)) > provider.config.MaxResponseBytes {
-		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureProviderPayloadParse, Cause: errors.New("Treasury response is empty or exceeds the bounded capture policy")}}
+		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureProviderPayloadParse, Cause: errors.New("treasury response is empty or exceeds the bounded capture policy")}}
 	}
 	return providercontract.ProviderAttemptResult{RawBytes: body}
 }

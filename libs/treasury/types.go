@@ -38,10 +38,10 @@ type Config struct {
 func (config Config) Validate() error {
 	parsed, err := url.Parse(strings.TrimRight(strings.TrimSpace(config.BaseURL), "/"))
 	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return fmt.Errorf("Treasury base URL must be an HTTPS origin without credentials, query, or fragment")
+		return fmt.Errorf("treasury base URL must be an HTTPS origin without credentials, query, or fragment")
 	}
 	if config.MaxResponseBytes <= 0 || config.MaxResponseBytes > 64<<20 {
-		return fmt.Errorf("Treasury maximum response size is invalid")
+		return fmt.Errorf("treasury maximum response size is invalid")
 	}
 	return nil
 }

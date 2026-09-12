@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create IB provider: %v", err)
 	}
-	defer provider.Close()
+	defer func() { _ = provider.Close() }()
 	fmt.Println("✅ Connected to IB Bridge")
 	fmt.Println()
 

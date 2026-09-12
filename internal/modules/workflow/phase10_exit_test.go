@@ -5,8 +5,6 @@ import (
 	"errors"
 	"testing"
 	"time"
-
-	"jax-trading-assistant/internal/modules/portfoliorisk"
 )
 
 // TestPhase10ExitHarness demonstrates the exact Phase-10 gate with frozen
@@ -65,5 +63,5 @@ func TestPhase10ExitHarness(t *testing.T) {
 	// The paper-intent path intentionally has no call site for a broker,
 	// execution worker, order, trade or fill. The contract's safety fields are
 	// the negative proof at this phase boundary.
-	var _ portfoliorisk.DecisionOutcome = risk.Outcome
+	var _ = risk.Outcome
 }

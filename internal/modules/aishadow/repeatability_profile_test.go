@@ -47,21 +47,6 @@ func repeatabilityTestPaths(t *testing.T, profile DiagnosticEvaluationProfile) D
 	}
 }
 
-func repeatabilityPreparedAuthorized(t *testing.T) (PreparedDiagnostic, OpenAIDiagnosticConfig) {
-	t.Helper()
-	profile := repeatabilityTestProfile(t)
-	config := repeatabilityTestConfig(t, profile, true, true, true)
-	prepared, err := PrepareHostedDiagnostic(repeatabilityTestPaths(t, profile), config, diagnosticTestSafety())
-	if err != nil {
-		t.Fatal(err)
-	}
-	prepared, err = ApplyDiagnosticExecutionShape(prepared, newDiagnosticExecutionShape(profile, 1, true))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return prepared, config
-}
-
 func TestC1F3RepeatabilityFrozenIdentityMaterial(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
 	raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(C1F3RepeatabilityScoringPath)))

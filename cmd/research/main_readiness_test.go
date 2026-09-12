@@ -14,7 +14,7 @@ func TestLoadMemoryReadiness_ReadyWhenSchemaIsCurrentAndComplete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock.New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	mock.ExpectQuery(`SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1`).
 		WillReturnRows(sqlmock.NewRows([]string{"version", "dirty"}).AddRow(pgmemory.RequiredSchemaVersion, false))
@@ -49,7 +49,7 @@ func TestLoadMemoryReadiness_NotReadyWhenSchemaVersionIsStale(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock.New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	mock.ExpectQuery(`SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1`).
 		WillReturnRows(sqlmock.NewRows([]string{"version", "dirty"}).AddRow(pgmemory.RequiredSchemaVersion-1, false))
@@ -84,7 +84,7 @@ func TestLoadMemoryReadiness_NotReadyWhenSchemaObjectsAreIncomplete(t *testing.T
 	if err != nil {
 		t.Fatalf("sqlmock.New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	mock.ExpectQuery(`SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1`).
 		WillReturnRows(sqlmock.NewRows([]string{"version", "dirty"}).AddRow(pgmemory.RequiredSchemaVersion, false))

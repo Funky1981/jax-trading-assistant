@@ -380,7 +380,7 @@ func (e *BacktestEngine) buildDataSource(ctx context.Context, symbols []string, 
 				candles = append(candles, c)
 			}
 		}
-		rows.Close()
+		_ = rows.Close()
 		if len(candles) == 0 {
 			return nil, fmt.Errorf("no candles found for %s in range", sym)
 		}

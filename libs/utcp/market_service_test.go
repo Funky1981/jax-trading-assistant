@@ -11,7 +11,7 @@ import (
 
 func TestMarketDataService_GetQuote(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
+		defer func() { _ = r.Body.Close() }()
 
 		var req struct {
 			Tool  string `json:"tool"`

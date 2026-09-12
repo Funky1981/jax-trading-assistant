@@ -116,7 +116,7 @@ func analyseEvent(config Config, provider Provider, resolver assetresolution.Res
 		responded := time.Now().UTC()
 		duration := responded.Sub(requested)
 		totalDuration += duration
-		validationErrors := []string{}
+		var validationErrors []string
 		failureReason := ""
 		if providerErr != nil {
 			failureReason = providerErr.Error()

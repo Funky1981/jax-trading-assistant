@@ -65,14 +65,6 @@ type CalendarResult struct {
 	Releases  []releaseevidence.EconomicRelease
 }
 
-func dateOnly(value string) (releaseevidence.Date, error) {
-	date := releaseevidence.Date(strings.TrimSpace(value))
-	if err := date.Validate(); err != nil {
-		return "", err
-	}
-	return date, nil
-}
-
 func utc(value time.Time) *time.Time {
 	value = value.UTC()
 	return &value

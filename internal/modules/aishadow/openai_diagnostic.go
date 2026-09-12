@@ -137,7 +137,7 @@ func LoadOpenAIDiagnosticConfigForProfile(lookup func(string) (string, bool), pr
 	}
 	model := values["JAX_AI_MODEL"]
 	experimentID := values["JAX_AI_EXPERIMENT_ID"]
-	if !supportedOpenAIDiagnosticModel(model) && !(model == OpenAIDiagnosticTerraModel && experimentID == C1F3TerraChallengerExperimentID) {
+	if !supportedOpenAIDiagnosticModel(model) && (model != OpenAIDiagnosticTerraModel || experimentID != C1F3TerraChallengerExperimentID) {
 		return OpenAIDiagnosticConfig{}, fmt.Errorf("hosted issuer diagnostic requires JAX_AI_MODEL=%s or %s outside the registered Terra challenger cell", OpenAIDiagnosticSolModel, OpenAIDiagnosticLunaModel)
 	}
 	if !experimentIDPattern.MatchString(experimentID) {
@@ -433,7 +433,7 @@ func NewOpenAIDiagnosticClient(config OpenAIDiagnosticConfig, transport HTTPDoer
 }
 
 func (c *OpenAIDiagnosticClient) Complete(request ProviderRequest) (ProviderResponse, error) {
-	if !supportedOpenAIDiagnosticModel(c.config.Runtime.Model) && !(c.config.Runtime.Model == OpenAIDiagnosticTerraModel && c.config.ExperimentID == C1F3TerraChallengerExperimentID) {
+	if !supportedOpenAIDiagnosticModel(c.config.Runtime.Model) && (c.config.Runtime.Model != OpenAIDiagnosticTerraModel || c.config.ExperimentID != C1F3TerraChallengerExperimentID) {
 		return ProviderResponse{}, providerSafeError{kind: "configured_model", fatal: true}
 	}
 	if err := validateOpenAIExperimentCell(c.config.ExperimentID, c.config.Runtime.Model, c.config.OutputContractMode); err != nil {
@@ -467,7 +467,7 @@ func (c *OpenAIDiagnosticClient) Complete(request ProviderRequest) (ProviderResp
 		c.recordFailure(failure)
 		return ProviderResponse{}, providerSafeError{kind: "transport", timeout: timedOut, ambiguous: true, fatal: true}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, readErr := io.ReadAll(io.LimitReader(response.Body, 2<<20))
 	requestID := response.Header.Get("x-request-id")
 	requestID = c.sanitize(requestID)
@@ -671,27 +671,27 @@ func estimatedOpenAIInputTokens(config OpenAIDiagnosticConfig, request ProviderR
 
 func validateOpenAIStructuredOutputSchema(schema map[string]any) error {
 	if schema == nil {
-		return fmt.Errorf("Structured Outputs require ProviderRequest.Schema")
+		return fmt.Errorf("structured outputs require ProviderRequest.Schema")
 	}
 	for keyword := range schema {
 		if !map[string]bool{"type": true, "properties": true, "required": true, "additionalProperties": true}[keyword] {
-			return fmt.Errorf("Structured Outputs root contains unsupported schema keyword %q", keyword)
+			return fmt.Errorf("structured outputs root contains unsupported schema keyword %q", keyword)
 		}
 	}
 	if schema["type"] != "object" {
-		return fmt.Errorf("Structured Outputs require a root object schema")
+		return fmt.Errorf("structured outputs require a root object schema")
 	}
 	additional, ok := schema["additionalProperties"].(bool)
 	if !ok || additional {
-		return fmt.Errorf("Structured Outputs require additionalProperties=false")
+		return fmt.Errorf("structured outputs require additionalProperties=false")
 	}
 	properties, ok := schema["properties"].(map[string]any)
 	if !ok || len(properties) == 0 {
-		return fmt.Errorf("Structured Outputs require object properties")
+		return fmt.Errorf("structured outputs require object properties")
 	}
 	required, ok := schema["required"].([]string)
 	if !ok || len(required) != len(properties) {
-		return fmt.Errorf("Structured Outputs require every property")
+		return fmt.Errorf("structured outputs require every property")
 	}
 	requiredSet := make(map[string]bool, len(required))
 	for _, name := range required {
@@ -699,10 +699,10 @@ func validateOpenAIStructuredOutputSchema(schema map[string]any) error {
 	}
 	for name, property := range properties {
 		if !requiredSet[name] {
-			return fmt.Errorf("Structured Outputs property %q is not required", name)
+			return fmt.Errorf("structured outputs property %q is not required", name)
 		}
 		if err := validateOpenAISchemaNode(property); err != nil {
-			return fmt.Errorf("Structured Outputs property %q: %w", name, err)
+			return fmt.Errorf("structured outputs property %q: %w", name, err)
 		}
 	}
 	return nil

@@ -269,7 +269,8 @@ func run(args []string, output io.Writer, deps dependencies) error {
 	}
 	var identity aishadow.DiagnosticModelIdentity
 	var provider aishadow.Provider
-	if providerName == aishadow.OpenAIDiagnosticProvider {
+	switch providerName {
+	case aishadow.OpenAIDiagnosticProvider:
 		if !hostedConfig.InferenceExplicitlyAuthorized {
 			return fmt.Errorf("hosted inference is not authorized: %s must be true under separate architecture approval", aishadow.OpenAIDiagnosticInferenceAuthEnv)
 		}
@@ -278,13 +279,13 @@ func run(args []string, output io.Writer, deps dependencies) error {
 		}
 		identity = aishadow.DiagnosticModelIdentity{Name: config.Model}
 		provider = deps.openAIProvider(hostedConfig)
-	} else if providerName == aishadow.DeepSeekDiagnosticProvider {
+	case aishadow.DeepSeekDiagnosticProvider:
 		if !deepSeekConfig.InferenceExplicitlyAuthorized {
 			return fmt.Errorf("hosted inference is not authorized: %s must be true under separate architecture approval", aishadow.OpenAIDiagnosticInferenceAuthEnv)
 		}
 		identity = aishadow.DiagnosticModelIdentity{Name: config.Model}
 		provider = deps.deepSeekProvider(deepSeekConfig)
-	} else {
+	default:
 		identity, err = deps.inspectModel(config)
 		if err != nil {
 			return err

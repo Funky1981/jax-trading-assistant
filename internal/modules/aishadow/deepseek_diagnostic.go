@@ -189,7 +189,7 @@ func (c *DeepSeekDiagnosticClient) Complete(request ProviderRequest) (ProviderRe
 		c.recordFailure(HostedProviderFailure{RequestNumber: requestNumber, EventID: request.EventID, AttemptNumber: request.AttemptNumber, Kind: "transport", Timeout: timedOut, AmbiguousSpend: true})
 		return ProviderResponse{}, deepSeekSafeError{kind: "transport", timeout: timedOut, ambiguous: true, fatal: true}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, readErr := io.ReadAll(io.LimitReader(response.Body, 2<<20))
 	requestID := c.sanitize(response.Header.Get("x-request-id"))
 	if readErr != nil {

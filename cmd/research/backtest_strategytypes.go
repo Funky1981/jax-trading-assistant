@@ -151,7 +151,7 @@ func fetchEventBuckets(ctx context.Context, db *sql.DB, symbol string, start, en
 	if err != nil {
 		return earnings, news
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var kind, severity string

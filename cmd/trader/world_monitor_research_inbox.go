@@ -213,10 +213,6 @@ func (s *worldMonitorResearchInboxService) toPersistEventInput(trigger worldMoni
 	}
 }
 
-func (s *worldMonitorResearchInboxService) findExistingReceipt(ctx context.Context, trigger worldMonitorResearchTrigger) (worldMonitorResearchReceipt, bool, error) {
-	return s.findExistingReceiptWith(ctx, s.pool, trigger)
-}
-
 func (s *worldMonitorResearchInboxService) findExistingReceiptWith(ctx context.Context, db worldMonitorInboxDB, trigger worldMonitorResearchTrigger) (worldMonitorResearchReceipt, bool, error) {
 	var receipt worldMonitorResearchReceipt
 	err := db.QueryRow(ctx, `
@@ -238,10 +234,6 @@ func (s *worldMonitorResearchInboxService) findExistingReceiptWith(ctx context.C
 		return worldMonitorResearchReceipt{}, false, fmt.Errorf("lookup world monitor inbox duplicate: %w", err)
 	}
 	return receipt, true, nil
-}
-
-func (s *worldMonitorResearchInboxService) insertInboxRow(ctx context.Context, trigger worldMonitorResearchTrigger, status, rejectionReason, normalizedEventID string) (string, error) {
-	return s.insertInboxRowWith(ctx, s.pool, trigger, status, rejectionReason, normalizedEventID)
 }
 
 func (s *worldMonitorResearchInboxService) insertInboxRowWith(ctx context.Context, db worldMonitorInboxDB, trigger worldMonitorResearchTrigger, status, rejectionReason, normalizedEventID string) (string, error) {

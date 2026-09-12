@@ -66,7 +66,7 @@ func captureSignals(baseURL, outputDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to fetch signals: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -111,7 +111,7 @@ func captureExecutions(baseURL, outputDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to fetch trades: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -156,7 +156,7 @@ func captureOrchestration(baseURL, outputDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to fetch orchestration runs: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		// If endpoint doesn't exist, create empty snapshot
@@ -212,7 +212,7 @@ func saveSnapshot(snapshot Snapshot, path string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")

@@ -87,7 +87,7 @@ func (provider *Provider) fetch(ctx context.Context, endpoint string) providerco
 	if err != nil {
 		return providercontract.ProviderAttemptResult{Failure: ptrFailure(providercontract.ClassifyTransportError(ctx, err))}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{HTTPStatus: response.StatusCode}}
 	}

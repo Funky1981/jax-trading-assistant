@@ -70,11 +70,13 @@ func TestLoadPolicyFromFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := json.NewEncoder(f).Encode(doc); err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	p, err := risk.LoadPolicy(f.Name())
 	if err != nil {

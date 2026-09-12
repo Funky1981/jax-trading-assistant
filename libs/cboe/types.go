@@ -38,10 +38,10 @@ type Config struct {
 func (config Config) Validate() error {
 	parsed, err := url.Parse(strings.TrimSpace(config.HistoryURL))
 	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return fmt.Errorf("Cboe VIX history URL must be HTTPS without credentials, query, or fragment")
+		return fmt.Errorf("cboe VIX history URL must be HTTPS without credentials, query, or fragment")
 	}
 	if config.MaxResponseBytes <= 0 || config.MaxResponseBytes > 64<<20 {
-		return fmt.Errorf("Cboe maximum response size is invalid")
+		return fmt.Errorf("cboe maximum response size is invalid")
 	}
 	return nil
 }

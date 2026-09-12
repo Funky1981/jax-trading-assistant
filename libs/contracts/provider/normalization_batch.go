@@ -157,7 +157,7 @@ func normalizeBatchAdapterError(ref RawPayloadRef, err error) error {
 }
 
 func acceptBatchCandidate(ref RawPayloadRef, target canonical.ContractSchemaRef, descriptor NormalizerDescriptor, candidate NormalizationCandidate) (NormalizationResult, error) {
-	if candidate.Record == nil || (reflect.ValueOf(candidate.Record).Kind() == reflect.Ptr && reflect.ValueOf(candidate.Record).IsNil()) {
+	if candidate.Record == nil || (reflect.ValueOf(candidate.Record).Kind() == reflect.Pointer && reflect.ValueOf(candidate.Record).IsNil()) {
 		return NormalizationResult{}, normalizationError(NormalizationStageMapping, NormalizationErrorCanonicalConstruction, ref, "normalizer returned no canonical candidate", nil)
 	}
 	if err := validateFieldDispositions(candidate.Dispositions); err != nil {

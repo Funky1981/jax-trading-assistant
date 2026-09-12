@@ -1546,24 +1546,24 @@ func prometheusHandler(pool *pgxpool.Pool) http.HandlerFunc {
 		).Scan(&totalRuns, &completedRuns, &failedRuns)
 
 		upSecs := time.Since(startTime).Seconds()
-		fmt.Fprintf(w, "# HELP jax_trader_uptime_seconds Uptime\n")
-		fmt.Fprintf(w, "# TYPE jax_trader_uptime_seconds gauge\n")
-		fmt.Fprintf(w, "jax_trader_uptime_seconds %.0f\n", upSecs)
-		fmt.Fprintf(w, "# HELP jax_signals_total Total strategy signals\n")
-		fmt.Fprintf(w, "# TYPE jax_signals_total counter\n")
-		fmt.Fprintf(w, "jax_signals_total %d\n", totalSignals)
-		fmt.Fprintf(w, "# HELP jax_signals_pending Pending strategy signals\n")
-		fmt.Fprintf(w, "# TYPE jax_signals_pending gauge\n")
-		fmt.Fprintf(w, "jax_signals_pending %d\n", pendingSignals)
-		fmt.Fprintf(w, "# HELP jax_orchestrator_runs_total Total orchestration runs\n")
-		fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_total counter\n")
-		fmt.Fprintf(w, "jax_orchestrator_runs_total %d\n", totalRuns)
-		fmt.Fprintf(w, "# HELP jax_orchestrator_runs_completed_total Completed runs\n")
-		fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_completed_total counter\n")
-		fmt.Fprintf(w, "jax_orchestrator_runs_completed_total %d\n", completedRuns)
-		fmt.Fprintf(w, "# HELP jax_orchestrator_runs_failed_total Failed runs\n")
-		fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_failed_total counter\n")
-		fmt.Fprintf(w, "jax_orchestrator_runs_failed_total %d\n", failedRuns)
+		_, _ = fmt.Fprintf(w, "# HELP jax_trader_uptime_seconds Uptime\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_trader_uptime_seconds gauge\n")
+		_, _ = fmt.Fprintf(w, "jax_trader_uptime_seconds %.0f\n", upSecs)
+		_, _ = fmt.Fprintf(w, "# HELP jax_signals_total Total strategy signals\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_signals_total counter\n")
+		_, _ = fmt.Fprintf(w, "jax_signals_total %d\n", totalSignals)
+		_, _ = fmt.Fprintf(w, "# HELP jax_signals_pending Pending strategy signals\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_signals_pending gauge\n")
+		_, _ = fmt.Fprintf(w, "jax_signals_pending %d\n", pendingSignals)
+		_, _ = fmt.Fprintf(w, "# HELP jax_orchestrator_runs_total Total orchestration runs\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_total counter\n")
+		_, _ = fmt.Fprintf(w, "jax_orchestrator_runs_total %d\n", totalRuns)
+		_, _ = fmt.Fprintf(w, "# HELP jax_orchestrator_runs_completed_total Completed runs\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_completed_total counter\n")
+		_, _ = fmt.Fprintf(w, "jax_orchestrator_runs_completed_total %d\n", completedRuns)
+		_, _ = fmt.Fprintf(w, "# HELP jax_orchestrator_runs_failed_total Failed runs\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_failed_total counter\n")
+		_, _ = fmt.Fprintf(w, "jax_orchestrator_runs_failed_total %d\n", failedRuns)
 	}
 }
 
@@ -1654,7 +1654,7 @@ func proxyPost(ctx context.Context, url string, body []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return nil, err

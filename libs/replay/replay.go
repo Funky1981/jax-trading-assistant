@@ -110,7 +110,7 @@ func (ts *TraceStore) Append(entry TraceEntry) (TraceEntry, error) {
 		ts.seq--
 		return TraceEntry{}, fmt.Errorf("replay.TraceStore.Append: open: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := fmt.Fprintf(f, "%s\n", data); err != nil {
 		ts.seq--

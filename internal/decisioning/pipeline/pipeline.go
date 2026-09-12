@@ -74,7 +74,7 @@ func Run(input Input) Result {
 	allowedActions := safeAllowedActions(riskAssessment.AllowedActions)
 	forbiddenActions := normaliseForbiddenActions(
 		decisionCore.FinalDecision.ForbiddenActions,
-		swingDecision.Decision.ForbiddenActions,
+		swingDecision.ForbiddenActions,
 		riskAssessment.ForbiddenActions,
 	)
 
@@ -89,7 +89,7 @@ func Run(input Input) Result {
 		finalStatus = StatusPipelineInvalid
 	}
 
-	reviewSchedule := review.NewReviewSchedule(swingDecision.Decision.DecisionID, now)
+	reviewSchedule := review.NewReviewSchedule(swingDecision.DecisionID, now)
 	return Result{
 		PipelineID:              pipelineID(input.Event.EventID),
 		EventID:                 input.Event.EventID,
@@ -167,8 +167,8 @@ func preparePaperReview(
 		MaxPaperPositionSize:          input.Swing.MaxPaperPositionSize,
 		CreatedAt:                     now,
 		ExpiresAt:                     now.Add(24 * time.Hour),
-		RequiredConfirmations:         swingDecision.Decision.RequiredConfirmations,
-		InvalidationConditions:        swingDecision.Decision.InvalidationConditions,
+		RequiredConfirmations:         swingDecision.RequiredConfirmations,
+		InvalidationConditions:        swingDecision.InvalidationConditions,
 		ExplicitHumanApprovalRequired: true,
 	}
 

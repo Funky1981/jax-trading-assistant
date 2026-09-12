@@ -20,7 +20,7 @@ func TestHTTPTradeExecutor_ExecuteSignal(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[{
+		_, _ = w.Write([]byte(`[{
 			"id": "ord-123",
 			"symbol": "AAPL",
 			"type": "limit",
@@ -64,7 +64,7 @@ func TestHTTPTradeExecutor_GetPositions(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[{
+		_, _ = w.Write([]byte(`[{
 			"symbol": "AAPL",
 			"quantity": 100,
 			"avg_entry_price": 150.25,
@@ -96,7 +96,7 @@ func TestHTTPTradeExecutor_GetPortfolio(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"account_id": "acc-123",
 			"cash": 50000.00,
 			"buying_power": 200000.00,

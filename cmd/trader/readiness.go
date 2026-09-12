@@ -305,7 +305,7 @@ func probeReadinessEndpoint(ctx context.Context, client *http.Client, name, endp
 		result["error"] = err.Error()
 		return result
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result["statusCode"] = resp.StatusCode
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))

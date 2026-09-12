@@ -230,14 +230,14 @@ func (p *AlpacaProvider) fetchAlpacaBarsAttempt(ctx context.Context, endpoint st
 		failure := providercontract.ClassifyTransportError(ctx, err)
 		return providercontract.ProviderAttemptResult{Failure: &failure}, ""
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{HTTPStatus: response.StatusCode, RetryAfter: response.Header.Get("Retry-After")}}, ""
 	}
 	contentType := strings.TrimSpace(response.Header.Get("Content-Type"))
 	baseType, _, parseErr := mime.ParseMediaType(contentType)
 	if parseErr != nil || baseType != "application/json" {
-		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureProviderPayloadParse, Cause: errors.New("Alpaca response media type is not application/json")}}, ""
+		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureProviderPayloadParse, Cause: errors.New("alpaca response media type is not application/json")}}, ""
 	}
 	body, err := io.ReadAll(io.LimitReader(response.Body, AlpacaBarsMaximumBytes+1))
 	if err != nil {
@@ -245,7 +245,7 @@ func (p *AlpacaProvider) fetchAlpacaBarsAttempt(ctx context.Context, endpoint st
 		return providercontract.ProviderAttemptResult{Failure: &failure}, ""
 	}
 	if len(body) == 0 || len(body) > AlpacaBarsMaximumBytes {
-		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureProviderPayloadParse, Cause: errors.New("Alpaca response body is empty or exceeds the bounded capture limit")}}, ""
+		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{Class: providercontract.FailureProviderPayloadParse, Cause: errors.New("alpaca response body is empty or exceeds the bounded capture limit")}}, ""
 	}
 	return providercontract.ProviderAttemptResult{RawBytes: body}, baseType
 }
@@ -267,7 +267,7 @@ func newAlpacaBarsNormalizer(instrument canonical.Instrument, feed MarketFeed, a
 		return nil, err
 	}
 	if adjustment != MarketAdjustmentUnadjusted {
-		return nil, errors.New("Alpaca hardened bars path currently requires raw/unadjusted bars")
+		return nil, errors.New("alpaca hardened bars path currently requires raw/unadjusted bars")
 	}
 	providerIdentity := cloneMarketProviderIdentity(AlpacaProviderIdentity)
 	mappingContent := canonical.RawContentIdentity([]byte("jax Alpaca daily stock bars mapping/v1"))
@@ -289,7 +289,7 @@ func (normalizer *alpacaBarsNormalizer) Descriptor() providercontract.Normalizer
 }
 
 func (normalizer *alpacaBarsNormalizer) Normalize(context.Context, providercontract.NormalizationInput) (providercontract.NormalizationCandidate, error) {
-	return providercontract.NormalizationCandidate{}, errors.New("Alpaca stock bars response contains a bounded observation batch")
+	return providercontract.NormalizationCandidate{}, errors.New("alpaca stock bars response contains a bounded observation batch")
 }
 
 func (normalizer *alpacaBarsNormalizer) NormalizeBatch(_ context.Context, input providercontract.NormalizationInput) ([]providercontract.NormalizationCandidate, error) {
@@ -303,10 +303,10 @@ func (normalizer *alpacaBarsNormalizer) NormalizeBatch(_ context.Context, input 
 	}
 	rows, ok := payload.Bars[ticker]
 	if !ok || len(rows) == 0 {
-		return nil, errors.New("Alpaca response contains no bars for the requested canonical symbol")
+		return nil, errors.New("alpaca response contains no bars for the requested canonical symbol")
 	}
 	if len(payload.Bars) != 1 {
-		return nil, errors.New("Alpaca response contains an unexpected symbol")
+		return nil, errors.New("alpaca response contains an unexpected symbol")
 	}
 	result := make([]providercontract.NormalizationCandidate, 0, len(rows)*5)
 	seen := map[time.Time]struct{}{}
@@ -314,17 +314,17 @@ func (normalizer *alpacaBarsNormalizer) NormalizeBatch(_ context.Context, input 
 	for _, row := range rows {
 		observedAt, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(row.Timestamp))
 		if err != nil || observedAt.Location() != time.UTC {
-			return nil, errors.New("Alpaca daily bar timestamp must be an RFC3339 UTC timestamp")
+			return nil, errors.New("alpaca daily bar timestamp must be an RFC3339 UTC timestamp")
 		}
 		observedAt = observedAt.UTC()
 		if observedAt.After(input.RawRef.ReceivedAt) {
-			return nil, errors.New("Alpaca bar timestamp is later than acquisition time")
+			return nil, errors.New("alpaca bar timestamp is later than acquisition time")
 		}
 		if !previous.IsZero() && !observedAt.After(previous) {
-			return nil, errors.New("Alpaca bars are not in strict chronological order")
+			return nil, errors.New("alpaca bars are not in strict chronological order")
 		}
 		if _, exists := seen[observedAt]; exists {
-			return nil, errors.New("Alpaca response contains duplicate bar timestamps")
+			return nil, errors.New("alpaca response contains duplicate bar timestamps")
 		}
 		seen[observedAt] = struct{}{}
 		previous = observedAt
@@ -351,12 +351,12 @@ func (normalizer *alpacaBarsNormalizer) NormalizeBatch(_ context.Context, input 
 				parsedValue, parseErr = parseAlpacaPrice(value.number)
 			}
 			if parseErr != nil {
-				return nil, fmt.Errorf("Alpaca %s is invalid: %w", value.field, parseErr)
+				return nil, fmt.Errorf("alpaca %s is invalid: %w", value.field, parseErr)
 			}
 			parsed = append(parsed, parsedValue)
 		}
 		if parsed[1] < parsed[2] || parsed[1] < parsed[0] || parsed[1] < parsed[3] || parsed[2] > parsed[0] || parsed[2] > parsed[3] || parsed[4] < 0 {
-			return nil, errors.New("Alpaca OHLCV invariants are violated")
+			return nil, errors.New("alpaca OHLCV invariants are violated")
 		}
 		for index, value := range values {
 			seed := strings.Join([]string{string(input.RawRef.ID), input.RawRef.Content.Digest.Value, normalizer.descriptor.Component.ID, normalizer.descriptor.Component.Version.Value, string(normalizer.instrument.ID), normalizer.feed.String(), string(normalizer.adjustment), observedAt.Format(time.RFC3339Nano), value.metric}, "\x00")
@@ -398,20 +398,20 @@ type alpacaBarRow struct {
 
 func parseAlpacaBarsPayload(raw []byte) (alpacaBarsPayload, error) {
 	if !json.Valid(raw) {
-		return alpacaBarsPayload{}, errors.New("Alpaca response JSON is invalid")
+		return alpacaBarsPayload{}, errors.New("alpaca response JSON is invalid")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.UseNumber()
 	decoder.DisallowUnknownFields()
 	var payload alpacaBarsPayload
 	if err := decoder.Decode(&payload); err != nil {
-		return alpacaBarsPayload{}, fmt.Errorf("Alpaca response does not match the documented bars schema: %w", err)
+		return alpacaBarsPayload{}, fmt.Errorf("alpaca response does not match the documented bars schema: %w", err)
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
-		return alpacaBarsPayload{}, errors.New("Alpaca response contains trailing data")
+		return alpacaBarsPayload{}, errors.New("alpaca response contains trailing data")
 	}
 	if payload.Bars == nil {
-		return alpacaBarsPayload{}, errors.New("Alpaca response bars object is required")
+		return alpacaBarsPayload{}, errors.New("alpaca response bars object is required")
 	}
 	return payload, nil
 }
@@ -463,7 +463,7 @@ func alpacaTicker(instrument canonical.Instrument) (string, error) {
 
 func validateAlpacaFeed(feed MarketFeed) error {
 	if feed != MarketFeedSIP && feed != MarketFeedIEX {
-		return fmt.Errorf("Alpaca feed must be explicit and one of %q or %q", MarketFeedSIP, MarketFeedIEX)
+		return fmt.Errorf("alpaca feed must be explicit and one of %q or %q", MarketFeedSIP, MarketFeedIEX)
 	}
 	return nil
 }
@@ -493,16 +493,16 @@ func validateAlpacaBarsRequest(request AlpacaBarsRequest) error {
 		return fmt.Errorf("%w: Alpaca hardened path supports daily bars only", ErrInvalidTimeframe)
 	}
 	if !isUTCDate(request.StartDate) || !isUTCDate(request.EndDate) || request.EndDate.Before(request.StartDate) {
-		return errors.New("Alpaca bar range must use ordered UTC calendar dates")
+		return errors.New("alpaca bar range must use ordered UTC calendar dates")
 	}
 	if days := int(request.EndDate.Sub(request.StartDate).Hours()/24) + 1; days <= 0 || days > 366 {
-		return errors.New("Alpaca bar range exceeds the bounded calendar window")
+		return errors.New("alpaca bar range exceeds the bounded calendar window")
 	}
 	if err := validateAlpacaFeed(request.Feed); err != nil {
 		return err
 	}
 	if request.Adjustment != MarketAdjustmentUnadjusted {
-		return errors.New("Alpaca hardened path requires explicit raw/unadjusted adjustment")
+		return errors.New("alpaca hardened path requires explicit raw/unadjusted adjustment")
 	}
 	if strings.TrimSpace(string(request.PayloadID)) == "" {
 		return errors.New("raw payload acquisition identity is required")
@@ -512,16 +512,16 @@ func validateAlpacaBarsRequest(request AlpacaBarsRequest) error {
 
 func projectAlpacaMarketBars(batch providercontract.BatchNormalizationResult, instrument canonical.Instrument, feed MarketFeed, adjustment MarketAdjustmentState) ([]CanonicalMarketBar, error) {
 	if err := batch.RawRef.Validate(); err != nil {
-		return nil, fmt.Errorf("Alpaca projection received an invalid first raw reference: %w", err)
+		return nil, fmt.Errorf("alpaca projection received an invalid first raw reference: %w", err)
 	}
 	if err := batch.Normalizer.Validate(); err != nil {
-		return nil, fmt.Errorf("Alpaca projection received an invalid normalizer: %w", err)
+		return nil, fmt.Errorf("alpaca projection received an invalid normalizer: %w", err)
 	}
 	if err := batch.Target.Validate(); err != nil {
-		return nil, fmt.Errorf("Alpaca projection received an invalid target: %w", err)
+		return nil, fmt.Errorf("alpaca projection received an invalid target: %w", err)
 	}
 	if len(batch.Records) == 0 {
-		return nil, errors.New("Alpaca projection received no normalized records")
+		return nil, errors.New("alpaca projection received no normalized records")
 	}
 	if err := instrument.Validate(); err != nil {
 		return nil, err
@@ -530,7 +530,7 @@ func projectAlpacaMarketBars(batch providercontract.BatchNormalizationResult, in
 		return nil, err
 	}
 	if adjustment != MarketAdjustmentUnadjusted {
-		return nil, errors.New("Alpaca projection requires raw/unadjusted adjustment")
+		return nil, errors.New("alpaca projection requires raw/unadjusted adjustment")
 	}
 	loc, err := time.LoadLocation("America/New_York")
 	if err != nil {
@@ -543,20 +543,20 @@ func projectAlpacaMarketBars(batch providercontract.BatchNormalizationResult, in
 	groups := map[time.Time]*group{}
 	for _, accepted := range batch.Records {
 		if accepted.Status != providercontract.NormalizationStatusAccepted || accepted.Quality != providercontract.NormalizationQualityValidated {
-			return nil, errors.New("Alpaca projection received a non-accepted normalization result")
+			return nil, errors.New("alpaca projection received a non-accepted normalization result")
 		}
 		if err := accepted.RawRef.Validate(); err != nil {
-			return nil, fmt.Errorf("Alpaca projection received an invalid raw reference: %w", err)
+			return nil, fmt.Errorf("alpaca projection received an invalid raw reference: %w", err)
 		}
 		if err := accepted.Output.Validate(); err != nil {
-			return nil, fmt.Errorf("Alpaca projection received an invalid canonical output reference: %w", err)
+			return nil, fmt.Errorf("alpaca projection received an invalid canonical output reference: %w", err)
 		}
 		observation, ok := accepted.Record.(canonical.Observation)
 		if !ok || observation.Subject.ID != string(instrument.ID) {
-			return nil, errors.New("Alpaca projection received an invalid canonical observation")
+			return nil, errors.New("alpaca projection received an invalid canonical observation")
 		}
 		if err := observation.Validate(); err != nil {
-			return nil, fmt.Errorf("Alpaca projection received an invalid canonical observation: %w", err)
+			return nil, fmt.Errorf("alpaca projection received an invalid canonical observation: %w", err)
 		}
 		item := groups[observation.ObservedAt]
 		if item == nil {
@@ -582,13 +582,13 @@ func projectAlpacaMarketBars(batch providercontract.BatchNormalizationResult, in
 		local := observedAt.In(loc)
 		start := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc).UTC()
 		if !start.Equal(observedAt) {
-			return nil, errors.New("Alpaca daily bar timestamp is not the documented New York date boundary")
+			return nil, errors.New("alpaca daily bar timestamp is not the documented New York date boundary")
 		}
 		nextLocal := time.Date(local.Year(), local.Month(), local.Day()+1, 0, 0, 0, 0, loc).UTC()
 		item := groups[observedAt]
 		for _, metric := range []string{MarketMetricOpen, MarketMetricHigh, MarketMetricLow, MarketMetricClose, MarketMetricVolume} {
 			if _, ok := item.observations[metric]; !ok {
-				return nil, fmt.Errorf("Alpaca market bar is missing canonical metric %q", metric)
+				return nil, fmt.Errorf("alpaca market bar is missing canonical metric %q", metric)
 			}
 		}
 		bar := CanonicalMarketBar{Instrument: canonical.ContractRef{Kind: canonical.ContractKindInstrument, ID: string(instrument.ID), ContractVersion: instrument.ContractVersion}, Interval: Timeframe1Day, Start: start, End: nextLocal, ProviderDate: local.Format("2006-01-02"), TimestampSemantics: MarketTimestampProviderBarTimestamp, TimestampAuthority: MarketTimestampAuthorityProviderTimestamp, Session: MarketSessionProviderEODUnspecified, MarketTimezone: "America/New_York", Feed: feed, FeedCoverage: coverage, Adjustment: adjustment, Open: item.observations[MarketMetricOpen], High: item.observations[MarketMetricHigh], Low: item.observations[MarketMetricLow], Close: item.observations[MarketMetricClose], Volume: item.observations[MarketMetricVolume]}

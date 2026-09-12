@@ -315,15 +315,21 @@ func TestNewJWTManagerFromEnv(t *testing.T) {
 
 	// Restore after test
 	defer func() {
-		os.Setenv("JWT_SECRET", origSecret)
-		os.Setenv("JWT_EXPIRY", origExpiry)
-		os.Setenv("JWT_REFRESH_EXPIRY", origRefresh)
+		_ = os.Setenv("JWT_SECRET", origSecret)
+		_ = os.Setenv("JWT_EXPIRY", origExpiry)
+		_ = os.Setenv("JWT_REFRESH_EXPIRY", origRefresh)
 	}()
 
 	t.Run("valid env vars", func(t *testing.T) {
-		os.Setenv("JWT_SECRET", "test-secret-from-env")
-		os.Setenv("JWT_EXPIRY", "2h")
-		os.Setenv("JWT_REFRESH_EXPIRY", "48h")
+		if err := os.Setenv("JWT_SECRET", "test-secret-from-env"); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Setenv("JWT_EXPIRY", "2h"); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Setenv("JWT_REFRESH_EXPIRY", "48h"); err != nil {
+			t.Fatal(err)
+		}
 
 		manager, err := NewJWTManagerFromEnv()
 		if err != nil {
@@ -335,7 +341,9 @@ func TestNewJWTManagerFromEnv(t *testing.T) {
 	})
 
 	t.Run("missing secret", func(t *testing.T) {
-		os.Unsetenv("JWT_SECRET")
+		if err := os.Unsetenv("JWT_SECRET"); err != nil {
+			t.Fatal(err)
+		}
 
 		_, err := NewJWTManagerFromEnv()
 		if err == nil {

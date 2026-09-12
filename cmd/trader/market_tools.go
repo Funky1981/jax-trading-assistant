@@ -345,7 +345,7 @@ func (m *marketTools) getIBBridgeReadiness(ctx context.Context) (*ibBridgeHealth
 	if err != nil {
 		return nil, 0, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
@@ -583,10 +583,6 @@ func (e *eventAggregator) getCalendarMacro(limit int) []utcp.NewsEntry {
 	return out
 }
 
-func (e *eventAggregator) fetchJSON(ctx context.Context, endpoint string, out any) error {
-	return e.fetchJSONWithHeaders(ctx, endpoint, nil, out)
-}
-
 func (e *eventAggregator) fetchJSONWithHeaders(ctx context.Context, endpoint string, headers map[string]string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -599,7 +595,7 @@ func (e *eventAggregator) fetchJSONWithHeaders(ctx context.Context, endpoint str
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
 		return fmt.Errorf("provider HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))

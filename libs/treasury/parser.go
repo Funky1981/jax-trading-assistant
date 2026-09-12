@@ -43,7 +43,7 @@ type properties struct {
 func parseYieldCurve(raw []byte, ref providercontract.RawPayloadRef, requestedYear int) ([]YieldObservation, error) {
 	var document feed
 	if err := xml.Unmarshal(raw, &document); err != nil {
-		return nil, fmt.Errorf("Treasury XML parse failed: %w", err)
+		return nil, fmt.Errorf("treasury XML parse failed: %w", err)
 	}
 	if len(document.Entries) == 0 {
 		return nil, errorsf("Treasury yield curve contains no entries")
@@ -70,10 +70,10 @@ func parseYieldCurve(raw []byte, ref providercontract.RawPayloadRef, requestedYe
 			return nil, err
 		}
 		if string(date[:4]) != strconv.Itoa(requestedYear) {
-			return nil, fmt.Errorf("Treasury response contains a row outside requested year %d", requestedYear)
+			return nil, fmt.Errorf("treasury response contains a row outside requested year %d", requestedYear)
 		}
 		if previous != "" && date <= previous {
-			return nil, fmt.Errorf("Treasury yield curve dates are not strictly ascending or contain duplicates")
+			return nil, fmt.Errorf("treasury yield curve dates are not strictly ascending or contain duplicates")
 		}
 		previous = date
 		rows = append(rows, item.Properties)
@@ -98,7 +98,7 @@ func parseYieldCurve(raw []byte, ref providercontract.RawPayloadRef, requestedYe
 			sourceValue := strings.TrimSpace(values[item.Name](row))
 			value, err := parseTreasuryValue(sourceValue)
 			if err != nil {
-				return nil, fmt.Errorf("Treasury %s %s value: %w", date, item.Name, err)
+				return nil, fmt.Errorf("treasury %s %s value: %w", date, item.Name, err)
 			}
 			idSeed := strings.Join([]string{"treasury-observation", item.Name, string(date), sourceValue}, "\x00")
 			observationID := "mobs_" + canonical.DigestBytes([]byte(idSeed)).Value[:24]
@@ -119,11 +119,11 @@ func parseYieldCurve(raw []byte, ref providercontract.RawPayloadRef, requestedYe
 func parseTreasuryDate(raw string) (macroevidence.Date, error) {
 	raw = strings.TrimSpace(raw)
 	if len(raw) < 10 {
-		return "", fmt.Errorf("Treasury date is malformed")
+		return "", fmt.Errorf("treasury date is malformed")
 	}
 	date := macroevidence.Date(raw[:10])
 	if err := date.Validate(); err != nil {
-		return "", fmt.Errorf("Treasury date: %w", err)
+		return "", fmt.Errorf("treasury date: %w", err)
 	}
 	return date, nil
 }
@@ -155,7 +155,7 @@ func parseUpdated(raw string) (*time.Time, error) {
 	}
 	parsed, err := time.Parse(time.RFC3339, raw)
 	if err != nil {
-		return nil, fmt.Errorf("Treasury feed updated timestamp is malformed")
+		return nil, fmt.Errorf("treasury feed updated timestamp is malformed")
 	}
 	value := parsed.UTC()
 	return &value, nil

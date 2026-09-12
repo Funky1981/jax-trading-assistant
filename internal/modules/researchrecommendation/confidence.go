@@ -2,8 +2,6 @@ package researchrecommendation
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 )
 
 const ConfidenceAssessmentContractV1 = "jax.confidence_assessment/v1"
@@ -53,10 +51,4 @@ func (assessment ConfidenceAssessment) Validate() error {
 		return fmt.Errorf("confidence uncertainty entries must be unique and non-empty")
 	}
 	return nil
-}
-
-func confidenceReason(assessment ConfidenceAssessment) string {
-	values := append([]string{}, assessment.Uncertainty...)
-	sort.Strings(values)
-	return strings.Join(values, ";")
 }

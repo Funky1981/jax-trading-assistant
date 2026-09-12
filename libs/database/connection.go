@@ -52,7 +52,7 @@ func Connect(ctx context.Context, config *Config) (*DB, error) {
 
 		// Test the connection
 		if err = db.PingContext(ctx); err != nil {
-			db.Close()
+			_ = db.Close()
 			if attempt == config.RetryAttempts {
 				return nil, fmt.Errorf("failed to ping database after %d attempts: %w", config.RetryAttempts+1, err)
 			}
@@ -77,7 +77,7 @@ func ConnectWithMigrations(ctx context.Context, config *Config, migrationsPath s
 	}
 
 	if err := RunMigrations(db.DB, migrationsPath); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 

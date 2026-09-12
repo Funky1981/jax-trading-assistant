@@ -207,13 +207,14 @@ func TestDeterminism(t *testing.T) {
 
 				// Calculate price levels
 				signal.EntryPrice = input.Price
-				if signal.Type == strategies.SignalBuy {
+				switch signal.Type {
+				case strategies.SignalBuy:
 					signal.StopLoss = input.Price - (2.0 * input.ATR)
 					signal.TakeProfit = []float64{
 						input.Price + (2.0 * input.ATR),
 						input.Price + (3.0 * input.ATR),
 					}
-				} else if signal.Type == strategies.SignalSell {
+				case strategies.SignalSell:
 					signal.StopLoss = input.Price + (2.0 * input.ATR)
 					signal.TakeProfit = []float64{
 						input.Price - (2.0 * input.ATR),

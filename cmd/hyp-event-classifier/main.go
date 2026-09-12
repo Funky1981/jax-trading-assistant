@@ -379,7 +379,7 @@ func (c *classifier) call(system, user string, schema map[string]any, eventID, a
 	if err != nil {
 		return callResponse{}, "", errors.New("provider transport failure")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	rawBody, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 	if err != nil {
 		return callResponse{}, "", errors.New("provider response read failure")
@@ -722,7 +722,7 @@ func readDotEnv(path string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	out := map[string]string{}
 	s := bufio.NewScanner(f)
 	for s.Scan() {
@@ -754,7 +754,7 @@ func loadExistingResults(path string) (map[string]bool, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		var r resultRecord
@@ -782,7 +782,7 @@ func loadProviderUsageCost(path string) (int64, bool, error) {
 	if err != nil {
 		return 0, false, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var total int64
 	s := bufio.NewScanner(f)
 	for s.Scan() {
@@ -806,7 +806,7 @@ func loadResultCost(path string) int64 {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var total int64
 	s := bufio.NewScanner(f)
 	for s.Scan() {
@@ -823,7 +823,7 @@ func appendJSONLine(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

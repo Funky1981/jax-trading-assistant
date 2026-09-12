@@ -19,12 +19,12 @@ func parseHistory(raw []byte, ref providercontract.RawPayloadRef) (macroevidence
 	reader.FieldsPerRecord = 5
 	header, err := reader.Read()
 	if err != nil {
-		return macroevidence.MacroSeries{}, nil, fmt.Errorf("Cboe VIX CSV header is missing: %w", err)
+		return macroevidence.MacroSeries{}, nil, fmt.Errorf("cboe VIX CSV header is missing: %w", err)
 	}
 	expected := []string{"DATE", "OPEN", "HIGH", "LOW", "CLOSE"}
 	for index := range expected {
 		if strings.TrimSpace(header[index]) != expected[index] {
-			return macroevidence.MacroSeries{}, nil, fmt.Errorf("Cboe VIX CSV header is not the documented schema")
+			return macroevidence.MacroSeries{}, nil, fmt.Errorf("cboe VIX CSV header is not the documented schema")
 		}
 	}
 	type row struct {
@@ -40,25 +40,25 @@ func parseHistory(raw []byte, ref providercontract.RawPayloadRef) (macroevidence
 			break
 		}
 		if err != nil {
-			return macroevidence.MacroSeries{}, nil, fmt.Errorf("Cboe VIX CSV row is malformed: %w", err)
+			return macroevidence.MacroSeries{}, nil, fmt.Errorf("cboe VIX CSV row is malformed: %w", err)
 		}
 		date, err := parseDate(fields[0])
 		if err != nil {
 			return macroevidence.MacroSeries{}, nil, err
 		}
 		if previous != "" && date <= previous {
-			return macroevidence.MacroSeries{}, nil, fmt.Errorf("Cboe VIX dates are not strictly ascending or contain duplicates")
+			return macroevidence.MacroSeries{}, nil, fmt.Errorf("cboe VIX dates are not strictly ascending or contain duplicates")
 		}
 		previous = date
 		sourceValue := strings.TrimSpace(fields[4])
 		value, err := parseValue(sourceValue)
 		if err != nil {
-			return macroevidence.MacroSeries{}, nil, fmt.Errorf("Cboe VIX %s close: %w", date, err)
+			return macroevidence.MacroSeries{}, nil, fmt.Errorf("cboe VIX %s close: %w", date, err)
 		}
 		rows = append(rows, row{date: date, sourceValue: sourceValue, value: value})
 	}
 	if len(rows) == 0 {
-		return macroevidence.MacroSeries{}, nil, fmt.Errorf("Cboe VIX CSV contains no data rows")
+		return macroevidence.MacroSeries{}, nil, fmt.Errorf("cboe VIX CSV contains no data rows")
 	}
 	seriesProvenance, err := makeProvenance(ref, "series")
 	if err != nil {
@@ -87,7 +87,7 @@ func parseHistory(raw []byte, ref providercontract.RawPayloadRef) (macroevidence
 func parseDate(raw string) (macroevidence.Date, error) {
 	parsed, err := time.Parse("01/02/2006", strings.TrimSpace(raw))
 	if err != nil {
-		return "", fmt.Errorf("Cboe VIX date is malformed")
+		return "", fmt.Errorf("cboe VIX date is malformed")
 	}
 	return macroevidence.Date(parsed.Format("2006-01-02")), nil
 }

@@ -13,12 +13,8 @@ func TestBuildContextSuppressesExactDuplicatesAndPreservesUntrustedDelimiters(t 
 	second := first
 	second.Identity.ID = "epi_" + strings.Repeat("b", 64)
 	third := packetItem("third", EvidenceKindCompany, "company-1")
-	packet, err := NewEvidencePacket(instrumentRef(), []EvidenceItem{first, second, third}, nil, packetTime())
-	if err != nil {
-		t.Fatal(err)
-	}
 	second.Identity.Source.RawContentSHA256 = strings.Repeat("c", 64)
-	packet, err = NewEvidencePacket(instrumentRef(), []EvidenceItem{first, second, third}, nil, packetTime())
+	packet, err := NewEvidencePacket(instrumentRef(), []EvidenceItem{first, second, third}, nil, packetTime())
 	if err != nil {
 		t.Fatal(err)
 	}

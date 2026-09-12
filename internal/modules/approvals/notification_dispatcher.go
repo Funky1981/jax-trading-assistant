@@ -133,7 +133,7 @@ func (s *TelegramNotificationSender) SendNotification(ctx context.Context, item 
 	if err != nil {
 		return fmt.Errorf("send telegram notification: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("telegram notification failed: status %d", resp.StatusCode)
 	}
@@ -169,7 +169,7 @@ func (s *TelegramNotificationSender) ConfigureWebhook(ctx context.Context, webho
 	if err != nil {
 		return fmt.Errorf("configure telegram webhook: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("telegram webhook configuration failed: status %d", resp.StatusCode)
 	}

@@ -90,7 +90,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(5)
 	if err := db.PingContext(ctx); err != nil {
@@ -427,28 +427,28 @@ func handlePrometheus(db *sql.DB) http.HandlerFunc {
 				COUNT(*) FILTER (WHERE status = 'failed') AS failed
 			FROM orchestration_runs`
 		if err := db.QueryRowContext(r.Context(), query).Scan(&total, &completed, &failed); err != nil {
-			fmt.Fprintln(w, "# HELP jax_research_metrics_error Metrics query error")
-			fmt.Fprintln(w, "# TYPE jax_research_metrics_error gauge")
-			fmt.Fprintln(w, "jax_research_metrics_error 1")
+			_, _ = fmt.Fprintln(w, "# HELP jax_research_metrics_error Metrics query error")
+			_, _ = fmt.Fprintln(w, "# TYPE jax_research_metrics_error gauge")
+			_, _ = fmt.Fprintln(w, "jax_research_metrics_error 1")
 			return
 		}
 
 		upSecs := time.Since(startTime).Seconds()
-		fmt.Fprintf(w, "# HELP jax_research_uptime_seconds Uptime in seconds\n")
-		fmt.Fprintf(w, "# TYPE jax_research_uptime_seconds gauge\n")
-		fmt.Fprintf(w, "jax_research_uptime_seconds %.0f\n", upSecs)
+		_, _ = fmt.Fprintf(w, "# HELP jax_research_uptime_seconds Uptime in seconds\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_research_uptime_seconds gauge\n")
+		_, _ = fmt.Fprintf(w, "jax_research_uptime_seconds %.0f\n", upSecs)
 
-		fmt.Fprintf(w, "# HELP jax_orchestrator_runs_total Total orchestration runs\n")
-		fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_total counter\n")
-		fmt.Fprintf(w, "jax_orchestrator_runs_total %d\n", total)
+		_, _ = fmt.Fprintf(w, "# HELP jax_orchestrator_runs_total Total orchestration runs\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_total counter\n")
+		_, _ = fmt.Fprintf(w, "jax_orchestrator_runs_total %d\n", total)
 
-		fmt.Fprintf(w, "# HELP jax_orchestrator_runs_completed_total Completed orchestration runs\n")
-		fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_completed_total counter\n")
-		fmt.Fprintf(w, "jax_orchestrator_runs_completed_total %d\n", completed)
+		_, _ = fmt.Fprintf(w, "# HELP jax_orchestrator_runs_completed_total Completed orchestration runs\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_completed_total counter\n")
+		_, _ = fmt.Fprintf(w, "jax_orchestrator_runs_completed_total %d\n", completed)
 
-		fmt.Fprintf(w, "# HELP jax_orchestrator_runs_failed_total Failed orchestration runs\n")
-		fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_failed_total counter\n")
-		fmt.Fprintf(w, "jax_orchestrator_runs_failed_total %d\n", failed)
+		_, _ = fmt.Fprintf(w, "# HELP jax_orchestrator_runs_failed_total Failed orchestration runs\n")
+		_, _ = fmt.Fprintf(w, "# TYPE jax_orchestrator_runs_failed_total counter\n")
+		_, _ = fmt.Fprintf(w, "jax_orchestrator_runs_failed_total %d\n", failed)
 	}
 }
 

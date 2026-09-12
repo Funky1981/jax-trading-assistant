@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+type clockTestContextKey string
+
 func TestSystemClock(t *testing.T) {
 	clock := SystemClock{}
 
@@ -183,7 +185,7 @@ func TestClockPropagationThroughContext(t *testing.T) {
 
 	ctx1 := context.Background()
 	ctx2 := WithClock(ctx1, clock)
-	ctx3 := context.WithValue(ctx2, "key", "value")
+	ctx3 := context.WithValue(ctx2, clockTestContextKey("key"), "value")
 	ctx4, cancel := context.WithTimeout(ctx3, 5*time.Minute)
 	defer cancel()
 

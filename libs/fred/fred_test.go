@@ -15,7 +15,6 @@ import (
 
 	"jax-trading-assistant/libs/contracts/canonical"
 	providercontract "jax-trading-assistant/libs/contracts/provider"
-	"jax-trading-assistant/libs/macroevidence"
 )
 
 var fixtureAPIKey = strings.Repeat("a", 32)
@@ -103,7 +102,7 @@ func TestFREDProviderDefinitionUsesOneLogicalIdentityAndMacroAndCalendarCapabili
 }
 
 func TestMacroOutputIsOwnedByProviderNeutralPackage(t *testing.T) {
-	var output macroevidence.MacroObservation = MacroObservation{}
+	var output = MacroObservation{}
 	if got := fmt.Sprintf("%T", output); !strings.Contains(got, "macroevidence.MacroObservation") {
 		t.Fatalf("macro output type = %s; FRED DTO package leaked into output", got)
 	}

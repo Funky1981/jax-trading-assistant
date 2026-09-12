@@ -61,7 +61,7 @@ func TestPostgresMemoryArtifactStorePersistsSources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock.New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	store := NewPostgresMemoryArtifactStore(db)
 	created := time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
 

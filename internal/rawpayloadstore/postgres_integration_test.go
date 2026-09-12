@@ -29,7 +29,7 @@ func TestPostgresRawPayloadStoreDurabilityAndIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer sqlDB.Close()
+	defer func() { _ = sqlDB.Close() }()
 	if err := sqlDB.PingContext(ctx); err != nil {
 		t.Fatal(err)
 	}

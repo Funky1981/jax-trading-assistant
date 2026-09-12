@@ -101,7 +101,7 @@ func (pipeline *NormalizationPipeline) Normalize(ctx context.Context, request No
 		}
 		return NormalizationResult{}, normalizationError(NormalizationStageMapping, NormalizationErrorCanonicalConstruction, ref, "normalizer failed without a typed provider-safe error", err)
 	}
-	if candidate.Record == nil || (reflect.ValueOf(candidate.Record).Kind() == reflect.Ptr && reflect.ValueOf(candidate.Record).IsNil()) {
+	if candidate.Record == nil || (reflect.ValueOf(candidate.Record).Kind() == reflect.Pointer && reflect.ValueOf(candidate.Record).IsNil()) {
 		return NormalizationResult{}, normalizationError(NormalizationStageMapping, NormalizationErrorCanonicalConstruction, ref, "normalizer returned no canonical candidate", nil)
 	}
 	if err := validateFieldDispositions(candidate.Dispositions); err != nil {

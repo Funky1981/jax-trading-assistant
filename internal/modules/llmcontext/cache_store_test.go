@@ -69,7 +69,7 @@ func TestPostgresPromptCacheWritesAuditableEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock.New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	store := NewPostgresPromptCache(db, DefaultCachePolicy())
 	pkg := PromptPackage{
 		TaskType:        TaskHistoricalSummary,

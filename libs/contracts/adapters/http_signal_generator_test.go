@@ -20,7 +20,7 @@ func TestHTTPSignalGenerator_GenerateSignals(t *testing.T) {
 		// Return mock signals
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[{
+		_, _ = w.Write([]byte(`[{
 			"id": "sig-123",
 			"symbol": "AAPL",
 			"timestamp": "2026-02-13T10:30:00Z",
@@ -57,7 +57,7 @@ func TestHTTPSignalGenerator_Health(t *testing.T) {
 			t.Errorf("Unexpected path: %s", r.URL.Path)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status": "healthy"}`))
+		_, _ = w.Write([]byte(`{"status": "healthy"}`))
 	}))
 	defer server.Close()
 
@@ -72,7 +72,7 @@ func TestHTTPSignalGenerator_HealthUnhealthy(t *testing.T) {
 	// Mock HTTP server returning unhealthy
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte(`{"status": "unhealthy"}`))
+		_, _ = w.Write([]byte(`{"status": "unhealthy"}`))
 	}))
 	defer server.Close()
 
@@ -95,7 +95,7 @@ func TestHTTPSignalGenerator_GetSignalHistory(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[{
+		_, _ = w.Write([]byte(`[{
 			"id": "sig-456",
 			"symbol": "TSLA",
 			"timestamp": "2026-02-13T09:30:00Z",

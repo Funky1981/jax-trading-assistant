@@ -346,7 +346,7 @@ func (s *Store) scanItems(ctx context.Context, query string, args ...any) ([]con
 	if err != nil {
 		return nil, fmt.Errorf("pgmemory: query: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []contracts.MemoryItem
 	for rows.Next() {

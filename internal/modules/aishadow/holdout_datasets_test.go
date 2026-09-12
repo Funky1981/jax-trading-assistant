@@ -5,11 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"os"
 	"reflect"
 	"regexp"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -488,17 +486,4 @@ func tokenJaccard(left, right string) float64 {
 		return 0
 	}
 	return float64(intersection) / float64(len(union))
-}
-
-func sortedMap(values map[string]int) string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	parts := make([]string, 0, len(keys))
-	for _, key := range keys {
-		parts = append(parts, fmt.Sprintf("%s=%d", key, values[key]))
-	}
-	return strings.Join(parts, ",")
 }

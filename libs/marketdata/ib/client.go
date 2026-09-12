@@ -112,7 +112,7 @@ func (c *Client) get(ctx context.Context, path string, result interface{}) error
 		if err != nil {
 			return nil, fmt.Errorf("request failed: %w", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
@@ -153,7 +153,7 @@ func (c *Client) post(ctx context.Context, path string, body interface{}, result
 		if err != nil {
 			return nil, fmt.Errorf("request failed: %w", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)

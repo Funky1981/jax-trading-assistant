@@ -35,7 +35,9 @@ func (m *mockDataSource) GetIndicators(ctx context.Context, symbol string, times
 func TestBacktester_SimpleWinningTrade(t *testing.T) {
 	registry := NewRegistry()
 	strategy := NewRSIMomentumStrategy()
-	registry.Register(strategy, strategy.GetMetadata())
+	if err := registry.Register(strategy, strategy.GetMetadata()); err != nil {
+		t.Fatal(err)
+	}
 
 	backtester := NewBacktester(registry).
 		WithCapital(10000.0).
@@ -91,7 +93,9 @@ func TestBacktester_SimpleWinningTrade(t *testing.T) {
 func TestBacktester_StopLossHit(t *testing.T) {
 	registry := NewRegistry()
 	strategy := NewRSIMomentumStrategy()
-	registry.Register(strategy, strategy.GetMetadata())
+	if err := registry.Register(strategy, strategy.GetMetadata()); err != nil {
+		t.Fatal(err)
+	}
 
 	backtester := NewBacktester(registry).
 		WithCapital(10000.0).
@@ -150,7 +154,9 @@ func TestBacktester_StopLossHit(t *testing.T) {
 func TestBacktester_MultipleSymbols(t *testing.T) {
 	registry := NewRegistry()
 	strategy := NewMACDCrossoverStrategy()
-	registry.Register(strategy, strategy.GetMetadata())
+	if err := registry.Register(strategy, strategy.GetMetadata()); err != nil {
+		t.Fatal(err)
+	}
 
 	backtester := NewBacktester(registry).
 		WithCapital(50000.0).
@@ -211,7 +217,9 @@ func TestBacktester_MultipleSymbols(t *testing.T) {
 func TestBacktester_PerformanceMetrics(t *testing.T) {
 	registry := NewRegistry()
 	strategy := NewMACrossoverStrategy()
-	registry.Register(strategy, strategy.GetMetadata())
+	if err := registry.Register(strategy, strategy.GetMetadata()); err != nil {
+		t.Fatal(err)
+	}
 
 	backtester := NewBacktester(registry).
 		WithCapital(100000.0).

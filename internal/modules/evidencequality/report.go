@@ -116,25 +116,25 @@ func markdownReport(report Report) string {
 	b.WriteString("Ruleset: `" + report.RulesetVersion + "`  \nInput fingerprint: `" + report.InputFingerprint + "`  \nPrimary operational anchor: `" + report.PrimaryAnchor + "`\n\n")
 	first, last := reportDateRange(report)
 	b.WriteString("## Population\n\n")
-	b.WriteString(fmt.Sprintf("- Genuine decisions considered: %d\n- Included: %d\n- Excluded: %d\n- Publication range: %s to %s\n- Receipt range: %s to %s\n- Decision range: %s to %s\n- Mapped: %d\n- Unmapped: %d\n- WATCH: %d\n- NO_TRADE: %d\n- CANDIDATE: %d\n\n", report.Population.Considered, report.Population.Included, report.Population.Excluded, formatTime(first), formatTime(last), formatTimePointer(report.Population.FirstReceipt), formatTimePointer(report.Population.LastReceipt), formatTimePointer(report.Population.FirstDecision), formatTimePointer(report.Population.LastDecision), report.Population.Mapped, report.Population.Unmapped, report.Population.Watch, report.Population.NoTrade, report.Population.Candidate))
+	fmt.Fprintf(&b, "- Genuine decisions considered: %d\n- Included: %d\n- Excluded: %d\n- Publication range: %s to %s\n- Receipt range: %s to %s\n- Decision range: %s to %s\n- Mapped: %d\n- Unmapped: %d\n- WATCH: %d\n- NO_TRADE: %d\n- CANDIDATE: %d\n\n", report.Population.Considered, report.Population.Included, report.Population.Excluded, formatTime(first), formatTime(last), formatTimePointer(report.Population.FirstReceipt), formatTimePointer(report.Population.LastReceipt), formatTimePointer(report.Population.FirstDecision), formatTimePointer(report.Population.LastDecision), report.Population.Mapped, report.Population.Unmapped, report.Population.Watch, report.Population.NoTrade, report.Population.Candidate)
 	b.WriteString("Decision origins:\n\n")
 	for _, key := range sortedKeys(report.Population.OriginCounts) {
-		b.WriteString(fmt.Sprintf("- %s: %d\n", key, report.Population.OriginCounts[key]))
+		fmt.Fprintf(&b, "- %s: %d\n", key, report.Population.OriginCounts[key])
 	}
 	b.WriteString("\n")
 	b.WriteString("Exclusions:\n\n")
 	for _, key := range sortedKeys(report.Population.ExclusionCounts) {
-		b.WriteString(fmt.Sprintf("- %s: %d\n", key, report.Population.ExclusionCounts[key]))
+		fmt.Fprintf(&b, "- %s: %d\n", key, report.Population.ExclusionCounts[key])
 	}
 	b.WriteString("\n")
 	b.WriteString("## Market-data coverage\n\n| Symbol | Timeframe | Provider | Candles | First | Last | Gaps | Timestamp semantics | Adjusted | Timezone |\n|---|---:|---|---:|---|---|---:|---|---|---|\n")
 	for _, row := range report.MarketCoverage {
-		b.WriteString(fmt.Sprintf("| %s | %s | %s | %d | %s | %s | %d | %s | %s | %s |\n", row.Symbol, row.Timeframe, row.Source, row.Count, formatTime(row.First), formatTime(row.Last), row.GapCount, row.TimestampSemantics, row.AdjustedState, row.ProviderTimezone))
+		fmt.Fprintf(&b, "| %s | %s | %s | %d | %s | %s | %d | %s | %s | %s |\n", row.Symbol, row.Timeframe, row.Source, row.Count, formatTime(row.First), formatTime(row.Last), row.GapCount, row.TimestampSemantics, row.AdjustedState, row.ProviderTimezone)
 	}
 	b.WriteString("\n")
 	b.WriteString("Horizon sufficiency:\n\n")
 	for _, row := range report.HorizonCoverage {
-		b.WriteString(fmt.Sprintf("- %s: %d outcome rows across %d events; sufficient=%t — %s\n", row.Horizon, row.OutcomeCount, row.EventCount, row.Sufficient, row.Reason))
+		fmt.Fprintf(&b, "- %s: %d outcome rows across %d events; sufficient=%t — %s\n", row.Horizon, row.OutcomeCount, row.EventCount, row.Sufficient, row.Reason)
 	}
 	b.WriteString("\n")
 	b.WriteString("## Outcome summary\n\nPrimary-anchor results (absolute, because no trustworthy pre-outcome direction exists):\n\n| Decision | Horizon | n | Median absolute move | Mean absolute move | Median absolute abnormal move | >=0.5% | >=1% | >=2% | Mean range | Mean MFE | Mean MAE |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
@@ -142,7 +142,7 @@ func markdownReport(report Report) string {
 		if row.Anchor != report.PrimaryAnchor {
 			continue
 		}
-		b.WriteString(fmt.Sprintf("| %s | %s | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n", row.Decision, row.Horizon, row.Count, formatPercentPointer(row.MedianAbsoluteReturn), formatPercentPointer(row.MeanAbsoluteReturn), formatPercentPointer(row.MedianAbsoluteAbnormalReturn), formatPercentPointer(row.ExceedPointFivePercent), formatPercentPointer(row.ExceedOnePercent), formatPercentPointer(row.ExceedTwoPercent), formatPercentPointer(row.MeanRealisedRange), formatPercentPointer(row.MeanMaximumFavourableExcursion), formatPercentPointer(row.MeanMaximumAdverseExcursion)))
+		fmt.Fprintf(&b, "| %s | %s | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n", row.Decision, row.Horizon, row.Count, formatPercentPointer(row.MedianAbsoluteReturn), formatPercentPointer(row.MeanAbsoluteReturn), formatPercentPointer(row.MedianAbsoluteAbnormalReturn), formatPercentPointer(row.ExceedPointFivePercent), formatPercentPointer(row.ExceedOnePercent), formatPercentPointer(row.ExceedTwoPercent), formatPercentPointer(row.MeanRealisedRange), formatPercentPointer(row.MeanMaximumFavourableExcursion), formatPercentPointer(row.MeanMaximumAdverseExcursion))
 	}
 	b.WriteString("\n")
 	b.WriteString("No percentage is interpreted without its displayed count. Bootstrap intervals, Mann–Whitney U, permutation tests, and effect sizes are emitted in `summary.json` only where both sample-size gates pass.\n\n")
@@ -150,7 +150,7 @@ func markdownReport(report Report) string {
 	b.WriteString("Live-origin rows use receipt-to-initial-decision latency. Historical backfill/replay rows show replay delay; that value is not live decision latency.\n\n")
 	for _, row := range report.Latency {
 		label := row.Decision + " (" + row.DecisionOrigin + ")"
-		b.WriteString(fmt.Sprintf("| %s | %d | %s | %s | %s | %s | %s |\n", label, row.Count, formatDurationPointer(row.PublicationCollectionMedian), formatDurationPointer(row.CollectionReceiptMedian), formatDurationPointer(row.ReceiptDecisionMedian), formatPercentPointer(row.MoveBeforeReceiptMedian), formatPercentPointer(row.MoveAfterReceiptMedian)))
+		fmt.Fprintf(&b, "| %s | %d | %s | %s | %s | %s | %s |\n", label, row.Count, formatDurationPointer(row.PublicationCollectionMedian), formatDurationPointer(row.CollectionReceiptMedian), formatDurationPointer(row.ReceiptDecisionMedian), formatPercentPointer(row.MoveBeforeReceiptMedian), formatPercentPointer(row.MoveAfterReceiptMedian))
 	}
 	b.WriteString("\n")
 	b.WriteString("## Category and source analysis\n\n")
@@ -178,8 +178,8 @@ func markdownReport(report Report) string {
 	}
 	b.WriteString("- Synthetic, manual test, controlled QQQ proof, duplicate, invalid-time, and post-coverage rows excluded deterministically.\n- Receipt is the primary operational anchor. Publication and collection anchors are separate diagnostics.\n- The first observable candle at or after an anchor is used; no candle preceding an event is used. Daily events occurring after the session open begin at the next persisted session open.\n- Unknown assets stay unknown. Category proxies are bounded by the versioned ruleset; no universal SPY/QQQ mapping is applied.\n- Direction is not inferred. Absolute raw and abnormal movement is evaluated.\n- Existing paper-ticket outcome checkpoints are reported but not joined to genuine-event decisions.\n\n")
 	b.WriteString("## Safety\n\n")
-	b.WriteString(fmt.Sprintf("Runtime: paper=%t, live trading=%t, execution=%t, execution worker=%t, broker execution=%t, maximum leverage=%.1fx.\n\n", report.RuntimeSafety.RuntimeMode == "paper", report.RuntimeSafety.AllowLiveTrading, report.RuntimeSafety.ExecutionEnabled, report.RuntimeSafety.ExecutionWorker, report.RuntimeSafety.BrokerExecution, report.RuntimeSafety.MaximumLeverage))
-	b.WriteString(fmt.Sprintf("Prohibited-state before/after: approvals %d/%d; candidate approvals %d/%d; paper tickets %d/%d; execution instructions %d/%d; order intents %d/%d; broker orders %d/%d; trades %d/%d; fills %d/%d. Delta: zero.\n\n", report.SafetyBefore.Approvals, report.SafetyAfter.Approvals, report.SafetyBefore.CandidateApprovals, report.SafetyAfter.CandidateApprovals, report.SafetyBefore.PaperTickets, report.SafetyAfter.PaperTickets, report.SafetyBefore.ExecutionInstructions, report.SafetyAfter.ExecutionInstructions, report.SafetyBefore.OrderIntents, report.SafetyAfter.OrderIntents, report.SafetyBefore.BrokerOrders, report.SafetyAfter.BrokerOrders, report.SafetyBefore.Trades, report.SafetyAfter.Trades, report.SafetyBefore.Fills, report.SafetyAfter.Fills))
+	fmt.Fprintf(&b, "Runtime: paper=%t, live trading=%t, execution=%t, execution worker=%t, broker execution=%t, maximum leverage=%.1fx.\n\n", report.RuntimeSafety.RuntimeMode == "paper", report.RuntimeSafety.AllowLiveTrading, report.RuntimeSafety.ExecutionEnabled, report.RuntimeSafety.ExecutionWorker, report.RuntimeSafety.BrokerExecution, report.RuntimeSafety.MaximumLeverage)
+	fmt.Fprintf(&b, "Prohibited-state before/after: approvals %d/%d; candidate approvals %d/%d; paper tickets %d/%d; execution instructions %d/%d; order intents %d/%d; broker orders %d/%d; trades %d/%d; fills %d/%d. Delta: zero.\n\n", report.SafetyBefore.Approvals, report.SafetyAfter.Approvals, report.SafetyBefore.CandidateApprovals, report.SafetyAfter.CandidateApprovals, report.SafetyBefore.PaperTickets, report.SafetyAfter.PaperTickets, report.SafetyBefore.ExecutionInstructions, report.SafetyAfter.ExecutionInstructions, report.SafetyBefore.OrderIntents, report.SafetyAfter.OrderIntents, report.SafetyBefore.BrokerOrders, report.SafetyAfter.BrokerOrders, report.SafetyBefore.Trades, report.SafetyAfter.Trades, report.SafetyBefore.Fills, report.SafetyAfter.Fills)
 	b.WriteString("## Limitations\n\n")
 	for _, limitation := range report.Limitations {
 		b.WriteString("- " + limitation + "\n")
@@ -197,7 +197,7 @@ func writeBreakdown(b *strings.Builder, rows []BreakdownRow, dimensions []string
 	b.WriteString("| Dimension | Value | Decision | n | Mapped | 1d outcomes | Median absolute 1d move |\n|---|---|---|---:|---:|---:|---:|\n")
 	for _, row := range rows {
 		if allowed[row.Dimension] {
-			b.WriteString(fmt.Sprintf("| %s | %s | %s | %d | %d | %d | %s |\n", row.Dimension, escapeTable(row.Value), row.Decision, row.Count, row.Mapped, row.OutcomeCount, formatPercentPointer(row.MedianAbsoluteReturn)))
+			fmt.Fprintf(b, "| %s | %s | %s | %d | %d | %d | %s |\n", row.Dimension, escapeTable(row.Value), row.Decision, row.Count, row.Mapped, row.OutcomeCount, formatPercentPointer(row.MedianAbsoluteReturn))
 		}
 	}
 	b.WriteString("\n")
@@ -205,7 +205,7 @@ func writeBreakdown(b *strings.Builder, rows []BreakdownRow, dimensions []string
 func writeMisses(b *strings.Builder, rows []MissRow) {
 	b.WriteString("| Event | Decision | Symbol | Horizon | Absolute move | Probable cause |\n|---|---|---|---|---:|---|\n")
 	for _, row := range rows {
-		b.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %.3f%% | %s |\n", escapeTable(row.Headline), row.Decision, row.Symbol, row.Horizon, row.AbsoluteMove*100, escapeTable(row.ProbableCause)))
+		fmt.Fprintf(b, "| %s | %s | %s | %s | %.3f%% | %s |\n", escapeTable(row.Headline), row.Decision, row.Symbol, row.Horizon, row.AbsoluteMove*100, escapeTable(row.ProbableCause))
 	}
 	b.WriteString("\n")
 }

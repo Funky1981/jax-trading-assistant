@@ -288,9 +288,10 @@ func deterministicBaseline(events []BenchmarkEvent, oneHour bool) Baseline {
 		if oneHour {
 			value = event.Outcome1H
 		}
-		if event.Decision == "WATCH" {
+		switch event.Decision {
+		case "WATCH":
 			watch = append(watch, value)
-		} else if event.Decision == "NO_TRADE" {
+		case "NO_TRADE":
 			noTrade = append(noTrade, value)
 		}
 	}
@@ -386,7 +387,7 @@ func writeCSV(path string, report Report) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 	_ = writer.Write([]string{"event_id", "validation_status", "retry_count", "latency_ms", "market_relevance", "model_mapping_status", "model_direct_issuer", "model_proxy_exposure", "model_mapping_confidence", "jax_resolution_status", "jax_raw_direct_issuer", "jax_normalized_issuer", "jax_canonical_issuer", "jax_matched_alias", "jax_resolved_ticker", "jax_mapping_type", "jax_relationship", "resolution_policy_version", "matched_rule", "jax_deterministic_reason", "frozen_reference_decision", "frozen_reference_mapping", "frozen_reference_asset", "absolute_1h_move", "absolute_1d_move"})

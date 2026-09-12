@@ -124,15 +124,16 @@ func (bar CanonicalMarketBar) Validate() error {
 	if bar.Session != MarketSessionProviderEODUnspecified || bar.MarketTimezone == "" {
 		return errors.New("market bar timestamp/session semantics are incomplete")
 	}
-	if bar.TimestampSemantics == MarketTimestampProviderDateIntervalEnd {
+	switch bar.TimestampSemantics {
+	case MarketTimestampProviderDateIntervalEnd:
 		if bar.TimestampAuthority != MarketTimestampAuthorityIntervalBoundary {
 			return errors.New("date-boundary market bar has invalid timestamp authority")
 		}
-	} else if bar.TimestampSemantics == MarketTimestampProviderBarTimestamp {
+	case MarketTimestampProviderBarTimestamp:
 		if bar.TimestampAuthority != MarketTimestampAuthorityProviderTimestamp {
 			return errors.New("provider-timestamp market bar has invalid timestamp authority")
 		}
-	} else {
+	default:
 		return errors.New("market bar timestamp/session semantics are incomplete")
 	}
 	if bar.Feed != "" {
@@ -465,7 +466,7 @@ func (p *FinancialDatasetsProvider) fetchHistoricalBarsAttempt(ctx context.Conte
 		failure := providercontract.ClassifyTransportError(ctx, err)
 		return providercontract.ProviderAttemptResult{Failure: &failure}, ""
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		failure := providercontract.ProviderFailure{HTTPStatus: resp.StatusCode, RetryAfter: resp.Header.Get("Retry-After")}
 		return providercontract.ProviderAttemptResult{Failure: &failure}, ""

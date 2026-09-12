@@ -27,7 +27,7 @@ func NewPolygonProvider(config ProviderConfig) (*PolygonProvider, error) {
 	client := polygon.New(config.APIKey)
 	baseURL := strings.TrimSpace(os.Getenv("POLYGON_BASE_URL"))
 	if baseURL != "" {
-		client.Client.HTTP.SetBaseURL(strings.TrimRight(baseURL, "/"))
+		client.HTTP.SetBaseURL(strings.TrimRight(baseURL, "/"))
 	}
 
 	// Create circuit breaker for this provider

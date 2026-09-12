@@ -69,7 +69,7 @@ func TestCircuitBreaker_StateTransitions(t *testing.T) {
 
 	// Trigger failures to open circuit
 	for i := 0; i < 5; i++ {
-		cb.Execute(func() (any, error) {
+		_, _ = cb.Execute(func() (any, error) {
 			return nil, errors.New("fail")
 		})
 	}
@@ -83,7 +83,7 @@ func TestCircuitBreaker_StateTransitions(t *testing.T) {
 	time.Sleep(150 * time.Millisecond)
 
 	// Next request should transition to half-open
-	cb.Execute(func() (any, error) {
+	_, _ = cb.Execute(func() (any, error) {
 		return "success", nil
 	})
 
@@ -149,9 +149,9 @@ func TestCircuitBreaker_Counts(t *testing.T) {
 	cb := NewCircuitBreaker(config)
 
 	// Execute some requests
-	cb.Execute(func() (any, error) { return "ok", nil })
-	cb.Execute(func() (any, error) { return nil, errors.New("fail") })
-	cb.Execute(func() (any, error) { return "ok", nil })
+	_, _ = cb.Execute(func() (any, error) { return "ok", nil })
+	_, _ = cb.Execute(func() (any, error) { return nil, errors.New("fail") })
+	_, _ = cb.Execute(func() (any, error) { return "ok", nil })
 
 	counts := cb.Counts()
 	if counts.Requests != 3 {

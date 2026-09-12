@@ -58,15 +58,27 @@ func validateCanonicalID(contract, field, value, prefix string) error {
 	}
 	suffix := value[len(prefix):]
 	first := suffix[0]
-	if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || (first >= '0' && first <= '9')) {
+	if !isASCIIAlphaNumeric(first) {
 		return invalid(contract, field, "must start its suffix with an ASCII letter or digit")
 	}
 	for _, r := range suffix {
-		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
+		if !isCanonicalIDCharacter(r) {
 			return invalid(contract, field, "contains an invalid canonical ID character")
 		}
 	}
 	return nil
+}
+
+func isASCIIAlphaNumeric(r byte) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
+}
+
+func isLowerASCIIOrDigit(r byte) bool {
+	return (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
+}
+
+func isCanonicalIDCharacter(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.'
 }
 
 func validateRequiredText(contract, field, value string, max int) error {
@@ -95,7 +107,7 @@ func validateCode(contract, field, value string) error {
 		return err
 	}
 	first := value[0]
-	if !((first >= 'a' && first <= 'z') || (first >= '0' && first <= '9')) {
+	if !isLowerASCIIOrDigit(first) {
 		return invalid(contract, field, "must start with a lower-case ASCII letter or digit")
 	}
 	for _, r := range value {

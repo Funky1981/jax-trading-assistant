@@ -185,7 +185,7 @@ func (s *Store) load() error {
 	if err != nil {
 		return fmt.Errorf("calendar: open store: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var list []EconEvent
 	if err := json.NewDecoder(f).Decode(&list); err != nil {
@@ -214,13 +214,16 @@ func (s *Store) save() error {
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(list); err != nil {
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp)
 		return fmt.Errorf("calendar: encode store: %w", err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("calendar: close store tmp: %w", err)
+	}
 	if err := os.Rename(tmp, s.storePath()); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("calendar: rename store: %w", err)
 	}
 	return nil
@@ -252,7 +255,7 @@ func (c *CSVSource) FetchEvents(_ context.Context, from, to time.Time) ([]EconEv
 	if err != nil {
 		return nil, fmt.Errorf("calendar.CSVSource %q: open: %w", c.name, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	r := csv.NewReader(f)
 	header, err := r.Read()

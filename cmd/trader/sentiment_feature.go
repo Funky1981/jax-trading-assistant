@@ -72,11 +72,9 @@ type localSentimentProvider struct{}
 type disabledSentimentProvider struct{}
 
 type hybridSentimentProvider struct {
-	mode      string
-	primary   sentimentProvider
-	fallback  sentimentProvider
-	degraded  bool
-	lastError string
+	mode     string
+	primary  sentimentProvider
+	fallback sentimentProvider
 }
 
 type externalHTTPSentimentProvider struct {
@@ -193,7 +191,7 @@ func (p externalHTTPSentimentProvider) Score(ctx context.Context, document senti
 	if err != nil {
 		return sentimentScore{Label: "unavailable", ProviderMode: "external", Degraded: true, Limitations: []string{err.Error()}}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		err := fmt.Errorf("external sentiment provider status %d", resp.StatusCode)
 		return sentimentScore{Label: "unavailable", ProviderMode: "external", Degraded: true, Limitations: []string{err.Error()}}, err

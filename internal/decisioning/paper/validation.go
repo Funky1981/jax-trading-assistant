@@ -1,8 +1,6 @@
 package paper
 
 import (
-	"time"
-
 	"jax-trading-assistant/internal/decisioning/core"
 	"jax-trading-assistant/internal/decisioning/risk"
 )
@@ -194,8 +192,4 @@ func containsAny(values []string, needles []string) bool {
 		}
 	}
 	return false
-}
-
-func ticketExpired(ticket PaperTicket, now time.Time) bool {
-	return !now.IsZero() && now.After(ticket.ExpiresAt)
 }

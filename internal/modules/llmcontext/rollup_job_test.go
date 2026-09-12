@@ -14,7 +14,7 @@ func TestPostgresCostRollupJobAggregatesStrategySymbolAndTask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sqlmock.New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	job := NewPostgresCostRollupJob(db)
 	from := time.Date(2026, 6, 4, 0, 0, 0, 0, time.UTC)
 	to := from.Add(24 * time.Hour)

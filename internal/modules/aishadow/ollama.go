@@ -51,15 +51,15 @@ func (c *OllamaClient) Complete(request ProviderRequest) (ProviderResponse, erro
 	httpRequest.Header.Set("Content-Type", "application/json")
 	response, err := c.http.Do(httpRequest)
 	if err != nil {
-		return ProviderResponse{}, fmt.Errorf("Ollama request: %w", err)
+		return ProviderResponse{}, fmt.Errorf("ollama request: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(response.Body, 2<<20))
 	if err != nil {
 		return ProviderResponse{}, fmt.Errorf("read Ollama response: %w", err)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return ProviderResponse{}, fmt.Errorf("Ollama HTTP %d: %s", response.StatusCode, string(body))
+		return ProviderResponse{}, fmt.Errorf("ollama HTTP %d: %s", response.StatusCode, string(body))
 	}
 	var decoded struct {
 		Model   string        `json:"model"`
@@ -70,7 +70,7 @@ func (c *OllamaClient) Complete(request ProviderRequest) (ProviderResponse, erro
 		return ProviderResponse{}, fmt.Errorf("decode Ollama response: %w", err)
 	}
 	if decoded.Error != "" {
-		return ProviderResponse{}, fmt.Errorf("Ollama error: %s", decoded.Error)
+		return ProviderResponse{}, fmt.Errorf("ollama error: %s", decoded.Error)
 	}
 	return ProviderResponse{Content: decoded.Message.Content, ModelIdentifier: decoded.Model}, nil
 }
@@ -89,11 +89,11 @@ func InspectOllamaModel(config Config) (DiagnosticModelIdentity, error) {
 	client := &http.Client{Timeout: minDuration(config.Timeout, 10*time.Second)}
 	response, err := client.Get(config.BaseURL + "/api/tags")
 	if err != nil {
-		return DiagnosticModelIdentity{}, fmt.Errorf("Ollama availability: %w", err)
+		return DiagnosticModelIdentity{}, fmt.Errorf("ollama availability: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
-		return DiagnosticModelIdentity{}, fmt.Errorf("Ollama availability returned HTTP %d", response.StatusCode)
+		return DiagnosticModelIdentity{}, fmt.Errorf("ollama availability returned HTTP %d", response.StatusCode)
 	}
 	var tags struct {
 		Models []struct {

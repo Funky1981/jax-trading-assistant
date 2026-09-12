@@ -409,7 +409,7 @@ func (s *Store) SetBreaker(_ context.Context, request BreakerRequest) (Breaker, 
 	if strings.TrimSpace(request.Name) == "" || strings.TrimSpace(request.Actor) == "" || strings.TrimSpace(request.IdempotencyKey) == "" {
 		return Breaker{}, ErrUnauthorized
 	}
-	if request.Tripped && !(request.ActorRole == ActorOperator || request.ActorRole == ActorSystem) {
+	if request.Tripped && (request.ActorRole != ActorOperator && request.ActorRole != ActorSystem) {
 		return Breaker{}, ErrUnauthorized
 	}
 	if !request.Tripped && request.ActorRole != ActorOperator {

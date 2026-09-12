@@ -70,7 +70,7 @@ func (s *Store) Save(ctx context.Context, event StoredEvent) (StoredEvent, error
 	if err != nil {
 		return StoredEvent{}, fmt.Errorf("begin macro event insert: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	err = tx.QueryRow(ctx, `
 		INSERT INTO macro_events (
@@ -667,7 +667,7 @@ func (s *Store) SaveConfounders(ctx context.Context, confounders []Confounder) (
 	if err != nil {
 		return nil, fmt.Errorf("begin macro confounder insert: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	out := make([]Confounder, 0, len(confounders))
 	for _, confounder := range confounders {

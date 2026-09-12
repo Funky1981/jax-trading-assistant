@@ -155,39 +155,6 @@ func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, e
 	return approval, nil
 }
 
-// buildInstruction is the legacy execution-instruction bridge. The current
-// roadmap approval path must not call it directly after human approval.
-func (s *Service) buildInstruction(ctx context.Context, approval *Approval) error {
-	var (
-		symbol, signalType string
-		signalID           *uuid.UUID
-		entryPrice         *float64
-		stopLoss           *float64
-		tpx                *float64
-	)
-	err := s.pool.QueryRow(ctx,
-		`SELECT signal_id, symbol, signal_type, entry_price, stop_loss, take_profit
-		   FROM candidate_trades WHERE id = $1`, approval.CandidateID,
-	).Scan(&signalID, &symbol, &signalType, &entryPrice, &stopLoss, &tpx)
-	if err != nil {
-		return fmt.Errorf("buildInstruction lookup candidate: %w", err)
-	}
-	if signalID == nil {
-		return ErrCandidateMissingSignal
-	}
-	inst := &ExecutionInstruction{
-		ApprovalID:  approval.ID,
-		CandidateID: approval.CandidateID,
-		Symbol:      symbol,
-		SignalType:  signalType,
-		EntryPrice:  entryPrice,
-		StopLoss:    stopLoss,
-		TakeProfit:  tpx,
-	}
-	_, err = s.store.CreateExecutionInstruction(ctx, inst)
-	return err
-}
-
 func (s *Service) persistPaperTicket(ctx context.Context, approval *Approval, eligibility candidatesmod.ApprovalEligibilityResult) error {
 	candidate, err := s.candidateStore.GetByID(ctx, approval.CandidateID)
 	if err != nil {

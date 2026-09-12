@@ -317,9 +317,9 @@ func TestRegistry_ListAll(t *testing.T) {
 	macd := NewMACDCrossoverStrategy()
 	ma := NewMACrossoverStrategy()
 
-	registry.Register(rsi, rsi.GetMetadata())
-	registry.Register(macd, macd.GetMetadata())
-	registry.Register(ma, ma.GetMetadata())
+	_ = registry.Register(rsi, rsi.GetMetadata())
+	_ = registry.Register(macd, macd.GetMetadata())
+	_ = registry.Register(ma, ma.GetMetadata())
 
 	all := registry.ListAll()
 	if len(all) != 3 {

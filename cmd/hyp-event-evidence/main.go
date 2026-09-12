@@ -303,7 +303,7 @@ func (f *fetcher) get(endpoint, accept string) ([]byte, error) {
 			continue
 		}
 		body, readErr := hypevidence.ReadAllBounded(response.Body, maxResponseBytes)
-		response.Body.Close()
+		_ = response.Body.Close()
 		if readErr == nil && response.StatusCode >= 200 && response.StatusCode < 300 {
 			return body, nil
 		}
@@ -382,9 +382,9 @@ func atomicWrite(filename string, data []byte) error {
 		return err
 	}
 	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
+	defer func() { _ = os.Remove(tmpName) }()
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Close(); err != nil {

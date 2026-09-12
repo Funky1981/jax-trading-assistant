@@ -34,9 +34,10 @@ func newMarketIndex(candles []Candle) marketIndex {
 		key := seriesKey(candle.Symbol, candle.Timeframe, candle.Source)
 		index.series[key] = append(index.series[key], candle)
 		end := candle.Timestamp
-		if candle.Timeframe == "1h" {
+		switch candle.Timeframe {
+		case "1h":
 			end = end.Add(time.Hour)
-		} else if candle.Timeframe == "1d" {
+		case "1d":
 			end = marketClose(candle.Timestamp)
 		}
 		if end.After(index.end) {

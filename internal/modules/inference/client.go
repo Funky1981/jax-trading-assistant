@@ -221,7 +221,7 @@ func (c *OpenAIClient) Complete(ctx context.Context, request Request) (Response,
 	if err != nil {
 		return Response{}, fmt.Errorf("inference openai transport: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 	if err != nil {
 		return Response{}, fmt.Errorf("inference openai read: %w", err)
@@ -281,7 +281,7 @@ func (c *OllamaClient) Complete(ctx context.Context, request Request) (Response,
 	if err != nil {
 		return Response{}, fmt.Errorf("inference ollama transport: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 	if err != nil {
 		return Response{}, fmt.Errorf("inference ollama read: %w", err)

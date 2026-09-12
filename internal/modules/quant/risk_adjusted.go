@@ -47,17 +47,17 @@ func CalculateRiskAdjustedMetrics(dataset FrozenDataset, window int, annualizati
 		}
 	}
 	if variance == 0 || !finite(variance) {
-		return Response{}, fmt.Errorf("Sharpe is undefined for zero or non-finite excess-return variance")
+		return Response{}, fmt.Errorf("sharpe is undefined for zero or non-finite excess-return variance")
 	}
 	standardDeviation := math.Sqrt(variance / float64(window-1))
 	downsideDeviation := math.Sqrt(downsideSquares / float64(window))
 	sharpe := excessMean / standardDeviation * math.Sqrt(annualizationFactor)
 	if downsideDeviation == 0 || !finite(downsideDeviation) {
-		return Response{}, fmt.Errorf("Sortino is undefined for zero downside deviation")
+		return Response{}, fmt.Errorf("sortino is undefined for zero downside deviation")
 	}
 	maximumDrawdown := maximumDrawdown(dataset.Bars)
 	if maximumDrawdown == 0 || !finite(maximumDrawdown) {
-		return Response{}, fmt.Errorf("Calmar is undefined without non-zero maximum drawdown")
+		return Response{}, fmt.Errorf("calmar is undefined without non-zero maximum drawdown")
 	}
 	periods := len(dataset.Bars) - 1
 	annualizedReturn := math.Pow(dataset.Bars[len(dataset.Bars)-1].Close/dataset.Bars[0].Close, annualizationFactor/float64(periods)) - 1

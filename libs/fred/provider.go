@@ -368,7 +368,7 @@ func (provider *Provider) fetch(ctx context.Context, endpoint string, query url.
 		classified.Cause = errors.New("FRED transport request failed")
 		return providercontract.ProviderAttemptResult{Failure: &classified}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return providercontract.ProviderAttemptResult{Failure: &providercontract.ProviderFailure{HTTPStatus: response.StatusCode, RetryAfter: response.Header.Get("Retry-After")}}
 	}

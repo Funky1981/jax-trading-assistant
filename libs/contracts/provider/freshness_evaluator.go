@@ -134,7 +134,7 @@ func (evaluator *FreshnessEvaluator) validateAcceptedRecord(policy FreshnessPoli
 		result.Validation != (NormalizationValidation{RawVerified: true, Parsed: true, Mapped: true, CanonicalValidated: true, ProvenanceValidated: true}) {
 		return freshnessError(FreshnessErrorInvalidCanonicalInput, policy.Identity, policy.CapabilityID, result.Output, "record was not fully accepted by the normalization pipeline", nil)
 	}
-	if result.Record == nil || (reflect.ValueOf(result.Record).Kind() == reflect.Ptr && reflect.ValueOf(result.Record).IsNil()) {
+	if result.Record == nil || (reflect.ValueOf(result.Record).Kind() == reflect.Pointer && reflect.ValueOf(result.Record).IsNil()) {
 		return freshnessError(FreshnessErrorInvalidCanonicalInput, policy.Identity, policy.CapabilityID, result.Output, "accepted normalization envelope has no canonical record", nil)
 	}
 	if result.RawRef.CapabilityID != policy.CapabilityID || result.Target != policy.Target {

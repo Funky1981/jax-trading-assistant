@@ -122,7 +122,7 @@ func (t *Tracker) Track(ctx context.Context, paperTicketID string) (Result, erro
 	if err != nil {
 		return Result{}, fmt.Errorf("begin paper outcome transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 	for _, def := range checkpointDefinitions {
 		cp := calculateCheckpoint(ticket, def, start, source, now, observations, dataSource, classification, interval)
 		if err := t.persist(ctx, tx, cp); err != nil {

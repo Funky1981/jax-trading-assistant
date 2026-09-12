@@ -65,7 +65,7 @@ func (p *IBBridgeProvider) GetQuote(ctx context.Context, symbol string) (*Quote,
 	if err != nil {
 		return nil, fmt.Errorf("%w: ib-bridge unreachable: %v", ErrProviderError, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("%w: ib-bridge returned HTTP %d for %s", ErrProviderError, resp.StatusCode, symbol)
@@ -106,7 +106,7 @@ func (p *IBBridgeProvider) HealthCheck(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("ib-bridge health check failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("ib-bridge health returned HTTP %d", resp.StatusCode)
@@ -134,7 +134,7 @@ func (p *IBBridgeProvider) GetCandles(ctx context.Context, symbol string, timefr
 	if err != nil {
 		return nil, fmt.Errorf("%w: ib-bridge candles unreachable: %v", ErrProviderError, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("%w: ib-bridge returned HTTP %d for candles %s", ErrProviderError, resp.StatusCode, symbol)

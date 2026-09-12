@@ -146,7 +146,7 @@ func TestBuilder_SymbolFallback(t *testing.T) {
 	b, _ := fakeBuilder()
 	// Construct result with empty Symbols slice but non-empty Symbol field.
 	res := makeResult("rsi_momentum", 2, []string{})
-	res.BacktestResult.Symbol = "GOOGL"
+	res.Symbol = "GOOGL"
 
 	art, err := b.BuildFromBacktest(context.Background(), "1.0.0",
 		nil, res,
