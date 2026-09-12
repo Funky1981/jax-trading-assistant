@@ -40,7 +40,17 @@ func terraChallengerTestConfig(t *testing.T, profile DiagnosticEvaluationProfile
 
 func terraChallengerTestPaths(t *testing.T, profile DiagnosticEvaluationProfile) DiagnosticPaths {
 	t.Helper()
-	return c1e2bProfilePaths(filepath.Join("..", "..", ".."), t.TempDir(), profile)
+	root := filepath.Join("..", "..", "..")
+	for _, relative := range []string{C1F3RepeatabilityBaselineRelativeDirectory, C1F3TerraAcceptedLunaRelativeDirectory} {
+		artifact := filepath.Join(root, filepath.FromSlash(relative), "artifact-index.json")
+		if _, err := os.Stat(artifact); err != nil {
+			if os.IsNotExist(err) {
+				t.Skipf("private Terra/C1F3 comparison evidence unavailable in clean CI: %s", artifact)
+			}
+			t.Fatalf("private Terra/C1F3 comparison evidence is unreadable: %v", err)
+		}
+	}
+	return c1e2bProfilePaths(root, t.TempDir(), profile)
 }
 
 func terraChallengerPreparedAuthorized(t *testing.T) (PreparedDiagnostic, OpenAIDiagnosticConfig) {

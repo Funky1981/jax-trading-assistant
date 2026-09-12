@@ -38,6 +38,13 @@ func repeatabilityTestConfig(t *testing.T, profile DiagnosticEvaluationProfile, 
 func repeatabilityTestPaths(t *testing.T, profile DiagnosticEvaluationProfile) DiagnosticPaths {
 	t.Helper()
 	root := filepath.Join("..", "..", "..")
+	privateArtifact := filepath.Join(root, filepath.FromSlash(C1F3RepeatabilityBaselineRelativeDirectory), "artifact-index.json")
+	if _, err := os.Stat(privateArtifact); err != nil {
+		if os.IsNotExist(err) {
+			t.Skipf("private C1F3 repeatability evidence unavailable in clean CI: %s", privateArtifact)
+		}
+		t.Fatalf("private C1F3 repeatability evidence is unreadable: %v", err)
+	}
 	return DiagnosticPaths{
 		EvaluationProfileID: profile.Identity,
 		ManifestPath:        filepath.Join(root, filepath.FromSlash(profile.ManifestPath)), FingerprintLockPath: filepath.Join(root, filepath.FromSlash(profile.FingerprintLockPath)),

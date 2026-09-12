@@ -1169,6 +1169,7 @@ func c1e3CommandFrozenPathArgs(t *testing.T, root, profileID string) []string {
 
 func c1f3CommandFrozenPathArgs(t *testing.T, root, profileID string) []string {
 	t.Helper()
+	requirePrivateC1F3CommandEvidence(t, root, profileID)
 	profile, err := aishadow.LoadDiagnosticExecutionProfile(profileID)
 	if err != nil {
 		t.Fatal(err)
@@ -1180,6 +1181,34 @@ func c1f3CommandFrozenPathArgs(t *testing.T, root, profileID string) []string {
 		"--typed-labels", filepath.Join(root, filepath.FromSlash(profile.TypedLabelPath)),
 		"--scoring-rubric", filepath.Join(root, filepath.FromSlash(profile.ScoringRubricPath)),
 		"--asset-ruleset-file", filepath.Join(root, "config", "event-asset-resolution-v1.json"),
+	}
+}
+
+func requirePrivateC1F3CommandEvidence(t *testing.T, root, profileID string) {
+	t.Helper()
+	var directories []string
+	switch profileID {
+	case aishadow.C1F3ProfileGeneralization:
+		directories = []string{filepath.Join(".runtime", "diagnostics", "ai-shadow-issuer-hosted", "openai-hosted-c1f3-generalization-v3", "WP-00.03C1F3-GENERALIZATION", "0a650e09-1c64-4349-bf5d-09bf4dd697d9")}
+	case aishadow.C1F3ProfileBoundary:
+		directories = []string{filepath.Join(".runtime", "diagnostics", "ai-shadow-issuer-hosted", "openai-hosted-c1f3-boundary-v3", "WP-00.03C1F3-BOUNDARY", "9da5becc-41de-4946-8703-b1c9b620382e")}
+	case aishadow.C1F3RepeatabilityProfileIdentity:
+		directories = []string{filepath.FromSlash(aishadow.C1F3RepeatabilityBaselineRelativeDirectory)}
+	case aishadow.C1F3RepeatabilityR3ProfileIdentity:
+		directories = []string{filepath.FromSlash(aishadow.C1F3RepeatabilityBaselineRelativeDirectory), filepath.FromSlash(aishadow.C1F3TerraAcceptedLunaRelativeDirectory)}
+	case aishadow.C1F3TerraChallengerProfileIdentity:
+		directories = []string{filepath.FromSlash(aishadow.C1F3RepeatabilityBaselineRelativeDirectory), filepath.FromSlash(aishadow.C1F3TerraAcceptedLunaRelativeDirectory)}
+	default:
+		return
+	}
+	for _, directory := range directories {
+		artifact := filepath.Join(root, directory, "artifact-index.json")
+		if _, err := os.Stat(artifact); err != nil {
+			if os.IsNotExist(err) {
+				t.Skipf("private C1F3 command evidence unavailable in clean CI: %s", artifact)
+			}
+			t.Fatalf("private C1F3 command evidence is unreadable: %v", err)
+		}
 	}
 }
 

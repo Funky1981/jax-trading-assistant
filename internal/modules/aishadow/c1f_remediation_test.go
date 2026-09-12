@@ -250,6 +250,7 @@ func TestC1F3ProfilesAreBoundMetadataOnlyAndDefaultDeny(t *testing.T) {
 }
 
 func TestC1E3OfflineDualScoringReplay(t *testing.T) {
+	requirePrivateC1E3ReplayEvidence(t)
 	rules := c1fTestRules(t)
 	identity := NewIssuerSemanticIdentity(rules)
 	tests := []struct {
@@ -307,6 +308,7 @@ func TestC1E3OfflineDualScoringReplay(t *testing.T) {
 }
 
 func TestC1FValidatorOfflineRetryProjection(t *testing.T) {
+	requirePrivateC1E3ReplayEvidence(t)
 	root := filepath.Join("..", "..", "..")
 	resolver := testAssetResolver(t)
 	tests := []struct{ manifest, attempts string }{
@@ -359,6 +361,7 @@ func TestC1FValidatorOfflineRetryProjection(t *testing.T) {
 }
 
 func TestGenerateC1F2OfflineFreeze(t *testing.T) {
+	requirePrivateC1E3ReplayEvidence(t)
 	root := filepath.Join("..", "..", "..")
 	path, hash, err := GenerateC1F2OfflineFreeze(root, t.TempDir())
 	if err != nil {
@@ -380,5 +383,23 @@ func TestGenerateC1F2OfflineFreeze(t *testing.T) {
 	}
 	if len(freeze.Profiles) != 2 || len(freeze.V3) != 2 || len(freeze.DevelopmentReplay) != 2 {
 		t.Fatalf("incomplete freeze: %+v", freeze)
+	}
+}
+
+func requirePrivateC1E3ReplayEvidence(t *testing.T) {
+	t.Helper()
+	root := filepath.Join("..", "..", "..")
+	patterns := []string{
+		filepath.Join(root, ".runtime", "diagnostics", "ai-shadow-issuer-hosted", "openai-hosted-c1e3-generalization-v2", "WP-00.03C1E3-GENERALIZATION", "60f4a31f-7363-4801-8724-36a76add70aa", "repetition-01", "*-attempt-01.json"),
+		filepath.Join(root, ".runtime", "diagnostics", "ai-shadow-issuer-hosted", "openai-hosted-c1e3-boundary-v2", "WP-00.03C1E3-BOUNDARY", "e736ac51-485a-44a2-b3e1-8e0812ae3793", "repetition-01", "*-attempt-01.json"),
+	}
+	for _, pattern := range patterns {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			t.Fatalf("private C1E3 replay evidence pattern is invalid: %v", err)
+		}
+		if len(matches) == 0 {
+			t.Skipf("private C1E3 replay evidence unavailable in clean CI: %s", pattern)
+		}
 	}
 }
