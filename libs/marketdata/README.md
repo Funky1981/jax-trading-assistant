@@ -104,7 +104,6 @@ for _, c := range candles {
 
 go get github.com/polygon-io/client-go
 go get github.com/alpacahq/alpaca-trade-api-go/v3
-go get github.com/redis/go-redis/v9
 
 ```
 
