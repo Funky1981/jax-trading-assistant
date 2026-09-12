@@ -1,6 +1,6 @@
 # Jax Commercial-Readiness CR-02F — Dependency, Licence & SBOM
 
-Status: **IMPLEMENTATION COMPLETE — EXTERNAL REVIEW REQUIRED**
+Status: **FINAL CI CLOSURE COMPLETE — EXTERNAL REVIEW REQUIRED**
 
 This is a technical inventory and reproducibility record. It is not a legal
 opinion, a data-rights clearance, or approval for live trading.
@@ -300,6 +300,23 @@ licence decisions, complete release-artifact SBOM/image scanning, data/API
 rights decisions, production secret management, and final distribution review.
 Phase 13 remains `NOT STARTED / BLOCKED BY CLEANUP GATE`.
 
+## Final CI closure
+
+The original authoritative push run for `e1431482eee9e5fe2e88f293db21c4ffa6b0f47b`
+was red in Go job `103572257922` and frontend job `103572258042` (workflow run
+`34700848786`). The Go failure was the Go-1.25-incompatible `golangci-lint`
+v1.64.8 configuration; the frontend failure was stale E2E assumptions and
+missing deterministic shell fixtures, not Vite readiness. The corrective
+commits are `3457edcbd8902d135d699ddf824b0f79e0f3ab37` (pinned
+golangci-lint-action v7.0.1 with golangci-lint v2.13.2 and explicit workspace
+coverage) and `40deb188aeb87231000988f5dd603290cc964e32` (frontend E2E
+fixtures and current route/UI contracts). The final exact-SHA workflow result
+is recorded in the CR-02F closure handover.
+
+The linter is a development/CI tool only: `RUNTIME SBOM IMPACT = NONE`.
+No runtime dependency, lockfile, research artifact or safety boundary was
+changed by this closure.
+
 ## Roadmap state
 
 - CR-02A = `GO`
@@ -307,6 +324,6 @@ Phase 13 remains `NOT STARTED / BLOCKED BY CLEANUP GATE`.
 - CR-02C = `GO`
 - CR-02D = `GO`
 - CR-02E = `GO`
-- CR-02F = `IMPLEMENTATION COMPLETE — EXTERNAL REVIEW REQUIRED`
+- CR-02F = `FINAL CI CLOSURE COMPLETE — EXTERNAL REVIEW REQUIRED`
 - CR-02G = `NOT STARTED`
 - Phase 13 = `NOT STARTED / BLOCKED BY CLEANUP GATE`

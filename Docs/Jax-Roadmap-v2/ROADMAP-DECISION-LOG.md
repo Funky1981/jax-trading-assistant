@@ -1288,3 +1288,20 @@ licence, LGPL/static-linking review for `gofinance/ib`, image-layer licensing,
 container vulnerability scanning, data/API terms and production secret
 management remain explicit owner/legal/deployment review items. Scientific
 status and private HYP-EVENT evidence are unchanged.
+
+## RD-2026-09-12-03 - CR-02F final CI closure
+
+- Date: 2026-09-12
+- Work package: Commercial-readiness CR-02F final CI closure
+- Status: Final CI closure complete; external review required
+- Original red workflow: `34700848786` on `e1431482eee9e5fe2e88f293db21c4ffa6b0f47b`
+- Go remediation: `3457edcbd8902d135d699ddf824b0f79e0f3ab37`
+- Frontend remediation: `40deb188aeb87231000988f5dd603290cc964e32`
+- CR-02G: `NOT STARTED`
+- Phase 13: `NOT STARTED / BLOCKED BY CLEANUP GATE`
+
+The Go CI path now uses the pinned Go-1.25-compatible golangci-lint v2 path
+with explicit supported workspace coverage. Frontend E2E runs self-contained
+with deterministic fixtures and current application routes. Scientific status
+remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`; forward-paper
+evidence remains `0 DAYS / 0 ORDERS`; no runtime SBOM scope changed.

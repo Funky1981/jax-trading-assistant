@@ -28,10 +28,10 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
-| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02F DEPENDENCY / LICENCE / SBOM CLEANUP** |
+| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02F FINAL CI CLOSURE / EXTERNAL REVIEW** |
 | Phase 13 — Optional Live Execution | **NOT STARTED / BLOCKED BY CLEANUP GATE** |
-| Current implementation package | **CR-02F — DEPENDENCIES / LICENCES / SBOM / SUPPLY CHAIN** |
-| Next package | **External review of CR-02F; CR-02G not started** |
+| Current implementation package | **CR-02F — FINAL CI CLOSURE** |
+| Next package | **External review of CR-02F final CI closure; CR-02G not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -247,7 +247,7 @@ the conflicting standalone Postgres Compose stack and removes stale active
 configuration. The canonical record is
 `Docs/commercial-readiness/CR-02E-CONFIG-COMPOSE-CONSOLIDATION.md`.
 
-CR-02E is accepted as GO. CR-02F is implementation complete and awaits
+CR-02E is accepted as GO. CR-02F final CI closure is complete and awaits
 external review; CR-02G has not started. Phase 13 remains **NOT STARTED /
 BLOCKED BY THE CLEANUP GATE**.
 `HYP-EVENT-001A` remains **NOT VALIDATED** and
