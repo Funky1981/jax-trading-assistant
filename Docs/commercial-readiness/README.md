@@ -14,3 +14,7 @@ commercial distribution.
 - `CR-02E-CONFIG-COMPOSE-CONSOLIDATION.md` — canonical environment ownership,
   safe defaults, Compose profiles, service boundaries and stale configuration
   removal.
+- `CR-02F-DEPENDENCY-LICENCE-SBOM.md` — dependency inventory, vulnerability
+  audit, reproducibility, SBOM generation and licence/notice review flags.
+- `../../THIRD_PARTY_NOTICES.md` — machine-supported direct runtime notice
+  inventory.

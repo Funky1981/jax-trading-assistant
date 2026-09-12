@@ -111,8 +111,10 @@ World Monitor profile and is not used by Jax's database.
 Prometheus and Grafana are operationally useful but not core application
 dependencies. They are profile-gated. The stale `jax-api` scrape target was
 removed; current targets are `jax-trader` API/internal metrics and
-`jax-research` metrics. Floating image tags remain a CR-02F reproducibility and
-SBOM review item.
+`jax-research` metrics. Image references are now digest-pinned where the
+repository controls them; the local-built World Monitor image remains
+intentionally separate. Detailed dependency, licence and SBOM evidence is
+recorded in CR-02F.
 
 ## Database configuration
 
@@ -133,8 +135,8 @@ external component. Shadow validation retains explicit production/shadow DSNs.
 tools use their explicit `KNOWLEDGE_DSN` make target and dedicated tools Compose,
 so the former root env alias was removed. Redis configuration was removed from
 the root examples/generator and legacy JSON config; the Redis-backed library
-code remains for CR-02F dependency review, but no supported root runtime
-requires Redis.
+code was removed during CR-02F because no supported root runtime requires
+Redis.
 
 ## Service/port matrix
 
@@ -255,15 +257,16 @@ are reproducibility/history records; they are not supported startup paths.
 ignored local override no longer contains a Dexter provider. Versioned strategy,
 risk, evidence and migration artifacts were not rewritten.
 
-## Remaining CR-02F concerns
+## CR-02F follow-up
 
-- Dependency/license/SBOM inventory, including the retained Redis library.
-- Floating container image tags and image provenance.
+- CR-02F records the dependency, licence, SBOM and supply-chain inventory.
+- The Redis implementation and dependency were removed.
+- Runtime image references are digest-pinned; image-layer scanning and legal
+  review remain explicit CR-02G work.
 - Formal commercial data-rights review for Alpaca, Polygon, IB, SEC, World
   Monitor and any retained redistributed/derived data.
 - Production secret storage/rotation and deployment-specific credential policy.
-- Broader dependency minimization outside the configuration surfaces addressed
-  here.
+- See `CR-02F-DEPENDENCY-LICENCE-SBOM.md` for the complete record.
 
 ## Roadmap state
 
@@ -271,7 +274,7 @@ risk, evidence and migration artifacts were not rewritten.
 - CR-02B = `GO`
 - CR-02C = `GO`
 - CR-02D = `GO`
-- CR-02E = `IMPLEMENTATION COMPLETE — EXTERNAL REVIEW REQUIRED`
-- CR-02F = `NOT STARTED`
+- CR-02E = `GO`
+- CR-02F = `IMPLEMENTATION COMPLETE — EXTERNAL REVIEW REQUIRED`
 - CR-02G = `NOT STARTED`
 - Phase 13 = `NOT STARTED / BLOCKED BY CLEANUP GATE`

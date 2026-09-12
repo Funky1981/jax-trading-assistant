@@ -1268,3 +1268,23 @@ COMPLETE / EXTERNAL REVIEW REQUIRED. CR-02F and CR-02G are NOT STARTED. Phase
 13 remains NOT STARTED / BLOCKED BY CLEANUP GATE. Scientific status remains
 TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE; actual forward-paper
 evidence remains 0 DAYS / 0 ORDERS.
+## RD-2026-09-12-02 - CR-02F dependency, licence and SBOM cleanup
+
+- Date: 2026-09-12
+- Work package: Commercial-readiness CR-02F
+- Status: Implementation complete; external review required
+- CR-02A through CR-02E: `GO`
+- CR-02F: `IMPLEMENTATION COMPLETE — EXTERNAL REVIEW REQUIRED`
+- CR-02G: `NOT STARTED`
+- Phase 13: `NOT STARTED / BLOCKED BY CLEANUP GATE`
+
+The supported Go, frontend and IB-bridge dependency surfaces were inventoried.
+Redis and its unused runtime cache were removed. Reachable Go vulnerabilities
+were remediated and the updated graph passed the pinned vulnerability scan;
+Python requirements were updated and passed pip-audit. CI actions, Go/toolchain
+versions and active container/base images are pinned. A repeatable CycloneDX
+SBOM set and third-party notice inventory were added. The root application
+licence, LGPL/static-linking review for `gofinance/ib`, image-layer licensing,
+container vulnerability scanning, data/API terms and production secret
+management remain explicit owner/legal/deployment review items. Scientific
+status and private HYP-EVENT evidence are unchanged.

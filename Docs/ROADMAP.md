@@ -28,10 +28,10 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
-| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02E CONFIGURATION & COMPOSE CONSOLIDATION** |
+| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02F DEPENDENCY / LICENCE / SBOM CLEANUP** |
 | Phase 13 — Optional Live Execution | **NOT STARTED / BLOCKED BY CLEANUP GATE** |
-| Current implementation package | **CR-02E — ENVIRONMENT / COMPOSE / CONFIGURATION CONSOLIDATION** |
-| Next package | **External review of CR-02E; CR-02F/CR-02G not started** |
+| Current implementation package | **CR-02F — DEPENDENCIES / LICENCES / SBOM / SUPPLY CHAIN** |
+| Next package | **External review of CR-02F; CR-02G not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -247,8 +247,9 @@ the conflicting standalone Postgres Compose stack and removes stale active
 configuration. The canonical record is
 `Docs/commercial-readiness/CR-02E-CONFIG-COMPOSE-CONSOLIDATION.md`.
 
-CR-02E is implementation complete and awaits external review. CR-02F and CR-02G
-have not started. Phase 13 remains **NOT STARTED / BLOCKED BY THE CLEANUP GATE**.
+CR-02E is accepted as GO. CR-02F is implementation complete and awaits
+external review; CR-02G has not started. Phase 13 remains **NOT STARTED /
+BLOCKED BY THE CLEANUP GATE**.
 `HYP-EVENT-001A` remains **NOT VALIDATED** and
 `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains unchanged.
 
@@ -353,13 +354,13 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is Commercial-Readiness Cleanup CR-02E — implementation
+The current position is Commercial-Readiness Cleanup CR-02F — implementation
 complete and external review required, after external GO decisions for
-Phase 12 and CR-01 through CR-02D. CR-02E consolidated the root configuration
+Phase 12 and CR-01 through CR-02E. CR-02E consolidated the root configuration
 contract, made observability and World Monitor explicit optional Compose
 profiles, removed the conflicting standalone Postgres stack, and removed stale
 active configuration. HYP-EVENT-001A evidence and the sealed 2025 holdout
 remain unchanged. This is not a trading-edge or profitability claim. Phase 10
 and Phase 11 remain complete/GO, with actual forward-paper evidence of 0 days /
-0 orders. CR-02F and CR-02G are not started and Phase 13 remains
+0 orders. CR-02G is not started and Phase 13 remains
 `NOT STARTED / BLOCKED BY CLEANUP GATE`.
