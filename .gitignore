@@ -4,6 +4,7 @@
 node_modules/
 dist/
 .vite/
+frontend/*.tsbuildinfo
 storybook-static/
 playwright-report/
 test-results/
