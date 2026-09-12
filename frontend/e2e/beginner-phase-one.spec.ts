@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { stubBase } from './helpers';
 
 const overview = {
   runtimeMode: 'paper',
@@ -22,6 +23,7 @@ const overview = {
 };
 
 test.beforeEach(async ({ page }) => {
+  await stubBase(page);
   await page.route('**/auth/status', (route) =>
     route.fulfill({
       status: 200,
@@ -52,7 +54,7 @@ test.beforeEach(async ({ page }) => {
 
 test('beginner journey preserves Review routes', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('status')).toContainText('Paper-safe mode is on');
+  await expect(page.getByRole('heading', { name: 'Paper-safe mode is on' })).toBeVisible();
   await page.getByRole('link', { name: 'Start the guide' }).click();
   await expect(
     page.getByRole('heading', { name: 'Start with the current Jax workflow' }),
@@ -75,6 +77,6 @@ for (const width of [320, 768, 1280]) {
     const primary = page.getByLabel('Primary navigation');
     await expect(primary.getByRole('link')).toHaveCount(6);
     await expect(page.getByRole('button', { name: 'Review' })).toBeVisible();
-    await expect(page.getByRole('status')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Paper-safe mode is on' })).toBeVisible();
   });
 }

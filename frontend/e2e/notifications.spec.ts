@@ -43,7 +43,7 @@ test('notifications inbox shows unread/read, stale, and route-aware destinations
 
   const destinationLinks = page.getByRole('link', { name: 'Open destination' });
   await expect(destinationLinks).toHaveCount(2);
-  await expect(destinationLinks.nth(0)).toHaveAttribute('href', '/etf/approvals');
+  await expect(destinationLinks.nth(0)).toHaveAttribute('href', '/review/approvals');
   await expect(destinationLinks.nth(1)).toHaveAttribute('href', '/ai-trading');
 
   await page.getByRole('button', { name: 'Mark read' }).first().click();

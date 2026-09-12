@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { stubBase } from './helpers';
 
 test('loads beginner Home and opens Evidence Inbox', async ({ page }) => {
+  await stubBase(page);
   await page.route('**/auth/status', async (route) => {
     await route.fulfill({
       status: 200,
@@ -54,9 +56,9 @@ test('loads beginner Home and opens Evidence Inbox', async ({ page }) => {
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Jax overview' })).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('Paper-safe mode is on');
+  await expect(page.getByRole('heading', { name: 'Paper-safe mode is on' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Open Evidence Inbox' }).last().click();
   await expect(page).toHaveURL(/\/monitor\/inbox$/);
-  await expect(page.locator('h1')).toContainText('Monitor Inbox');
+  await expect(page.locator('h1')).toContainText('Evidence Inbox');
 });

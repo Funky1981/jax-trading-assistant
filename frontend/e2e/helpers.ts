@@ -49,6 +49,41 @@ export async function stubHealth(page: Page): Promise<void> {
 
 /** Stubs both auth/status (disabled) and /health. */
 export async function stubBase(page: Page): Promise<void> {
+  // Shared shell requests must remain deterministic; spec-specific routes
+  // registered after this helper take precedence over these defaults.
+  await page.route('**/api/v1/operator-evidence/overview', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        runtimeMode: 'paper', allowLiveTrading: false, executionEnabled: false,
+        executionWorkerEnabled: false, brokerExecutionAllowed: false, maximumLeverage: 1,
+        genuineEvents: 0, syntheticEvents: 0, rejectedEvents: 0, deduplicatedEvents: 0,
+        candidates: 0, approvals: 0, paperTickets: 0, pendingCheckpoints: 0,
+        completedCheckpoints: 0, missingDataCheckpoints: 0, ambiguousCheckpoints: 0,
+        noTradeDecisions: 0, watchDecisions: 0, candidateDecisions: 0, awaitingProcessing: 0,
+        checkedAt: '2026-09-12T00:00:00Z',
+      }),
+    }),
+  );
+  await page.route('**/api/v1/research/events/world-monitor/inbox**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [], counts: { genuine: 0, syntheticTests: 0, rejected: 0, duplicates: 0, candidatesCreated: 0 } }),
+    }),
+  );
+  await page.route('**/api/v1/research/events/world-monitor/status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        connected: false,
+        counts: { total: 0, pending: 0, candidatesCreated: 0, rejected: 0, ignored: 0 },
+        checkedAt: '2026-09-12T00:00:00Z',
+      }),
+    }),
+  );
   await stubAuthDisabled(page);
   await stubHealth(page);
 }

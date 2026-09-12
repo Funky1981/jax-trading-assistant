@@ -91,7 +91,7 @@ function destinationForEvent(event: EventSummary): string {
   const category = categoryForEvent(event);
   switch (category) {
     case 'approval':
-      return '/etf/approvals';
+      return '/review/approvals';
     case 'opportunity':
     case 'sentiment_triggered':
     case 'sentiment_invalidated':

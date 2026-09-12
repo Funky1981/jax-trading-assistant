@@ -202,7 +202,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
             </p>
             <div className="flex flex-wrap gap-2">
               <Button asChild type="button" variant="outline">
-                <Link to="/etf/approvals">Review approval queue</Link>
+                <Link to="/review/approvals">Review approval queue</Link>
               </Button>
             </div>
           </div>
@@ -219,7 +219,7 @@ export function OrderTicketPanel({ isOpen, onToggle }: OrderTicketPanelProps) {
                 Choose another symbol
               </Button>
               <Button asChild type="button" variant="outline">
-                <Link to="/etf/approvals">Open approved ETF workflow</Link>
+                <Link to="/review/approvals">Open approved ETF workflow</Link>
               </Button>
             </div>
             <p className="text-xs text-destructive/90">

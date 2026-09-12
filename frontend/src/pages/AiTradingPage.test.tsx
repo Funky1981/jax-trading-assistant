@@ -202,7 +202,7 @@ describe('AiTradingPage', () => {
     expect(screen.getByText('AAPL')).toBeInTheDocument();
     expect(screen.getByText('Needs chart confirmation')).toBeInTheDocument();
     expect(screen.getByText('Execution chain')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Send to approval/i })).toHaveAttribute('href', '/etf/approvals');
+    expect(screen.getByRole('link', { name: /Send to approval/i })).toHaveAttribute('href', '/review/approvals');
     expect(screen.getByRole('link', { name: /View execution chain/i })).toHaveAttribute('href', '/approvals');
     expect(screen.getByRole('link', { name: /Review chart evidence/i })).toHaveAttribute(
       'href',

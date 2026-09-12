@@ -176,7 +176,7 @@ export function TradingPage() {
             <Button type="button" variant="outline" onClick={() => navigate('/equity-alpha/order-ticket')}>
               Open Manual Order Ticket
             </Button>
-            <Button type="button" variant="outline" onClick={() => navigate('/etf/approvals')}>
+            <Button type="button" variant="outline" onClick={() => navigate('/review/approvals')}>
               Open ETF Approval Queue
             </Button>
             <Button type="button" variant="outline" onClick={() => navigate('/testing/mobile-approval-harness')}>

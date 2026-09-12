@@ -82,7 +82,7 @@ export const routes = [
 
       { path: 'trading', element: <Navigate to="/equity-alpha/trading" replace /> },
       { path: 'order-ticket', element: <OrderTicketPage /> },
-      { path: 'approvals', element: <Navigate to="/etf/approvals" replace /> },
+      { path: 'approvals', element: <Navigate to="/review/approvals" replace /> },
       { path: 'etf-universe', element: <Navigate to="/etf/universe" replace /> },
       { path: 'strategies', element: <Navigate to="/etf/strategies" replace /> },
       { path: 'timeline', element: <Navigate to="/etf/timeline" replace /> },

@@ -69,7 +69,7 @@ describe('NotificationCentrePage', () => {
     expect(await screen.findByRole('heading', { name: 'Notification Centre' })).toBeInTheDocument();
     expect(await screen.findByText('Approval required for QQQ')).toBeInTheDocument();
     const destinationLinks = screen.getAllByRole('link', { name: 'Open destination' }).map((link) => link.getAttribute('href'));
-    expect(destinationLinks).toContain('/etf/approvals');
+    expect(destinationLinks).toContain('/review/approvals');
     expect(destinationLinks).toContain('/ai-trading');
 
     await userEvent.setup().click(screen.getAllByRole('link', { name: 'Open destination' })[1]);

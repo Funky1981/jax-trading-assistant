@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
+import { stubBase } from './helpers';
 
 async function installTradingStubs(page: Page) {
+  await stubBase(page);
   let brokerOrders = [
     {
       order_id: 101,
@@ -507,11 +509,10 @@ test('shows pilot trade gate on the system page', async ({ page }) => {
   await page.goto('/system', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { level: 1, name: /System/ })).toBeVisible();
-  await expect(page.getByText('Pilot Trading Status')).toBeVisible();
-  await expect(page.getByText('Trade Enabled')).toBeVisible();
-  await expect(page.getByText('Connected')).toBeVisible();
-  await expect(page.getByText('Required')).toBeVisible();
-  await expect(page.getByText('admin', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Critical safety settings' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Live trading' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Broker execution' })).toBeVisible();
+  await expect(page.getByText('1x', { exact: true }).first()).toBeVisible();
 });
 
 test('loads trading page with operator workflow and management controls', async ({ page }) => {
@@ -575,8 +576,8 @@ test('reroutes ETF manual entries to approval flow while leaving exposure action
   await page.locator('#order-ticket-symbol').fill('SPY');
   await page.locator('#order-ticket-quantity').fill('10');
 
-  await expect(page.getByText(/Approval required for this ETF/i)).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open approval flow' })).toBeVisible();
+  await expect(page.getByText('Approval-first ETF workflow')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Review approval queue' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Submit BUY Order' })).toBeDisabled();
 
   await page.getByRole('button', { name: 'Protect' }).first().click();
@@ -721,7 +722,7 @@ test('approval paper order flow from promoted news idea', async ({ page }) => {
     });
   });
 
-  await page.goto('/etf/approvals', { waitUntil: 'domcontentloaded' });
+  await page.goto('/review/approvals', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: 'Approval Queue' })).toBeVisible();
   await expect(page.getByText('QQQ', { exact: true })).toBeVisible();

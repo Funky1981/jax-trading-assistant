@@ -108,7 +108,7 @@ describe('OrderTicketPanel', () => {
 
     expect(screen.getByText(/Approval-first ETF workflow/i)).toBeInTheDocument();
     expect(screen.getByText(/No approval item has been created from this manual ticket/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Review approval queue' })).toHaveAttribute('href', '/etf/approvals');
+    expect(screen.getByRole('link', { name: 'Review approval queue' })).toHaveAttribute('href', '/review/approvals');
     expect(screen.getByRole('button', { name: 'Submit BUY Order' })).toBeDisabled();
     expect(mutate).not.toHaveBeenCalled();
   });
@@ -160,7 +160,7 @@ describe('OrderTicketPanel', () => {
 
     expect(screen.getByText(/Manual entry is blocked for this ETF/i)).toBeInTheDocument();
     expect(screen.getByText(/Reason:/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open approved ETF workflow' })).toHaveAttribute('href', '/etf/approvals');
+    expect(screen.getByRole('link', { name: 'Open approved ETF workflow' })).toHaveAttribute('href', '/review/approvals');
 
     await user.click(screen.getByRole('button', { name: 'Choose another symbol' }));
 

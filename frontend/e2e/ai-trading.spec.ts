@@ -119,6 +119,7 @@ test('AI Trading opens from the shell and renders route-aware opportunities', as
   );
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Review' }).click();
   await page.getByRole('link', { name: 'AI Trading' }).click();
 
   await expect(page).toHaveURL(/\/ai-trading$/);

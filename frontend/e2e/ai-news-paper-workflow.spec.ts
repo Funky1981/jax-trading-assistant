@@ -181,7 +181,7 @@ test('ai news paper workflow promotes an opportunity through approval into a pap
   await expect(page.getByRole('link', { name: /Send to approval/i })).toBeVisible();
 
   await page.getByRole('link', { name: /Send to approval/i }).click();
-  await expect(page).toHaveURL(/\/etf\/approvals$/);
+  await expect(page).toHaveURL(/\/review\/approvals$/);
   await expect(page.getByRole('heading', { name: 'Approval Queue' })).toBeVisible();
   await expect(page.getByText('QQQ', { exact: true })).toBeVisible();
   await expect(page.getByText('74%')).toBeVisible();

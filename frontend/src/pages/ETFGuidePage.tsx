@@ -25,7 +25,7 @@ export function ETFGuidePage() {
       actions={[
         { label: 'Open ETF Trading', to: '/etf/trading' },
         { label: 'Open ETF Universe', to: '/etf/universe', variant: 'outline' },
-        { label: 'Open ETF Approvals', to: '/etf/approvals', variant: 'outline' },
+        { label: 'Open ETF Approvals', to: '/review/approvals', variant: 'outline' },
       ]}
     />
   );

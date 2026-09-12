@@ -20,7 +20,7 @@ describe('notification adapter', () => {
     expect(mapped).toMatchObject({
       id: 'event-approval-1',
       category: 'approval',
-      destinationPath: '/etf/approvals',
+      destinationPath: '/review/approvals',
       channels: ['In-app inbox', 'Email'],
       stale: false,
     });

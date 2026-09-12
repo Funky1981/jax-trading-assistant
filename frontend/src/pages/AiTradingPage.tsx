@@ -117,7 +117,7 @@ function primaryAction(opportunity: OpportunitySummary) {
   }
 
   if (opportunity.route === 'approval_required') {
-    return { label: 'Send to approval', path: '/etf/approvals' };
+    return { label: 'Send to approval', path: '/review/approvals' };
   }
 
   if (opportunity.route === 'execution_ready') {

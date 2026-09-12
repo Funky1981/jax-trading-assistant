@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { stubBase } from './helpers';
 
 const overview = {
   runtimeMode: 'paper',
@@ -42,6 +43,7 @@ const genuineEvidence = {
 };
 
 async function mockRuntime(page: Page) {
+  await stubBase(page);
   await page.route('**/auth/status', (route) =>
     route.fulfill({
       status: 200,
@@ -95,9 +97,9 @@ for (const width of [320, 768, 1280]) {
     await page.getByRole('button', { name: /long genuine evidence headline/i }).click();
 
     await expect(page.getByRole('link', { name: 'Open original source' })).toBeVisible();
-    await expect(page.getByText('Published time')).toBeVisible();
-    await expect(page.getByText('Collection time').first()).toBeVisible();
-    await expect(page.getByText('Jax receipt time').first()).toBeVisible();
+    await expect(page.getByText('Published', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Collected', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Received', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Source and provenance').locator('..')).not.toHaveAttribute('open');
     await expect(page.getByText('Analysis', { exact: true }).locator('..')).not.toHaveAttribute(
       'open',
