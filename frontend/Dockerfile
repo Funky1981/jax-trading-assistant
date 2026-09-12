@@ -1,5 +1,5 @@
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ ENV VITE_JAX_API_URL=${VITE_JAX_API_URL}
 RUN npm run build
 
 # Runtime stage — nginx to serve static assets
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10 AS runtime
 
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
