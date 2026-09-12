@@ -1,6 +1,6 @@
 module jax-trading-assistant/libs/marketdata
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/alpacahq/alpaca-trade-api-go/v3 v3.3.0
@@ -27,8 +27,8 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sony/gobreaker/v2 v2.0.0 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 )

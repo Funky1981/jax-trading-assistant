@@ -25,5 +25,12 @@ tmp/
 # Git history (large)
 .git/
 
+# Secrets and private research artifacts must never enter a build context
+.env
+**/.env
+data/
+reports/
+.runtime/
+
 # Docker-specific
 **/.dockerignore
