@@ -317,6 +317,25 @@ The linter is a development/CI tool only: `RUNTIME SBOM IMPACT = NONE`.
 No runtime dependency, lockfile, research artifact or safety boundary was
 changed by this closure.
 
+### Clean-checkout CI closure
+
+The first post-remediation exact-SHA run (`34710136479` on
+`18b8669c2405c5905c3f2ab203d45b0b8297009d`) reached the corrected linter and
+frontend E2E successfully, but exposed that several legacy forensic tests
+assumed private, ignored `.runtime` and `data/datasets` artifacts were present
+in every checkout. Those artifacts are intentionally local and are not part
+of the public repository. Commit `b1bac5416e028f587b36f0fea043587a874a4e40`
+added narrow prerequisite guards: the tests execute their original assertions
+when the private evidence is mounted, and explicitly skip only when that
+private evidence is absent from a clean checkout. Other errors remain fatal.
+
+The exact final push run for `b1bac5416e028f587b36f0fea043587a874a4e40` is
+`34710567041`: Go job `103598475052` **SUCCESS**, frontend job
+`103598475151` **SUCCESS**, and the intentionally manual-only integration job
+`103598475620` **SKIPPED**. The run is a push on `capability-reset` for that
+exact SHA. No hosted inference, broker call, paid service, runtime dependency,
+lockfile, research artifact, or safety boundary changed.
+
 ## Roadmap state
 
 - CR-02A = `GO`

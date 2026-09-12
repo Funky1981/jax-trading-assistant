@@ -1305,3 +1305,22 @@ with explicit supported workspace coverage. Frontend E2E runs self-contained
 with deterministic fixtures and current application routes. Scientific status
 remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`; forward-paper
 evidence remains `0 DAYS / 0 ORDERS`; no runtime SBOM scope changed.
+
+## RD-2026-09-12-04 - CR-02F clean-checkout CI closure
+
+- Date: 2026-09-12
+- Work package: Commercial-readiness CR-02F final CI closure
+- Status: Final CI closure complete; external review required
+- Clean-checkout fixture remediation: `b1bac5416e028f587b36f0fea043587a874a4e40`
+- Exact final push workflow: `34710567041`
+- Go job: `103598475052` — SUCCESS
+- Frontend job: `103598475151` — SUCCESS
+- Integration job: `103598475620` — SKIPPED by intentional manual-only policy
+
+The final CI run passed on the exact pushed `capability-reset` SHA. Private
+ignored forensic/dataset artifacts are now guarded narrowly in tests: present
+artifacts retain full validation, while a clean public checkout records an
+explicit skip rather than treating absent private evidence as an application
+failure. No runtime SBOM scope, research artifact, provider, or safety
+boundary changed. CR-02G remains `NOT STARTED`; Phase 13 remains
+`NOT STARTED / BLOCKED BY CLEANUP GATE`.
