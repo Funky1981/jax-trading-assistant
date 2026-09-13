@@ -1,9 +1,11 @@
 # Commercial-readiness cleanup
 
 This folder contains bounded technical audits and cleanup evidence between the
-accepted Phase-12 research gate and any future Phase-13 decision. These are not
-legal opinions and do not authorize destructive removals, live execution or
-commercial distribution.
+accepted Phase-12 research gate and any future Phase-13 decision. CR-02G is
+externally accepted as `COMPLETE / GO` for the technical cleanup sequence. This
+is not a legal opinion, commercial-sale clearance or live-execution
+authorization. Jax's current objective is personal strategy validation;
+optional future commercialisation is `DEFERRED / NOT A CURRENT OBJECTIVE`.
 
 - `CR-01-ARCHITECTURE-VENDOR-AUDIT.md` — current architecture, provider,
   dependency, ownership and cleanup-plan audit.
@@ -23,3 +25,9 @@ commercial distribution.
   clean-checkout, toolchain, image-security and reproducibility closure.
 - `../../THIRD_PARTY_NOTICES.md` — machine-supported direct runtime notice
   inventory.
+
+## Current boundary
+
+`CR-01 → CR-02G TECHNICAL CLEANUP = COMPLETE / GO`. The next active validation
+package is `Docs/validation/VAL-01-STRATEGY-PROMOTION-READINESS.md`. Phase 13 is
+`NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE`.

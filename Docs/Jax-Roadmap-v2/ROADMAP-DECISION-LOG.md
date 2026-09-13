@@ -1,5 +1,20 @@
 # Roadmap Decision Log
 
+## RD-2026-09-13-VAL-01 — CR-02G accepted; personal strategy validation opened
+
+- Decision state: **CR-02G = COMPLETE / GO** by external technical-lead review.
+- Cleanup state: **CR-01 → CR-02G TECHNICAL CLEANUP = COMPLETE / GO**.
+- Current objective: **PERSONAL TRADING VALIDATION**. Optional future
+  commercialisation is **DEFERRED / NOT A CURRENT OBJECTIVE**; this decision is
+  not commercial-sale or licensing clearance.
+- Active package: **VAL-01 — STRATEGY PROMOTION & FORWARD-PAPER READINESS GATE**.
+- Scientific status remains `HYP-EVENT-001A = NOT VALIDATED` and
+  `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE`.
+- Phase 11 capability remains implemented and accepted; actual forward-paper
+  evidence remains `0 DAYS / 0 ORDERS`.
+- Phase 13 remains `NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL
+  FORWARD-PAPER EVIDENCE`. VAL-01 does not start real forward paper or Phase 13.
+
 ## RD-2026-09-09-17 — CR-02B Jax-native planner and complete Agent0 removal
 
 - Decision state: **IMPLEMENTATION IN PROGRESS — EXTERNAL CR-02B REVIEW REQUIRED**.

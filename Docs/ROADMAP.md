@@ -28,10 +28,10 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
-| Commercial-Readiness Cleanup Gate | **CR-02G TECHNICAL CLOSURE COMPLETE — EXTERNAL REVIEW** |
-| Phase 13 — Optional Live Execution | **NOT STARTED / BLOCKED BY CLEANUP GATE** |
-| Current implementation package | **CR-02G — FINAL TECHNICAL CLOSURE** |
-| Next package | **External review of CR-02G technical closure; Phase 13 remains blocked** |
+| Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
+| Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
+| Current implementation package | **VAL-01 — STRATEGY PROMOTION & FORWARD-PAPER READINESS GATE** |
+| Next package | **VAL-01 completion review; real forward paper has not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -236,7 +236,8 @@ development/validation/2024 OOS artifact and registered falsification records
 are retained privately. The 2024 conditioned comparison is a research
 candidate only; no advanced model was trained or promoted, no paid data was
 added, and recommendation logic was unchanged. HYP-EVENT-001A remains
-`NOT VALIDATED`; Phase 13 is blocked by the commercial-readiness cleanup gate.
+`NOT VALIDATED`; Phase 13 is blocked by strategy validation and real forward-paper
+evidence, not by unfinished commercial-readiness cleanup.
 
 ### Commercial-readiness cleanup gate — CR-02E IN PROGRESS
 
@@ -247,9 +248,12 @@ the conflicting standalone Postgres Compose stack and removes stale active
 configuration. The canonical record is
 `Docs/commercial-readiness/CR-02E-CONFIG-COMPOSE-CONSOLIDATION.md`.
 
-CR-02E is accepted as GO. CR-02F final CI closure is complete and awaits
-external review; CR-02G has not started. Phase 13 remains **NOT STARTED /
-BLOCKED BY THE CLEANUP GATE**.
+CR-02A through CR-02G are accepted as GO. CR-02G completes the technical
+cleanup sequence; it does not clear legal or commercial distribution questions.
+The current objective is personal strategy validation. Optional future
+commercialisation is **DEFERRED / NOT A CURRENT OBJECTIVE**. Phase 13 remains
+**NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER
+EVIDENCE**.
 `HYP-EVENT-001A` remains **NOT VALIDATED** and
 `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE` remains unchanged.
 
@@ -354,15 +358,16 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is Commercial-Readiness Cleanup CR-02G — technical closure
-complete locally and external review required, after external GO decisions for
-Phase 12 and CR-01 through CR-02F. CR-02G records the final architecture,
-distribution boundary, security, licence/data-rights and clean-checkout
-validation. HYP-EVENT-001A evidence and the sealed 2025 holdout remain
-unchanged. This is not a trading-edge or profitability claim. Phase 10 and
-Phase 11 remain complete/GO, with actual forward-paper evidence of 0 days / 0
-orders. Phase 13 remains `NOT STARTED / BLOCKED BY EXTERNAL CR-02G REVIEW`
-pending external review. The technical closure uses a canonical LF
+The current position is VAL-01 — Strategy Promotion & Forward-Paper Readiness,
+following the external `GO` for CR-02G and the complete CR-01 through CR-02G
+technical cleanup sequence. The cleanup record does not grant commercial-sale
+clearance. Jax is currently a personal trading platform; optional future
+commercialisation is **DEFERRED / NOT A CURRENT OBJECTIVE**. HYP-EVENT-001A
+remains not validated and the sealed 2025 holdout remains unchanged. This is
+not a trading-edge or profitability claim. Phase 10 and Phase 11 remain
+complete/GO, with actual forward-paper evidence of 0 days / 0 orders. Phase 13
+remains `NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER
+EVIDENCE`. The technical closure uses a canonical LF
 clean-checkout environment, reproducible pinned toolchains, clean rebuilt core
 images, and explicit disposition of the remaining unfixed bridge base-package
 advisory. The commercial release gate remains separate and blocked by owner,
