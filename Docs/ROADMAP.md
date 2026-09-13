@@ -30,8 +30,8 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-02 — CANDIDATE SELECTION & SCIENTIFIC PREREGISTRATION** |
-| Next package | **VAL-03 historical validation only after external review; real forward paper has not started** |
+| Current implementation package | **VAL-02A — MA CROSSOVER PREREGISTRATION CONTRACT CLOSURE** |
+| Next package | **VAL-03 historical validation only after external review of the frozen closure; real forward paper has not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -358,8 +358,8 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is VAL-02 — Candidate Selection & Scientific
-Preregistration,
+The current position is VAL-02A — MA Crossover Preregistration Contract
+Closure,
 following the external `GO` for CR-02G and the complete CR-01 through CR-02G
 technical cleanup sequence. The cleanup record does not grant commercial-sale
 clearance. Jax is currently a personal trading platform; optional future
@@ -370,7 +370,9 @@ complete/GO, with actual forward-paper evidence of 0 days / 0 orders. VAL-01 is
 complete/GO with forward-paper admission NO-GO. VAL-02 selected exactly one
 existing candidate, `ma_crossover_v1`, using frozen outcome-blind feasibility
 criteria and froze a candidate-specific VAL-03 protocol without executing
-performance evaluation. Phase 13 remains `NOT STARTED / BLOCKED BY STRATEGY
+performance evaluation. VAL-02 candidate selection remains accepted and
+VAL-02A is `PREREGISTRATION CONTRACT CLOSURE COMPLETE — EXTERNAL REVIEW
+REQUIRED`; VAL-03 remains not started. Phase 13 remains `NOT STARTED / BLOCKED BY STRATEGY
 VALIDATION AND REAL FORWARD-PAPER EVIDENCE`. The technical closure uses a canonical LF
 clean-checkout environment, reproducible pinned toolchains, clean rebuilt core
 images, and explicit disposition of the remaining unfixed bridge base-package

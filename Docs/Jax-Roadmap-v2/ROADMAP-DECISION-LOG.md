@@ -1414,3 +1414,30 @@ The selected candidate is a research-design choice based on deterministic data
 tractability, point-in-time feasibility, simple parameterization, cost-model
 compatibility and personal-platform fit. It is not a profitability or edge
 claim. No recommendation, paper-trading, execution or safety boundary changed.
+
+## RD-2026-09-13-03 - VAL-02A MA crossover preregistration contract closure
+
+- Date: 2026-09-13
+- Work package: VAL-02A — MA Crossover Preregistration Contract Closure
+- Status: Complete; external review required before VAL-03 execution
+- VAL-02 candidate selection: `ACCEPTED`
+- VAL-02 preregistration: `CLOSURE REQUIRED` resolved by the frozen closure
+- Selected candidate: `ma_crossover_v1`; candidate was not reselected
+- Closure artifact:
+  `Docs/validation/VAL-02A-PREREGISTRATION-CLOSURE.md`
+- Machine-readable manifest contract: `v1.1`, status
+  `FROZEN_FOR_EXTERNAL_REVIEW`
+- VAL-03: `NOT STARTED / BLOCKED BY VAL-02A`
+- Forward paper: `NOT STARTED`
+- Phase 13: `NOT STARTED`
+- Historical performance, returns, P&L and 2025 holdout data were not accessed
+  or calculated.
+
+The closure binds the operational signal semantics to the existing Jax
+confidence gate (`>= 0.60`), excludes the source-only 0.55 pullback from
+actionable episodes, freezes the simple-average SMA/ATR inputs, raw
+point-in-time corporate-action handling, first-target/no-scale-out exits,
+direction-symmetric net episode return, the existing evaluation cost contract
+with its derived identity, bearish borrow/dividend treatment, episode versus
+portfolio measurement, and instrument-year block bootstrap rules. The 2025
+holdout remains sealed and HYP-EVENT-001A remains not validated.

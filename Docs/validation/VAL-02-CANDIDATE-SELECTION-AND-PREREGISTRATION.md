@@ -162,6 +162,18 @@ period is called pristine merely because source code existed before VAL-02.
 
 ## Economic hypothesis
 
+## VAL-02A closure override
+
+The original VAL-02 design text contains intentionally unresolved wording that
+was identified before VAL-03. It is superseded for execution by
+`Docs/validation/VAL-02A-PREREGISTRATION-CLOSURE.md` and manifest contract
+version `v1.1`. That closure binds the operational signal gate, excludes the
+source-only 0.55 pullback from actionable episodes, fixes raw point-in-time
+price/corporate-action semantics, selects the first operational target, binds
+the exact cost policy, makes the primary metric direction-symmetric, separates
+episode and portfolio analyses, and freezes block-bootstrap inference. The
+historical VAL-02 selection record remains unchanged; no result was calculated.
+
 **HYP-MA-001:** For the fixed preregistered basket of liquid US-listed ETFs,
 when the existing `ma_crossover_v1` rule observes a valid daily bullish or
 bearish alignment at a regular-session close, entering at the next regular

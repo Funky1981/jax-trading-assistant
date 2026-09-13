@@ -1,7 +1,14 @@
 {
   "contract_id": "jax.val-02.candidate-preregistration",
-  "contract_version": "v1",
+  "contract_version": "v1.1",
   "preregistration_status": "FROZEN_FOR_EXTERNAL_REVIEW",
+  "closure": {
+    "closure_id": "jax.val-02a.ma-crossover-preregistration-closure",
+    "closure_version": "v1",
+    "historical_performance_executed": false,
+    "candidate_reselected": false,
+    "val_03_status": "NOT_STARTED / BLOCKED BY VAL-02A"
+  },
   "selection_method": {
     "outcome_blind": true,
     "observed_performance_used": false,
@@ -26,73 +33,242 @@
     "candidate_id": "ma_crossover_v1",
     "strategy_version": "ma_crossover_v1",
     "source": "libs/strategies/ma_crossover.go",
-    "selection_unit": "MACrossoverStrategy source contract on fixed ETF basket",
+    "selection_unit": "MACrossoverStrategy operational behavior on fixed ETF basket",
     "weighted_feasibility_score": 300,
     "score_maximum": 300
   },
+  "code_identity": {
+    "repository_baseline_sha": "757878ada2177057fb38b74f31d94ff758f44be0",
+    "strategy_source": {"path": "libs/strategies/ma_crossover.go", "blob_sha1": "fb22b9dd909a0ae5f13dd727ff2eddf40963d426"},
+    "strategy_type_contract": {"path": "libs/strategies/strategy.go", "blob_sha1": "8ff03f23aed6dba929cdc83cda5c1a1153da616f"},
+    "operational_input_and_indicators": {"path": "internal/trader/signalgenerator/inprocess.go", "blob_sha1": "4a3f0537013308f40ee94c3eb723d3a152297048"},
+    "operational_actionable_gate_and_first_target": {"path": "cmd/trader/instance_scheduler.go", "blob_sha1": "54244f758599e97317d31073f8c23f1d2b4ae729"},
+    "cost_contract_implementation": {"path": "internal/modules/evaluation/costs.go", "blob_sha1": "2cc7d92d4ab045f1295fbb0570e04ac2301fc9f5"},
+    "atr_conformance_reference": {"path": "internal/modules/quant/volatility.go", "blob_sha1": "6fb7cee0e1643352f073022bbf999283b5a04a49"}
+  },
   "hypothesis": {
     "id": "HYP-MA-001",
-    "question": "Whether the existing daily MA alignment rule produces positive net benchmark-relative signed return per non-overlapping episode versus same-interval per-asset buy-and-hold in formal OOS.",
-    "direction": "bullish and bearish source signals preserved",
-    "not_a_profitability_claim": true
+    "question": "Whether the frozen operational MA alignment rule produces positive net directional edge per non-overlapping episode after the frozen cost model in the formal OOS period.",
+    "population": "fixed basket of SPY, QQQ, IWM, DIA, XLK, XLF, XLE, TLT and GLD",
+    "trigger": "daily regular-session close with SMA20 > SMA50 > SMA200 and close > SMA20, or the exact bearish inverse, subject to the operational gate",
+    "decision_timestamp": "signal-session regular-session close",
+    "entry_timestamp": "next regular US equity session open",
+    "holding_horizon": "first frozen stop/target or twentieth future regular session close",
+    "primary_benchmark": "zero net directional edge",
+    "predicted_effect": "positive mean net directional return and rejection of the frozen sign-permutation null",
+    "not_a_profitability_or_promotion_claim": true
   },
   "universe": {
     "method": "fixed ETF basket selected before outcome inspection",
     "symbols": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"],
     "replacement_policy": "none",
-    "survivorship_scope": "fixed ETF basket only; no current equity index membership inference"
+    "survivorship_scope": "fixed ETF basket only; no current equity index membership inference",
+    "inception_closure_policy": "instrument must have valid point-in-time bars; closed instruments are not replaced",
+    "corporate_action_policy": "point-in-time effective-event handling defined below"
+  },
+  "operational_signal_semantics": {
+    "implementation": "MACrossoverStrategy.Analyze followed by the Jax scheduler actionable gate",
+    "actionable_conditions": ["signal type is not HOLD", "confidence >= 0.60", "deterministic research/risk validity checks pass"],
+    "pullback_branch": "excluded: source confidence is 0.55 and the existing operational gate rejects it",
+    "hold_and_below_threshold": "recorded as no-trade/abstention observations",
+    "bearish_signals": "included as short-direction research measurements; no execution authority"
+  },
+  "confidence_contract": {
+    "threshold": 0.6,
+    "probability_calibration": "NOT_APPLICABLE",
+    "formula": "base 0.65 + 0.12 when MarketTrend agrees + 0.08 when Volume > AvgVolume20 + 0.10 when directional abs(SMA20-SMA200)/SMA200 > 0.05, capped at 1.00",
+    "market_trend": "bullish iff SMA20 > SMA50 > SMA200; bearish iff SMA20 < SMA50 < SMA200; otherwise neutral",
+    "avg_volume": "arithmetic mean of last 20 eligible volumes",
+    "post_result_filtering": false
+  },
+  "indicator_contract": {
+    "identity": "jax.ma_crossover.operational-indicators/v1",
+    "sma20": "arithmetic mean of last 20 eligible closes",
+    "sma50": "arithmetic mean of last 50 eligible closes",
+    "sma200": "arithmetic mean of last 200 eligible closes",
+    "atr14": "arithmetic mean of last 14 true ranges; true_range=max(high-low,abs(high-previous_close),abs(low-previous_close)); first bar without previous close excluded",
+    "avg_volume20": "arithmetic mean of last 20 eligible volumes",
+    "window_rule": "only bars available at the signal close; insufficient/invalid history abstains",
+    "provider_indicator_substitution": false
+  },
+  "price_and_corporate_action_contract": {
+    "signal_price_mode": "RAW_AS_OBSERVED",
+    "entry_stop_target_price_mode": "RAW_PRICE_SCALE",
+    "return_price_mode": "RAW_EXECUTION_PNL_PLUS_EXPLICIT_CORPORATE_ACTION_CASH",
+    "corporate_action_mode": "POINT_IN_TIME_EFFECTIVE_EVENT_HANDLING",
+    "dividend_treatment": "excluded from indicators; long receives and short pays cash distribution when held through ex-date using point-in-time record",
+    "split_treatment": "no retrospective back-adjustment; apply prospectively on effective session; if an indicator window crosses a split, abstain until 200 valid post-split sessions",
+    "future_adjustment_prohibited": true,
+    "missing_or_ambiguous_action": "abstain and retain provenance failure"
   },
   "protocol": {
     "frequency": "daily regular-session bars",
     "signal_cutoff": "regular-session close",
-    "entry": "next regular US equity session open",
-    "exit": "first frozen stop/target or twentieth future trading-session close",
+    "entry": "next regular US equity session open strictly after signal close",
     "same_bar_entry": false,
+    "exit": "first frozen stop/target or twentieth future regular-session close",
+    "gap_rule": "if the next open crosses a level, entry and immediate exit resolve at the open; no impossible fill outside the bar",
+    "intrabar_order": "open crossing first; otherwise touched levels; stop before target when both are touched",
+    "session_calendar": "deterministic Jax US regular-session calendar with UTC storage and US/Eastern interpretation",
     "overlap_policy": "one non-overlapping episode per instrument",
+    "walk_forward_refitting": false,
     "max_leverage": 1.0,
-    "sizing": "equal notional across active episodes capped at 1x aggregate gross exposure",
-    "parameter_search": false,
-    "walk_forward_refitting": false
+    "missing_data": "record abstention; never impute or create a trade"
   },
-  "parameters": {
-    "sma_fast_sessions": 20,
-    "sma_medium_sessions": 50,
-    "sma_slow_sessions": 200,
-    "pullback_lower_pct": -0.02,
-    "pullback_upper_pct": 0.01,
-    "holding_period_sessions": 20,
-    "trial_budget": 1
+  "exit_contract": {
+    "bullish_stop": "signal_SMA50 - signal_ATR14",
+    "bullish_target": "signal_close + 3 * signal_ATR14",
+    "bearish_stop": "signal_SMA50 + signal_ATR14",
+    "bearish_target": "signal_close - 3 * signal_ATR14",
+    "target_selection": "first TakeProfit only; source second target ignored because scheduler persists TakeProfit[0]",
+    "scale_out": false,
+    "levels_fixed_at_signal": true,
+    "time_exit": "close of twentieth future regular session",
+    "reentry": "prohibited while instrument episode is active"
+  },
+  "bearish_economics": {
+    "primary_claim": "included as short-direction measurements",
+    "spread_slippage_commission_impact": "charged on entry and exit legs",
+    "borrow": "20 bps per held trading day on short notional",
+    "dividend_liability": "explicit cash outflow for short held through ex-date",
+    "borrow_availability": "unknown/unavailable borrow record causes abstention",
+    "execution_authority": "none"
+  },
+  "cost_model": {
+    "id": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8",
+    "contract": "jax.cost_slippage_policy/v1",
+    "version": "v1",
+    "commission_per_order_usd": 0.5,
+    "commission_bps_per_leg": 10,
+    "spread_bps_per_leg": 5,
+    "slippage_bps_per_leg": 10,
+    "market_impact_bps_per_leg": 15,
+    "borrow_bps_per_held_trading_day": 20,
+    "reference_price_rule": "NEXT_AVAILABLE_OBSERVATION",
+    "assumption_source": "Phase 07 deterministic fixture",
+    "created_at": "2026-09-07T16:00:00Z",
+    "diagnostic_baseline": false,
+    "application": "commission/spread/slippage/impact on each leg; borrow only for SELL/short episodes; gross and net retained; primary uses net"
+  },
+  "analysis_units": {
+    "primary": "fixed unit-notional non-overlapping episode",
+    "primary_return": "direction_sign * (exit_value-entry_value)/entry_value minus round-trip costs and signed corporate-action cash flows, divided by fixed entry notional",
+    "portfolio_secondary": {
+      "starting_capital_usd": 100000,
+      "aggregate_gross_cap": 1.0,
+      "allocation": "equal among active episodes",
+      "resize_existing": false,
+      "residual_cash": "retained",
+      "cap_breach": "new portfolio episode not allocated; primary episode observation remains",
+      "long_and_short_count_toward_gross": true
+    }
   },
   "partitions": {
     "warmup": ["2015-01-01", "2015-12-31"],
     "development": ["2016-01-01", "2020-12-31"],
     "validation": ["2021-01-01", "2022-12-31"],
     "formal_oos": ["2023-01-01", "2024-12-31"],
-    "final_holdout": ["2025-01-01", "2025-12-31", "SEALED"]
+    "final_holdout": ["2025-01-01", "2025-12-31", "SEALED"],
+    "holdout_access": "metadata/schema/hash only; no bars, signals, episodes, outcomes or semantics"
   },
-  "primary_metric": "mean net benchmark-relative signed return per non-overlapping episode",
-  "primary_comparator": "same-interval per-asset buy-and-hold",
-  "uncertainty": "instrument-year block bootstrap, 95 percent interval, no naive IID assumption",
-  "cost_model": "accepted Phase-11 versioned model, identity to be bound before VAL-03 execution",
-  "falsification_suite_version": "jax.val-02.ma-crossover.falsification/v1",
-  "falsification_tests": [
-    "within-instrument-year randomized signs",
-    "within-instrument-year constrained timestamp permutation",
-    "matched non-signal placebo dates",
-    "top-five-percent contribution exclusion",
-    "leave-one-instrument-out",
-    "SPY-above-below-SMA200 regime split",
-    "predefined sector-theme subset reporting",
-    "one-session SMA perturbation",
-    "ten-percent ATR perturbation",
-    "two-times transaction-cost stress",
-    "overlap-deduplication sensitivity",
-    "null and buy-hold baselines"
-  ],
-  "calibration": "not applicable; source confidence is heuristic, not probability",
-  "holdout_policy": "2025 sealed; metadata-only integrity checks permitted; no outcomes or semantics",
-  "new_paid_spend_usd": 0,
+  "sample_and_dependence": {
+    "episode_floors": {"development": 90, "validation": 30, "formal_oos": 30},
+    "effective_block_floor": {"formal_oos_nonempty_instrument_year_blocks": 12, "formal_oos_instruments": 6},
+    "instrument_contribution_max": 0.4,
+    "minimum_regime_or_calendar_slices": 3,
+    "dependence_unit": "instrument-year block; overlapping episodes deduplicated per instrument"
+  },
+  "primary_metric": {
+    "name": "MEAN_NET_DIRECTIONAL_RETURN_PER_NON_OVERLAPPING_EPISODE",
+    "direction_symmetric": true,
+    "null": "no positive net directional edge; mean <= 0",
+    "test": "one-sided instrument-year block-bootstrap 95% lower bound plus preregistered within-instrument-year sign-permutation randomization test",
+    "success": "positive net mean, 95% lower bound above zero, and candidate mean above the 95th percentile of the frozen sign-permutation null",
+    "secondary": ["same-interval per-asset buy-and-hold", "SPY buy-and-hold", "zero/null return", "gross versus net", "holding duration", "concentration and regime slices"]
+  },
+  "benchmarks": {
+    "primary": "zero net directional edge",
+    "direction_only_or_naive": "within-instrument-year sign permutation",
+    "market": "SPY buy-and-hold over matching dates",
+    "asset": "same-interval per-asset buy-and-hold",
+    "random": "registered constrained timestamp/sign placebo"
+  },
+  "bootstrap": {
+    "resampling_unit": "non-empty instrument-year block",
+    "replicates": 10000,
+    "interval": "percentile 95 percent interval",
+    "seed_derivation": "first eight bytes of SHA-256(manifest_sha256 || |instrument-year-bootstrap-v1|)",
+    "empty_blocks": "excluded",
+    "unequal_episode_counts": "preserved within sampled block",
+    "iid_inference": false
+  },
+  "falsification_suite": {
+    "version": "jax.val-02a.ma-crossover.falsification/v1",
+    "tests": [
+      "within-instrument-year randomized signs",
+      "within-instrument-year constrained timestamp permutation",
+      "matched non-signal placebo dates",
+      "top-five-percent contribution exclusion",
+      "leave-one-instrument-out",
+      "SPY-above-below-SMA200 regime split",
+      "predefined sector-theme subset reporting",
+      "one-session SMA perturbation",
+      "ten-percent ATR perturbation",
+      "two-times transaction-cost stress",
+      "overlap-deduplication sensitivity",
+      "null and buy-hold baselines"
+    ],
+    "registration_rule": "exactly this list; failures retained; no post-OOS additions used to repair the thesis"
+  },
+  "parameters": {
+    "sma_fast_sessions": {"value": 20, "classification": "FIXED_BY_EXISTING_STRATEGY"},
+    "sma_medium_sessions": {"value": 50, "classification": "FIXED_BY_EXISTING_STRATEGY"},
+    "sma_slow_sessions": {"value": 200, "classification": "FIXED_BY_EXISTING_STRATEGY"},
+    "atr_period_sessions": {"value": 14, "classification": "FIXED_BY_OPERATIONAL_INDICATOR_CONTRACT"},
+    "pullback_lower_pct": {"value": -0.02, "classification": "FIXED_SOURCE_BUT_INACTIONABLE"},
+    "pullback_upper_pct": {"value": 0.01, "classification": "FIXED_SOURCE_BUT_INACTIONABLE"},
+    "actionable_confidence_threshold": {"value": 0.6, "classification": "STRUCTURAL_NOT_TUNABLE"},
+    "crossover_stop_atr": {"value": 1.0, "classification": "FIXED_BY_EXISTING_STRATEGY"},
+    "crossover_target_atr": {"value": 3.0, "classification": "FIXED_BY_OPERATIONAL_FIRST_TARGET"},
+    "holding_period_sessions": {"value": 20, "classification": "STRUCTURAL_NOT_TUNABLE"},
+    "parameter_search": false,
+    "trial_budget": 1
+  },
+  "calibration": {
+    "probability": "NOT_APPLICABLE; source confidence is heuristic",
+    "ordinal_resolution": "descriptive confidence buckets only; no post-result filtering"
+  },
+  "abstention": {
+    "record": ["HOLD", "below-confidence", "invalid/incomplete/stale data", "corporate-action ambiguity", "borrow unavailable", "risk/sizing veto", "active-position suppression"],
+    "coverage_required": true,
+    "no_trade_is_not_dropped": true
+  },
+  "concentration": {
+    "report": ["instrument", "theme/sector", "calendar year", "regime", "overlap", "top-N contribution"],
+    "failure_rules": ["instrument exceeds 40 percent of episodes", "top 5 percent supplies the effect", "effect exists only in one unregistered slice"]
+  },
+  "multiple_testing": {
+    "candidate_variants": 1,
+    "parameter_trials": 1,
+    "model_prompt_variants": 0,
+    "validation_retries_changing_candidate": 0,
+    "rejected_trials_retained": true,
+    "sensitivity_tests_are_not_selection_trials": true
+  },
+  "success_and_rejection": {
+    "allowed_terminal_statuses": ["FORWARD_PAPER_ELIGIBLE", "RESEARCH_CANDIDATE", "INSUFFICIENT_EVIDENCE", "FAILED_VALIDATION", "CONTAMINATED_FOR_FORMAL_OOS"],
+    "promotion_requires": ["reproducibility", "point-in-time correctness", "sample floors", "net costs", "frozen OOS", "falsification", "concentration", "uncertainty/abstention", "no material contamination"],
+    "positive_metric_alone_sufficient": false,
+    "no_robust_edge_is_valid": true
+  },
+  "falsification_and_holdout_policy": {
+    "2025_status": "SEALED",
+    "2025_semantic_or_outcome_access": false,
+    "hyp_event_001a_2024_lineage": "CONTAMINATED_FOR_FORMAL_OOS and not reused",
+    "future_tuning": false
+  },
   "execution_authority": "none",
   "forward_paper_admission": "not authorized by this manifest",
+  "new_paid_spend_usd": 0,
   "phase_13": "not started"
 }
