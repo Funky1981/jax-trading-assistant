@@ -1389,3 +1389,28 @@ blocked. No CR-02G remote CI result exists because push is not authorized.
 - Commercial release: remains blocked by owner/licence, legal/data-rights,
   deployment secret-manager and explicit release-risk decisions.
 - Phase 13: `NOT STARTED / BLOCKED BY EXTERNAL CR-02G REVIEW`
+
+## RD-2026-09-13-02 - VAL-02 candidate selection and preregistration
+
+- Date: 2026-09-13
+- Work package: VAL-02 Candidate Selection & Scientific Preregistration
+- Status: Complete; external review required before VAL-03 execution
+- VAL-01: `COMPLETE / GO`
+- Forward-paper admission: `NO-GO`
+- Selected candidate: `ma_crossover_v1`
+- Selection: outcome-blind structural feasibility only; no performance outcomes
+  were inspected or calculated
+- Preregistration:
+  `Docs/validation/VAL-02-CANDIDATE-SELECTION-AND-PREREGISTRATION.md`
+- Machine-readable manifest:
+  `Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json`
+- VAL-03: not started; no historical performance experiment executed
+- Real forward-paper evidence: `0 DAYS / 0 ORDERS`
+- HYP-EVENT-001A: `NOT VALIDATED`; 2025 holdout remains sealed
+- Phase 13: `NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL
+  FORWARD-PAPER EVIDENCE`
+
+The selected candidate is a research-design choice based on deterministic data
+tractability, point-in-time feasibility, simple parameterization, cost-model
+compatibility and personal-platform fit. It is not a profitability or edge
+claim. No recommendation, paper-trading, execution or safety boundary changed.
