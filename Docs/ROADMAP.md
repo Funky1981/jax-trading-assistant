@@ -30,8 +30,8 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03 — MA CROSSOVER FROZEN HISTORICAL VALIDATION; DATASET BLOCKED — CORPORATE ACTION PROVENANCE** |
-| Next package | **VAL-03 may proceed only after the frozen Alpaca raw-bar plus point-in-time corporate-action contract is satisfied; real forward paper has not started** |
+| Current implementation package | **VAL-03A — CORPORATE-ACTION PROVENANCE RESOLUTION; DATASET BLOCKED** |
+| Next package | **VAL-03 may proceed only after the frozen Alpaca raw-bar plus corporate-action provenance contract is satisfied; real forward paper has not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -358,7 +358,7 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is VAL-03 — MA Crossover Frozen Historical Validation,
+The current position is VAL-03A — Corporate-Action Provenance Resolution,
 following the external `GO` for CR-02G and the complete CR-01 through CR-02G
 technical cleanup sequence. The cleanup record does not grant commercial-sale
 clearance. Jax is currently a personal trading platform; optional future
@@ -374,7 +374,7 @@ VAL-02A is `PREREGISTRATION CONTRACT CLOSURE COMPLETE — EXTERNAL REVIEW
 REQUIRED`; VAL-02B is a historical partial closure superseded for remaining
 mechanics by VAL-02C, whose contract is `v1.3` and is `FINAL PREREGISTRATION
 CLOSURE COMPLETE — EXTERNAL REVIEW REQUIRED`. VAL-03 preflight is hard-stopped
-as `DATASET_BLOCKED — CORPORATE ACTION PROVENANCE`; no performance evaluation
-was executed. Phase 13 remains `NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND
+as `DATASET_BLOCKED — CORPORATE ACTION PROVENANCE`, and VAL-03A has not resolved
+the blocker; no performance evaluation was executed. Phase 13 remains `NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND
 REAL FORWARD-PAPER EVIDENCE`. The commercial release gate remains separate and
 blocked by owner, legal, account/contract and deployment decisions.

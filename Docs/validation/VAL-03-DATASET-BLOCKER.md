@@ -54,9 +54,9 @@ scientifically without either:
    corporate-action/knowability treatment.
 
 No fallback provider, retrospective adjusted series, silent dividend omission,
-or post-result repair is permitted. No Alpaca corporate-action request was
-made because the repository/provider preflight already establishes that the
-required point-in-time guarantee is unavailable.
+or post-result repair is permitted. A bounded metadata-only Alpaca REST query
+and a bounded Alpaca SSE replay test were performed during VAL-03A; neither
+established the required historical point-in-time provenance.
 
 ## Current governance
 
@@ -69,3 +69,5 @@ required point-in-time guarantee is unavailable.
 
 This blocker is not a strategy-performance classification. No candidate
 performance result exists from this VAL-03 attempt.
+
+VAL-03A continued this hard stop and did not create a v1.4 manifest.

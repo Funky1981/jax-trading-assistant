@@ -1,5 +1,29 @@
 # Roadmap Decision Log
 
+## RD-2026-09-13-07 - VAL-03A corporate-action provenance resolution
+
+- Work package: `VAL-03A — CORPORATE-ACTION PROVENANCE RESOLUTION`.
+- VAL-03 attempt #1 remains a correct hard stop:
+  `DATASET_BLOCKED — CORPORATE ACTION PROVENANCE`.
+- `ma_crossover_v1` remains selected; no performance was tested and OOS run
+  count remains zero.
+- Current official Alpaca REST documentation confirms action types,
+  process-date filtering, data-quality modes, pagination and the absence of a
+  creation-time guarantee. Current SSE documentation confirms bounded replay,
+  event IDs and insert/update/delete mutations but does not establish retention
+  of 2015–2024 publication chronology.
+- A bounded SSE replay constrained to January 2015 returned HTTP 200 but no
+  event before the bounded read timed out; historical replay coverage was not
+  proven. A bounded REST request for the nine frozen ETFs over 2015–2024
+  returned HTTP 200 with zero records and no next-page token; complete coverage
+  was not proven.
+- The possible non-alpha structural split and ex-post dividend accounting
+  amendment was rejected because the required complete historical records were
+  not established. v1.3 remains unchanged; no v1.4 manifest was created.
+- No market bars, 2025 data, performance, broker call, paid data or forward
+  paper were accessed.
+- Closure artifact: `Docs/validation/VAL-03A-CORPORATE-ACTION-PROVENANCE-RESOLUTION.md`.
+
 ## RD-2026-09-13-06 - VAL-03 dataset preflight hard stop
 
 - Work package: `VAL-03 — MA CROSSOVER FROZEN HISTORICAL VALIDATION`.
