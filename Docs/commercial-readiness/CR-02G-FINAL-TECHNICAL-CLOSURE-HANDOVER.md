@@ -55,11 +55,11 @@ source. Final local image identities were:
 
 | Image | Digest | Critical | High |
 | --- | --- | ---: | ---: |
-| trader | `sha256:d256a277ab572a488ed7503b32153bfced2045ffbe4c2e8cca24235ef70ce88e` | 0 | 0 |
-| research | `sha256:e3ad77e1b7289d1524423b9a82ec0b21d29508e5887ee50773a5fd2d1ea43a73` | 0 | 0 |
-| db-migrate | `sha256:fb480876e84ab2dcaa81c66d0bb618f2138328b91f7fd1ef3d82ea675c2312b0` | 0 | 0 |
-| frontend | `sha256:7216768b1611c08af27817d855706466bf96e746aab2865401cae5006660c2cf` | 0 | 0 |
-| IB bridge | `sha256:f38cb3dba5c7a787b00c42e056070a856d4cc5c62ffdda004b4e7bc6e2b32d6e` | 0 | 1 |
+| trader | `sha256:72934298411ef4c1ed6f71f97cbf75ff5b49e14fa7aa3d22051bb013e28478ff` | 0 | 0 |
+| research | `sha256:796c901654485fd5d270ac9465a43ccb4ef60fbbda1203491cd24b95812a08ba` | 0 | 0 |
+| db-migrate | `sha256:0f6b3f009ff38265cc8357b6a6ec9b4cd8cb86bcdad827dcd386146eefc9384c` | 0 | 0 |
+| frontend | `sha256:e1ab8c89ef8d15aec3344c528a3673e613c550edbe340b06d027d803198c200c` | 0 | 0 |
+| IB bridge | `sha256:c178d094af72c827d5c32572a538381947e584302653de640bbafa2b753d8dac` | 0 | 1 |
 
 Scanner: Docker Scout v1.24.0, commit `b1c9331b2166aef7ec690aa16fd655b8798ea4c6`.
 The single IB-bridge high finding is Debian trixie `zlib` CVE-2026-85091;
@@ -149,6 +149,16 @@ These do not get silently converted into technical clearance.
   `Docs/archive/runtime-history/phases/PHASE_4_COMPLETE.md`).
 - Docker-based race verification remains previously accepted; native Windows
   cgo is not required for that accepted path.
+
+## Remote CI proof
+
+The exact final pushed SHA `8b5d6a33589a416cd4cd5fa9a5bb9717873267fb` was
+validated by push workflow `34727057218` on branch `capability-reset`.
+The Go job `103642921851` and Frontend job `103642921757` both succeeded;
+Golden Tests `34727057249` and Import Boundary Enforcement `34727057264` also
+succeeded. The integration job `103642922264` was intentionally skipped by
+the workflow's manual-only policy. This closure record itself is the subject
+of external review; no external GO is self-awarded.
 
 ## Exact status
 
