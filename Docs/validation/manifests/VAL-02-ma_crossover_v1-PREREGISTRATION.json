@@ -1,0 +1,98 @@
+{
+  "contract_id": "jax.val-02.candidate-preregistration",
+  "contract_version": "v1",
+  "preregistration_status": "FROZEN_FOR_EXTERNAL_REVIEW",
+  "selection_method": {
+    "outcome_blind": true,
+    "observed_performance_used": false,
+    "candidate_pool_source": "VAL-01 frozen inventory",
+    "score_scale": {"1": "LOW", "2": "MEDIUM", "3": "HIGH"},
+    "weights": {
+      "personal_product_alignment": 10,
+      "economic_plausibility": 10,
+      "point_in_time_tractability": 12,
+      "data_availability": 12,
+      "sample_feasibility": 10,
+      "cost_model_tractability": 10,
+      "survivorship_universe_risk": 10,
+      "falsifiability": 8,
+      "parameter_complexity": 6,
+      "operational_feasibility": 6,
+      "model_dependence": 4,
+      "validation_cost": 2
+    }
+  },
+  "selected_candidate": {
+    "candidate_id": "ma_crossover_v1",
+    "strategy_version": "ma_crossover_v1",
+    "source": "libs/strategies/ma_crossover.go",
+    "selection_unit": "MACrossoverStrategy source contract on fixed ETF basket",
+    "weighted_feasibility_score": 300,
+    "score_maximum": 300
+  },
+  "hypothesis": {
+    "id": "HYP-MA-001",
+    "question": "Whether the existing daily MA alignment rule produces positive net benchmark-relative signed return per non-overlapping episode versus same-interval per-asset buy-and-hold in formal OOS.",
+    "direction": "bullish and bearish source signals preserved",
+    "not_a_profitability_claim": true
+  },
+  "universe": {
+    "method": "fixed ETF basket selected before outcome inspection",
+    "symbols": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"],
+    "replacement_policy": "none",
+    "survivorship_scope": "fixed ETF basket only; no current equity index membership inference"
+  },
+  "protocol": {
+    "frequency": "daily regular-session bars",
+    "signal_cutoff": "regular-session close",
+    "entry": "next regular US equity session open",
+    "exit": "first frozen stop/target or twentieth future trading-session close",
+    "same_bar_entry": false,
+    "overlap_policy": "one non-overlapping episode per instrument",
+    "max_leverage": 1.0,
+    "sizing": "equal notional across active episodes capped at 1x aggregate gross exposure",
+    "parameter_search": false,
+    "walk_forward_refitting": false
+  },
+  "parameters": {
+    "sma_fast_sessions": 20,
+    "sma_medium_sessions": 50,
+    "sma_slow_sessions": 200,
+    "pullback_lower_pct": -0.02,
+    "pullback_upper_pct": 0.01,
+    "holding_period_sessions": 20,
+    "trial_budget": 1
+  },
+  "partitions": {
+    "warmup": ["2015-01-01", "2015-12-31"],
+    "development": ["2016-01-01", "2020-12-31"],
+    "validation": ["2021-01-01", "2022-12-31"],
+    "formal_oos": ["2023-01-01", "2024-12-31"],
+    "final_holdout": ["2025-01-01", "2025-12-31", "SEALED"]
+  },
+  "primary_metric": "mean net benchmark-relative signed return per non-overlapping episode",
+  "primary_comparator": "same-interval per-asset buy-and-hold",
+  "uncertainty": "instrument-year block bootstrap, 95 percent interval, no naive IID assumption",
+  "cost_model": "accepted Phase-11 versioned model, identity to be bound before VAL-03 execution",
+  "falsification_suite_version": "jax.val-02.ma-crossover.falsification/v1",
+  "falsification_tests": [
+    "within-instrument-year randomized signs",
+    "within-instrument-year constrained timestamp permutation",
+    "matched non-signal placebo dates",
+    "top-five-percent contribution exclusion",
+    "leave-one-instrument-out",
+    "SPY-above-below-SMA200 regime split",
+    "predefined sector-theme subset reporting",
+    "one-session SMA perturbation",
+    "ten-percent ATR perturbation",
+    "two-times transaction-cost stress",
+    "overlap-deduplication sensitivity",
+    "null and buy-hold baselines"
+  ],
+  "calibration": "not applicable; source confidence is heuristic, not probability",
+  "holdout_policy": "2025 sealed; metadata-only integrity checks permitted; no outcomes or semantics",
+  "new_paid_spend_usd": 0,
+  "execution_authority": "none",
+  "forward_paper_admission": "not authorized by this manifest",
+  "phase_13": "not started"
+}
