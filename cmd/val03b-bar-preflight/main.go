@@ -83,14 +83,6 @@ func (store *fileStore) Get(ctx context.Context, ref providercontract.RawPayload
 	return os.ReadFile(filepath.Join(store.root, ref.Content.Digest.Value+".json"))
 }
 
-type barFrame struct {
-	Date   string                      `json:"date"`
-	Raw    marketdata.VAL03BPriceFrame `json:"raw"`
-	Split  marketdata.VAL03BPriceFrame `json:"split"`
-	Spin   marketdata.VAL03BPriceFrame `json:"split_spin_off"`
-	Factor float64                     `json:"split_factor"`
-}
-
 type familyQuality struct {
 	Instrument             string   `json:"instrument"`
 	Adjustment             string   `json:"adjustment"`
