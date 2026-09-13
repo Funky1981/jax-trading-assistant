@@ -70,6 +70,31 @@ the Phase-12 registry and the retained run artifacts.
 | `SWING_BRAIN_V1` | `internal/decisioning/brains/swing`, `Docs/STRATEGIES/SWING_TRADING`; deterministic decisions `NO_TRADE`, `WATCH`, `SETUP_FORMING`, `TRADE_CANDIDATE` | `INSUFFICIENT_EVIDENCE` | Decision/risk rules are implemented and tested, but no frozen strategy-level research bundle, OOS/walk-forward evidence or calibration evidence exists |
 | `HYP-EVENT-001A` | Phase-12 private artifact and scientific closure; 2024 lineage is exploratory and promotion is closed | `CONTAMINATED_FOR_FORMAL_OOS` | Required development→validation→admission→freeze sequence was not durably recorded; 2025 remains sealed and survivorship is unresolved |
 
+### Candidate definition details
+
+The following records capture the currently knowable design surface. Where a
+source does not define a field, that absence is itself a promotion gap; it is
+not filled with an assumption.
+
+| Candidate | Thesis / universe / horizon | Entry / exit / abstention / risk surface | Dependencies and configuration state |
+| --- | --- | --- | --- |
+| `rsi_momentum_v1` | RSI reversal; generic symbols; indicator-driven short horizon | Entry on oversold/overbought; exit by ATR stop/targets or caller; hold in neutral RSI; risk sizing is legacy backtester default | OHLCV-derived RSI/ATR; defaults are in `libs/strategies/rsi_momentum.go`; no candidate dataset or frozen admission config |
+| `macd_crossover_v1` | MACD trend continuation; generic symbols; short horizon | Entry on bullish/bearish crossover; exit by ATR stop/targets or caller; hold without crossover; risk sizing is legacy default | OHLCV-derived MACD/ATR; source defaults only; no OOS/evidence identity |
+| `ma_crossover_v1` | SMA trend continuation; generic symbols; multi-session horizon | Entry on SMA20>SMA50>SMA200 with price confirmation; exit/risk are source signal parameters and caller policy; hold otherwise | OHLCV-derived SMA/ATR; source implementation and tests only |
+| `same_day_earnings_drift_v1` | Post-earnings drift; configured QQQ instance; same-day/intraday | Entry after gap/volume and delay; exit/flattening via instance policy; abstain below gap/volume limits; risk/paper fields not a research admission | Earnings plus 1m/5m candles; `earnings-qqq-paper-v1` disabled; no point-in-time OOS bundle |
+| `same_day_news_repricing_v1` | Post-news consolidation breakout; supported ETF/news inputs are required | Entry after materiality/confirmation; exit and risk require caller/strategy contract; abstain without qualifying news/confirmation | News plus 1m/5m candles; no frozen historical event panel or result |
+| `news_shock_momentum_v1` | High-materiality news shock continuation; event-affected instrument universe | Entry after news and volume confirmation; exit/risk are implementation parameters; abstain without shock confirmation | News plus 1m/5m candles; no candidate-level validation |
+| `opening_range_to_close_v1` | Opening-range breakout; configured SPY instance; intraday-to-close | Entry after opening-range hold and volume; flatten by configured close; abstain when range/volume fails; paper instance disabled | 1m/5m candles; `or-spy-paper-v1` disabled; no OOS/cost bundle |
+| `event_gap_continuation_v1` | Event-related gap continuation; event/earnings universe | Entry after gap and early confirmation; exit/risk not admitted as a frozen research contract; abstain without event confirmation | Earnings plus 1m/5m candles; no reproducible evaluation |
+| `panic_reversion_v1` | Intraday panic mean reversion near VWAP; liquid instruments | Entry after stabilization; exit on stop/target or caller; abstain without panic/stabilization | Intraday candles, VWAP/ATR; no regime/falsification evidence |
+| `pairs_event_relative_v1` | Event-relative strength against a peer; pair universe | Entry on event-relative divergence; exit/invalidation requires point-in-time peer rules; abstain when peer mapping/conflict is unknown | News and paired market data; source marks it research-first; peer selection and survivorship unresolved |
+| `index_flow_v1` | SPY/QQQ trend-day pullback continuation; index ETF universe; intraday | Entry on deterministic pullback thresholds; exit/risk caller-defined; hold/abstain outside trend-day conditions | 1m/5m candles and market context; no OOS evidence |
+| `etf_news_market_panic_reversal_v1` | Confirmed broad-market panic reversal; SPY/QQQ/DIA/IWM configured universe | Entry after news, drop, volume and stabilization; ATR stop/reward target; abstain when confirmations fail; instance disabled | News plus 1m/5m market data; disabled `etf-news-market-panic-paper-v1`; no historical evidence |
+| `etf_news_sector_momentum_v1` | Confirmed sector-news momentum; QQQ/XLK/SMH/SOXX/XLE/XLF/IWM/GLD configured universe | Entry after confirmations, move, volume and stabilization; ATR stop/reward target; abstain on missing/weak confirmation; instance disabled | News plus 1m/5m candles and sector mapping; no OOS/falsification bundle |
+| `etf_news_rates_bonds_rotation_v1` | Rates/inflation event rotation; TLT/GLD/SPY/QQQ/XLF configured universe | Entry after confirmations, move, volume and stabilization; ATR stop/reward target; abstain on missing macro/event confirmation; instance disabled | News/macro plus 1m/5m data; no point-in-time OOS bundle |
+| `SWING_BRAIN_V1` | Evidence-backed swing setup assessment; affected assets and mapped ETFs; 2 days–8 weeks | Entry only as `TRADE_CANDIDATE` after catalyst/confirmation/R:R/invalidation; `WATCH`/`NO_TRADE` are explicit abstentions; paper-only/HITL/risk vetoes | Structured event, daily/4h data, sector/regime/calendar/portfolio context; rules/tests exist, but no strategy-level performance evidence |
+| `HYP-EVENT-001A` | SEC 8-K directional reaction; event-defined US-listed issuer sample; 5-day primary horizon | Entry next regular session open after SEC availability; exit fifth future session; `NEUTRAL`/`INSUFFICIENT_EVIDENCE` abstain from directional analysis; promotion closed | Private SEC/Alpaca dataset, frozen classifier and cost model; 2024 exploratory lineage, 2025 sealed, survivorship unresolved |
+
 The documented `hyp_swing_001` and `hyp_commodity_dislocation` values are
 templates/test fixtures, not registered forward candidates. The
 `Docs/runs/real-candidate-proof` files demonstrate candidate-routing and
