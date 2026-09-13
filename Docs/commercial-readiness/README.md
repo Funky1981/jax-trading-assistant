@@ -19,5 +19,7 @@ commercial distribution.
 - `CR-02G-FINAL-COMMERCIAL-READINESS-VALIDATION.md` — final architecture,
   distribution boundary, security, licence/data-rights and reproducibility
   validation. This remains an external-review record, not legal clearance.
+- `CR-02G-FINAL-TECHNICAL-CLOSURE-HANDOVER.md` — bounded remediation for the
+  clean-checkout, toolchain, image-security and reproducibility closure.
 - `../../THIRD_PARTY_NOTICES.md` — machine-supported direct runtime notice
   inventory.

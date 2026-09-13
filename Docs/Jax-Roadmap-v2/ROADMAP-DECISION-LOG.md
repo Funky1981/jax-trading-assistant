@@ -1355,3 +1355,22 @@ provider data/API terms, production secret-manager selection and development
 frontend advisories remain explicit owner/legal/deployment decisions. The
 cleanup/architecture gate is conditional and the commercial-release gate is
 blocked. No CR-02G remote CI result exists because push is not authorized.
+
+## RD-2026-09-13-01 - CR-02G bounded technical closure
+
+- Date: 2026-09-13
+- Work package: CR-02G final technical closure after the prior NO-GO
+- Status: Technical closure complete locally; external review required
+- Base SHA: `58fc30debd19ff2359fa8578269c78913d37f569`
+- Clean tracked-only checkout: PASS with `core.longpaths=true` and
+  `core.autocrlf=false`; frontend and Go reproducibility proof completed.
+- Rebuilt commercial-boundary images: four Docker Scout clean; IB bridge has
+  one explained Debian zlib high finding with no fixed version reported.
+- Go toolchain/CI/Docker aligned to 1.26.8; x/crypto and x/net security updates
+  applied; exact golangci-lint v2.13.2 verification passed.
+- Frontend Node 22/npm 10 lockfile synchronization corrected; lint, typecheck,
+  tests, build and deterministic E2E passed.
+- CR-02G: `TECHNICAL CLOSURE COMPLETE — EXTERNAL REVIEW REQUIRED`
+- Commercial release: remains blocked by owner/licence, legal/data-rights,
+  deployment secret-manager and explicit release-risk decisions.
+- Phase 13: `NOT STARTED / BLOCKED BY EXTERNAL CR-02G REVIEW`

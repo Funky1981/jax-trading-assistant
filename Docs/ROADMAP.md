@@ -28,10 +28,10 @@ decision remains `NO_TRADE`.
 | Phase 10 — Workflow, HITL & Operational Safety | **COMPLETE / GO** |
 | Phase 11 — High-Fidelity Paper Trading | **COMPLETE / GO** |
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
-| Commercial-Readiness Cleanup Gate | **IN PROGRESS — CR-02F FINAL CI CLOSURE / EXTERNAL REVIEW** |
+| Commercial-Readiness Cleanup Gate | **CR-02G TECHNICAL CLOSURE COMPLETE — EXTERNAL REVIEW** |
 | Phase 13 — Optional Live Execution | **NOT STARTED / BLOCKED BY CLEANUP GATE** |
-| Current implementation package | **CR-02F — FINAL CI CLOSURE** |
-| Next package | **External review of CR-02F final CI closure; CR-02G not started** |
+| Current implementation package | **CR-02G — FINAL TECHNICAL CLOSURE** |
+| Next package | **External review of CR-02G technical closure; Phase 13 remains blocked** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -354,12 +354,16 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is Commercial-Readiness Cleanup CR-02G — implementation
-complete and external review required, after external GO decisions for
+The current position is Commercial-Readiness Cleanup CR-02G — technical closure
+complete locally and external review required, after external GO decisions for
 Phase 12 and CR-01 through CR-02F. CR-02G records the final architecture,
 distribution boundary, security, licence/data-rights and clean-checkout
 validation. HYP-EVENT-001A evidence and the sealed 2025 holdout remain
 unchanged. This is not a trading-edge or profitability claim. Phase 10 and
 Phase 11 remain complete/GO, with actual forward-paper evidence of 0 days / 0
-orders. Phase 13 remains `NOT STARTED / BLOCKED BY CLEANUP GATE` pending
-external CR-02G review.
+orders. Phase 13 remains `NOT STARTED / BLOCKED BY EXTERNAL CR-02G REVIEW`
+pending external review. The technical closure uses a canonical LF
+clean-checkout environment, reproducible pinned toolchains, clean rebuilt core
+images, and explicit disposition of the remaining unfixed bridge base-package
+advisory. The commercial release gate remains separate and blocked by owner,
+legal, account/contract and deployment decisions.
