@@ -1,10 +1,10 @@
 {
   "contract_id": "jax.val-02.candidate-preregistration",
-  "contract_version": "v1.1",
+  "contract_version": "v1.2",
   "preregistration_status": "FROZEN_FOR_EXTERNAL_REVIEW",
   "closure": {
     "closure_id": "jax.val-02a.ma-crossover-preregistration-closure",
-    "closure_version": "v1",
+    "closure_version": "v1.2",
     "historical_performance_executed": false,
     "candidate_reselected": false,
     "val_03_status": "NOT_STARTED / BLOCKED BY VAL-02A"
@@ -151,8 +151,16 @@
     "application": "commission/spread/slippage/impact on each leg; borrow only for SELL/short episodes; gross and net retained; primary uses net"
   },
   "analysis_units": {
-    "primary": "fixed unit-notional non-overlapping episode",
+    "primary": "fixed 10000 USD analytical notional per non-overlapping episode",
+    "primary_notional_usd": 10000,
+    "quantity_formula": "primary_notional_usd / raw_entry_price; fractional quantity is analytical normalization only",
     "primary_return": "direction_sign * (exit_value-entry_value)/entry_value minus round-trip costs and signed corporate-action cash flows, divided by fixed entry notional",
+    "net_return_formula": "(direction_sign * quantity * (exit_raw_price - entry_raw_price) + direction_sign * quantity * dividend_cash_per_share - entry_leg_cost - exit_leg_cost - short_borrow_cost) / entry_notional",
+    "direction_sign": "BUY=+1; SELL=-1",
+    "entry_notional": "entry_raw_price * quantity",
+    "leg_cost_formula": "commission_per_order + leg_raw_price * quantity * (commission_bps + spread_bps + slippage_bps + market_impact_bps) / 10000",
+    "short_borrow_formula": "SELL only: entry_notional * borrow_bps_per_held_trading_day / 10000 * held_future_trading_sessions; BUY=0",
+    "corporate_action_cash_sign": "long dividend receipt positive; short dividend liability negative",
     "portfolio_secondary": {
       "starting_capital_usd": 100000,
       "aggregate_gross_cap": 1.0,
@@ -182,7 +190,10 @@
     "name": "MEAN_NET_DIRECTIONAL_RETURN_PER_NON_OVERLAPPING_EPISODE",
     "direction_symmetric": true,
     "null": "no positive net directional edge; mean <= 0",
-    "test": "one-sided instrument-year block-bootstrap 95% lower bound plus preregistered within-instrument-year sign-permutation randomization test",
+    "test": "one-sided instrument-year block-bootstrap 95% lower bound for the observed mean plus preregistered within-instrument-year sign-permutation randomization test",
+    "test_statistic": "M = arithmetic mean of net_return_formula over eligible non-overlapping episodes",
+    "permutation_p_value": "(1 + null statistics >= observed M) / (1 + 10000), with directions permuted only within instrument-year blocks",
+    "permutation_role": "falsification/comparative null; it cannot be replaced or tuned after outcomes",
     "success": "positive net mean, 95% lower bound above zero, and candidate mean above the 95th percentile of the frozen sign-permutation null",
     "secondary": ["same-interval per-asset buy-and-hold", "SPY buy-and-hold", "zero/null return", "gross versus net", "holding duration", "concentration and regime slices"]
   },
@@ -197,7 +208,7 @@
     "resampling_unit": "non-empty instrument-year block",
     "replicates": 10000,
     "interval": "percentile 95 percent interval",
-    "seed_derivation": "first eight bytes of SHA-256(manifest_sha256 || |instrument-year-bootstrap-v1|)",
+    "seed_derivation": "first eight big-endian bytes of SHA-256(manifest_sha256 || |instrument-year-bootstrap-v1|)",
     "empty_blocks": "excluded",
     "unequal_episode_counts": "preserved within sampled block",
     "iid_inference": false
@@ -266,6 +277,24 @@
     "2025_semantic_or_outcome_access": false,
     "hyp_event_001a_2024_lineage": "CONTAMINATED_FOR_FORMAL_OOS and not reused",
     "future_tuning": false
+  },
+  "val_02b_execution_economics_and_statistics": {
+    "status": "FROZEN_FOR_EXTERNAL_REVIEW",
+    "entry_reference": "next regular-session raw open; signal close is never an entry price",
+    "exit_order": "next-open gap resolution, then open-crossing, then intraday range touch; stop has priority over target; time exit last",
+    "gap_fill": "open reference when open crosses a level; no fill outside the observed bar range",
+    "first_target_only": true,
+    "scale_out": false,
+    "short_cost_in_primary": true,
+    "short_borrow_availability": "required; unavailable borrow causes abstention",
+    "portfolio_is_secondary": true,
+    "bootstrap_replicates": 10000,
+    "bootstrap_interval": "percentile 95 percent",
+    "minimum_effective_oos_blocks": 12,
+    "minimum_effective_oos_instruments": 6,
+    "primary_success_requires": ["positive observed net mean", "95 percent block-bootstrap lower bound above zero", "one-sided permutation p-value below 0.05", "all sample/concentration/falsification gates pass"],
+    "positive_return_alone_sufficient": false,
+    "experiment_execution_authorized": false
   },
   "execution_authority": "none",
   "forward_paper_admission": "not authorized by this manifest",

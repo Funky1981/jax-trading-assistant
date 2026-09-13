@@ -298,3 +298,12 @@ PERFORMANCE EXPERIMENT EXECUTED = NO
 REAL FORWARD PAPER STARTED = NO
 PHASE 13 STARTED = NO
 ```
+
+## VAL-02B continuation
+
+VAL-02A was externally accepted. The final execution-economics and statistical
+details are now frozen by
+`Docs/validation/VAL-02B-FINAL-PREREGISTRATION-CLOSURE.md` and manifest contract
+version `v1.2`. VAL-02B supersedes this document only for the exact notional,
+cash-flow arithmetic, short-cost application, statistical test and resampling
+details; it does not change the selected candidate or reopen any result.

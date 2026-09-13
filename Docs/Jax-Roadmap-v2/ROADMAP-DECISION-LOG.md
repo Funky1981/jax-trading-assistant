@@ -1441,3 +1441,27 @@ direction-symmetric net episode return, the existing evaluation cost contract
 with its derived identity, bearish borrow/dividend treatment, episode versus
 portfolio measurement, and instrument-year block bootstrap rules. The 2025
 holdout remains sealed and HYP-EVENT-001A remains not validated.
+
+## RD-2026-09-13-04 - VAL-02B final execution-economics and statistical closure
+
+- Date: 2026-09-13
+- Work package: VAL-02B — Final Execution-Economics & Statistical Preregistration Closure
+- Status: Complete; external review required before VAL-03 execution
+- VAL-02A: `EXTERNALLY ACCEPTED`
+- Selected candidate: `ma_crossover_v1`; no reselection
+- Closure artifact:
+  `Docs/validation/VAL-02B-FINAL-PREREGISTRATION-CLOSURE.md`
+- Machine-readable manifest: contract `v1.2`, status
+  `FROZEN_FOR_EXTERNAL_REVIEW`
+- Manifest SHA-256: `a72e31cd8d90a700704fbc33489af20f6e0db23c4aecf76dd62917e388e20b9c`
+- VAL-03: `NOT STARTED`
+- Forward paper: `NOT STARTED`
+- Phase 13: `NOT STARTED`
+
+VAL-02B freezes a `$10,000` analytical episode notional, exact two-leg cost
+and short-borrow arithmetic, dividend/split cash treatment, gap and daily-bar
+ordering, the direction-symmetric net-return statistic, zero-edge null, exact
+sign-permutation p-value, 10,000-replicate instrument-year block bootstrap and
+effective OOS block floor. No historical performance or 2025 holdout data was
+accessed. Scientific status remains `TRADING EDGE NOT DEMONSTRATED /
+INSUFFICIENT SAMPLE` and HYP-EVENT-001A remains `NOT VALIDATED`.
