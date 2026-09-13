@@ -426,3 +426,11 @@ REAL FORWARD PAPER STARTED = NO
 PHASE 13 STARTED = NO
 SAFETY BOUNDARIES PRESERVED = YES
 ```
+
+## VAL-03B continuation reference
+
+The selected candidate remains unchanged. VAL-03B amended only the blocked
+corporate-action/data-price contract to v1.4 before outcomes and documented the
+adjusted-bar equivalence design. Its Alpaca preflight did not cover the
+required 2015-01-01 warm-up, so VAL-03 remains blocked before performance
+evaluation.

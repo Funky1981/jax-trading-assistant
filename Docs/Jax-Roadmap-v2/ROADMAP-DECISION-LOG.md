@@ -1,5 +1,25 @@
 # Roadmap Decision Log
 
+## RD-2026-09-13-08 - VAL-03B adjusted-bar contract and preflight
+
+- Work package: `VAL-03B — ADJUSTED-BAR EQUIVALENCE & CONSERVATIVE PRICE-EDGE CONTRACT`.
+- VAL-03A remains accepted at the investigation gate; v1.3 raw/event-ledger
+  resumption remains blocked.
+- The externally authorized pre-outcome amendment advanced the manifest to
+  v1.4 without changing the candidate, parameters, costs, sample floors,
+  placebo, partitions, robustness suite or holdout.
+- The hardened Alpaca route now supports only explicit RAW, SPLIT and
+  SPLIT+SPIN-OFF research identities and carries `asof=2024-12-31`.
+- A bounded nine-symbol × three-family preflight returned synchronized
+  2016-01-04 through 2024-12-31 bars with no 2025 rows and no observed
+  SPLIT/SPLIT+SPIN-OFF differences. All requested families nevertheless lack
+  the required 2015-01-01 warm-up coverage.
+- VAL-03B therefore remains `DATA CONTRACT BLOCKED`; no signal, episode,
+  return, OOS result, forward paper or Phase 13 activity occurred.
+- Artifacts: `Docs/validation/VAL-03B-ADJUSTED-BAR-EQUIVALENCE-CONTRACT.md`,
+  `Docs/validation/VAL-03B-V1.4-AMENDMENT.md`, and
+  `Docs/validation/results/VAL-03B-DATASET-READINESS.json`.
+
 ## RD-2026-09-13-07 - VAL-03A corporate-action provenance resolution
 
 - Work package: `VAL-03A — CORPORATE-ACTION PROVENANCE RESOLUTION`.

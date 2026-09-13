@@ -71,3 +71,8 @@ This blocker is not a strategy-performance classification. No candidate
 performance result exists from this VAL-03 attempt.
 
 VAL-03A continued this hard stop and did not create a v1.4 manifest.
+
+VAL-03B is the authorized continuation. It implemented and tested a v1.4
+adjusted-bar contract, but its Alpaca preflight found that all requested
+families begin on 2016-01-04 rather than the required 2015-01-01 warm-up.
+VAL-03 therefore remains blocked before performance evaluation.

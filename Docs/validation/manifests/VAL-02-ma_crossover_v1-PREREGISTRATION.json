@@ -1,6 +1,6 @@
 {
   "contract_id": "jax.val-02.candidate-preregistration",
-  "contract_version": "v1.3",
+  "contract_version": "v1.4",
   "preregistration_status": "FROZEN_FOR_EXTERNAL_REVIEW",
   "closure": {
     "closure_id": "jax.val-02c.ma-crossover-broker-realism-null-mechanics",
@@ -10,7 +10,9 @@
     "val_02c": "FINAL PREREGISTRATION CONTRACT CLOSURE COMPLETE — EXTERNAL REVIEW REQUIRED",
     "historical_performance_executed": false,
     "candidate_reselected": false,
-    "val_03_status": "NOT STARTED / BLOCKED BY VAL-02C"
+    "val_03a": "COMPLETE / HISTORICAL CORPORATE-ACTION EVENT CONTRACT BLOCKED",
+    "val_03b": "ADJUSTED-BAR PRICE-EDGE CONTRACT COMPLETE — EXTERNAL REVIEW REQUIRED",
+    "val_03_status": "NOT STARTED / BLOCKED BY VAL-03B"
   },
   "selected_candidate": {
     "candidate_id": "ma_crossover_v1",
@@ -60,16 +62,48 @@
     "provider_indicator_substitution": false
   },
   "price_and_corporate_action_contract": {
-    "signal_price_mode": "RAW_UNADJUSTED_AS_OBSERVED",
-    "indicator_price_mode": "RAW_UNADJUSTED_AS_OBSERVED",
-    "entry_stop_target_price_mode": "RAW_PRICE_SCALE",
-    "return_price_mode": "RAW_EXECUTION_PNL_PLUS_EXPLICIT_POINT_IN_TIME_CORPORATE_ACTION_CASH",
-    "corporate_action_mode": "POINT_IN_TIME_EFFECTIVE_EVENT_HANDLING",
-    "dividend_treatment": "excluded from indicators; long dividend cash is included when held through the point-in-time ex-date",
-    "split_treatment": "no retrospective back-adjustment; apply prospectively on the effective session; a window crossing a split abstains until 200 valid post-split sessions",
+    "historical_validation_return_type": "NET_PRICE_RETURN_EXCLUDING_CASH_DISTRIBUTIONS",
+    "signal_price_mode": "ALPACA_SIP_SPLIT_ADJUSTED",
+    "indicator_price_mode": "ALPACA_SIP_SPLIT_ADJUSTED",
+    "entry_stop_target_price_mode": "SPLIT_ADJUSTED_GEOMETRY_WITH_RAW_EXECUTION_REFERENCE",
+    "return_price_mode": "SPLIT_ADJUSTED_PRICE_RETURN_PLUS_BASE_EXECUTION_COSTS; NO_CASH_DISTRIBUTION_CREDIT",
+    "corporate_action_mode": "ADJUSTED_BAR_FAMILY_CONTRACT; NO_HISTORICAL_EVENT_LEDGER_REQUIRED_FOR_PRIMARY_PRICE_EDGE",
+    "dividend_treatment": "not used as alpha or primary return credit; future forward-paper accounting remains required prospectively",
+    "split_treatment": "split-adjusted signal/geometry; synchronized raw bars for execution reference; detected structural boundary triggers 200 valid post-split-session reset",
+    "cash_distribution_primary_credit": "NONE",
+    "signal_bar_adjustment": "SPLIT",
+    "execution_geometry_adjustment": "SPLIT",
+    "execution_reference_adjustment": "RAW",
+    "structural_detector_adjustment": "SPLIT_SPIN_OFF",
+    "split_boundary_source": "RAW_VS_SPLIT_FACTOR",
+    "post_split_reset_sessions": 200,
+    "split_spanning_episode": "STRUCTURAL_ACTION_INVALIDATED",
+    "corporate_action_event_stream_required": "NO_FOR_PRIMARY_HISTORICAL_PRICE_EDGE",
+    "corporate_action_data_used_as_alpha": "NO",
+    "forward_paper_corporate_action_accounting": "REQUIRED_PROSPECTIVELY",
     "future_adjustment_prohibited": true,
     "missing_or_ambiguous_action": "abstain and retain provenance failure",
     "rounding": "carry high-precision arithmetic; round displayed monetary outputs only to cents using round-half-up"
+  },
+  "val03b_bar_family_contract": {
+    "provider": "Alpaca",
+    "feed": "SIP",
+    "timeframe": "1Day",
+    "asof": "2024-12-31",
+    "date_range": ["2015-01-01", "2024-12-31"],
+    "signal_family": "SPLIT",
+    "execution_reference_family": "RAW",
+    "structural_detector_family": "SPLIT_SPIN_OFF",
+    "unsupported_signal_families": ["DIVIDEND", "ALL"],
+    "factor_contract": "derive split_adjusted OHLC / raw OHLC; require one positive common factor within relative tolerance 5e-4 for provider quote-precision rounding; require inverse volume relation where non-zero",
+    "factor_boundary": "adjacent-session factor change; action type is not inferred from price return",
+    "synchronization": "all three families must have identical session keys and strict chronological order",
+    "spin_off_policy": "any SPLIT versus SPLIT_SPIN_OFF adjustment boundary is UNSUPPORTED_STRUCTURAL_ACTION before performance evaluation",
+    "holdout_guard": "reject request end or returned provider date >= 2025-01-01",
+    "raw_persistence": "persist exact provider bytes before normalization with provider/feed/timeframe/adjustment/asof request identity and content hash",
+    "adapter_identity": "libs/marketdata/alpaca_hardened.go explicit adjustment identities and adjustment-bearing source/normalizer identities",
+    "execution_authority": "NONE",
+    "creates_fill": false
   },
   "protocol": {
     "frequency": "daily regular-session bars",
@@ -202,7 +236,7 @@
     "replacement_rule": "variants are falsification only and cannot replace the original candidate"
   },
   "provider_acquisition_order": {
-    "primary": {"provider": "Alpaca", "route": "existing hardened historical daily-bars route", "implementation": "libs/marketdata/alpaca_hardened.go", "source_id": "src_alpaca_stock_bars_sip_unadjusted", "feed": "SIP", "timeframe": "1Day", "adjustment": "raw/unadjusted", "date_range": ["2015-01-01", "2024-12-31"], "universe": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"], "raw_artifact_storage": "persist raw provider bytes before normalization with content hash, request identity, retrieval timestamp and source identity"},
+    "primary": {"provider": "Alpaca", "route": "existing hardened historical daily-bars route", "implementation": "libs/marketdata/alpaca_hardened.go", "source_id": "src_alpaca_stock_bars_sip_raw", "feed": "SIP", "timeframe": "1Day", "adjustment_families": ["raw", "split", "split,spin-off"], "asof": "2024-12-31", "date_range": ["2015-01-01", "2024-12-31"], "universe": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"], "raw_artifact_storage": "persist raw provider bytes before normalization with content hash, request identity, retrieval timestamp and source identity"},
     "fallback": "NONE",
     "fallback_trigger": "if primary cannot provide complete frozen range/feed/adjustment/provenance, stop as DATASET_BLOCKED; do not shop providers",
     "paid_spend": 0

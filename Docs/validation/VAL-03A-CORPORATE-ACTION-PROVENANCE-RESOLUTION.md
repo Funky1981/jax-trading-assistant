@@ -348,3 +348,10 @@ PHASE 13 = NOT STARTED
 SAFETY BOUNDARIES = PRESERVED
 
 Adversarial VAL-03A review = PASS
+
+## Continuation
+
+VAL-03B supersedes the unexecutable v1.3 corporate-action event-ledger
+requirement with an externally authorized pre-outcome adjusted-bar contract.
+This historical VAL-03A hard-stop record remains unchanged as evidence; the
+continuation is documented in `VAL-03B-ADJUSTED-BAR-EQUIVALENCE-CONTRACT.md`.
