@@ -44,9 +44,12 @@ var (
 type MarketAdjustmentState string
 
 const (
-	MarketAdjustmentUnknown    MarketAdjustmentState = "UNKNOWN"
-	MarketAdjustmentAdjusted   MarketAdjustmentState = "ADJUSTED"
-	MarketAdjustmentUnadjusted MarketAdjustmentState = "UNADJUSTED"
+	MarketAdjustmentUnknown      MarketAdjustmentState = "UNKNOWN"
+	MarketAdjustmentAdjusted     MarketAdjustmentState = "ADJUSTED"
+	MarketAdjustmentUnadjusted   MarketAdjustmentState = "UNADJUSTED"
+	MarketAdjustmentRaw          MarketAdjustmentState = "RAW"
+	MarketAdjustmentSplit        MarketAdjustmentState = "SPLIT"
+	MarketAdjustmentSplitSpinOff MarketAdjustmentState = "SPLIT_SPIN_OFF"
 )
 
 type MarketSessionState string

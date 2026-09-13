@@ -27,6 +27,10 @@ func alpacaFixturePayload(next string, timestamp string) string {
 }
 
 func alpacaFixtureDependencies(t *testing.T, body func(*http.Request) string) (*AlpacaProvider, AlpacaBarsDependencies, *httptest.Server) {
+	return alpacaFixtureDependenciesForAdjustment(t, MarketAdjustmentUnadjusted, body)
+}
+
+func alpacaFixtureDependenciesForAdjustment(t *testing.T, adjustment MarketAdjustmentState, body func(*http.Request) string) (*AlpacaProvider, AlpacaBarsDependencies, *httptest.Server) {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -50,7 +54,7 @@ func alpacaFixtureDependencies(t *testing.T, body func(*http.Request) string) (*
 	if err != nil {
 		t.Fatal(err)
 	}
-	normalizer, err := newAlpacaBarsNormalizer(marketTestInstrument(), MarketFeedSIP, MarketAdjustmentUnadjusted)
+	normalizer, err := newAlpacaBarsNormalizer(marketTestInstrument(), MarketFeedSIP, adjustment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +73,7 @@ func alpacaFixtureDependencies(t *testing.T, body func(*http.Request) string) (*
 }
 
 func TestAlpacaHardenedDailyBarsPersistsBeforeParseAndPreservesFeedSemantics(t *testing.T) {
-	payload := alpacaFixturePayload("", "2026-08-28T04:00:00Z")
+	payload := alpacaFixturePayload("", "2024-08-28T04:00:00Z")
 	provider, dependencies, server := alpacaFixtureDependencies(t, func(request *http.Request) string {
 		if request.URL.Path != "/v2/stocks/bars" || request.URL.Query().Get("symbols") != "AAPL" || request.URL.Query().Get("timeframe") != "1Day" || request.URL.Query().Get("feed") != "sip" || request.URL.Query().Get("adjustment") != "raw" {
 			t.Fatalf("unexpected Alpaca request: %s", request.URL.String())
@@ -79,7 +83,7 @@ func TestAlpacaHardenedDailyBarsPersistsBeforeParseAndPreservesFeedSemantics(t *
 		}
 		return payload
 	})
-	result, err := provider.AcquireAndNormalizeDailyBars(context.Background(), dependencies, AlpacaBarsRequest{Instrument: marketTestInstrument(), StartDate: time.Date(2026, 8, 28, 0, 0, 0, 0, time.UTC), EndDate: time.Date(2026, 8, 28, 0, 0, 0, 0, time.UTC), Interval: Timeframe1Day, Feed: MarketFeedSIP, Adjustment: MarketAdjustmentUnadjusted, PayloadID: "rpa_alpaca_fixture", Retention: alpacaRetention()})
+	result, err := provider.AcquireAndNormalizeDailyBars(context.Background(), dependencies, AlpacaBarsRequest{Instrument: marketTestInstrument(), StartDate: time.Date(2024, 8, 28, 0, 0, 0, 0, time.UTC), EndDate: time.Date(2024, 8, 28, 0, 0, 0, 0, time.UTC), Interval: Timeframe1Day, Feed: MarketFeedSIP, Adjustment: MarketAdjustmentUnadjusted, PayloadID: "rpa_alpaca_fixture", Retention: alpacaRetention()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +98,7 @@ func TestAlpacaHardenedDailyBarsPersistsBeforeParseAndPreservesFeedSemantics(t *
 	if bar.Instrument.ID != "ins_aapl_common" || bar.Feed != MarketFeedSIP || bar.FeedCoverage != MarketFeedCoverageSIP || bar.Adjustment != MarketAdjustmentUnadjusted || bar.TimestampSemantics != MarketTimestampProviderBarTimestamp || bar.MarketTimezone != "America/New_York" {
 		t.Fatalf("unexpected Alpaca market semantics: %+v", bar)
 	}
-	if bar.ProviderDate != "2026-08-28" || !bar.Open.ObservedAt.Equal(bar.Start) || !bar.Close.ObservedAt.Equal(bar.Start) {
+	if bar.ProviderDate != "2024-08-28" || !bar.Open.ObservedAt.Equal(bar.Start) || !bar.Close.ObservedAt.Equal(bar.Start) {
 		t.Fatalf("provider timestamp semantics were not preserved: %+v", bar)
 	}
 	if bar.Open.Source.ExternalID == nil || bar.Open.Source.ExternalID.Value != "sip/UNADJUSTED" {
@@ -114,11 +118,11 @@ func TestAlpacaHardenedPaginationProgressionAndDuplicateRejection(t *testing.T) 
 		defer mu.Unlock()
 		requests++
 		if request.URL.Query().Get("page_token") == "next" {
-			return alpacaFixturePayload("", "2026-09-02T04:00:00Z")
+			return alpacaFixturePayload("", "2024-09-02T04:00:00Z")
 		}
-		return alpacaFixturePayload("next", "2026-08-28T04:00:00Z")
+		return alpacaFixturePayload("next", "2024-08-28T04:00:00Z")
 	})
-	result, err := provider.AcquireAndNormalizeDailyBars(context.Background(), dependencies, AlpacaBarsRequest{Instrument: marketTestInstrument(), StartDate: time.Date(2026, 8, 28, 0, 0, 0, 0, time.UTC), EndDate: time.Date(2026, 9, 2, 0, 0, 0, 0, time.UTC), Interval: Timeframe1Day, Feed: MarketFeedSIP, Adjustment: MarketAdjustmentUnadjusted, PayloadID: "rpa_alpaca_pages", Retention: alpacaRetention()})
+	result, err := provider.AcquireAndNormalizeDailyBars(context.Background(), dependencies, AlpacaBarsRequest{Instrument: marketTestInstrument(), StartDate: time.Date(2024, 8, 28, 0, 0, 0, 0, time.UTC), EndDate: time.Date(2024, 9, 2, 0, 0, 0, 0, time.UTC), Interval: Timeframe1Day, Feed: MarketFeedSIP, Adjustment: MarketAdjustmentUnadjusted, PayloadID: "rpa_alpaca_pages", Retention: alpacaRetention()})
 	if err != nil || requests != 2 || len(result.RawPayloads) != 2 || len(result.Bars) != 2 {
 		t.Fatalf("pagination result=%+v err=%v requests=%d", result, err, requests)
 	}
@@ -127,11 +131,11 @@ func TestAlpacaHardenedPaginationProgressionAndDuplicateRejection(t *testing.T) 
 	duplicateProvider, duplicateDependencies, _ := alpacaFixtureDependencies(t, func(request *http.Request) string {
 		duplicateRequests++
 		if request.URL.Query().Get("page_token") == "next" {
-			return alpacaFixturePayload("", "2026-08-28T04:00:00Z")
+			return alpacaFixturePayload("", "2024-08-28T04:00:00Z")
 		}
-		return alpacaFixturePayload("next", "2026-08-28T04:00:00Z")
+		return alpacaFixturePayload("next", "2024-08-28T04:00:00Z")
 	})
-	duplicateResult, duplicateErr := duplicateProvider.AcquireAndNormalizeDailyBars(context.Background(), duplicateDependencies, AlpacaBarsRequest{Instrument: marketTestInstrument(), StartDate: time.Date(2026, 8, 28, 0, 0, 0, 0, time.UTC), EndDate: time.Date(2026, 8, 28, 0, 0, 0, 0, time.UTC), Interval: Timeframe1Day, Feed: MarketFeedSIP, Adjustment: MarketAdjustmentUnadjusted, PayloadID: "rpa_alpaca_duplicate", Retention: alpacaRetention()})
+	duplicateResult, duplicateErr := duplicateProvider.AcquireAndNormalizeDailyBars(context.Background(), duplicateDependencies, AlpacaBarsRequest{Instrument: marketTestInstrument(), StartDate: time.Date(2024, 8, 28, 0, 0, 0, 0, time.UTC), EndDate: time.Date(2024, 8, 28, 0, 0, 0, 0, time.UTC), Interval: Timeframe1Day, Feed: MarketFeedSIP, Adjustment: MarketAdjustmentUnadjusted, PayloadID: "rpa_alpaca_duplicate", Retention: alpacaRetention()})
 	if duplicateErr == nil || !strings.Contains(duplicateErr.Error(), "duplicate Alpaca market metric") || duplicateRequests != 2 || len(duplicateResult.RawPayloads) != 2 {
 		t.Fatalf("duplicate bar was not rejected after raw-first persistence: err=%v requests=%d raw_payloads=%d", duplicateErr, duplicateRequests, len(duplicateResult.RawPayloads))
 	}
@@ -140,7 +144,7 @@ func TestAlpacaHardenedPaginationProgressionAndDuplicateRejection(t *testing.T) 
 func TestAlpacaHardenedParserRejectsMalformedAndUnorderedBars(t *testing.T) {
 	for name, raw := range map[string]string{
 		"malformed":     "{",
-		"unknown field": `{"bars":{"AAPL":[{"c":1,"h":1,"l":1,"o":1,"t":"2026-08-28T04:00:00Z","v":1,"unexpected":1}]}}`,
+		"unknown field": `{"bars":{"AAPL":[{"c":1,"h":1,"l":1,"o":1,"t":"2024-08-28T04:00:00Z","v":1,"unexpected":1}]}}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := parseAlpacaBarsPayload([]byte(raw)); err == nil {
@@ -165,9 +169,9 @@ func TestAlpacaHardenedParserRejectsMalformedAndUnorderedBars(t *testing.T) {
 
 func TestAlpacaHardenedRejectsFractionalVolume(t *testing.T) {
 	provider, dependencies, _ := alpacaFixtureDependencies(t, func(*http.Request) string {
-		return `{"bars":{"AAPL":[{"c":227.16,"h":229.12,"l":225.41,"o":226.00,"t":"2026-08-28T04:00:00Z","v":1.5}]}}`
+		return `{"bars":{"AAPL":[{"c":227.16,"h":229.12,"l":225.41,"o":226.00,"t":"2024-08-28T04:00:00Z","v":1.5}]}}`
 	})
-	_, err := provider.AcquireAndNormalizeDailyBars(context.Background(), dependencies, AlpacaBarsRequest{Instrument: marketTestInstrument(), StartDate: time.Date(2026, 8, 28, 0, 0, 0, 0, time.UTC), EndDate: time.Date(2026, 8, 28, 0, 0, 0, 0, time.UTC), Interval: Timeframe1Day, Feed: MarketFeedSIP, Adjustment: MarketAdjustmentUnadjusted, PayloadID: "rpa_alpaca_fractional_volume", Retention: alpacaRetention()})
+	_, err := provider.AcquireAndNormalizeDailyBars(context.Background(), dependencies, AlpacaBarsRequest{Instrument: marketTestInstrument(), StartDate: time.Date(2024, 8, 28, 0, 0, 0, 0, time.UTC), EndDate: time.Date(2024, 8, 28, 0, 0, 0, 0, time.UTC), Interval: Timeframe1Day, Feed: MarketFeedSIP, Adjustment: MarketAdjustmentUnadjusted, PayloadID: "rpa_alpaca_fractional_volume", Retention: alpacaRetention()})
 	if err == nil {
 		t.Fatalf("fractional volume was accepted: %v", err)
 	}

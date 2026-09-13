@@ -41,6 +41,7 @@ type AlpacaBarsRequest struct {
 	Instrument canonical.Instrument
 	StartDate  time.Time
 	EndDate    time.Time
+	AsOfDate   time.Time
 	Interval   Timeframe
 	Feed       MarketFeed
 	Adjustment MarketAdjustmentState
@@ -120,7 +121,7 @@ func (p *AlpacaProvider) AcquireAndNormalizeDailyBars(ctx context.Context, depen
 	allRecords := make([]providercontract.NormalizationResult, 0)
 	var firstRaw providercontract.RawPayloadRef
 	for page := 0; page < AlpacaBarsMaximumPages; page++ {
-		endpoint, err := p.historicalBarsURL(request.Instrument, request.StartDate, request.EndDate, feed, adjustment, pageToken)
+		endpoint, err := p.historicalBarsURL(request.Instrument, request.StartDate, request.EndDate, request.AsOfDate, feed, adjustment, pageToken)
 		if err != nil {
 			return result, err
 		}
@@ -192,7 +193,7 @@ func (p *AlpacaProvider) AcquireAndNormalizeDailyBars(ctx context.Context, depen
 	return result, nil
 }
 
-func (p *AlpacaProvider) historicalBarsURL(instrument canonical.Instrument, start, end time.Time, feed MarketFeed, adjustment MarketAdjustmentState, pageToken string) (string, error) {
+func (p *AlpacaProvider) historicalBarsURL(instrument canonical.Instrument, start, end, asOf time.Time, feed MarketFeed, adjustment MarketAdjustmentState, pageToken string) (string, error) {
 	ticker, err := alpacaTicker(instrument)
 	if err != nil {
 		return "", err
@@ -210,6 +211,9 @@ func (p *AlpacaProvider) historicalBarsURL(instrument canonical.Instrument, star
 	query.Set("adjustment", alpacaAdjustmentQuery(adjustment))
 	query.Set("feed", string(feed))
 	query.Set("sort", "asc")
+	if !asOf.IsZero() {
+		query.Set("asof", asOf.Format("2006-01-02"))
+	}
 	if strings.TrimSpace(pageToken) != "" {
 		query.Set("page_token", pageToken)
 	}
@@ -266,12 +270,12 @@ func newAlpacaBarsNormalizer(instrument canonical.Instrument, feed MarketFeed, a
 	if err := validateAlpacaFeed(feed); err != nil {
 		return nil, err
 	}
-	if adjustment != MarketAdjustmentUnadjusted {
-		return nil, errors.New("alpaca hardened bars path currently requires raw/unadjusted bars")
+	if !isSupportedAlpacaAdjustment(adjustment) {
+		return nil, fmt.Errorf("alpaca hardened bars path does not support adjustment %q", adjustment)
 	}
 	providerIdentity := cloneMarketProviderIdentity(AlpacaProviderIdentity)
-	mappingContent := canonical.RawContentIdentity([]byte("jax Alpaca daily stock bars mapping/v1"))
-	descriptor := providercontract.NormalizerDescriptor{ContractVersion: providercontract.NormalizerDescriptorV1, Provider: providerIdentity, CapabilityID: providercontract.CapabilityMarketBars, Raw: providercontract.RawRepresentation{Boundary: providercontract.RawBoundaryProvider, Format: providercontract.RawFormatJSONDocument, Schema: AlpacaHistoricalRaw, MediaType: "application/json"}, Component: canonical.ComponentIdentity{ID: AlpacaBarsNormalizerID, Kind: canonical.ComponentKindNormalizer, Name: "Alpaca documented daily stock bars normalizer", Version: canonical.VersionIdentity{Namespace: "jax.normalizer.market_bars", Value: "alpaca-v1"}, Provider: &providerIdentity, Content: &mappingContent}, Target: canonical.ContractSchemaRef{Kind: canonical.ContractKindObservation, Version: canonical.ObservationContractV2}}
+	mappingContent := canonical.RawContentIdentity([]byte("jax Alpaca daily stock bars mapping/v1/" + strings.ToLower(string(adjustment))))
+	descriptor := providercontract.NormalizerDescriptor{ContractVersion: providercontract.NormalizerDescriptorV1, Provider: providerIdentity, CapabilityID: providercontract.CapabilityMarketBars, Raw: providercontract.RawRepresentation{Boundary: providercontract.RawBoundaryProvider, Format: providercontract.RawFormatJSONDocument, Schema: AlpacaHistoricalRaw, MediaType: "application/json"}, Component: canonical.ComponentIdentity{ID: AlpacaBarsNormalizerID + "_" + strings.ToLower(string(adjustment)), Kind: canonical.ComponentKindNormalizer, Name: "Alpaca documented daily stock bars normalizer (" + string(adjustment) + ")", Version: canonical.VersionIdentity{Namespace: "jax.normalizer.market_bars", Value: "alpaca-v1/" + strings.ToLower(string(adjustment))}, Provider: &providerIdentity, Content: &mappingContent}, Target: canonical.ContractSchemaRef{Kind: canonical.ContractKindObservation, Version: canonical.ObservationContractV2}}
 	if err := descriptor.Validate(); err != nil {
 		return nil, err
 	}
@@ -282,6 +286,12 @@ func newAlpacaBarsNormalizer(instrument canonical.Instrument, feed MarketFeed, a
 // to the bounded Phase-03 packet harness without exposing provider DTOs.
 func NewAlpacaBarsNormalizerForGate(instrument canonical.Instrument, feed MarketFeed) (providercontract.Normalizer, error) {
 	return newAlpacaBarsNormalizer(instrument, feed, MarketAdjustmentUnadjusted)
+}
+
+// NewAlpacaBarsNormalizerForAdjustment exposes only the explicit adjustment
+// identities approved by the VAL-03B research contract.
+func NewAlpacaBarsNormalizerForAdjustment(instrument canonical.Instrument, feed MarketFeed, adjustment MarketAdjustmentState) (providercontract.Normalizer, error) {
+	return newAlpacaBarsNormalizer(instrument, feed, adjustment)
 }
 
 func (normalizer *alpacaBarsNormalizer) Descriptor() providercontract.NormalizerDescriptor {
@@ -469,10 +479,25 @@ func validateAlpacaFeed(feed MarketFeed) error {
 }
 
 func alpacaAdjustmentQuery(adjustment MarketAdjustmentState) string {
-	if adjustment == MarketAdjustmentUnadjusted {
+	switch adjustment {
+	case MarketAdjustmentUnadjusted, MarketAdjustmentRaw:
 		return "raw"
+	case MarketAdjustmentSplit:
+		return "split"
+	case MarketAdjustmentSplitSpinOff:
+		return "split,spin-off"
+	default:
+		return strings.ToLower(string(adjustment))
 	}
-	return strings.ToLower(string(adjustment))
+}
+
+func isSupportedAlpacaAdjustment(adjustment MarketAdjustmentState) bool {
+	switch adjustment {
+	case MarketAdjustmentUnadjusted, MarketAdjustmentRaw, MarketAdjustmentSplit, MarketAdjustmentSplitSpinOff:
+		return true
+	default:
+		return false
+	}
 }
 
 func (feed MarketFeed) String() string { return string(feed) }
@@ -495,14 +520,17 @@ func validateAlpacaBarsRequest(request AlpacaBarsRequest) error {
 	if !isUTCDate(request.StartDate) || !isUTCDate(request.EndDate) || request.EndDate.Before(request.StartDate) {
 		return errors.New("alpaca bar range must use ordered UTC calendar dates")
 	}
-	if days := int(request.EndDate.Sub(request.StartDate).Hours()/24) + 1; days <= 0 || days > 366 {
+	if !request.AsOfDate.IsZero() && !isUTCDate(request.AsOfDate) {
+		return errors.New("alpaca as-of date must be a UTC calendar date")
+	}
+	if days := int(request.EndDate.Sub(request.StartDate).Hours()/24) + 1; days <= 0 || days > 3660 {
 		return errors.New("alpaca bar range exceeds the bounded calendar window")
 	}
 	if err := validateAlpacaFeed(request.Feed); err != nil {
 		return err
 	}
-	if request.Adjustment != MarketAdjustmentUnadjusted {
-		return errors.New("alpaca hardened path requires explicit raw/unadjusted adjustment")
+	if !isSupportedAlpacaAdjustment(request.Adjustment) {
+		return fmt.Errorf("alpaca hardened path rejects unsupported adjustment %q", request.Adjustment)
 	}
 	if strings.TrimSpace(string(request.PayloadID)) == "" {
 		return errors.New("raw payload acquisition identity is required")
@@ -529,8 +557,8 @@ func projectAlpacaMarketBars(batch providercontract.BatchNormalizationResult, in
 	if err := validateAlpacaFeed(feed); err != nil {
 		return nil, err
 	}
-	if adjustment != MarketAdjustmentUnadjusted {
-		return nil, errors.New("alpaca projection requires raw/unadjusted adjustment")
+	if !isSupportedAlpacaAdjustment(adjustment) {
+		return nil, fmt.Errorf("alpaca projection rejects unsupported adjustment %q", adjustment)
 	}
 	loc, err := time.LoadLocation("America/New_York")
 	if err != nil {
