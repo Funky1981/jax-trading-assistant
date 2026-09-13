@@ -9,6 +9,12 @@ not execute VAL-03.
 
 `VAL-02B = FINAL PREREGISTRATION CLOSURE COMPLETE — EXTERNAL REVIEW REQUIRED`.
 
+The external VAL-02B review accepted only a partial closure. The unresolved
+personal-broker economics, long-only short-side boundary, pre-entry gap rule,
+placebo/randomisation mechanics, exact robustness variants and provider order
+are superseded by `VAL-02C-BROKER-REALISM-AND-NULL-MECHANICS-CLOSURE.md` and
+manifest contract `v1.3`. This historical record is not rewritten.
+
 The updated machine-readable manifest is
 `Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json`,
 contract version `v1.2`, with UTF-8 byte SHA-256

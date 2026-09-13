@@ -164,6 +164,11 @@ period is called pristine merely because source code existed before VAL-02.
 
 ## VAL-02A closure override
 
+`VAL-02` candidate selection remains accepted. `VAL-02A` and `VAL-02B` are
+historical closure records; the remaining broker-realism and null-mechanics
+requirements are frozen by `VAL-02C`, manifest contract `v1.3`. VAL-03 remains
+not started and no performance outcome has been calculated.
+
 The original VAL-02 design text contains intentionally unresolved wording that
 was identified before VAL-03. It is superseded for execution by
 `Docs/validation/VAL-02A-PREREGISTRATION-CLOSURE.md` and manifest contract

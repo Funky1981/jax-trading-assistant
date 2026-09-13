@@ -1,5 +1,23 @@
 # Roadmap Decision Log
 
+## RD-2026-09-13-05 - VAL-02C broker-realism and null-mechanics closure
+
+- Work package: `VAL-02C — BROKER-REALISM & NULL-MECHANICS FINAL CLOSURE`.
+- Status: complete; external review required before VAL-03 execution.
+- Candidate selection remains accepted: `ma_crossover_v1`; no reselection.
+- VAL-02B is a historical partial closure, superseded only for remaining
+  economics and statistical mechanics.
+- The v1.3 manifest freezes the official IBKR Pro Fixed commission facts,
+  separate base and legacy stress models, whole-share USD 10,000 episodes,
+  long-only primary tradable claim, pre-entry invalidation, matched placebo,
+  deterministic seeds, exact robustness variants and Alpaca provider order.
+- No historical performance, return, OOS, 2025, broker, paid-data, hosted-AI,
+  forward-paper or Phase-13 action occurred. The 2025 holdout remains sealed.
+- VAL-03: `NOT STARTED / BLOCKED BY VAL-02C`; forward paper: `NOT STARTED`;
+  Phase 13: `NOT STARTED`.
+- Closure artifact: `Docs/validation/VAL-02C-BROKER-REALISM-AND-NULL-MECHANICS-CLOSURE.md`.
+- Manifest: `Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json`, contract `v1.3`.
+
 ## RD-2026-09-13-VAL-01 — CR-02G accepted; personal strategy validation opened
 
 - Decision state: **CR-02G = COMPLETE / GO** by external technical-lead review.

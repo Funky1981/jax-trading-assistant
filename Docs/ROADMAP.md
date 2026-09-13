@@ -30,8 +30,8 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-02B — FINAL EXECUTION-ECONOMICS & STATISTICAL PREREGISTRATION CLOSURE** |
-| Next package | **VAL-03 historical validation only after external review of the frozen VAL-02B contract; real forward paper has not started** |
+| Current implementation package | **VAL-02C — BROKER-REALISM & NULL-MECHANICS FINAL CLOSURE** |
+| Next package | **VAL-03 historical validation only after external review of the frozen VAL-02C contract; real forward paper has not started** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -358,7 +358,7 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is VAL-02B — Final Execution-Economics and Statistical
+The current position is VAL-02C — Broker-Realism and Null-Mechanics Final
 Preregistration Closure,
 following the external `GO` for CR-02G and the complete CR-01 through CR-02G
 technical cleanup sequence. The cleanup record does not grant commercial-sale
@@ -372,8 +372,9 @@ existing candidate, `ma_crossover_v1`, using frozen outcome-blind feasibility
 criteria and froze a candidate-specific VAL-03 protocol without executing
 performance evaluation. VAL-02 candidate selection remains accepted and
 VAL-02A is `PREREGISTRATION CONTRACT CLOSURE COMPLETE — EXTERNAL REVIEW
-REQUIRED`; VAL-02B is `FINAL PREREGISTRATION CLOSURE COMPLETE — EXTERNAL REVIEW
-REQUIRED`; VAL-03 remains not started. Phase 13 remains `NOT STARTED / BLOCKED BY STRATEGY
+REQUIRED`; VAL-02B is a historical partial closure superseded for remaining
+mechanics by VAL-02C, whose contract is `v1.3` and is `FINAL PREREGISTRATION
+CLOSURE COMPLETE — EXTERNAL REVIEW REQUIRED`; VAL-03 remains not started. Phase 13 remains `NOT STARTED / BLOCKED BY STRATEGY
 VALIDATION AND REAL FORWARD-PAPER EVIDENCE`. The technical closure uses a canonical LF
 clean-checkout environment, reproducible pinned toolchains, clean rebuilt core
 images, and explicit disposition of the remaining unfixed bridge base-package
