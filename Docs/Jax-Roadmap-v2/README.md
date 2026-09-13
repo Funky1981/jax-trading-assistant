@@ -48,20 +48,21 @@ criteria remain binding.
 - Phase 09: `COMPLETE / GO`
 - Phase 10: `COMPLETE / GO`
 - Phase 11: `COMPLETE / GO`
-- Current package: `CR-02B — JAX-NATIVE PLANNER + COMPLETE AGENT0 REMOVAL`
+- Current package: `VAL-01 — STRATEGY PROMOTION & FORWARD-PAPER READINESS GATE`
 - Phase 12: `COMPLETE / GO — HYP-EVENT-001A NOT VALIDATED`
-- Commercial-readiness cleanup: `IN PROGRESS — CR-02B`
-- Phase 13: `NOT STARTED / BLOCKED BY CLEANUP GATE`
+- Commercial-readiness cleanup: `CR-01 → CR-02G COMPLETE / GO`
+- Phase 13: `NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE`
 
 `HYP-EVENT-001A` has completed its real historical scientific evaluation. The
 private result artifact contains 939 event-time direction records, frozen
-development/validation selection, one formal 2024 OOS score and retained
+development/validation selection, one exploratory 2024 result and retained
 falsification results. The conditioned comparison remains research-only and
 promotion is closed because the 2025 holdout is sealed and survivorship is
 unresolved. WP-12.01 was assessed without adopting a new runtime. CR-01 is a
 documentation-only commercial-readiness audit; CR-02A removed Dexter and CR-02B
-is the active Agent0 removal package. Phase 13 remains blocked by the cleanup
-gate.
+is the accepted technical cleanup sequence. Jax is currently focused on
+personal strategy validation; optional future commercialisation is deferred.
+Phase 13 remains blocked by strategy validation and real forward-paper evidence.
 
 
 ## 2026-08-10 integrated roadmap change

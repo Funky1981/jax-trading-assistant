@@ -43,13 +43,13 @@ paper-trading race tests. Phase 11 is
 **COMPLETE / GO** after WP-11.01 through WP-11.08 and its
 accelerated exit harness; its tested race condition is resolved in the existing
 Docker environment. Phase 12
-is **COMPLETE / CONDITIONAL GO** for the real scientific evaluation of
+is **COMPLETE / GO at the capability gate; HYP-EVENT-001A NOT VALIDATED** for the real scientific evaluation of
 `HYP-EVENT-001A`; its data-readiness gate was accepted and the implementation
 uses the existing Jax Go architecture. Real direction labels and performance
 results and falsification records are now retained in a single frozen
 2024 OOS artifact; the immutable SEC filing-time evidence extension is
 complete. No advanced model was promoted and
-no recommendation logic changed.
+no recommendation logic changed. CR-01 through CR-02G technical cleanup is complete/GO. Jax is currently a personal trading platform; optional future commercialisation is deferred and Phase 13 remains blocked by strategy validation and real forward-paper evidence.
 Phase 11 preserves
 the paper-only boundary and does not claim trading edge.
 The scientific status remains `TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT
