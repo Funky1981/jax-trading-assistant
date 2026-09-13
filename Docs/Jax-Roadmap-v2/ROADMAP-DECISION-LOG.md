@@ -1,5 +1,24 @@
 # Roadmap Decision Log
 
+## RD-2026-09-13-06 - VAL-03 dataset preflight hard stop
+
+- Work package: `VAL-03 — MA CROSSOVER FROZEN HISTORICAL VALIDATION`.
+- VAL-02C is recorded as `COMPLETE / GO`; the v1.3 manifest remains verified
+  and unchanged.
+- The frozen implementation identities match the manifest.
+- Preflight stopped before acquisition and before any performance calculation:
+  `DATASET_BLOCKED — CORPORATE ACTION PROVENANCE`.
+- The required repository route provides Alpaca raw/unadjusted bars but no
+  complete corporate-action acquisition/storage path or dataset for the nine
+  ETFs and 2015–2024 period. Alpaca's official documentation also states that
+  corporate-action creation time is not guaranteed, so the current endpoint
+  cannot prove historical decision-time knowability required by the manifest.
+- No fallback provider, adjusted-bar workaround, paid data, broker call, 2025
+  access, performance scoring or forward-paper action occurred.
+- VAL-03 remains not started as a scientific experiment; forward paper and
+  Phase 13 remain not started.
+- Closure artifact: `Docs/validation/VAL-03-DATASET-BLOCKER.md`.
+
 ## RD-2026-09-13-05 - VAL-02C broker-realism and null-mechanics closure
 
 - Work package: `VAL-02C — BROKER-REALISM & NULL-MECHANICS FINAL CLOSURE`.
