@@ -64,3 +64,21 @@ production-path proof, and null-statistic correctness.
 | Calendar-regime cell persistence | PASS | PASS | PASS | PASS | persisted-cell test |
 
 R1D unresolved ambiguity: 0. No outcome-bearing validation was executed.
+
+## R2 validation-floor correction
+
+The historical R1B summary above is retained as an audit record. A later
+outcome-free review found that its `Sample floors = PASS / all floors bound`
+statement was overstated: `FrozenExperimentConfig` bound development and formal
+OOS floors but omitted the manifest's validation floor. Therefore the accurate
+state for that specific binding at R1D was:
+
+| Requirement | R1D state | R2 final state | Evidence |
+|---|---|---|---|
+| Development sample floor | PASS — 90 typed | PASS — 90 typed | `sample_and_dependence.episode_floors.development` |
+| Validation sample floor | PARTIAL — not typed | PASS — 30 typed | `sample_and_dependence.episode_floors.validation`; `ValidationSampleFloor` |
+| Formal OOS sample floor | PASS — 30 typed | PASS — 30 typed | `sample_and_dependence.episode_floors.formal_oos` |
+
+R2 corrects this omission before any new independent recovery OOS access. No
+historical manifest or contaminated result was rewritten, and no performance
+was inspected.

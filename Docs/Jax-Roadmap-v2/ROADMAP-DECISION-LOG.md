@@ -1,5 +1,32 @@
 # Roadmap Decision Log
 
+## RD-2026-09-14-08 - VAL-03R2 recovery preregistration and OOS boundary freeze
+
+- Work package: `VAL-03R2 — RECOVERY PREREGISTRATION & INDEPENDENT OOS BOUNDARY FREEZE`.
+- External authorization: GO for outcome-free contract work only. `VAL-03R1D`
+  is accepted and the harness corrective loop is closed for the identified
+  defects.
+- The contaminated VAL-03 formal OOS remains immutable and is never rerun:
+  formal run count `1`, `no_rerun=true`, classification
+  `CONTAMINATED_FOR_FORMAL_OOS`. The v1.5 parent manifest remains unchanged.
+- R2 creates a distinct recovery identity for `ma_crossover_v1`, inherits the
+  accepted R1B/R1C/R1D policy identities, and freezes a new independent OOS
+  boundary of `2025-01-01..2026-09-11`. The incomplete `2026-09-14` session and
+  all later dates are excluded; no post-result extension is permitted.
+- Structural feasibility is recorded only mathematically: nine instruments
+  provide a maximum of nine 2025 instrument-year blocks and eighteen over the
+  two-year recovery boundary, against the registered twelve-block floor. No
+  signal, episode, regime, return or outcome count was inspected.
+- R2 corrects the outcome-free typed-contract omission discovered in the prior
+  conformance history: `ValidationSampleFloor` is now parsed directly from
+  `sample_and_dependence.episode_floors.validation` and equals `30`, alongside
+  development `90` and OOS `30`.
+- Provider contract is fixed to Alpaca SIP 1Day, RAW/SPLIT/SPLIT+SPIN-OFF,
+  fallback NONE, zero paid spend. R2 does not call Alpaca or acquire data.
+- `VAL-03R2 = COMPLETE / EXTERNAL REVIEW REQUIRED`; new independent OOS,
+  recovery data acquisition, forward paper and Phase 13 remain unauthorized or
+  not started.
+
 ## RD-2026-09-14-07 - VAL-03R1D sign-permutation null integrity closure
 
 - Work package: `VAL-03R1D — SIGN-PERMUTATION NULL INTEGRITY CLOSURE`.
