@@ -563,15 +563,16 @@ func simulateDirectional(d *instrumentData, symbol string, sig signal, entryInde
 		return directionalObservation{}, entryIndex, false
 	}
 	next := d.Split[entryDate]
-	if direction == "BUY" {
+	switch direction {
+	case "BUY":
 		if !geometryValid(sig.Stop, next.Open, sig.Target) {
 			return directionalObservation{}, entryIndex, false
 		}
-	} else if direction == "SELL" {
+	case "SELL":
 		if !(sig.Target < next.Open && next.Open < sig.Stop) {
 			return directionalObservation{}, entryIndex, false
 		}
-	} else {
+	default:
 		return directionalObservation{}, entryIndex, false
 	}
 	exitIndex, exitSplit := -1, 0.0
