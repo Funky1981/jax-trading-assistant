@@ -30,7 +30,7 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03R1A — FULL MANIFEST CONFORMANCE; EXTERNAL REVIEW REQUIRED** |
+| Current implementation package | **VAL-03R1B — FALSIFICATION & PROMOTION INTEGRITY CLOSURE; EXTERNAL REVIEW REQUIRED** |
 | Next package | **New independent OOS boundary NOT AUTHORIZED; contaminated VAL-03 remains closed** |
 
 The current package context is the `capability-reset` sequence. Package

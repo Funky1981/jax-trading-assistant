@@ -1,5 +1,23 @@
 # Roadmap Decision Log
 
+## RD-2026-09-14-05 - VAL-03R1B falsification and promotion integrity closure
+
+- Work package: `VAL-03R1B — FALSIFICATION & PROMOTION INTEGRITY CLOSURE`.
+- External authorization: GO for bounded, outcome-free harness correction.
+- The contaminated VAL-03 run remains immutable and invalid for both promotion
+  and rejection. Manifest v1.5 remains unchanged; formal run count remains 1
+  with `no_rerun=true`.
+- The harness now uses ceil-based top-five removal with a blocking concentration
+  disposition, explicit typed secondary directional observations with
+  independent SHA-256 signs, and calendar-year × SPY-regime breadth cells.
+- Promotion classification explicitly respects blocking semantics. Synthetic
+  tests cover boundary sample sizes, sign determinism/order invariance, breadth,
+  blocking, and weekday/holiday trading-session overlap.
+- No development/validation/OOS result, 2025/2026 data, broker action, paper
+  activity or Phase 13 work occurred. A new independent OOS remains
+  `NOT AUTHORIZED` pending external review.
+- `VAL-03R1B = COMPLETE / EXTERNAL REVIEW REQUIRED`.
+
 ## RD-2026-09-14-04 - VAL-03R1A manifest conformance closure
 
 - Work package: `VAL-03R1A — FULL MANIFEST SEMANTIC CONFORMANCE CLOSURE`.
