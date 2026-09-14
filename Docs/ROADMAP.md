@@ -30,8 +30,8 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03R2 — RECOVERY PREREGISTRATION & INDEPENDENT OOS BOUNDARY FREEZE; EXTERNAL REVIEW REQUIRED** |
-| Next package | **Recovery data acquisition/readiness NOT AUTHORIZED; contaminated VAL-03 remains closed** |
+| Current implementation package | **VAL-03R3 — RECOVERY READINESS, DATASET & EXECUTION FREEZE; EXTERNAL REVIEW REQUIRED** |
+| Next package | **VAL-03R4 — SINGLE REPLACEMENT FORMAL OOS EXECUTION; NOT AUTHORIZED** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -39,6 +39,9 @@ acceptance is recorded in the relevant evidence and review handovers.
 mixed-stratum, persisted-breadth, and fail-closed-disposition findings without
 rerunning the contaminated VAL-03 experiment. A new independent OOS remains
 `NOT AUTHORIZED` pending external review.
+`VAL-03R3` has now passed outcome-free pre-holdout readiness and structural
+recovery data-quality checks locally. Recovery performance remains frozen and
+not started pending the separate VAL-03R4 authorization.
 `VAL-03R1D` corrects the remaining secondary null-statistic integrity defect;
 its null now uses deterministic assigned signs multiplied by fixed absolute
 magnitudes, with outcome-free regression coverage. `VAL-03R2` freezes a new,

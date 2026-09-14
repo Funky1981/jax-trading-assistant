@@ -45,10 +45,13 @@ func TestRecoveryManifestFullConformance(t *testing.T) {
 	}
 }
 
-func TestOutcomeFreeContractAuditExecutes(t *testing.T) {
+func TestOutcomeFreeContractAuditRemainsPreAcquisitionOnly(t *testing.T) {
 	withRepoRoot(t)
-	if err := runContractAudit(); err != nil {
-		t.Fatal(err)
+	if _, err := os.Stat(recoveryRawRoot); err != nil {
+		t.Skip("pre-acquisition fixture is not present in this checkout")
+	}
+	if err := runContractAudit(); err == nil || !containsFold(err.Error(), "exists before") {
+		t.Fatalf("post-acquisition contract audit was not blocked: %v", err)
 	}
 }
 

@@ -1,5 +1,26 @@
 # Roadmap Decision Log
 
+## RD-2026-09-14-09 - VAL-03R3 local recovery readiness and performance lock
+
+- External review rejected a roadmap change and authorized continuation from
+  the exact `e14495fb923e9f1c882a71a88bc4dff88ce7aa9c` state. The original
+  2023-2024 formal OOS remains `CONTAMINATED_FOR_FORMAL_OOS`, run count `1`,
+  and is never rerun.
+- The local `.runtime/val03b/raw` evidence was verified against all 33
+  previously bound payload hashes. No historical evidence was reacquired.
+- Outcome-free readiness passed: development `326` against floor `90`, and
+  validation `104` against floor `30`. No performance fields are persisted.
+- Under the already accepted R2 contract, Alpaca recovery bars for the exact
+  2025-01-01..2026-09-11 boundary and RAW/SPLIT/SPLIT+SPIN-OFF families were
+  acquired for data quality only. The structural artifact reports 424
+  synchronized sessions, no out-of-range rows, and no detected spin-off
+  boundary. No signals, episodes, returns or outcomes were calculated.
+- R3's dedicated recovery runner is performance-locked to contract-audit and
+  preflight-only modes. Recovery performance remains unstarted; VAL-03R4 is
+  the next separately authorized package.
+- `VAL-03R3` remains external-review-required. Forward paper and Phase 13 are
+  not started; safety boundaries remain unchanged.
+
 ## RD-2026-09-14-08 - VAL-03R2 recovery preregistration and OOS boundary freeze
 
 - Work package: `VAL-03R2 — RECOVERY PREREGISTRATION & INDEPENDENT OOS BOUNDARY FREEZE`.
