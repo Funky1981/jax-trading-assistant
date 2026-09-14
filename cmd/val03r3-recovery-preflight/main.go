@@ -1,6 +1,6 @@
 // Command val03r3-recovery-preflight performs the outcome-free VAL-03R3
-// recovery contract audit and pre-holdout readiness count. It is deliberately
-// incapable of recovery OOS performance execution.
+// recovery contract audit and pre-holdout readiness count. It cannot execute
+// recovery OOS performance.
 package main
 
 import (
@@ -14,30 +14,28 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 )
 
 const (
-	parentManifestPath          = "Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json"
-	recoveryManifestPath        = "Docs/validation/manifests/VAL-03R2-ma_crossover_v1-RECOVERY-PREREGISTRATION.json"
-	integrityPath               = "Docs/validation/results/VAL-03-HYP-MA-001-INTEGRITY-REVIEW.json"
-	barFamilyPath               = "Docs/validation/results/VAL-03B-DATASET-READINESS.json"
-	readinessOutputPath         = "Docs/validation/results/VAL-03R3-PRE-HOLDOUT-READINESS.json"
-	oldRawRoot                  = ".runtime/val03b/raw"
-	recoveryRawRoot             = ".runtime/val03r3/raw"
-	parentManifestSHA256        = "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a"
-	recoveryManifestSHA256      = "c19a4cfc774a7bf53466d9bcf5705bd3813f69258a9600291883db48aab490eb"
-	barFamilySHA256             = "78c1fbeec2122eebba1a8dbe21c2edfc3c569377770561afe9e128cd633037e5"
-	val03cReadinessSHA256       = "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce"
-	recoveryStart               = "2025-01-01"
-	recoveryEnd                 = "2026-09-11"
-	developmentStart            = "2016-01-01"
-	developmentEnd              = "2020-12-31"
-	validationStart             = "2021-01-01"
-	validationEnd               = "2022-12-31"
-	readinessMaxDate            = validationEnd
-	factorTolerance             = 5e-4
+	parentManifestPath     = "Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json"
+	recoveryManifestPath   = "Docs/validation/manifests/VAL-03R2-ma_crossover_v1-RECOVERY-PREREGISTRATION.json"
+	integrityPath          = "Docs/validation/results/VAL-03-HYP-MA-001-INTEGRITY-REVIEW.json"
+	barFamilyPath          = "Docs/validation/results/VAL-03B-DATASET-READINESS.json"
+	readinessOutputPath    = "Docs/validation/results/VAL-03R3-PRE-HOLDOUT-READINESS.json"
+	oldRawRoot             = ".runtime/val03b/raw"
+	recoveryRawRoot        = ".runtime/val03r3/raw"
+	parentManifestSHA256   = "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a"
+	recoveryManifestSHA256 = "c19a4cfc774a7bf53466d9bcf5705bd3813f69258a9600291883db48aab490eb"
+	barFamilySHA256        = "78c1fbeec2122eebba1a8dbe21c2edfc3c569377770561afe9e128cd633037e5"
+	recoveryStart          = "2025-01-01"
+	recoveryEnd            = "2026-09-11"
+	developmentStart       = "2016-01-01"
+	developmentEnd         = "2020-12-31"
+	validationStart        = "2021-01-01"
+	validationEnd          = "2022-12-31"
+	readinessMaxDate       = validationEnd
+	factorTolerance        = 5e-4
 )
 
 var expectedUniverse = []string{"SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"}
@@ -63,21 +61,21 @@ type recoveryManifest struct {
 		ManifestSHA256 string `json:"manifest_sha256"`
 	} `json:"parent"`
 	Candidate struct {
-		CandidateID                    string  `json:"candidate_id"`
-		StrategyVersion                string  `json:"strategy_version"`
-		PrimaryClaim                   string  `json:"primary_claim"`
-		ActionableConfidenceThreshold  float64 `json:"actionable_confidence_threshold"`
-		SMAFast                        int     `json:"sma_fast"`
-		SMAMedium                      int     `json:"sma_medium"`
-		SMASlow                        int     `json:"sma_slow"`
-		ATRPeriod                      int     `json:"atr_period"`
-		AvgVolumePeriod                int     `json:"avg_volume_period"`
-		StopATR                        float64 `json:"stop_atr"`
-		TargetATR                      float64 `json:"target_atr"`
-		HoldingPeriodSessions          int     `json:"holding_period_sessions"`
-		ReferenceCapitalUSD            int     `json:"reference_capital_usd"`
-		QuantityConvention             string  `json:"quantity_convention"`
-		ParameterChangePermitted       bool    `json:"parameter_change_permitted"`
+		CandidateID                   string  `json:"candidate_id"`
+		StrategyVersion               string  `json:"strategy_version"`
+		PrimaryClaim                  string  `json:"primary_claim"`
+		ActionableConfidenceThreshold float64 `json:"actionable_confidence_threshold"`
+		SMAFast                       int     `json:"sma_fast"`
+		SMAMedium                     int     `json:"sma_medium"`
+		SMASlow                       int     `json:"sma_slow"`
+		ATRPeriod                     int     `json:"atr_period"`
+		AvgVolumePeriod               int     `json:"avg_volume_period"`
+		StopATR                       float64 `json:"stop_atr"`
+		TargetATR                     float64 `json:"target_atr"`
+		HoldingPeriodSessions         int     `json:"holding_period_sessions"`
+		ReferenceCapitalUSD           int     `json:"reference_capital_usd"`
+		QuantityConvention            string  `json:"quantity_convention"`
+		ParameterChangePermitted      bool    `json:"parameter_change_permitted"`
 	} `json:"candidate"`
 	InheritedPolicies []string `json:"inherited_policies"`
 	SourceIdentities  map[string]struct {
@@ -85,104 +83,104 @@ type recoveryManifest struct {
 		BlobSHA1 string `json:"blob_sha1"`
 	} `json:"source_identities"`
 	RecoveryBoundary struct {
-		Start                       string `json:"start"`
-		End                         string `json:"end"`
-		ScoredSessions              string `json:"scored_sessions"`
-		ExcludedIncompleteSession   string `json:"excluded_incomplete_session"`
-		PostResultExtensionAllowed  bool   `json:"post_result_extension_allowed"`
-		ExtensionRequiresNewID      bool   `json:"extension_requires_new_preregistration"`
+		Start                      string `json:"start"`
+		End                        string `json:"end"`
+		ScoredSessions             string `json:"scored_sessions"`
+		ExcludedIncompleteSession  string `json:"excluded_incomplete_session"`
+		PostResultExtensionAllowed bool   `json:"post_result_extension_allowed"`
+		ExtensionRequiresNewID     bool   `json:"extension_requires_new_preregistration"`
 	} `json:"recovery_oos_boundary"`
 	StructuralFeasibility struct {
-		UniverseInstruments       int  `json:"universe_instruments"`
-		RecoveryYears             int  `json:"recovery_years"`
-		Max2025Blocks             int  `json:"maximum_theoretical_2025_blocks"`
-		MaxRecoveryBlocks         int  `json:"maximum_theoretical_recovery_blocks"`
-		EffectiveBlockFloor       int  `json:"effective_block_floor"`
-		OutcomeCountsInspected    bool `json:"outcome_counts_inspected"`
+		UniverseInstruments    int  `json:"universe_instruments"`
+		RecoveryYears          int  `json:"recovery_years"`
+		Max2025Blocks          int  `json:"maximum_theoretical_2025_blocks"`
+		MaxRecoveryBlocks      int  `json:"maximum_theoretical_recovery_blocks"`
+		EffectiveBlockFloor    int  `json:"effective_block_floor"`
+		OutcomeCountsInspected bool `json:"outcome_counts_inspected"`
 	} `json:"structural_feasibility"`
 	Warmup struct {
-		Source                           string `json:"source"`
-		Mode                             string `json:"mode"`
-		PreRecoveryState                 string `json:"pre_recovery_state"`
-		PreRecoveryPerformanceIncluded   bool   `json:"pre_recovery_performance_included"`
-		ContaminatedResultReused         bool   `json:"contaminated_2023_2024_result_reused"`
+		Source                         string `json:"source"`
+		Mode                           string `json:"mode"`
+		PreRecoveryState               string `json:"pre_recovery_state"`
+		PreRecoveryPerformanceIncluded bool   `json:"pre_recovery_performance_included"`
+		ContaminatedResultReused       bool   `json:"contaminated_2023_2024_result_reused"`
 	} `json:"warmup"`
 	Provider struct {
-		Provider                       string   `json:"provider"`
-		Feed                           string   `json:"feed"`
-		Timeframe                      string   `json:"timeframe"`
-		Universe                       []string `json:"universe"`
-		AdjustmentFamilies             []string `json:"adjustment_families"`
-		Route                          string   `json:"route"`
-		Fallback                       string   `json:"fallback"`
-		PaidSpendUSD                   int      `json:"paid_spend_usd"`
-		RawBytesBeforeNormalization    bool     `json:"raw_bytes_before_normalization"`
-		ProviderCallsAuthorizedInR2    bool     `json:"provider_calls_authorized_in_r2"`
-		RequestDateGuard               string   `json:"request_date_guard"`
+		Provider                    string   `json:"provider"`
+		Feed                        string   `json:"feed"`
+		Timeframe                   string   `json:"timeframe"`
+		Universe                    []string `json:"universe"`
+		AdjustmentFamilies          []string `json:"adjustment_families"`
+		Route                       string   `json:"route"`
+		Fallback                    string   `json:"fallback"`
+		PaidSpendUSD                int      `json:"paid_spend_usd"`
+		RawBytesBeforeNormalization bool     `json:"raw_bytes_before_normalization"`
+		ProviderCallsAuthorizedInR2 bool     `json:"provider_calls_authorized_in_r2"`
+		RequestDateGuard            string   `json:"request_date_guard"`
 	} `json:"provider_contract"`
 	SampleFloors struct {
-		Development                         int    `json:"development"`
-		Validation                          int    `json:"validation"`
-		RecoveryOOS                         int    `json:"recovery_oos"`
-		Paired                              int    `json:"paired"`
-		InstrumentYearBlocks                int    `json:"instrument_year_blocks"`
-		Instruments                         int    `json:"instruments"`
-		YearRegimeCells                     int    `json:"year_regime_cells"`
-		ReadinessFailure                    string `json:"development_validation_readiness_failure"`
+		Development          int    `json:"development"`
+		Validation           int    `json:"validation"`
+		RecoveryOOS          int    `json:"recovery_oos"`
+		Paired               int    `json:"paired"`
+		InstrumentYearBlocks int    `json:"instrument_year_blocks"`
+		Instruments          int    `json:"instruments"`
+		YearRegimeCells      int    `json:"year_regime_cells"`
+		ReadinessFailure     string `json:"development_validation_readiness_failure"`
 	} `json:"sample_floors"`
 	PromotionGates struct {
-		PrimaryMeanNetLongReturn        string  `json:"primary_mean_net_long_return"`
-		PrimaryBootstrapLowerBound      string  `json:"primary_block_bootstrap_lower_bound"`
-		PairedMeanDifference            string  `json:"paired_mean_difference"`
-		PairedBootstrapLowerBound       string  `json:"paired_bootstrap_lower_bound"`
-		ConcentrationCeiling            float64 `json:"concentration_ceiling"`
-		TopFiveConcentration            string  `json:"top_five_concentration"`
-		BlockingFalsification           string  `json:"blocking_falsification"`
-		DataQuality                     string  `json:"data_quality"`
-		UnknownMaterialStatus           string  `json:"unknown_material_status"`
-		SecondarySignPermutation        string  `json:"secondary_sign_permutation"`
+		PrimaryMeanNetLongReturn   string  `json:"primary_mean_net_long_return"`
+		PrimaryBootstrapLowerBound string  `json:"primary_block_bootstrap_lower_bound"`
+		PairedMeanDifference       string  `json:"paired_mean_difference"`
+		PairedBootstrapLowerBound  string  `json:"paired_bootstrap_lower_bound"`
+		ConcentrationCeiling       float64 `json:"concentration_ceiling"`
+		TopFiveConcentration       string  `json:"top_five_concentration"`
+		BlockingFalsification      string  `json:"blocking_falsification"`
+		DataQuality                string  `json:"data_quality"`
+		UnknownMaterialStatus      string  `json:"unknown_material_status"`
+		SecondarySignPermutation   string  `json:"secondary_sign_permutation"`
 	} `json:"promotion_gates"`
 	NoPostResultSalvage struct {
-		ParameterTuning             bool `json:"parameter_tuning"`
-		ThresholdTuning             bool `json:"threshold_tuning"`
-		UniverseSubstitution        bool `json:"universe_substitution"`
-		DateExtension               bool `json:"date_extension"`
-		InstrumentDroppingOrAdding  bool `json:"instrument_dropping_or_adding"`
-		CostChange                  bool `json:"cost_change"`
-		PlaceboChange               bool `json:"placebo_change"`
-		BootstrapChange             bool `json:"bootstrap_change"`
-		FalsificationChange         bool `json:"falsification_change"`
-		RegimeChange                bool `json:"regime_change"`
-		TopFivePolicyChange         bool `json:"top_five_policy_change"`
-		NewExperimentRequired       bool `json:"new_experiment_required_for_change"`
+		ParameterTuning            bool `json:"parameter_tuning"`
+		ThresholdTuning            bool `json:"threshold_tuning"`
+		UniverseSubstitution       bool `json:"universe_substitution"`
+		DateExtension              bool `json:"date_extension"`
+		InstrumentDroppingOrAdding bool `json:"instrument_dropping_or_adding"`
+		CostChange                 bool `json:"cost_change"`
+		PlaceboChange              bool `json:"placebo_change"`
+		BootstrapChange            bool `json:"bootstrap_change"`
+		FalsificationChange        bool `json:"falsification_change"`
+		RegimeChange               bool `json:"regime_change"`
+		TopFivePolicyChange        bool `json:"top_five_policy_change"`
+		NewExperimentRequired      bool `json:"new_experiment_required_for_change"`
 	} `json:"no_post_result_salvage"`
 	ContaminatedRun struct {
-		Artifact                    string `json:"artifact"`
-		FormalOOSRunCount           int    `json:"formal_oos_run_count"`
-		NoRerun                     bool   `json:"no_rerun"`
-		Classification              string `json:"classification"`
-		OldRunnerExecution           string `json:"old_runner_execution"`
+		Artifact           string `json:"artifact"`
+		FormalOOSRunCount  int    `json:"formal_oos_run_count"`
+		NoRerun            bool   `json:"no_rerun"`
+		Classification     string `json:"classification"`
+		OldRunnerExecution string `json:"old_runner_execution"`
 	} `json:"contaminated_run_guard"`
 	OutcomeFreeAudit struct {
-		NoMarketDataAccess          bool   `json:"no_market_data_access"`
-		No2025Access                bool   `json:"no_2025_access"`
-		No2026Access                bool   `json:"no_2026_access"`
-		NoSignalCounts              bool   `json:"no_signal_counts"`
-		NoEpisodeCounts             bool   `json:"no_episode_counts"`
-		NoOutcomeAccess             bool   `json:"no_outcome_access"`
-		NoExecution                 bool   `json:"no_execution"`
-		NoPostResultExtension       bool   `json:"no_post_result_extension"`
-		Command                     string `json:"command"`
+		NoMarketDataAccess    bool   `json:"no_market_data_access"`
+		No2025Access          bool   `json:"no_2025_access"`
+		No2026Access          bool   `json:"no_2026_access"`
+		NoSignalCounts        bool   `json:"no_signal_counts"`
+		NoEpisodeCounts       bool   `json:"no_episode_counts"`
+		NoOutcomeAccess       bool   `json:"no_outcome_access"`
+		NoExecution           bool   `json:"no_execution"`
+		NoPostResultExtension bool   `json:"no_post_result_extension"`
+		Command               string `json:"command"`
 	} `json:"outcome_free_audit"`
 	Safety struct {
-		ExecutionAuthority          string  `json:"execution_authority"`
-		CreatesFill                 bool    `json:"creates_fill"`
-		AllowLiveTrading            bool    `json:"allow_live_trading"`
-		BrokerExecutionAllowed      bool    `json:"broker_execution_allowed"`
-		ExecutionEnabled            bool    `json:"execution_enabled"`
-		MaximumLeverage             float64 `json:"maximum_leverage"`
-		ForwardPaper                string  `json:"forward_paper"`
-		Phase13                     string  `json:"phase_13"`
+		ExecutionAuthority     string  `json:"execution_authority"`
+		CreatesFill            bool    `json:"creates_fill"`
+		AllowLiveTrading       bool    `json:"allow_live_trading"`
+		BrokerExecutionAllowed bool    `json:"broker_execution_allowed"`
+		ExecutionEnabled       bool    `json:"execution_enabled"`
+		MaximumLeverage        float64 `json:"maximum_leverage"`
+		ForwardPaper           string  `json:"forward_paper"`
+		Phase13                string  `json:"phase_13"`
 	} `json:"safety"`
 }
 
@@ -223,24 +221,21 @@ type bar struct {
 type instrumentData struct {
 	Raw, Split, Detector map[string]bar
 	Dates                []string
-	Factor               map[string]float64
 	Boundaries           map[string]bool
 }
 
 type signal struct {
-	Date                           string
-	Confidence, SMA50, ATR14       float64
-	Stop, Target                   float64
+	Confidence, Stop, Target float64
 }
 
 type readinessResult struct {
-	ContractID                 string `json:"contract_id"`
-	R2ManifestSHA256           string `json:"r2_manifest_sha256"`
-	ParentManifestSHA256       string `json:"parent_manifest_sha256"`
-	DevelopmentEligibleEpisodes int   `json:"development_eligible_primary_episodes"`
-	ValidationEligibleEpisodes  int   `json:"validation_eligible_primary_episodes"`
-	DevelopmentFloor            int   `json:"development_floor"`
-	ValidationFloor             int   `json:"validation_floor"`
+	ContractID                  string `json:"contract_id"`
+	R2ManifestSHA256            string `json:"r2_manifest_sha256"`
+	ParentManifestSHA256        string `json:"parent_manifest_sha256"`
+	DevelopmentEligibleEpisodes int    `json:"development_eligible_primary_episodes"`
+	ValidationEligibleEpisodes  int    `json:"validation_eligible_primary_episodes"`
+	DevelopmentFloor            int    `json:"development_floor"`
+	ValidationFloor             int    `json:"validation_floor"`
 	DevelopmentReadiness        string `json:"development_readiness"`
 	ValidationReadiness         string `json:"validation_readiness"`
 	RecoveryReadiness           string `json:"recovery_readiness"`
@@ -254,17 +249,17 @@ func main() {
 	if len(os.Args) != 2 {
 		fatal(errors.New("usage: val03r3-recovery-preflight --contract-audit|--pre-holdout-readiness"))
 	}
+	var err error
 	switch os.Args[1] {
 	case "--contract-audit":
-		if err := runContractAudit(); err != nil {
-			fatal(err)
-		}
+		err = runContractAudit()
 	case "--pre-holdout-readiness":
-		if err := runPreHoldoutReadiness(); err != nil {
-			fatal(err)
-		}
+		err = runPreHoldoutReadiness()
 	default:
-		fatal(errors.New("unsupported mode"))
+		err = errors.New("unsupported mode")
+	}
+	if err != nil {
+		fatal(err)
 	}
 }
 
@@ -282,9 +277,6 @@ func runContractAudit() error {
 		return err
 	}
 	for key, source := range m.SourceIdentities {
-		if source.Path == "" || source.BlobSHA1 == "" {
-			return fmt.Errorf("source identity %s incomplete", key)
-		}
 		actual, err := gitBlobSHA1(source.Path)
 		if err != nil {
 			return fmt.Errorf("hash source %s: %w", key, err)
@@ -342,7 +334,7 @@ func validateRecoveryManifest(m recoveryManifest) error {
 		return errors.New("inherited policy mismatch")
 	}
 	b := m.RecoveryBoundary
-	if b.Start != recoveryStart || b.End != recoveryEnd || b.ScoredSessions != "valid US regular sessions only" || b.ExcludedIncompleteSession != "2026-09-14" || b.PostResultExtensionAllowed || !b.ExtensionRequiresNewID {
+	if b.Start != recoveryStart || b.End != recoveryEnd || b.ScoredSessions != "valid US regular sessions only" || b.ExcludedIncompleteSession != "2026-09-14" || b.PostResultExtensionAllowed || !b.ExtensionRequiresNewID || !recoveryDateAllowed(b.Start) || !recoveryDateAllowed(b.End) || recoveryDateAllowed("2026-09-12") {
 		return errors.New("recovery boundary mismatch")
 	}
 	s := m.StructuralFeasibility
@@ -428,19 +420,19 @@ func runPreHoldoutReadiness() error {
 		return fmt.Errorf("validation readiness: %w", err)
 	}
 	result := readinessResult{
-		ContractID: "jax.val-03r3.pre-holdout-readiness/v1",
-		R2ManifestSHA256: recoveryManifestSHA256,
-		ParentManifestSHA256: parentManifestSHA256,
+		ContractID:                  "jax.val-03r3.pre-holdout-readiness/v1",
+		R2ManifestSHA256:            recoveryManifestSHA256,
+		ParentManifestSHA256:        parentManifestSHA256,
 		DevelopmentEligibleEpisodes: dev,
-		ValidationEligibleEpisodes: val,
-		DevelopmentFloor: m.SampleFloors.Development,
-		ValidationFloor: m.SampleFloors.Validation,
-		DevelopmentReadiness: passFail(dev >= m.SampleFloors.Development),
-		ValidationReadiness: passFail(val >= m.SampleFloors.Validation),
-		ReturnsCalculated: false,
-		PerformanceMetricsEmitted: false,
-		ContaminatedOOSUsed: false,
-		RecoveryDataAccessed: false,
+		ValidationEligibleEpisodes:  val,
+		DevelopmentFloor:            m.SampleFloors.Development,
+		ValidationFloor:             m.SampleFloors.Validation,
+		DevelopmentReadiness:        passFail(dev >= m.SampleFloors.Development),
+		ValidationReadiness:         passFail(val >= m.SampleFloors.Validation),
+		ReturnsCalculated:           false,
+		PerformanceMetricsEmitted:   false,
+		ContaminatedOOSUsed:         false,
+		RecoveryDataAccessed:        false,
 	}
 	if dev >= m.SampleFloors.Development && val >= m.SampleFloors.Validation {
 		result.RecoveryReadiness = "PASS"
@@ -472,9 +464,9 @@ func loadPreRecoveryData() (map[string]*instrumentData, error) {
 	if len(input.Families) == 0 {
 		return nil, errors.New("bar-family artifact contains no family references")
 	}
-	data := map[string]*instrumentData{}
+	data := make(map[string]*instrumentData, len(expectedUniverse))
 	for _, symbol := range expectedUniverse {
-		data[symbol] = &instrumentData{Raw: map[string]bar{}, Split: map[string]bar{}, Detector: map[string]bar{}, Factor: map[string]float64{}, Boundaries: map[string]bool{}}
+		data[symbol] = &instrumentData{Raw: map[string]bar{}, Split: map[string]bar{}, Detector: map[string]bar{}, Boundaries: map[string]bool{}}
 	}
 	for _, family := range input.Families {
 		d := data[family.Instrument]
@@ -501,10 +493,7 @@ func loadPreRecoveryData() (map[string]*instrumentData, error) {
 					return nil, errors.New("provider timestamp too short")
 				}
 				date := item.Timestamp[:10]
-				if date > readinessMaxDate {
-					continue
-				}
-				if date < "2016-01-01" {
+				if date < "2016-01-01" || date > readinessMaxDate {
 					continue
 				}
 				bb := bar{Date: date, Open: item.Open, High: item.High, Low: item.Low, Close: item.Close, Volume: item.Volume}
@@ -541,7 +530,6 @@ func loadPreRecoveryData() (map[string]*instrumentData, error) {
 				return nil, fmt.Errorf("invalid bar %s %s", symbol, date)
 			}
 			factor := split.Close / raw.Close
-			d.Factor[date] = factor
 			if previous != 0 && math.Abs(factor-previous) > factorTolerance*math.Max(1, math.Max(factor, previous)) {
 				d.Boundaries[date] = true
 			}
@@ -564,10 +552,7 @@ func countEligibleEpisodes(data map[string]*instrumentData, start, end string, m
 				continue
 			}
 			sig, kind := buildSignal(d, i, m)
-			if kind != "BUY" || sig.Confidence < m.Candidate.ActionableConfidenceThreshold {
-				continue
-			}
-			if i <= activeUntil {
+			if kind != "BUY" || sig.Confidence < m.Candidate.ActionableConfidenceThreshold || i <= activeUntil {
 				continue
 			}
 			entryIndex := i + 1
@@ -601,9 +586,9 @@ func buildSignal(d *instrumentData, i int, m recoveryManifest) (signal, string) 
 	sm := avgClose(d, i, m.Candidate.SMAMedium)
 	ss := avgClose(d, i, m.Candidate.SMASlow)
 	price := d.Split[d.Dates[i]].Close
-	atr := atr(d, i, m.Candidate.ATRPeriod)
+	atrValue := atr(d, i, m.Candidate.ATRPeriod)
 	avgVol := avgVolume(d, i, m.Candidate.AvgVolumePeriod)
-	s := signal{Date: d.Dates[i], Confidence: 0.65, SMA50: sm, ATR14: atr}
+	s := signal{Confidence: 0.65}
 	if sf > sm && sm > ss && price > sf {
 		s.Confidence += 0.12
 		if d.Split[d.Dates[i]].Volume > avgVol {
@@ -612,11 +597,9 @@ func buildSignal(d *instrumentData, i int, m recoveryManifest) (signal, string) 
 		if (sf-ss)/ss > 0.05 {
 			s.Confidence += 0.10
 		}
-		if s.Confidence > 1 {
-			s.Confidence = 1
-		}
-		s.Stop = sm - atr*m.Candidate.StopATR
-		s.Target = price + m.Candidate.TargetATR*atr
+		s.Confidence = math.Min(s.Confidence, 1)
+		s.Stop = sm - atrValue*m.Candidate.StopATR
+		s.Target = price + m.Candidate.TargetATR*atrValue
 		return s, "BUY"
 	}
 	if sf < sm && sm < ss && price < sf {
@@ -631,18 +614,14 @@ func readinessExitIndex(d *instrumentData, sig signal, entryIndex int, partition
 		if idx >= len(d.Dates) || d.Dates[idx] > partitionEnd {
 			return 0, false
 		}
-		date := d.Dates[idx]
-		if d.Boundaries[date] {
+		if d.Boundaries[d.Dates[idx]] {
 			return 0, false
 		}
-		b := d.Split[date]
+		b := d.Split[d.Dates[idx]]
 		if offset > 0 && (b.Open <= sig.Stop || b.Open >= sig.Target) {
 			return idx, true
 		}
-		if b.Low <= sig.Stop || b.High >= sig.Target {
-			return idx, true
-		}
-		if offset == holding-1 {
+		if b.Low <= sig.Stop || b.High >= sig.Target || offset == holding-1 {
 			return idx, true
 		}
 	}
@@ -699,7 +678,7 @@ func gitBlobSHA1(path string) (string, error) {
 		return "", err
 	}
 	h := sha1.New()
-	_, _ = h.Write([]byte(fmt.Sprintf("blob %d\x00", len(b))))
+	_, _ = fmt.Fprintf(h, "blob %d\x00", len(b))
 	_, _ = h.Write(b)
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
@@ -734,12 +713,8 @@ func equalStrings(a, b []string) bool {
 	}
 	for i := range a {
 		if a[i] != b[i] {
-		return false
+			return false
 		}
 	}
 	return true
 }
-
-// compile-time references retained to make static expectations explicit.
-var _ = strings.Builder{}
-var _ = val03cReadinessSHA256
