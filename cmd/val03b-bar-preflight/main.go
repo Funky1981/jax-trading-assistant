@@ -19,12 +19,25 @@ import (
 )
 
 const (
-	startDate = "2015-01-01"
-	endDate   = "2024-12-31"
-	asOfDate  = "2024-12-31"
+	legacyStartDate   = "2015-01-01"
+	legacyEndDate     = "2024-12-31"
+	legacyAsOfDate    = "2024-12-31"
+	recoveryStartDate = "2025-01-01"
+	recoveryEndDate   = "2026-09-11"
+	recoveryAsOfDate  = "2026-09-11"
 )
 
 var symbols = []string{"SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"}
+
+var (
+	startDate     = legacyStartDate
+	endDate       = legacyEndDate
+	asOfDate      = legacyAsOfDate
+	rawRoot       = filepath.Join(".runtime", "val03b", "raw")
+	outputPath    = filepath.Join("Docs", "validation", "results", "VAL-03B-DATASET-READINESS.json")
+	payloadPrefix = "rpa_val03b_"
+	recoveryMode  bool
+)
 
 type fileStore struct {
 	root string
@@ -132,6 +145,16 @@ type preflightArtifact struct {
 }
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "--recovery-data-quality" {
+		recoveryMode = true
+		startDate, endDate, asOfDate = recoveryStartDate, recoveryEndDate, recoveryAsOfDate
+		rawRoot = filepath.Join(".runtime", "val03r3", "raw")
+		outputPath = filepath.Join("Docs", "validation", "results", "VAL-03R3-RECOVERY-DATASET-READINESS.json")
+		payloadPrefix = "rpa_val03r3_"
+	} else if len(os.Args) > 1 {
+		fmt.Fprintln(os.Stderr, "usage: val03b-bar-preflight [--recovery-data-quality]")
+		os.Exit(2)
+	}
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "VAL-03B_PREFLIGHT=BLOCKED: %v\n", err)
 		os.Exit(1)
@@ -141,7 +164,11 @@ func main() {
 func run() error {
 	start, _ := time.Parse("2006-01-02", startDate)
 	end, _ := time.Parse("2006-01-02", endDate)
-	if err := marketdata.ValidateVAL03BDateRange(start.UTC(), end.UTC()); err != nil {
+	if recoveryMode {
+		if !validRecoveryRange(start.UTC(), end.UTC(), asOfDate) {
+			return errors.New("VAL-03R3 recovery range must be 2025-01-01..2026-09-11 with ASOF 2026-09-11")
+		}
+	} else if err := marketdata.ValidateVAL03BDateRange(start.UTC(), end.UTC()); err != nil {
 		return err
 	}
 	key := configValue("ALPACA_API_KEY")
@@ -153,11 +180,17 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	store, err := newFileStore(filepath.Join(".runtime", "val03b", "raw"))
+	store, err := newFileStore(rawRoot)
 	if err != nil {
 		return err
 	}
-	artifact := preflightArtifact{ContractVersion: "jax.val-03b.bar-family-readiness/v1", Status: "IN_PROGRESS", GeneratedAt: time.Now().UTC().Format(time.RFC3339Nano), Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", AsOf: asOfDate, DateRange: [2]string{startDate, endDate}, Universe: append([]string(nil), symbols...), CompleteNo2025Guard: true, PerformanceOutput: false, SourceContract: "raw + split + split,spin-off through hardened Alpaca route"}
+	contractVersion := "jax.val-03b.bar-family-readiness/v1"
+	sourceContract := "raw + split + split,spin-off through hardened Alpaca route"
+	if recoveryMode {
+		contractVersion = "jax.val-03r3.recovery-dataset-readiness/v1"
+		sourceContract = "recovery raw + split + split,spin-off through hardened Alpaca route; data quality only"
+	}
+	artifact := preflightArtifact{ContractVersion: contractVersion, Status: "IN_PROGRESS", GeneratedAt: time.Now().UTC().Format(time.RFC3339Nano), Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", AsOf: asOfDate, DateRange: [2]string{startDate, endDate}, Universe: append([]string(nil), symbols...), CompleteNo2025Guard: true, PerformanceOutput: false, SourceContract: sourceContract}
 	series := make(map[string]map[string]map[string]marketdata.VAL03BPriceFrame)
 	coverageBlocked := false
 	for _, symbol := range symbols {
@@ -199,11 +232,11 @@ func run() error {
 	}
 	if coverageBlocked {
 		artifact.Status = "BLOCKED_INCOMPLETE_DATE_COVERAGE"
-		artifact.Error = "one or more adjustment families do not cover the requested 2015-01-01 start"
+		artifact.Error = "one or more adjustment families do not cover the requested start boundary"
 		if err := writeArtifact(artifact); err != nil {
 			return err
 		}
-		return errors.New("DATASET_BLOCKED: requested 2015-01-01 warm-up coverage is unavailable")
+		return errors.New("DATASET_BLOCKED: requested start boundary is unavailable")
 	}
 	sort.Strings(artifact.SpinOffBoundaries)
 	if len(artifact.SpinOffBoundaries) > 0 {
@@ -251,7 +284,7 @@ func acquire(ctx context.Context, provider *marketdata.AlpacaProvider, store pro
 	start, _ := time.Parse("2006-01-02", startDate)
 	end, _ := time.Parse("2006-01-02", endDate)
 	asOf, _ := time.Parse("2006-01-02", asOfDate)
-	return provider.AcquireAndNormalizeDailyBars(ctx, marketdata.AlpacaBarsDependencies{Registry: registry, Executor: executor, Store: store, Pipeline: pipeline}, marketdata.AlpacaBarsRequest{Instrument: instrument, StartDate: start.UTC(), EndDate: end.UTC(), AsOfDate: asOf.UTC(), Interval: marketdata.Timeframe1Day, Feed: marketdata.MarketFeedSIP, Adjustment: adjustment, PayloadID: providercontract.RawPayloadID("rpa_val03b_" + strings.ToLower(symbol) + "_" + adjustmentKey(adjustment)), Retention: retention()})
+	return provider.AcquireAndNormalizeDailyBars(ctx, marketdata.AlpacaBarsDependencies{Registry: registry, Executor: executor, Store: store, Pipeline: pipeline}, marketdata.AlpacaBarsRequest{Instrument: instrument, StartDate: start.UTC(), EndDate: end.UTC(), AsOfDate: asOf.UTC(), Interval: marketdata.Timeframe1Day, Feed: marketdata.MarketFeedSIP, Adjustment: adjustment, PayloadID: providercontract.RawPayloadID(payloadPrefix + strings.ToLower(symbol) + "_" + adjustmentKey(adjustment)), Retention: retention()})
 }
 
 func qualityFor(symbol string, adjustment marketdata.MarketAdjustmentState, result marketdata.AlpacaBarsResult) (familyQuality, map[string]marketdata.VAL03BPriceFrame, error) {
@@ -259,7 +292,7 @@ func qualityFor(symbol string, adjustment marketdata.MarketAdjustmentState, resu
 	frames := make(map[string]marketdata.VAL03BPriceFrame, len(result.Bars))
 	previous := ""
 	for _, bar := range result.Bars {
-		if err := marketdata.ValidateVAL03BProviderDate(bar.ProviderDate); err != nil {
+		if err := validateProviderDate(bar.ProviderDate); err != nil {
 			return familyQuality{}, nil, err
 		}
 		if previous != "" && bar.ProviderDate <= previous {
@@ -278,7 +311,7 @@ func qualityFor(symbol string, adjustment marketdata.MarketAdjustmentState, resu
 	quality.FirstSession = result.Bars[0].ProviderDate
 	quality.LastSession = result.Bars[len(result.Bars)-1].ProviderDate
 	quality.RequestedStartCoverage = "PASS"
-	if quality.FirstSession > startDate {
+	if !recoveryMode && quality.FirstSession > startDate {
 		quality.RequestedStartCoverage = "BLOCKED_REQUESTED_START_NOT_COVERED"
 	}
 	for _, raw := range result.RawPayloads {
@@ -350,6 +383,28 @@ func instrumentFor(symbol string) canonical.Instrument {
 	return canonical.Instrument{ContractVersion: canonical.InstrumentContractV1, ID: canonical.InstrumentID("ins_val03b_" + strings.ToLower(symbol)), Type: canonical.InstrumentTypeEquity, Name: symbol, Currency: "USD", CreatedAt: time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC), ExternalIDs: []canonical.ExternalID{{Namespace: "ticker.us", Value: symbol}}}
 }
 
+func validRecoveryRange(start, end time.Time, asOf string) bool {
+	return start.Format("2006-01-02") == recoveryStartDate &&
+		end.Format("2006-01-02") == recoveryEndDate &&
+		asOf == recoveryAsOfDate
+}
+
+func validateProviderDate(providerDate string) error {
+	date, err := time.Parse("2006-01-02", strings.TrimSpace(providerDate))
+	if err != nil {
+		return fmt.Errorf("provider date is invalid: %w", err)
+	}
+	if recoveryMode {
+		start, _ := time.Parse("2006-01-02", recoveryStartDate)
+		end, _ := time.Parse("2006-01-02", recoveryEndDate)
+		if date.Before(start) || date.After(end) {
+			return fmt.Errorf("recovery provider date outside sealed boundary: %s", providerDate)
+		}
+		return nil
+	}
+	return marketdata.ValidateVAL03BProviderDate(providerDate)
+}
+
 func configValue(name string) string {
 	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 		return value
@@ -379,7 +434,7 @@ func operationalPolicy() providercontract.OperationalPolicy {
 }
 
 func writeArtifact(artifact preflightArtifact) error {
-	path := filepath.Join("Docs", "validation", "results", "VAL-03B-DATASET-READINESS.json")
+	path := outputPath
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
