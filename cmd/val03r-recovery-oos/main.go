@@ -28,6 +28,9 @@ const (
 	recoveryEnd        = "2026-09-11"
 )
 
+var expectedRecoveryUniverse = []string{"SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"}
+var expectedAdjustmentFamilies = []string{"RAW", "SPLIT", "SPLIT+SPIN-OFF"}
+
 type readinessArtifact struct {
 	DevelopmentEpisodes int    `json:"development_eligible_primary_episodes"`
 	ValidationEpisodes  int    `json:"validation_eligible_primary_episodes"`
@@ -132,7 +135,7 @@ func validateContract() error {
 	if contract.Status != "FROZEN_FOR_DATA_QUALITY_ACQUISITION" || contract.Candidate != "ma_crossover_v1" || contract.PerformanceAuthorized || contract.SignalsAuthorized {
 		return errors.New("recovery data contract is not outcome-free")
 	}
-	if contract.Provider.Name != "Alpaca" || contract.Provider.Feed != "SIP" || contract.Provider.Timeframe != "1Day" || contract.Provider.AsOf != recoveryEnd || contract.Provider.Fallback != "NONE" || contract.Provider.PaidSpendUSD != 0 || contract.Provider.RawRoot != ".runtime/val03r3/raw" || contract.Provider.Request.Start != recoveryStart || contract.Provider.Request.End != recoveryEnd || !contract.Provider.Request.RejectBefore || !contract.Provider.Request.RejectAfter || !contract.Provider.Request.RejectExplicit20260914 {
+	if contract.Provider.Name != "Alpaca" || contract.Provider.Feed != "SIP" || contract.Provider.Timeframe != "1Day" || contract.Provider.AsOf != recoveryEnd || contract.Provider.Fallback != "NONE" || contract.Provider.PaidSpendUSD != 0 || contract.Provider.RawRoot != ".runtime/val03r3/raw" || !sameStrings(contract.Provider.Families, expectedAdjustmentFamilies) || !sameStrings(contract.Provider.Universe, expectedRecoveryUniverse) || contract.Provider.Request.Start != recoveryStart || contract.Provider.Request.End != recoveryEnd || !contract.Provider.Request.RejectBefore || !contract.Provider.Request.RejectAfter || !contract.Provider.Request.RejectExplicit20260914 {
 		return errors.New("recovery provider or request identity mismatch")
 	}
 	if contract.Execution.Authority != "NONE" || contract.Execution.CreatesFill || contract.Execution.LiveTrading || contract.Execution.BrokerAllowed || contract.Execution.Enabled || contract.Execution.Leverage != 1 || contract.Lifecycle.PerformanceExecuted || contract.Lifecycle.RunCount != 0 || contract.Lifecycle.PostBoundary {
@@ -146,6 +149,18 @@ func validateContract() error {
 		return errors.New("recovery dataset readiness is not a structural PASS")
 	}
 	return nil
+}
+
+func sameStrings(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func verifySHA(path, expected string) error {

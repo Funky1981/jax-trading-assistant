@@ -2,7 +2,8 @@
 
 ## Status
 
-`VAL-03R3 = IN PROGRESS`.
+`VAL-03R3 = RECOVERY READINESS + DATASET + EXECUTION FREEZE COMPLETE /
+EXTERNAL REVIEW REQUIRED`.
 
 The static contract-conformance stage passed, and the local hash-bound
 pre-recovery evidence was verified without reacquisition. Outcome-free
@@ -12,6 +13,13 @@ no strategy signals, episodes, returns or performance artifacts were produced.
 
 The dedicated recovery runner is performance-locked. R3 may complete only by
 freezing the future execution contract; VAL-03R4 remains separately gated.
+
+The frozen execution artifact is
+`Docs/validation/results/VAL-03R3-RECOVERY-OOS-EXECUTION-FREEZE.json`.
+Its SHA-256 is
+`4fc66036cdbc9218bbe37ca23d8dbd6366a6f062ad68090e0164ce9f70c51ee7`.
+Its lifecycle is `performance_execution_started=false`,
+`performance_artifacts_written=false`, and `performance_run_count=0`.
 
 ## Immutable scientific boundary
 

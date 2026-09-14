@@ -1,0 +1,112 @@
+{
+  "contract_id": "jax.val-03r3.recovery-oos-execution-freeze/v1",
+  "status": "FROZEN_FOR_FUTURE_AUTHORIZATION",
+  "candidate_id": "ma_crossover_v1",
+  "parent_manifest_sha256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a",
+  "r2_manifest_sha256": "c19a4cfc774a7bf53466d9bcf5705bd3813f69258a9600291883db48aab490eb",
+  "r3_conformance_sha256": "d1799329cadf925fbf78f213ab15c546570c93f6942253664cf290a4a8ca3f60",
+  "r3_readiness_sha256": "10ddf19ef8a2b6612ba65efe9c0685c1b46a015cfc41091a442a10117baf0f28",
+  "r3_data_contract_sha256": "9fb35ef0be7e1378a72f04ba5c10d0cf838d94ef57115772469308ab28f14cf0",
+  "r3_dataset_readiness_sha256": "f4bb7c1f05b009bd4d2d284533137c1151693fd9cc59e76871581c144fa8f73f",
+  "val03b_bar_family_sha256": "78c1fbeec2122eebba1a8dbe21c2edfc3c569377770561afe9e128cd633037e5",
+  "val03c_readiness_sha256": "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce",
+  "runner": {
+    "path": "cmd/val03r-recovery-oos/main.go",
+    "blob_sha1": "14bf87edf4400422ae05f4106b7bf39e37dd87e8",
+    "performance_lock": "CONTRACT_AUDIT_AND_PREFLIGHT_ONLY_UNTIL_VAL03R4",
+    "allowed_modes": ["--contract-audit", "--preflight-only"],
+    "arbitrary_threshold_override": false
+  },
+  "strategy_identity": {
+    "source_path": "libs/strategies/ma_crossover.go",
+    "blob_sha1": "fb22b9dd909a0ae5f13dd727ff2eddf40963d426",
+    "candidate_version": "ma_crossover_v1"
+  },
+  "provider_identity": {
+    "provider": "Alpaca",
+    "route": "libs/marketdata/alpaca_hardened.go",
+    "feed": "SIP",
+    "timeframe": "1Day",
+    "asof": "2026-09-11",
+    "boundary": {
+      "start": "2025-01-01",
+      "end": "2026-09-11",
+      "partial_2026_calendar_year": true,
+      "post_boundary_extension": false
+    },
+    "universe": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"],
+    "adjustment_families": ["RAW", "SPLIT", "SPLIT+SPIN-OFF"],
+    "fallback": "NONE",
+    "paid_spend_usd": 0,
+    "raw_root": ".runtime/val03r3/raw"
+  },
+  "frozen_execution_terms": {
+    "actionable_confidence_threshold": 0.60,
+    "threshold_source": "parent_manifest",
+    "sma_periods": [20, 50, 200],
+    "atr_period": 14,
+    "avg_volume_period": 20,
+    "primary_population": "ACTIONABLE_LONG_EPISODES",
+    "entry": "NEXT_REGULAR_SESSION_OPEN",
+    "pre_entry_invalidation": "LONG_STOP_LT_NEXT_OPEN_LT_TARGET",
+    "stop": "SIGNAL_SMA50_MINUS_SIGNAL_ATR14",
+    "target": "SIGNAL_CLOSE_PLUS_3_X_SIGNAL_ATR14",
+    "holding_period_sessions": 20,
+    "reference_capital_usd": 10000,
+    "quantity_convention": "WHOLE_SHARES_FLOOR_10000_DIVIDED_BY_RAW_NEXT_OPEN",
+    "base_cost_model_id": "cost_val03_ibkr_fixed_personal_base_v1",
+    "stress_cost_model_id": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8",
+    "placebo_policy_id": "MIXED_INSTRUMENT_YEAR_ONLY_V1",
+    "bootstrap_policy_id": "INSTRUMENT_YEAR_BLOCK_PERCENTILE_10000_V1",
+    "sample_floors": {
+      "development": 90,
+      "validation": 30,
+      "recovery_oos": 30,
+      "effective_non_empty_instrument_year_blocks": 12
+    },
+    "concentration_ceiling": 0.40,
+    "inherited_falsification_policy_ids": [
+      "CEIL_5_PERCENT_V1",
+      "CALENDAR_YEAR_X_SPY_SMA200_REGIME_V1",
+      "SECONDARY_DIRECTIONAL_PRICE_EFFECT_V1",
+      "SHA256_INDEPENDENT_SIGN_ASSIGNMENT_V1",
+      "MIXED_INSTRUMENT_YEAR_ONLY_V1",
+      "FAIL_CLOSED_UNKNOWN_STATUS_V1",
+      "SIGN_X_ABSOLUTE_MAGNITUDE_NULL_V1"
+    ],
+    "random_seed_domains": [
+      "instrument-year-bootstrap-v2",
+      "timestamp-placebo-v1",
+      "secondary-sign-permutation-v1"
+    ]
+  },
+  "partitions": {
+    "warmup": "MINIMUM_PRECEDING_VALID_SESSIONS_FROM_HASH_BOUND_PRE_RECOVERY_EVIDENCE",
+    "recovery_oos": "2025-01-01..2026-09-11",
+    "partial_2026_semantics": "PARTIAL_CALENDAR_YEAR_INSTRUMENT_BLOCK",
+    "final_holdout": "NONE_AFTER_RECOVERY_RECLASSIFICATION"
+  },
+  "future_result_schema": "jax.val-03r4.recovery-oos-results/v1",
+  "future_execution_command": "go run ./cmd/val03r-recovery-oos --execute",
+  "authorization_requirements": [
+    "VAL-03R4_EXPLICIT_EXTERNAL_AUTHORIZATION",
+    "THIS_EXECUTION_FREEZE_PRESENT_AND_HASH_VERIFIED",
+    "ALL_INHERITED_IDENTITIES_HASH_VERIFIED"
+  ],
+  "lifecycle": {
+    "performance_execution_started": false,
+    "performance_artifacts_written": false,
+    "performance_run_count": 0,
+    "recovery_oos_status": "NOT_STARTED / FROZEN_FOR_FUTURE_AUTHORIZATION"
+  },
+  "safety": {
+    "execution_authority": "NONE",
+    "creates_fill": false,
+    "allow_live_trading": false,
+    "broker_execution_allowed": false,
+    "execution_enabled": false,
+    "maximum_leverage": 1,
+    "forward_paper": "NOT_STARTED",
+    "phase_13": "NOT_STARTED"
+  }
+}

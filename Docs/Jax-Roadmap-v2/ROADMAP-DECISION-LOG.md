@@ -18,8 +18,13 @@
 - R3's dedicated recovery runner is performance-locked to contract-audit and
   preflight-only modes. Recovery performance remains unstarted; VAL-03R4 is
   the next separately authorized package.
-- `VAL-03R3` remains external-review-required. Forward paper and Phase 13 are
-  not started; safety boundaries remain unchanged.
+- The recovery OOS execution-freeze artifact binds the runner identity,
+  inherited contracts, recovery boundary, threshold, sample floors, cost and
+  placebo policies, and lifecycle `performance_run_count=0`. It does not
+  authorize execution.
+- `VAL-03R3 = RECOVERY READINESS + DATASET + EXECUTION FREEZE COMPLETE /
+  EXTERNAL REVIEW REQUIRED`. Forward paper and Phase 13 are not started;
+  safety boundaries remain unchanged.
 
 ## RD-2026-09-14-08 - VAL-03R2 recovery preregistration and OOS boundary freeze
 
