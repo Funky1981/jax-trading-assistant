@@ -40,6 +40,13 @@ func TestRecoveryManifestFullConformance(t *testing.T) {
 	}
 }
 
+func TestOutcomeFreeContractAuditExecutes(t *testing.T) {
+	withRepoRoot(t)
+	if err := runContractAudit(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRecoveryDateGuardIsExact(t *testing.T) {
 	for _, date := range []string{"2025-01-01", "2026-01-02", "2026-09-11"} {
 		if !recoveryDateAllowed(date) {
