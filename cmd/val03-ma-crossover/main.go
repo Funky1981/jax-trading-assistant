@@ -22,6 +22,7 @@ const (
 	manifestPath  = "Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json"
 	readyPath     = "Docs/validation/results/VAL-03C-DATASET-READINESS.json"
 	barFamilyPath = "Docs/validation/results/VAL-03B-DATASET-READINESS.json"
+	integrityPath = "Docs/validation/results/VAL-03-HYP-MA-001-INTEGRITY-REVIEW.json"
 	rawRoot       = ".runtime/val03b/raw"
 	dataStart     = "2016-01-01"
 	dataEnd       = "2024-12-31"
@@ -125,6 +126,24 @@ func run() error {
 	if manifestHash != "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a" {
 		return errors.New("manifest hash mismatch")
 	}
+	cfg, err := loadFrozenExperimentConfig(manifestBytes, manifestHash)
+	if err != nil {
+		return err
+	}
+	guard, err := contaminatedRunGuard(integrityPath)
+	if err != nil {
+		return fmt.Errorf("validate contaminated-run guard: %w", err)
+	}
+	if preflightOnly() {
+		if !guard {
+			return errors.New("contaminated-run guard is not active")
+		}
+		fmt.Printf("VAL03_PREFLIGHT=PASS candidate=%s threshold=%.2f holdout=%s no_rerun=true outcomes_calculated=false\n", cfg.CandidateID, cfg.ActionableConfidenceThreshold, cfg.HoldoutStart)
+		return nil
+	}
+	if guard {
+		return errors.New("contaminated VAL-03 execution identity is immutable; new preregistration required")
+	}
 	if readyHash != "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce" {
 		return errors.New("readiness hash mismatch")
 	}
@@ -152,10 +171,10 @@ func run() error {
 	if err := validateData(data); err != nil {
 		return err
 	}
-	partitions := map[string][2]string{"development": {"2016-01-01", "2020-12-31"}, "validation": {"2021-01-01", "2022-12-31"}, "formal_oos": {"2023-01-01", "2024-12-31"}}
+	partitions := map[string][2]string{"development": {cfg.DevelopmentStart, cfg.DevelopmentEnd}, "validation": {cfg.ValidationStart, cfg.ValidationEnd}, "formal_oos": {cfg.OOSStart, cfg.OOSEnd}}
 	results := map[string]partitionResult{}
 	for name, dates := range partitions {
-		r, err := evaluatePartition(data, name, dates[0], dates[1], 20, 50, 200, 1)
+		r, err := evaluatePartition(data, name, dates[0], dates[1], cfg)
 		if err != nil {
 			return err
 		}
@@ -163,14 +182,14 @@ func run() error {
 	}
 	for _, name := range []string{"development", "validation", "formal_oos"} {
 		r := results[name]
-		if err := attachPlacebos(data, &r); err != nil {
+		if err := attachPlacebos(data, &r, cfg, manifestHash); err != nil {
 			return err
 		}
 		results[name] = r
 	}
 	for _, name := range []string{"development", "validation", "formal_oos"} {
 		r := results[name]
-		applyBootstrap(&r, manifestHash)
+		applyBootstrap(&r, manifestHash, cfg)
 		results[name] = r
 	}
 	oos := results["formal_oos"]
@@ -181,12 +200,12 @@ func run() error {
 	if len(oos.Episodes) >= 30 && oos.MatchedPairs >= 30 && oos.Blocks >= 12 && oos.Instruments >= 6 && oos.MaxInstrumentShare <= 0.4 && oos.RegimeSlices >= 3 && oos.MeanNet > 0 && oos.BootstrapLow > 0 && oos.MeanPairedDifference > 0 && oos.PairedBootstrapLow > 0 {
 		classification = "FORWARD_PAPER_ELIGIBLE"
 	}
-	falsification := buildFalsification(data, oos, manifestHash)
-	out := runOutput{ContractVersion: "jax.val-03.ma-crossover-result/v1", ManifestSHA256: manifestHash, DatasetReadinessSHA256: readyHash, Runner: "cmd/val03-ma-crossover", ExecutionAuthority: "NONE", CreatesFill: false, Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", Universe: append([]string(nil), symbols...), DataStart: dataStart, DataEnd: dataEnd, HoldoutAccessed: false, PerformanceRunCount: 1, Partitions: results, Falsification: falsification, AbstentionTotals: totalAbstentions(results), DataQuality: qualitySummary(data), TerminalClassification: classification}
+	falsification := buildFalsification(data, oos, manifestHash, cfg)
+	out := runOutput{ContractVersion: "jax.val-03.ma-crossover-result/v1", ManifestSHA256: manifestHash, DatasetReadinessSHA256: readyHash, Runner: "cmd/val03-ma-crossover", ExecutionAuthority: "NONE", CreatesFill: false, Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", Universe: append([]string(nil), symbols...), DataStart: dataStart, DataEnd: dataEnd, HoldoutAccessed: false, PerformanceRunCount: 1, Partitions: results, Falsification: falsification, AbstentionTotals: totalAbstentions(results), DataQuality: qualitySummary(data, true), TerminalClassification: classification}
 	if err := writeJSON("Docs/validation/results/VAL-03-HYP-MA-001-RUN-MANIFEST.json", out); err != nil {
 		return err
 	}
-	if err := writeJSON("Docs/validation/results/VAL-03-HYP-MA-001-DATASET.json", qualitySummary(data)); err != nil {
+	if err := writeJSON("Docs/validation/results/VAL-03-HYP-MA-001-DATASET.json", qualitySummary(data, false)); err != nil {
 		return err
 	}
 	for name, result := range results {
@@ -207,6 +226,16 @@ func validateDateRange(start, end string) error {
 	}
 	if end >= holdoutStart {
 		return fmt.Errorf("VAL-03 range reaches sealed holdout: %s", end)
+	}
+	return nil
+}
+
+func validateProviderDate(date string) error {
+	if len(date) < 10 {
+		return errors.New("provider timestamp too short")
+	}
+	if date[:10] >= holdoutStart {
+		return fmt.Errorf("holdout row %s", date[:10])
 	}
 	return nil
 }
@@ -233,13 +262,10 @@ func loadData(ready readinessInput) (map[string]*instrumentData, error) {
 				return nil, err
 			}
 			for _, item := range p.Bars[family.Instrument] {
-				if len(item.Timestamp) < 10 {
-					return nil, errors.New("provider timestamp too short")
+				if err := validateProviderDate(item.Timestamp); err != nil {
+					return nil, err
 				}
 				date := item.Timestamp[:10]
-				if date >= holdoutStart {
-					return nil, fmt.Errorf("holdout row %s", date)
-				}
 				b := bar{Date: date, Open: item.Open, High: item.High, Low: item.Low, Close: item.Close, Volume: item.Volume}
 				switch family.Adjustment {
 				case "raw":
@@ -304,7 +330,8 @@ func validateData(data map[string]*instrumentData) error {
 	return nil
 }
 
-func evaluatePartition(data map[string]*instrumentData, name, start, end string, fast, medium, slow int, gate float64) (partitionResult, error) {
+func evaluatePartition(data map[string]*instrumentData, name, start, end string, cfg FrozenExperimentConfig) (partitionResult, error) {
+	fast, medium, slow := cfg.SMAFast, cfg.SMAMedium, cfg.SMASlow
 	r := partitionResult{Partition: name, Start: start, End: end, Abstentions: map[string]int{}}
 	for _, symbol := range symbols {
 		d := data[symbol]
@@ -314,7 +341,7 @@ func evaluatePartition(data map[string]*instrumentData, name, start, end string,
 				continue
 			}
 			r.SignalObservations++
-			sig, kind := buildSignal(d, i, fast, medium, slow)
+			sig, kind := buildSignal(d, i, fast, medium, slow, cfg)
 			if kind == "HOLD" {
 				r.Abstentions["HOLD"]++
 				continue
@@ -323,7 +350,7 @@ func evaluatePartition(data map[string]*instrumentData, name, start, end string,
 				r.BearishDiagnostics++
 				continue
 			}
-			if sig.Confidence < gate {
+			if !actionableByConfig(sig.Confidence, cfg) {
 				r.Abstentions["below-confidence"]++
 				continue
 			}
@@ -331,16 +358,16 @@ func evaluatePartition(data map[string]*instrumentData, name, start, end string,
 				r.Abstentions["active-position suppression"]++
 				continue
 			}
-			if i+1 >= len(d.Dates) {
+			if entryIndexForSignal(i) >= len(d.Dates) {
 				r.Abstentions["incomplete data"]++
 				continue
 			}
-			next := d.Split[d.Dates[i+1]]
+			next := d.Split[d.Dates[entryIndexForSignal(i)]]
 			if !geometryValid(sig.Stop, next.Open, sig.Target) {
 				r.Abstentions["PRE_ENTRY_INVALIDATED"]++
 				continue
 			}
-			ep, exitIndex, ok := simulateLong(d, symbol, sig, i+1, 1)
+			ep, exitIndex, ok := simulateLong(d, symbol, sig, entryIndexForSignal(i), 1, cfg)
 			if !ok {
 				r.Abstentions["structural_action_invalidated"]++
 				continue
@@ -355,12 +382,45 @@ func evaluatePartition(data map[string]*instrumentData, name, start, end string,
 }
 
 func geometryValid(stop, open, target float64) bool { return stop < open && open < target }
-func buildSignal(d *instrumentData, i, fast, medium, slow int) (signal, string) {
+
+func entryIndexForSignal(signalIndex int) int { return signalIndex + 1 }
+
+func openingCrossExit(open, stop, target float64) (float64, bool) {
+	if open <= stop {
+		return open, true
+	}
+	if open >= target {
+		return open, true
+	}
+	return 0, false
+}
+
+func intrabarExit(low, high, stop, target float64) (float64, bool) {
+	if low <= stop {
+		return stop, true
+	}
+	if high >= target {
+		return target, true
+	}
+	return 0, false
+}
+
+func matchedPlaceboScore(manifestHash, instrument, signalDate, candidateDate string) string {
+	return sha256Hex([]byte(manifestHash + "|matched-placebo-v1|" + instrument + "|" + signalDate + "|" + candidateDate))
+}
+
+func quantityForCapital(capital, open float64) int {
+	if open <= 0 {
+		return 0
+	}
+	return int(math.Floor(capital / open))
+}
+func buildSignal(d *instrumentData, i, fast, medium, slow int, cfg FrozenExperimentConfig) (signal, string) {
 	if i < slow-1 {
 		return signal{}, "HOLD"
 	}
 	sf, sm, ss := avgWindow(d, i, fast), avgWindow(d, i, medium), avgWindow(d, i, slow)
-	vol, atr := avgVolume(d, i, 20), atr14(d, i)
+	vol, atr := avgVolume(d, i, cfg.AvgVolumePeriod), atr14(d, i, cfg.ATRPeriod)
 	price := d.Split[d.Dates[i]].Close
 	s := signal{Date: d.Dates[i], Confidence: 0.65, SMA20: sf, SMA50: sm, SMA200: ss, ATR14: atr}
 	if sf > sm && sm > ss && price > sf {
@@ -411,28 +471,29 @@ func avgVolume(d *instrumentData, i, n int) float64 {
 	}
 	return avg(v)
 }
-func atr14(d *instrumentData, i int) float64 {
+
+func atr14(d *instrumentData, i, period int) float64 {
 	total := 0.0
-	for j := i - 13; j <= i; j++ {
+	for j := i - period + 1; j <= i; j++ {
 		b, p := d.Split[d.Dates[j]], d.Split[d.Dates[j-1]].Close
 		total += math.Max(b.High-b.Low, math.Max(math.Abs(b.High-p), math.Abs(b.Low-p)))
 	}
-	return total / 14
+	return total / float64(period)
 }
-func simulateLong(d *instrumentData, symbol string, sig signal, entryIndex int, atrScale float64) (episode, int, bool) {
+func simulateLong(d *instrumentData, symbol string, sig signal, entryIndex int, atrScale float64, cfg FrozenExperimentConfig) (episode, int, bool) {
 	if entryIndex >= len(d.Dates) {
 		return episode{}, entryIndex, false
 	}
 	entryDate := d.Dates[entryIndex]
 	rawEntry := d.Raw[entryDate].Open
-	qty := int(math.Floor(10000 / rawEntry))
+	qty := quantityForCapital(10000, rawEntry)
 	if qty < 1 {
 		return episode{}, entryIndex, false
 	}
-	stop := sig.SMA50 - sig.ATR14*atrScale
-	target := d.Split[sig.Date].Close + 3*sig.ATR14*atrScale
+	stop := sig.SMA50 - sig.ATR14*cfg.StopATR*atrScale
+	target := d.Split[sig.Date].Close + cfg.TargetATR*sig.ATR14*atrScale
 	exitIndex, exitSplit := -1, 0.0
-	for offset := 0; offset < 20; offset++ {
+	for offset := 0; offset < cfg.HoldingPeriod; offset++ {
 		idx := entryIndex + offset
 		if idx >= len(d.Dates) {
 			return episode{}, entryIndex, false
@@ -442,23 +503,17 @@ func simulateLong(d *instrumentData, symbol string, sig signal, entryIndex int, 
 			return episode{}, idx, false
 		}
 		b := d.Split[date]
-		if offset > 0 && b.Open <= stop {
-			exitIndex, exitSplit = idx, b.Open
+		if offset > 0 {
+			if opening, crossed := openingCrossExit(b.Open, stop, target); crossed {
+				exitIndex, exitSplit = idx, opening
+				break
+			}
+		}
+		if touched, crossed := intrabarExit(b.Low, b.High, stop, target); crossed {
+			exitIndex, exitSplit = idx, touched
 			break
 		}
-		if offset > 0 && b.Open >= target {
-			exitIndex, exitSplit = idx, b.Open
-			break
-		}
-		if b.Low <= stop {
-			exitIndex, exitSplit = idx, stop
-			break
-		}
-		if b.High >= target {
-			exitIndex, exitSplit = idx, target
-			break
-		}
-		if offset == 19 {
+		if offset == cfg.HoldingPeriod-1 {
 			exitIndex, exitSplit = idx, b.Close
 			break
 		}
@@ -467,8 +522,8 @@ func simulateLong(d *instrumentData, symbol string, sig signal, entryIndex int, 
 		return episode{}, entryIndex, false
 	}
 	rawExit := exitSplit / d.Factor[d.Dates[exitIndex]]
-	base := netReturn(rawEntry, rawExit, qty, 4, 5, 0)
-	stress := netReturnFixed(rawEntry, rawExit, qty, 5, 10, 15, 0.5)
+	base := netReturn(rawEntry, rawExit, qty, cfg.BaseSpreadBPS, cfg.BaseSlippageBPS, cfg.BaseImpactBPS)
+	stress := netReturnFixed(rawEntry, rawExit, qty, cfg.StressSpreadBPS, cfg.StressSlippageBPS, cfg.StressImpactBPS, 0.5)
 	ep := episode{ID: fmt.Sprintf("%s-%s", symbol, sig.Date), Instrument: symbol, SignalDate: sig.Date, EntryDate: entryDate, ExitDate: d.Dates[exitIndex], Duration: exitIndex - entryIndex + 1, GrossReturn: rawExit/rawEntry - 1, NetReturn: base, StressNetReturn: stress, Year: yearOf(sig.Date)}
 	return ep, exitIndex, true
 }
@@ -500,7 +555,7 @@ func regimeBreadth(eps []episode) int {
 	}
 	return len(years)
 }
-func attachPlacebos(data map[string]*instrumentData, r *partitionResult) error {
+func attachPlacebos(data map[string]*instrumentData, r *partitionResult, cfg FrozenExperimentConfig, manifestHash string) error {
 	if len(r.Episodes) == 0 {
 		return nil
 	}
@@ -516,21 +571,23 @@ func attachPlacebos(data map[string]*instrumentData, r *partitionResult) error {
 		ep := &r.Episodes[i]
 		d := data[ep.Instrument]
 		signalIndex := indexOf(d.Dates, ep.SignalDate)
-		best, bestDist := "", 999999
+		best, bestDist, bestScore := "", 999999, ""
 		for idx, date := range d.Dates {
 			if date < r.Start || date > r.End || date[:4] != ep.SignalDate[:4] || actual[ep.Instrument][date] || idx < minLookback || idx+20 >= len(d.Dates) {
 				continue
 			}
 			dist := absInt(idx - signalIndex)
-			if dist <= 60 && dist < bestDist {
+			score := matchedPlaceboScore(manifestHash, ep.Instrument, ep.SignalDate, date)
+			if dist <= 60 && (dist < bestDist || (dist == bestDist && (bestScore == "" || score < bestScore))) {
 				best, bestDist = date, dist
+				bestScore = score
 			}
 		}
 		if best == "" {
 			r.Abstentions["no matched placebo"]++
 			continue
 		}
-		p, ok := fixedHorizonReturn(d, best)
+		p, ok := fixedHorizonReturn(d, best, cfg)
 		if !ok {
 			r.Abstentions["no matched placebo"]++
 			continue
@@ -545,20 +602,20 @@ func attachPlacebos(data map[string]*instrumentData, r *partitionResult) error {
 	}
 	return nil
 }
-func fixedHorizonReturn(d *instrumentData, date string) (float64, bool) {
+func fixedHorizonReturn(d *instrumentData, date string, cfg FrozenExperimentConfig) (float64, bool) {
 	i := indexOf(d.Dates, date)
-	if i < 0 || i+20 >= len(d.Dates) {
+	if i < 0 || i+cfg.HoldingPeriod >= len(d.Dates) {
 		return 0, false
 	}
-	entry, exit := d.Dates[i+1], d.Dates[i+20]
+	entry, exit := d.Dates[i+1], d.Dates[i+cfg.HoldingPeriod]
 	rawEntry, rawExit := d.Raw[entry].Open, d.Raw[exit].Close
-	qty := int(math.Floor(10000 / rawEntry))
+	qty := quantityForCapital(10000, rawEntry)
 	if qty < 1 {
 		return 0, false
 	}
-	return netReturn(rawEntry, rawExit, qty, 4, 5, 0), true
+	return netReturn(rawEntry, rawExit, qty, cfg.BaseSpreadBPS, cfg.BaseSlippageBPS, cfg.BaseImpactBPS), true
 }
-func applyBootstrap(r *partitionResult, manifestHash string) {
+func applyBootstrap(r *partitionResult, manifestHash string, cfg FrozenExperimentConfig) {
 	blocks := map[string][]episode{}
 	for _, e := range r.Episodes {
 		id := fmt.Sprintf("%s-%d", e.Instrument, e.Year)
@@ -575,7 +632,7 @@ func applyBootstrap(r *partitionResult, manifestHash string) {
 	}
 	rng := seedFor(manifestHash, "|instrument-year-bootstrap-v2|")
 	values, paired := make([]float64, bootstrapN), make([]float64, bootstrapN)
-	for k := 0; k < bootstrapN; k++ {
+	for k := 0; k < cfg.BootstrapN; k++ {
 		total, diff := 0.0, 0.0
 		count, pairCount := 0, 0
 		for j := 0; j < len(ids); j++ {
@@ -603,7 +660,7 @@ func applyBootstrap(r *partitionResult, manifestHash string) {
 		r.PairedBootstrapLow, r.PairedBootstrapHigh = paired[250], paired[9749]
 	}
 }
-func buildFalsification(data map[string]*instrumentData, oos partitionResult, manifestHash string) map[string]any {
+func buildFalsification(data map[string]*instrumentData, oos partitionResult, manifestHash string, cfg FrozenExperimentConfig) map[string]any {
 	top := append([]episode(nil), oos.Episodes...)
 	sort.Slice(top, func(i, j int) bool { return top[i].NetReturn > top[j].NetReturn })
 	remove := int(math.Ceil(0.05 * float64(len(top))))
@@ -614,7 +671,7 @@ func buildFalsification(data map[string]*instrumentData, oos partitionResult, ma
 	if remove < len(top) {
 		after = mean(top[remove:], func(e episode) float64 { return e.NetReturn })
 	}
-	return map[string]any{"matched_non_signal_placebo": map[string]any{"pairs": oos.MatchedPairs, "mean_difference": oos.MeanPairedDifference, "bootstrap_low": oos.PairedBootstrapLow}, "timestamp_placebo": timestampPlacebo(data, oos, manifestHash), "secondary_sign_permutation": map[string]any{"status": "NOT_APPLICABLE_PRIMARY_LONG_ONLY"}, "top_5_percent_exclusion": map[string]any{"removed": remove, "mean_before": oos.MeanNet, "mean_after": after}, "leave_one_instrument_out": leaveOneOut(oos), "regime_slices": descriptiveSlices(oos, "regime"), "theme_slices": descriptiveSlices(oos, "theme"), "sma_19_49_199": variantSummary(data, 19, 49, 199, 1), "sma_21_51_201": variantSummary(data, 21, 51, 201, 1), "atr_0_90": variantSummary(data, 20, 50, 200, 0.90), "atr_1_10": variantSummary(data, 20, 50, 200, 1.10), "stress_cost": map[string]any{"mean_net_return": oos.MeanStress, "model": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8"}, "overlap_sensitivity": overlapSummary(oos), "zero_and_buy_hold_baselines": map[string]any{"zero_return": 0, "buy_hold": "DESCRIPTIVE_ONLY"}, "seed_domain": manifestHash + "|falsification-v1|"}
+	return map[string]any{"matched_non_signal_placebo": map[string]any{"pairs": oos.MatchedPairs, "mean_difference": oos.MeanPairedDifference, "bootstrap_low": oos.PairedBootstrapLow}, "timestamp_placebo": timestampPlacebo(data, oos, manifestHash), "secondary_sign_permutation": map[string]any{"status": "NOT_APPLICABLE_PRIMARY_LONG_ONLY"}, "top_5_percent_exclusion": map[string]any{"removed": remove, "mean_before": oos.MeanNet, "mean_after": after}, "leave_one_instrument_out": leaveOneOut(oos), "regime_slices": descriptiveSlices(oos, "regime"), "theme_slices": descriptiveSlices(oos, "theme"), "sma_19_49_199": variantSummary(data, cfg, 19, 49, 199, 1), "sma_21_51_201": variantSummary(data, cfg, 21, 51, 201, 1), "atr_0_90": variantSummary(data, cfg, 20, 50, 200, 0.90), "atr_1_10": variantSummary(data, cfg, 20, 50, 200, 1.10), "stress_cost": map[string]any{"mean_net_return": oos.MeanStress, "model": cfg.StressCostID}, "overlap_sensitivity": overlapSummary(oos), "zero_and_buy_hold_baselines": map[string]any{"zero_return": 0, "buy_hold": "DESCRIPTIVE_ONLY"}, "seed_domain": manifestHash + "|falsification-v1|"}
 }
 func timestampPlacebo(data map[string]*instrumentData, oos partitionResult, manifestHash string) map[string]any {
 	eligible := 0
@@ -643,7 +700,7 @@ func leaveOneOut(r partitionResult) []map[string]any {
 func descriptiveSlices(r partitionResult, key string) map[string]any {
 	return map[string]any{"status": "REPORTED_DESCRIPTIVELY", "slice_key": key, "episode_count": len(r.Episodes), "mean_net_return": r.MeanNet}
 }
-func variantSummary(data map[string]*instrumentData, fast, medium, slow int, atrScale float64) map[string]any {
+func variantSummary(data map[string]*instrumentData, cfg FrozenExperimentConfig, fast, medium, slow int, atrScale float64) map[string]any {
 	count := 0
 	total := 0.0
 	for _, s := range symbols {
@@ -652,15 +709,15 @@ func variantSummary(data map[string]*instrumentData, fast, medium, slow int, atr
 			if date < "2023-01-01" || date > dataEnd || i < slow-1 {
 				continue
 			}
-			sig, kind := buildSignal(d, i, fast, medium, slow)
-			if kind != "BUY" || sig.Confidence < 0.60 || i+1 >= len(d.Dates) {
+			sig, kind := buildSignal(d, i, fast, medium, slow, cfg)
+			if kind != "BUY" || !actionableByConfig(sig.Confidence, cfg) || i+1 >= len(d.Dates) {
 				continue
 			}
 			next := d.Split[d.Dates[i+1]]
 			if !(sig.Stop < next.Open && next.Open < sig.Target) {
 				continue
 			}
-			ep, _, ok := simulateLong(d, s, sig, i+1, atrScale)
+			ep, _, ok := simulateLong(d, s, sig, i+1, atrScale, cfg)
 			if ok {
 				count++
 				total += ep.NetReturn
@@ -693,13 +750,13 @@ func indexOfDate(eps []episode, date string) int {
 	}
 	return -1
 }
-func qualitySummary(data map[string]*instrumentData) map[string]any {
+func qualitySummary(data map[string]*instrumentData, performanceOutputGenerated bool) map[string]any {
 	per := map[string]any{}
 	for _, s := range symbols {
 		d := data[s]
 		per[s] = map[string]any{"raw_sessions": len(d.Raw), "split_sessions": len(d.Split), "split_spin_off_sessions": len(d.Detector), "first_session": d.Dates[0], "last_session": d.Dates[len(d.Dates)-1], "structural_boundaries": []string{}, "no_2025_rows": true}
 	}
-	return map[string]any{"provider": "Alpaca", "feed": "SIP", "timeframe": "1Day", "date_range": []string{dataStart, dataEnd}, "instruments": per, "performance_output_generated": false}
+	return map[string]any{"provider": "Alpaca", "feed": "SIP", "timeframe": "1Day", "date_range": []string{dataStart, dataEnd}, "instruments": per, "performance_output_generated": performanceOutputGenerated}
 }
 func totalAbstentions(results map[string]partitionResult) map[string]int {
 	out := map[string]int{}
