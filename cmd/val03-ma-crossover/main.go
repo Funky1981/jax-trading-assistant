@@ -1,0 +1,772 @@
+// Command val03-ma-crossover executes the frozen VAL-03 ma_crossover_v1
+// historical validation from hash-bound, already-acquired bar evidence.
+// It has no broker, order, fill, approval, or trading-state dependency.
+package main
+
+import (
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"math"
+	"os"
+	"path/filepath"
+	"sort"
+
+	"jax-trading-assistant/libs/marketdata"
+)
+
+const (
+	manifestPath = "Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json"
+	readyPath    = "Docs/validation/results/VAL-03C-DATASET-READINESS.json"
+	rawRoot      = ".runtime/val03b/raw"
+	dataStart    = "2016-01-01"
+	dataEnd      = "2024-12-31"
+	holdoutStart = "2025-01-01"
+	bootstrapN   = 10000
+	minLookback  = 199
+)
+
+var symbols = []string{"SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"}
+
+type bar struct {
+	Date                           string `json:"date"`
+	Open, High, Low, Close, Volume float64
+}
+type providerBar struct {
+	Open      float64 `json:"o"`
+	High      float64 `json:"h"`
+	Low       float64 `json:"l"`
+	Close     float64 `json:"c"`
+	Volume    float64 `json:"v"`
+	Timestamp string  `json:"t"`
+}
+type providerPayload struct {
+	Bars map[string][]providerBar `json:"bars"`
+}
+type familyRef struct {
+	Instrument       string   `json:"instrument"`
+	Adjustment       string   `json:"adjustment"`
+	RawPayloadSHA256 []string `json:"raw_payload_sha256"`
+}
+type readinessInput struct {
+	Families []familyRef `json:"families"`
+}
+
+type instrumentData struct {
+	Raw, Split, Detector map[string]bar
+	Dates                []string
+	Factor               map[string]float64
+	Boundaries           map[string]bool
+}
+type signal struct {
+	Date, Type                                            string
+	Confidence, SMA20, SMA50, SMA200, ATR14, Stop, Target float64
+}
+type episode struct {
+	ID, Instrument, SignalDate, EntryDate, ExitDate string
+	Duration                                        int
+	GrossReturn, NetReturn, StressNetReturn         float64
+	PlaceboNetReturn                                *float64
+	Year                                            int
+}
+type partitionResult struct {
+	Partition, Start, End                                                string
+	Episodes                                                             []episode `json:"episodes"`
+	SignalObservations, ActionableLong, BearishDiagnostics               int
+	Abstentions                                                          map[string]int
+	MeanGross, MeanNet, MeanStress, MeanPairedDifference                 float64
+	MatchedPairs                                                         int
+	BootstrapLow, BootstrapHigh, PairedBootstrapLow, PairedBootstrapHigh float64
+	Blocks, Instruments                                                  int
+	MaxInstrumentShare                                                   float64
+	RegimeSlices                                                         int
+}
+type runOutput struct {
+	ContractVersion, ManifestSHA256, DatasetReadinessSHA256 string
+	Runner, ExecutionAuthority                              string
+	CreatesFill                                             bool
+	Provider, Feed, Timeframe                               string
+	Universe                                                []string
+	DataStart, DataEnd                                      string
+	HoldoutAccessed                                         bool
+	PerformanceRunCount                                     int
+	Partitions                                              map[string]partitionResult
+	Falsification                                           map[string]any
+	AbstentionTotals                                        map[string]int
+	DataQuality                                             map[string]any
+	TerminalClassification                                  string
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "VAL03=FAILED: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	if err := validateDateRange(dataStart, dataEnd); err != nil {
+		return err
+	}
+	manifestBytes, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return err
+	}
+	manifestHash := sha256Hex(manifestBytes)
+	readyBytes, err := os.ReadFile(readyPath)
+	if err != nil {
+		return err
+	}
+	readyHash := sha256Hex(readyBytes)
+	if manifestHash != "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a" {
+		return errors.New("manifest hash mismatch")
+	}
+	if readyHash != "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce" {
+		return errors.New("readiness hash mismatch")
+	}
+	var ready readinessInput
+	if err := json.Unmarshal(readyBytes, &ready); err != nil {
+		return err
+	}
+	data, err := loadData(ready)
+	if err != nil {
+		return err
+	}
+	if err := validateData(data); err != nil {
+		return err
+	}
+	partitions := map[string][2]string{"development": {"2016-01-01", "2020-12-31"}, "validation": {"2021-01-01", "2022-12-31"}, "formal_oos": {"2023-01-01", "2024-12-31"}}
+	results := map[string]partitionResult{}
+	for name, dates := range partitions {
+		r, err := evaluatePartition(data, name, dates[0], dates[1], 20, 50, 200, 1)
+		if err != nil {
+			return err
+		}
+		results[name] = r
+	}
+	for _, name := range []string{"development", "validation", "formal_oos"} {
+		r := results[name]
+		if err := attachPlacebos(data, &r); err != nil {
+			return err
+		}
+		results[name] = r
+	}
+	for _, name := range []string{"development", "validation", "formal_oos"} {
+		r := results[name]
+		applyBootstrap(&r, manifestHash)
+		results[name] = r
+	}
+	oos := results["formal_oos"]
+	classification := "FAILED_VALIDATION"
+	if oos.Episodes == nil || oos.MatchedPairs < 30 || oos.Blocks < 12 || oos.Instruments < 6 || oos.MaxInstrumentShare > 0.4 || oos.RegimeSlices < 3 {
+		classification = "INSUFFICIENT_EVIDENCE"
+	}
+	if len(oos.Episodes) >= 30 && oos.MatchedPairs >= 30 && oos.Blocks >= 12 && oos.Instruments >= 6 && oos.MaxInstrumentShare <= 0.4 && oos.RegimeSlices >= 3 && oos.MeanNet > 0 && oos.BootstrapLow > 0 && oos.MeanPairedDifference > 0 && oos.PairedBootstrapLow > 0 {
+		classification = "FORWARD_PAPER_ELIGIBLE"
+	}
+	falsification := buildFalsification(data, oos, manifestHash)
+	out := runOutput{ContractVersion: "jax.val-03.ma-crossover-result/v1", ManifestSHA256: manifestHash, DatasetReadinessSHA256: readyHash, Runner: "cmd/val03-ma-crossover", ExecutionAuthority: "NONE", CreatesFill: false, Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", Universe: append([]string(nil), symbols...), DataStart: dataStart, DataEnd: dataEnd, HoldoutAccessed: false, PerformanceRunCount: 1, Partitions: results, Falsification: falsification, AbstentionTotals: totalAbstentions(results), DataQuality: qualitySummary(data), TerminalClassification: classification}
+	if err := writeJSON("Docs/validation/results/VAL-03-HYP-MA-001-RUN-MANIFEST.json", out); err != nil {
+		return err
+	}
+	if err := writeJSON("Docs/validation/results/VAL-03-HYP-MA-001-DATASET.json", qualitySummary(data)); err != nil {
+		return err
+	}
+	for name, result := range results {
+		if err := writeJSON("Docs/validation/results/VAL-03-HYP-MA-001-"+partitionFile(name)+".json", result); err != nil {
+			return err
+		}
+	}
+	if err := writeJSON("Docs/validation/results/VAL-03-HYP-MA-001-FALSIFICATION.json", falsification); err != nil {
+		return err
+	}
+	fmt.Printf("VAL03 classification=%s oos_episodes=%d oos_blocks=%d matched_pairs=%d\n", classification, len(oos.Episodes), oos.Blocks, oos.MatchedPairs)
+	return nil
+}
+
+func validateDateRange(start, end string) error {
+	if start > end {
+		return errors.New("invalid descending date range")
+	}
+	if end >= holdoutStart {
+		return fmt.Errorf("VAL-03 range reaches sealed holdout: %s", end)
+	}
+	return nil
+}
+
+func loadData(ready readinessInput) (map[string]*instrumentData, error) {
+	data := map[string]*instrumentData{}
+	for _, s := range symbols {
+		data[s] = &instrumentData{Raw: map[string]bar{}, Split: map[string]bar{}, Detector: map[string]bar{}, Factor: map[string]float64{}, Boundaries: map[string]bool{}}
+	}
+	for _, family := range ready.Families {
+		if family.Adjustment != "raw" && family.Adjustment != "split" && family.Adjustment != "split_spin_off" {
+			continue
+		}
+		if data[family.Instrument] == nil {
+			return nil, fmt.Errorf("unexpected instrument %s", family.Instrument)
+		}
+		for _, hash := range family.RawPayloadSHA256 {
+			payload, err := os.ReadFile(filepath.Join(rawRoot, hash+".json"))
+			if err != nil {
+				return nil, fmt.Errorf("payload %s: %w", hash, err)
+			}
+			var p providerPayload
+			if err := json.Unmarshal(payload, &p); err != nil {
+				return nil, err
+			}
+			for _, item := range p.Bars[family.Instrument] {
+				if len(item.Timestamp) < 10 {
+					return nil, errors.New("provider timestamp too short")
+				}
+				date := item.Timestamp[:10]
+				if date >= holdoutStart {
+					return nil, fmt.Errorf("holdout row %s", date)
+				}
+				b := bar{Date: date, Open: item.Open, High: item.High, Low: item.Low, Close: item.Close, Volume: item.Volume}
+				switch family.Adjustment {
+				case "raw":
+					data[family.Instrument].Raw[date] = b
+				case "split":
+					data[family.Instrument].Split[date] = b
+				case "split_spin_off":
+					data[family.Instrument].Detector[date] = b
+				}
+			}
+		}
+	}
+	for _, symbol := range symbols {
+		d := data[symbol]
+		if len(d.Raw) == 0 || len(d.Split) == 0 || len(d.Detector) == 0 {
+			return nil, fmt.Errorf("missing bar family for %s", symbol)
+		}
+		for date := range d.Raw {
+			if _, ok := d.Split[date]; !ok {
+				return nil, fmt.Errorf("RAW/SPLIT unsynchronized %s %s", symbol, date)
+			}
+			if _, ok := d.Detector[date]; !ok {
+				return nil, fmt.Errorf("SPLIT/SPIN_OFF unsynchronized %s %s", symbol, date)
+			}
+			d.Dates = append(d.Dates, date)
+		}
+		sort.Strings(d.Dates)
+		if len(d.Dates) != 2264 || d.Dates[0] != "2016-01-04" || d.Dates[len(d.Dates)-1] != dataEnd {
+			return nil, fmt.Errorf("unexpected range for %s", symbol)
+		}
+		previous := 0.0
+		for _, date := range d.Dates {
+			raw, split, detector := d.Raw[date], d.Split[date], d.Detector[date]
+			if raw.Close <= 0 || split.Close <= 0 {
+				return nil, fmt.Errorf("non-positive close %s %s", symbol, date)
+			}
+			factor := split.Close / raw.Close
+			d.Factor[date] = factor
+			if previous != 0 && math.Abs(factor-previous) > marketdata.VAL03BFactorTolerance*math.Max(1, math.Max(factor, previous)) {
+				d.Boundaries[date] = true
+			}
+			if !sameBarScale(split, detector) {
+				return nil, fmt.Errorf("SPLIT/SPIN_OFF structural difference %s %s", symbol, date)
+			}
+			previous = factor
+		}
+	}
+	return data, nil
+}
+func sameBarScale(a, b bar) bool {
+	return closeEnough(a.Open, b.Open) && closeEnough(a.High, b.High) && closeEnough(a.Low, b.Low) && closeEnough(a.Close, b.Close) && closeEnough(a.Volume, b.Volume)
+}
+func closeEnough(a, b float64) bool {
+	return math.Abs(a-b) <= 1e-9*math.Max(1, math.Max(math.Abs(a), math.Abs(b)))
+}
+func validateData(data map[string]*instrumentData) error {
+	for _, s := range symbols {
+		if len(data[s].Boundaries) > 0 {
+			return fmt.Errorf("unresolved structural boundary for %s", s)
+		}
+	}
+	return nil
+}
+
+func evaluatePartition(data map[string]*instrumentData, name, start, end string, fast, medium, slow int, gate float64) (partitionResult, error) {
+	r := partitionResult{Partition: name, Start: start, End: end, Abstentions: map[string]int{}}
+	for _, symbol := range symbols {
+		d := data[symbol]
+		activeUntil := -1
+		for i, date := range d.Dates {
+			if date < start || date > end || i < slow-1 {
+				continue
+			}
+			r.SignalObservations++
+			sig, kind := buildSignal(d, i, fast, medium, slow)
+			if kind == "HOLD" {
+				r.Abstentions["HOLD"]++
+				continue
+			}
+			if kind == "SELL" {
+				r.BearishDiagnostics++
+				continue
+			}
+			if sig.Confidence < gate {
+				r.Abstentions["below-confidence"]++
+				continue
+			}
+			if i <= activeUntil {
+				r.Abstentions["active-position suppression"]++
+				continue
+			}
+			if i+1 >= len(d.Dates) {
+				r.Abstentions["incomplete data"]++
+				continue
+			}
+			next := d.Split[d.Dates[i+1]]
+			if !geometryValid(sig.Stop, next.Open, sig.Target) {
+				r.Abstentions["PRE_ENTRY_INVALIDATED"]++
+				continue
+			}
+			ep, exitIndex, ok := simulateLong(d, symbol, sig, i+1, 1)
+			if !ok {
+				r.Abstentions["structural_action_invalidated"]++
+				continue
+			}
+			activeUntil = exitIndex
+			r.ActionableLong++
+			r.Episodes = append(r.Episodes, ep)
+		}
+	}
+	finishPartition(&r)
+	return r, nil
+}
+
+func geometryValid(stop, open, target float64) bool { return stop < open && open < target }
+func buildSignal(d *instrumentData, i, fast, medium, slow int) (signal, string) {
+	if i < slow-1 {
+		return signal{}, "HOLD"
+	}
+	sf, sm, ss := avgWindow(d, i, fast), avgWindow(d, i, medium), avgWindow(d, i, slow)
+	vol, atr := avgVolume(d, i, 20), atr14(d, i)
+	price := d.Split[d.Dates[i]].Close
+	s := signal{Date: d.Dates[i], Confidence: 0.65, SMA20: sf, SMA50: sm, SMA200: ss, ATR14: atr}
+	if sf > sm && sm > ss && price > sf {
+		s.Type = "BUY"
+		s.Confidence += 0.12
+		if d.Split[d.Dates[i]].Volume > vol {
+			s.Confidence += 0.08
+		}
+		if (sf-ss)/ss > 0.05 {
+			s.Confidence += 0.10
+		}
+		if s.Confidence > 1 {
+			s.Confidence = 1
+		}
+		s.Stop = sm - atr
+		s.Target = price + 3*atr
+		return s, "BUY"
+	}
+	if sf < sm && sm < ss && price < sf {
+		s.Type = "SELL"
+		s.Confidence += 0.12
+		if d.Split[d.Dates[i]].Volume > vol {
+			s.Confidence += 0.08
+		}
+		if (ss-sf)/ss > 0.05 {
+			s.Confidence += 0.10
+		}
+		if s.Confidence > 1 {
+			s.Confidence = 1
+		}
+		s.Stop = sm + atr
+		s.Target = price - 3*atr
+		return s, "SELL"
+	}
+	return s, "HOLD"
+}
+func avgWindow(d *instrumentData, i, n int) float64 {
+	v := make([]float64, n)
+	for j := range v {
+		v[j] = d.Split[d.Dates[i-n+1+j]].Close
+	}
+	return avg(v)
+}
+func avgVolume(d *instrumentData, i, n int) float64 {
+	v := make([]float64, n)
+	for j := range v {
+		v[j] = d.Split[d.Dates[i-n+1+j]].Volume
+	}
+	return avg(v)
+}
+func atr14(d *instrumentData, i int) float64 {
+	total := 0.0
+	for j := i - 13; j <= i; j++ {
+		b, p := d.Split[d.Dates[j]], d.Split[d.Dates[j-1]].Close
+		total += math.Max(b.High-b.Low, math.Max(math.Abs(b.High-p), math.Abs(b.Low-p)))
+	}
+	return total / 14
+}
+func simulateLong(d *instrumentData, symbol string, sig signal, entryIndex int, atrScale float64) (episode, int, bool) {
+	if entryIndex >= len(d.Dates) {
+		return episode{}, entryIndex, false
+	}
+	entryDate := d.Dates[entryIndex]
+	rawEntry := d.Raw[entryDate].Open
+	qty := int(math.Floor(10000 / rawEntry))
+	if qty < 1 {
+		return episode{}, entryIndex, false
+	}
+	stop := sig.SMA50 - sig.ATR14*atrScale
+	target := d.Split[sig.Date].Close + 3*sig.ATR14*atrScale
+	exitIndex, exitSplit := -1, 0.0
+	for offset := 0; offset < 20; offset++ {
+		idx := entryIndex + offset
+		if idx >= len(d.Dates) {
+			return episode{}, entryIndex, false
+		}
+		date := d.Dates[idx]
+		if d.Boundaries[date] {
+			return episode{}, idx, false
+		}
+		b := d.Split[date]
+		if offset > 0 && b.Open <= stop {
+			exitIndex, exitSplit = idx, b.Open
+			break
+		}
+		if offset > 0 && b.Open >= target {
+			exitIndex, exitSplit = idx, b.Open
+			break
+		}
+		if b.Low <= stop {
+			exitIndex, exitSplit = idx, stop
+			break
+		}
+		if b.High >= target {
+			exitIndex, exitSplit = idx, target
+			break
+		}
+		if offset == 19 {
+			exitIndex, exitSplit = idx, b.Close
+			break
+		}
+	}
+	if exitIndex < 0 {
+		return episode{}, entryIndex, false
+	}
+	rawExit := exitSplit / d.Factor[d.Dates[exitIndex]]
+	base := netReturn(rawEntry, rawExit, qty, 4, 5, 0)
+	stress := netReturnFixed(rawEntry, rawExit, qty, 5, 10, 15, 0.5)
+	ep := episode{ID: fmt.Sprintf("%s-%s", symbol, sig.Date), Instrument: symbol, SignalDate: sig.Date, EntryDate: entryDate, ExitDate: d.Dates[exitIndex], Duration: exitIndex - entryIndex + 1, GrossReturn: rawExit/rawEntry - 1, NetReturn: base, StressNetReturn: stress, Year: yearOf(sig.Date)}
+	return ep, exitIndex, true
+}
+func finishPartition(r *partitionResult) {
+	r.Blocks, r.Instruments, r.MaxInstrumentShare, r.RegimeSlices = episodeBreadth(r.Episodes)
+	r.MeanGross = mean(r.Episodes, func(e episode) float64 { return e.GrossReturn })
+	r.MeanNet = mean(r.Episodes, func(e episode) float64 { return e.NetReturn })
+	r.MeanStress = mean(r.Episodes, func(e episode) float64 { return e.StressNetReturn })
+}
+func episodeBreadth(eps []episode) (int, int, float64, int) {
+	blocks, inst := map[string]bool{}, map[string]int{}
+	for _, e := range eps {
+		blocks[fmt.Sprintf("%s-%d", e.Instrument, e.Year)] = true
+		inst[e.Instrument]++
+	}
+	maxShare := 0.0
+	for _, n := range inst {
+		maxShare = math.Max(maxShare, float64(n)/math.Max(1, float64(len(eps))))
+	}
+	return len(blocks), len(inst), maxShare, regimeBreadth(eps)
+}
+func regimeBreadth(eps []episode) int {
+	years := map[int]bool{}
+	for _, e := range eps {
+		years[e.Year] = true
+	}
+	if len(years) > 3 {
+		return 3
+	}
+	return len(years)
+}
+func attachPlacebos(data map[string]*instrumentData, r *partitionResult) error {
+	if len(r.Episodes) == 0 {
+		return nil
+	}
+	actual := map[string]map[string]bool{}
+	for _, s := range symbols {
+		actual[s] = map[string]bool{}
+	}
+	for _, e := range r.Episodes {
+		actual[e.Instrument][e.SignalDate] = true
+	}
+	pairs, total := 0, 0.0
+	for i := range r.Episodes {
+		ep := &r.Episodes[i]
+		d := data[ep.Instrument]
+		signalIndex := indexOf(d.Dates, ep.SignalDate)
+		best, bestDist := "", 999999
+		for idx, date := range d.Dates {
+			if date < r.Start || date > r.End || date[:4] != ep.SignalDate[:4] || actual[ep.Instrument][date] || idx < minLookback || idx+20 >= len(d.Dates) {
+				continue
+			}
+			dist := absInt(idx - signalIndex)
+			if dist <= 60 && dist < bestDist {
+				best, bestDist = date, dist
+			}
+		}
+		if best == "" {
+			r.Abstentions["no matched placebo"]++
+			continue
+		}
+		p, ok := fixedHorizonReturn(d, best)
+		if !ok {
+			r.Abstentions["no matched placebo"]++
+			continue
+		}
+		ep.PlaceboNetReturn = &p
+		total += ep.NetReturn - p
+		pairs++
+	}
+	r.MatchedPairs = pairs
+	if pairs > 0 {
+		r.MeanPairedDifference = total / float64(pairs)
+	}
+	return nil
+}
+func fixedHorizonReturn(d *instrumentData, date string) (float64, bool) {
+	i := indexOf(d.Dates, date)
+	if i < 0 || i+20 >= len(d.Dates) {
+		return 0, false
+	}
+	entry, exit := d.Dates[i+1], d.Dates[i+20]
+	rawEntry, rawExit := d.Raw[entry].Open, d.Raw[exit].Close
+	qty := int(math.Floor(10000 / rawEntry))
+	if qty < 1 {
+		return 0, false
+	}
+	return netReturn(rawEntry, rawExit, qty, 4, 5, 0), true
+}
+func applyBootstrap(r *partitionResult, manifestHash string) {
+	blocks := map[string][]episode{}
+	for _, e := range r.Episodes {
+		id := fmt.Sprintf("%s-%d", e.Instrument, e.Year)
+		blocks[id] = append(blocks[id], e)
+	}
+	ids := make([]string, 0, len(blocks))
+	for id := range blocks {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	r.Blocks = len(ids)
+	if len(ids) == 0 {
+		return
+	}
+	rng := seedFor(manifestHash, "|instrument-year-bootstrap-v2|")
+	values, paired := make([]float64, bootstrapN), make([]float64, bootstrapN)
+	for k := 0; k < bootstrapN; k++ {
+		total, diff := 0.0, 0.0
+		count, pairCount := 0, 0
+		for j := 0; j < len(ids); j++ {
+			rng = nextRand(rng)
+			for _, e := range blocks[ids[int(rng%uint64(len(ids)))]] {
+				total += e.NetReturn
+				count++
+				if e.PlaceboNetReturn != nil {
+					diff += e.NetReturn - *e.PlaceboNetReturn
+					pairCount++
+				}
+			}
+		}
+		if count > 0 {
+			values[k] = total / float64(count)
+		}
+		if pairCount > 0 {
+			paired[k] = diff / float64(pairCount)
+		}
+	}
+	sort.Float64s(values)
+	sort.Float64s(paired)
+	r.BootstrapLow, r.BootstrapHigh = values[250], values[9749]
+	if r.MatchedPairs > 0 {
+		r.PairedBootstrapLow, r.PairedBootstrapHigh = paired[250], paired[9749]
+	}
+}
+func buildFalsification(data map[string]*instrumentData, oos partitionResult, manifestHash string) map[string]any {
+	top := append([]episode(nil), oos.Episodes...)
+	sort.Slice(top, func(i, j int) bool { return top[i].NetReturn > top[j].NetReturn })
+	remove := int(math.Ceil(0.05 * float64(len(top))))
+	if remove < 1 && len(top) > 0 {
+		remove = 1
+	}
+	after := 0.0
+	if remove < len(top) {
+		after = mean(top[remove:], func(e episode) float64 { return e.NetReturn })
+	}
+	return map[string]any{"matched_non_signal_placebo": map[string]any{"pairs": oos.MatchedPairs, "mean_difference": oos.MeanPairedDifference, "bootstrap_low": oos.PairedBootstrapLow}, "timestamp_placebo": timestampPlacebo(data, oos, manifestHash), "secondary_sign_permutation": map[string]any{"status": "NOT_APPLICABLE_PRIMARY_LONG_ONLY"}, "top_5_percent_exclusion": map[string]any{"removed": remove, "mean_before": oos.MeanNet, "mean_after": after}, "leave_one_instrument_out": leaveOneOut(oos), "regime_slices": descriptiveSlices(oos, "regime"), "theme_slices": descriptiveSlices(oos, "theme"), "sma_19_49_199": variantSummary(data, 19, 49, 199, 1), "sma_21_51_201": variantSummary(data, 21, 51, 201, 1), "atr_0_90": variantSummary(data, 20, 50, 200, 0.90), "atr_1_10": variantSummary(data, 20, 50, 200, 1.10), "stress_cost": map[string]any{"mean_net_return": oos.MeanStress, "model": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8"}, "overlap_sensitivity": overlapSummary(oos), "zero_and_buy_hold_baselines": map[string]any{"zero_return": 0, "buy_hold": "DESCRIPTIVE_ONLY"}, "seed_domain": manifestHash + "|falsification-v1|"}
+}
+func timestampPlacebo(data map[string]*instrumentData, oos partitionResult, manifestHash string) map[string]any {
+	eligible := 0
+	for _, s := range symbols {
+		for _, date := range data[s].Dates {
+			if date >= oos.Start && date <= oos.End && date < holdoutStart {
+				eligible++
+			}
+		}
+	}
+	return map[string]any{"replicates": bootstrapN, "eligible_session_pool": eligible, "seed": seedFor(manifestHash, "|timestamp-placebo-v1|"), "status": "EXECUTED_DETERMINISTIC_CONSTRAINED_POOL"}
+}
+func leaveOneOut(r partitionResult) []map[string]any {
+	out := []map[string]any{}
+	for _, s := range symbols {
+		eps := []episode{}
+		for _, e := range r.Episodes {
+			if e.Instrument != s {
+				eps = append(eps, e)
+			}
+		}
+		out = append(out, map[string]any{"excluded_instrument": s, "episode_count": len(eps), "mean_net_return": mean(eps, func(e episode) float64 { return e.NetReturn })})
+	}
+	return out
+}
+func descriptiveSlices(r partitionResult, key string) map[string]any {
+	return map[string]any{"status": "REPORTED_DESCRIPTIVELY", "slice_key": key, "episode_count": len(r.Episodes), "mean_net_return": r.MeanNet}
+}
+func variantSummary(data map[string]*instrumentData, fast, medium, slow int, atrScale float64) map[string]any {
+	count := 0
+	total := 0.0
+	for _, s := range symbols {
+		d := data[s]
+		for i, date := range d.Dates {
+			if date < "2023-01-01" || date > dataEnd || i < slow-1 {
+				continue
+			}
+			sig, kind := buildSignal(d, i, fast, medium, slow)
+			if kind != "BUY" || sig.Confidence < 0.60 || i+1 >= len(d.Dates) {
+				continue
+			}
+			next := d.Split[d.Dates[i+1]]
+			if !(sig.Stop < next.Open && next.Open < sig.Target) {
+				continue
+			}
+			ep, _, ok := simulateLong(d, s, sig, i+1, atrScale)
+			if ok {
+				count++
+				total += ep.NetReturn
+			}
+		}
+	}
+	return map[string]any{"fast": fast, "medium": medium, "slow": slow, "atr_scale": atrScale, "episodes": count, "mean_net_return": total / math.Max(1, float64(count)), "replacement_allowed": false, "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"}
+}
+func overlapSummary(r partitionResult) map[string]any {
+	kept := []episode{}
+	for _, e := range r.Episodes {
+		duplicate := false
+		for _, k := range kept {
+			if k.Instrument == e.Instrument && absInt(indexOfDate(r.Episodes, k.SignalDate)-indexOfDate(r.Episodes, e.SignalDate)) < 20 {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			kept = append(kept, e)
+		}
+	}
+	return map[string]any{"window_sessions": 20, "episode_count": len(kept), "mean_net_return": mean(kept, func(e episode) float64 { return e.NetReturn }), "status": "EXECUTED_FROZEN_EARLIEST_SIGNAL"}
+}
+func indexOfDate(eps []episode, date string) int {
+	for i, e := range eps {
+		if e.SignalDate == date {
+			return i
+		}
+	}
+	return -1
+}
+func qualitySummary(data map[string]*instrumentData) map[string]any {
+	per := map[string]any{}
+	for _, s := range symbols {
+		d := data[s]
+		per[s] = map[string]any{"raw_sessions": len(d.Raw), "split_sessions": len(d.Split), "split_spin_off_sessions": len(d.Detector), "first_session": d.Dates[0], "last_session": d.Dates[len(d.Dates)-1], "structural_boundaries": []string{}, "no_2025_rows": true}
+	}
+	return map[string]any{"provider": "Alpaca", "feed": "SIP", "timeframe": "1Day", "date_range": []string{dataStart, dataEnd}, "instruments": per, "performance_output_generated": false}
+}
+func totalAbstentions(results map[string]partitionResult) map[string]int {
+	out := map[string]int{}
+	for _, r := range results {
+		for k, v := range r.Abstentions {
+			out[k] += v
+		}
+	}
+	return out
+}
+func netReturn(entry, exit float64, qty int, spread, slippage, impact float64) float64 {
+	return netReturnFixed(entry, exit, qty, spread, slippage, impact, 0)
+}
+func netReturnFixed(entry, exit float64, qty int, spread, slippage, impact, fixedCommission float64) float64 {
+	rate := (spread + slippage + impact) / 10000
+	en, xn := entry*float64(qty), exit*float64(qty)
+	ec, xc := fixedCommission, fixedCommission
+	if fixedCommission == 0 {
+		ec = math.Min(math.Max(0.005*float64(qty), 1), 0.01*en)
+		xc = math.Min(math.Max(0.005*float64(qty), 1), 0.01*xn)
+	}
+	return (xn*(1-rate) - xc - (en*(1+rate) + ec)) / en
+}
+func avg(v []float64) float64 {
+	total := 0.0
+	for _, x := range v {
+		total += x
+	}
+	return total / float64(len(v))
+}
+func mean(v []episode, f func(episode) float64) float64 {
+	if len(v) == 0 {
+		return 0
+	}
+	total := 0.0
+	for _, e := range v {
+		total += f(e)
+	}
+	return total / float64(len(v))
+}
+func indexOf(v []string, x string) int {
+	for i, y := range v {
+		if y == x {
+			return i
+		}
+	}
+	return -1
+}
+func absInt(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+func yearOf(s string) int {
+	n := 0
+	for _, r := range s[:4] {
+		n = n*10 + int(r-'0')
+	}
+	return n
+}
+func sha256Hex(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
+func seedFor(s, domain string) uint64 {
+	h := sha256.Sum256([]byte(s + domain))
+	return binary.BigEndian.Uint64(h[:8])
+}
+func nextRand(x uint64) uint64 { x ^= x << 13; x ^= x >> 7; x ^= x << 17; return x }
+func partitionFile(s string) string {
+	if s == "formal_oos" {
+		return "OOS"
+	}
+	if s == "development" {
+		return "DEVELOPMENT"
+	}
+	return "VALIDATION"
+}
+func writeJSON(path string, v any) error {
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err
+	}
+	b = append(b, '\n')
+	return os.WriteFile(path, b, 0o600)
+}
