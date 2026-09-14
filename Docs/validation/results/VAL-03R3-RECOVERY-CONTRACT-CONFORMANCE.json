@@ -24,7 +24,7 @@
     },
     "r3_preflight_harness": {
       "path": "cmd/val03r3-recovery-preflight/main.go",
-      "blob_sha1": "597b028ddbeb7db72bedad11834495acb94119d4"
+      "blob_sha1": "2aa2b9602d36768639a56b01a5146235989143d6"
     },
     "strategy": {
       "path": "libs/strategies/ma_crossover.go",
