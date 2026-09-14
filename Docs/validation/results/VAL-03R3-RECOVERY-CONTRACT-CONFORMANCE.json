@@ -1,0 +1,79 @@
+{
+  "contract_id": "jax.val-03r3.recovery-contract-conformance/v1",
+  "status": "PASS",
+  "r2_manifest_sha256": "c19a4cfc774a7bf53466d9bcf5705bd3813f69258a9600291883db48aab490eb",
+  "parent_manifest_sha256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a",
+  "candidate_id": "ma_crossover_v1",
+  "recovery_boundary": {
+    "start": "2025-01-01",
+    "end": "2026-09-11",
+    "post_result_extension": false
+  },
+  "source_blob_identities": {
+    "legacy_config": {
+      "path": "cmd/val03-ma-crossover/config.go",
+      "blob_sha1": "382662fb976d2f5d116f6330119720208888b741"
+    },
+    "legacy_recovery_guard": {
+      "path": "cmd/val03-ma-crossover/recovery.go",
+      "blob_sha1": "857ec1f091b15693c00b8f44ae92e0361581cd86"
+    },
+    "legacy_contaminated_runner": {
+      "path": "cmd/val03-ma-crossover/main.go",
+      "blob_sha1": "4452fb7ed8b27756b25a5b7988d06cb7fa425656"
+    },
+    "r3_preflight_harness": {
+      "path": "cmd/val03r3-recovery-preflight/main.go",
+      "blob_sha1": "fe65f645c2a8f3ed6353a847777b1ed45f329e50"
+    },
+    "strategy": {
+      "path": "libs/strategies/ma_crossover.go",
+      "blob_sha1": "fb22b9dd909a0ae5f13dd727ff2eddf40963d426"
+    },
+    "strategy_type_contract": {
+      "path": "libs/strategies/strategy.go",
+      "blob_sha1": "8ff03f23aed6dba929cdc83cda5c1a1153da616f"
+    },
+    "operational_input": {
+      "path": "internal/trader/signalgenerator/inprocess.go",
+      "blob_sha1": "4a3f0537013308f40ee94c3eb723d3a152297048"
+    },
+    "atr_reference": {
+      "path": "internal/modules/quant/volatility.go",
+      "blob_sha1": "6fb7cee0e1643352f073022bbf999283b5a04a49"
+    },
+    "actionable_gate": {
+      "path": "cmd/trader/instance_scheduler.go",
+      "blob_sha1": "54244f758599e97317d31073f8c23f1d2b4ae729"
+    },
+    "adjusted_bar_contract": {
+      "path": "libs/marketdata/val03b_contract.go",
+      "blob_sha1": "6d020ddf97d4729eb68514fbe95e6621fdc359eb"
+    },
+    "alpaca_route": {
+      "path": "libs/marketdata/alpaca_hardened.go",
+      "blob_sha1": "9039a7d6129158bbfcc8aa3a8525d54675dd3cc6"
+    },
+    "warmup_contract": {
+      "path": "libs/marketdata/val03c_warmup.go",
+      "blob_sha1": "7905262ddeff899bf18c17e50d45d0073079afea"
+    }
+  },
+  "validated_material_fields": {
+    "provider_contract": true,
+    "no_post_result_salvage": true,
+    "promotion_gates": true,
+    "outcome_free_audit": true,
+    "safety": true,
+    "contaminated_run_guard": true,
+    "candidate_parameters": true,
+    "sample_floors": true,
+    "boundary": true
+  },
+  "outcome_state": {
+    "recovery_market_data_accessed": false,
+    "recovery_performance_executed": false,
+    "recovery_oos_run_count": 0,
+    "2023_2024_rerun": false
+  }
+}
