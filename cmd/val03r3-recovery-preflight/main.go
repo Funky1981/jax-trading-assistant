@@ -34,7 +34,6 @@ const (
 	developmentEnd         = "2020-12-31"
 	validationStart        = "2021-01-01"
 	validationEnd          = "2022-12-31"
-	readinessMaxDate       = validationEnd
 	factorTolerance        = 5e-4
 )
 
@@ -214,7 +213,6 @@ type providerPayload struct {
 }
 
 type bar struct {
-	Date                           string
 	Open, High, Low, Close, Volume float64
 }
 
@@ -230,8 +228,6 @@ type signal struct {
 
 type readinessResult struct {
 	ContractID                  string `json:"contract_id"`
-	R2ManifestSHA256            string `json:"r2_manifest_sha256"`
-	ParentManifestSHA256        string `json:"parent_manifest_sha256"`
 	DevelopmentEligibleEpisodes int    `json:"development_eligible_primary_episodes"`
 	ValidationEligibleEpisodes  int    `json:"validation_eligible_primary_episodes"`
 	DevelopmentFloor            int    `json:"development_floor"`
@@ -239,10 +235,6 @@ type readinessResult struct {
 	DevelopmentReadiness        string `json:"development_readiness"`
 	ValidationReadiness         string `json:"validation_readiness"`
 	RecoveryReadiness           string `json:"recovery_readiness"`
-	ReturnsCalculated           bool   `json:"returns_calculated"`
-	PerformanceMetricsEmitted   bool   `json:"performance_metrics_emitted"`
-	ContaminatedOOSUsed         bool   `json:"contaminated_oos_used"`
-	RecoveryDataAccessed        bool   `json:"recovery_data_accessed"`
 }
 
 func main() {
@@ -342,7 +334,7 @@ func validateRecoveryManifest(m recoveryManifest) error {
 		return errors.New("structural feasibility mismatch")
 	}
 	w := m.Warmup
-	if w.Source != "accepted VAL-03B/VAL-03C hash-bound pre-recovery evidence" || w.Mode != "minimum preceding valid sessions required by the frozen indicator contract" || w.PreRecoveryState != "WARMUP_ONLY" || w.PreRecoveryPerformanceIncluded || w.ContaminatedResultReused {
+	if w.Source != "accepted VAL-03B/VAL-03C hash-bound pre-recovery evidence" || w.Mode != "minimum preceding valid sessions required by frozen indicator contract" || w.PreRecoveryState != "WARMUP_ONLY" || w.PreRecoveryPerformanceIncluded || w.ContaminatedResultReused {
 		return errors.New("warm-up contract mismatch")
 	}
 	p := m.Provider
@@ -421,18 +413,12 @@ func runPreHoldoutReadiness() error {
 	}
 	result := readinessResult{
 		ContractID:                  "jax.val-03r3.pre-holdout-readiness/v1",
-		R2ManifestSHA256:            recoveryManifestSHA256,
-		ParentManifestSHA256:        parentManifestSHA256,
 		DevelopmentEligibleEpisodes: dev,
 		ValidationEligibleEpisodes:  val,
 		DevelopmentFloor:            m.SampleFloors.Development,
 		ValidationFloor:             m.SampleFloors.Validation,
 		DevelopmentReadiness:        passFail(dev >= m.SampleFloors.Development),
 		ValidationReadiness:         passFail(val >= m.SampleFloors.Validation),
-		ReturnsCalculated:           false,
-		PerformanceMetricsEmitted:   false,
-		ContaminatedOOSUsed:         false,
-		RecoveryDataAccessed:        false,
 	}
 	if dev >= m.SampleFloors.Development && val >= m.SampleFloors.Validation {
 		result.RecoveryReadiness = "PASS"
@@ -493,10 +479,10 @@ func loadPreRecoveryData() (map[string]*instrumentData, error) {
 					return nil, errors.New("provider timestamp too short")
 				}
 				date := item.Timestamp[:10]
-				if date < "2016-01-01" || date > readinessMaxDate {
+				if date < "2016-01-01" || date > validationEnd {
 					continue
 				}
-				bb := bar{Date: date, Open: item.Open, High: item.High, Low: item.Low, Close: item.Close, Volume: item.Volume}
+				bb := bar{Open: item.Open, High: item.High, Low: item.Low, Close: item.Close, Volume: item.Volume}
 				switch family.Adjustment {
 				case "raw":
 					d.Raw[date] = bb
@@ -547,8 +533,12 @@ func countEligibleEpisodes(data map[string]*instrumentData, start, end string, m
 	for _, symbol := range expectedUniverse {
 		d := data[symbol]
 		activeUntil := -1
+		lastBoundary := -1000
 		for i, date := range d.Dates {
-			if date < start || date > end || i < m.Candidate.SMASlow-1 {
+			if d.Boundaries[date] {
+				lastBoundary = i
+			}
+			if date < start || date > end || i < m.Candidate.SMASlow-1 || i-lastBoundary < m.Candidate.SMASlow {
 				continue
 			}
 			sig, kind := buildSignal(d, i, m)
@@ -579,9 +569,6 @@ func countEligibleEpisodes(data map[string]*instrumentData, start, end string, m
 }
 
 func buildSignal(d *instrumentData, i int, m recoveryManifest) (signal, string) {
-	if i < m.Candidate.SMASlow-1 {
-		return signal{}, "HOLD"
-	}
 	sf := avgClose(d, i, m.Candidate.SMAFast)
 	sm := avgClose(d, i, m.Candidate.SMAMedium)
 	ss := avgClose(d, i, m.Candidate.SMASlow)
