@@ -39,27 +39,27 @@ type readinessArtifact struct {
 }
 
 type dataContractArtifact struct {
-	Status                  string `json:"status"`
-	Candidate               string `json:"candidate"`
-	PerformanceAuthorized   bool   `json:"performance_execution_authorized"`
-	SignalsAuthorized       bool   `json:"strategy_signals_authorized"`
-	Provider                struct {
-		Name           string   `json:"name"`
-		Feed           string   `json:"feed"`
-		Timeframe      string   `json:"timeframe"`
-		AsOf           string   `json:"asof"`
-		Families       []string `json:"adjustment_families"`
-		Universe       []string `json:"universe"`
-		Fallback       string   `json:"fallback"`
-		PaidSpendUSD   int      `json:"paid_spend_usd"`
-		RawRoot        string   `json:"raw_persistence"`
-		Request        struct {
-			Start                 string   `json:"start"`
-			End                   string   `json:"end"`
-			ReturnedDates         []string `json:"returned_session_dates_inclusive"`
-			RejectBefore          bool     `json:"reject_before_start"`
-			RejectAfter           bool     `json:"reject_after_end"`
-			RejectExplicit20260914 bool    `json:"reject_explicit_2026_09_14"`
+	Status                string `json:"status"`
+	Candidate             string `json:"candidate"`
+	PerformanceAuthorized bool   `json:"performance_execution_authorized"`
+	SignalsAuthorized     bool   `json:"strategy_signals_authorized"`
+	Provider              struct {
+		Name         string   `json:"name"`
+		Feed         string   `json:"feed"`
+		Timeframe    string   `json:"timeframe"`
+		AsOf         string   `json:"asof"`
+		Families     []string `json:"adjustment_families"`
+		Universe     []string `json:"universe"`
+		Fallback     string   `json:"fallback"`
+		PaidSpendUSD int      `json:"paid_spend_usd"`
+		RawRoot      string   `json:"raw_persistence"`
+		Request      struct {
+			Start                  string   `json:"start"`
+			End                    string   `json:"end"`
+			ReturnedDates          []string `json:"returned_session_dates_inclusive"`
+			RejectBefore           bool     `json:"reject_before_start"`
+			RejectAfter            bool     `json:"reject_after_end"`
+			RejectExplicit20260914 bool     `json:"reject_explicit_2026_09_14"`
 		} `json:"request_identity"`
 	} `json:"provider"`
 	Execution struct {
@@ -73,21 +73,21 @@ type dataContractArtifact struct {
 	Lifecycle struct {
 		PerformanceExecuted bool `json:"recovery_performance_executed"`
 		RunCount            int  `json:"recovery_oos_run_count"`
-		PostBoundary         bool `json:"post_boundary_extension"`
+		PostBoundary        bool `json:"post_boundary_extension"`
 	} `json:"lifecycle"`
 }
 
 type datasetArtifact struct {
-	Status                 string `json:"status"`
-	AsOf                   string `json:"as_of"`
-	Start                  string `json:"date_range_start"`
-	End                    string `json:"date_range_end"`
-	Provider               string `json:"provider"`
-	Feed                   string `json:"feed"`
-	Timeframe              string `json:"timeframe"`
-	SynchronizedSessions   int    `json:"synchronized_session_count"`
-	CompleteNo2025Guard    bool   `json:"complete_no_2025_guard"`
-	PerformanceOutput      bool   `json:"performance_output_generated"`
+	Status               string `json:"status"`
+	AsOf                 string `json:"as_of"`
+	Start                string `json:"date_range_start"`
+	End                  string `json:"date_range_end"`
+	Provider             string `json:"provider"`
+	Feed                 string `json:"feed"`
+	Timeframe            string `json:"timeframe"`
+	SynchronizedSessions int    `json:"synchronized_session_count"`
+	CompleteNo2025Guard  bool   `json:"complete_no_2025_guard"`
+	PerformanceOutput    bool   `json:"performance_output_generated"`
 }
 
 func main() {
