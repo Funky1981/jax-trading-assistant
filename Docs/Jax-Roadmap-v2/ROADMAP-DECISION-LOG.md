@@ -1,5 +1,24 @@
 # Roadmap Decision Log
 
+## RD-2026-09-14-07 - VAL-03R1D sign-permutation null integrity closure
+
+- Work package: `VAL-03R1D — SIGN-PERMUTATION NULL INTEGRITY CLOSURE`.
+- External authorization: GO for bounded, outcome-free corrective closure.
+- R1C production wiring was correct, but its first null-statistic implementation
+  reused populated `DirectionalEffect` values after mutating `Direction`. R1D
+  separates the observed statistic (`mean(DirectionalEffect)`) from the null
+  statistic (`mean(assigned_sign * AbsoluteMagnitude)`). Signs are assigned
+  directly from a defined SHA-256 digest bit with 10,000 deterministic draws.
+- Production observations now carry one canonical instrument-year stratum ID;
+  mismatches fail closed. R1C mixed-only filtering, persisted breadth, and
+  unknown-status protections remain intact.
+- Synthetic tests prove exact reference signs, non-degenerate null statistics,
+  p-value non-degeneracy, input-order determinism, excluded-stratum invariance,
+  production BUY/SELL wiring, and R1B/R1C regressions. Manifest v1.5 and the
+  contaminated VAL-03 artifact remain unchanged.
+- `VAL-03R1D = COMPLETE / EXTERNAL REVIEW REQUIRED`; independent OOS remains
+  `NOT AUTHORIZED`.
+
 ## RD-2026-09-14-06 - VAL-03R1C secondary-diagnostic and audit-traceability closure
 
 - Work package: `VAL-03R1C — SECONDARY-DIAGNOSTIC & AUDIT-TRACEABILITY CLOSURE`.

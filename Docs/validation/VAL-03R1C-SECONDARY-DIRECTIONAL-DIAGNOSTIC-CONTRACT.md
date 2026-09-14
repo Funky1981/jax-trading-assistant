@@ -1,5 +1,9 @@
 # VAL-03R1C Secondary Directional Diagnostic Contract
 
+> Supersession note: R1D corrected the null-statistic implementation described
+> below so null draws use `SIGN_X_ABSOLUTE_MAGNITUDE_NULL_V1` and never reuse a
+> populated observed directional effect.
+
 ## Status
 
 `VAL-03R1C = COMPLETE / EXTERNAL REVIEW REQUIRED`. This is a prospective,
@@ -39,8 +43,11 @@ The secondary sign permutation uses
 domain-separated deterministic seed. Under `MIXED_INSTRUMENT_YEAR_ONLY_V1`,
 only instrument-year strata containing both BUY and SELL observations enter the
 permutation. Single-direction strata are explicitly listed and excluded with
-their observation counts. No label shuffling occurs. The add-one p-value is
-informational only; no mixed stratum yields `NOT_APPLICABLE`.
+their observation counts. Each null value is the assigned deterministic sign
+times the observation's fixed absolute magnitude under
+`SIGN_X_ABSOLUTE_MAGNITUDE_NULL_V1`; it never reads the observed effect sign.
+No label shuffling occurs. The add-one p-value is informational only; no mixed
+stratum yields `NOT_APPLICABLE`.
 
 ## Auditability
 

@@ -1,7 +1,7 @@
 # VAL-03R1A Manifest Conformance Matrix
 
-This outcome-free matrix records both the R1A baseline and the final R1B
-closure state. It does not load market bars or inspect VAL-03 results.
+This outcome-free matrix records the R1A baseline and later corrective closure
+states. It does not load market bars or inspect VAL-03 results.
 
 | Frozen requirement | Manifest/source | Implementation evidence | Test evidence | Baseline | Final R1B | Notes |
 |---|---|---|---|---:|---:|---|
@@ -44,3 +44,23 @@ closure state. It does not load market bars or inspect VAL-03 results.
 - Unresolved material ambiguities: 0.
 - Manifest v1.5 remains unchanged and historical VAL-03 evidence remains
   immutable.
+
+## R1C/R1D production-path conformance
+
+R1C established production wiring, but R1D found that the first sign-null
+implementation reused the observed directional effect when production effects
+were populated. The R1D column below distinguishes implementation existence,
+production-path proof, and null-statistic correctness.
+
+| Requirement | Implementation exists | Production path proven | R1C | Final R1D | Evidence |
+|---|---:|---:|---:|---:|---|
+| Secondary BUY/SELL diagnostic creation | PASS | PASS | PASS | PASS | evaluator integration test |
+| Typed persisted stratum identity | PASS | PASS | PASS | PASS | canonical stratum and production observation test |
+| Mixed-only stratum filtering | PASS | PASS | PASS | PASS | mixed/excluded ID tests |
+| Observed directional statistic | PASS | PASS | PASS | PASS | explicit observed-statistic test |
+| Sign × absolute-magnitude null | PASS | PASS | PASS | PASS | R1D reference and regression tests |
+| Deterministic null signs | PASS | PASS | PASS | PASS | direct SHA-256 bit-convention test |
+| Unknown disposition fail-closed | PASS | PASS | PASS | PASS | classifier regression test |
+| Calendar-regime cell persistence | PASS | PASS | PASS | PASS | persisted-cell test |
+
+R1D unresolved ambiguity: 0. No outcome-bearing validation was executed.
