@@ -4,7 +4,7 @@
   "candidate_id": "ma_crossover_v1",
   "preregistration_manifest_sha256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a",
   "dataset_readiness_sha256": "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce",
-  "runner_commit_sha": "b35073932665734bb538656df6067beda288ff1a",
+  "runner_commit_sha": "4ae446299418fde8bb5173b02bfe670da0266235",
   "runner_source": "cmd/val03-ma-crossover/main.go",
   "execution_command": "go run ./cmd/val03-ma-crossover",
   "result_schema": "jax.val-03.ma-crossover-result/v1",
