@@ -1,0 +1,39 @@
+{
+  "schema_version": "jax.val-03.oos-execution-freeze/v1",
+  "status": "FROZEN_BEFORE_FORMAL_OOS",
+  "candidate_id": "ma_crossover_v1",
+  "preregistration_manifest_sha256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a",
+  "dataset_readiness_sha256": "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce",
+  "runner_commit_sha": "b35073932665734bb538656df6067beda288ff1a",
+  "runner_source": "cmd/val03-ma-crossover/main.go",
+  "execution_command": "go run ./cmd/val03-ma-crossover",
+  "result_schema": "jax.val-03.ma-crossover-result/v1",
+  "formal_oos_partition": {
+    "start": "2023-01-01",
+    "end": "2024-12-31",
+    "holdout_start": "2025-01-01",
+    "holdout_accessed": false
+  },
+  "frozen_source_identities": {
+    "libs/strategies/ma_crossover.go": "fb22b9dd909a0ae5f13dd727ff2eddf40963d426",
+    "libs/strategies/strategy.go": "8ff03f23aed6dba929cdc83cda5c1a1153da616f",
+    "internal/trader/signalgenerator/inprocess.go": "4a3f0537013308f40ee94c3eb723d3a152297048",
+    "internal/modules/quant/volatility.go": "6fb7cee0e1643352f073022bbf999283b5a04a49",
+    "cmd/trader/instance_scheduler.go": "54244f758599e97317d31073f8c23f1d2b4ae729",
+    "libs/marketdata/alpaca_hardened.go": "9039a7d6129158bbfcc8aa3a8525d54675dd3cc6",
+    "libs/marketdata/val03b_contract.go": "6d020ddf97d4729eb68514fbe95e6621fdc359eb",
+    "libs/marketdata/val03c_warmup.go": "7905262ddeff899bf18c17e50d45d0073079afea"
+  },
+  "cost_models": {
+    "base": "cost_val03_ibkr_fixed_personal_base_v1",
+    "stress": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8"
+  },
+  "random_seed_domains": [
+    "|instrument-year-bootstrap-v2|",
+    "|timestamp-placebo-v1|",
+    "|secondary-sign-permutation-v1|"
+  ],
+  "formal_oos_run_count_before_execution": 0,
+  "strategy_parameters_changed": false,
+  "holdout_sealed": true
+}
