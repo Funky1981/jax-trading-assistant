@@ -1,5 +1,27 @@
 # Roadmap Decision Log
 
+## RD-2026-09-14-04 - VAL-03R1A manifest conformance closure
+
+- Work package: `VAL-03R1A — FULL MANIFEST SEMANTIC CONFORMANCE CLOSURE`.
+- External decision implemented: `VAL-03R1` is treated as partial closure; the
+  contaminated VAL-03 run remains immutable and no independent OOS is
+  authorized.
+- The VAL-03 harness now binds all promotion-critical floors from the frozen
+  v1.5 manifest, implements deterministic matched/timestamp placebo selection,
+  typed falsification dispositions, signal-time SPY regime and exact theme
+  slices, trading-session overlap sensitivity, numeric descriptive benchmarks,
+  and falsification-before-promotion classification.
+- The outcome-free `--contract-audit` command verifies manifest identity,
+  registered coverage, fail-closed promotion configuration, contaminated-run
+  protection, holdout protection and execution authority without loading bars
+  or outcomes.
+- Synthetic tests cover the corrected semantics. No strategy, parameter,
+  manifest, statistical floor or historical artifact was changed. No market
+  outcome, 2025/2026 data, broker action, paper run or Phase 13 activity
+  occurred.
+- `VAL-03R1A = COMPLETE / EXTERNAL REVIEW REQUIRED`; new independent OOS
+  remains `NOT AUTHORIZED`.
+
 ## RD-2026-09-14-03 - VAL-03R1 harness integrity recovery
 
 - Work package: `VAL-03R1 — HISTORICAL VALIDATION HARNESS INTEGRITY RECOVERY`.
