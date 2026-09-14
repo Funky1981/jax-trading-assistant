@@ -629,7 +629,7 @@ func simulateDirectional(d *instrumentData, symbol string, sig signal, entryInde
 	if direction == "SELL" {
 		effect = -underlying
 	}
-	return directionalObservation{Instrument: symbol, Year: yearOf(sig.Date), Direction: direction, Magnitude: absFloat(effect), SignalDate: sig.Date, EntryDate: entryDate, ExitDate: d.Dates[exitIndex], DirectionalEffect: effect, AbsoluteMagnitude: absFloat(effect)}, exitIndex, true
+	return directionalObservation{Instrument: symbol, Year: yearOf(sig.Date), Direction: direction, Magnitude: absFloat(effect), SignalDate: sig.Date, EntryDate: entryDate, ExitDate: d.Dates[exitIndex], DirectionalEffect: effect, AbsoluteMagnitude: absFloat(effect), Stratum: canonicalDirectionalStratum(symbol, yearOf(sig.Date))}, exitIndex, true
 }
 func finishPartition(r *partitionResult) {
 	r.Blocks, r.Instruments, r.MaxInstrumentShare, r.RegimeSlices = episodeBreadth(r.Episodes)

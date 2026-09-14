@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
+	"math"
 	"sort"
 )
 
@@ -12,6 +15,7 @@ const (
 	secondaryDiagnosticPolicyVer = "SECONDARY_DIRECTIONAL_PRICE_EFFECT_V1"
 	mixedStratumPolicyVer        = "MIXED_INSTRUMENT_YEAR_ONLY_V1"
 	unknownDispositionPolicyVer  = "FAIL_CLOSED_UNKNOWN_STATUS_V1"
+	nullStatisticPolicyVer       = "SIGN_X_ABSOLUTE_MAGNITUDE_NULL_V1"
 )
 
 // FalsificationStatus is deliberately closed: an unclassified registered
@@ -216,6 +220,7 @@ type directionalObservation struct {
 	ExitDate          string  `json:"exit_date,omitempty"`
 	DirectionalEffect float64 `json:"directional_effect"`
 	AbsoluteMagnitude float64 `json:"absolute_magnitude"`
+	Stratum           string  `json:"stratum"`
 }
 
 type secondaryDirectionalDiagnostics struct {
@@ -225,6 +230,7 @@ type secondaryDirectionalDiagnostics struct {
 }
 
 type signPermutationSummary struct {
+	Policy                           string              `json:"policy"`
 	Status                           FalsificationStatus `json:"status"`
 	Replicates                       int                 `json:"replicates"`
 	Seed                             uint64              `json:"seed"`
@@ -237,16 +243,33 @@ type signPermutationSummary struct {
 	ObservationsUsed                 int                 `json:"observations_used"`
 	ObservationsExcluded             int                 `json:"observations_excluded"`
 	MixedStratumPolicy               string              `json:"mixed_stratum_policy"`
+	NullStatisticPolicy              string              `json:"null_statistic_policy"`
+	ObservedStatistic                float64             `json:"observed_statistic"`
+	NullStatisticDigest              string              `json:"null_statistic_digest,omitempty"`
+	Reason                           string              `json:"reason,omitempty"`
 }
 
 func secondarySignPermutation(diagnostics secondaryDirectionalDiagnostics, manifestHash string, cfg FrozenExperimentConfig) signPermutationSummary {
-	return signPermutation(diagnostics.Observations, manifestHash, cfg)
+	if diagnostics.Policy != "" && diagnostics.Policy != secondaryDiagnosticPolicyVer {
+		return signPermutationSummary{Policy: secondaryDiagnosticPolicyVer, Status: FalsificationInsufficient, Replicates: cfg.BootstrapN, Algorithm: signPermutationAlgorithmVer, MixedStratumPolicy: mixedStratumPolicyVer, NullStatisticPolicy: nullStatisticPolicyVer, Reason: "secondary diagnostic policy identity mismatch"}
+	}
+	result := signPermutation(diagnostics.Observations, manifestHash, cfg)
+	result.Policy = secondaryDiagnosticPolicyVer
+	return result
 }
 
 func signPermutation(observations []directionalObservation, manifestHash string, cfg FrozenExperimentConfig) signPermutationSummary {
 	strata := map[string][]directionalObservation{}
 	for _, observation := range observations {
-		strata[fmt.Sprintf("%s-%d", observation.Instrument, observation.Year)] = append(strata[fmt.Sprintf("%s-%d", observation.Instrument, observation.Year)], observation)
+		canonical := canonicalDirectionalStratum(observation.Instrument, observation.Year)
+		if observation.Stratum != "" && observation.Stratum != canonical {
+			return signPermutationSummary{Status: FalsificationInsufficient, Replicates: cfg.BootstrapN, Algorithm: signPermutationAlgorithmVer, MixedStratumPolicy: mixedStratumPolicyVer, NullStatisticPolicy: nullStatisticPolicyVer, Reason: "stored directional observation stratum disagrees with instrument/year"}
+		}
+		if observation.Direction != "BUY" && observation.Direction != "SELL" {
+			return signPermutationSummary{Status: FalsificationInsufficient, Replicates: cfg.BootstrapN, Algorithm: signPermutationAlgorithmVer, MixedStratumPolicy: mixedStratumPolicyVer, NullStatisticPolicy: nullStatisticPolicyVer, Reason: "unsupported directional observation direction"}
+		}
+		observation.Stratum = canonical
+		strata[canonical] = append(strata[canonical], observation)
 	}
 	keys := make([]string, 0, len(strata))
 	for key := range strata {
@@ -262,7 +285,16 @@ func signPermutation(observations []directionalObservation, manifestHash string,
 			if values[i].Direction != values[j].Direction {
 				return values[i].Direction < values[j].Direction
 			}
-			return values[i].Magnitude < values[j].Magnitude
+			if absoluteMagnitude(values[i]) != absoluteMagnitude(values[j]) {
+				return absoluteMagnitude(values[i]) < absoluteMagnitude(values[j])
+			}
+			if values[i].SignalDate != values[j].SignalDate {
+				return values[i].SignalDate < values[j].SignalDate
+			}
+			if values[i].EntryDate != values[j].EntryDate {
+				return values[i].EntryDate < values[j].EntryDate
+			}
+			return values[i].ExitDate < values[j].ExitDate
 		})
 		ordered[key] = values
 		hasBuy, hasSell := false, false
@@ -278,49 +310,80 @@ func signPermutation(observations []directionalObservation, manifestHash string,
 	}
 	seed := seedFor(manifestHash, "|secondary-sign-permutation-v1|")
 	if len(mixedIDs) == 0 {
-		return signPermutationSummary{Status: FalsificationNotApplicable, Replicates: cfg.BootstrapN, Seed: seed, MixedStrata: 0, Algorithm: signPermutationAlgorithmVer, Strata: keys, ExcludedSingleDirectionStrataIDs: excludedIDs, ObservationsExcluded: len(observations), MixedStratumPolicy: mixedStratumPolicyVer}
+		return signPermutationSummary{Status: FalsificationNotApplicable, Replicates: cfg.BootstrapN, Seed: seed, MixedStrata: 0, Algorithm: signPermutationAlgorithmVer, Strata: keys, ExcludedSingleDirectionStrataIDs: excludedIDs, ObservationsExcluded: len(observations), MixedStratumPolicy: mixedStratumPolicyVer, NullStatisticPolicy: nullStatisticPolicyVer}
 	}
 	canonical := []directionalObservation{}
 	for _, key := range mixedIDs {
 		canonical = append(canonical, ordered[key]...)
 	}
-	observed := signedMean(canonical)
+	observed := observedDirectionalStatistic(canonical)
 	ge := 0
+	digest := sha256.New()
 	for replicate := 0; replicate < cfg.BootstrapN; replicate++ {
-		null := make([]directionalObservation, 0, len(canonical))
-		for _, key := range mixedIDs {
-			for index, value := range ordered[key] {
-				assignment := sha256Hex([]byte(fmt.Sprintf("%d|%d|%s|%d", seed, replicate, key, index)))
-				if assignment[0]%2 == 0 {
-					value.Direction = "BUY"
-				} else {
-					value.Direction = "SELL"
-				}
-				null = append(null, value)
-			}
-		}
-		if signedMean(null) >= observed {
+		null := nullStatisticForReplicate(canonical, mixedIDs, seed, replicate)
+		var encoded [16]byte
+		binary.BigEndian.PutUint64(encoded[:8], uint64(replicate))
+		binary.BigEndian.PutUint64(encoded[8:], math.Float64bits(null))
+		digest.Write(encoded[:])
+		if null >= observed {
 			ge++
 		}
 	}
-	return signPermutationSummary{Status: FalsificationInformational, Replicates: cfg.BootstrapN, Seed: seed, PValue: float64(1+ge) / float64(1+cfg.BootstrapN), MixedStrata: len(mixedIDs), Algorithm: signPermutationAlgorithmVer, Strata: keys, MixedStrataIDs: mixedIDs, ExcludedSingleDirectionStrataIDs: excludedIDs, ObservationsUsed: len(canonical), ObservationsExcluded: len(observations) - len(canonical), MixedStratumPolicy: mixedStratumPolicyVer}
+	return signPermutationSummary{Status: FalsificationInformational, Replicates: cfg.BootstrapN, Seed: seed, PValue: float64(1+ge) / float64(1+cfg.BootstrapN), MixedStrata: len(mixedIDs), Algorithm: signPermutationAlgorithmVer, Strata: keys, MixedStrataIDs: mixedIDs, ExcludedSingleDirectionStrataIDs: excludedIDs, ObservationsUsed: len(canonical), ObservationsExcluded: len(observations) - len(canonical), MixedStratumPolicy: mixedStratumPolicyVer, NullStatisticPolicy: nullStatisticPolicyVer, ObservedStatistic: observed, NullStatisticDigest: fmt.Sprintf("%x", digest.Sum(nil))}
 }
 
-func signedMean(observations []directionalObservation) float64 {
+func canonicalDirectionalStratum(instrument string, year int) string {
+	return fmt.Sprintf("%s-%d", instrument, year)
+}
+
+func absoluteMagnitude(observation directionalObservation) float64 {
+	return absFloat(observation.AbsoluteMagnitude)
+}
+
+func observedDirectionalStatistic(observations []directionalObservation) float64 {
 	if len(observations) == 0 {
 		return 0
 	}
 	total := 0.0
 	for _, observation := range observations {
-		if observation.DirectionalEffect != 0 {
-			total += observation.DirectionalEffect
-		} else if observation.Direction == "SELL" {
-			total -= absFloat(observation.Magnitude)
-		} else {
-			total += absFloat(observation.Magnitude)
-		}
+		total += observation.DirectionalEffect
 	}
 	return total / float64(len(observations))
+}
+
+func nullDirectionalStatistic(observations []directionalObservation, signs []int) float64 {
+	if len(observations) == 0 || len(observations) != len(signs) {
+		return 0
+	}
+	total := 0.0
+	for i, observation := range observations {
+		total += float64(signs[i]) * absoluteMagnitude(observation)
+	}
+	return total / float64(len(observations))
+}
+
+func nullAssignmentSign(seed uint64, replicate int, stratum string, index int) int {
+	digest := sha256.Sum256([]byte(fmt.Sprintf("%d|%d|%s|%d", seed, replicate, stratum, index)))
+	if digest[0]&1 == 0 {
+		return 1
+	}
+	return -1
+}
+
+func nullStatisticForReplicate(observations []directionalObservation, mixedStrata []string, seed uint64, replicate int) float64 {
+	strata := map[string][]directionalObservation{}
+	for _, observation := range observations {
+		strata[observation.Stratum] = append(strata[observation.Stratum], observation)
+	}
+	ordered := []directionalObservation{}
+	signs := []int{}
+	for _, stratum := range mixedStrata {
+		for index, observation := range strata[stratum] {
+			ordered = append(ordered, observation)
+			signs = append(signs, nullAssignmentSign(seed, replicate, stratum, index))
+		}
+	}
+	return nullDirectionalStatistic(ordered, signs)
 }
 
 func overlapFilter(episodes []episode, data map[string]*instrumentData, window int) []episode {

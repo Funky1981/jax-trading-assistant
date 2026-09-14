@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"math"
 	"reflect"
 	"sort"
@@ -97,12 +99,12 @@ func TestTimestampPlaceboRegisteredReplicatesAndEligibility(t *testing.T) {
 
 func TestSignPermutationMechanics(t *testing.T) {
 	cfg := testConfig()
-	mixed := []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", Magnitude: .1}, {Instrument: "SPY", Year: 2023, Direction: "SELL", Magnitude: .1}}
+	mixed := []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", DirectionalEffect: .1, AbsoluteMagnitude: .1, Stratum: "SPY-2023"}, {Instrument: "SPY", Year: 2023, Direction: "SELL", DirectionalEffect: .1, AbsoluteMagnitude: .1, Stratum: "SPY-2023"}}
 	result := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: mixed}, "manifest", cfg)
 	if result.Status != FalsificationInformational || result.Replicates != 10000 || result.MixedStrata != 1 || result.PValue < 0 || result.PValue > 1 || result.Algorithm != signPermutationAlgorithmVer {
 		t.Fatalf("unexpected mixed sign permutation: %+v", result)
 	}
-	na := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", Magnitude: .1}}}, "manifest", cfg)
+	na := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", DirectionalEffect: .1, AbsoluteMagnitude: .1, Stratum: "SPY-2023"}}}, "manifest", cfg)
 	if na.Status != FalsificationNotApplicable {
 		t.Fatalf("single-direction stratum status = %s, want NOT_APPLICABLE", na.Status)
 	}
@@ -113,13 +115,98 @@ func TestSignPermutationMechanics(t *testing.T) {
 	if seedFor("manifest", "|secondary-sign-permutation-v1|") == seedFor("manifest", "|different-domain|") {
 		t.Fatal("sign seed domain is not separated")
 	}
-	if math.Abs(signedMean([]directionalObservation{{Direction: "BUY", Magnitude: .1}, {Direction: "BUY", Magnitude: .2}})-.15) > 1e-12 {
-		t.Fatal("all-positive observed directional statistic is not stable")
+	if math.Abs(observedDirectionalStatistic([]directionalObservation{{DirectionalEffect: .1}, {DirectionalEffect: .2}})-.15) > 1e-12 {
+		t.Fatal("observed directional statistic is not stable")
 	}
 	withSingle := append(append([]directionalObservation{}, mixed...), directionalObservation{Instrument: "QQQ", Year: 2023, Direction: "BUY", Magnitude: .9})
 	filtered := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: withSingle}, "manifest", cfg)
 	if filtered.ObservationsUsed != 2 || filtered.ObservationsExcluded != 1 || !reflect.DeepEqual(filtered.MixedStrataIDs, []string{"SPY-2023"}) || !reflect.DeepEqual(filtered.ExcludedSingleDirectionStrataIDs, []string{"QQQ-2023"}) {
 		t.Fatalf("single-direction strata were not excluded: %+v", filtered)
+	}
+}
+
+func TestNullStatisticUsesAbsoluteMagnitudeAndDiffersFromObserved(t *testing.T) {
+	cfg := testConfig()
+	observations := []directionalObservation{
+		{Instrument: "SPY", Year: 2023, Direction: "BUY", DirectionalEffect: .10, AbsoluteMagnitude: .10, Stratum: "SPY-2023"},
+		{Instrument: "SPY", Year: 2023, Direction: "SELL", DirectionalEffect: .10, AbsoluteMagnitude: .10, Stratum: "SPY-2023"},
+	}
+	result := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: observations}, "manifest", cfg)
+	if result.ObservedStatistic != .10 || result.PValue >= 1 || result.NullStatisticDigest == "" {
+		t.Fatalf("positive observed case retained a degenerate null: %+v", result)
+	}
+	seed := seedFor("manifest", "|secondary-sign-permutation-v1|")
+	if got := nullStatisticForReplicate(observations, []string{"SPY-2023"}, seed, 0); got != 0 {
+		t.Fatalf("replicate 0 null statistic = %v, want 0 from opposite signs", got)
+	}
+	if got := nullStatisticForReplicate(observations, []string{"SPY-2023"}, seed, 2); got != -.10 {
+		t.Fatalf("replicate 2 null statistic = %v, want -0.10", got)
+	}
+	if got := nullDirectionalStatistic(observations, []int{1, -1}); got != 0 {
+		t.Fatalf("explicit +/- absolute-magnitude null = %v, want 0", got)
+	}
+}
+
+func TestNullStatisticDeterministicReferenceSigns(t *testing.T) {
+	observations := []directionalObservation{
+		{Instrument: "SPY", Year: 2023, Direction: "BUY", DirectionalEffect: .10, AbsoluteMagnitude: .10, Stratum: "SPY-2023"},
+		{Instrument: "SPY", Year: 2023, Direction: "SELL", DirectionalEffect: .10, AbsoluteMagnitude: .10, Stratum: "SPY-2023"},
+	}
+	seed := seedFor("manifest", "|secondary-sign-permutation-v1|")
+	for _, reference := range []struct {
+		replicate int
+		want      float64
+	}{
+		{replicate: 0, want: 0},
+		{replicate: 1, want: 0},
+		{replicate: 2, want: -.1},
+		{replicate: 42, want: -.1},
+	} {
+		signs := []int{}
+		for index := range observations {
+			digest := sha256.Sum256([]byte(fmt.Sprintf("%d|%d|SPY-2023|%d", seed, reference.replicate, index)))
+			if digest[0]&1 == 0 {
+				signs = append(signs, 1)
+			} else {
+				signs = append(signs, -1)
+			}
+		}
+		if got := nullDirectionalStatistic(observations, signs); got != reference.want {
+			t.Fatalf("replicate %d signs=%v null=%v, want %v", reference.replicate, signs, got, reference.want)
+		}
+	}
+}
+
+func TestMixedStrataPolicyExcludesSingleDirectionFromNull(t *testing.T) {
+	cfg := testConfig()
+	base := []directionalObservation{
+		{Instrument: "SPY", Year: 2023, Direction: "BUY", DirectionalEffect: .1, AbsoluteMagnitude: .1, Stratum: "SPY-2023"},
+		{Instrument: "SPY", Year: 2023, Direction: "SELL", DirectionalEffect: -.1, AbsoluteMagnitude: .1, Stratum: "SPY-2023"},
+		{Instrument: "QQQ", Year: 2023, Direction: "BUY", DirectionalEffect: .9, AbsoluteMagnitude: .9, Stratum: "QQQ-2023"},
+	}
+	changedExcluded := append([]directionalObservation(nil), base...)
+	changedExcluded[2].DirectionalEffect, changedExcluded[2].AbsoluteMagnitude = -.7, .7
+	first := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: base}, "manifest", cfg)
+	second := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: changedExcluded}, "manifest", cfg)
+	if first.ObservedStatistic != second.ObservedStatistic || first.NullStatisticDigest != second.NullStatisticDigest || first.PValue != second.PValue {
+		t.Fatal("excluded single-direction stratum altered the applicable null result")
+	}
+	changedMixed := append([]directionalObservation(nil), base...)
+	changedMixed[0].AbsoluteMagnitude = .2
+	third := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: changedMixed}, "manifest", cfg)
+	if third.NullStatisticDigest == first.NullStatisticDigest {
+		t.Fatal("applicable mixed-stratum magnitude did not alter null sequence")
+	}
+	na := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: []directionalObservation{{Instrument: "QQQ", Year: 2023, Direction: "BUY", DirectionalEffect: .1, AbsoluteMagnitude: .1, Stratum: "QQQ-2023"}}}, "manifest", cfg)
+	if na.Status != FalsificationNotApplicable || na.ObservationsUsed != 0 {
+		t.Fatalf("single-direction-only diagnostic = %+v", na)
+	}
+}
+
+func TestStoredStratumMismatchFailsClosed(t *testing.T) {
+	result := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", DirectionalEffect: .1, AbsoluteMagnitude: .1, Stratum: "QQQ-2023"}}}, "manifest", testConfig())
+	if result.Status != FalsificationInsufficient || result.Reason == "" {
+		t.Fatalf("inconsistent stored stratum was not rejected: %+v", result)
 	}
 }
 
@@ -144,6 +231,9 @@ func TestSecondaryDiagnosticsArePopulatedByProductionEvaluator(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	for _, observation := range r.SecondaryDiagnostics.Observations {
+		if observation.Instrument == "" || observation.Year == 0 || observation.Stratum != canonicalDirectionalStratum(observation.Instrument, observation.Year) || observation.SignalDate == "" || observation.EntryDate == "" || observation.ExitDate == "" || observation.AbsoluteMagnitude != absFloat(observation.DirectionalEffect) {
+			t.Fatalf("production diagnostic identity/effect is incomplete: %+v", observation)
+		}
 		seen[observation.Direction] = true
 	}
 	if !seen["BUY"] || !seen["SELL"] {
@@ -158,7 +248,7 @@ func TestSecondaryDiagnosticsArePopulatedByProductionEvaluator(t *testing.T) {
 
 func TestSecondaryPermutationUsesExplicitBuilderObservations(t *testing.T) {
 	cfg := testConfig()
-	observations := secondaryDirectionalDiagnostics{Observations: []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", Magnitude: .2}, {Instrument: "SPY", Year: 2023, Direction: "SELL", Magnitude: .1}}}
+	observations := secondaryDirectionalDiagnostics{Observations: []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", DirectionalEffect: .2, AbsoluteMagnitude: .2, Stratum: "SPY-2023"}, {Instrument: "SPY", Year: 2023, Direction: "SELL", DirectionalEffect: .1, AbsoluteMagnitude: .1, Stratum: "SPY-2023"}}}
 	result := buildFalsification(map[string]*instrumentData{}, partitionResult{SecondaryDiagnostics: observations}, "manifest", cfg, observations)
 	summary, ok := result["secondary_sign_permutation"].(signPermutationSummary)
 	if !ok || summary.MixedStrata != 1 || summary.Status != FalsificationInformational {
