@@ -40,10 +40,12 @@ func TestBaseCommissionMinimumAndMaximum(t *testing.T) {
 
 func TestSeedDerivationIsDeterministicAndDomainSeparated(t *testing.T) {
 	manifest := "manifest-test"
-	if seedFor(manifest, "|instrument-year-bootstrap-v2|") != seedFor(manifest, "|instrument-year-bootstrap-v2|") {
+	seedA := seedFor(manifest, "|instrument-year-bootstrap-v2|")
+	seedB := seedFor(manifest, "|instrument-year-bootstrap-v2|")
+	if seedA != seedB {
 		t.Fatal("seed derivation is not deterministic")
 	}
-	if seedFor(manifest, "|instrument-year-bootstrap-v2|") == seedFor(manifest, "|timestamp-placebo-v1|") {
+	if seedA == seedFor(manifest, "|timestamp-placebo-v1|") {
 		t.Fatal("seed domains unexpectedly collide")
 	}
 }
