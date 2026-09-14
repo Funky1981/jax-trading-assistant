@@ -1,5 +1,25 @@
 # Roadmap Decision Log
 
+## RD-2026-09-14-03 - VAL-03R1 harness integrity recovery
+
+- Work package: `VAL-03R1 — HISTORICAL VALIDATION HARNESS INTEGRITY RECOVERY`.
+- External decision: the prior VAL-03 result remains
+  `NO-GO / CONTAMINATED_FOR_FORMAL_OOS`; its raw artifacts are immutable and
+  its formal OOS run count remains `1`.
+- The VAL-03 harness now loads a typed `FrozenExperimentConfig` from the
+  hash-bound v1.5 manifest, binds the same `0.60` eligibility threshold across
+  primary and registered variant paths, validates material contract drift and
+  refuses reuse of the contaminated execution identity.
+- A preflight-only command and deterministic synthetic tests were added. The
+  future output schema now marks result-bearing run manifests as having output;
+  the historical contaminated artifact was not rewritten.
+- No historical performance was rerun. No development, validation, OOS, 2025
+  or 2026 outcome was accessed. No new provider data, broker call, order, fill,
+  forward paper or Phase 13 activity occurred.
+- `VAL-03R1 = COMPLETE / EXTERNAL REVIEW REQUIRED`; a new independent OOS
+  boundary is `NOT AUTHORIZED`. Recovery design options are recorded in
+  `Docs/validation/VAL-03R1-INDEPENDENT-RECOVERY-OPTIONS.md`.
+
 ## RD-2026-09-14-02 - VAL-03 formal execution integrity closure
 
 - Work package: `VAL-03 — MA CROSSOVER FROZEN HISTORICAL VALIDATION`.

@@ -30,8 +30,8 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03 — FORMAL EXECUTION CLOSED AS CONTAMINATED_FOR_FORMAL_OOS; EXTERNAL REVIEW REQUIRED** |
-| Next package | **No VAL-03 rerun is authorized from this execution; any new attempt requires a separately frozen and externally authorized boundary** |
+| Current implementation package | **VAL-03R1 — HARNESS INTEGRITY RECOVERY COMPLETE; EXTERNAL REVIEW REQUIRED** |
+| Next package | **New independent OOS boundary NOT AUTHORIZED; contaminated VAL-03 remains closed** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -358,7 +358,7 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is the VAL-03 formal execution integrity review,
+The current position is the VAL-03R1 harness integrity recovery review,
 following the external `GO` for CR-02G and the complete CR-01 through CR-02G
 technical cleanup sequence. The cleanup record does not grant commercial-sale
 clearance. Jax is currently a personal trading platform; optional future
@@ -383,4 +383,6 @@ no-rerun rule applies and VAL-03 is classified `CONTAMINATED_FOR_FORMAL_OOS`;
 its raw numeric outputs are not scientifically interpretable. Phase 13 remains
 `NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE`.
 The commercial release gate remains separate and blocked by owner, legal,
-account/contract and deployment decisions.
+account/contract and deployment decisions. VAL-03 remains
+`CONTAMINATED_FOR_FORMAL_OOS / CLOSED`; VAL-03R1 repaired the harness without
+rerunning outcomes. A new independent performance boundary is not authorized.
