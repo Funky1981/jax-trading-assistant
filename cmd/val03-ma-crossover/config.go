@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // FrozenExperimentConfig is the single source of truth for outcome-bearing
@@ -302,6 +303,24 @@ func auditManifestContract(manifestBytes []byte, cfg FrozenExperimentConfig) err
 	}
 	if cfg.ExecutionAuthority != "NONE" {
 		return errors.New("execution authority is not NONE")
+	}
+	if topFiveRuleVersion != "CEIL_5_PERCENT_V1" || slicePolicyVersion != "CALENDAR_YEAR_X_SPY_SMA200_REGIME_V1" || signPermutationAlgorithmVer != "SHA256_INDEPENDENT_SIGN_ASSIGNMENT_V1" {
+		return errors.New("R1B contract identity mismatch")
+	}
+	source, err := os.ReadFile("cmd/val03-ma-crossover/main.go")
+	if err != nil {
+		return fmt.Errorf("read falsification wiring: %w", err)
+	}
+	if strings.Contains(string(source), "signPermutation(nil") || !strings.Contains(string(source), "secondarySignPermutation(secondary") {
+		return errors.New("secondary sign permutation lacks explicit observation wiring")
+	}
+	contractSource, err := os.ReadFile("cmd/val03-ma-crossover/contract.go")
+	if err != nil {
+		return fmt.Errorf("read R1B contract implementation: %w", err)
+	}
+	contractText := string(contractSource)
+	if !strings.Contains(contractText, "topFiveFalsification") || !strings.Contains(contractText, "Blocking && disposition.Status") || !strings.Contains(contractText, "calendarRegimeCells") {
+		return errors.New("R1B blocking or breadth semantics are not active")
 	}
 	blocked, err := contaminatedRunGuard(integrityPath)
 	if err != nil || !blocked {

@@ -78,7 +78,7 @@ func TestVAL03R1BootstrapAndBreadthAreDeterministic(t *testing.T) {
 		t.Fatal("bootstrap is not deterministic")
 	}
 	blocks, instruments, share, regimes := episodeBreadth(eps)
-	if blocks != 2 || instruments != 2 || share != 0.5 || regimes != 1 {
+	if blocks != 2 || instruments != 2 || share != 0.5 || regimes != 0 {
 		t.Fatalf("unexpected breadth: %d %d %v %d", blocks, instruments, share, regimes)
 	}
 }

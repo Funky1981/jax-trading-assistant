@@ -2,6 +2,8 @@ package main
 
 import (
 	"math"
+	"reflect"
+	"sort"
 	"testing"
 	"time"
 )
@@ -96,13 +98,33 @@ func TestTimestampPlaceboRegisteredReplicatesAndEligibility(t *testing.T) {
 func TestSignPermutationMechanics(t *testing.T) {
 	cfg := testConfig()
 	mixed := []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", Magnitude: .1}, {Instrument: "SPY", Year: 2023, Direction: "SELL", Magnitude: .1}}
-	result := signPermutation(mixed, "manifest", cfg)
-	if result.Status != FalsificationPass || result.Replicates != 10000 || result.MixedStrata != 1 || result.PValue < 0 || result.PValue > 1 {
+	result := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: mixed}, "manifest", cfg)
+	if result.Status != FalsificationInformational || result.Replicates != 10000 || result.MixedStrata != 1 || result.PValue < 0 || result.PValue > 1 || result.Algorithm != signPermutationAlgorithmVer {
 		t.Fatalf("unexpected mixed sign permutation: %+v", result)
 	}
-	na := signPermutation([]directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", Magnitude: .1}}, "manifest", cfg)
+	na := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", Magnitude: .1}}}, "manifest", cfg)
 	if na.Status != FalsificationNotApplicable {
 		t.Fatalf("single-direction stratum status = %s, want NOT_APPLICABLE", na.Status)
+	}
+	reordered := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: []directionalObservation{mixed[1], mixed[0]}}, "manifest", cfg)
+	if !reflect.DeepEqual(result, reordered) {
+		t.Fatal("sign permutation changed with input order")
+	}
+	if seedFor("manifest", "|secondary-sign-permutation-v1|") == seedFor("manifest", "|different-domain|") {
+		t.Fatal("sign seed domain is not separated")
+	}
+	if math.Abs(signedMean([]directionalObservation{{Direction: "BUY", Magnitude: .1}, {Direction: "BUY", Magnitude: .2}})-.15) > 1e-12 {
+		t.Fatal("all-positive observed directional statistic is not stable")
+	}
+}
+
+func TestSecondaryPermutationUsesExplicitBuilderObservations(t *testing.T) {
+	cfg := testConfig()
+	observations := secondaryDirectionalDiagnostics{Observations: []directionalObservation{{Instrument: "SPY", Year: 2023, Direction: "BUY", Magnitude: .2}, {Instrument: "SPY", Year: 2023, Direction: "SELL", Magnitude: .1}}}
+	result := buildFalsification(map[string]*instrumentData{}, partitionResult{SecondaryDiagnostics: observations}, "manifest", cfg, observations)
+	summary, ok := result["secondary_sign_permutation"].(signPermutationSummary)
+	if !ok || summary.MixedStrata != 1 || summary.Status != FalsificationInformational {
+		t.Fatalf("explicit secondary observations did not reach builder: %#v", result["secondary_sign_permutation"])
 	}
 }
 
@@ -138,9 +160,111 @@ func TestSessionOverlapAndTopFiveExclusion(t *testing.T) {
 		t.Fatalf("overlap filter = %+v, want earliest 1,21,41 sessions", kept)
 	}
 	before, after, removed := topFivePercentExclusion(eps)
-	if before <= after || len(removed) != 1 || removed[0] != "other" {
+	if before <= after || len(removed) != 1 || removed[0] != "other" || topFiveRuleVersion != "CEIL_5_PERCENT_V1" {
 		t.Fatalf("top-five exclusion = before %v after %v removed %v", before, after, removed)
 	}
+}
+
+func TestTopFiveCeilingBoundaryAndIDs(t *testing.T) {
+	for _, tc := range []struct{ n, want int }{{1, 1}, {19, 1}, {20, 1}, {21, 2}, {39, 2}, {40, 2}, {41, 3}, {100, 5}} {
+		if got := topFiveRemovalCount(tc.n); got != tc.want {
+			t.Fatalf("N=%d removal count=%d, want %d", tc.n, got, tc.want)
+		}
+		eps := make([]episode, tc.n)
+		for i := range eps {
+			eps[i] = episode{ID: string(rune('a' + i%26)), NetReturn: float64(tc.n - i)}
+		}
+		_, _, removed := topFivePercentExclusion(eps)
+		if len(removed) != tc.want {
+			t.Fatalf("N=%d removed IDs=%d, want %d", tc.n, len(removed), tc.want)
+		}
+	}
+	boundary := []episode{{ID: "1", NetReturn: .5}, {ID: "2", NetReturn: .4}, {ID: "3", NetReturn: .3}, {ID: "4", NetReturn: .2}, {ID: "5", NetReturn: .1}, {ID: "6", NetReturn: 0}}
+	_, _, removed := topFivePercentExclusion(boundary)
+	if !reflect.DeepEqual(removed, []string{"1"}) {
+		t.Fatalf("removed IDs = %v, want [1]", removed)
+	}
+}
+
+func TestTopFiveBlockingDispositions(t *testing.T) {
+	cfg := testConfig()
+	cfg.PairedFloor = 2
+	robust := []episode{{ID: "a", NetReturn: .20, PlaceboNetReturn: floatPtr(0)}, {ID: "b", NetReturn: .10, PlaceboNetReturn: floatPtr(0)}, {ID: "c", NetReturn: .05, PlaceboNetReturn: floatPtr(0)}}
+	_, disposition := topFiveFalsification(robust, cfg)
+	if disposition.Status != FalsificationPass || !disposition.Blocking {
+		t.Fatalf("robust remainder = %+v", disposition)
+	}
+	failed := []episode{{ID: "a", NetReturn: .50, PlaceboNetReturn: floatPtr(0)}, {ID: "b", NetReturn: -.10, PlaceboNetReturn: floatPtr(0)}, {ID: "c", NetReturn: -.20, PlaceboNetReturn: floatPtr(0)}}
+	_, disposition = topFiveFalsification(failed, cfg)
+	if disposition.Status != FalsificationFail || !disposition.Blocking {
+		t.Fatalf("failed remainder = %+v", disposition)
+	}
+	insufficient := []episode{{ID: "a", NetReturn: .5, PlaceboNetReturn: floatPtr(0)}, {ID: "b", NetReturn: .1, PlaceboNetReturn: floatPtr(0)}}
+	_, disposition = topFiveFalsification(insufficient, cfg)
+	if disposition.Status != FalsificationInsufficient || !disposition.Blocking {
+		t.Fatalf("insufficient remainder = %+v", disposition)
+	}
+	base := partitionResult{Episodes: robust, MatchedPairs: 2, Blocks: 1, Instruments: 1, MaxInstrumentShare: .2, RegimeSlices: 1, MeanNet: .1, BootstrapLow: .01, MeanPairedDifference: .1, PairedBootstrapLow: .01}
+	if got := classifyPromotion(base, []FalsificationDisposition{{Name: "top", Status: FalsificationFail, Blocking: true}}, testConfigWithFloors(cfg)); got != "FAILED_VALIDATION" {
+		t.Fatalf("blocking top-five failure classified as %s", got)
+	}
+	if got := classifyPromotion(base, []FalsificationDisposition{{Name: "top", Status: FalsificationInsufficient, Blocking: true}}, testConfigWithFloors(cfg)); got != "INSUFFICIENT_EVIDENCE" {
+		t.Fatalf("blocking top-five insufficiency classified as %s", got)
+	}
+}
+
+func TestCalendarRegimeBreadthCells(t *testing.T) {
+	ones := []episode{{Year: 2023, Regime: "SPY_ABOVE_SMA200"}, {Year: 2023, Regime: "SPY_BELOW_SMA200"}}
+	if regimeBreadth(ones) != 2 {
+		t.Fatalf("one year/two regimes breadth=%d", regimeBreadth(ones))
+	}
+	twoYears := []episode{{Year: 2023, Regime: "SPY_ABOVE_SMA200"}, {Year: 2024, Regime: "SPY_ABOVE_SMA200"}}
+	if regimeBreadth(twoYears) != 2 {
+		t.Fatalf("two years/one regime breadth=%d", regimeBreadth(twoYears))
+	}
+	three := append(twoYears, episode{Year: 2024, Regime: "SPY_BELOW_SMA200"})
+	three = append(three, episode{Year: 2024, Regime: "SPY_BELOW_SMA200"}, episode{Year: 2025, Regime: "UNKNOWN"})
+	if regimeBreadth(three) != 3 || !reflect.DeepEqual(calendarRegimeCells(three), []string{"2023|SPY_ABOVE_SMA200", "2024|SPY_ABOVE_SMA200", "2024|SPY_BELOW_SMA200"}) {
+		t.Fatalf("year-regime cells=%v", calendarRegimeCells(three))
+	}
+}
+
+func TestUSSessionOverlapIgnoresWeekendAndHoliday(t *testing.T) {
+	dates := usSessionDates(45)
+	data := map[string]*instrumentData{"SPY": syntheticData(dates, func(i int) float64 { return 10 }), "QQQ": syntheticData(dates, func(i int) float64 { return 10 })}
+	eps := []episode{{ID: "early", Instrument: "SPY", EntryDate: dates[0]}, {ID: "conflict", Instrument: "SPY", EntryDate: dates[19]}, {ID: "allowed", Instrument: "SPY", EntryDate: dates[20]}, {ID: "other", Instrument: "QQQ", EntryDate: dates[19]}}
+	kept := overlapFilter(eps, data, 20)
+	ids := []string{}
+	for _, ep := range kept {
+		ids = append(ids, ep.ID)
+	}
+	sort.Strings(ids)
+	if !reflect.DeepEqual(ids, []string{"allowed", "early", "other"}) {
+		t.Fatalf("session overlap kept=%v", ids)
+	}
+	if dates[5] != "2023-01-09" {
+		t.Fatalf("session fixture did not skip the MLK holiday: %s", dates[5])
+	}
+}
+
+func floatPtr(v float64) *float64 { return &v }
+
+func testConfigWithFloors(cfg FrozenExperimentConfig) FrozenExperimentConfig {
+	cfg.OOSSampleFloor, cfg.PairedFloor, cfg.EffectiveBlockFloor, cfg.InstrumentFloor, cfg.MinimumSliceFloor = 1, 1, 1, 1, 1
+	return cfg
+}
+
+func usSessionDates(n int) []string {
+	date := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
+	result := []string{}
+	for len(result) < n {
+		weekday := date.Weekday()
+		if weekday != time.Saturday && weekday != time.Sunday && date.Format("2006-01-02") != "2023-01-16" {
+			result = append(result, date.Format("2006-01-02"))
+		}
+		date = date.AddDate(0, 0, 1)
+	}
+	return result
 }
 
 func TestPromotionRequiresFalsificationBeforeEligibility(t *testing.T) {
@@ -162,6 +286,9 @@ func TestPromotionRequiresFalsificationBeforeEligibility(t *testing.T) {
 	info := []FalsificationDisposition{{Name: "robustness", Status: FalsificationInformational}}
 	if got := classifyPromotion(oos, info, cfg); got != "FORWARD_PAPER_ELIGIBLE" {
 		t.Fatalf("informational-only disposition should not block otherwise passing synthetic gate: %s", got)
+	}
+	if got := classifyPromotion(oos, []FalsificationDisposition{{Name: "diagnostic", Status: FalsificationFail, Blocking: false}}, cfg); got != "FORWARD_PAPER_ELIGIBLE" {
+		t.Fatalf("non-blocking failure unexpectedly blocked promotion: %s", got)
 	}
 	oos.MeanNet = -0.01
 	if got := classifyPromotion(oos, info, cfg); got != "FAILED_VALIDATION" {

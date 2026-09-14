@@ -86,6 +86,7 @@ type partitionResult struct {
 	Blocks, Instruments                                                  int
 	MaxInstrumentShare                                                   float64
 	RegimeSlices                                                         int
+	SecondaryDiagnostics                                                 secondaryDirectionalDiagnostics `json:"-"`
 }
 type runOutput struct {
 	ContractVersion, ManifestSHA256, DatasetReadinessSHA256 string
@@ -204,7 +205,7 @@ func run() error {
 		results[name] = r
 	}
 	oos := results["formal_oos"]
-	falsification := buildFalsification(data, oos, manifestHash, cfg)
+	falsification := buildFalsification(data, oos, manifestHash, cfg, oos.SecondaryDiagnostics)
 	classification := classifyPromotion(oos, falsificationDispositions(falsification), cfg)
 	out := runOutput{ContractVersion: "jax.val-03.ma-crossover-result/v1", ManifestSHA256: manifestHash, DatasetReadinessSHA256: readyHash, Runner: "cmd/val03-ma-crossover", ExecutionAuthority: "NONE", CreatesFill: false, Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", Universe: append([]string(nil), symbols...), DataStart: dataStart, DataEnd: dataEnd, HoldoutAccessed: false, PerformanceRunCount: 1, Partitions: results, Falsification: falsification, AbstentionTotals: totalAbstentions(results), DataQuality: qualitySummary(data, true), TerminalClassification: classification}
 	if err := writeJSON("Docs/validation/results/VAL-03-HYP-MA-001-RUN-MANIFEST.json", out); err != nil {
@@ -553,21 +554,7 @@ func episodeBreadth(eps []episode) (int, int, float64, int) {
 	return len(blocks), len(inst), maxShare, regimeBreadth(eps)
 }
 func regimeBreadth(eps []episode) int {
-	regimes := map[string]bool{}
-	years := map[int]bool{}
-	for _, e := range eps {
-		if e.Regime != "" && e.Regime != "UNKNOWN" {
-			regimes[e.Regime] = true
-		}
-		years[e.Year] = true
-	}
-	if len(regimes) > 0 {
-		return len(regimes)
-	}
-	if len(years) > 3 {
-		return 3
-	}
-	return len(years)
+	return len(calendarRegimeCells(eps))
 }
 func attachPlacebos(data map[string]*instrumentData, r *partitionResult, cfg FrozenExperimentConfig, manifestHash string) error {
 	if len(r.Episodes) == 0 {
@@ -661,15 +648,15 @@ func applyBootstrap(r *partitionResult, manifestHash string, cfg FrozenExperimen
 		r.PairedBootstrapLow, r.PairedBootstrapHigh = paired[250], paired[9749]
 	}
 }
-func buildFalsification(data map[string]*instrumentData, oos partitionResult, manifestHash string, cfg FrozenExperimentConfig) map[string]any {
-	before, after, removed := topFivePercentExclusion(oos.Episodes)
+func buildFalsification(data map[string]*instrumentData, oos partitionResult, manifestHash string, cfg FrozenExperimentConfig, secondary secondaryDirectionalDiagnostics) map[string]any {
 	intervals := episodeIntervals(data, oos.Episodes)
-	permutation := signPermutation(nil, manifestHash, cfg)
+	permutation := secondarySignPermutation(secondary, manifestHash, cfg)
+	topFive, topFiveDisposition := topFiveFalsification(oos.Episodes, cfg)
 	dispositions := []FalsificationDisposition{
 		{Name: "matched_non_signal_placebo", Status: dispositionForPairs(oos.MatchedPairs, cfg.PairedFloor), Blocking: true},
 		{Name: "timestamp_placebo", Status: FalsificationInformational, Blocking: false},
 		{Name: "secondary_sign_permutation", Status: permutation.Status, Blocking: false},
-		{Name: "top_5_percent_exclusion", Status: FalsificationInformational, Blocking: false},
+		topFiveDisposition,
 		{Name: "leave_one_instrument_out", Status: FalsificationInformational, Blocking: false},
 		{Name: "regime_slices", Status: dispositionForSlices(oos.RegimeSlices, cfg.MinimumSliceFloor), Blocking: true},
 		{Name: "theme_slices", Status: FalsificationInformational, Blocking: false},
@@ -681,7 +668,7 @@ func buildFalsification(data map[string]*instrumentData, oos partitionResult, ma
 		{Name: "overlap_sensitivity", Status: FalsificationInformational, Blocking: false},
 		{Name: "zero_and_buy_hold_baselines", Status: FalsificationInformational, Blocking: false},
 	}
-	return map[string]any{"matched_non_signal_placebo": map[string]any{"pairs": oos.MatchedPairs, "mean_difference": oos.MeanPairedDifference, "bootstrap_low": oos.PairedBootstrapLow}, "timestamp_placebo": timestampPlacebo(data, oos, manifestHash, cfg, intervals), "secondary_sign_permutation": permutation, "top_5_percent_exclusion": map[string]any{"removed": removed, "mean_before": before, "mean_after": after}, "leave_one_instrument_out": leaveOneOut(oos), "regime_slices": descriptiveSlices(oos, "regime"), "theme_slices": descriptiveSlices(oos, "theme"), "sma_19_49_199": variantSummary(data, cfg, 19, 49, 199, 1), "sma_21_51_201": variantSummary(data, cfg, 21, 51, 201, 1), "atr_0_90": variantSummary(data, cfg, 20, 50, 200, 0.90), "atr_1_10": variantSummary(data, cfg, 20, 50, 200, 1.10), "stress_cost": map[string]any{"mean_net_return": oos.MeanStress, "model": cfg.StressCostID}, "overlap_sensitivity": overlapSummary(oos, data, cfg), "zero_and_buy_hold_baselines": benchmarks(data, oos, cfg), "dispositions": dispositions, "seed_domain": manifestHash + "|falsification-v1|"}
+	return map[string]any{"matched_non_signal_placebo": map[string]any{"pairs": oos.MatchedPairs, "mean_difference": oos.MeanPairedDifference, "bootstrap_low": oos.PairedBootstrapLow}, "timestamp_placebo": timestampPlacebo(data, oos, manifestHash, cfg, intervals), "secondary_sign_permutation": permutation, "top_5_percent_exclusion": topFive, "leave_one_instrument_out": leaveOneOut(oos), "regime_slices": descriptiveSlices(oos, "regime"), "theme_slices": descriptiveSlices(oos, "theme"), "sma_19_49_199": variantSummary(data, cfg, 19, 49, 199, 1), "sma_21_51_201": variantSummary(data, cfg, 21, 51, 201, 1), "atr_0_90": variantSummary(data, cfg, 20, 50, 200, 0.90), "atr_1_10": variantSummary(data, cfg, 20, 50, 200, 1.10), "stress_cost": map[string]any{"mean_net_return": oos.MeanStress, "model": cfg.StressCostID}, "overlap_sensitivity": overlapSummary(oos, data, cfg), "zero_and_buy_hold_baselines": benchmarks(data, oos, cfg), "dispositions": dispositions, "seed_domain": manifestHash + "|falsification-v1|"}
 }
 func timestampPlacebo(data map[string]*instrumentData, oos partitionResult, manifestHash string, cfg FrozenExperimentConfig, intervals map[string][]activeInterval) map[string]any {
 	selections := timestampPlaceboSelections(data, oos.Start, oos.End, manifestHash, cfg, intervals)

@@ -65,6 +65,24 @@ func TestManifestBoundConfigFreezesCoreSemantics(t *testing.T) {
 	}
 }
 
+func TestR1BPreservesFrozenManifestAndExplicitPermutationWiring(t *testing.T) {
+	b, err := os.ReadFile(repoFile(manifestPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := sha256.Sum256(b)
+	if got := hex.EncodeToString(h[:]); got != "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a" {
+		t.Fatalf("v1.5 manifest changed: %s", got)
+	}
+	source, err := os.ReadFile(repoFile("cmd/val03-ma-crossover/main.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(source), "signPermutation(nil") || !strings.Contains(string(source), "secondarySignPermutation(secondary") {
+		t.Fatal("secondary sign permutation does not require explicit typed observations")
+	}
+}
+
 func TestManifestBoundConfigRejectsMaterialDrift(t *testing.T) {
 	for _, tc := range []struct {
 		name string

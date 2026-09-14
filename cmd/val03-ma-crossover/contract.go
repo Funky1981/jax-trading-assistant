@@ -5,6 +5,12 @@ import (
 	"sort"
 )
 
+const (
+	topFiveRuleVersion          = "CEIL_5_PERCENT_V1"
+	slicePolicyVersion          = "CALENDAR_YEAR_X_SPY_SMA200_REGIME_V1"
+	signPermutationAlgorithmVer = "SHA256_INDEPENDENT_SIGN_ASSIGNMENT_V1"
+)
+
 // FalsificationStatus is deliberately closed: an unclassified registered
 // diagnostic cannot be treated as a pass.
 type FalsificationStatus string
@@ -204,12 +210,22 @@ type directionalObservation struct {
 	Magnitude  float64
 }
 
+type secondaryDirectionalDiagnostics struct {
+	Observations []directionalObservation
+}
+
 type signPermutationSummary struct {
 	Status      FalsificationStatus `json:"status"`
 	Replicates  int                 `json:"replicates"`
 	Seed        uint64              `json:"seed"`
 	PValue      float64             `json:"p_value,omitempty"`
 	MixedStrata int                 `json:"mixed_strata"`
+	Algorithm   string              `json:"algorithm"`
+	Strata      []string            `json:"strata,omitempty"`
+}
+
+func secondarySignPermutation(diagnostics secondaryDirectionalDiagnostics, manifestHash string, cfg FrozenExperimentConfig) signPermutationSummary {
+	return signPermutation(diagnostics.Observations, manifestHash, cfg)
 }
 
 func signPermutation(observations []directionalObservation, manifestHash string, cfg FrozenExperimentConfig) signPermutationSummary {
@@ -217,8 +233,22 @@ func signPermutation(observations []directionalObservation, manifestHash string,
 	for _, observation := range observations {
 		strata[fmt.Sprintf("%s-%d", observation.Instrument, observation.Year)] = append(strata[fmt.Sprintf("%s-%d", observation.Instrument, observation.Year)], observation)
 	}
+	keys := make([]string, 0, len(strata))
+	for key := range strata {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	ordered := map[string][]directionalObservation{}
 	mixed := 0
-	for _, values := range strata {
+	for _, key := range keys {
+		values := append([]directionalObservation(nil), strata[key]...)
+		sort.Slice(values, func(i, j int) bool {
+			if values[i].Direction != values[j].Direction {
+				return values[i].Direction < values[j].Direction
+			}
+			return values[i].Magnitude < values[j].Magnitude
+		})
+		ordered[key] = values
 		hasBuy, hasSell := false, false
 		for _, value := range values {
 			hasBuy = hasBuy || value.Direction == "BUY"
@@ -230,25 +260,24 @@ func signPermutation(observations []directionalObservation, manifestHash string,
 	}
 	seed := seedFor(manifestHash, "|secondary-sign-permutation-v1|")
 	if mixed == 0 {
-		return signPermutationSummary{Status: FalsificationNotApplicable, Replicates: cfg.BootstrapN, Seed: seed, MixedStrata: 0}
+		return signPermutationSummary{Status: FalsificationNotApplicable, Replicates: cfg.BootstrapN, Seed: seed, MixedStrata: 0, Algorithm: signPermutationAlgorithmVer, Strata: keys}
 	}
-	observed := signedMean(observations)
+	canonical := []directionalObservation{}
+	for _, key := range keys {
+		canonical = append(canonical, ordered[key]...)
+	}
+	observed := signedMean(canonical)
 	ge := 0
-	rng := seed
 	for replicate := 0; replicate < cfg.BootstrapN; replicate++ {
-		null := []directionalObservation{}
-		for _, values := range strata {
-			labels := make([]string, len(values))
-			for i, value := range values {
-				labels[i] = value.Direction
-			}
-			for i := len(labels) - 1; i > 0; i-- {
-				rng = nextRand(rng)
-				j := int(rng % uint64(i+1))
-				labels[i], labels[j] = labels[j], labels[i]
-			}
-			for i, value := range values {
-				value.Direction = labels[i]
+		null := make([]directionalObservation, 0, len(canonical))
+		for _, key := range keys {
+			for index, value := range ordered[key] {
+				assignment := sha256Hex([]byte(fmt.Sprintf("%d|%d|%s|%d", seed, replicate, key, index)))
+				if assignment[0]%2 == 0 {
+					value.Direction = "BUY"
+				} else {
+					value.Direction = "SELL"
+				}
 				null = append(null, value)
 			}
 		}
@@ -256,7 +285,7 @@ func signPermutation(observations []directionalObservation, manifestHash string,
 			ge++
 		}
 	}
-	return signPermutationSummary{Status: FalsificationPass, Replicates: cfg.BootstrapN, Seed: seed, PValue: float64(1+ge) / float64(1+cfg.BootstrapN), MixedStrata: mixed}
+	return signPermutationSummary{Status: FalsificationInformational, Replicates: cfg.BootstrapN, Seed: seed, PValue: float64(1+ge) / float64(1+cfg.BootstrapN), MixedStrata: mixed, Algorithm: signPermutationAlgorithmVer, Strata: keys}
 }
 
 func signedMean(observations []directionalObservation) float64 {
@@ -266,9 +295,9 @@ func signedMean(observations []directionalObservation) float64 {
 	total := 0.0
 	for _, observation := range observations {
 		if observation.Direction == "SELL" {
-			total -= observation.Magnitude
+			total -= absFloat(observation.Magnitude)
 		} else {
-			total += observation.Magnitude
+			total += absFloat(observation.Magnitude)
 		}
 	}
 	return total / float64(len(observations))
@@ -306,10 +335,7 @@ func buyHoldReturn(entry, exit float64) float64 {
 func topFivePercentExclusion(episodes []episode) (before, after float64, removed []string) {
 	ordered := append([]episode(nil), episodes...)
 	sort.Slice(ordered, func(i, j int) bool { return ordered[i].NetReturn > ordered[j].NetReturn })
-	remove := int(float64(len(ordered)) * 0.05)
-	if len(ordered) > 0 && remove < 1 {
-		remove = 1
-	}
+	remove := topFiveRemovalCount(len(ordered))
 	before = mean(ordered, func(e episode) float64 { return e.NetReturn })
 	for i := 0; i < remove && i < len(ordered); i++ {
 		removed = append(removed, ordered[i].ID)
@@ -318,6 +344,53 @@ func topFivePercentExclusion(episodes []episode) (before, after float64, removed
 		after = mean(ordered[remove:], func(e episode) float64 { return e.NetReturn })
 	}
 	return before, after, removed
+}
+
+func topFiveRemovalCount(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	remove := (n*5 + 99) / 100
+	if remove < 1 {
+		return 1
+	}
+	return remove
+}
+
+func topFiveFalsification(episodes []episode, cfg FrozenExperimentConfig) (map[string]any, FalsificationDisposition) {
+	before, after, removed := topFivePercentExclusion(episodes)
+	removedSet := map[string]bool{}
+	for _, id := range removed {
+		removedSet[id] = true
+	}
+	remaining := make([]episode, 0, len(episodes)-len(removed))
+	pairs := 0
+	difference := 0.0
+	for _, ep := range episodes {
+		if removedSet[ep.ID] {
+			continue
+		}
+		remaining = append(remaining, ep)
+		if ep.PlaceboNetReturn != nil {
+			pairs++
+			difference += ep.NetReturn - *ep.PlaceboNetReturn
+		}
+	}
+	pairedMean := 0.0
+	if pairs > 0 {
+		pairedMean = difference / float64(pairs)
+	}
+	status := FalsificationPass
+	reason := "remaining primary effect and paired effect remain positive"
+	if pairs < cfg.PairedFloor {
+		status = FalsificationInsufficient
+		reason = "remaining matched evidence is below the registered pair floor"
+	} else if mean(remaining, func(e episode) float64 { return e.NetReturn }) <= 0 || pairedMean <= 0 {
+		status = FalsificationFail
+		reason = "top-five removal eliminates the remaining primary or paired effect"
+	}
+	disposition := FalsificationDisposition{Name: "top_5_percent_exclusion", Status: status, Blocking: true, Reason: reason}
+	return map[string]any{"rule_version": topFiveRuleVersion, "removed": removed, "removed_count": len(removed), "mean_before": before, "mean_after": after, "remaining_episode_count": len(remaining), "remaining_matched_pairs": pairs, "remaining_mean_paired_difference": pairedMean, "disposition": disposition}, disposition
 }
 
 func episodeIntervals(data map[string]*instrumentData, episodes []episode) map[string][]activeInterval {
@@ -349,6 +422,22 @@ func falsificationDispositions(result map[string]any) []FalsificationDisposition
 		return raw
 	}
 	return nil
+}
+
+func calendarRegimeCells(eps []episode) []string {
+	cells := map[string]bool{}
+	for _, e := range eps {
+		if e.Regime == "" || e.Regime == "UNKNOWN" {
+			continue
+		}
+		cells[fmt.Sprintf("%d|%s", e.Year, e.Regime)] = true
+	}
+	result := make([]string, 0, len(cells))
+	for cell := range cells {
+		result = append(result, cell)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func evaluateVariant(data map[string]*instrumentData, cfg FrozenExperimentConfig, fast, medium, slow int, atrScale float64) partitionResult {
@@ -439,13 +528,13 @@ func classifyPromotion(oos partitionResult, dispositions []FalsificationDisposit
 		return "INSUFFICIENT_EVIDENCE"
 	}
 	for _, disposition := range dispositions {
-		if disposition.Status == FalsificationFail {
+		if disposition.Blocking && disposition.Status == FalsificationFail {
 			return "FAILED_VALIDATION"
 		}
-		if disposition.Status == FalsificationInsufficient {
+		if disposition.Blocking && disposition.Status == FalsificationInsufficient {
 			return "INSUFFICIENT_EVIDENCE"
 		}
-		if disposition.Status != FalsificationPass && disposition.Status != FalsificationInformational && disposition.Status != FalsificationNotApplicable {
+		if disposition.Blocking && disposition.Status != FalsificationPass {
 			return "INSUFFICIENT_EVIDENCE"
 		}
 	}
@@ -456,6 +545,13 @@ func classifyPromotion(oos partitionResult, dispositions []FalsificationDisposit
 		return "FORWARD_PAPER_ELIGIBLE"
 	}
 	return "FAILED_VALIDATION"
+}
+
+func absFloat(v float64) float64 {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 func requiredFalsificationNames() []string {
