@@ -237,12 +237,15 @@ trial. Sensitivity tests are falsification records only.
 
 ## Data requirements
 
-VAL-03 requires daily historical bars for the fixed basket from at least
-`2015-01-01` through `2025-12-31`; 2015 is warm-up only for SMA200. The intended
-first source is the existing approved Alpaca historical route, subject to a
-fresh entitlement and coverage check. VAL-02 acquires no data.
+VAL-03 requires daily historical bars for the fixed basket from
+`2016-01-01` through `2024-12-31`; the first provider session is expected to be
+`2016-01-04`. Initialization is per instrument and requires 200 valid
+synchronized SPLIT-adjusted sessions before development scoring. The final
+2025 holdout remains sealed. The source is the existing approved Alpaca
+historical route. VAL-02 acquired no scored data.
 
-Required fields include raw OHLCV, adjustment/corporate-action provenance,
+Required fields include RAW and SPLIT OHLCV plus the SPLIT+SPIN-OFF structural
+detector, adjustment-family provenance,
 symbol identity/history, UTC and US/Eastern timestamps, trading calendar,
 completeness/staleness flags, dataset identity and content hash.
 
@@ -266,8 +269,8 @@ is limited to this basket and cannot be generalized to all equities.
 
 | Partition | Dates | Permitted use |
 | --- | --- | --- |
-| Warm-up | 2015-01-01 through 2015-12-31 | Indicator warm-up only; not scored. |
-| Development | 2016-01-01 through 2020-12-31 | Pipeline and descriptive development checks. |
+| Initialization | First provider session through each instrument's 200th valid synchronized SPLIT session | `WARMUP_ONLY`; not scored. |
+| Development | 2016-01-01 through 2020-12-31, scorable only after initialization | Pipeline and descriptive development checks. |
 | Validation | 2021-01-01 through 2022-12-31 | Protocol verification and registered diagnostics. |
 | Formal OOS | 2023-01-01 through 2024-12-31 | One frozen candidate evaluation. |
 | Final holdout | 2025-01-01 through 2025-12-31 | Sealed; no VAL-02/ordinary VAL-03 access. |
@@ -276,8 +279,9 @@ No HYP-EVENT-001A partition is reused as this line's formal OOS.
 
 ## Expected sample
 
-Expected workload before outcomes is approximately 9 instruments × 2,500
-scored sessions across 2016–2025, or about 22,500 daily bars plus warm-up.
+Expected workload before outcomes is approximately 9 instruments × 2,264
+available sessions across 2016–2024, with the first 200 valid sessions per
+instrument reserved for initialization. The final 2025 holdout is sealed.
 Exact signal counts are not computed in VAL-02.
 
 Pre-registered floors for VAL-03 are:
@@ -431,6 +435,14 @@ SAFETY BOUNDARIES PRESERVED = YES
 
 The selected candidate remains unchanged. VAL-03B amended only the blocked
 corporate-action/data-price contract to v1.4 before outcomes and documented the
-adjusted-bar equivalence design. Its Alpaca preflight did not cover the
-required 2015-01-01 warm-up, so VAL-03 remains blocked before performance
-evaluation.
+adjusted-bar equivalence design. Its Alpaca preflight established complete
+2016-01-04 through 2024-12-31 bar-family coverage but did not satisfy the then-
+required standalone 2015 warm-up.
+
+## VAL-03C continuation reference
+
+VAL-03C corrects that obsolete standalone 2015 warm-up requirement using a
+per-instrument 200-valid-session initialization contract. The selected
+`ma_crossover_v1`, all strategy/statistical terms, validation/OOS dates and the
+2025 seal remain unchanged. No performance was executed; the corrected data
+contract is ready for separate external VAL-03 authorization.

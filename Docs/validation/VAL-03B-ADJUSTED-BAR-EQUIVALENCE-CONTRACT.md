@@ -4,6 +4,15 @@
 
 `VAL-03B = DATA CONTRACT BLOCKED`.
 
+## VAL-03C continuation
+
+The adjusted-bar engineering contract was accepted externally. VAL-03C
+supersedes only the obsolete requirement for a separate 2015 calendar warm-up:
+the frozen 2016-01-01 request boundary uses the first valid 2016 sessions for
+per-instrument SMA200 initialization. The v1.5 manifest and readiness artifact
+record this correction. No strategy performance, signals, episodes, returns or
+2025 data were accessed.
+
 The adjusted-bar contract is internally consistent, but the authorized Alpaca
 preflight did not cover the required `2015-01-01` warm-up boundary. VAL-03 has
 not resumed and no strategy performance was calculated.

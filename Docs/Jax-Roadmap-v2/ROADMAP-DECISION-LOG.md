@@ -1546,3 +1546,23 @@ sign-permutation p-value, 10,000-replicate instrument-year block bootstrap and
 effective OOS block floor. No historical performance or 2025 holdout data was
 accessed. Scientific status remains `TRADING EDGE NOT DEMONSTRATED /
 INSUFFICIENT SAMPLE` and HYP-EVENT-001A remains `NOT VALIDATED`.
+## RD-2026-09-14-01 - VAL-03C warm-up and manifest consistency
+
+- Work package: `VAL-03C — WARM-UP BOUNDARY & MANIFEST CONSISTENCY CLOSURE`.
+- External decision: VAL-03B adjusted-bar engineering is accepted; its only
+  readiness failure was the obsolete standalone 2015 initialization year.
+- The frozen data request is now `2016-01-01..2024-12-31`, with expected first
+  provider session `2016-01-04`. Each instrument remains `WARMUP_ONLY` until
+  200 valid synchronized SPLIT-adjusted sessions are available.
+- Development remains `2016-01-01..2020-12-31`, but scoring begins only after
+  each instrument's initialization-complete session. Validation, formal OOS,
+  sample floors, strategy parameters, placebo design and sealed 2025 holdout
+  are unchanged.
+- The v1.4 manifest was reconciled and advanced to v1.5: indicator inputs are
+  SPLIT-adjusted, RAW is execution-reference only, and primary/placebo returns
+  contain no cash-distribution credit.
+- No strategy signals, episodes, returns, performance or 2025 data were
+  accessed. VAL-03 remains not started and requires external authorization.
+- Artifacts: `Docs/validation/VAL-03C-WARMUP-AND-MANIFEST-CONSISTENCY-AMENDMENT.md`,
+  `Docs/validation/results/VAL-03C-DATASET-READINESS.json`, and the v1.5
+  preregistration manifest.

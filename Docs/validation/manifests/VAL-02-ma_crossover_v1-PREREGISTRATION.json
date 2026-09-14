@@ -1,6 +1,6 @@
 {
   "contract_id": "jax.val-02.candidate-preregistration",
-  "contract_version": "v1.4",
+  "contract_version": "v1.5",
   "preregistration_status": "FROZEN_FOR_EXTERNAL_REVIEW",
   "closure": {
     "closure_id": "jax.val-02c.ma-crossover-broker-realism-null-mechanics",
@@ -11,8 +11,9 @@
     "historical_performance_executed": false,
     "candidate_reselected": false,
     "val_03a": "COMPLETE / HISTORICAL CORPORATE-ACTION EVENT CONTRACT BLOCKED",
-    "val_03b": "ADJUSTED-BAR PRICE-EDGE CONTRACT COMPLETE — EXTERNAL REVIEW REQUIRED",
-    "val_03_status": "NOT STARTED / BLOCKED BY VAL-03B"
+    "val_03b": "ACCEPTED / DATA READINESS SUPERSEDED FOR 2015 WARM-UP CONSISTENCY",
+    "val_03c": "WARM-UP / MANIFEST CONSISTENCY CLOSURE COMPLETE — EXTERNAL REVIEW REQUIRED",
+    "val_03_status": "NOT STARTED / READY FOR EXTERNAL VAL-03 AUTHORISATION"
   },
   "selected_candidate": {
     "candidate_id": "ma_crossover_v1",
@@ -28,7 +29,11 @@
     "strategy_type_contract": {"path": "libs/strategies/strategy.go", "blob_sha1": "8ff03f23aed6dba929cdc83cda5c1a1153da616f"},
     "operational_input_and_indicator_calculation": {"path": "internal/trader/signalgenerator/inprocess.go", "blob_sha1": "4a3f0537013308f40ee94c3eb723d3a152297048"},
     "atr_reference": {"path": "internal/modules/quant/volatility.go", "blob_sha1": "6fb7cee0e1643352f073022bbf999283b5a04a49"},
-    "operational_actionable_gate_and_first_target": {"path": "cmd/trader/instance_scheduler.go", "blob_sha1": "54244f758599e97317d31073f8c23f1d2b4ae729"}
+    "operational_actionable_gate_and_first_target": {"path": "cmd/trader/instance_scheduler.go", "blob_sha1": "54244f758599e97317d31073f8c23f1d2b4ae729"},
+    "val03b_adjusted_bar_contract": {"path": "libs/marketdata/val03b_contract.go", "blob_sha1": "6d020ddf97d4729eb68514fbe95e6621fdc359eb"},
+    "val03b_alpaca_adjusted_route": {"path": "libs/marketdata/alpaca_hardened.go", "blob_sha1": "9039a7d6129158bbfcc8aa3a8525d54675dd3cc6"},
+    "val03b_preflight": {"path": "cmd/val03b-bar-preflight/main.go", "blob_sha1": "6ec04f8f00acd7f89f1011f824ac41e3069d24e2"},
+    "val03c_initialization_contract": {"path": "libs/marketdata/val03c_warmup.go", "blob_sha1": "7905262ddeff899bf18c17e50d45d0073079afea"}
   },
   "hypothesis": {
     "id": "HYP-MA-001",
@@ -46,18 +51,18 @@
     "actionable_threshold": 0.6,
     "formula": "base 0.65 + 0.12 when directional MarketTrend agrees + 0.08 when Volume > AvgVolume20 + 0.10 when abs(SMA20-SMA200)/SMA200 > 0.05 in the signal direction, capped at 1.00",
     "market_trend": "bullish iff SMA20 > SMA50 > SMA200; bearish iff SMA20 < SMA50 < SMA200; otherwise neutral",
-    "avg_volume20": "arithmetic mean of the last 20 eligible volumes",
+    "avg_volume20": "arithmetic mean of the last 20 eligible SPLIT-adjusted volumes",
     "probability_calibration": "NOT_APPLICABLE; confidence is a heuristic eligibility score, not a probability",
     "post_result_filtering": false
   },
   "indicator_contract": {
     "identity": "jax.ma_crossover.operational-indicators/v1",
     "implementation_owner": "internal/trader/signalgenerator/inprocess.go plus internal/modules/quant/volatility.go",
-    "sma20": "arithmetic mean of the last 20 eligible raw closes",
-    "sma50": "arithmetic mean of the last 50 eligible raw closes",
-    "sma200": "arithmetic mean of the last 200 eligible raw closes",
-    "atr14": "arithmetic mean of the last 14 true ranges; true_range=max(high-low, abs(high-previous_close), abs(low-previous_close)); first bar without previous close excluded",
-    "avg_volume20": "arithmetic mean of the last 20 eligible raw volumes",
+    "sma20": "arithmetic mean of the last 20 eligible SPLIT-adjusted closes",
+    "sma50": "arithmetic mean of the last 50 eligible SPLIT-adjusted closes",
+    "sma200": "arithmetic mean of the last 200 eligible SPLIT-adjusted closes",
+    "atr14": "arithmetic mean of the last 14 true ranges over SPLIT-adjusted OHLC; true_range=max(high-low, abs(high-previous_close), abs(low-previous_close)); first bar without previous close excluded",
+    "avg_volume20": "arithmetic mean of the last 20 eligible SPLIT-adjusted volumes",
     "window_rule": "only bars available through the signal-session close; insufficient, invalid or non-finite history abstains",
     "provider_indicator_substitution": false
   },
@@ -81,7 +86,7 @@
     "corporate_action_event_stream_required": "NO_FOR_PRIMARY_HISTORICAL_PRICE_EDGE",
     "corporate_action_data_used_as_alpha": "NO",
     "forward_paper_corporate_action_accounting": "REQUIRED_PROSPECTIVELY",
-    "future_adjustment_prohibited": true,
+    "future_adjustment_policy": "SPLIT NORMALIZATION ALLOWED ONLY UNDER THE FROZEN SCALE-INVARIANCE / STRUCTURAL CONTRACT; DIVIDEND ADJUSTMENT PROHIBITED FOR PRIMARY SIGNAL AND RETURN; ALL ADJUSTMENT PROHIBITED; SPIN-OFF ADJUSTMENT DETECTOR ONLY",
     "missing_or_ambiguous_action": "abstain and retain provenance failure",
     "rounding": "carry high-precision arithmetic; round displayed monetary outputs only to cents using round-half-up"
   },
@@ -90,7 +95,7 @@
     "feed": "SIP",
     "timeframe": "1Day",
     "asof": "2024-12-31",
-    "date_range": ["2015-01-01", "2024-12-31"],
+    "date_range": ["2016-01-01", "2024-12-31"],
     "signal_family": "SPLIT",
     "execution_reference_family": "RAW",
     "structural_detector_family": "SPLIT_SPIN_OFF",
@@ -104,6 +109,22 @@
     "adapter_identity": "libs/marketdata/alpaca_hardened.go explicit adjustment identities and adjustment-bearing source/normalizer identities",
     "execution_authority": "NONE",
     "creates_fill": false
+  },
+  "val03c_warmup_contract": {
+    "provider_data_start": "2016-01-04",
+    "requested_data_start": "2016-01-01",
+    "initialization_mode": "PER_INSTRUMENT_VALID_SESSION_LOOKBACK",
+    "initialization_required_sessions": 200,
+    "pre_initialization_state": "WARMUP_ONLY",
+    "initialization_complete": "earliest session on which 200 valid synchronized SPLIT-adjusted sessions are available for the frozen operational lookback",
+    "development_calendar_partition": ["2016-01-01", "2020-12-31"],
+    "development_scoring_rule": "only after per-instrument INITIALIZATION_COMPLETE; no MA direction or performance is produced by the readiness helper",
+    "validation_partition": ["2021-01-01", "2022-12-31"],
+    "formal_oos_partition": ["2023-01-01", "2024-12-31"],
+    "final_holdout": ["2025-01-01", "2025-12-31", "SEALED"],
+    "warmup_helper": {"path": "libs/marketdata/val03c_warmup.go", "blob_sha1": "7905262ddeff899bf18c17e50d45d0073079afea"},
+    "readiness_artifact": "Docs/validation/results/VAL-03C-DATASET-READINESS.json",
+    "readiness_artifact_sha256": "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce"
   },
   "protocol": {
     "frequency": "daily regular-session bars",
@@ -186,7 +207,7 @@
     "unused_capital": "remains cash",
     "entry_notional": "whole_share_quantity * next_open",
     "return_denominator": "actual deployed entry_notional, not fixed 10000 USD",
-    "episode_net_return": "(net exit cash value - net entry cash outlay + point-in-time long dividend cash) / actual deployed entry_notional",
+    "episode_net_return": "(net exit price value - net entry price outlay) / actual deployed RAW entry_notional; no cash-distribution credit",
     "portfolio_secondary": {"starting_capital_usd": 100000, "aggregate_gross_cap": 1.0, "allocation": "equal among active valid episodes", "resize_existing": false, "residual_cash": "retained", "portfolio_is_not_primary": true}
   },
   "primary_metric": {
@@ -201,7 +222,7 @@
   },
   "secondary_benchmarks": {
     "primary_comparator": "deterministic matched non-signal fixed-horizon long placebo",
-    "placebo_outcome": "whole-share long entry at placebo next open, exit at twentieth future regular-session close, same cost model and point-in-time dividend treatment; no strategy stop/target transferred",
+    "placebo_outcome": "whole-share long entry at placebo next open, exit at twentieth future regular-session close, same SPLIT/RAW/base-cost semantics and no cash-distribution credit; no strategy stop/target transferred",
     "rationale": "fixed-horizon geometry avoids assigning an arbitrary signal stop/target to a non-signal date",
     "additional": ["zero return", "SPY buy-and-hold over matching dates", "same-asset buy-and-hold descriptive only", "gross versus net", "holding duration", "predefined theme and regime slices"]
   },
@@ -223,8 +244,8 @@
     "insufficient_floor_result": "INSUFFICIENT_EVIDENCE"
   },
   "placebo_contract": {
-    "timestamp_placebo": {"version": "jax.val-02c.timestamp-placebo/v1", "replicates": 10000, "eligibility": ["same instrument", "same calendar year", "regular session", "not actionable", "not active episode", "at least 20 future valid sessions", "raw bars and point-in-time corporate-action provenance"], "selection": "rank eligible dates by SHA-256(seed || replicate || instrument || candidate_date) ascending and choose first; no relaxation", "seed": "SHA-256(frozen_manifest_sha256 || |timestamp-placebo-v1|)", "future_matching": false},
-    "matched_non_signal": {"version": "jax.val-02c.matched-non-signal-placebo/v1", "one_to_one": true, "match_fields": ["same instrument", "same calendar year", "same broad pre-signal regime: SPY close above/below available SMA200"], "eligibility": ["no actionable MA signal", "not signal date", "not active primary episode", "at least 20 future valid sessions", "valid raw bars and provenance"], "distance_limit": "within 60 trading sessions; no relaxation", "selection": "smallest absolute trading-session distance, SHA-256 tie-break using frozen manifest and both dates", "no_match": "record missing; actual episode remains; paired gate is INSUFFICIENT_EVIDENCE below pair floor", "outcome": "fixed-horizon long from placebo next open to twentieth future close with selected costs and dividends", "minimum_pairs": 30}
+    "timestamp_placebo": {"version": "jax.val-02c.timestamp-placebo/v1", "replicates": 10000, "eligibility": ["same instrument", "same calendar year", "regular session", "not actionable", "not active episode", "at least 20 future valid sessions", "synchronized RAW/SPLIT/SPLIT+SPIN-OFF bar-family structural provenance"], "selection": "rank eligible dates by SHA-256(seed || replicate || instrument || candidate_date) ascending and choose first; no relaxation", "seed": "SHA-256(frozen_manifest_sha256 || |timestamp-placebo-v1|)", "future_matching": false},
+    "matched_non_signal": {"version": "jax.val-02c.matched-non-signal-placebo/v1", "one_to_one": true, "match_fields": ["same instrument", "same calendar year", "same broad pre-signal regime: SPY close above/below available SMA200"], "eligibility": ["no actionable MA signal", "not signal date", "not active primary episode", "at least 20 future valid sessions", "valid synchronized bar-family structural provenance"], "distance_limit": "within 60 trading sessions; no relaxation", "selection": "smallest absolute trading-session distance, SHA-256 tie-break using frozen manifest and both dates", "no_match": "record missing; actual episode remains; paired gate is INSUFFICIENT_EVIDENCE below pair floor", "outcome": "fixed-horizon SPLIT-adjusted price-only long from placebo next open to twentieth future close with selected costs and no cash-distribution credit", "minimum_pairs": 30}
   },
   "robustness_variants": {
     "sma_perturbation": [{"fast": 19, "medium": 49, "slow": 199}, {"fast": 21, "medium": 51, "slow": 201}],
@@ -236,13 +257,13 @@
     "replacement_rule": "variants are falsification only and cannot replace the original candidate"
   },
   "provider_acquisition_order": {
-    "primary": {"provider": "Alpaca", "route": "existing hardened historical daily-bars route", "implementation": "libs/marketdata/alpaca_hardened.go", "source_id": "src_alpaca_stock_bars_sip_raw", "feed": "SIP", "timeframe": "1Day", "adjustment_families": ["raw", "split", "split,spin-off"], "asof": "2024-12-31", "date_range": ["2015-01-01", "2024-12-31"], "universe": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"], "raw_artifact_storage": "persist raw provider bytes before normalization with content hash, request identity, retrieval timestamp and source identity"},
+    "primary": {"provider": "Alpaca", "route": "existing hardened historical daily-bars route", "implementation": "libs/marketdata/alpaca_hardened.go", "source_id": "src_alpaca_stock_bars_sip_raw", "feed": "SIP", "timeframe": "1Day", "adjustment_families": ["raw", "split", "split,spin-off"], "asof": "2024-12-31", "date_range": ["2016-01-01", "2024-12-31"], "universe": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"], "raw_artifact_storage": "persist raw provider bytes before normalization with content hash, request identity, retrieval timestamp and source identity"},
     "fallback": "NONE",
     "fallback_trigger": "if primary cannot provide complete frozen range/feed/adjustment/provenance, stop as DATASET_BLOCKED; do not shop providers",
     "paid_spend": 0
   },
   "universe": {"symbols": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"], "membership": "fixed ETF basket; no replacement for closure, delisting or termination", "delisted_or_closed": "retain if historical data exists; otherwise record missing coverage and do not substitute a survivor", "inception": "no episode before required 200-valid-session history", "survivorship_scope": "fixed basket only"},
-  "partitions": {"warmup": ["2015-01-01", "2015-12-31"], "development": ["2016-01-01", "2020-12-31"], "validation": ["2021-01-01", "2022-12-31"], "formal_oos": ["2023-01-01", "2024-12-31"], "final_holdout": ["2025-01-01", "2025-12-31", "SEALED"], "holdout_access": "metadata/schema/hash only; no bars, signals, counts, returns, calibration or semantics"},
+  "partitions": {"requested_data_range": ["2016-01-01", "2024-12-31"], "provider_first_expected_session": "2016-01-04", "initialization": "per-instrument valid-session lookback; 200 sessions; WARMUP_ONLY before completion", "development": ["2016-01-01", "2020-12-31"], "development_scoring_rule": "only observations on or after per-instrument INITIALIZATION_COMPLETE", "validation": ["2021-01-01", "2022-12-31"], "formal_oos": ["2023-01-01", "2024-12-31"], "final_holdout": ["2025-01-01", "2025-12-31", "SEALED"], "holdout_access": "metadata/schema/hash only; no bars, signals, counts, returns, calibration or semantics"},
   "sample_and_dependence": {"episode_floors": {"development": 90, "validation": 30, "formal_oos": 30}, "minimum_paired_placebos": 30, "effective_block_floor": {"formal_oos_nonempty_instrument_year_blocks": 12, "formal_oos_instruments": 6}, "instrument_contribution_max": 0.4, "minimum_regime_or_calendar_slices": 3, "dependence_unit": "instrument-year block"},
   "parameters": {"sma_fast_sessions": 20, "sma_medium_sessions": 50, "sma_slow_sessions": 200, "atr_period_sessions": 14, "pullback_lower_pct": -0.02, "pullback_upper_pct": 0.01, "actionable_confidence_threshold": 0.6, "crossover_stop_atr": 1.0, "crossover_target_atr": 3.0, "holding_period_sessions": 20, "parameter_search": false, "trial_budget": 1},
   "falsification_suite": {"version": "jax.val-02c.ma-crossover.falsification/v1", "tests": ["matched non-signal placebo", "constrained timestamp placebo", "secondary mixed-direction sign permutation where applicable", "top-five-percent contribution exclusion", "leave-one-instrument-out", "SPY SMA200 regime split", "predefined theme groups", "SMA 19/49/199", "SMA 21/51/201", "0.90*ATR14", "1.10*ATR14", "legacy Phase-07 stress cost", "20-session overlap sensitivity", "zero and buy-hold baselines"], "registration_rule": "exact list; failures retained; no post-OOS additions"},

@@ -76,3 +76,12 @@ VAL-03B is the authorized continuation. It implemented and tested a v1.4
 adjusted-bar contract, but its Alpaca preflight found that all requested
 families begin on 2016-01-04 rather than the required 2015-01-01 warm-up.
 VAL-03 therefore remains blocked before performance evaluation.
+
+## VAL-03C continuation
+
+The adjusted-bar contract is accepted; the standalone 2015 warm-up condition
+was obsolete because 2015 was initialization-only. VAL-03C replaces it with a
+per-instrument 200-valid-synchronized-session initialization boundary, without
+changing the 2021–2022 validation, 2023–2024 formal OOS, sample floors or sealed
+2025 holdout. The v1.5 manifest and readiness artifact record the correction.
+VAL-03 performance remains not started.
