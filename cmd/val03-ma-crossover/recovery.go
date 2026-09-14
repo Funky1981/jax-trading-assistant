@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha1"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -209,9 +208,4 @@ func validateRecoveryManifest(m recoveryManifest) error {
 		return errors.New("incomplete 2026-09-14 session included")
 	}
 	return nil
-}
-
-func recoveryManifestSHA(b []byte) string {
-	h := sha256.Sum256(b)
-	return hex.EncodeToString(h[:])
 }
