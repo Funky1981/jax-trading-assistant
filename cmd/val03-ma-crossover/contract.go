@@ -6,9 +6,12 @@ import (
 )
 
 const (
-	topFiveRuleVersion          = "CEIL_5_PERCENT_V1"
-	slicePolicyVersion          = "CALENDAR_YEAR_X_SPY_SMA200_REGIME_V1"
-	signPermutationAlgorithmVer = "SHA256_INDEPENDENT_SIGN_ASSIGNMENT_V1"
+	topFiveRuleVersion           = "CEIL_5_PERCENT_V1"
+	slicePolicyVersion           = "CALENDAR_YEAR_X_SPY_SMA200_REGIME_V1"
+	signPermutationAlgorithmVer  = "SHA256_INDEPENDENT_SIGN_ASSIGNMENT_V1"
+	secondaryDiagnosticPolicyVer = "SECONDARY_DIRECTIONAL_PRICE_EFFECT_V1"
+	mixedStratumPolicyVer        = "MIXED_INSTRUMENT_YEAR_ONLY_V1"
+	unknownDispositionPolicyVer  = "FAIL_CLOSED_UNKNOWN_STATUS_V1"
 )
 
 // FalsificationStatus is deliberately closed: an unclassified registered
@@ -204,24 +207,36 @@ func timestampPlaceboSelections(data map[string]*instrumentData, start, end stri
 }
 
 type directionalObservation struct {
-	Instrument string
-	Year       int
-	Direction  string
-	Magnitude  float64
+	Instrument        string  `json:"instrument"`
+	Year              int     `json:"year"`
+	Direction         string  `json:"direction"`
+	Magnitude         float64 `json:"magnitude"`
+	SignalDate        string  `json:"signal_date,omitempty"`
+	EntryDate         string  `json:"entry_date,omitempty"`
+	ExitDate          string  `json:"exit_date,omitempty"`
+	DirectionalEffect float64 `json:"directional_effect"`
+	AbsoluteMagnitude float64 `json:"absolute_magnitude"`
 }
 
 type secondaryDirectionalDiagnostics struct {
-	Observations []directionalObservation
+	Policy       string                   `json:"policy"`
+	Observations []directionalObservation `json:"observations"`
+	Abstentions  map[string]int           `json:"abstentions,omitempty"`
 }
 
 type signPermutationSummary struct {
-	Status      FalsificationStatus `json:"status"`
-	Replicates  int                 `json:"replicates"`
-	Seed        uint64              `json:"seed"`
-	PValue      float64             `json:"p_value,omitempty"`
-	MixedStrata int                 `json:"mixed_strata"`
-	Algorithm   string              `json:"algorithm"`
-	Strata      []string            `json:"strata,omitempty"`
+	Status                           FalsificationStatus `json:"status"`
+	Replicates                       int                 `json:"replicates"`
+	Seed                             uint64              `json:"seed"`
+	PValue                           float64             `json:"p_value,omitempty"`
+	MixedStrata                      int                 `json:"mixed_strata"`
+	Algorithm                        string              `json:"algorithm"`
+	Strata                           []string            `json:"strata,omitempty"`
+	MixedStrataIDs                   []string            `json:"mixed_strata_ids,omitempty"`
+	ExcludedSingleDirectionStrataIDs []string            `json:"excluded_single_direction_strata_ids,omitempty"`
+	ObservationsUsed                 int                 `json:"observations_used"`
+	ObservationsExcluded             int                 `json:"observations_excluded"`
+	MixedStratumPolicy               string              `json:"mixed_stratum_policy"`
 }
 
 func secondarySignPermutation(diagnostics secondaryDirectionalDiagnostics, manifestHash string, cfg FrozenExperimentConfig) signPermutationSummary {
@@ -239,7 +254,8 @@ func signPermutation(observations []directionalObservation, manifestHash string,
 	}
 	sort.Strings(keys)
 	ordered := map[string][]directionalObservation{}
-	mixed := 0
+	mixedIDs := []string{}
+	excludedIDs := []string{}
 	for _, key := range keys {
 		values := append([]directionalObservation(nil), strata[key]...)
 		sort.Slice(values, func(i, j int) bool {
@@ -255,22 +271,24 @@ func signPermutation(observations []directionalObservation, manifestHash string,
 			hasSell = hasSell || value.Direction == "SELL"
 		}
 		if hasBuy && hasSell {
-			mixed++
+			mixedIDs = append(mixedIDs, key)
+		} else {
+			excludedIDs = append(excludedIDs, key)
 		}
 	}
 	seed := seedFor(manifestHash, "|secondary-sign-permutation-v1|")
-	if mixed == 0 {
-		return signPermutationSummary{Status: FalsificationNotApplicable, Replicates: cfg.BootstrapN, Seed: seed, MixedStrata: 0, Algorithm: signPermutationAlgorithmVer, Strata: keys}
+	if len(mixedIDs) == 0 {
+		return signPermutationSummary{Status: FalsificationNotApplicable, Replicates: cfg.BootstrapN, Seed: seed, MixedStrata: 0, Algorithm: signPermutationAlgorithmVer, Strata: keys, ExcludedSingleDirectionStrataIDs: excludedIDs, ObservationsExcluded: len(observations), MixedStratumPolicy: mixedStratumPolicyVer}
 	}
 	canonical := []directionalObservation{}
-	for _, key := range keys {
+	for _, key := range mixedIDs {
 		canonical = append(canonical, ordered[key]...)
 	}
 	observed := signedMean(canonical)
 	ge := 0
 	for replicate := 0; replicate < cfg.BootstrapN; replicate++ {
 		null := make([]directionalObservation, 0, len(canonical))
-		for _, key := range keys {
+		for _, key := range mixedIDs {
 			for index, value := range ordered[key] {
 				assignment := sha256Hex([]byte(fmt.Sprintf("%d|%d|%s|%d", seed, replicate, key, index)))
 				if assignment[0]%2 == 0 {
@@ -285,7 +303,7 @@ func signPermutation(observations []directionalObservation, manifestHash string,
 			ge++
 		}
 	}
-	return signPermutationSummary{Status: FalsificationInformational, Replicates: cfg.BootstrapN, Seed: seed, PValue: float64(1+ge) / float64(1+cfg.BootstrapN), MixedStrata: mixed, Algorithm: signPermutationAlgorithmVer, Strata: keys}
+	return signPermutationSummary{Status: FalsificationInformational, Replicates: cfg.BootstrapN, Seed: seed, PValue: float64(1+ge) / float64(1+cfg.BootstrapN), MixedStrata: len(mixedIDs), Algorithm: signPermutationAlgorithmVer, Strata: keys, MixedStrataIDs: mixedIDs, ExcludedSingleDirectionStrataIDs: excludedIDs, ObservationsUsed: len(canonical), ObservationsExcluded: len(observations) - len(canonical), MixedStratumPolicy: mixedStratumPolicyVer}
 }
 
 func signedMean(observations []directionalObservation) float64 {
@@ -294,7 +312,9 @@ func signedMean(observations []directionalObservation) float64 {
 	}
 	total := 0.0
 	for _, observation := range observations {
-		if observation.Direction == "SELL" {
+		if observation.DirectionalEffect != 0 {
+			total += observation.DirectionalEffect
+		} else if observation.Direction == "SELL" {
 			total -= absFloat(observation.Magnitude)
 		} else {
 			total += absFloat(observation.Magnitude)
@@ -527,7 +547,14 @@ func classifyPromotion(oos partitionResult, dispositions []FalsificationDisposit
 	if len(dispositions) == 0 {
 		return "INSUFFICIENT_EVIDENCE"
 	}
+	known := map[FalsificationStatus]bool{
+		FalsificationPass: true, FalsificationFail: true, FalsificationInsufficient: true,
+		FalsificationInformational: true, FalsificationNotApplicable: true,
+	}
 	for _, disposition := range dispositions {
+		if !known[disposition.Status] {
+			return "INSUFFICIENT_EVIDENCE"
+		}
 		if disposition.Blocking && disposition.Status == FalsificationFail {
 			return "FAILED_VALIDATION"
 		}

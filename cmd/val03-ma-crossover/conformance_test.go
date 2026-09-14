@@ -116,6 +116,44 @@ func TestSignPermutationMechanics(t *testing.T) {
 	if math.Abs(signedMean([]directionalObservation{{Direction: "BUY", Magnitude: .1}, {Direction: "BUY", Magnitude: .2}})-.15) > 1e-12 {
 		t.Fatal("all-positive observed directional statistic is not stable")
 	}
+	withSingle := append(append([]directionalObservation{}, mixed...), directionalObservation{Instrument: "QQQ", Year: 2023, Direction: "BUY", Magnitude: .9})
+	filtered := secondarySignPermutation(secondaryDirectionalDiagnostics{Observations: withSingle}, "manifest", cfg)
+	if filtered.ObservationsUsed != 2 || filtered.ObservationsExcluded != 1 || !reflect.DeepEqual(filtered.MixedStrataIDs, []string{"SPY-2023"}) || !reflect.DeepEqual(filtered.ExcludedSingleDirectionStrataIDs, []string{"QQQ-2023"}) {
+		t.Fatalf("single-direction strata were not excluded: %+v", filtered)
+	}
+}
+
+func TestSecondaryDiagnosticsArePopulatedByProductionEvaluator(t *testing.T) {
+	dates := syntheticDates(30)
+	closes := []float64{10, 9, 8, 7, 9, 11, 13, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}
+	data := map[string]*instrumentData{}
+	for _, symbol := range symbols {
+		data[symbol] = syntheticData(dates, func(i int) float64 { return closes[i] })
+	}
+	cfg := testConfig()
+	cfg.SMAFast, cfg.SMAMedium, cfg.SMASlow = 2, 3, 4
+	cfg.ATRPeriod, cfg.AvgVolumePeriod, cfg.HoldingPeriod = 1, 1, 2
+	cfg.StopATR, cfg.TargetATR = 1, 3
+	cfg.OOSStart, cfg.OOSEnd = dates[0], dates[len(dates)-1]
+	r, err := evaluatePartition(data, "synthetic", cfg.OOSStart, cfg.OOSEnd, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.SecondaryDiagnostics.Policy != secondaryDiagnosticPolicyVer || len(r.SecondaryDiagnostics.Observations) == 0 {
+		t.Fatalf("production evaluator did not persist secondary diagnostics: %+v", r.SecondaryDiagnostics)
+	}
+	seen := map[string]bool{}
+	for _, observation := range r.SecondaryDiagnostics.Observations {
+		seen[observation.Direction] = true
+	}
+	if !seen["BUY"] || !seen["SELL"] {
+		t.Fatalf("production diagnostics did not retain both directions: %+v", seen)
+	}
+	falsification := buildFalsification(data, r, "manifest", cfg, r.SecondaryDiagnostics)
+	summary, ok := falsification["secondary_sign_permutation"].(signPermutationSummary)
+	if !ok || summary.ObservationsUsed == 0 {
+		t.Fatalf("production diagnostics did not reach falsification builder: %#v", falsification["secondary_sign_permutation"])
+	}
 }
 
 func TestSecondaryPermutationUsesExplicitBuilderObservations(t *testing.T) {
@@ -227,6 +265,11 @@ func TestCalendarRegimeBreadthCells(t *testing.T) {
 	if regimeBreadth(three) != 3 || !reflect.DeepEqual(calendarRegimeCells(three), []string{"2023|SPY_ABOVE_SMA200", "2024|SPY_ABOVE_SMA200", "2024|SPY_BELOW_SMA200"}) {
 		t.Fatalf("year-regime cells=%v", calendarRegimeCells(three))
 	}
+	r := partitionResult{Episodes: three}
+	finishPartition(&r)
+	if r.RegimeSlices != len(r.CalendarRegimeCells) || !reflect.DeepEqual(r.CalendarRegimeCells, calendarRegimeCells(three)) {
+		t.Fatalf("partition did not persist exact calendar-regime cells: %+v", r)
+	}
 }
 
 func TestUSSessionOverlapIgnoresWeekendAndHoliday(t *testing.T) {
@@ -289,6 +332,9 @@ func TestPromotionRequiresFalsificationBeforeEligibility(t *testing.T) {
 	}
 	if got := classifyPromotion(oos, []FalsificationDisposition{{Name: "diagnostic", Status: FalsificationFail, Blocking: false}}, cfg); got != "FORWARD_PAPER_ELIGIBLE" {
 		t.Fatalf("non-blocking failure unexpectedly blocked promotion: %s", got)
+	}
+	if got := classifyPromotion(oos, []FalsificationDisposition{{Name: "unknown", Status: FalsificationStatus("UNKNOWN"), Blocking: false}}, cfg); got != "INSUFFICIENT_EVIDENCE" {
+		t.Fatalf("unknown non-blocking disposition was not fail-closed: %s", got)
 	}
 	oos.MeanNet = -0.01
 	if got := classifyPromotion(oos, info, cfg); got != "FAILED_VALIDATION" {

@@ -86,7 +86,9 @@ type partitionResult struct {
 	Blocks, Instruments                                                  int
 	MaxInstrumentShare                                                   float64
 	RegimeSlices                                                         int
-	SecondaryDiagnostics                                                 secondaryDirectionalDiagnostics `json:"-"`
+	CalendarRegimeCells                                                  []string                        `json:"calendar_regime_cells,omitempty"`
+	SecondaryDiagnostics                                                 secondaryDirectionalDiagnostics `json:"secondary_diagnostics,omitempty"`
+	SecondaryAbstentions                                                 map[string]int                  `json:"secondary_abstentions,omitempty"`
 }
 type runOutput struct {
 	ContractVersion, ManifestSHA256, DatasetReadinessSHA256 string
@@ -338,10 +340,11 @@ func validateData(data map[string]*instrumentData) error {
 
 func evaluatePartition(data map[string]*instrumentData, name, start, end string, cfg FrozenExperimentConfig) (partitionResult, error) {
 	fast, medium, slow := cfg.SMAFast, cfg.SMAMedium, cfg.SMASlow
-	r := partitionResult{Partition: name, Start: start, End: end, Abstentions: map[string]int{}}
+	r := partitionResult{Partition: name, Start: start, End: end, Abstentions: map[string]int{}, SecondaryDiagnostics: secondaryDirectionalDiagnostics{Policy: secondaryDiagnosticPolicyVer, Abstentions: map[string]int{}}, SecondaryAbstentions: map[string]int{}}
 	for _, symbol := range symbols {
 		d := data[symbol]
 		activeUntil := -1
+		secondaryActiveUntil := -1
 		for i, date := range d.Dates {
 			if date < start || date > end || i < slow-1 {
 				continue
@@ -352,12 +355,27 @@ func evaluatePartition(data map[string]*instrumentData, name, start, end string,
 				r.Abstentions["HOLD"]++
 				continue
 			}
-			if kind == "SELL" {
-				r.BearishDiagnostics++
-				continue
-			}
 			if !actionableByConfig(sig.Confidence, cfg) {
 				r.Abstentions["below-confidence"]++
+				if kind == "SELL" {
+					r.BearishDiagnostics++
+				}
+				continue
+			}
+			if i > secondaryActiveUntil {
+				if diagnostic, exitIndex, ok := simulateDirectional(d, symbol, sig, i+1, kind, cfg); ok {
+					r.SecondaryDiagnostics.Observations = append(r.SecondaryDiagnostics.Observations, diagnostic)
+					secondaryActiveUntil = exitIndex
+				} else {
+					r.SecondaryDiagnostics.Abstentions["invalid_or_incomplete_diagnostic"]++
+					r.SecondaryAbstentions["invalid_or_incomplete_diagnostic"]++
+				}
+			} else {
+				r.SecondaryDiagnostics.Abstentions["active-position suppression"]++
+				r.SecondaryAbstentions["active-position suppression"]++
+			}
+			if kind == "SELL" {
+				r.BearishDiagnostics++
 				continue
 			}
 			if i <= activeUntil {
@@ -535,8 +553,86 @@ func simulateLong(d *instrumentData, symbol string, sig signal, entryIndex int, 
 	ep := episode{ID: fmt.Sprintf("%s-%s", symbol, sig.Date), Instrument: symbol, SignalDate: sig.Date, EntryDate: entryDate, ExitDate: d.Dates[exitIndex], Duration: exitIndex - entryIndex + 1, GrossReturn: rawExit/rawEntry - 1, NetReturn: base, StressNetReturn: stress, Year: yearOf(sig.Date)}
 	return ep, exitIndex, true
 }
+
+func simulateDirectional(d *instrumentData, symbol string, sig signal, entryIndex int, direction string, cfg FrozenExperimentConfig) (directionalObservation, int, bool) {
+	if entryIndex >= len(d.Dates) {
+		return directionalObservation{}, entryIndex, false
+	}
+	entryDate := d.Dates[entryIndex]
+	if d.Boundaries[sig.Date] {
+		return directionalObservation{}, entryIndex, false
+	}
+	next := d.Split[entryDate]
+	if direction == "BUY" {
+		if !geometryValid(sig.Stop, next.Open, sig.Target) {
+			return directionalObservation{}, entryIndex, false
+		}
+	} else if direction == "SELL" {
+		if !(sig.Target < next.Open && next.Open < sig.Stop) {
+			return directionalObservation{}, entryIndex, false
+		}
+	} else {
+		return directionalObservation{}, entryIndex, false
+	}
+	exitIndex, exitSplit := -1, 0.0
+	for offset := 0; offset < cfg.HoldingPeriod; offset++ {
+		idx := entryIndex + offset
+		if idx >= len(d.Dates) {
+			return directionalObservation{}, entryIndex, false
+		}
+		date := d.Dates[idx]
+		if d.Boundaries[date] {
+			return directionalObservation{}, idx, false
+		}
+		b := d.Split[date]
+		if offset > 0 {
+			if direction == "BUY" {
+				if opening, crossed := openingCrossExit(b.Open, sig.Stop, sig.Target); crossed {
+					exitIndex, exitSplit = idx, opening
+					break
+				}
+			} else {
+				if b.Open >= sig.Stop || b.Open <= sig.Target {
+					exitIndex, exitSplit = idx, b.Open
+					break
+				}
+			}
+		}
+		if direction == "BUY" {
+			if touched, crossed := intrabarExit(b.Low, b.High, sig.Stop, sig.Target); crossed {
+				exitIndex, exitSplit = idx, touched
+				break
+			}
+		} else {
+			if b.High >= sig.Stop {
+				exitIndex, exitSplit = idx, sig.Stop
+				break
+			}
+			if b.Low <= sig.Target {
+				exitIndex, exitSplit = idx, sig.Target
+				break
+			}
+		}
+		if offset == cfg.HoldingPeriod-1 {
+			exitIndex, exitSplit = idx, b.Close
+			break
+		}
+	}
+	if exitIndex < 0 {
+		return directionalObservation{}, entryIndex, false
+	}
+	rawEntry := d.Raw[entryDate].Open
+	rawExit := exitSplit / d.Factor[d.Dates[exitIndex]]
+	underlying := rawExit/rawEntry - 1
+	effect := underlying
+	if direction == "SELL" {
+		effect = -underlying
+	}
+	return directionalObservation{Instrument: symbol, Year: yearOf(sig.Date), Direction: direction, Magnitude: absFloat(effect), SignalDate: sig.Date, EntryDate: entryDate, ExitDate: d.Dates[exitIndex], DirectionalEffect: effect, AbsoluteMagnitude: absFloat(effect)}, exitIndex, true
+}
 func finishPartition(r *partitionResult) {
 	r.Blocks, r.Instruments, r.MaxInstrumentShare, r.RegimeSlices = episodeBreadth(r.Episodes)
+	r.CalendarRegimeCells = calendarRegimeCells(r.Episodes)
 	r.MeanGross = mean(r.Episodes, func(e episode) float64 { return e.GrossReturn })
 	r.MeanNet = mean(r.Episodes, func(e episode) float64 { return e.NetReturn })
 	r.MeanStress = mean(r.Episodes, func(e episode) float64 { return e.StressNetReturn })
