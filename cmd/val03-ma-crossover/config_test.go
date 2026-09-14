@@ -57,6 +57,9 @@ func TestManifestBoundConfigFreezesCoreSemantics(t *testing.T) {
 	if cfg.ExecutionAuthority != "NONE" || !sameStrings(cfg.Universe, expectedUniverse) {
 		t.Fatalf("unexpected safety/universe config: %+v", cfg)
 	}
+	if cfg.DevelopmentSampleFloor != 90 || cfg.OOSSampleFloor != 30 || cfg.PairedFloor != 30 || cfg.EffectiveBlockFloor != 12 || cfg.InstrumentFloor != 6 || cfg.MinimumSliceFloor != 3 || cfg.OverlapWindow != 20 || cfg.ConcentrationCeiling != .4 {
+		t.Fatalf("promotion-critical floors are not fully bound: %+v", cfg)
+	}
 	if cfg.DevelopmentStart != "2016-01-01" || cfg.ValidationStart != "2021-01-01" || cfg.OOSStart != "2023-01-01" || cfg.HoldoutStart != "2025-01-01" {
 		t.Fatalf("unexpected partitions: %+v", cfg)
 	}
@@ -70,6 +73,8 @@ func TestManifestBoundConfigRejectsMaterialDrift(t *testing.T) {
 		{"threshold", []string{"confidence_contract", "actionable_threshold", "0.7"}},
 		{"candidate", []string{"selected_candidate", "candidate_id", "other"}},
 		{"partition", []string{"partitions", "formal_oos", "2022-01-01"}},
+		{"universe", []string{"universe", "symbols", "OTHER"}},
+		{"minimum slices", []string{"sample_and_dependence", "minimum_regime_or_calendar_slices", "2"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			b := manifestWithChange(t, tc.path...)
@@ -108,6 +113,9 @@ func TestContaminatedRunGuardBlocksOldFormalIdentity(t *testing.T) {
 }
 
 func TestPreflightDoesNotPermitSealedDate(t *testing.T) {
+	if err := validateProviderDate("2025-01-01T00:00:00Z"); err == nil {
+		t.Fatal("expected returned 2025 provider row rejection")
+	}
 	if err := validateDateRange("2024-01-01", "2025-01-01"); err == nil {
 		t.Fatal("expected 2025 rejection")
 	}

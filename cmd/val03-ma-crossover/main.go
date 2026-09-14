@@ -72,6 +72,7 @@ type episode struct {
 	Duration                                        int
 	GrossReturn, NetReturn, StressNetReturn         float64
 	PlaceboNetReturn                                *float64
+	Direction, Regime, Theme                        string
 	Year                                            int
 }
 type partitionResult struct {
@@ -141,6 +142,16 @@ func run() error {
 		fmt.Printf("VAL03_PREFLIGHT=PASS candidate=%s threshold=%.2f holdout=%s no_rerun=true outcomes_calculated=false\n", cfg.CandidateID, cfg.ActionableConfidenceThreshold, cfg.HoldoutStart)
 		return nil
 	}
+	if contractAuditOnly() {
+		if !guard {
+			return errors.New("contaminated-run guard is not active")
+		}
+		if err := auditManifestContract(manifestBytes, cfg); err != nil {
+			return err
+		}
+		fmt.Printf("VAL03_CONTRACT_AUDIT=PASS candidate=%s falsifications=%d no_outcomes_loaded=true no_2025=true no_2026=true\n", cfg.CandidateID, len(requiredFalsificationNames()))
+		return nil
+	}
 	if guard {
 		return errors.New("contaminated VAL-03 execution identity is immutable; new preregistration required")
 	}
@@ -193,14 +204,8 @@ func run() error {
 		results[name] = r
 	}
 	oos := results["formal_oos"]
-	classification := "FAILED_VALIDATION"
-	if oos.Episodes == nil || oos.MatchedPairs < 30 || oos.Blocks < 12 || oos.Instruments < 6 || oos.MaxInstrumentShare > 0.4 || oos.RegimeSlices < 3 {
-		classification = "INSUFFICIENT_EVIDENCE"
-	}
-	if len(oos.Episodes) >= 30 && oos.MatchedPairs >= 30 && oos.Blocks >= 12 && oos.Instruments >= 6 && oos.MaxInstrumentShare <= 0.4 && oos.RegimeSlices >= 3 && oos.MeanNet > 0 && oos.BootstrapLow > 0 && oos.MeanPairedDifference > 0 && oos.PairedBootstrapLow > 0 {
-		classification = "FORWARD_PAPER_ELIGIBLE"
-	}
 	falsification := buildFalsification(data, oos, manifestHash, cfg)
+	classification := classifyPromotion(oos, falsificationDispositions(falsification), cfg)
 	out := runOutput{ContractVersion: "jax.val-03.ma-crossover-result/v1", ManifestSHA256: manifestHash, DatasetReadinessSHA256: readyHash, Runner: "cmd/val03-ma-crossover", ExecutionAuthority: "NONE", CreatesFill: false, Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", Universe: append([]string(nil), symbols...), DataStart: dataStart, DataEnd: dataEnd, HoldoutAccessed: false, PerformanceRunCount: 1, Partitions: results, Falsification: falsification, AbstentionTotals: totalAbstentions(results), DataQuality: qualitySummary(data, true), TerminalClassification: classification}
 	if err := writeJSON("Docs/validation/results/VAL-03-HYP-MA-001-RUN-MANIFEST.json", out); err != nil {
 		return err
@@ -373,6 +378,8 @@ func evaluatePartition(data map[string]*instrumentData, name, start, end string,
 				continue
 			}
 			activeUntil = exitIndex
+			ep.Regime = regimeAtDate(data, sig.Date, cfg)
+			ep.Theme = themeForInstrument(symbol)
 			r.ActionableLong++
 			r.Episodes = append(r.Episodes, ep)
 		}
@@ -546,9 +553,16 @@ func episodeBreadth(eps []episode) (int, int, float64, int) {
 	return len(blocks), len(inst), maxShare, regimeBreadth(eps)
 }
 func regimeBreadth(eps []episode) int {
+	regimes := map[string]bool{}
 	years := map[int]bool{}
 	for _, e := range eps {
+		if e.Regime != "" && e.Regime != "UNKNOWN" {
+			regimes[e.Regime] = true
+		}
 		years[e.Year] = true
+	}
+	if len(regimes) > 0 {
+		return len(regimes)
 	}
 	if len(years) > 3 {
 		return 3
@@ -559,30 +573,17 @@ func attachPlacebos(data map[string]*instrumentData, r *partitionResult, cfg Fro
 	if len(r.Episodes) == 0 {
 		return nil
 	}
-	actual := map[string]map[string]bool{}
-	for _, s := range symbols {
-		actual[s] = map[string]bool{}
-	}
+	used := map[string]bool{}
+	intervals := map[string][]activeInterval{}
 	for _, e := range r.Episodes {
-		actual[e.Instrument][e.SignalDate] = true
+		d := data[e.Instrument]
+		intervals[e.Instrument] = append(intervals[e.Instrument], newActiveInterval(e.Instrument, indexOf(d.Dates, e.SignalDate), indexOf(d.Dates, e.ExitDate)))
 	}
 	pairs, total := 0, 0.0
 	for i := range r.Episodes {
 		ep := &r.Episodes[i]
 		d := data[ep.Instrument]
-		signalIndex := indexOf(d.Dates, ep.SignalDate)
-		best, bestDist, bestScore := "", 999999, ""
-		for idx, date := range d.Dates {
-			if date < r.Start || date > r.End || date[:4] != ep.SignalDate[:4] || actual[ep.Instrument][date] || idx < minLookback || idx+20 >= len(d.Dates) {
-				continue
-			}
-			dist := absInt(idx - signalIndex)
-			score := matchedPlaceboScore(manifestHash, ep.Instrument, ep.SignalDate, date)
-			if dist <= 60 && (dist < bestDist || (dist == bestDist && (bestScore == "" || score < bestScore))) {
-				best, bestDist = date, dist
-				bestScore = score
-			}
-		}
+		best := matchedPlaceboDate(data, *ep, r.Start, r.End, used, intervals[ep.Instrument], cfg, manifestHash)
 		if best == "" {
 			r.Abstentions["no matched placebo"]++
 			continue
@@ -631,7 +632,7 @@ func applyBootstrap(r *partitionResult, manifestHash string, cfg FrozenExperimen
 		return
 	}
 	rng := seedFor(manifestHash, "|instrument-year-bootstrap-v2|")
-	values, paired := make([]float64, bootstrapN), make([]float64, bootstrapN)
+	values, paired := make([]float64, cfg.BootstrapN), make([]float64, cfg.BootstrapN)
 	for k := 0; k < cfg.BootstrapN; k++ {
 		total, diff := 0.0, 0.0
 		count, pairCount := 0, 0
@@ -661,28 +662,31 @@ func applyBootstrap(r *partitionResult, manifestHash string, cfg FrozenExperimen
 	}
 }
 func buildFalsification(data map[string]*instrumentData, oos partitionResult, manifestHash string, cfg FrozenExperimentConfig) map[string]any {
-	top := append([]episode(nil), oos.Episodes...)
-	sort.Slice(top, func(i, j int) bool { return top[i].NetReturn > top[j].NetReturn })
-	remove := int(math.Ceil(0.05 * float64(len(top))))
-	if remove < 1 && len(top) > 0 {
-		remove = 1
+	before, after, removed := topFivePercentExclusion(oos.Episodes)
+	intervals := episodeIntervals(data, oos.Episodes)
+	permutation := signPermutation(nil, manifestHash, cfg)
+	dispositions := []FalsificationDisposition{
+		{Name: "matched_non_signal_placebo", Status: dispositionForPairs(oos.MatchedPairs, cfg.PairedFloor), Blocking: true},
+		{Name: "timestamp_placebo", Status: FalsificationInformational, Blocking: false},
+		{Name: "secondary_sign_permutation", Status: permutation.Status, Blocking: false},
+		{Name: "top_5_percent_exclusion", Status: FalsificationInformational, Blocking: false},
+		{Name: "leave_one_instrument_out", Status: FalsificationInformational, Blocking: false},
+		{Name: "regime_slices", Status: dispositionForSlices(oos.RegimeSlices, cfg.MinimumSliceFloor), Blocking: true},
+		{Name: "theme_slices", Status: FalsificationInformational, Blocking: false},
+		{Name: "sma_19_49_199", Status: FalsificationInformational, Blocking: false},
+		{Name: "sma_21_51_201", Status: FalsificationInformational, Blocking: false},
+		{Name: "atr_0_90", Status: FalsificationInformational, Blocking: false},
+		{Name: "atr_1_10", Status: FalsificationInformational, Blocking: false},
+		{Name: "stress_cost", Status: FalsificationInformational, Blocking: false},
+		{Name: "overlap_sensitivity", Status: FalsificationInformational, Blocking: false},
+		{Name: "zero_and_buy_hold_baselines", Status: FalsificationInformational, Blocking: false},
 	}
-	after := 0.0
-	if remove < len(top) {
-		after = mean(top[remove:], func(e episode) float64 { return e.NetReturn })
-	}
-	return map[string]any{"matched_non_signal_placebo": map[string]any{"pairs": oos.MatchedPairs, "mean_difference": oos.MeanPairedDifference, "bootstrap_low": oos.PairedBootstrapLow}, "timestamp_placebo": timestampPlacebo(data, oos, manifestHash), "secondary_sign_permutation": map[string]any{"status": "NOT_APPLICABLE_PRIMARY_LONG_ONLY"}, "top_5_percent_exclusion": map[string]any{"removed": remove, "mean_before": oos.MeanNet, "mean_after": after}, "leave_one_instrument_out": leaveOneOut(oos), "regime_slices": descriptiveSlices(oos, "regime"), "theme_slices": descriptiveSlices(oos, "theme"), "sma_19_49_199": variantSummary(data, cfg, 19, 49, 199, 1), "sma_21_51_201": variantSummary(data, cfg, 21, 51, 201, 1), "atr_0_90": variantSummary(data, cfg, 20, 50, 200, 0.90), "atr_1_10": variantSummary(data, cfg, 20, 50, 200, 1.10), "stress_cost": map[string]any{"mean_net_return": oos.MeanStress, "model": cfg.StressCostID}, "overlap_sensitivity": overlapSummary(oos), "zero_and_buy_hold_baselines": map[string]any{"zero_return": 0, "buy_hold": "DESCRIPTIVE_ONLY"}, "seed_domain": manifestHash + "|falsification-v1|"}
+	return map[string]any{"matched_non_signal_placebo": map[string]any{"pairs": oos.MatchedPairs, "mean_difference": oos.MeanPairedDifference, "bootstrap_low": oos.PairedBootstrapLow}, "timestamp_placebo": timestampPlacebo(data, oos, manifestHash, cfg, intervals), "secondary_sign_permutation": permutation, "top_5_percent_exclusion": map[string]any{"removed": removed, "mean_before": before, "mean_after": after}, "leave_one_instrument_out": leaveOneOut(oos), "regime_slices": descriptiveSlices(oos, "regime"), "theme_slices": descriptiveSlices(oos, "theme"), "sma_19_49_199": variantSummary(data, cfg, 19, 49, 199, 1), "sma_21_51_201": variantSummary(data, cfg, 21, 51, 201, 1), "atr_0_90": variantSummary(data, cfg, 20, 50, 200, 0.90), "atr_1_10": variantSummary(data, cfg, 20, 50, 200, 1.10), "stress_cost": map[string]any{"mean_net_return": oos.MeanStress, "model": cfg.StressCostID}, "overlap_sensitivity": overlapSummary(oos, data, cfg), "zero_and_buy_hold_baselines": benchmarks(data, oos, cfg), "dispositions": dispositions, "seed_domain": manifestHash + "|falsification-v1|"}
 }
-func timestampPlacebo(data map[string]*instrumentData, oos partitionResult, manifestHash string) map[string]any {
-	eligible := 0
-	for _, s := range symbols {
-		for _, date := range data[s].Dates {
-			if date >= oos.Start && date <= oos.End && date < holdoutStart {
-				eligible++
-			}
-		}
-	}
-	return map[string]any{"replicates": bootstrapN, "eligible_session_pool": eligible, "seed": seedFor(manifestHash, "|timestamp-placebo-v1|"), "status": "EXECUTED_DETERMINISTIC_CONSTRAINED_POOL"}
+func timestampPlacebo(data map[string]*instrumentData, oos partitionResult, manifestHash string, cfg FrozenExperimentConfig, intervals map[string][]activeInterval) map[string]any {
+	selections := timestampPlaceboSelections(data, oos.Start, oos.End, manifestHash, cfg, intervals)
+	b, _ := json.Marshal(selections)
+	return map[string]any{"replicates": cfg.BootstrapN, "selection_count": len(selections), "selection_digest": sha256Hex(b), "seed": seedFor(manifestHash, "|timestamp-placebo-v1|"), "status": "EXECUTED_DETERMINISTIC_CONSTRAINED_SELECTIONS", "future_matching": false}
 }
 func leaveOneOut(r partitionResult) []map[string]any {
 	out := []map[string]any{}
@@ -697,58 +701,13 @@ func leaveOneOut(r partitionResult) []map[string]any {
 	}
 	return out
 }
-func descriptiveSlices(r partitionResult, key string) map[string]any {
-	return map[string]any{"status": "REPORTED_DESCRIPTIVELY", "slice_key": key, "episode_count": len(r.Episodes), "mean_net_return": r.MeanNet}
-}
 func variantSummary(data map[string]*instrumentData, cfg FrozenExperimentConfig, fast, medium, slow int, atrScale float64) map[string]any {
-	count := 0
-	total := 0.0
-	for _, s := range symbols {
-		d := data[s]
-		for i, date := range d.Dates {
-			if date < "2023-01-01" || date > dataEnd || i < slow-1 {
-				continue
-			}
-			sig, kind := buildSignal(d, i, fast, medium, slow, cfg)
-			if kind != "BUY" || !actionableByConfig(sig.Confidence, cfg) || i+1 >= len(d.Dates) {
-				continue
-			}
-			next := d.Split[d.Dates[i+1]]
-			if !(sig.Stop < next.Open && next.Open < sig.Target) {
-				continue
-			}
-			ep, _, ok := simulateLong(d, s, sig, i+1, atrScale, cfg)
-			if ok {
-				count++
-				total += ep.NetReturn
-			}
-		}
-	}
-	return map[string]any{"fast": fast, "medium": medium, "slow": slow, "atr_scale": atrScale, "episodes": count, "mean_net_return": total / math.Max(1, float64(count)), "replacement_allowed": false, "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"}
+	result := evaluateVariant(data, cfg, fast, medium, slow, atrScale)
+	return map[string]any{"fast": fast, "medium": medium, "slow": slow, "atr_scale": atrScale, "episodes": len(result.Episodes), "mean_net_return": result.MeanNet, "replacement_allowed": false, "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"}
 }
-func overlapSummary(r partitionResult) map[string]any {
-	kept := []episode{}
-	for _, e := range r.Episodes {
-		duplicate := false
-		for _, k := range kept {
-			if k.Instrument == e.Instrument && absInt(indexOfDate(r.Episodes, k.SignalDate)-indexOfDate(r.Episodes, e.SignalDate)) < 20 {
-				duplicate = true
-				break
-			}
-		}
-		if !duplicate {
-			kept = append(kept, e)
-		}
-	}
-	return map[string]any{"window_sessions": 20, "episode_count": len(kept), "mean_net_return": mean(kept, func(e episode) float64 { return e.NetReturn }), "status": "EXECUTED_FROZEN_EARLIEST_SIGNAL"}
-}
-func indexOfDate(eps []episode, date string) int {
-	for i, e := range eps {
-		if e.SignalDate == date {
-			return i
-		}
-	}
-	return -1
+func overlapSummary(r partitionResult, data map[string]*instrumentData, cfg FrozenExperimentConfig) map[string]any {
+	kept := overlapFilter(r.Episodes, data, cfg.OverlapWindow)
+	return map[string]any{"window_sessions": cfg.OverlapWindow, "episode_count": len(kept), "mean_net_return": mean(kept, func(e episode) float64 { return e.NetReturn }), "status": "EXECUTED_FROZEN_EARLIEST_SIGNAL"}
 }
 func qualitySummary(data map[string]*instrumentData, performanceOutputGenerated bool) map[string]any {
 	per := map[string]any{}

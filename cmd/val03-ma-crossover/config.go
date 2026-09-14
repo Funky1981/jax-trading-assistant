@@ -17,6 +17,7 @@ type FrozenExperimentConfig struct {
 	AvgVolumePeriod                                        int
 	StopATR, TargetATR                                     float64
 	HoldingPeriod, InitializationRequired, BootstrapN      int
+	OverlapWindow                                          int
 	BaseSpreadBPS, BaseSlippageBPS, BaseImpactBPS          float64
 	StressSpreadBPS, StressSlippageBPS, StressImpactBPS    float64
 	Universe                                               []string
@@ -25,6 +26,7 @@ type FrozenExperimentConfig struct {
 	OOSStart, OOSEnd, HoldoutStart                         string
 	DevelopmentSampleFloor, OOSSampleFloor, PairedFloor    int
 	EffectiveBlockFloor, InstrumentFloor                   int
+	MinimumSliceFloor                                      int
 	ConcentrationCeiling                                   float64
 	SeedDomains                                            []string
 	ExecutionAuthority                                     string
@@ -117,6 +119,9 @@ func loadFrozenExperimentConfig(manifestBytes []byte, manifestHash string) (Froz
 	if c.InstrumentFloor, err = intAt(root, "sample_and_dependence", "effective_block_floor", "formal_oos_instruments"); err != nil || c.InstrumentFloor != 6 {
 		return FrozenExperimentConfig{}, errors.New("instrument floor mismatch")
 	}
+	if c.MinimumSliceFloor, err = intAt(root, "sample_and_dependence", "minimum_regime_or_calendar_slices"); err != nil || c.MinimumSliceFloor != 3 {
+		return FrozenExperimentConfig{}, errors.New("minimum slice floor mismatch")
+	}
 	if c.ConcentrationCeiling, err = numberAt(root, "sample_and_dependence", "instrument_contribution_max"); err != nil || c.ConcentrationCeiling != 0.4 {
 		return FrozenExperimentConfig{}, errors.New("concentration ceiling mismatch")
 	}
@@ -145,6 +150,7 @@ func loadFrozenExperimentConfig(manifestBytes []byte, manifestHash string) (Froz
 		return FrozenExperimentConfig{}, errors.New("execution authority mismatch")
 	}
 	c.SeedDomains = []string{"|instrument-year-bootstrap-v2|", "|timestamp-placebo-v1|", "|secondary-sign-permutation-v1|"}
+	c.OverlapWindow = 20
 	return c, nil
 }
 
@@ -254,6 +260,54 @@ func preflightOnly() bool {
 		}
 	}
 	return false
+}
+
+func contractAuditOnly() bool {
+	for _, arg := range os.Args[1:] {
+		if arg == "--contract-audit" {
+			return true
+		}
+	}
+	return false
+}
+
+func auditManifestContract(manifestBytes []byte, cfg FrozenExperimentConfig) error {
+	var root map[string]any
+	if err := json.Unmarshal(manifestBytes, &root); err != nil {
+		return fmt.Errorf("decode contract: %w", err)
+	}
+	if cfg.MinimumSliceFloor != 3 || cfg.OverlapWindow != 20 || cfg.DevelopmentSampleFloor != 90 || cfg.OOSSampleFloor != 30 || cfg.PairedFloor != 30 || cfg.EffectiveBlockFloor != 12 || cfg.InstrumentFloor != 6 || cfg.ConcentrationCeiling != 0.4 {
+		return errors.New("promotion-critical floors are not fully bound")
+	}
+	tests, err := stringsAt(root, "falsification_suite", "tests")
+	expectedTests := []string{"matched non-signal placebo", "constrained timestamp placebo", "secondary mixed-direction sign permutation where applicable", "top-five-percent contribution exclusion", "leave-one-instrument-out", "SPY SMA200 regime split", "predefined theme groups", "SMA 19/49/199", "SMA 21/51/201", "0.90*ATR14", "1.10*ATR14", "legacy Phase-07 stress cost", "20-session overlap sensitivity", "zero and buy-hold baselines"}
+	if err != nil || !sameStrings(tests, expectedTests) {
+		return errors.New("falsification registration is incomplete")
+	}
+	if _, err := stringAt(root, "secondary_benchmarks", "primary_comparator"); err != nil {
+		return errors.New("primary comparator is not registered")
+	}
+	if _, err := stringAt(root, "placebo_contract", "timestamp_placebo", "selection"); err != nil {
+		return errors.New("timestamp placebo is not registered")
+	}
+	if _, err := stringAt(root, "placebo_contract", "matched_non_signal", "selection"); err != nil {
+		return errors.New("matched placebo is not registered")
+	}
+	overlap, err := stringAt(root, "robustness_variants", "overlap_sensitivity")
+	if err != nil || overlap != "retain earliest signal per instrument in each 20-trading-session entry-date window; compare descriptively with baseline actual-exit non-overlap" {
+		return errors.New("overlap sensitivity is not registered")
+	}
+	if admission, err := stringAt(root, "forward_paper_admission"); err != nil || admission != "not authorized by this manifest" {
+		return errors.New("promotion admission is not fail-closed")
+	}
+	if cfg.ExecutionAuthority != "NONE" {
+		return errors.New("execution authority is not NONE")
+	}
+	blocked, err := contaminatedRunGuard(integrityPath)
+	if err != nil || !blocked {
+		return errors.New("old OOS rerun guard is not active")
+	}
+	return nil
 }
 
 func actionableByConfig(confidence float64, cfg FrozenExperimentConfig) bool {
