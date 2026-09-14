@@ -1,5 +1,24 @@
 # Roadmap Decision Log
 
+## RD-2026-09-14-02 - VAL-03 formal execution integrity closure
+
+- Work package: `VAL-03 — MA CROSSOVER FROZEN HISTORICAL VALIDATION`.
+- The pre-OOS execution freeze was pushed and passed its exact-SHA checkpoint
+  before the formal command was run.
+- One formal pipeline execution was attempted over `2023-01-01..2024-12-31`.
+  It produced the retained result artifacts, but the primary partition path
+  passed an actionable confidence gate of `1.0` instead of the frozen
+  operational `0.60` gate; registered robustness code used `0.60`.
+- The resulting raw `INSUFFICIENT_EVIDENCE` output is not a valid scientific
+  result for the preregistered candidate. Under the frozen no-rerun rule, the
+  final execution classification is `CONTAMINATED_FOR_FORMAL_OOS`.
+- No 2025 data was accessed. No broker calls, orders, fills, forward paper or
+  Phase 13 activity occurred. Trading edge remains not demonstrated and real
+  forward-paper evidence remains `0 DAYS / 0 ORDERS`.
+- Artifacts: `Docs/validation/VAL-03-FORMAL-OOS-INTEGRITY-REVIEW.md`,
+  `Docs/validation/results/VAL-03-HYP-MA-001-INTEGRITY-REVIEW.json`, and the
+  retained `VAL-03-HYP-MA-001-*` raw result files.
+
 ## RD-2026-09-13-08 - VAL-03B adjusted-bar contract and preflight
 
 - Work package: `VAL-03B — ADJUSTED-BAR EQUIVALENCE & CONSERVATIVE PRICE-EDGE CONTRACT`.

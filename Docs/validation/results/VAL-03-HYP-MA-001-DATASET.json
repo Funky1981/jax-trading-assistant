@@ -1,0 +1,93 @@
+{
+  "date_range": [
+    "2016-01-01",
+    "2024-12-31"
+  ],
+  "feed": "SIP",
+  "instruments": {
+    "DIA": {
+      "first_session": "2016-01-04",
+      "last_session": "2024-12-31",
+      "no_2025_rows": true,
+      "raw_sessions": 2264,
+      "split_sessions": 2264,
+      "split_spin_off_sessions": 2264,
+      "structural_boundaries": []
+    },
+    "GLD": {
+      "first_session": "2016-01-04",
+      "last_session": "2024-12-31",
+      "no_2025_rows": true,
+      "raw_sessions": 2264,
+      "split_sessions": 2264,
+      "split_spin_off_sessions": 2264,
+      "structural_boundaries": []
+    },
+    "IWM": {
+      "first_session": "2016-01-04",
+      "last_session": "2024-12-31",
+      "no_2025_rows": true,
+      "raw_sessions": 2264,
+      "split_sessions": 2264,
+      "split_spin_off_sessions": 2264,
+      "structural_boundaries": []
+    },
+    "QQQ": {
+      "first_session": "2016-01-04",
+      "last_session": "2024-12-31",
+      "no_2025_rows": true,
+      "raw_sessions": 2264,
+      "split_sessions": 2264,
+      "split_spin_off_sessions": 2264,
+      "structural_boundaries": []
+    },
+    "SPY": {
+      "first_session": "2016-01-04",
+      "last_session": "2024-12-31",
+      "no_2025_rows": true,
+      "raw_sessions": 2264,
+      "split_sessions": 2264,
+      "split_spin_off_sessions": 2264,
+      "structural_boundaries": []
+    },
+    "TLT": {
+      "first_session": "2016-01-04",
+      "last_session": "2024-12-31",
+      "no_2025_rows": true,
+      "raw_sessions": 2264,
+      "split_sessions": 2264,
+      "split_spin_off_sessions": 2264,
+      "structural_boundaries": []
+    },
+    "XLE": {
+      "first_session": "2016-01-04",
+      "last_session": "2024-12-31",
+      "no_2025_rows": true,
+      "raw_sessions": 2264,
+      "split_sessions": 2264,
+      "split_spin_off_sessions": 2264,
+      "structural_boundaries": []
+    },
+    "XLF": {
+      "first_session": "2016-01-04",
+      "last_session": "2024-12-31",
+      "no_2025_rows": true,
+      "raw_sessions": 2264,
+      "split_sessions": 2264,
+      "split_spin_off_sessions": 2264,
+      "structural_boundaries": []
+    },
+    "XLK": {
+      "first_session": "2016-01-04",
+      "last_session": "2024-12-31",
+      "no_2025_rows": true,
+      "raw_sessions": 2264,
+      "split_sessions": 2264,
+      "split_spin_off_sessions": 2264,
+      "structural_boundaries": []
+    }
+  },
+  "performance_output_generated": false,
+  "provider": "Alpaca",
+  "timeframe": "1Day"
+}

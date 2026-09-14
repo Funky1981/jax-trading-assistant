@@ -30,8 +30,8 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03C — WARM-UP / MANIFEST CONSISTENCY CLOSURE COMPLETE; VAL-03 READY FOR EXTERNAL PERFORMANCE AUTHORISATION** |
-| Next package | **VAL-03 historical performance may proceed only after external authorization under manifest v1.5; real forward paper has not started** |
+| Current implementation package | **VAL-03 — FORMAL EXECUTION CLOSED AS CONTAMINATED_FOR_FORMAL_OOS; EXTERNAL REVIEW REQUIRED** |
+| Next package | **No VAL-03 rerun is authorized from this execution; any new attempt requires a separately frozen and externally authorized boundary** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -358,8 +358,7 @@ runtime settings, broker behaviour, trading rules, strategies or model selection
   explain existing implementation history and must not be used as current
   authorization for live trading or autonomous execution.
 
-The current position is VAL-03C — Warm-Up Boundary & Manifest Consistency
-Closure,
+The current position is the VAL-03 formal execution integrity review,
 following the external `GO` for CR-02G and the complete CR-01 through CR-02G
 technical cleanup sequence. The cleanup record does not grant commercial-sale
 clearance. Jax is currently a personal trading platform; optional future
@@ -377,7 +376,11 @@ mechanics by VAL-02C, whose contract is now `v1.5` and remains frozen for
 external review. VAL-03A established the historical event-ledger blocker and
 VAL-03B implemented the authorized adjusted-bar contract. VAL-03C replaced the
 obsolete standalone 2015 warm-up requirement with a per-instrument 200-valid-
-session initialization boundary and reconciled stale manifest semantics. No
-performance evaluation was executed. Phase 13 remains `NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND
-REAL FORWARD-PAPER EVIDENCE`. The commercial release gate remains separate and
-blocked by owner, legal, account/contract and deployment decisions.
+session initialization boundary and reconciled stale manifest semantics. The
+single formal pipeline execution was later found to have passed `1.0` instead
+of the frozen `0.60` actionable-confidence gate. Because output existed, the
+no-rerun rule applies and VAL-03 is classified `CONTAMINATED_FOR_FORMAL_OOS`;
+its raw numeric outputs are not scientifically interpretable. Phase 13 remains
+`NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE`.
+The commercial release gate remains separate and blocked by owner, legal,
+account/contract and deployment decisions.

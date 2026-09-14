@@ -1,0 +1,33 @@
+{
+  "schema_version": "jax.val-03.integrity-review/v1",
+  "candidate_id": "ma_crossover_v1",
+  "formal_oos_run_count": 1,
+  "raw_run_manifest": "Docs/validation/results/VAL-03-HYP-MA-001-RUN-MANIFEST.json",
+  "raw_terminal_classification": "INSUFFICIENT_EVIDENCE",
+  "final_terminal_classification": "CONTAMINATED_FOR_FORMAL_OOS",
+  "interpretation": "INVALID_DO_NOT_USE_FOR_SCIENTIFIC_PROMOTION_OR_REJECTION",
+  "material_defect": {
+    "frozen_actionable_confidence_threshold": 0.6,
+    "formal_partition_gate_used": 1.0,
+    "location": "cmd/val03-ma-crossover/main.go",
+    "description": "Primary partition evaluation passed gate 1.0 instead of frozen operational gate 0.60; registered robustness helper used 0.60, so the single pipeline did not execute one consistent candidate semantics."
+  },
+  "no_rerun": true,
+  "no_post_oos_code_fix": true,
+  "preregistration_manifest_sha256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a",
+  "dataset_readiness_sha256": "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce",
+  "execution_freeze_sha256": "d0bd5197dac359ec2ced9e527701bbe85f35247f6d559776480f04b8219ad29a",
+  "runner_commit_sha": "4ae446299418fde8bb5173b02bfe670da0266235",
+  "formal_oos_partition": {
+    "start": "2023-01-01",
+    "end": "2024-12-31",
+    "holdout_start": "2025-01-01",
+    "holdout_accessed": false
+  },
+  "performance_values_interpretable": false,
+  "2025_accessed": false,
+  "forward_paper_started": false,
+  "phase_13_started": false,
+  "execution_authority": "NONE",
+  "creates_fill": false
+}

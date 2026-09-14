@@ -1,0 +1,26 @@
+{
+  "Partition": "development",
+  "Start": "2016-01-01",
+  "End": "2020-12-31",
+  "episodes": null,
+  "SignalObservations": 9540,
+  "ActionableLong": 0,
+  "BearishDiagnostics": 669,
+  "Abstentions": {
+    "HOLD": 5358,
+    "below-confidence": 3513
+  },
+  "MeanGross": 0,
+  "MeanNet": 0,
+  "MeanStress": 0,
+  "MeanPairedDifference": 0,
+  "MatchedPairs": 0,
+  "BootstrapLow": 0,
+  "BootstrapHigh": 0,
+  "PairedBootstrapLow": 0,
+  "PairedBootstrapHigh": 0,
+  "Blocks": 0,
+  "Instruments": 0,
+  "MaxInstrumentShare": 0,
+  "RegimeSlices": 0
+}

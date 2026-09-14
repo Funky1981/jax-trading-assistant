@@ -1,0 +1,26 @@
+{
+  "Partition": "formal_oos",
+  "Start": "2023-01-01",
+  "End": "2024-12-31",
+  "episodes": null,
+  "SignalObservations": 4518,
+  "ActionableLong": 0,
+  "BearishDiagnostics": 251,
+  "Abstentions": {
+    "HOLD": 2552,
+    "below-confidence": 1715
+  },
+  "MeanGross": 0,
+  "MeanNet": 0,
+  "MeanStress": 0,
+  "MeanPairedDifference": 0,
+  "MatchedPairs": 0,
+  "BootstrapLow": 0,
+  "BootstrapHigh": 0,
+  "PairedBootstrapLow": 0,
+  "PairedBootstrapHigh": 0,
+  "Blocks": 0,
+  "Instruments": 0,
+  "MaxInstrumentShare": 0,
+  "RegimeSlices": 0
+}

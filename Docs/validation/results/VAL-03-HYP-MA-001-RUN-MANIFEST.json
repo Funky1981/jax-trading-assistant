@@ -1,0 +1,339 @@
+{
+  "ContractVersion": "jax.val-03.ma-crossover-result/v1",
+  "ManifestSHA256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a",
+  "DatasetReadinessSHA256": "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce",
+  "Runner": "cmd/val03-ma-crossover",
+  "ExecutionAuthority": "NONE",
+  "CreatesFill": false,
+  "Provider": "Alpaca",
+  "Feed": "SIP",
+  "Timeframe": "1Day",
+  "Universe": [
+    "SPY",
+    "QQQ",
+    "IWM",
+    "DIA",
+    "XLK",
+    "XLF",
+    "XLE",
+    "TLT",
+    "GLD"
+  ],
+  "DataStart": "2016-01-01",
+  "DataEnd": "2024-12-31",
+  "HoldoutAccessed": false,
+  "PerformanceRunCount": 1,
+  "Partitions": {
+    "development": {
+      "Partition": "development",
+      "Start": "2016-01-01",
+      "End": "2020-12-31",
+      "episodes": null,
+      "SignalObservations": 9540,
+      "ActionableLong": 0,
+      "BearishDiagnostics": 669,
+      "Abstentions": {
+        "HOLD": 5358,
+        "below-confidence": 3513
+      },
+      "MeanGross": 0,
+      "MeanNet": 0,
+      "MeanStress": 0,
+      "MeanPairedDifference": 0,
+      "MatchedPairs": 0,
+      "BootstrapLow": 0,
+      "BootstrapHigh": 0,
+      "PairedBootstrapLow": 0,
+      "PairedBootstrapHigh": 0,
+      "Blocks": 0,
+      "Instruments": 0,
+      "MaxInstrumentShare": 0,
+      "RegimeSlices": 0
+    },
+    "formal_oos": {
+      "Partition": "formal_oos",
+      "Start": "2023-01-01",
+      "End": "2024-12-31",
+      "episodes": null,
+      "SignalObservations": 4518,
+      "ActionableLong": 0,
+      "BearishDiagnostics": 251,
+      "Abstentions": {
+        "HOLD": 2552,
+        "below-confidence": 1715
+      },
+      "MeanGross": 0,
+      "MeanNet": 0,
+      "MeanStress": 0,
+      "MeanPairedDifference": 0,
+      "MatchedPairs": 0,
+      "BootstrapLow": 0,
+      "BootstrapHigh": 0,
+      "PairedBootstrapLow": 0,
+      "PairedBootstrapHigh": 0,
+      "Blocks": 0,
+      "Instruments": 0,
+      "MaxInstrumentShare": 0,
+      "RegimeSlices": 0
+    },
+    "validation": {
+      "Partition": "validation",
+      "Start": "2021-01-01",
+      "End": "2022-12-31",
+      "episodes": null,
+      "SignalObservations": 4527,
+      "ActionableLong": 0,
+      "BearishDiagnostics": 744,
+      "Abstentions": {
+        "HOLD": 2622,
+        "below-confidence": 1161
+      },
+      "MeanGross": 0,
+      "MeanNet": 0,
+      "MeanStress": 0,
+      "MeanPairedDifference": 0,
+      "MatchedPairs": 0,
+      "BootstrapLow": 0,
+      "BootstrapHigh": 0,
+      "PairedBootstrapLow": 0,
+      "PairedBootstrapHigh": 0,
+      "Blocks": 0,
+      "Instruments": 0,
+      "MaxInstrumentShare": 0,
+      "RegimeSlices": 0
+    }
+  },
+  "Falsification": {
+    "atr_0_90": {
+      "atr_scale": 0.9,
+      "episodes": 1684,
+      "fast": 20,
+      "mean_net_return": 0.0032187483234532785,
+      "medium": 50,
+      "replacement_allowed": false,
+      "slow": 200,
+      "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"
+    },
+    "atr_1_10": {
+      "atr_scale": 1.1,
+      "episodes": 1680,
+      "fast": 20,
+      "mean_net_return": 0.0034624707783614006,
+      "medium": 50,
+      "replacement_allowed": false,
+      "slow": 200,
+      "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"
+    },
+    "leave_one_instrument_out": [
+      {
+        "episode_count": 0,
+        "excluded_instrument": "SPY",
+        "mean_net_return": 0
+      },
+      {
+        "episode_count": 0,
+        "excluded_instrument": "QQQ",
+        "mean_net_return": 0
+      },
+      {
+        "episode_count": 0,
+        "excluded_instrument": "IWM",
+        "mean_net_return": 0
+      },
+      {
+        "episode_count": 0,
+        "excluded_instrument": "DIA",
+        "mean_net_return": 0
+      },
+      {
+        "episode_count": 0,
+        "excluded_instrument": "XLK",
+        "mean_net_return": 0
+      },
+      {
+        "episode_count": 0,
+        "excluded_instrument": "XLF",
+        "mean_net_return": 0
+      },
+      {
+        "episode_count": 0,
+        "excluded_instrument": "XLE",
+        "mean_net_return": 0
+      },
+      {
+        "episode_count": 0,
+        "excluded_instrument": "TLT",
+        "mean_net_return": 0
+      },
+      {
+        "episode_count": 0,
+        "excluded_instrument": "GLD",
+        "mean_net_return": 0
+      }
+    ],
+    "matched_non_signal_placebo": {
+      "bootstrap_low": 0,
+      "mean_difference": 0,
+      "pairs": 0
+    },
+    "overlap_sensitivity": {
+      "episode_count": 0,
+      "mean_net_return": 0,
+      "status": "EXECUTED_FROZEN_EARLIEST_SIGNAL",
+      "window_sessions": 20
+    },
+    "regime_slices": {
+      "episode_count": 0,
+      "mean_net_return": 0,
+      "slice_key": "regime",
+      "status": "REPORTED_DESCRIPTIVELY"
+    },
+    "secondary_sign_permutation": {
+      "status": "NOT_APPLICABLE_PRIMARY_LONG_ONLY"
+    },
+    "seed_domain": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a|falsification-v1|",
+    "sma_19_49_199": {
+      "atr_scale": 1,
+      "episodes": 1665,
+      "fast": 19,
+      "mean_net_return": 0.003313000765529634,
+      "medium": 49,
+      "replacement_allowed": false,
+      "slow": 199,
+      "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"
+    },
+    "sma_21_51_201": {
+      "atr_scale": 1,
+      "episodes": 1683,
+      "fast": 21,
+      "mean_net_return": 0.0032258484775275174,
+      "medium": 51,
+      "replacement_allowed": false,
+      "slow": 201,
+      "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"
+    },
+    "stress_cost": {
+      "mean_net_return": 0,
+      "model": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8"
+    },
+    "theme_slices": {
+      "episode_count": 0,
+      "mean_net_return": 0,
+      "slice_key": "theme",
+      "status": "REPORTED_DESCRIPTIVELY"
+    },
+    "timestamp_placebo": {
+      "eligible_session_pool": 4518,
+      "replicates": 10000,
+      "seed": 3968036554387150833,
+      "status": "EXECUTED_DETERMINISTIC_CONSTRAINED_POOL"
+    },
+    "top_5_percent_exclusion": {
+      "mean_after": 0,
+      "mean_before": 0,
+      "removed": 0
+    },
+    "zero_and_buy_hold_baselines": {
+      "buy_hold": "DESCRIPTIVE_ONLY",
+      "zero_return": 0
+    }
+  },
+  "AbstentionTotals": {
+    "HOLD": 10532,
+    "below-confidence": 6389
+  },
+  "DataQuality": {
+    "date_range": [
+      "2016-01-01",
+      "2024-12-31"
+    ],
+    "feed": "SIP",
+    "instruments": {
+      "DIA": {
+        "first_session": "2016-01-04",
+        "last_session": "2024-12-31",
+        "no_2025_rows": true,
+        "raw_sessions": 2264,
+        "split_sessions": 2264,
+        "split_spin_off_sessions": 2264,
+        "structural_boundaries": []
+      },
+      "GLD": {
+        "first_session": "2016-01-04",
+        "last_session": "2024-12-31",
+        "no_2025_rows": true,
+        "raw_sessions": 2264,
+        "split_sessions": 2264,
+        "split_spin_off_sessions": 2264,
+        "structural_boundaries": []
+      },
+      "IWM": {
+        "first_session": "2016-01-04",
+        "last_session": "2024-12-31",
+        "no_2025_rows": true,
+        "raw_sessions": 2264,
+        "split_sessions": 2264,
+        "split_spin_off_sessions": 2264,
+        "structural_boundaries": []
+      },
+      "QQQ": {
+        "first_session": "2016-01-04",
+        "last_session": "2024-12-31",
+        "no_2025_rows": true,
+        "raw_sessions": 2264,
+        "split_sessions": 2264,
+        "split_spin_off_sessions": 2264,
+        "structural_boundaries": []
+      },
+      "SPY": {
+        "first_session": "2016-01-04",
+        "last_session": "2024-12-31",
+        "no_2025_rows": true,
+        "raw_sessions": 2264,
+        "split_sessions": 2264,
+        "split_spin_off_sessions": 2264,
+        "structural_boundaries": []
+      },
+      "TLT": {
+        "first_session": "2016-01-04",
+        "last_session": "2024-12-31",
+        "no_2025_rows": true,
+        "raw_sessions": 2264,
+        "split_sessions": 2264,
+        "split_spin_off_sessions": 2264,
+        "structural_boundaries": []
+      },
+      "XLE": {
+        "first_session": "2016-01-04",
+        "last_session": "2024-12-31",
+        "no_2025_rows": true,
+        "raw_sessions": 2264,
+        "split_sessions": 2264,
+        "split_spin_off_sessions": 2264,
+        "structural_boundaries": []
+      },
+      "XLF": {
+        "first_session": "2016-01-04",
+        "last_session": "2024-12-31",
+        "no_2025_rows": true,
+        "raw_sessions": 2264,
+        "split_sessions": 2264,
+        "split_spin_off_sessions": 2264,
+        "structural_boundaries": []
+      },
+      "XLK": {
+        "first_session": "2016-01-04",
+        "last_session": "2024-12-31",
+        "no_2025_rows": true,
+        "raw_sessions": 2264,
+        "split_sessions": 2264,
+        "split_spin_off_sessions": 2264,
+        "structural_boundaries": []
+      }
+    },
+    "performance_output_generated": false,
+    "provider": "Alpaca",
+    "timeframe": "1Day"
+  },
+  "TerminalClassification": "INSUFFICIENT_EVIDENCE"
+}
