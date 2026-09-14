@@ -19,14 +19,15 @@ import (
 )
 
 const (
-	manifestPath = "Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json"
-	readyPath    = "Docs/validation/results/VAL-03C-DATASET-READINESS.json"
-	rawRoot      = ".runtime/val03b/raw"
-	dataStart    = "2016-01-01"
-	dataEnd      = "2024-12-31"
-	holdoutStart = "2025-01-01"
-	bootstrapN   = 10000
-	minLookback  = 199
+	manifestPath  = "Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json"
+	readyPath     = "Docs/validation/results/VAL-03C-DATASET-READINESS.json"
+	barFamilyPath = "Docs/validation/results/VAL-03B-DATASET-READINESS.json"
+	rawRoot       = ".runtime/val03b/raw"
+	dataStart     = "2016-01-01"
+	dataEnd       = "2024-12-31"
+	holdoutStart  = "2025-01-01"
+	bootstrapN    = 10000
+	minLookback   = 199
 )
 
 var symbols = []string{"SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"}
@@ -130,6 +131,19 @@ func run() error {
 	var ready readinessInput
 	if err := json.Unmarshal(readyBytes, &ready); err != nil {
 		return err
+	}
+	if len(ready.Families) == 0 {
+		familyBytes, err := os.ReadFile(barFamilyPath)
+		if err != nil {
+			return fmt.Errorf("read bar-family evidence: %w", err)
+		}
+		familyHash := sha256Hex(familyBytes)
+		if familyHash != "78c1fbeec2122eebba1a8dbe21c2edfc3c569377770561afe9e128cd633037e5" {
+			return errors.New("bar-family evidence hash mismatch")
+		}
+		if err := json.Unmarshal(familyBytes, &ready); err != nil {
+			return err
+		}
 	}
 	data, err := loadData(ready)
 	if err != nil {
