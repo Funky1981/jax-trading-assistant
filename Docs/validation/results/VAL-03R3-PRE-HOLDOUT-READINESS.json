@@ -1,0 +1,10 @@
+{
+  "contract_id": "jax.val-03r3.pre-holdout-readiness/v1",
+  "development_eligible_primary_episodes": 326,
+  "validation_eligible_primary_episodes": 104,
+  "development_floor": 90,
+  "validation_floor": 30,
+  "development_readiness": "PASS",
+  "validation_readiness": "PASS",
+  "recovery_readiness": "PASS"
+}
