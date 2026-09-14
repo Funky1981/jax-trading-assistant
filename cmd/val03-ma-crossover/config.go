@@ -12,25 +12,25 @@ import (
 // VAL-03 semantics. It is loaded from the hash-bound preregistration rather
 // than reconstructed from call-site literals.
 type FrozenExperimentConfig struct {
-	CandidateID, StrategyVersion, BaseCostID, StressCostID string
-	ActionableConfidenceThreshold                          float64
-	SMAFast, SMAMedium, SMASlow, ATRPeriod                 int
-	AvgVolumePeriod                                        int
-	StopATR, TargetATR                                     float64
-	HoldingPeriod, InitializationRequired, BootstrapN      int
-	OverlapWindow                                          int
-	BaseSpreadBPS, BaseSlippageBPS, BaseImpactBPS          float64
-	StressSpreadBPS, StressSlippageBPS, StressImpactBPS    float64
-	Universe                                               []string
-	DevelopmentStart, DevelopmentEnd                       string
-	ValidationStart, ValidationEnd                         string
-	OOSStart, OOSEnd, HoldoutStart                         string
-	DevelopmentSampleFloor, OOSSampleFloor, PairedFloor    int
-	EffectiveBlockFloor, InstrumentFloor                   int
-	MinimumSliceFloor                                      int
-	ConcentrationCeiling                                   float64
-	SeedDomains                                            []string
-	ExecutionAuthority                                     string
+	CandidateID, StrategyVersion, BaseCostID, StressCostID                     string
+	ActionableConfidenceThreshold                                              float64
+	SMAFast, SMAMedium, SMASlow, ATRPeriod                                     int
+	AvgVolumePeriod                                                            int
+	StopATR, TargetATR                                                         float64
+	HoldingPeriod, InitializationRequired, BootstrapN                          int
+	OverlapWindow                                                              int
+	BaseSpreadBPS, BaseSlippageBPS, BaseImpactBPS                              float64
+	StressSpreadBPS, StressSlippageBPS, StressImpactBPS                        float64
+	Universe                                                                   []string
+	DevelopmentStart, DevelopmentEnd                                           string
+	ValidationStart, ValidationEnd                                             string
+	OOSStart, OOSEnd, HoldoutStart                                             string
+	DevelopmentSampleFloor, ValidationSampleFloor, OOSSampleFloor, PairedFloor int
+	EffectiveBlockFloor, InstrumentFloor                                       int
+	MinimumSliceFloor                                                          int
+	ConcentrationCeiling                                                       float64
+	SeedDomains                                                                []string
+	ExecutionAuthority                                                         string
 }
 
 var expectedUniverse = []string{"SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"}
@@ -107,6 +107,9 @@ func loadFrozenExperimentConfig(manifestBytes []byte, manifestHash string) (Froz
 	}
 	if c.DevelopmentSampleFloor, err = intAt(root, "sample_and_dependence", "episode_floors", "development"); err != nil || c.DevelopmentSampleFloor != 90 {
 		return FrozenExperimentConfig{}, errors.New("development sample floor mismatch")
+	}
+	if c.ValidationSampleFloor, err = intAt(root, "sample_and_dependence", "episode_floors", "validation"); err != nil || c.ValidationSampleFloor != 30 {
+		return FrozenExperimentConfig{}, errors.New("validation sample floor mismatch")
 	}
 	if c.OOSSampleFloor, err = intAt(root, "sample_and_dependence", "episode_floors", "formal_oos"); err != nil || c.OOSSampleFloor != 30 {
 		return FrozenExperimentConfig{}, errors.New("OOS sample floor mismatch")
@@ -272,12 +275,21 @@ func contractAuditOnly() bool {
 	return false
 }
 
+func recoveryContractAuditOnly() bool {
+	for _, arg := range os.Args[1:] {
+		if arg == "--recovery-contract-audit" {
+			return true
+		}
+	}
+	return false
+}
+
 func auditManifestContract(manifestBytes []byte, cfg FrozenExperimentConfig) error {
 	var root map[string]any
 	if err := json.Unmarshal(manifestBytes, &root); err != nil {
 		return fmt.Errorf("decode contract: %w", err)
 	}
-	if cfg.MinimumSliceFloor != 3 || cfg.OverlapWindow != 20 || cfg.DevelopmentSampleFloor != 90 || cfg.OOSSampleFloor != 30 || cfg.PairedFloor != 30 || cfg.EffectiveBlockFloor != 12 || cfg.InstrumentFloor != 6 || cfg.ConcentrationCeiling != 0.4 {
+	if cfg.MinimumSliceFloor != 3 || cfg.OverlapWindow != 20 || cfg.DevelopmentSampleFloor != 90 || cfg.ValidationSampleFloor != 30 || cfg.OOSSampleFloor != 30 || cfg.PairedFloor != 30 || cfg.EffectiveBlockFloor != 12 || cfg.InstrumentFloor != 6 || cfg.ConcentrationCeiling != 0.4 {
 		return errors.New("promotion-critical floors are not fully bound")
 	}
 	tests, err := stringsAt(root, "falsification_suite", "tests")

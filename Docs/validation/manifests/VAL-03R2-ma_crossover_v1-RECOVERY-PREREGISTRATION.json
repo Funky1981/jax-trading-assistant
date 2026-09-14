@@ -1,0 +1,147 @@
+{
+  "contract_id": "jax.val-03r2.ma-crossover-recovery-preregistration",
+  "contract_version": "v1",
+  "status": "FROZEN_FOR_EXTERNAL_REVIEW",
+  "parent": {
+    "candidate_id": "ma_crossover_v1",
+    "manifest": "Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json",
+    "version": "v1.5",
+    "manifest_sha256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a"
+  },
+  "candidate": {
+    "candidate_id": "ma_crossover_v1",
+    "strategy_version": "ma_crossover_v1",
+    "primary_claim": "BULLISH_LONG_ONLY",
+    "actionable_confidence_threshold": 0.6,
+    "sma_fast": 20,
+    "sma_medium": 50,
+    "sma_slow": 200,
+    "atr_period": 14,
+    "avg_volume_period": 20,
+    "stop_atr": 1.0,
+    "target_atr": 3.0,
+    "holding_period_sessions": 20,
+    "reference_capital_usd": 10000,
+    "quantity_convention": "WHOLE_SHARES",
+    "parameter_change_permitted": false
+  },
+  "inherited_policies": [
+    "CEIL_5_PERCENT_V1",
+    "CALENDAR_YEAR_X_SPY_SMA200_REGIME_V1",
+    "SECONDARY_DIRECTIONAL_PRICE_EFFECT_V1",
+    "SHA256_INDEPENDENT_SIGN_ASSIGNMENT_V1",
+    "MIXED_INSTRUMENT_YEAR_ONLY_V1",
+    "FAIL_CLOSED_UNKNOWN_STATUS_V1",
+    "SIGN_X_ABSOLUTE_MAGNITUDE_NULL_V1"
+  ],
+  "source_identities": {
+    "strategy": {"path": "libs/strategies/ma_crossover.go", "blob_sha1": "fb22b9dd909a0ae5f13dd727ff2eddf40963d426"},
+    "strategy_type_contract": {"path": "libs/strategies/strategy.go", "blob_sha1": "8ff03f23aed6dba929cdc83cda5c1a1153da616f"},
+    "operational_input": {"path": "internal/trader/signalgenerator/inprocess.go", "blob_sha1": "4a3f0537013308f40ee94c3eb723d3a152297048"},
+    "atr_reference": {"path": "internal/modules/quant/volatility.go", "blob_sha1": "6fb7cee0e1643352f073022bbf999283b5a04a49"},
+    "actionable_gate": {"path": "cmd/trader/instance_scheduler.go", "blob_sha1": "54244f758599e97317d31073f8c23f1d2b4ae729"},
+    "adjusted_bar_contract": {"path": "libs/marketdata/val03b_contract.go", "blob_sha1": "6d020ddf97d4729eb68514fbe95e6621fdc359eb"},
+    "alpaca_route": {"path": "libs/marketdata/alpaca_hardened.go", "blob_sha1": "9039a7d6129158bbfcc8aa3a8525d54675dd3cc6"},
+    "warmup_contract": {"path": "libs/marketdata/val03c_warmup.go", "blob_sha1": "7905262ddeff899bf18c17e50d45d0073079afea"}
+  },
+  "recovery_oos_boundary": {
+    "start": "2025-01-01",
+    "end": "2026-09-11",
+    "scored_sessions": "valid US regular sessions only",
+    "excluded_incomplete_session": "2026-09-14",
+    "post_result_extension_allowed": false,
+    "extension_requires_new_preregistration": true
+  },
+  "structural_feasibility": {
+    "universe_instruments": 9,
+    "recovery_years": 2,
+    "maximum_theoretical_2025_blocks": 9,
+    "maximum_theoretical_recovery_blocks": 18,
+    "effective_block_floor": 12,
+    "outcome_counts_inspected": false
+  },
+  "warmup": {
+    "source": "accepted VAL-03B/VAL-03C hash-bound pre-recovery evidence",
+    "mode": "minimum preceding valid sessions required by frozen indicator contract",
+    "pre_recovery_state": "WARMUP_ONLY",
+    "pre_recovery_performance_included": false,
+    "contaminated_2023_2024_result_reused": false
+  },
+  "provider_contract": {
+    "provider": "Alpaca",
+    "feed": "SIP",
+    "timeframe": "1Day",
+    "universe": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"],
+    "adjustment_families": ["RAW", "SPLIT", "SPLIT+SPIN-OFF"],
+    "route": "existing hardened Alpaca historical route",
+    "fallback": "NONE",
+    "paid_spend_usd": 0,
+    "raw_bytes_before_normalization": true,
+    "provider_calls_authorized_in_r2": false,
+    "request_date_guard": "reject any request or returned date >= 2026-09-12; 2025/2026 acquisition is not authorized in R2"
+  },
+  "sample_floors": {
+    "development": 90,
+    "validation": 30,
+    "recovery_oos": 30,
+    "paired": 30,
+    "instrument_year_blocks": 12,
+    "instruments": 6,
+    "year_regime_cells": 3,
+    "development_validation_readiness_failure": "INSUFFICIENT_EVIDENCE before holdout access"
+  },
+  "promotion_gates": {
+    "primary_mean_net_long_return": "> 0",
+    "primary_block_bootstrap_lower_bound": "> 0",
+    "paired_mean_difference": "> 0",
+    "paired_bootstrap_lower_bound": "> 0",
+    "concentration_ceiling": 0.4,
+    "top_five_concentration": "must PASS",
+    "blocking_falsification": "must PASS",
+    "data_quality": "must PASS",
+    "unknown_material_status": "FAIL_CLOSED",
+    "secondary_sign_permutation": "NON_BLOCKING_INFORMATIONAL"
+  },
+  "no_post_result_salvage": {
+    "parameter_tuning": false,
+    "threshold_tuning": false,
+    "universe_substitution": false,
+    "date_extension": false,
+    "instrument_dropping_or_adding": false,
+    "cost_change": false,
+    "placebo_change": false,
+    "bootstrap_change": false,
+    "falsification_change": false,
+    "regime_change": false,
+    "top_five_policy_change": false,
+    "new_experiment_required_for_change": true
+  },
+  "contaminated_run_guard": {
+    "artifact": "Docs/validation/results/VAL-03-HYP-MA-001-INTEGRITY-REVIEW.json",
+    "formal_oos_run_count": 1,
+    "no_rerun": true,
+    "classification": "CONTAMINATED_FOR_FORMAL_OOS",
+    "old_runner_execution": "BLOCKED"
+  },
+  "outcome_free_audit": {
+    "no_market_data_access": true,
+    "no_2025_access": true,
+    "no_2026_access": true,
+    "no_signal_counts": true,
+    "no_episode_counts": true,
+    "no_outcome_access": true,
+    "no_execution": true,
+    "no_post_result_extension": true,
+    "command": "go run ./cmd/val03-ma-crossover --recovery-contract-audit"
+  },
+  "safety": {
+    "execution_authority": "NONE",
+    "creates_fill": false,
+    "allow_live_trading": false,
+    "broker_execution_allowed": false,
+    "execution_enabled": false,
+    "maximum_leverage": 1,
+    "forward_paper": "NOT_STARTED",
+    "phase_13": "NOT_STARTED"
+  }
+}

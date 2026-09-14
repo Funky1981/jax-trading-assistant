@@ -57,7 +57,7 @@ func TestManifestBoundConfigFreezesCoreSemantics(t *testing.T) {
 	if cfg.ExecutionAuthority != "NONE" || !sameStrings(cfg.Universe, expectedUniverse) {
 		t.Fatalf("unexpected safety/universe config: %+v", cfg)
 	}
-	if cfg.DevelopmentSampleFloor != 90 || cfg.OOSSampleFloor != 30 || cfg.PairedFloor != 30 || cfg.EffectiveBlockFloor != 12 || cfg.InstrumentFloor != 6 || cfg.MinimumSliceFloor != 3 || cfg.OverlapWindow != 20 || cfg.ConcentrationCeiling != .4 {
+	if cfg.DevelopmentSampleFloor != 90 || cfg.ValidationSampleFloor != 30 || cfg.OOSSampleFloor != 30 || cfg.PairedFloor != 30 || cfg.EffectiveBlockFloor != 12 || cfg.InstrumentFloor != 6 || cfg.MinimumSliceFloor != 3 || cfg.OverlapWindow != 20 || cfg.ConcentrationCeiling != .4 {
 		t.Fatalf("promotion-critical floors are not fully bound: %+v", cfg)
 	}
 	if cfg.DevelopmentStart != "2016-01-01" || cfg.ValidationStart != "2021-01-01" || cfg.OOSStart != "2023-01-01" || cfg.HoldoutStart != "2025-01-01" {

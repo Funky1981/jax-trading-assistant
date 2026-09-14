@@ -114,6 +114,9 @@ func main() {
 }
 
 func run() error {
+	if recoveryContractAuditOnly() {
+		return runRecoveryContractAudit()
+	}
 	if err := validateDateRange(dataStart, dataEnd); err != nil {
 		return err
 	}
