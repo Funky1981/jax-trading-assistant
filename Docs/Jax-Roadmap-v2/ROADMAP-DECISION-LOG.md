@@ -1,5 +1,23 @@
 # Roadmap Decision Log
 
+## RD-2026-09-14-06 - VAL-03R1C secondary-diagnostic and audit-traceability closure
+
+- Work package: `VAL-03R1C — SECONDARY-DIAGNOSTIC & AUDIT-TRACEABILITY CLOSURE`.
+- External authorization: GO for bounded, outcome-free corrective closure.
+- The production evaluator now constructs typed BUY/SELL secondary directional
+  observations with an independent active interval and passes them to the
+  falsification path. Mixed sign permutation uses only mixed instrument-year
+  strata and records excluded single-direction strata. Exact calendar-year ×
+  SPY-regime cells are persisted, and unknown falsification statuses fail closed
+  regardless of the blocking flag.
+- Deterministic integration and conformance tests prove production wiring,
+  mixed-stratum accounting, persisted breadth identities, and unknown-status
+  rejection. Manifest v1.5 and the contaminated VAL-03 artifact remain
+  unchanged; no outcomes or 2025/2026 data were accessed.
+- `VAL-03 = CONTAMINATED_FOR_FORMAL_OOS`; new independent OOS remains
+  `NOT AUTHORIZED`; forward paper and Phase 13 remain not started.
+- `VAL-03R1C = COMPLETE / EXTERNAL REVIEW REQUIRED`.
+
 ## RD-2026-09-14-05 - VAL-03R1B falsification and promotion integrity closure
 
 - Work package: `VAL-03R1B — FALSIFICATION & PROMOTION INTEGRITY CLOSURE`.

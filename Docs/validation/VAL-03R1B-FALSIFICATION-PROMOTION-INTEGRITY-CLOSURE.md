@@ -1,5 +1,9 @@
 # Jax VAL-03R1B Falsification & Promotion Integrity Closure
 
+> Current status note: the remaining audit-traceability defects identified
+> after this package are closed by `VAL-03R1C`. This document preserves the R1B
+> evidence and is not the final R1C handover.
+
 ## Status
 
 `VAL-03R1B = COMPLETE / EXTERNAL REVIEW REQUIRED`.

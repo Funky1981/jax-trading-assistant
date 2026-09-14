@@ -30,11 +30,15 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03R1B — FALSIFICATION & PROMOTION INTEGRITY CLOSURE; EXTERNAL REVIEW REQUIRED** |
+| Current implementation package | **VAL-03R1C — SECONDARY-DIAGNOSTIC & AUDIT-TRACEABILITY CLOSURE; EXTERNAL REVIEW REQUIRED** |
 | Next package | **New independent OOS boundary NOT AUTHORIZED; contaminated VAL-03 remains closed** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
+`VAL-03R1C` closes the bounded secondary-diagnostic production-wiring,
+mixed-stratum, persisted-breadth, and fail-closed-disposition findings without
+rerunning the contaminated VAL-03 experiment. A new independent OOS remains
+`NOT AUTHORIZED` pending external review.
 WP-03.04 and WP-03.05 have received independent technical-lead **FINAL GO**.
 WP-03.06 has received independent technical-lead FINAL GO and is now COMPLETE /
 GO. The Phase-03 exit condition was demonstrated using a deterministic,
