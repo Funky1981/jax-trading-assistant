@@ -1,0 +1,17 @@
+{
+  "contract_id": "jax.val-03r4a.prestart-attempt-1-integrity/v1",
+  "status": "AUTHORISED / PRE-START DATA-INTEGRITY ABORT",
+  "attempt": 1,
+  "execute_invocations": 1,
+  "started_once": false,
+  "formal_recovery_run_count": 0,
+  "outcomes_calculated": false,
+  "signals_calculated": false,
+  "episodes_calculated": false,
+  "returns_calculated": false,
+  "r3c_execution_freeze_sha256": "e42d6fb9aff86d51951fc5a0dc251059da65e73264968d972e666905fbe560d3",
+  "r4_authorization_sha256": "bb437cd90c2d670edec09d53def4e0b8cc5f2084ac8a49aa5ad2ef2ac51740cd",
+  "error": "raw/split factor inconsistency XLK 2016-02-11",
+  "result_artifacts_absent": true,
+  "formal_run_state_absent": true
+}
