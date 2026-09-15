@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+//nolint:unused // retained for historical R3B freeze audit.
 type r3bFreezeArtifact struct {
 	ContractID  string `json:"contract_id"`
 	Status      string `json:"status"`

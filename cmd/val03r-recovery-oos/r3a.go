@@ -548,10 +548,8 @@ func r3aExecute(contract r3aFrozenContract) error {
 		return fmt.Errorf("authorization: %w", err)
 	}
 	if stateBytes, err := os.ReadFile(r3aRunStatePath); err == nil {
-		if _, stateErr := r3aValidateRunStateBytesForFreeze(stateBytes, freezeSHA); stateErr != nil {
-			return stateErr
-		}
-		return errors.New("recovery run already consumed")
+		_, stateErr := r3aValidateRunStateBytesForFreeze(stateBytes, freezeSHA)
+		return stateErr
 	} else if !os.IsNotExist(err) {
 		return err
 	}
