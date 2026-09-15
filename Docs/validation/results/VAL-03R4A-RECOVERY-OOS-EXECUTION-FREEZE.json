@@ -1,0 +1,98 @@
+{
+  "contract_id": "jax.val-03r4a.recovery-oos-execution-freeze/v1",
+  "status": "FROZEN_FOR_VAL03R4B_EXTERNAL_AUTHORIZATION",
+  "parent": {
+    "r3c_execution_freeze_sha256": "e42d6fb9aff86d51951fc5a0dc251059da65e73264968d972e666905fbe560d3",
+    "r3c_manifest_status": "FROZEN_FOR_VAL03R4_EXTERNAL_AUTHORIZATION"
+  },
+  "attempt_1": {
+    "integrity_sha256": "8dc3874be5d4593c82fc77c3b1090a6fa55b4787b72e0a09a23bbd8066e05d96",
+    "started_once": false,
+    "outcomes_exposed": false,
+    "signals_calculated": false,
+    "episodes_calculated": false,
+    "returns_calculated": false,
+    "formal_recovery_run_count": 0,
+    "result_artifacts_absent": true,
+    "formal_run_state_absent": true
+  },
+  "forensic": {
+    "sha256": "70941d082cd1d430b684017129341370b25e7fe845730169dfd5a3a847d85624",
+    "status": "VALIDATOR DRIFT CONFIRMED"
+  },
+  "preflight": {
+    "sha256": "2d5f7fc479b6777854987fe1954114a74a528015d0952ed086666aad635b777f",
+    "status": "PASS",
+    "outcome_calculations": false
+  },
+  "canonical_contract": {
+    "factor_helper": "marketdata.DeriveVAL03BSplitFactor",
+    "boundary_helper": "marketdata.IsVAL03BStructuralFactorBoundary",
+    "tolerance": "5e-4",
+    "split_spin_off_policy": "SPLIT != SPLIT+SPIN-OFF => UNSUPPORTED_STRUCTURAL_ACTION"
+  },
+  "scientific_terms": {
+    "candidate": "ma_crossover_v1",
+    "threshold": "0.60",
+    "strategy_parameters": "20/50/200 SMA; ATR14; AvgVolume20",
+    "primary_population": "ACTIONABLE LONG EPISODES",
+    "signal_adjustment": "SPLIT",
+    "execution_reference": "RAW",
+    "structural_detector": "SPLIT+SPIN-OFF",
+    "base_cost": "cost_val03_ibkr_fixed_personal_base_v1",
+    "stress_cost": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8",
+    "recovery_boundary": "2025-01-01..2026-09-11",
+    "post_split_reset": "200 valid synchronized sessions",
+    "split_spanning_episode": "STRUCTURAL_ACTION_INVALIDATED",
+    "sample_floors": "recovery 30; paired 30; effective blocks 12; instruments 6; slices 3",
+    "concentration_ceiling": "0.40"
+  },
+  "runner": {
+    "path": "cmd/val03r-recovery-oos",
+    "allowed_modes": ["--contract-audit", "--preflight-only", "--execute"],
+    "source_blobs_sha1": {
+      "main.go": "aec7b7e27c17193882cfdb368daede90072b4375",
+      "config.go": "2696c5996e5531e5759abd0283b342b4198ec435",
+      "contract.go": "d614ca6f7b636c49058bc3c7d0ad14bf82411e47",
+      "recovery.go": "88d66c67f14a07f86972a95ba53b160ac2494528",
+      "r3a.go": "abfa6b10799aca60861286fec0f42a790411d83a",
+      "r3b.go": "9a8b33d63fc79325639c13db2dfa9a684aee83b4",
+      "structural.go": "20ba181f2a36e13eae39d5bf7e450aa9bd13a7f7",
+      "r3c.go": "43a1e0622a87df358f2149b0f2c199dc1da2aba3",
+      "r4a.go": "f16d6924d05bf59357545081c1f69c5566f1422a",
+      "val03b_contract.go": "6d020ddf97d4729eb68514fbe95e6621fdc359eb"
+    },
+    "canonical_loader": "marketdata.DeriveVAL03BSplitFactor",
+    "canonical_boundary_detection": "marketdata.IsVAL03BStructuralFactorBoundary",
+    "old_r4_authorization_reusable": false,
+    "future_authorization_required": true,
+    "execution_authority": "NONE",
+    "creates_fill": false
+  },
+  "authorization": {
+    "old_r4_status": "HISTORICAL / NOT REUSABLE",
+    "future_path": "Docs/validation/results/VAL-03R4B-EXECUTION-AUTHORIZATION.json",
+    "future_contract_id": "jax.val-03r4b.execution-authorization/v1",
+    "future_value": "GO_VAL03R4B_SINGLE_RECOVERY_OOS_EXECUTION"
+  },
+  "run_state": {
+    "path": "Docs/validation/results/VAL-03R4-RUN-STATE.json",
+    "status": "ABSENT"
+  },
+  "lifecycle": {
+    "performance_execution_started": false,
+    "performance_artifacts_written": false,
+    "performance_run_count": 0,
+    "status": "NOT_STARTED / FROZEN_FOR_FUTURE_AUTHORIZATION"
+  },
+  "safety": {
+    "execution_authority": "NONE",
+    "creates_fill": false,
+    "allow_live_trading": false,
+    "broker_execution_allowed": false,
+    "execution_enabled": false,
+    "maximum_leverage": 1,
+    "forward_paper": "NOT_STARTED",
+    "phase_13": "NOT_STARTED"
+  }
+}

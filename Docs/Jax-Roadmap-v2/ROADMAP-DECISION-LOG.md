@@ -1,5 +1,23 @@
 # Roadmap Decision Log
 
+## RD-2026-09-15-14 - VAL-03R4A pre-start data-integrity validator closure
+
+- The single VAL-03R4 attempt aborted before `STARTED_ONCE` on the XLK
+  2016-02-11 RAW/SPLIT frame. Formal recovery run count remains `0`; no signals,
+  episodes, returns, result artifacts or run state were created.
+- Outcome-free forensic reconstruction confirmed validator drift: the legacy
+  duplicate absolute-price check rejected a rounded frame that the canonical
+  `marketdata.DeriveVAL03BSplitFactor` accepts at the frozen `5e-4` tolerance.
+  The complete structural-only preflight passed for all nine instruments and
+  2,688 synchronized sessions per instrument.
+- The recovery loader now uses the canonical factor and boundary helpers. The
+  corrected R4A freeze binds the runner source identities and makes the future
+  `VAL-03R4B-EXECUTION-AUTHORIZATION.json` mandatory; the old R4 authorization
+  is historical and not reusable.
+- `VAL-03R4A = COMPLETE / EXTERNAL REVIEW REQUIRED`; `VAL-03R4B` is not
+  authorized. No 2023–2024 rerun, recovery performance, 2025/2026 outcome,
+  forward paper or Phase 13 activity occurred. Safety flags remain unchanged.
+
 ## RD-2026-09-15-13 - VAL-03R4 single recovery formal OOS authorization
 
 - External technical-lead decision: `VAL-03R3C = COMPLETE / GO` and exactly one

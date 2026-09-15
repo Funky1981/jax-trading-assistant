@@ -816,16 +816,3 @@ func barScaleConsistent(raw, split bar, factor float64) bool {
 func closeEnoughWithTolerance(a, b float64) bool {
 	return math.Abs(a-b) <= r3aTolerance*math.Max(1, math.Max(math.Abs(a), math.Abs(b)))
 }
-
-func r3aAbsFloat(v float64) float64 {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
-func r3aMaxFloat(a, b float64) float64 {
-	if a > b {
-		return a
-	}
-	return b
-}

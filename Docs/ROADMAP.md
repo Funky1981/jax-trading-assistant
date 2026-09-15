@@ -30,8 +30,8 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03R4 — SINGLE RECOVERY FORMAL OOS EXECUTION; AUTHORIZED ONCE** |
-| Next package | **External review of VAL-03R4 result; forward paper remains NOT STARTED** |
+| Current implementation package | **VAL-03R4A — PRE-START DATA-INTEGRITY VALIDATOR CLOSURE; EXTERNAL REVIEW REQUIRED** |
+| Next package | **VAL-03R4B — SINGLE RECOVERY FORMAL OOS EXECUTION; NOT AUTHORIZED** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -49,8 +49,12 @@ recovery boundary data and contains no strategy outputs.
 supersedes it for the corrected late structural-boundary reset and complete
 freeze identity, while recovery performance remains locked and `VAL-03R4`
 remains unauthorized until the current single-use authorization checkpoint.
-`VAL-03R4` is now authorized exactly once by the external technical-lead
-decision; its result is still subject to external review. No forward paper or
+`VAL-03R4` attempt #1 was a pre-start abort caused by validator drift on a
+rounded XLK 2016-02-11 RAW/SPLIT frame. No `STARTED_ONCE` marker, formal run
+state or result artifact was created. `VAL-03R4A` corrected the formal loader
+to use the canonical shared factor contract and completed an outcome-free
+structural preflight. The R4A freeze requires a new single-use R4B
+authorization; recovery performance remains unstarted. No forward paper or
 Phase 13 activity is implied.
 `VAL-03R1D` corrects the remaining secondary null-statistic integrity defect;
 its null now uses deterministic assigned signs multiplied by fixed absolute

@@ -20,6 +20,14 @@ var r3cRunnerPaths = map[string]string{
 	"r3c.go":        "cmd/val03r-recovery-oos/r3c.go",
 }
 
+// R3C validation remains preserved as historical code while R4A is the
+// current freeze validator.
+var (
+	_ = r3cFreezePath
+	_ = r3cRunnerPaths
+	_ = r3cValidateFreeze
+)
+
 func r3cValidateFreeze() error {
 	b, err := os.ReadFile(r3cFreezePath)
 	if err != nil {
