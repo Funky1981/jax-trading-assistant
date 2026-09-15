@@ -1,0 +1,128 @@
+{
+  "contract_id": "jax.val-03r3a.recovery-oos-execution-freeze/v1",
+  "status": "FROZEN_FOR_VAL03R4_EXTERNAL_AUTHORIZATION",
+  "candidate_id": "ma_crossover_v1",
+  "parent_manifest": {
+    "path": "Docs/validation/manifests/VAL-02-ma_crossover_v1-PREREGISTRATION.json",
+    "sha256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a",
+    "contract_version": "v1.5"
+  },
+  "r2_manifest_sha256": "c19a4cfc774a7bf53466d9bcf5705bd3813f69258a9600291883db48aab490eb",
+  "r3_conformance_sha256": "d1799329cadf925fbf78f213ab15c546570c93f6942253664cf290a4a8ca3f60",
+  "r3_readiness_sha256": "10ddf19ef8a2b6612ba65efe9c0685c1b46a015cfc41091a442a10117baf0f28",
+  "r3_data_contract_sha256": "9fb35ef0be7e1378a72f04ba5c10d0cf838d94ef57115772469308ab28f14cf0",
+  "r3_dataset_readiness_sha256": "f4bb7c1f05b009bd4d2d284533137c1151693fd9cc59e76871581c144fa8f73f",
+  "r3a_dataset_readiness": {
+    "path": "Docs/validation/results/VAL-03R3A-RECOVERY-DATASET-READINESS.json",
+    "sha256": "dd4c49313016bcb45912142620bf8dcd965ec80eaf8b5be7376b3f36d98651d0",
+    "status": "PASS",
+    "performance_output_generated": false,
+    "signals_generated": false,
+    "episodes_generated": false,
+    "returns_generated": false,
+    "pnl_generated": false
+  },
+  "runner": {
+    "command": "go run ./cmd/val03r-recovery-oos --execute",
+    "path": "cmd/val03r-recovery-oos",
+    "source_blobs_sha1": {
+      "main.go": "df9c0521ca768b430630b98e1b838e9d66972434",
+      "config.go": "0a1ece51245d1d16d1490c243d87a6af8e6b4d34",
+      "contract.go": "1e57d36aacc94872d95097afff29beba43d8043a",
+      "recovery.go": "88d66c67f14a07f86972a95ba53b160ac2494528",
+      "r3a.go": "405d6489c7fb5cf6476fbbb8d625fe4111890029"
+    },
+    "allowed_modes": ["--contract-audit", "--preflight-only", "--execute"],
+    "execution_mode_requires": [
+      "VAL-03R4-EXECUTION-AUTHORIZATION.json",
+      "matching_execution_freeze_sha256",
+      "one-shot_run_state_absent_or_uncompleted_artifacts_absent"
+    ],
+    "arbitrary_threshold_override": false,
+    "performance_lock_before_authorization": true,
+    "contaminated_runner_reenabled": false
+  },
+  "strategy_identities": {
+    "strategy": {"path": "libs/strategies/ma_crossover.go", "blob_sha1": "fb22b9dd909a0ae5f13dd727ff2eddf40963d426"},
+    "strategy_contract": {"path": "libs/strategies/strategy.go", "blob_sha1": "8ff03f23aed6dba929cdc83cda5c1a1153da616f"},
+    "operational_signal_gate": {"path": "internal/trader/signalgenerator/inprocess.go", "blob_sha1": "4a3f0537013308f40ee94c3eb723d3a152297048"},
+    "atr": {"path": "internal/modules/quant/volatility.go", "blob_sha1": "6fb7cee0e1643352f073022bbf999283b5a04a49"},
+    "signal_scheduler": {"path": "cmd/trader/instance_scheduler.go", "blob_sha1": "54244f758599e97317d31073f8c23f1d2b4ae729"}
+  },
+  "data_identities": {
+    "adjusted_bar_contract": {"path": "libs/marketdata/val03b_contract.go", "blob_sha1": "6d020ddf97d4729eb68514fbe95e6621fdc359eb"},
+    "provider_route": {"path": "libs/marketdata/alpaca_hardened.go", "blob_sha1": "9039a7d6129158bbfcc8aa3a8525d54675dd3cc6"},
+    "warmup_contract": {"path": "libs/marketdata/val03c_warmup.go", "blob_sha1": "7905262ddeff899bf18c17e50d45d0073079afea"}
+  },
+  "recovery_boundary": {
+    "start": "2025-01-01",
+    "end": "2026-09-11",
+    "partial_2026_calendar_year": true,
+    "post_boundary_extension": false,
+    "excluded_date": "2026-09-14",
+    "asof": "2026-09-11",
+    "blocks": {"2025": "CALENDAR_YEAR_INSTRUMENT_BLOCK", "2026": "PARTIAL_CALENDAR_YEAR_INSTRUMENT_BLOCK", "maximum": 18}
+  },
+  "execution_terms": {
+    "threshold": 0.6,
+    "threshold_source": "parent_manifest",
+    "sma_periods": [20, 50, 200],
+    "atr_period": 14,
+    "avg_volume_period": 20,
+    "primary_population": "ACTIONABLE_LONG_EPISODES",
+    "entry": "NEXT_REGULAR_SESSION_OPEN",
+    "pre_entry_invalidation": "LONG_STOP_LT_NEXT_OPEN_LT_TARGET",
+    "stop": "SIGNAL_SMA50_MINUS_SIGNAL_ATR14",
+    "target": "SIGNAL_CLOSE_PLUS_3_X_SIGNAL_ATR14",
+    "target_selection": "FIRST_OPERATIONAL_TARGET_ONLY",
+    "maximum_holding_period_sessions": 20,
+    "reference_capital_usd": 10000,
+    "quantity_convention": "WHOLE_SHARES_FLOOR_10000_DIVIDED_BY_RAW_NEXT_OPEN",
+    "split_spanning_episode": "STRUCTURAL_ACTION_INVALIDATED",
+    "post_split_reset_sessions": 200,
+    "base_cost_model_id": "cost_val03_ibkr_fixed_personal_base_v1",
+    "stress_cost_model_id": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8",
+    "matched_placebo_id": "jax.val-02c.matched-non-signal-placebo/v1",
+    "timestamp_placebo_id": "jax.val-02c.timestamp-placebo/v1",
+    "bootstrap": {"unit": "non-empty instrument-year block", "replicates": 10000, "interval": "percentile", "lower_bound": "2.5th percentile"},
+    "sample_floors": {"development": 90, "validation": 30, "recovery_oos": 30, "matched_placebo_pairs": 30, "effective_blocks": 12, "instruments": 6, "slices": 3},
+    "concentration_ceiling": 0.4,
+    "falsification_tests": ["matched_non_signal_placebo", "timestamp_placebo", "secondary_sign_permutation", "top_5_percent_exclusion", "leave_one_instrument_out", "regime_slices", "theme_slices", "sma_19_49_199", "sma_21_51_201", "atr_0_90", "atr_1_10", "stress_cost", "overlap_sensitivity", "zero_and_buy_hold_baselines"],
+    "random_seed_domains": ["instrument-year-bootstrap-v2", "timestamp-placebo-v1", "secondary-sign-permutation-v1"]
+  },
+  "provider": {
+    "name": "Alpaca",
+    "feed": "SIP",
+    "timeframe": "1Day",
+    "universe": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"],
+    "adjustment_families": ["RAW", "SPLIT", "SPLIT+SPIN-OFF"],
+    "raw_root": ".runtime/val03r3/raw",
+    "fallback": "NONE",
+    "paid_spend_usd": 0
+  },
+  "result_schema": "jax.val-03r4.recovery-oos-results/v1",
+  "authorization": {
+    "path": "Docs/validation/results/VAL-03R4-EXECUTION-AUTHORIZATION.json",
+    "contract_id": "jax.val-03r4.execution-authorization/v1",
+    "required_external_value": "GO_VAL03R4_SINGLE_RECOVERY_OOS_EXECUTION",
+    "present_during_r3a": false
+  },
+  "lifecycle": {
+    "performance_execution_started": false,
+    "performance_artifacts_written": false,
+    "performance_run_count": 0,
+    "recovery_oos_status": "NOT_STARTED / FROZEN_FOR_FUTURE_AUTHORIZATION",
+    "run_state_path": "Docs/validation/results/VAL-03R4-RUN-STATE.json",
+    "run_state_present_during_r3a": false
+  },
+  "safety": {
+    "execution_authority": "NONE",
+    "creates_fill": false,
+    "allow_live_trading": false,
+    "broker_execution_allowed": false,
+    "execution_enabled": false,
+    "maximum_leverage": 1,
+    "forward_paper": "NOT_STARTED",
+    "phase_13": "NOT_STARTED"
+  }
+}

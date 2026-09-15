@@ -1,5 +1,28 @@
 # Roadmap Decision Log
 
+## RD-2026-09-15-10 - VAL-03R3A executable recovery runner and final freeze
+
+- External review rejected a roadmap change and authorized continuation of
+  `VAL-03R3A` from the exact R3 state. The selected candidate remains
+  `ma_crossover_v1`; the contaminated 2023-2024 formal run remains immutable
+  and is never rerun.
+- R3A corrects the misleading recovery data-quality status and creates the
+  typed, future executable `cmd/val03r-recovery-oos` pipeline. Its representative
+  readiness behavior is tested directly against the frozen strategy source,
+  including the 0.60 gate, 0.55 pullback exclusion, HOLD handling and SELL
+  secondary-only treatment.
+- The superseding freeze is
+  `VAL-03R3A-RECOVERY-OOS-EXECUTION-FREEZE.json` with status
+  `FROZEN_FOR_VAL03R4_EXTERNAL_AUTHORIZATION`. `--execute` is fail-closed until
+  an exact external R4 authorization matches that freeze, and a one-shot run
+  state prevents reruns.
+- No recovery data was reacquired, no strategy signals or performance were
+  calculated, and no 2025/2026 outcomes were inspected in R3A. Forward paper
+  and Phase 13 remain not started; all execution safety flags remain disabled.
+- `VAL-03R3A = COMPLETE / EXTERNAL REVIEW REQUIRED`; next package is
+  `VAL-03R4 — SINGLE REPLACEMENT FORMAL OOS EXECUTION`, not authorized by this
+  package.
+
 ## RD-2026-09-14-09 - VAL-03R3 local recovery readiness and performance lock
 
 - External review rejected a roadmap change and authorized continuation from

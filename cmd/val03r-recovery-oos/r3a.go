@@ -166,6 +166,38 @@ type r3aResultEnvelope struct {
 	ExecutionFreeze string         `json:"execution_freeze_identity"`
 }
 
+type r3aFreezeArtifact struct {
+	ContractID  string `json:"contract_id"`
+	Status      string `json:"status"`
+	CandidateID string `json:"candidate_id"`
+	R3ADataset  struct {
+		SHA256            string `json:"sha256"`
+		Status            string `json:"status"`
+		PerformanceOutput bool   `json:"performance_output_generated"`
+		SignalsGenerated  bool   `json:"signals_generated"`
+		EpisodesGenerated bool   `json:"episodes_generated"`
+		ReturnsGenerated  bool   `json:"returns_generated"`
+		PNLGenerated      bool   `json:"pnl_generated"`
+	} `json:"r3a_dataset_readiness"`
+	Runner struct {
+		Path                      string            `json:"path"`
+		SourceBlobs               map[string]string `json:"source_blobs_sha1"`
+		AllowedModes              []string          `json:"allowed_modes"`
+		ArbitraryThreshold        bool              `json:"arbitrary_threshold_override"`
+		PerformanceLockBeforeAuth bool              `json:"performance_lock_before_authorization"`
+		ContaminatedRunner        bool              `json:"contaminated_runner_reenabled"`
+	} `json:"runner"`
+	Authorization struct {
+		PresentDuringR3A bool `json:"present_during_r3a"`
+	} `json:"authorization"`
+	Lifecycle struct {
+		Started bool   `json:"performance_execution_started"`
+		Written bool   `json:"performance_artifacts_written"`
+		Runs    int    `json:"performance_run_count"`
+		Status  string `json:"recovery_oos_status"`
+	} `json:"lifecycle"`
+}
+
 func runR3A(mode string) error {
 	contract, err := r3aLoadAndValidateContracts()
 	if err != nil {
@@ -297,7 +329,35 @@ func r3aLoadAndValidateContracts() (r3aFrozenContract, error) {
 	if err := r3aValidateCorrectedDataset(); err != nil {
 		return contract, err
 	}
+	if err := r3aValidateFreeze(); err != nil {
+		return contract, err
+	}
 	return contract, nil
+}
+
+func r3aValidateFreeze() error {
+	b, err := os.ReadFile(r3aFreezePath)
+	if err != nil {
+		return fmt.Errorf("read R3A execution freeze: %w", err)
+	}
+	var v r3aFreezeArtifact
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	if v.ContractID != "jax.val-03r3a.recovery-oos-execution-freeze/v1" || v.Status != "FROZEN_FOR_VAL03R4_EXTERNAL_AUTHORIZATION" || v.CandidateID != "ma_crossover_v1" || v.R3ADataset.SHA256 != r3aCorrectedDatasetSHA || v.R3ADataset.Status != "PASS" || v.R3ADataset.PerformanceOutput || v.R3ADataset.SignalsGenerated || v.R3ADataset.EpisodesGenerated || v.R3ADataset.ReturnsGenerated || v.R3ADataset.PNLGenerated || v.Runner.Path != "cmd/val03r-recovery-oos" || !sameStrings(v.Runner.AllowedModes, []string{"--contract-audit", "--preflight-only", "--execute"}) || v.Runner.ArbitraryThreshold || !v.Runner.PerformanceLockBeforeAuth || v.Runner.ContaminatedRunner || v.Authorization.PresentDuringR3A || v.Lifecycle.Started || v.Lifecycle.Written || v.Lifecycle.Runs != 0 || v.Lifecycle.Status != "NOT_STARTED / FROZEN_FOR_FUTURE_AUTHORIZATION" {
+		return errors.New("R3A execution freeze contract mismatch")
+	}
+	for name, expected := range map[string]string{"main.go": "cmd/val03r-recovery-oos/main.go", "config.go": "cmd/val03r-recovery-oos/config.go", "contract.go": "cmd/val03r-recovery-oos/contract.go", "recovery.go": "cmd/val03r-recovery-oos/recovery.go", "r3a.go": "cmd/val03r-recovery-oos/r3a.go"} {
+		want, ok := v.Runner.SourceBlobs[name]
+		if !ok || want == "" {
+			return fmt.Errorf("missing R3A runner identity %s", name)
+		}
+		got, err := gitBlobSHA1(expected)
+		if err != nil || got != want {
+			return fmt.Errorf("R3A runner identity mismatch %s", name)
+		}
+	}
+	return nil
 }
 
 func r3aValidateR2() error {

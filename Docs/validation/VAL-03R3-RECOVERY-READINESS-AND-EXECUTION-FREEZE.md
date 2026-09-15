@@ -1,5 +1,12 @@
 # Jax VAL-03R3 Recovery Readiness and Execution Freeze
 
+> **VAL-03R3A supersession note:** The static R3 readiness and recovery data
+> remain accepted historical evidence, but the original R3 future execution
+> freeze is superseded for execution-path purposes by
+> `VAL-03R3A-RECOVERY-OOS-EXECUTION-FREEZE.json`. R3A corrects the recovery
+> dataset status wording, binds a complete future runner and keeps performance
+> locked until separate R4 authorization. No recovery performance was run.
+
 ## Status
 
 `VAL-03R3 = RECOVERY READINESS + DATASET + EXECUTION FREEZE COMPLETE /
