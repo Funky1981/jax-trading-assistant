@@ -172,6 +172,7 @@ type r3aResultEnvelope struct {
 	ExecutionFreeze string         `json:"execution_freeze_identity"`
 }
 
+//nolint:unused // retained for historical R3A artifact audit.
 type r3aFreezeArtifact struct {
 	ContractID  string `json:"contract_id"`
 	Status      string `json:"status"`
@@ -341,6 +342,7 @@ func r3aLoadAndValidateContracts() (r3aFrozenContract, error) {
 	return contract, nil
 }
 
+//nolint:unused // retained for historical R3A artifact audit.
 func r3aValidateFreeze() error {
 	b, err := os.ReadFile(r3aFreezePath)
 	if err != nil {
@@ -606,7 +608,7 @@ func r3aStartRunStateAt(path, freezeSHA string) error {
 		}
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := f.Write(b); err != nil {
 		return err
 	}
