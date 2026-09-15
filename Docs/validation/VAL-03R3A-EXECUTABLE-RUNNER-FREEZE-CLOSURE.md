@@ -2,7 +2,10 @@
 
 ## Status
 
-`VAL-03R3A = COMPLETE / EXTERNAL REVIEW REQUIRED`.
+`VAL-03R3A = COMPLETE / SUPERSEDED FOR REMAINING EXECUTION-SEMANTICS DEFECTS`.
+
+VAL-03R3B is the current superseding closure. The R3A freeze remains retained
+as historical evidence; it is not the current execution identity.
 
 This package repairs the executable recovery-runner contract after the R3
 static freeze was found not to be a complete future execution path. The
@@ -43,14 +46,15 @@ and the inherited falsification contract.
 
 ## Future execution freeze
 
-`Docs/validation/results/VAL-03R3A-RECOVERY-OOS-EXECUTION-FREEZE.json` is the
-superseding freeze. Its status is
+`Docs/validation/results/VAL-03R3A-RECOVERY-OOS-EXECUTION-FREEZE.json` was the
+R3A superseding freeze. Its status was
 `FROZEN_FOR_VAL03R4_EXTERNAL_AUTHORIZATION`; it binds the final runner source
 blobs, all inherited scientific identities, the corrected dataset identity,
 future command, authorization schema/path, one-shot lifecycle, and safety
-state. Its current SHA-256 is
-`7338909b98d0165e351079c4b82c42bf99f7464817586b1e37ba8b51923ceec9`. It does
-not authorize execution.
+state. Its historical SHA-256 is
+`7338909b98d0165e351079c4b82c42bf99f7464817586b1e37ba8b51923ceec9`. R3B now
+supersedes it for the remaining execution-semantics and integrity closure. It
+does not authorize execution.
 
 The authorization file
 `Docs/validation/results/VAL-03R4-EXECUTION-AUTHORIZATION.json` and run-state

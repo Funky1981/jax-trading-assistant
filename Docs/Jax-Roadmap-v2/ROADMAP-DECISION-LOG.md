@@ -1,5 +1,23 @@
 # Roadmap Decision Log
 
+## RD-2026-09-15-11 - VAL-03R3B final execution semantics closure
+
+- Work package: `VAL-03R3B — FINAL EXECUTION SEMANTICS & ONE-SHOT INTEGRITY CLOSURE`.
+- External decision: R3 static conformance is accepted, R3B continues locally;
+  this is not a roadmap change and VAL-03R4 is not authorized.
+- The selected candidate remains `ma_crossover_v1`; no strategy, parameter,
+  cost, placebo, bootstrap, sample-floor or boundary change was made.
+- Recovery execution remains performance-locked. Execution-time validation now
+  verifies both hash-bound raw payload inventories and synchronized structural
+  bar families before the exclusive `STARTED_ONCE` marker is written.
+- Stress arithmetic is explicit (`$0.50` fixed/order plus `10 bps` per leg on
+  both legs); bootstrap draws are SHA-256 counter-derived from the parent
+  manifest; timestamp placebo ranking uses the full SHA-256 seed.
+- The result schema is `jax.val-03r4.recovery-oos-results/v1`; completion is an
+  atomic `COMPLETED_ONCE` transition. No authorization, run-state, recovery
+  performance, forward paper or Phase 13 activity occurred.
+- `VAL-03R3B = FINAL EXECUTION SEMANTICS CLOSURE / EXTERNAL REVIEW REQUIRED`.
+
 ## RD-2026-09-15-10 - VAL-03R3A executable recovery runner and final freeze
 
 - External review rejected a roadmap change and authorized continuation of
