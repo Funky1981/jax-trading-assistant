@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"jax-trading-assistant/libs/marketdata"
 )
 
 const (
@@ -336,7 +338,7 @@ func r3aLoadAndValidateContracts() (r3aFrozenContract, error) {
 	if err := r3aValidateCorrectedDataset(); err != nil {
 		return contract, err
 	}
-	if err := r3cValidateFreeze(); err != nil {
+	if err := r4aValidateFreeze(); err != nil {
 		return contract, err
 	}
 	return contract, nil
@@ -535,16 +537,16 @@ func r3aValidateRunStateBytesForFreeze(b []byte, expectedFreezeSHA string) (r3aR
 }
 
 func r3aExecute(contract r3aFrozenContract) error {
-	authBytes, err := os.ReadFile(r3aAuthorizationPath)
+	authBytes, err := os.ReadFile(r4bAuthorizationPath)
 	if err != nil {
-		return errors.New("R4 authorization required; performance locked before data load")
+		return errors.New("VAL-03R4B AUTHORIZATION REQUIRED")
 	}
-	freezeBytes, err := os.ReadFile(r3cFreezePath)
+	freezeBytes, err := os.ReadFile(r4aFreezePath)
 	if err != nil {
 		return fmt.Errorf("read execution freeze: %w", err)
 	}
 	freezeSHA := sha256Hex(freezeBytes)
-	if _, err := r3aValidateAuthorizationBytes(authBytes, freezeSHA); err != nil {
+	if err := r4aValidateAuthorizationBytes(authBytes, freezeSHA); err != nil {
 		return fmt.Errorf("authorization: %w", err)
 	}
 	if stateBytes, err := os.ReadFile(r3aRunStatePath); err == nil {
@@ -770,15 +772,15 @@ func r3aLoadCombinedData() (map[string]*instrumentData, error) {
 			if !validBar(raw, date) || !validBar(split, date) || !validBar(det, date) {
 				return nil, fmt.Errorf("invalid synchronized bar %s %s", s, date)
 			}
-			factor := split.Close / raw.Close
-			if !barScaleConsistent(raw, split, factor) {
-				return nil, fmt.Errorf("raw/split factor inconsistency %s %s", s, date)
+			factor, err := marketdata.DeriveVAL03BSplitFactor(toVAL03BPriceFrame(raw), toVAL03BPriceFrame(split))
+			if err != nil {
+				return nil, fmt.Errorf("raw/split factor inconsistency %s %s: %w", s, date, err)
 			}
 			if !sameBarScale(split, det) {
 				return nil, fmt.Errorf("split/spin-off structural difference %s %s", s, date)
 			}
 			d.Factor[date] = factor
-			if prev != 0 && r3aAbsFloat(factor-prev) > r3aTolerance*r3aMaxFloat(1, r3aMaxFloat(factor, prev)) {
+			if prev != 0 && marketdata.IsVAL03BStructuralFactorBoundary(prev, factor) {
 				d.Boundaries[date] = true
 			}
 			prev = factor
@@ -788,6 +790,10 @@ func r3aLoadCombinedData() (map[string]*instrumentData, error) {
 		}
 	}
 	return data, nil
+}
+
+func toVAL03BPriceFrame(v bar) marketdata.VAL03BPriceFrame {
+	return marketdata.VAL03BPriceFrame{Open: v.Open, High: v.High, Low: v.Low, Close: v.Close, Volume: v.Volume}
 }
 
 func validBar(v bar, date string) bool {

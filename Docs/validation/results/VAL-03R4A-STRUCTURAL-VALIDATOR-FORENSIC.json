@@ -1,0 +1,46 @@
+{
+  "contract_id": "jax.val-03r4a.structural-validator-forensic/v1",
+  "status": "OUTCOME_FREE_FORENSIC",
+  "scope": {
+    "instruments": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"],
+    "periods": ["2016-01-01..2024-12-31", "2025-01-01..2026-09-11"],
+    "sessions_per_instrument": 2688,
+    "pre_recovery_sessions": 2264,
+    "recovery_sessions": 424
+  },
+  "canonical_contract": {
+    "factor_helper": "marketdata.DeriveVAL03BSplitFactor",
+    "boundary_helper": "marketdata.IsVAL03BStructuralFactorBoundary",
+    "tolerance": 0.0005
+  },
+  "xlk_2016_02_11": {
+    "raw_payload_sha256": ["315d346f6c311b5cef78e2f600a9250ebe59d9cfdb95aca754cf9ffdaa5279ac", "718139872fb4b6cc13b3023e11dfb870f30228a6887ee5f38314a9236f38cdcc", "c4fc2991b60c56bf836ea8b6713dd7eca99bfe0c9be488ab2850550bc144920b"],
+    "split_payload_sha256": ["9176b7077f60ca2f516b50cca3ad6a35395dac26068b4267c615c7d726c3f910", "d0a166336dd5177a1c21dd185d4b8e46dc2af56b46d2675d8d7766b02d321825", "f19de0ef69b84defbe8f5e5cbbddde39570e2057a19524bd9944b73e02daa777"],
+    "raw": {"open": 38.32, "high": 38.98, "low": 38.25, "close": 38.73, "volume": 24918011},
+    "split": {"open": 19.16, "high": 19.49, "low": 19.13, "close": 19.36, "volume": 49836022},
+    "split_raw_ratios": {"open": 0.5, "high": 0.5, "low": 0.5001307189542483, "close": 0.49987090111025045},
+    "raw_split_volume_ratio": 0.5,
+    "canonical_result": "PASS",
+    "canonical_factor": 0.5,
+    "legacy_r4_duplicate_result": "FAIL",
+    "legacy_error": "raw/split factor inconsistency XLK 2016-02-11"
+  },
+  "comparison": {
+    "SPY": {"sessions_checked": 2688, "canonical_pass": 2688, "canonical_fail": 0, "legacy_pass": 2688, "legacy_fail": 0, "disagreement": 0},
+    "QQQ": {"sessions_checked": 2688, "canonical_pass": 2688, "canonical_fail": 0, "legacy_pass": 2688, "legacy_fail": 0, "disagreement": 0},
+    "IWM": {"sessions_checked": 2688, "canonical_pass": 2688, "canonical_fail": 0, "legacy_pass": 2688, "legacy_fail": 0, "disagreement": 0},
+    "DIA": {"sessions_checked": 2688, "canonical_pass": 2688, "canonical_fail": 0, "legacy_pass": 2688, "legacy_fail": 0, "disagreement": 0},
+    "XLK": {"sessions_checked": 2688, "canonical_pass": 2688, "canonical_fail": 0, "legacy_pass": 2687, "legacy_fail": 1, "disagreement": 1},
+    "XLF": {"sessions_checked": 2688, "canonical_pass": 2688, "canonical_fail": 0, "legacy_pass": 2688, "legacy_fail": 0, "disagreement": 0},
+    "XLE": {"sessions_checked": 2688, "canonical_pass": 2688, "canonical_fail": 0, "legacy_pass": 2664, "legacy_fail": 24, "disagreement": 24},
+    "TLT": {"sessions_checked": 2688, "canonical_pass": 2688, "canonical_fail": 0, "legacy_pass": 2688, "legacy_fail": 0, "disagreement": 0},
+    "GLD": {"sessions_checked": 2688, "canonical_pass": 2688, "canonical_fail": 0, "legacy_pass": 2688, "legacy_fail": 0, "disagreement": 0}
+  },
+  "factor_boundaries": [
+    {"instrument": "XLK", "date": "2025-12-05"},
+    {"instrument": "XLE", "date": "2025-12-05"}
+  ],
+  "split_vs_split_spin_off_differences": 0,
+  "validator_drift": "CONFIRMED",
+  "outcome_calculations": false
+}

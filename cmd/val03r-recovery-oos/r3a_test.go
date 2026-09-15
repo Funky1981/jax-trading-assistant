@@ -378,6 +378,21 @@ func TestR3BStructuralScaleAndBarValidation(t *testing.T) {
 	}
 }
 
+func TestR4AXLK20160211UsesCanonicalRatioTolerance(t *testing.T) {
+	raw := bar{Date: "2016-02-11", Open: 38.32, High: 38.98, Low: 38.25, Close: 38.73, Volume: 24918011}
+	split := bar{Date: raw.Date, Open: 19.16, High: 19.49, Low: 19.13, Close: 19.36, Volume: 49836022}
+	factor, err := marketdata.DeriveVAL03BSplitFactor(toVAL03BPriceFrame(raw), toVAL03BPriceFrame(split))
+	if err != nil {
+		t.Fatalf("canonical XLK frame rejected: %v", err)
+	}
+	if math.Abs(factor-0.5) > marketdata.VAL03BFactorTolerance {
+		t.Fatalf("canonical factor = %.12f, want approximately 0.5", factor)
+	}
+	if barScaleConsistent(raw, split, split.Close/raw.Close) {
+		t.Fatal("legacy absolute-price validator unexpectedly accepted the known rounded frame")
+	}
+}
+
 func TestR3BResultSchemaUsesExplicitRecoveryIdentity(t *testing.T) {
 	b, err := json.Marshal(runOutput{ContractVersion: "jax.val-03r4.recovery-oos-results/v1", ManifestSHA256: parentManifestSHA, SeedManifestSHA256: parentManifestSHA, HoldoutAccessed: true})
 	if err != nil {
