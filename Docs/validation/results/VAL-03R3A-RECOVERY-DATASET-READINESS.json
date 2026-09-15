@@ -1,0 +1,57 @@
+{
+  "contract_id": "jax.val-03r3a.recovery-dataset-readiness/v1",
+  "status": "PASS",
+  "source_artifact": "Docs/validation/results/VAL-03R3-RECOVERY-DATASET-READINESS.json",
+  "source_artifact_sha256": "f4bb7c1f05b009bd4d2d284533137c1151693fd9cc59e76871581c144fa8f73f",
+  "provider": "Alpaca",
+  "feed": "SIP",
+  "timeframe": "1Day",
+  "asof": "2026-09-11",
+  "recovery_range_start": "2025-01-01",
+  "recovery_range_end": "2026-09-11",
+  "range_guard_status": "PASS",
+  "out_of_range_rows": 0,
+  "contains_expected_2025_data": true,
+  "post_boundary_rows": 0,
+  "universe": ["SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "TLT", "GLD"],
+  "adjustment_families": ["RAW", "SPLIT", "SPLIT+SPIN-OFF"],
+  "logical_family_count": 27,
+  "unique_raw_payload_count": 11,
+  "synchronized_sessions": 424,
+  "session_span": {
+    "first_returned_session": "2025-01-02",
+    "last_returned_session": "2026-09-11",
+    "duplicates": 0,
+    "monotonic": true
+  },
+  "quality": {
+    "dataset_quality": "PASS",
+    "ohlc_validity": "PASS",
+    "volume_validity": "PASS",
+    "synchronization": "PASS",
+    "structural_factor_consistency": "PASS",
+    "spin_off_boundary": "NONE_DETECTED"
+  },
+  "raw_payload_sha256": [
+    "05ea5af71e3b28895539d004885f59d667298d9de9850ac042449432fc9b7135",
+    "099e5f753e90839d78b152a94bef772a64107877b0987ec6096fe1c0163266d7",
+    "0e4529021b69b29267abfa97298bbff40094286bf03695fe85962bdc70ef2e54",
+    "1e66a50fb35fb71f2d2f5bb46b4b674666e8fa5a16ef2d46e51066a306e83dd1",
+    "2d4178526a1adb78c0fec58d9aab14fa7f24281399022d6385fdfc6b0af665ad",
+    "3d86507ac62d6993b176f0a544900a34ba9e5de128887aa08fb3b7957fd3827b",
+    "4c04534708e249230743fb57afb9e493e34c1f6cef0f833dc16fe036d60b0c84",
+    "5a5da7a04e015cb839eb4a5b699894e3ad0210d33e307e0ff0585ed85598902c",
+    "81182c3bdb0db2b763cd5ee12122c2a28a5b2300966e5d8af3097fe82387e2d4",
+    "a5959ee97b4636a68de18182e0089348058825989d39fc2d009ab64793168318",
+    "b516a9fa7cc4aa780028f4d5fbcf00e840eeb70a45c0910c0cf1ec58ab6b10e7"
+  ],
+  "structural_factor_boundaries": [
+    {"instrument": "XLK", "date": "2025-12-05", "previous_factor": 0.5, "current_factor": 1.0},
+    {"instrument": "XLE", "date": "2025-12-05", "previous_factor": 0.5, "current_factor": 1.0}
+  ],
+  "performance_output_generated": false,
+  "signals_generated": false,
+  "episodes_generated": false,
+  "returns_generated": false,
+  "pnl_generated": false
+}

@@ -1,36 +1,51 @@
 package main
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
-func TestRecoveryRunnerPerformanceLock(t *testing.T) {
-	for _, args := range [][]string{{"--contract-audit"}, {"--preflight-only"}} {
-		if len(args) != 1 || (args[0] != "--contract-audit" && args[0] != "--preflight-only") {
-			t.Fatalf("registered mode rejected: %v", args)
-		}
+func TestValidateDateRangeRejectsSealedHoldout(t *testing.T) {
+	if err := validateDateRange("2016-01-01", "2025-01-01"); err == nil {
+		t.Fatal("expected sealed-holdout rejection")
 	}
-	for _, forbidden := range []string{"--run", "--execute", "--threshold=0.2", "--oos"} {
-		if forbidden == "--contract-audit" || forbidden == "--preflight-only" {
-			t.Fatal("performance mode accidentally registered")
+	if err := validateDateRange("2016-01-01", "2024-12-31"); err != nil {
+		t.Fatalf("unexpected pre-holdout rejection: %v", err)
+	}
+}
+
+func TestGeometryValidityIsStrictlyPreEntry(t *testing.T) {
+	for _, tc := range []struct {
+		stop, open, target float64
+		want               bool
+	}{
+		{10, 11, 12, true},
+		{10, 10, 12, false},
+		{10, 12, 12, false},
+		{12, 11, 10, false},
+	} {
+		if got := geometryValid(tc.stop, tc.open, tc.target); got != tc.want {
+			t.Fatalf("geometryValid(%v,%v,%v)=%v, want %v", tc.stop, tc.open, tc.target, got, tc.want)
 		}
 	}
 }
 
-func TestRecoveryRunnerFrozenContractConstants(t *testing.T) {
-	if recoveryStart != "2025-01-01" || recoveryEnd != "2026-09-11" {
-		t.Fatal("recovery boundary drifted")
+func TestBaseCommissionMinimumAndMaximum(t *testing.T) {
+	minimum := netReturn(100, 101, 1, 0, 0, 0)
+	if minimum >= 0 {
+		t.Fatalf("minimum commission arithmetic should charge both legs, got %v", minimum)
 	}
-	if !strings.Contains(parentManifestPath, "PREREGISTRATION.json") || !strings.Contains(dataContractPath, "RECOVERY-DATA-CONTRACT.json") {
-		t.Fatal("required contract identity missing")
+	maximum := netReturn(0.01, 0.02, 1000000, 0, 0, 0)
+	if maximum <= 0 {
+		t.Fatalf("expected positive result under capped commission, got %v", maximum)
 	}
 }
 
-func TestRecoveryRunnerCannotCreatePerformanceArtifacts(t *testing.T) {
-	// The command has no performance mode and validateContract only reads the
-	// frozen contracts. This test documents the absence of a result writer.
-	if strings.Contains("--contract-audit|--preflight-only", "--run") {
-		t.Fatal("performance execution mode present")
+func TestSeedDerivationIsDeterministicAndDomainSeparated(t *testing.T) {
+	manifest := "manifest-test"
+	seedA := seedFor(manifest, "|instrument-year-bootstrap-v2|")
+	seedB := seedFor(manifest, "|instrument-year-bootstrap-v2|")
+	if seedA != seedB {
+		t.Fatal("seed derivation is not deterministic")
+	}
+	if seedA == seedFor(manifest, "|timestamp-placebo-v1|") {
+		t.Fatal("seed domains unexpectedly collide")
 	}
 }
