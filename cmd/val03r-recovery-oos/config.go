@@ -257,6 +257,7 @@ func contaminatedRunGuard(path string) (bool, error) {
 	return record.NoRerun && record.FormalOOSRunCount == 1 && record.FinalTerminalClassification == "CONTAMINATED_FOR_FORMAL_OOS", nil
 }
 
+//nolint:unused // retained as a compatibility helper for the future R4 CLI.
 func preflightOnly() bool {
 	for _, arg := range os.Args[1:] {
 		if arg == "--preflight-only" {
@@ -266,6 +267,7 @@ func preflightOnly() bool {
 	return false
 }
 
+//nolint:unused // retained as a compatibility helper for the future R4 CLI.
 func contractAuditOnly() bool {
 	for _, arg := range os.Args[1:] {
 		if arg == "--contract-audit" {
@@ -275,6 +277,7 @@ func contractAuditOnly() bool {
 	return false
 }
 
+//nolint:unused // retained as a compatibility helper for the future R4 CLI.
 func recoveryContractAuditOnly() bool {
 	for _, arg := range os.Args[1:] {
 		if arg == "--recovery-contract-audit" {
@@ -284,6 +287,7 @@ func recoveryContractAuditOnly() bool {
 	return false
 }
 
+//nolint:unused // retained for the future R4 contract-audit surface.
 func auditManifestContract(manifestBytes []byte, cfg FrozenExperimentConfig) error {
 	var root map[string]any
 	if err := json.Unmarshal(manifestBytes, &root); err != nil {

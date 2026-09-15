@@ -105,6 +105,7 @@ type recoveryManifest struct {
 	} `json:"outcome_free_audit"`
 }
 
+//nolint:unused // retained as a future R4 audit helper.
 func runRecoveryContractAudit() error {
 	parentBytes, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -151,6 +152,7 @@ func runRecoveryContractAudit() error {
 	return nil
 }
 
+//nolint:unused // retained for future source-identity checks.
 func gitBlobSHA1(path string) (string, error) {
 	b, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {

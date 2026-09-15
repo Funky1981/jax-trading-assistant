@@ -53,6 +53,8 @@ type familyRef struct {
 	Adjustment       string   `json:"adjustment"`
 	RawPayloadSHA256 []string `json:"raw_payload_sha256"`
 }
+
+//nolint:unused // retained for the future authorized pipeline's legacy input adapter.
 type readinessInput struct {
 	Families []familyRef `json:"families"`
 }
@@ -125,6 +127,7 @@ func run() error {
 	}
 }
 
+//nolint:unused // retained as the future pipeline implementation behind R4 authorization.
 func runHistorical() error {
 	if recoveryContractAuditOnly() {
 		return runRecoveryContractAudit()
@@ -263,6 +266,7 @@ func validateProviderDate(date string) error {
 	return nil
 }
 
+//nolint:unused // retained as a reusable future data-loader implementation.
 func loadData(ready readinessInput) (map[string]*instrumentData, error) {
 	data := map[string]*instrumentData{}
 	for _, s := range symbols {
@@ -338,12 +342,18 @@ func loadData(ready readinessInput) (map[string]*instrumentData, error) {
 	}
 	return data, nil
 }
+
+//nolint:unused // retained for future adjusted-family validation.
 func sameBarScale(a, b bar) bool {
 	return closeEnough(a.Open, b.Open) && closeEnough(a.High, b.High) && closeEnough(a.Low, b.Low) && closeEnough(a.Close, b.Close) && closeEnough(a.Volume, b.Volume)
 }
+
+//nolint:unused // retained for future adjusted-family validation.
 func closeEnough(a, b float64) bool {
 	return math.Abs(a-b) <= 1e-9*math.Max(1, math.Max(math.Abs(a), math.Abs(b)))
 }
+
+//nolint:unused // retained for future pipeline data validation.
 func validateData(data map[string]*instrumentData) error {
 	for _, s := range symbols {
 		if len(data[s].Boundaries) > 0 {
@@ -821,12 +831,15 @@ func overlapSummary(r partitionResult, data map[string]*instrumentData, cfg Froz
 	return map[string]any{"window_sessions": cfg.OverlapWindow, "episode_count": len(kept), "mean_net_return": mean(kept, func(e episode) float64 { return e.NetReturn }), "status": "EXECUTED_FROZEN_EARLIEST_SIGNAL"}
 }
 func qualitySummary(data map[string]*instrumentData, performanceOutputGenerated bool) map[string]any {
+	return qualitySummaryForRange(data, performanceOutputGenerated, dataStart, dataEnd)
+}
+func qualitySummaryForRange(data map[string]*instrumentData, performanceOutputGenerated bool, start, end string) map[string]any {
 	per := map[string]any{}
 	for _, s := range symbols {
 		d := data[s]
 		per[s] = map[string]any{"raw_sessions": len(d.Raw), "split_sessions": len(d.Split), "split_spin_off_sessions": len(d.Detector), "first_session": d.Dates[0], "last_session": d.Dates[len(d.Dates)-1], "structural_boundaries": []string{}, "no_2025_rows": true}
 	}
-	return map[string]any{"provider": "Alpaca", "feed": "SIP", "timeframe": "1Day", "date_range": []string{dataStart, dataEnd}, "instruments": per, "performance_output_generated": performanceOutputGenerated}
+	return map[string]any{"provider": "Alpaca", "feed": "SIP", "timeframe": "1Day", "date_range": []string{start, end}, "instruments": per, "performance_output_generated": performanceOutputGenerated}
 }
 func totalAbstentions(results map[string]partitionResult) map[string]int {
 	out := map[string]int{}
@@ -894,6 +907,8 @@ func seedFor(s, domain string) uint64 {
 	return binary.BigEndian.Uint64(h[:8])
 }
 func nextRand(x uint64) uint64 { x ^= x << 13; x ^= x >> 7; x ^= x << 17; return x }
+
+//nolint:unused // retained for future result partition naming.
 func partitionFile(s string) string {
 	if s == "formal_oos" {
 		return "OOS"

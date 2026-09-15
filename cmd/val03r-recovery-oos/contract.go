@@ -644,6 +644,7 @@ func absFloat(v float64) float64 {
 	return v
 }
 
+//nolint:unused // retained as a future R4 schema helper.
 func requiredFalsificationNames() []string {
 	return []string{
 		"matched_non_signal_placebo", "timestamp_placebo", "secondary_sign_permutation",

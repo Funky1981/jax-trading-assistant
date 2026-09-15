@@ -480,9 +480,10 @@ func r3aExecute(contract r3aFrozenContract) error {
 		return err
 	}
 	oos := results["recovery_oos"]
-	falsification := buildFalsification(data, oos, parentManifestSHA, contract.Config, oos.SecondaryDiagnostics)
-	classification := classifyPromotion(oos, falsificationDispositions(falsification), contract.Config)
-	out := runOutput{ContractVersion: "jax.val-03r4.recovery-result/v1", ManifestSHA256: parentManifestSHA, DatasetReadinessSHA256: r3aCorrectedDatasetSHA, Runner: "cmd/val03r-recovery-oos", ExecutionAuthority: "NONE", CreatesFill: false, Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", Universe: append([]string(nil), expectedRecoveryUniverse...), DataStart: r3aRecoveryStart, DataEnd: r3aRecoveryEnd, HoldoutAccessed: false, PerformanceRunCount: 1, Partitions: results, Falsification: falsification, AbstentionTotals: totalAbstentions(results), DataQuality: qualitySummary(data, true), TerminalClassification: classification}
+	executionConfig := r3aExecutionConfig(contract.Config)
+	falsification := buildFalsification(data, oos, parentManifestSHA, executionConfig, oos.SecondaryDiagnostics)
+	classification := classifyPromotion(oos, falsificationDispositions(falsification), executionConfig)
+	out := runOutput{ContractVersion: "jax.val-03r4.recovery-result/v1", ManifestSHA256: parentManifestSHA, DatasetReadinessSHA256: r3aCorrectedDatasetSHA, Runner: "cmd/val03r-recovery-oos", ExecutionAuthority: "NONE", CreatesFill: false, Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", Universe: append([]string(nil), expectedRecoveryUniverse...), DataStart: r3aRecoveryStart, DataEnd: r3aRecoveryEnd, HoldoutAccessed: false, PerformanceRunCount: 1, Partitions: results, Falsification: falsification, AbstentionTotals: totalAbstentions(results), DataQuality: qualitySummaryForRange(data, true, r3aRecoveryStart, r3aRecoveryEnd), TerminalClassification: classification}
 	envelope := r3aResultEnvelope{RunOutput: out, RunnerIdentity: "cmd/val03r-recovery-oos", ManifestSHA256: parentManifestSHA, DatasetSHA256: r3aCorrectedDatasetSHA, ExecutionFreeze: freezeSHA, Lifecycle: map[string]any{"performance_execution_started": true, "performance_artifacts_written": true, "performance_run_count": 1, "recovery_oos_status": "EXECUTED_ONCE"}}
 	if err := writeJSON("Docs/validation/results/VAL-03R4-RUN-MANIFEST.json", envelope); err != nil {
 		return err
@@ -496,15 +497,25 @@ func r3aExecute(contract r3aFrozenContract) error {
 	return writeJSON(r3aRunStatePath, r3aRunState{PerformanceRunCount: 1, Status: "COMPLETED_ONCE"})
 }
 
+func r3aExecutionConfig(cfg FrozenExperimentConfig) FrozenExperimentConfig {
+	cfg.OOSStart, cfg.OOSEnd = r3aRecoveryStart, r3aRecoveryEnd
+	return cfg
+}
+
 func r3aEvaluate(data map[string]*instrumentData, contract r3aFrozenContract) (map[string]partitionResult, error) {
-	r, err := evaluatePartition(data, "recovery_oos", r3aRecoveryStart, r3aRecoveryEnd, contract.Config)
+	// The parent config retains the immutable original OOS dates. The recovery
+	// runner supplies its separately frozen recovery boundary only to the future
+	// execution calls, so variants and diagnostics cannot silently fall back to
+	// 2023-2024.
+	executionConfig := r3aExecutionConfig(contract.Config)
+	r, err := evaluatePartition(data, "recovery_oos", r3aRecoveryStart, r3aRecoveryEnd, executionConfig)
 	if err != nil {
 		return nil, err
 	}
-	if err := attachPlacebos(data, &r, contract.Config, parentManifestSHA); err != nil {
+	if err := attachPlacebos(data, &r, executionConfig, parentManifestSHA); err != nil {
 		return nil, err
 	}
-	applyBootstrap(&r, parentManifestSHA, contract.Config)
+	applyBootstrap(&r, parentManifestSHA, executionConfig)
 	return map[string]partitionResult{"recovery_oos": r}, nil
 }
 
