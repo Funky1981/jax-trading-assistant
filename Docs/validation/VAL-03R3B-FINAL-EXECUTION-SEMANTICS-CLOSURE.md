@@ -2,8 +2,10 @@
 
 ## Status
 
-`VAL-03R3B = FINAL EXECUTION SEMANTICS CLOSURE / EXTERNAL REVIEW REQUIRED`.
-This is an outcome-free continuation of R3. `VAL-03R4` is not authorized.
+`VAL-03R3B = SUPERSEDED BY VAL-03R3C FOR STRUCTURAL RESET AND FREEZE
+COMPLETENESS`.
+This historical closure remains an outcome-free record. The corrected current
+closure is `VAL-03R3C`; `VAL-03R4` is not authorized.
 
 ## Accepted starting state
 

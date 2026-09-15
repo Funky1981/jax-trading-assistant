@@ -1,0 +1,121 @@
+{
+  "contract_id": "jax.val-03r3c.recovery-oos-execution-freeze/v1",
+  "status": "FROZEN_FOR_VAL03R4_EXTERNAL_AUTHORIZATION",
+  "parent": {
+    "manifest_sha256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a",
+    "r2_manifest_sha256": "c19a4cfc774a7bf53466d9bcf5705bd3813f69258a9600291883db48aab490eb",
+    "r3_conformance_sha256": "d1799329cadf925fbf78f213ab15c546570c93f6942253664cf290a4a8ca3f60",
+    "r3_readiness_sha256": "10ddf19ef8a2b6612ba65efe9c0685c1b46a015cfc41091a442a10117baf0f28",
+    "r3_data_contract_sha256": "9fb35ef0be7e1378a72f04ba5c10d0cf838d94ef57115772469308ab28f14cf0",
+    "r3_recovery_dataset_sha256": "f4bb7c1f05b009bd4d2d284533137c1151693fd9cc59e76871581c144fa8f73f",
+    "r3a_corrected_dataset_sha256": "dd4c49313016bcb45912142620bf8dcd965ec80eaf8b5be7376b3f36d98651d0",
+    "val03b_bar_family_sha256": "78c1fbeec2122eebba1a8dbe21c2edfc3c569377770561afe9e128cd633037e5",
+    "val03c_readiness_sha256": "b7081deb3bf55be5a23c1f1fcafbe44ff90c4fcee924de47f738cdcad86861ce"
+  },
+  "identities": {
+    "candidate_id": "ma_crossover_v1",
+    "strategy_parameters": "20/50/200 SMA; ATR14; AvgVolume20; threshold 0.60",
+    "original_formal_oos": "2023-01-01..2024-12-31 CONTAMINATED_FOR_FORMAL_OOS",
+    "recovery_boundary": "2025-01-01..2026-09-11"
+  },
+  "runner": {
+    "path": "cmd/val03r-recovery-oos",
+    "source_blobs_sha1": {
+      "main.go": "aec7b7e27c17193882cfdb368daede90072b4375",
+      "config.go": "2696c5996e5531e5759abd0283b342b4198ec435",
+      "contract.go": "d614ca6f7b636c49058bc3c7d0ad14bf82411e47",
+      "recovery.go": "88d66c67f14a07f86972a95ba53b160ac2494528",
+      "r3a.go": "1dcd54529533579ef493f37b14141249c7cd3651",
+      "r3b.go": "9a8b33d63fc79325639c13db2dfa9a684aee83b4",
+      "structural.go": "20ba181f2a36e13eae39d5bf7e450aa9bd13a7f7",
+      "r3c.go": "f7622cb9df7c5efc1365150f4036e29ee6cd0879"
+    },
+    "allowed_modes": ["--contract-audit", "--preflight-only", "--execute"],
+    "arbitrary_threshold_override": false,
+    "performance_lock_before_authorization": true,
+    "contaminated_runner_reenabled": false,
+    "execution_authority": "NONE",
+    "creates_fill": false
+  },
+  "candidate": {
+    "id": "ma_crossover_v1",
+    "primary_population": "ACTIONABLE LONG EPISODES",
+    "threshold": 0.6,
+    "threshold_source": "parent v1.5 manifest",
+    "sma": ["20", "50", "200"],
+    "atr": 14,
+    "avg_volume": 20,
+    "hold": 20,
+    "reference_capital_usd": 10000,
+    "quantity": "whole shares"
+  },
+  "boundary": {
+    "start": "2025-01-01",
+    "end": "2026-09-11",
+    "post_boundary_extension": false,
+    "excluded_incomplete_date": "2026-09-14",
+    "semantics": "PARTIAL CALENDAR-YEAR INSTRUMENT BLOCK"
+  },
+  "structural_contract": {
+    "post_split_reset": "200 valid synchronized sessions",
+    "boundary_session_count": "1",
+    "split_spanning_episode": "STRUCTURAL_ACTION_INVALIDATED",
+    "implementation_blob": "20ba181f2a36e13eae39d5bf7e450aa9bd13a7f7"
+  },
+  "costs": {
+    "base_model_id": "cost_val03_ibkr_fixed_personal_base_v1",
+    "stress_model_id": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8",
+    "stress_formula": "USD 0.50/order + 10bps commission/leg + 5bps spread/leg + 10bps slippage/leg + 15bps market impact/leg"
+  },
+  "placebo": {
+    "matched": "jax.val-02c.matched-non-signal-placebo/v1",
+    "timestamp": "jax.val-02c.timestamp-placebo/v1"
+  },
+  "bootstrap": {
+    "unit": "non-empty instrument-year block",
+    "replicates": 10000,
+    "interval": "95% percentile",
+    "lower_bound": "2.5th percentile",
+    "randomness": "SHA256 counter-derived",
+    "seed_manifest": "parent v1.5 SHA"
+  },
+  "sample_gates": {
+    "recovery_episode_floor": 30,
+    "paired_placebo_floor": 30,
+    "effective_block_floor": 12,
+    "instrument_floor": 6,
+    "calendar_regime_cell_floor": 3,
+    "instrument_concentration_ceiling": 0.4
+  },
+  "falsification_suite": {
+    "tests": ["matched_non_signal_placebo", "timestamp_placebo", "secondary_sign_permutation", "top_5_percent_exclusion", "leave_one_instrument_out", "regime_slices", "theme_slices", "sma_19_49_199", "sma_21_51_201", "atr_0_90", "atr_1_10", "stress_cost", "overlap_sensitivity", "zero_and_buy_hold_baselines"]
+  },
+  "result_contract": {
+    "schema": "jax.val-03r4.recovery-oos-results/v1"
+  },
+  "authorization": {
+    "path": "Docs/validation/results/VAL-03R4-EXECUTION-AUTHORIZATION.json",
+    "required_external_value": "GO_VAL03R4_SINGLE_RECOVERY_OOS_EXECUTION"
+  },
+  "run_state": {
+    "path": "Docs/validation/results/VAL-03R4-RUN-STATE.json",
+    "started_once": "run count 1 / attempt consumed",
+    "completed_once": "run count 1 / attempt consumed"
+  },
+  "safety": {
+    "execution_authority": "NONE",
+    "creates_fill": false,
+    "allow_live_trading": false,
+    "broker_execution_allowed": false,
+    "execution_enabled": false,
+    "maximum_leverage": 1,
+    "forward_paper": "NOT_STARTED",
+    "phase_13": "NOT_STARTED"
+  },
+  "lifecycle": {
+    "performance_execution_started": false,
+    "performance_artifacts_written": false,
+    "performance_run_count": 0,
+    "status": "NOT_STARTED / FROZEN_FOR_FUTURE_AUTHORIZATION"
+  }
+}

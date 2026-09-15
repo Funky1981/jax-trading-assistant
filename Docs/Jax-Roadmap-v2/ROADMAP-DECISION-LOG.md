@@ -1,5 +1,23 @@
 # Roadmap Decision Log
 
+## RD-2026-09-15-12 - VAL-03R3C structural reset and freeze completeness closure
+
+- `VAL-03R3B` is superseded only for the corrected late-boundary structural
+  reset and final freeze completeness; this is not a roadmap change.
+- The recovery runner now evaluates the full session prefix through the target
+  date, so a structural boundary after prior initialization resets the exact
+  200-valid-session warm-up. Boundary session `#1` is tested explicitly.
+- The one-shot marker records `performance_run_count=1` at `STARTED_ONCE`, and
+  strict freeze-bound state validation plus concurrent-start tests preserve the
+  single-attempt rule. `COMPLETED_ONCE` remains terminal.
+- `VAL-03R3C-RECOVERY-OOS-EXECUTION-FREEZE.json` binds current runner source
+  blobs and inherited contracts. It remains a future authorization contract;
+  no authorization, recovery performance, signals, episodes, returns, 2025/2026
+  outcomes, forward paper or Phase 13 activity occurred.
+- `VAL-03R3C = COMPLETE / EXTERNAL REVIEW REQUIRED`; `VAL-03R4` remains not
+  authorized. Safety flags and the contaminated original 2023-2024 run state
+  are unchanged.
+
 ## RD-2026-09-15-11 - VAL-03R3B final execution semantics closure
 
 - Work package: `VAL-03R3B — FINAL EXECUTION SEMANTICS & ONE-SHOT INTEGRITY CLOSURE`.
