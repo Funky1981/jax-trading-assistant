@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -224,5 +225,57 @@ func TestR3BOneShotStartMarkerIsExclusiveAndCompletionIsTerminal(t *testing.T) {
 	state, err = r3aValidateRunStateBytes(b)
 	if err == nil || state.Status != "COMPLETED_ONCE" || state.PerformanceRunCount != 1 {
 		t.Fatalf("completed state validation = %+v, err=%v", state, err)
+	}
+}
+
+func TestR3BPayloadManifestHashVerification(t *testing.T) {
+	dir := t.TempDir()
+	payload := []byte(`{"bars":{}}`)
+	hash := sha256Hex(payload)
+	if err := os.WriteFile(filepath.Join(dir, hash+".json"), payload, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	metadata := []byte(fmt.Sprintf(`{"families":[{"raw_payload_sha256":["%s"]}]}`, hash))
+	metadataPath := filepath.Join(dir, "metadata.json")
+	if err := os.WriteFile(metadataPath, metadata, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := r3aValidatePayloadManifest(metadataPath, sha256Hex(metadata), dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, hash+".json"), []byte(`{"bars":{"SPY":[]}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := r3aValidatePayloadManifest(metadataPath, sha256Hex(metadata), dir); err == nil {
+		t.Fatal("tampered payload was accepted")
+	}
+}
+
+func TestR3BStructuralScaleAndBarValidation(t *testing.T) {
+	raw := bar{Date: "2025-01-02", Open: 10, High: 12, Low: 9, Close: 11, Volume: 1000}
+	split := bar{Date: raw.Date, Open: 20, High: 24, Low: 18, Close: 22, Volume: 500}
+	if !barScaleConsistent(raw, split, 2) {
+		t.Fatal("consistent split scale was rejected")
+	}
+	split.High = 25
+	if barScaleConsistent(raw, split, 2) {
+		t.Fatal("inconsistent OHLC split scale was accepted")
+	}
+	if !validBar(raw, raw.Date) || validBar(bar{Date: raw.Date, Open: 10, High: 9, Low: 8, Close: 9, Volume: 1}, raw.Date) {
+		t.Fatal("bar validity contract drifted")
+	}
+}
+
+func TestR3BResultSchemaUsesExplicitRecoveryIdentity(t *testing.T) {
+	b, err := json.Marshal(runOutput{ContractVersion: "jax.val-03r4.recovery-oos-results/v1", ManifestSHA256: parentManifestSHA, SeedManifestSHA256: parentManifestSHA, HoldoutAccessed: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(b, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if fields["HoldoutAccessed"] != nil || fields["seed_manifest_sha256"] != parentManifestSHA {
+		t.Fatalf("result schema fields = %+v", fields)
 	}
 }

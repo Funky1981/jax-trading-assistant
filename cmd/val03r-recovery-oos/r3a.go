@@ -14,6 +14,7 @@ const (
 	r3aCorrectedDatasetPath = "Docs/validation/results/VAL-03R3A-RECOVERY-DATASET-READINESS.json"
 	r3aCorrectedDatasetSHA  = "dd4c49313016bcb45912142620bf8dcd965ec80eaf8b5be7376b3f36d98651d0"
 	r3aFreezePath           = "Docs/validation/results/VAL-03R3A-RECOVERY-OOS-EXECUTION-FREEZE.json"
+	r3bFreezePath           = "Docs/validation/results/VAL-03R3B-RECOVERY-OOS-EXECUTION-FREEZE.json"
 	r3aAuthorizationPath    = "Docs/validation/results/VAL-03R4-EXECUTION-AUTHORIZATION.json"
 	r3aRunStatePath         = "Docs/validation/results/VAL-03R4-RUN-STATE.json"
 	r3aRecoveryDatasetPath  = "Docs/validation/results/VAL-03R3-RECOVERY-DATASET-READINESS.json"
@@ -334,7 +335,7 @@ func r3aLoadAndValidateContracts() (r3aFrozenContract, error) {
 	if err := r3aValidateCorrectedDataset(); err != nil {
 		return contract, err
 	}
-	if err := r3aValidateFreeze(); err != nil {
+	if err := r3bValidateFreeze(); err != nil {
 		return contract, err
 	}
 	return contract, nil
@@ -532,7 +533,7 @@ func r3aExecute(contract r3aFrozenContract) error {
 	if err != nil {
 		return errors.New("R4 authorization required; performance locked before data load")
 	}
-	freezeBytes, err := os.ReadFile(r3aFreezePath)
+	freezeBytes, err := os.ReadFile(r3bFreezePath)
 	if err != nil {
 		return fmt.Errorf("read execution freeze: %w", err)
 	}
@@ -731,6 +732,9 @@ func r3aLoadCombinedData() (map[string]*instrumentData, error) {
 	}
 	for _, s := range expectedRecoveryUniverse {
 		d := data[s]
+		if len(d.Raw) != len(d.Split) || len(d.Split) != len(d.Detector) {
+			return nil, fmt.Errorf("synchronized family cardinality mismatch %s", s)
+		}
 		for date := range d.Raw {
 			if _, ok := d.Split[date]; !ok {
 				return nil, fmt.Errorf("raw/split mismatch %s %s", s, date)
@@ -739,6 +743,16 @@ func r3aLoadCombinedData() (map[string]*instrumentData, error) {
 				return nil, fmt.Errorf("split/spin-off mismatch %s %s", s, date)
 			}
 			d.Dates = append(d.Dates, date)
+		}
+		for date := range d.Split {
+			if _, ok := d.Raw[date]; !ok {
+				return nil, fmt.Errorf("split has no raw session %s %s", s, date)
+			}
+		}
+		for date := range d.Detector {
+			if _, ok := d.Split[date]; !ok {
+				return nil, fmt.Errorf("detector has no split session %s %s", s, date)
+			}
 		}
 		sort.Strings(d.Dates)
 		if len(d.Dates) == 0 {

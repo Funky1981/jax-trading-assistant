@@ -1,0 +1,71 @@
+{
+  "contract_id": "jax.val-03r3b.recovery-oos-execution-freeze/v1",
+  "status": "FROZEN_FOR_VAL03R4_EXTERNAL_AUTHORIZATION",
+  "candidate_id": "ma_crossover_v1",
+  "parent": {
+    "manifest_sha256": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a",
+    "r2_manifest_sha256": "c19a4cfc774a7bf53466d9bcf5705bd3813f69258a9600291883db48aab490eb",
+    "r3_conformance_sha256": "d1799329cadf925fbf78f213ab15c546570c93f6942253664cf290a4a8ca3f60"
+  },
+  "runner": {
+    "path": "cmd/val03r-recovery-oos",
+    "source_blobs_sha1": {
+      "main.go": "0fabf28edcf481eb127daa8299b3d654509d3481",
+      "config.go": "2696c5996e5531e5759abd0283b342b4198ec435",
+      "contract.go": "d614ca6f7b636c49058bc3c7d0ad14bf82411e47",
+      "recovery.go": "88d66c67f14a07f86972a95ba53b160ac2494528",
+      "r3a.go": "7dabb082c5dc588f0652c2e8867f27cadc48b3a7",
+      "structural.go": "07ce54e9f6a6899076e795a2a5f75115b1a88542",
+      "r3b.go": "36de6f98c7bfa25280dcdb288ab13d590447934e"
+    },
+    "allowed_modes": ["--contract-audit", "--preflight-only", "--execute"],
+    "arbitrary_threshold_override": false,
+    "performance_lock_before_authorization": true,
+    "contaminated_runner_reenabled": false,
+    "execution_authority": "NONE",
+    "creates_fill": false
+  },
+  "execution": {
+    "threshold": 0.6,
+    "threshold_source": "parent_manifest",
+    "stress_formula": "fixed USD 0.50 per order plus 10 bps per leg, both legs",
+    "payload_verification": "REQUIRED_IMMEDIATELY_BEFORE_DATA_LOAD",
+    "structural_revalidation": "REQUIRED_BEFORE_START_MARKER",
+    "start_marker": "EXCLUSIVE_STARTED_ONCE_BEFORE_OUTCOME_CALCULATION",
+    "completion_transition": "ATOMIC_COMPLETED_ONCE_AFTER_ALL_RESULT_ARTIFACTS",
+    "result_schema": "jax.val-03r4.recovery-oos-results/v1"
+  },
+  "randomness": {
+    "seed_manifest": "PARENT_V1.5_SHA256",
+    "bootstrap": "SHA256_COUNTER_DERIVED_FIRST_8_BIG_ENDIAN_BYTES",
+    "timestamp_placebo": "FULL_SHA256_SEED_AND_SCORE"
+  },
+  "data_integrity": {
+    "pre_payload_manifest": "Docs/validation/results/VAL-03B-DATASET-READINESS.json",
+    "pre_payload_manifest_sha256": "78c1fbeec2122eebba1a8dbe21c2edfc3c569377770561afe9e128cd633037e5",
+    "pre_raw_root": ".runtime/val03b/raw",
+    "recovery_payload_manifest": "Docs/validation/results/VAL-03R3-RECOVERY-DATASET-READINESS.json",
+    "recovery_payload_manifest_sha256": "f4bb7c1f05b009bd4d2d284533137c1151693fd9cc59e76871581c144fa8f73f",
+    "recovery_raw_root": ".runtime/val03r3/raw",
+    "runtime_structural_revalidation": "RAW_SPLIT_DETECTOR_SYNCHRONIZATION_AND_FACTOR_CONSISTENCY"
+  },
+  "lifecycle": {
+    "performance_execution_started": false,
+    "performance_artifacts_written": false,
+    "performance_run_count": 0,
+    "recovery_oos_status": "NOT_STARTED / FROZEN_FOR_FUTURE_AUTHORIZATION",
+    "run_state_schema": "jax.val-03r4.recovery-run-state/v2",
+    "authorization_status": "ABSENT_DURING_R3B"
+  },
+  "result_schema": "jax.val-03r4.recovery-oos-results/v1",
+  "safety": {
+    "execution_authority": "NONE",
+    "creates_fill": false,
+    "allow_live_trading": false,
+    "broker_execution_allowed": false,
+    "execution_enabled": false,
+    "maximum_leverage": 1,
+    "forward_paper": "NOT_STARTED",
+    "phase_13": "NOT_STARTED"
+  }
+}
