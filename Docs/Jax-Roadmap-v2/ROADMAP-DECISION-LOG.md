@@ -1,5 +1,21 @@
 # Roadmap Decision Log
 
+## RD-2026-09-15-13 - VAL-03R4 single recovery formal OOS authorization
+
+- External technical-lead decision: `VAL-03R3C = COMPLETE / GO` and exactly one
+  `VAL-03R4` recovery execution is authorized for `ma_crossover_v1` over
+  `2025-01-01..2026-09-11`.
+- Authorization is bound to R3C freeze SHA
+  `e42d6fb9aff86d51951fc5a0dc251059da65e73264968d972e666905fbe560d3`, with
+  `performance_run_count_before=0` and `execute_once=true`.
+- The original 2023-2024 formal run remains
+  `CONTAMINATED_FOR_FORMAL_OOS` and is never rerun. No strategy, parameter,
+  cost, placebo, bootstrap, sample-floor, universe or boundary change is
+  authorized.
+- Recovery execution remains read-only with `ExecutionAuthority=NONE`,
+  `CreatesFill=false`, live trading disabled and maximum leverage `1x`.
+  Forward paper and Phase 13 remain not started.
+
 ## RD-2026-09-15-12 - VAL-03R3C structural reset and freeze completeness closure
 
 - `VAL-03R3B` is superseded only for the corrected late-boundary structural

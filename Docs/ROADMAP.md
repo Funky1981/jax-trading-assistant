@@ -30,8 +30,8 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03R3C — STRUCTURAL RESET & FINAL FREEZE COMPLETENESS CLOSURE; EXTERNAL REVIEW REQUIRED** |
-| Next package | **VAL-03R4 — SINGLE REPLACEMENT FORMAL OOS EXECUTION; NOT AUTHORIZED** |
+| Current implementation package | **VAL-03R4 — SINGLE RECOVERY FORMAL OOS EXECUTION; AUTHORIZED ONCE** |
+| Next package | **External review of VAL-03R4 result; forward paper remains NOT STARTED** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -48,8 +48,10 @@ recovery boundary data and contains no strategy outputs.
 `VAL-03R3B` was the outcome-free execution-semantics closure. `VAL-03R3C` now
 supersedes it for the corrected late structural-boundary reset and complete
 freeze identity, while recovery performance remains locked and `VAL-03R4`
-remains unauthorized. The R3C freeze records lifecycle run count zero and
-requires a future external authorization before any recovery performance.
+remains unauthorized until the current single-use authorization checkpoint.
+`VAL-03R4` is now authorized exactly once by the external technical-lead
+decision; its result is still subject to external review. No forward paper or
+Phase 13 activity is implied.
 `VAL-03R1D` corrects the remaining secondary null-statistic integrity defect;
 its null now uses deterministic assigned signs multiplied by fixed absolute
 magnitudes, with outcome-free regression coverage. `VAL-03R2` freezes a new,

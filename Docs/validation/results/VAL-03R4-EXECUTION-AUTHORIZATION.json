@@ -1,0 +1,9 @@
+{
+  "contract_id": "jax.val-03r4.execution-authorization/v1",
+  "candidate": "ma_crossover_v1",
+  "recovery_boundary": "2025-01-01..2026-09-11",
+  "execution_freeze_sha256": "e42d6fb9aff86d51951fc5a0dc251059da65e73264968d972e666905fbe560d3",
+  "performance_run_count_before": 0,
+  "execute_once": true,
+  "external_authorization": "GO_VAL03R4_SINGLE_RECOVERY_OOS_EXECUTION"
+}
