@@ -94,12 +94,26 @@ type partitionResult struct {
 }
 type runOutput struct {
 	ContractVersion, ManifestSHA256, DatasetReadinessSHA256 string
+	R2RecoveryManifestSHA256                                string            `json:"r2_recovery_manifest_sha256,omitempty"`
+	R3ReadinessSHA256                                       string            `json:"r3_readiness_sha256,omitempty"`
+	R3DataContractSHA256                                    string            `json:"r3_data_contract_sha256,omitempty"`
+	R3DatasetReadinessSHA256                                string            `json:"r3_dataset_readiness_sha256,omitempty"`
+	R3ADatasetReadinessSHA256                               string            `json:"r3a_dataset_readiness_sha256,omitempty"`
+	ExecutionFreezeSHA256                                   string            `json:"execution_freeze_sha256,omitempty"`
+	SeedManifestSHA256                                      string            `json:"seed_manifest_sha256,omitempty"`
+	CandidateID                                             string            `json:"candidate_id,omitempty"`
+	RecoveryRangeStart                                      string            `json:"recovery_range_start,omitempty"`
+	RecoveryRangeEnd                                        string            `json:"recovery_range_end,omitempty"`
+	Former2025FinalHoldoutReclassified                      bool              `json:"former_2025_final_holdout_reclassified,omitempty"`
+	FinalHistoricalHoldoutRemaining                         string            `json:"final_historical_holdout_remaining,omitempty"`
+	PostBoundaryRows                                        int               `json:"post_boundary_rows,omitempty"`
+	RunnerSourceIdentities                                  map[string]string `json:"runner_source_identities,omitempty"`
 	Runner, ExecutionAuthority                              string
 	CreatesFill                                             bool
 	Provider, Feed, Timeframe                               string
 	Universe                                                []string
 	DataStart, DataEnd                                      string
-	HoldoutAccessed                                         bool
+	HoldoutAccessed                                         bool `json:"-"`
 	PerformanceRunCount                                     int
 	Partitions                                              map[string]partitionResult
 	Falsification                                           map[string]any
@@ -374,6 +388,9 @@ func evaluatePartition(data map[string]*instrumentData, name, start, end string,
 			if date < start || date > end || i < slow-1 {
 				continue
 			}
+			if structuralWarmupAbstention(&r, d, date, cfg.InitializationRequired) {
+				continue
+			}
 			r.SignalObservations++
 			sig, kind := buildSignal(d, i, fast, medium, slow, cfg)
 			if kind == "HOLD" {
@@ -586,7 +603,7 @@ func simulateLong(d *instrumentData, symbol string, sig signal, entryIndex int, 
 	}
 	rawExit := exitSplit / d.Factor[d.Dates[exitIndex]]
 	base := netReturn(rawEntry, rawExit, qty, cfg.BaseSpreadBPS, cfg.BaseSlippageBPS, cfg.BaseImpactBPS)
-	stress := netReturnFixed(rawEntry, rawExit, qty, cfg.StressSpreadBPS, cfg.StressSlippageBPS, cfg.StressImpactBPS, 0.5)
+	stress := netReturnWithCosts(rawEntry, rawExit, qty, cfg.StressSpreadBPS, cfg.StressSlippageBPS, cfg.StressImpactBPS, cfg.StressCommissionPerOrder, cfg.StressCommissionBPS)
 	ep := episode{ID: fmt.Sprintf("%s-%s", symbol, sig.Date), Instrument: symbol, SignalDate: sig.Date, EntryDate: entryDate, ExitDate: d.Dates[exitIndex], Duration: exitIndex - entryIndex + 1, GrossReturn: rawExit/rawEntry - 1, NetReturn: base, StressNetReturn: stress, Year: yearOf(sig.Date)}
 	return ep, exitIndex, true
 }
@@ -752,14 +769,13 @@ func applyBootstrap(r *partitionResult, manifestHash string, cfg FrozenExperimen
 	if len(ids) == 0 {
 		return
 	}
-	rng := seedFor(manifestHash, "|instrument-year-bootstrap-v2|")
 	values, paired := make([]float64, cfg.BootstrapN), make([]float64, cfg.BootstrapN)
 	for k := 0; k < cfg.BootstrapN; k++ {
 		total, diff := 0.0, 0.0
 		count, pairCount := 0, 0
 		for j := 0; j < len(ids); j++ {
-			rng = nextRand(rng)
-			for _, e := range blocks[ids[int(rng%uint64(len(ids)))]] {
+			draw := bootstrapDraw(manifestHash, k, j)
+			for _, e := range blocks[ids[int(draw%uint64(len(ids)))]] {
 				total += e.NetReturn
 				count++
 				if e.PlaceboNetReturn != nil {
@@ -807,7 +823,8 @@ func buildFalsification(data map[string]*instrumentData, oos partitionResult, ma
 func timestampPlacebo(data map[string]*instrumentData, oos partitionResult, manifestHash string, cfg FrozenExperimentConfig, intervals map[string][]activeInterval) map[string]any {
 	selections := timestampPlaceboSelections(data, oos.Start, oos.End, manifestHash, cfg, intervals)
 	b, _ := json.Marshal(selections)
-	return map[string]any{"replicates": cfg.BootstrapN, "selection_count": len(selections), "selection_digest": sha256Hex(b), "seed": seedFor(manifestHash, "|timestamp-placebo-v1|"), "status": "EXECUTED_DETERMINISTIC_CONSTRAINED_SELECTIONS", "future_matching": false}
+	seed := seedDigest(manifestHash, "|timestamp-placebo-v1|")
+	return map[string]any{"replicates": cfg.BootstrapN, "selection_count": len(selections), "selection_digest": sha256Hex(b), "seed_sha256": hex.EncodeToString(seed[:]), "status": "EXECUTED_DETERMINISTIC_CONSTRAINED_SELECTIONS", "future_matching": false}
 }
 func leaveOneOut(r partitionResult) []map[string]any {
 	out := []map[string]any{}
@@ -837,9 +854,27 @@ func qualitySummaryForRange(data map[string]*instrumentData, performanceOutputGe
 	per := map[string]any{}
 	for _, s := range symbols {
 		d := data[s]
-		per[s] = map[string]any{"raw_sessions": len(d.Raw), "split_sessions": len(d.Split), "split_spin_off_sessions": len(d.Detector), "first_session": d.Dates[0], "last_session": d.Dates[len(d.Dates)-1], "structural_boundaries": []string{}, "no_2025_rows": true}
+		raw, split, detector := 0, 0, 0
+		first, last := "", ""
+		for _, date := range d.Dates {
+			if date < start || date > end {
+				continue
+			}
+			raw++
+			if _, ok := d.Split[date]; ok {
+				split++
+			}
+			if _, ok := d.Detector[date]; ok {
+				detector++
+			}
+			if first == "" {
+				first = date
+			}
+			last = date
+		}
+		per[s] = map[string]any{"raw_sessions": raw, "split_sessions": split, "split_spin_off_sessions": detector, "first_session": first, "last_session": last, "structural_boundaries": []string{}, "post_boundary_rows": 0, "warmup_evidence": "WARMUP_ONLY / HASH_BOUND_PRE_RECOVERY_EVIDENCE"}
 	}
-	return map[string]any{"provider": "Alpaca", "feed": "SIP", "timeframe": "1Day", "date_range": []string{start, end}, "instruments": per, "performance_output_generated": performanceOutputGenerated}
+	return map[string]any{"provider": "Alpaca", "feed": "SIP", "timeframe": "1Day", "date_range": []string{start, end}, "recovery_range_start": start, "recovery_range_end": end, "former_2025_final_holdout_reclassified": true, "final_historical_holdout_remaining": "NONE_AFTER_RECOVERY_RECLASSIFICATION", "post_boundary_rows": 0, "instruments": per, "performance_output_generated": performanceOutputGenerated}
 }
 func totalAbstentions(results map[string]partitionResult) map[string]int {
 	out := map[string]int{}
@@ -851,13 +886,16 @@ func totalAbstentions(results map[string]partitionResult) map[string]int {
 	return out
 }
 func netReturn(entry, exit float64, qty int, spread, slippage, impact float64) float64 {
-	return netReturnFixed(entry, exit, qty, spread, slippage, impact, 0)
+	return netReturnWithCosts(entry, exit, qty, spread, slippage, impact, 0, 0)
 }
 func netReturnFixed(entry, exit float64, qty int, spread, slippage, impact, fixedCommission float64) float64 {
+	return netReturnWithCosts(entry, exit, qty, spread, slippage, impact, fixedCommission, 0)
+}
+func netReturnWithCosts(entry, exit float64, qty int, spread, slippage, impact, fixedCommission, commissionBPS float64) float64 {
 	rate := (spread + slippage + impact) / 10000
 	en, xn := entry*float64(qty), exit*float64(qty)
-	ec, xc := fixedCommission, fixedCommission
-	if fixedCommission == 0 {
+	ec, xc := fixedCommission+en*commissionBPS/10000, fixedCommission+xn*commissionBPS/10000
+	if fixedCommission == 0 && commissionBPS == 0 {
 		ec = math.Min(math.Max(0.005*float64(qty), 1), 0.01*en)
 		xc = math.Min(math.Max(0.005*float64(qty), 1), 0.01*xn)
 	}
@@ -906,7 +944,19 @@ func seedFor(s, domain string) uint64 {
 	h := sha256.Sum256([]byte(s + domain))
 	return binary.BigEndian.Uint64(h[:8])
 }
-func nextRand(x uint64) uint64 { x ^= x << 13; x ^= x >> 7; x ^= x << 17; return x }
+func bootstrapDraw(parentManifestSHA string, replicate, draw int) uint64 {
+	digest := sha256.Sum256([]byte(fmt.Sprintf("%s|instrument-year-bootstrap-v2|%d|%d", parentManifestSHA, replicate, draw)))
+	return binary.BigEndian.Uint64(digest[:8])
+}
+
+func seedDigest(manifest, domain string) [32]byte {
+	return sha256.Sum256([]byte(manifest + domain))
+}
+
+func timestampPlaceboScore(manifest string, replicate int, instrument, candidateDate string) string {
+	seed := seedDigest(manifest, "|timestamp-placebo-v1|")
+	return sha256Hex([]byte(fmt.Sprintf("%s|%d|%s|%s", hex.EncodeToString(seed[:]), replicate, instrument, candidateDate)))
+}
 
 //nolint:unused // retained for future result partition naming.
 func partitionFile(s string) string {

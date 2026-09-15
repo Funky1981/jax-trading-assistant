@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"math"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"jax-trading-assistant/libs/strategies"
@@ -141,5 +144,85 @@ func TestR3AModeDoesNotAcceptPerformanceFlags(t *testing.T) {
 	}
 	if _, err := json.Marshal(r3aRunState{PerformanceRunCount: 0, Status: "NOT_STARTED"}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestStressCostIncludesFixedAndTenBPSCommissionOnBothLegs(t *testing.T) {
+	entry, exit, qty := 100.0, 110.0, 100
+	got := netReturnWithCosts(entry, exit, qty, 5, 10, 15, 0.50, 10)
+	entryNotional, exitNotional := entry*float64(qty), exit*float64(qty)
+	rate := (5 + 10 + 15) / 10000.0
+	entryCost := 0.50 + entryNotional*10/10000
+	exitCost := 0.50 + exitNotional*10/10000
+	want := (exitNotional*(1-rate) - exitCost - (entryNotional*(1+rate) + entryCost)) / entryNotional
+	if math.Abs(got-want) > 1e-12 {
+		t.Fatalf("stress return=%v, want %v", got, want)
+	}
+	withoutVariable := netReturnWithCosts(entry, exit, qty, 5, 10, 15, 0.50, 0)
+	if math.Abs(got-withoutVariable) < 1e-6 {
+		t.Fatal("stress 10 bps commission component disappeared")
+	}
+}
+
+func TestR3BDeterministicSeedReferenceVectors(t *testing.T) {
+	parent := parentManifestSHA
+	if got := bootstrapDraw(parent, 0, 0); got != 18345650792210198742 {
+		t.Fatalf("bootstrap reference = %d", got)
+	}
+	if got := bootstrapDraw(parent, 7, 3); got != 7948458560650707498 {
+		t.Fatalf("bootstrap second reference = %d", got)
+	}
+	seed := seedDigest(parent, "|timestamp-placebo-v1|")
+	if got := hex.EncodeToString(seed[:]); got != "37114c390002d7f19e2fabb24dd4957a53e5c365f91afef2632025525acad3ea" {
+		t.Fatalf("timestamp seed = %s", got)
+	}
+	if got := timestampPlaceboScore(parent, 0, "SPY", "2023-01-03"); got != "214e496784e9bdee9ab6c3b4d34cab6adc2df223ac306213ae9304833b180090" {
+		t.Fatalf("timestamp score = %s", got)
+	}
+}
+
+func TestR3BStructuralWarmupAndBoundaryReset(t *testing.T) {
+	dates := syntheticDates(350)
+	d := syntheticData(dates, func(int) float64 { return 100 })
+	d.Boundaries[dates[100]] = true
+	if got, err := structuralStateAt(d, dates[298], 200); err != nil || got != structuralWarmupState {
+		t.Fatalf("pre-reset state = %s, err=%v", got, err)
+	}
+	if got, err := structuralStateAt(d, dates[299], 200); err != nil || got != structuralInitializedState {
+		t.Fatalf("post-reset state = %s, err=%v", got, err)
+	}
+	delete(d.Raw, dates[250])
+	if got, err := structuralStateAt(d, dates[299], 200); err != nil || got != structuralWarmupState {
+		t.Fatalf("missing synchronized session state = %s, err=%v", got, err)
+	}
+}
+
+func TestR3BOneShotStartMarkerIsExclusiveAndCompletionIsTerminal(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "run-state.json")
+	if err := r3aStartRunStateAt(path, "freeze"); err != nil {
+		t.Fatal(err)
+	}
+	if err := r3aStartRunStateAt(path, "freeze"); err == nil {
+		t.Fatal("second start marker was accepted")
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := r3aValidateRunStateBytes(b)
+	if err == nil || state.Status != "STARTED_ONCE" {
+		t.Fatalf("started state validation = %+v, err=%v", state, err)
+	}
+	if err := r3aCompleteRunStateAt(path, "freeze"); err != nil {
+		t.Fatal(err)
+	}
+	b, err = os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err = r3aValidateRunStateBytes(b)
+	if err == nil || state.Status != "COMPLETED_ONCE" || state.PerformanceRunCount != 1 {
+		t.Fatalf("completed state validation = %+v, err=%v", state, err)
 	}
 }

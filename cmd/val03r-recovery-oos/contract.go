@@ -60,8 +60,11 @@ func dateInActiveIntervals(index int, intervals []activeInterval) bool {
 	return false
 }
 
-func validStructuralWindow(d *instrumentData, start, length int) bool {
+func validStructuralWindow(d *instrumentData, start, length, required int) bool {
 	if start < 0 || start+length >= len(d.Dates) {
+		return false
+	}
+	if required > 0 && !structurallyEligibleAt(d, d.Dates[start], required) {
 		return false
 	}
 	for i := start; i <= start+length; i++ {
@@ -106,6 +109,9 @@ func actualSignalDate(d *instrumentData, index int, cfg FrozenExperimentConfig) 
 	if index < cfg.SMASlow-1 || index >= len(d.Dates) {
 		return false
 	}
+	if cfg.InitializationRequired > 0 && !structurallyEligibleAt(d, d.Dates[index], cfg.InitializationRequired) {
+		return false
+	}
 	sig, kind := buildSignal(d, index, cfg.SMAFast, cfg.SMAMedium, cfg.SMASlow, cfg)
 	return kind != "HOLD" && actionableByConfig(sig.Confidence, cfg)
 }
@@ -134,7 +140,7 @@ func matchedPlaceboDate(data map[string]*instrumentData, ep episode, partitionSt
 		if idx == signalIndex || used[placeboKey(ep.Instrument, date)] || actualSignalDate(d, idx, cfg) || dateInActiveIntervals(idx, intervals) {
 			continue
 		}
-		if regimeAtDate(data, date, cfg) != wantRegime || !validStructuralWindow(d, idx, cfg.HoldingPeriod) {
+		if regimeAtDate(data, date, cfg) != wantRegime || !validStructuralWindow(d, idx, cfg.HoldingPeriod, cfg.InitializationRequired) {
 			continue
 		}
 		distance := absInt(idx - signalIndex)
@@ -191,14 +197,14 @@ func timestampPlaceboSelections(data map[string]*instrumentData, start, end stri
 			for _, year := range orderedYears {
 				candidates := []string{}
 				for idx, date := range d.Dates {
-					if date < start || date > end || yearOf(date) != year || idx < cfg.SMASlow-1 || idx+cfg.HoldingPeriod >= len(d.Dates) || actualSignalDate(d, idx, cfg) || dateInActiveIntervals(idx, intervals[instrument]) || !validStructuralWindow(d, idx, cfg.HoldingPeriod) {
+					if date < start || date > end || yearOf(date) != year || idx < cfg.SMASlow-1 || idx+cfg.HoldingPeriod >= len(d.Dates) || actualSignalDate(d, idx, cfg) || dateInActiveIntervals(idx, intervals[instrument]) || !validStructuralWindow(d, idx, cfg.HoldingPeriod, cfg.InitializationRequired) {
 						continue
 					}
 					candidates = append(candidates, date)
 				}
 				sort.Slice(candidates, func(i, j int) bool {
-					a := sha256Hex([]byte(fmt.Sprintf("%d|%d|%s|%s", seedFor(manifestHash, "|timestamp-placebo-v1|"), replicate, instrument, candidates[i])))
-					b := sha256Hex([]byte(fmt.Sprintf("%d|%d|%s|%s", seedFor(manifestHash, "|timestamp-placebo-v1|"), replicate, instrument, candidates[j])))
+					a := timestampPlaceboScore(manifestHash, replicate, instrument, candidates[i])
+					b := timestampPlaceboScore(manifestHash, replicate, instrument, candidates[j])
 					return a < b
 				})
 				if len(candidates) > 0 {
@@ -530,6 +536,9 @@ func evaluateVariant(data map[string]*instrumentData, cfg FrozenExperimentConfig
 		activeUntil := -1
 		for i, date := range d.Dates {
 			if date < cfg.OOSStart || date > cfg.OOSEnd || i < slow-1 {
+				continue
+			}
+			if structuralWarmupAbstention(&r, d, date, cfg.InitializationRequired) {
 				continue
 			}
 			r.SignalObservations++

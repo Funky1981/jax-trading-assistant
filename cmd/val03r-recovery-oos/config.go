@@ -21,6 +21,7 @@ type FrozenExperimentConfig struct {
 	OverlapWindow                                                              int
 	BaseSpreadBPS, BaseSlippageBPS, BaseImpactBPS                              float64
 	StressSpreadBPS, StressSlippageBPS, StressImpactBPS                        float64
+	StressCommissionPerOrder, StressCommissionBPS                              float64
 	Universe                                                                   []string
 	DevelopmentStart, DevelopmentEnd                                           string
 	ValidationStart, ValidationEnd                                             string
@@ -149,6 +150,12 @@ func loadFrozenExperimentConfig(manifestBytes []byte, manifestHash string) (Froz
 	}
 	if c.StressImpactBPS, err = numberAt(root, "cost_models", "stress", "market_impact_bps_per_leg"); err != nil || c.StressImpactBPS != 15 {
 		return FrozenExperimentConfig{}, errors.New("stress impact mismatch")
+	}
+	if c.StressCommissionPerOrder, err = numberAt(root, "cost_models", "stress", "commission_per_order_usd"); err != nil || c.StressCommissionPerOrder != 0.50 {
+		return FrozenExperimentConfig{}, errors.New("stress fixed commission mismatch")
+	}
+	if c.StressCommissionBPS, err = numberAt(root, "cost_models", "stress", "commission_bps_per_leg"); err != nil || c.StressCommissionBPS != 10 {
+		return FrozenExperimentConfig{}, errors.New("stress commission bps mismatch")
 	}
 	if c.ExecutionAuthority, err = stringAt(root, "execution_authority"); err != nil || c.ExecutionAuthority != "NONE" {
 		return FrozenExperimentConfig{}, errors.New("execution authority mismatch")

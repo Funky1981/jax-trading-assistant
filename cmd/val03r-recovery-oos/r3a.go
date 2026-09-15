@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -153,8 +154,12 @@ type r3aAuthorization struct {
 }
 
 type r3aRunState struct {
-	PerformanceRunCount int    `json:"performance_run_count"`
-	Status              string `json:"status"`
+	ContractID            string `json:"contract_id"`
+	PerformanceRunCount   int    `json:"performance_run_count"`
+	Status                string `json:"status"`
+	Candidate             string `json:"candidate"`
+	RecoveryBoundary      string `json:"recovery_boundary"`
+	ExecutionFreezeSHA256 string `json:"execution_freeze_sha256"`
 }
 
 type r3aResultEnvelope struct {
@@ -430,12 +435,19 @@ func r3aValidateCorrectedDataset() error {
 }
 
 func r3aValidateRawPayloadHashes() error {
-	b, err := os.ReadFile(r3aRecoveryDatasetPath)
+	if err := r3aValidatePayloadManifest(r3aRecoveryDatasetPath, r3aRecoveryDatasetSHA, r3aRecoveryRawRoot); err != nil {
+		return err
+	}
+	return r3aValidatePayloadManifest(barFamilyPath, r3aBarFamilySHA, r3aPreRawRoot)
+}
+
+func r3aValidatePayloadManifest(metadataPath, expectedMetadataSHA, root string) error {
+	b, err := os.ReadFile(metadataPath)
 	if err != nil {
 		return err
 	}
-	if sha256Hex(b) != r3aRecoveryDatasetSHA {
-		return errors.New("R3 recovery dataset hash mismatch")
+	if sha256Hex(b) != expectedMetadataSHA {
+		return fmt.Errorf("dataset metadata hash mismatch %s", metadataPath)
 	}
 	var v struct {
 		Families []struct {
@@ -448,17 +460,20 @@ func r3aValidateRawPayloadHashes() error {
 	seen := map[string]bool{}
 	for _, f := range v.Families {
 		for _, h := range f.RawPayloadSHA256 {
+			if h == "" {
+				return fmt.Errorf("empty payload hash in %s", metadataPath)
+			}
 			seen[h] = true
 		}
 	}
 	for h := range seen {
-		path := filepath.Join(r3aRecoveryRawRoot, h+".json")
+		path := filepath.Join(root, h+".json")
 		payload, err := os.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("recovery payload %s: %w", h, err)
+			return fmt.Errorf("payload %s: %w", h, err)
 		}
 		if sha256Hex(payload) != h {
-			return fmt.Errorf("recovery payload hash mismatch %s", h)
+			return fmt.Errorf("payload hash mismatch %s", h)
 		}
 	}
 	return nil
@@ -490,20 +505,26 @@ func r3aValidateRunStateBytes(b []byte) (r3aRunState, error) {
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return r3aRunState{}, err
 	}
-	if len(raw) != 2 || raw["performance_run_count"] == nil || raw["status"] == nil {
+	allowed := map[string]bool{"contract_id": true, "performance_run_count": true, "status": true, "candidate": true, "recovery_boundary": true, "execution_freeze_sha256": true}
+	if len(raw) != len(allowed) {
 		return r3aRunState{}, errors.New("incomplete recovery run state")
+	}
+	for key := range raw {
+		if !allowed[key] || raw[key] == nil {
+			return r3aRunState{}, errors.New("invalid recovery run state fields")
+		}
 	}
 	var state r3aRunState
 	if err := json.Unmarshal(b, &state); err != nil {
 		return state, err
 	}
-	if state.PerformanceRunCount != 1 || state.Status != "COMPLETED_ONCE" {
+	if state.ContractID != "jax.val-03r4.recovery-run-state/v2" || state.Candidate != "ma_crossover_v1" || state.RecoveryBoundary != "2025-01-01..2026-09-11" || state.ExecutionFreezeSHA256 == "" {
+		return state, errors.New("recovery run state identity mismatch")
+	}
+	if (state.PerformanceRunCount == 1 && state.Status != "COMPLETED_ONCE") || (state.PerformanceRunCount != 1 && state.Status != "STARTED_ONCE") {
 		return state, errors.New("invalid recovery run state")
 	}
-	if state.PerformanceRunCount != 0 {
-		return state, errors.New("recovery run already completed")
-	}
-	return state, nil
+	return state, errors.New("recovery run already consumed")
 }
 
 func r3aExecute(contract r3aFrozenContract) error {
@@ -520,9 +541,8 @@ func r3aExecute(contract r3aFrozenContract) error {
 		return fmt.Errorf("authorization: %w", err)
 	}
 	if stateBytes, err := os.ReadFile(r3aRunStatePath); err == nil {
-		if _, err := r3aValidateRunStateBytes(stateBytes); err != nil {
-			return err
-		}
+		_, _ = r3aValidateRunStateBytes(stateBytes)
+		return errors.New("recovery run already consumed")
 	} else if !os.IsNotExist(err) {
 		return err
 	}
@@ -531,8 +551,14 @@ func r3aExecute(contract r3aFrozenContract) error {
 			return errors.New("completed recovery artifacts already exist; rerun prohibited")
 		}
 	}
+	if err := r3aValidateRawPayloadHashes(); err != nil {
+		return fmt.Errorf("execution-time payload verification: %w", err)
+	}
 	data, err := r3aLoadCombinedData()
 	if err != nil {
+		return err
+	}
+	if err := r3aStartRunState(freezeSHA); err != nil {
 		return err
 	}
 	results, err := r3aEvaluate(data, contract)
@@ -543,7 +569,11 @@ func r3aExecute(contract r3aFrozenContract) error {
 	executionConfig := r3aExecutionConfig(contract.Config)
 	falsification := buildFalsification(data, oos, parentManifestSHA, executionConfig, oos.SecondaryDiagnostics)
 	classification := classifyPromotion(oos, falsificationDispositions(falsification), executionConfig)
-	out := runOutput{ContractVersion: "jax.val-03r4.recovery-result/v1", ManifestSHA256: parentManifestSHA, DatasetReadinessSHA256: r3aCorrectedDatasetSHA, Runner: "cmd/val03r-recovery-oos", ExecutionAuthority: "NONE", CreatesFill: false, Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", Universe: append([]string(nil), expectedRecoveryUniverse...), DataStart: r3aRecoveryStart, DataEnd: r3aRecoveryEnd, HoldoutAccessed: false, PerformanceRunCount: 1, Partitions: results, Falsification: falsification, AbstentionTotals: totalAbstentions(results), DataQuality: qualitySummaryForRange(data, true, r3aRecoveryStart, r3aRecoveryEnd), TerminalClassification: classification}
+	runnerBlobs, err := r3aCurrentRunnerSourceIdentities()
+	if err != nil {
+		return err
+	}
+	out := runOutput{ContractVersion: "jax.val-03r4.recovery-oos-results/v1", ManifestSHA256: parentManifestSHA, DatasetReadinessSHA256: r3aCorrectedDatasetSHA, R2RecoveryManifestSHA256: r3aR2ManifestSHA, R3ReadinessSHA256: r3aReadinessSHA, R3DataContractSHA256: r3aDataContractSHA, R3DatasetReadinessSHA256: r3aRecoveryDatasetSHA, R3ADatasetReadinessSHA256: r3aCorrectedDatasetSHA, ExecutionFreezeSHA256: freezeSHA, SeedManifestSHA256: parentManifestSHA, CandidateID: contract.Candidate, RecoveryRangeStart: r3aRecoveryStart, RecoveryRangeEnd: r3aRecoveryEnd, Former2025FinalHoldoutReclassified: true, FinalHistoricalHoldoutRemaining: "NONE_AFTER_RECOVERY_RECLASSIFICATION", PostBoundaryRows: 0, RunnerSourceIdentities: runnerBlobs, Runner: "cmd/val03r-recovery-oos", ExecutionAuthority: "NONE", CreatesFill: false, Provider: "Alpaca", Feed: "SIP", Timeframe: "1Day", Universe: append([]string(nil), expectedRecoveryUniverse...), DataStart: r3aRecoveryStart, DataEnd: r3aRecoveryEnd, HoldoutAccessed: false, PerformanceRunCount: 1, Partitions: results, Falsification: falsification, AbstentionTotals: totalAbstentions(results), DataQuality: qualitySummaryForRange(data, true, r3aRecoveryStart, r3aRecoveryEnd), TerminalClassification: classification}
 	envelope := r3aResultEnvelope{RunOutput: out, RunnerIdentity: "cmd/val03r-recovery-oos", ManifestSHA256: parentManifestSHA, DatasetSHA256: r3aCorrectedDatasetSHA, ExecutionFreeze: freezeSHA, Lifecycle: map[string]any{"performance_execution_started": true, "performance_artifacts_written": true, "performance_run_count": 1, "recovery_oos_status": "EXECUTED_ONCE"}}
 	if err := writeJSON("Docs/validation/results/VAL-03R4-RUN-MANIFEST.json", envelope); err != nil {
 		return err
@@ -554,7 +584,71 @@ func r3aExecute(contract r3aFrozenContract) error {
 	if err := writeJSON("Docs/validation/results/VAL-03R4-FALSIFICATION.json", falsification); err != nil {
 		return err
 	}
-	return writeJSON(r3aRunStatePath, r3aRunState{PerformanceRunCount: 1, Status: "COMPLETED_ONCE"})
+	return r3aCompleteRunState(freezeSHA)
+}
+
+func r3aStartRunState(freezeSHA string) error {
+	return r3aStartRunStateAt(r3aRunStatePath, freezeSHA)
+}
+
+func r3aStartRunStateAt(path, freezeSHA string) error {
+	state := r3aRunState{ContractID: "jax.val-03r4.recovery-run-state/v2", PerformanceRunCount: 0, Status: "STARTED_ONCE", Candidate: "ma_crossover_v1", RecoveryBoundary: "2025-01-01..2026-09-11", ExecutionFreezeSHA256: freezeSHA}
+	b, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		return err
+	}
+	b = append(b, '\n')
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		if os.IsExist(err) {
+			return errors.New("recovery run already consumed")
+		}
+		return err
+	}
+	defer f.Close()
+	if _, err := f.Write(b); err != nil {
+		return err
+	}
+	return f.Sync()
+}
+
+func r3aCompleteRunState(freezeSHA string) error {
+	return r3aCompleteRunStateAt(r3aRunStatePath, freezeSHA)
+}
+
+func r3aCompleteRunStateAt(path, freezeSHA string) error {
+	state := r3aRunState{ContractID: "jax.val-03r4.recovery-run-state/v2", PerformanceRunCount: 1, Status: "COMPLETED_ONCE", Candidate: "ma_crossover_v1", RecoveryBoundary: "2025-01-01..2026-09-11", ExecutionFreezeSHA256: freezeSHA}
+	return writeAtomicJSON(path, state)
+}
+
+func writeAtomicJSON(path string, value any) error {
+	b, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	b = append(b, '\n')
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, b, 0o600); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
+}
+
+func r3aCurrentRunnerSourceIdentities() (map[string]string, error) {
+	paths := map[string]string{"main.go": "cmd/val03r-recovery-oos/main.go", "config.go": "cmd/val03r-recovery-oos/config.go", "contract.go": "cmd/val03r-recovery-oos/contract.go", "recovery.go": "cmd/val03r-recovery-oos/recovery.go", "r3a.go": "cmd/val03r-recovery-oos/r3a.go", "structural.go": "cmd/val03r-recovery-oos/structural.go"}
+	out := make(map[string]string, len(paths))
+	for name, path := range paths {
+		h, err := gitBlobSHA1(path)
+		if err != nil {
+			return nil, err
+		}
+		out[name] = h
+	}
+	return out, nil
 }
 
 func r3aExecutionConfig(cfg FrozenExperimentConfig) FrozenExperimentConfig {
@@ -653,10 +747,16 @@ func r3aLoadCombinedData() (map[string]*instrumentData, error) {
 		prev := 0.0
 		for _, date := range d.Dates {
 			raw, split, det := d.Raw[date], d.Split[date], d.Detector[date]
-			if raw.Close <= 0 || split.Close <= 0 {
-				return nil, errors.New("non-positive price")
+			if !validBar(raw, date) || !validBar(split, date) || !validBar(det, date) {
+				return nil, fmt.Errorf("invalid synchronized bar %s %s", s, date)
 			}
 			factor := split.Close / raw.Close
+			if !barScaleConsistent(raw, split, factor) {
+				return nil, fmt.Errorf("raw/split factor inconsistency %s %s", s, date)
+			}
+			if !sameBarScale(split, det) {
+				return nil, fmt.Errorf("split/spin-off structural difference %s %s", s, date)
+			}
 			d.Factor[date] = factor
 			if prev != 0 && r3aAbsFloat(factor-prev) > r3aTolerance*r3aMaxFloat(1, r3aMaxFloat(factor, prev)) {
 				d.Boundaries[date] = true
@@ -668,6 +768,27 @@ func r3aLoadCombinedData() (map[string]*instrumentData, error) {
 		}
 	}
 	return data, nil
+}
+
+func validBar(v bar, date string) bool {
+	return v.Date == date && v.Open > 0 && v.High > 0 && v.Low > 0 && v.Close > 0 && v.High >= v.Low && v.High >= v.Open && v.High >= v.Close && v.Low <= v.Open && v.Low <= v.Close && v.Volume >= 0 && !math.IsNaN(v.Open) && !math.IsNaN(v.High) && !math.IsNaN(v.Low) && !math.IsNaN(v.Close) && !math.IsNaN(v.Volume)
+}
+
+func barScaleConsistent(raw, split bar, factor float64) bool {
+	if factor <= 0 || !closeEnoughWithTolerance(split.Open, raw.Open*factor) || !closeEnoughWithTolerance(split.High, raw.High*factor) || !closeEnoughWithTolerance(split.Low, raw.Low*factor) || !closeEnoughWithTolerance(split.Close, raw.Close*factor) {
+		return false
+	}
+	if raw.Volume > 0 && split.Volume > 0 {
+		inverse := raw.Volume / factor
+		if math.Abs(split.Volume-inverse) > 0.01*math.Max(1, math.Abs(inverse)) {
+			return false
+		}
+	}
+	return true
+}
+
+func closeEnoughWithTolerance(a, b float64) bool {
+	return math.Abs(a-b) <= r3aTolerance*math.Max(1, math.Max(math.Abs(a), math.Abs(b)))
 }
 
 func r3aAbsFloat(v float64) float64 {
