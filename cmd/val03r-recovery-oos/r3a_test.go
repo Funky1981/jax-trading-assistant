@@ -8,8 +8,10 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
+	"jax-trading-assistant/libs/marketdata"
 	"jax-trading-assistant/libs/strategies"
 )
 
@@ -211,9 +213,18 @@ func TestR3BOneShotStartMarkerIsExclusiveAndCompletionIsTerminal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err := r3aValidateRunStateBytes(b)
+	state, err := r3aValidateRunStateBytesForFreeze(b, "freeze")
 	if err == nil || state.Status != "STARTED_ONCE" {
 		t.Fatalf("started state validation = %+v, err=%v", state, err)
+	}
+	if state.PerformanceRunCount != 1 {
+		t.Fatalf("started state run count = %d, want 1", state.PerformanceRunCount)
+	}
+	if _, err := r3aValidateRunStateBytesForFreeze(b, "wrong-freeze"); err == nil {
+		t.Fatal("wrong freeze SHA was accepted")
+	}
+	if _, err := r3aValidateRunStateBytes([]byte(`{"contract_id":"jax.val-03r4.recovery-run-state/v2","performance_run_count":0,"status":"STARTED_ONCE","candidate":"ma_crossover_v1","recovery_boundary":"2025-01-01..2026-09-11","execution_freeze_sha256":"freeze"}`)); err == nil {
+		t.Fatal("zero-count started state was accepted")
 	}
 	if err := r3aCompleteRunStateAt(path, "freeze"); err != nil {
 		t.Fatal(err)
@@ -222,9 +233,110 @@ func TestR3BOneShotStartMarkerIsExclusiveAndCompletionIsTerminal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err = r3aValidateRunStateBytes(b)
+	state, err = r3aValidateRunStateBytesForFreeze(b, "freeze")
 	if err == nil || state.Status != "COMPLETED_ONCE" || state.PerformanceRunCount != 1 {
 		t.Fatalf("completed state validation = %+v, err=%v", state, err)
+	}
+}
+
+func TestR3CConcurrentStartMarkersHaveOneWinner(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "run-state.json")
+	var wg sync.WaitGroup
+	errs := make(chan error, 2)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- r3aStartRunStateAt(path, "freeze")
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	wins := 0
+	for err := range errs {
+		if err == nil {
+			wins++
+		}
+	}
+	if wins != 1 {
+		t.Fatalf("concurrent start winners = %d, want 1", wins)
+	}
+}
+
+func TestR3CLateStructuralBoundaryResetsAfterPriorInitialization(t *testing.T) {
+	dates := syntheticDates(750)
+	d := syntheticData(dates, func(int) float64 { return 100 })
+	d.Boundaries[dates[500]] = true
+	d.Boundaries[dates[730]] = true
+	if got, _ := structuralStateAt(d, dates[400], marketdata.VAL03CInitializationSessions); got != structuralInitializedState {
+		t.Fatalf("before late boundary = %s", got)
+	}
+	if got, _ := structuralStateAt(d, dates[500], marketdata.VAL03CInitializationSessions); got != structuralWarmupState {
+		t.Fatalf("boundary session = %s", got)
+	}
+	if got, _ := structuralStateAt(d, dates[698], marketdata.VAL03CInitializationSessions); got != structuralWarmupState {
+		t.Fatalf("198 post-boundary sessions = %s", got)
+	}
+	if got, _ := structuralStateAt(d, dates[699], marketdata.VAL03CInitializationSessions); got != structuralInitializedState {
+		t.Fatalf("200th post-boundary session = %s", got)
+	}
+	if got, _ := structuralStateAt(d, dates[700], marketdata.VAL03CInitializationSessions); got != structuralInitializedState {
+		t.Fatalf("session after reset = %s", got)
+	}
+	if got, _ := structuralStateAt(d, dates[730], marketdata.VAL03CInitializationSessions); got != structuralWarmupState {
+		t.Fatalf("second boundary = %s", got)
+	}
+	if got, _ := structuralStateAt(d, dates[749], marketdata.VAL03CInitializationSessions); got != structuralWarmupState {
+		t.Fatalf("second reset did not remain warmup = %s", got)
+	}
+}
+
+func TestR3CCanonicalInitializationEquivalenceAcrossBoundaries(t *testing.T) {
+	dates := syntheticDates(720)
+	positions := []int{0, 199, 200, 500, 650}
+	d := syntheticData(dates, func(int) float64 { return 100 })
+	for _, pos := range []int{150, 200, 501, 650} {
+		d.Boundaries[dates[pos]] = true
+	}
+	delete(d.Split, dates[205])
+	delete(d.Raw, dates[205])
+	sessions := make([]marketdata.VAL03CSession, len(dates))
+	for i, date := range dates {
+		sessions[i] = marketdata.VAL03CSession{ProviderDate: date, Valid: validSynchronizedSession(d, date), StructuralBoundary: d.Boundaries[date]}
+	}
+	for _, pos := range positions {
+		canonical, err := marketdata.DeriveVAL03CInitialization(sessions[:pos+1])
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := structuralStateAt(d, dates[pos], marketdata.VAL03CInitializationSessions)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := structuralWarmupState
+		if canonical.State == marketdata.VAL03CInitializationComplete {
+			want = structuralInitializedState
+		}
+		if got != want {
+			t.Fatalf("date %s runner=%s canonical=%s", dates[pos], got, canonical.State)
+		}
+	}
+}
+
+func TestR3CQualitySummaryReportsValidatedBoundaries(t *testing.T) {
+	dates := []string{"2025-12-04", "2025-12-05", "2025-12-08"}
+	d := syntheticData(dates, func(int) float64 { return 100 })
+	d.Boundaries[dates[1]] = true
+	data := map[string]*instrumentData{}
+	for _, symbol := range symbols {
+		data[symbol] = d
+	}
+	summary := qualitySummaryForRange(data, false, "2025-01-01", "2026-09-11")
+	per := summary["instruments"].(map[string]any)
+	spy := per["SPY"].(map[string]any)
+	boundaries := spy["structural_boundaries"].([]string)
+	if len(boundaries) != 1 || boundaries[0] != dates[1] {
+		t.Fatalf("reported boundaries = %#v", boundaries)
 	}
 }
 

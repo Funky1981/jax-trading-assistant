@@ -336,7 +336,7 @@ func r3aLoadAndValidateContracts() (r3aFrozenContract, error) {
 	if err := r3aValidateCorrectedDataset(); err != nil {
 		return contract, err
 	}
-	if err := r3bValidateFreeze(); err != nil {
+	if err := r3cValidateFreeze(); err != nil {
 		return contract, err
 	}
 	return contract, nil
@@ -504,6 +504,10 @@ func r3aValidateAuthorizationBytes(b []byte, freezeSHA string) (r3aAuthorization
 }
 
 func r3aValidateRunStateBytes(b []byte) (r3aRunState, error) {
+	return r3aValidateRunStateBytesForFreeze(b, "")
+}
+
+func r3aValidateRunStateBytesForFreeze(b []byte, expectedFreezeSHA string) (r3aRunState, error) {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return r3aRunState{}, err
@@ -521,10 +525,10 @@ func r3aValidateRunStateBytes(b []byte) (r3aRunState, error) {
 	if err := json.Unmarshal(b, &state); err != nil {
 		return state, err
 	}
-	if state.ContractID != "jax.val-03r4.recovery-run-state/v2" || state.Candidate != "ma_crossover_v1" || state.RecoveryBoundary != "2025-01-01..2026-09-11" || state.ExecutionFreezeSHA256 == "" {
+	if state.ContractID != "jax.val-03r4.recovery-run-state/v2" || state.Candidate != "ma_crossover_v1" || state.RecoveryBoundary != "2025-01-01..2026-09-11" || state.ExecutionFreezeSHA256 == "" || (expectedFreezeSHA != "" && state.ExecutionFreezeSHA256 != expectedFreezeSHA) {
 		return state, errors.New("recovery run state identity mismatch")
 	}
-	if (state.PerformanceRunCount == 1 && state.Status != "COMPLETED_ONCE") || (state.PerformanceRunCount != 1 && state.Status != "STARTED_ONCE") {
+	if state.PerformanceRunCount != 1 || (state.Status != "STARTED_ONCE" && state.Status != "COMPLETED_ONCE") {
 		return state, errors.New("invalid recovery run state")
 	}
 	return state, errors.New("recovery run already consumed")
@@ -535,7 +539,7 @@ func r3aExecute(contract r3aFrozenContract) error {
 	if err != nil {
 		return errors.New("R4 authorization required; performance locked before data load")
 	}
-	freezeBytes, err := os.ReadFile(r3bFreezePath)
+	freezeBytes, err := os.ReadFile(r3cFreezePath)
 	if err != nil {
 		return fmt.Errorf("read execution freeze: %w", err)
 	}
@@ -544,7 +548,9 @@ func r3aExecute(contract r3aFrozenContract) error {
 		return fmt.Errorf("authorization: %w", err)
 	}
 	if stateBytes, err := os.ReadFile(r3aRunStatePath); err == nil {
-		_, _ = r3aValidateRunStateBytes(stateBytes)
+		if _, stateErr := r3aValidateRunStateBytesForFreeze(stateBytes, freezeSHA); stateErr != nil {
+			return stateErr
+		}
 		return errors.New("recovery run already consumed")
 	} else if !os.IsNotExist(err) {
 		return err
@@ -595,7 +601,7 @@ func r3aStartRunState(freezeSHA string) error {
 }
 
 func r3aStartRunStateAt(path, freezeSHA string) error {
-	state := r3aRunState{ContractID: "jax.val-03r4.recovery-run-state/v2", PerformanceRunCount: 0, Status: "STARTED_ONCE", Candidate: "ma_crossover_v1", RecoveryBoundary: "2025-01-01..2026-09-11", ExecutionFreezeSHA256: freezeSHA}
+	state := r3aRunState{ContractID: "jax.val-03r4.recovery-run-state/v2", PerformanceRunCount: 1, Status: "STARTED_ONCE", Candidate: "ma_crossover_v1", RecoveryBoundary: "2025-01-01..2026-09-11", ExecutionFreezeSHA256: freezeSHA}
 	b, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
 		return err

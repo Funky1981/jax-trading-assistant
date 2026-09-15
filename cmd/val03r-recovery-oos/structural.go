@@ -28,10 +28,9 @@ func structuralStateAt(d *instrumentData, date string, required int) (string, er
 			continue
 		}
 		count++
-		if count >= required {
-			// Later sessions remain initialized until a new boundary is seen.
-			return structuralInitializedState, nil
-		}
+	}
+	if count >= required {
+		return structuralInitializedState, nil
 	}
 	return structuralWarmupState, nil
 }

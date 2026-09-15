@@ -50,6 +50,7 @@ type r3bFreezeArtifact struct {
 	} `json:"lifecycle"`
 }
 
+//nolint:unused // retained for historical R3B freeze audit.
 func r3bValidateFreeze() error {
 	b, err := os.ReadFile(r3bFreezePath)
 	if err != nil {

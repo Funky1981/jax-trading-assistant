@@ -856,9 +856,13 @@ func qualitySummaryForRange(data map[string]*instrumentData, performanceOutputGe
 		d := data[s]
 		raw, split, detector := 0, 0, 0
 		first, last := "", ""
+		boundaries := []string{}
 		for _, date := range d.Dates {
 			if date < start || date > end {
 				continue
+			}
+			if d.Boundaries[date] {
+				boundaries = append(boundaries, date)
 			}
 			raw++
 			if _, ok := d.Split[date]; ok {
@@ -872,7 +876,7 @@ func qualitySummaryForRange(data map[string]*instrumentData, performanceOutputGe
 			}
 			last = date
 		}
-		per[s] = map[string]any{"raw_sessions": raw, "split_sessions": split, "split_spin_off_sessions": detector, "first_session": first, "last_session": last, "structural_boundaries": []string{}, "post_boundary_rows": 0, "warmup_evidence": "WARMUP_ONLY / HASH_BOUND_PRE_RECOVERY_EVIDENCE"}
+		per[s] = map[string]any{"raw_sessions": raw, "split_sessions": split, "split_spin_off_sessions": detector, "first_session": first, "last_session": last, "structural_boundaries": boundaries, "post_boundary_rows": 0, "warmup_evidence": "WARMUP_ONLY / HASH_BOUND_PRE_RECOVERY_EVIDENCE"}
 	}
 	return map[string]any{"provider": "Alpaca", "feed": "SIP", "timeframe": "1Day", "date_range": []string{start, end}, "recovery_range_start": start, "recovery_range_end": end, "former_2025_final_holdout_reclassified": true, "final_historical_holdout_remaining": "NONE_AFTER_RECOVERY_RECLASSIFICATION", "post_boundary_rows": 0, "instruments": per, "performance_output_generated": performanceOutputGenerated}
 }
