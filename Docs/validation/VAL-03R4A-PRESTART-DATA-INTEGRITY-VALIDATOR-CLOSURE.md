@@ -58,4 +58,3 @@ activity occurred.
 
 Execution remains `ExecutionAuthority=NONE`, `CreatesFill=false`, live trading
 disabled, broker execution disabled and maximum leverage `1x`.
-
