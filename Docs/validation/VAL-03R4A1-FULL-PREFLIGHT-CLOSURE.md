@@ -67,7 +67,7 @@ legacy absolute-price validator fails.
 `FROZEN_FOR_VAL03R4B_EXTERNAL_AUTHORIZATION`, and binds the current runner,
 shared-loader and canonical helper identities. Its SHA-256 is:
 
-`8d669accb29c426d0a3006c247ee495ab37884bf66cd427ee4dc5d8790296101`
+`7f1ca6532c5ab6e6fab30aed3a53179eb236ef4ed1b294a7aed40c0275f5e830`
 
 The freeze preserves the candidate, 0.60 threshold, strategy parameters, cost
 models, placebos, bootstrap, sample gates, falsification suite, recovery
