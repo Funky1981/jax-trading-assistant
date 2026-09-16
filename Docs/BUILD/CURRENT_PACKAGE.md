@@ -1,10 +1,10 @@
 # Current Build Package
 
-## PAPER-01 — exploratory single-recovery paper package
+## PAPER-01 — event-driven exploratory paper-trader package
 
 Status: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
 
-PAPER-01 is the current implementation package. It establishes the bounded exploratory thesis, lifecycle, approval, monitoring, and outcome-review contracts for a single recovery-oriented paper scenario. It does not demonstrate a trading edge, authorize PAPER-02, create formal evidence, or permit live execution.
+PAPER-01 is the current implementation package. It establishes the bounded event-driven exploratory paper-trader model: source-backed event intake, causal thesis formation, human approval, isolated paper lifecycle, session monitoring, and outcome review. It does not demonstrate a trading edge, authorize PAPER-02, create formal evidence, or permit live execution.
 
 Read in this order:
 

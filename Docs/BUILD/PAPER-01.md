@@ -1,10 +1,10 @@
-# PAPER-01 — Exploratory Single-Recovery Paper Package
+# PAPER-01 — Event-Driven Exploratory Paper-Trader Package
 
 Status: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
 
 ## Purpose
 
-PAPER-01 makes the short-horizon trader model observable and reviewable through one bounded exploratory paper scenario. It is a contract and evidence-collection package, not a claim of profitability or edge.
+PAPER-01 makes the event-driven short-horizon trader model observable and reviewable through bounded exploratory paper-trader scenarios. It is a contract and evidence-collection package, not a claim of profitability or edge.
 
 ## Scope
 
@@ -21,7 +21,7 @@ Automated tests establish implementation behaviour. They do not establish predic
 
 ## Required review questions
 
-1. Is the single-recovery thesis sufficiently falsifiable and bounded?
+1. Is the event-driven thesis sufficiently falsifiable and bounded?
 2. Are approval, monitoring, exit, and outcome records auditable without implying execution?
 3. Are exploratory observations kept separate from formal evidence and promotion decisions?
 4. Are unknown, missing, ambiguous, and contradictory inputs retained rather than silently normalised?
