@@ -150,6 +150,40 @@ func TestR3AModeDoesNotAcceptPerformanceFlags(t *testing.T) {
 	}
 }
 
+func TestR4A1PreflightDispatchesSharedStructuralLoaderOnly(t *testing.T) {
+	originalContracts := r3aLoadContractsFn
+	originalPreflight := r3aDataIntegrityPreflightFn
+	originalStart := r3aStartRunStateFn
+	originalEvaluate := r3aEvaluateFn
+	defer func() {
+		r3aLoadContractsFn = originalContracts
+		r3aDataIntegrityPreflightFn = originalPreflight
+		r3aStartRunStateFn = originalStart
+		r3aEvaluateFn = originalEvaluate
+	}()
+
+	r3aLoadContractsFn = func() (r3aFrozenContract, error) {
+		return r3aFrozenContract{Candidate: "ma_crossover_v1", Config: FrozenExperimentConfig{ActionableConfidenceThreshold: 0.60}}, nil
+	}
+	called := false
+	r3aDataIntegrityPreflightFn = func() (map[string]*instrumentData, r3aStructuralPreflightSummary, error) {
+		called = true
+		return map[string]*instrumentData{}, r3aStructuralPreflightSummary{Instruments: 9, SessionsPerInstrument: 2688}, nil
+	}
+	r3aStartRunStateFn = func(string) error { t.Fatal("preflight created run state"); return nil }
+	r3aEvaluateFn = func(map[string]*instrumentData, r3aFrozenContract) (map[string]partitionResult, error) {
+		t.Fatal("preflight evaluated outcomes")
+		return nil, nil
+	}
+
+	if err := runR3A("--preflight-only"); err != nil {
+		t.Fatal(err)
+	}
+	if !called {
+		t.Fatal("--preflight-only did not invoke the shared structural loader")
+	}
+}
+
 func TestStressCostIncludesFixedAndTenBPSCommissionOnBothLegs(t *testing.T) {
 	entry, exit, qty := 100.0, 110.0, 100
 	got := netReturnWithCosts(entry, exit, qty, 5, 10, 15, 0.50, 10)

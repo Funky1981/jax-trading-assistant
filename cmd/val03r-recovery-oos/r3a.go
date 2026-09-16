@@ -174,6 +174,20 @@ type r3aResultEnvelope struct {
 	ExecutionFreeze string         `json:"execution_freeze_identity"`
 }
 
+type r3aStructuralPreflightSummary struct {
+	Instruments             int
+	SessionsPerInstrument   int
+	CanonicalFactorFailures int
+	SpinOffDifferences      int
+	OutOfRangeRows          int
+	StructuralBoundaries    int
+}
+
+var r3aLoadContractsFn = r3aLoadAndValidateContracts
+var r3aDataIntegrityPreflightFn = r3aRunDataIntegrityPreflight
+var r3aStartRunStateFn = r3aStartRunState
+var r3aEvaluateFn = r3aEvaluate
+
 //nolint:unused // retained for historical R3A artifact audit.
 type r3aFreezeArtifact struct {
 	ContractID  string `json:"contract_id"`
@@ -208,7 +222,7 @@ type r3aFreezeArtifact struct {
 }
 
 func runR3A(mode string) error {
-	contract, err := r3aLoadAndValidateContracts()
+	contract, err := r3aLoadContractsFn()
 	if err != nil {
 		return err
 	}
@@ -216,9 +230,12 @@ func runR3A(mode string) error {
 		return r3aExecute(contract)
 	}
 	if mode == "--preflight-only" {
-		if err := r3aValidateRawPayloadHashes(); err != nil {
+		_, summary, err := r3aDataIntegrityPreflightFn()
+		if err != nil {
 			return err
 		}
+		fmt.Printf("VAL03R4A1_PREFLIGHT=PASS instruments=%d sessions_per_instrument=%d canonical_factor_failures=%d spin_off_differences=%d out_of_range_rows=%d structural_boundaries=%d performance_execution_started=false performance_run_count=0\n", summary.Instruments, summary.SessionsPerInstrument, summary.CanonicalFactorFailures, summary.SpinOffDifferences, summary.OutOfRangeRows, summary.StructuralBoundaries)
+		return nil
 	}
 	fmt.Printf("VAL03R3A=%s candidate=%s threshold=%.2f recovery=%s..%s performance_execution_started=false performance_run_count=0\n", mode[2:], contract.Candidate, contract.Config.ActionableConfidenceThreshold, r3aRecoveryStart, r3aRecoveryEnd)
 	return nil
@@ -338,7 +355,7 @@ func r3aLoadAndValidateContracts() (r3aFrozenContract, error) {
 	if err := r3aValidateCorrectedDataset(); err != nil {
 		return contract, err
 	}
-	if err := r4aValidateFreeze(); err != nil {
+	if err := r4a1ValidateFreeze(); err != nil {
 		return contract, err
 	}
 	return contract, nil
@@ -446,6 +463,29 @@ func r3aValidateRawPayloadHashes() error {
 	return r3aValidatePayloadManifest(barFamilyPath, r3aBarFamilySHA, r3aPreRawRoot)
 }
 
+// r3aRunDataIntegrityPreflight is the single outcome-free data path shared by
+// the official preflight command and the future execution path. It validates
+// payload identities before reconstructing the combined RAW/SPLIT/
+// SPLIT+SPIN-OFF dataset, so a future execution cannot bypass structural
+// validation between authorization and STARTED_ONCE.
+func r3aRunDataIntegrityPreflight() (map[string]*instrumentData, r3aStructuralPreflightSummary, error) {
+	if err := r3aValidateRawPayloadHashes(); err != nil {
+		return nil, r3aStructuralPreflightSummary{}, err
+	}
+	data, err := r3aLoadCombinedData()
+	if err != nil {
+		return nil, r3aStructuralPreflightSummary{}, err
+	}
+	summary := r3aStructuralPreflightSummary{Instruments: len(data)}
+	for _, d := range data {
+		if summary.SessionsPerInstrument == 0 || len(d.Dates) < summary.SessionsPerInstrument {
+			summary.SessionsPerInstrument = len(d.Dates)
+		}
+		summary.StructuralBoundaries += len(d.Boundaries)
+	}
+	return data, summary, nil
+}
+
 func r3aValidatePayloadManifest(metadataPath, expectedMetadataSHA, root string) error {
 	b, err := os.ReadFile(metadataPath)
 	if err != nil {
@@ -541,7 +581,7 @@ func r3aExecute(contract r3aFrozenContract) error {
 	if err != nil {
 		return errors.New("VAL-03R4B AUTHORIZATION REQUIRED")
 	}
-	freezeBytes, err := os.ReadFile(r4aFreezePath)
+	freezeBytes, err := os.ReadFile(r4a1FreezePath)
 	if err != nil {
 		return fmt.Errorf("read execution freeze: %w", err)
 	}
@@ -560,17 +600,14 @@ func r3aExecute(contract r3aFrozenContract) error {
 			return errors.New("completed recovery artifacts already exist; rerun prohibited")
 		}
 	}
-	if err := r3aValidateRawPayloadHashes(); err != nil {
-		return fmt.Errorf("execution-time payload verification: %w", err)
-	}
-	data, err := r3aLoadCombinedData()
+	data, _, err := r3aDataIntegrityPreflightFn()
 	if err != nil {
 		return err
 	}
-	if err := r3aStartRunState(freezeSHA); err != nil {
+	if err := r3aStartRunStateFn(freezeSHA); err != nil {
 		return err
 	}
-	results, err := r3aEvaluate(data, contract)
+	results, err := r3aEvaluateFn(data, contract)
 	if err != nil {
 		return err
 	}
