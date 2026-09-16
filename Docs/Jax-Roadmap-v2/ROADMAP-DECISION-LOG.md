@@ -1867,3 +1867,23 @@ INSUFFICIENT SAMPLE` and HYP-EVENT-001A remains `NOT VALIDATED`.
 - Artifacts: `Docs/validation/VAL-03C-WARMUP-AND-MANIFEST-CONSISTENCY-AMENDMENT.md`,
   `Docs/validation/results/VAL-03C-DATASET-READINESS.json`, and the v1.5
   preregistration manifest.
+
+## RD-2026-09-16-01 - VAL-04A validation harness hardening
+
+- VAL-03R4B is complete, externally reviewed, and terminally
+  `FAILED_VALIDATION`; `ma_crossover_v1` is closed under its formal identity.
+- External decision: `NO-GO FORWARD PAPER / FAILED HISTORICAL VALIDATION`.
+- VAL-04A is `VALIDATION HARNESS HARDENING / EXTERNAL REVIEW REQUIRED`.
+- The immutable R4B evidence was not edited, regenerated, or rerun. No new
+  strategy, tuning, market-data acquisition, forward paper, broker mutation,
+  or Phase 13 activity occurred.
+- Future validation now distinguishes matched-placebo sample sufficiency from
+  matched-placebo comparative edge. Pair-count sufficiency cannot be rendered
+  as edge `PASS`; unsupported blocking dispositions fail closed as insufficient.
+- Future top-5% output reports both primary and paired means before and after
+  removal with neutral wording. A reusable deterministic timestamp selector
+  precomputes eligibility once per instrument/year date pool and selects a
+  minimum SHA-256 score without sorting the full candidate pool.
+- VAL-04B — `OUTCOME-BLIND NEXT-CANDIDATE SELECTION` is `NOT AUTHORIZED`.
+- Phase 13 remains `NOT STARTED / BLOCKED`; optional future commercialisation
+  remains `DEFERRED / NOT A CURRENT OBJECTIVE`.

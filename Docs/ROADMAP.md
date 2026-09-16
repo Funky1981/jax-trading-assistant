@@ -418,3 +418,21 @@ The commercial release gate remains separate and blocked by owner, legal,
 account/contract and deployment decisions. VAL-03 remains
 `CONTAMINATED_FOR_FORMAL_OOS / CLOSED`; VAL-03R1 repaired the harness without
 rerunning outcomes. A new independent performance boundary is not authorized.
+
+## RD-2026-09-16-01 - VAL-04A failed-candidate closeout and harness hardening
+
+- VAL-03R4B: `COMPLETE / FAILED_VALIDATION / EXTERNALLY REVIEWED`.
+- `ma_crossover_v1`: `FORMAL HISTORICAL VALIDATION FAILED / CLOSED`.
+- Forward paper: `NO-GO`; trading edge: `NOT DEMONSTRATED`.
+- VAL-04A: `VALIDATION HARNESS HARDENING / EXTERNAL REVIEW REQUIRED`.
+- VAL-04B: `NOT AUTHORIZED`; its future purpose is outcome-blind selection of
+  a genuinely separate candidate from pre-existing research inventory.
+- Phase 13: `NOT STARTED / BLOCKED`.
+- Optional future commercialisation: `DEFERRED / NOT A CURRENT OBJECTIVE`.
+
+VAL-04A closes the failed R4B candidate scientifically and adds reusable,
+fail-closed promotion-gate semantics, explicit matched-placebo sample versus
+comparative-edge statuses, neutral top-5% reporting, and a deterministic
+precomputed timestamp-placebo selector. The historical runner and all R4B
+artifacts remain immutable. No candidate was selected or tuned, no formal
+backtest was started, and no forward paper or broker capability was enabled.
