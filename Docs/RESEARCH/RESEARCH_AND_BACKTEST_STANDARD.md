@@ -15,7 +15,8 @@ BACKTESTED_WEAK
 BACKTESTED_PROMISING
 PAPER_READY
 PAPER_REJECTED
-PAPER_PROVEN
+EXPLORATORY_PAPER_OBSERVED
+FORMAL_FORWARD_PAPER_EVIDENCE
 ```
 
 No setup family can become `PAPER_READY` without a research evidence bundle.
@@ -123,7 +124,8 @@ A backtest is invalid if it lacks:
 | Backtest with OOS and realistic costs | BACKTESTED_PROMISING |
 | Backtest promising + risk rules defined | PAPER_READY |
 | Paper results poor | PAPER_REJECTED |
-| Paper results stable over agreed sample | PAPER_PROVEN |
+| Exploratory paper observations | EXPLORATORY_PAPER_OBSERVED; no promotion claim |
+| Separately authorised formal forward-paper evidence | FORMAL_FORWARD_PAPER_EVIDENCE; review required |
 
 ## Anti-overfitting rules
 

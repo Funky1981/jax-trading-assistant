@@ -1,17 +1,5 @@
 # Plans Index
 
-`Docs/plans` is archive/import only. Active docs must live in the main `Docs/` structure.
+`Docs/plans` is archive/import-only. It is never the current Jax roadmap or build router.
 
-New work should not treat `Docs/plans` as the source of truth. Use the active top-level docs and folders instead, including `Docs/JAX_PRODUCT_CHARTER.md`, `Docs/CAPABILITY_MATRIX.md`, `Docs/PHASE_CONTRACTS/`, `Docs/PROJECT_MANAGEMENT/`, `Docs/TRADING_BRAIN/`, `Docs/STRATEGIES/`, `Docs/RESEARCH/`, `Docs/PAPER_TRADING/`, and `Docs/MEMORY_AND_REVIEW/`.
-
-This index tracks imported, archived, and completed planning packs under `Docs/plans`.
-
-| Folder | Scope | Status |
-| --- | --- | --- |
-| `jax-all-plans-pack-swing-v2/` | Swing V2 planning pack imported for reference | Archive/import |
-| `jax-trading-roadmap-pack/` | Earlier candidate/risk/paper roadmap retained for context | Historical/supporting |
-| `automation-n8n/` | N8N automation planning and integration notes | Archive/import |
-| `Completed/analysis-intelligence-layer/` | Expert-level technical analysis, fundamental analysis, scoring, review flow, memory, and TA/FA UAT | Complete |
-| `Completed/robust-profitability-layer/` | Market regime, cross-asset confirmation, confounders, execution quality, sizing, walk-away logic, review, dashboards, and stress testing | Complete |
-| `Completed/jax_complete_trading_readiness_docs/` | Complete readiness planning pack containing macro reaction, analysis intelligence, and robust profitability layers | Complete |
-| `Completed/` | Archived plans that have been completed |
+Use `Docs/ROADMAP.md` for sequence and `Docs/BUILD/CURRENT_PACKAGE.md` for current implementation routing. Historical planning packs remain available for provenance and context; they cannot authorize current work.

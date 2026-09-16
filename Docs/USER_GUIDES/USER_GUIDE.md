@@ -69,15 +69,15 @@ The compact Evidence Inbox refinement was manually accepted from operator-suppli
 ## Screenshots
 
 ### Dataset Snapshots
-![System dataset snapshots](../frontend/public/user-guide/system-datasets.png)
+![System dataset snapshots](../../frontend/public/user-guide/system-datasets.png)
 
 ### Run a Backtest
-![Research backtest](../frontend/public/user-guide/research-backtest.png)
+![Research backtest](../../frontend/public/user-guide/research-backtest.png)
 
 ### Review Runs and Analysis
-![Backtest runs](../frontend/public/user-guide/backtest-runs.png)
+![Backtest runs](../../frontend/public/user-guide/backtest-runs.png)
 
-![Analysis run](../frontend/public/user-guide/analysis-run.png)
+![Analysis run](../../frontend/public/user-guide/analysis-run.png)
 
 ## Analysis Page
 

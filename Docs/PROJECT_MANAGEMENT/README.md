@@ -1,24 +1,13 @@
 # Project Management
 
-Project-manager and ProjectOS Codex docs live here.
+This directory contains process templates, planning records, and imported ProjectOS material. It is process-only and is not a source of current Jax product direction, roadmap sequence, capability maturity, or work-package authorization.
 
-Project-manager docs control delivery process. Jax product docs control product direction.
+Use the canonical chain first:
 
-This folder contains imported ProjectOS planning, AI workflow, GitHub template, and project-board documentation for managing Jax delivery work. These docs support project management only; they do not replace the canonical Jax product, architecture, trading, or phase-contract docs.
+1. `../JAX_PRODUCT_CHARTER.md`
+2. `../ROADMAP.md`
+3. `../STATUS.md`
+4. `../CAPABILITY_MATRIX.md`
+5. `../BUILD/CURRENT_PACKAGE.md`
 
-Project-manager docs must enforce, not replace:
-
-- `../JAX_PRODUCT_CHARTER.md`
-- `../CAPABILITY_MATRIX.md`
-- `../PHASE_CONTRACTS/`
-
-Key entry points:
-
-- `CODEX_FIRST_README.md`
-- `CODEX_CHAT_SETUP.md`
-- `PROJECTOS_USAGE.md`
-- `ai/`
-- `project/`
-- `github-project-board/`
-- `.github/`
-- `scripts/`
+Project records may preserve historical decisions and delivery context. If a process record conflicts with the canonical chain, the canonical chain wins. `PHASE_CONTRACTS` and the old ProjectOS current-focus/roadmap templates are retired from current routing.

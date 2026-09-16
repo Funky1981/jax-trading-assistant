@@ -1,68 +1,34 @@
 # Jax Trading Assistant — Project Overview
 
-## Purpose
+Jax is an evidence-first market research and trading decision platform. The repository contains a modular Go monolith, frontend read models, Postgres persistence, and explicit external service boundaries.
 
-Jax Trading Assistant is a modular monolith with two active Go runtimes:
+## Current truth
 
-- `cmd/trader`: production-facing runtime for deterministic trading flows and frontend API endpoints.
-- `cmd/research`: research runtime for orchestration, backtests, and memory tools.
+- Product direction: `Docs/JAX_PRODUCT_CHARTER.md`
+- Roadmap sequence: `Docs/ROADMAP.md`
+- Current status: `Docs/STATUS.md`
+- Capability maturity: `Docs/CAPABILITY_MATRIX.md`
+- Current implementation routing: `Docs/BUILD/CURRENT_PACKAGE.md`
+- Documentation authority: `Docs/DOCUMENTATION-AUTHORITY.md`
 
-The system integrates with one external Python service where appropriate:
+PAPER-01 is implemented and awaiting external review. It is exploratory and hypothetical. A demonstrated trading edge has not been established; PAPER-02, formal paper evidence, live-readiness, and Phase 13 are not authorized or are blocked as stated in the roadmap.
 
-- `services/ib-bridge` (market connectivity)
+## Runtime topology
 
-## Active Runtime Topology
+- `cmd/trader` — deterministic trader runtime and frontend-facing API;
+- `cmd/research` — research, orchestration, replay, and memory runtime;
+- `services/ib-bridge` — explicit Interactive Brokers boundary;
+- `frontend` — operator dashboard;
+- `db/postgres/migrations` — runtime schema history.
 
-- `jax-trader`
-  - API health and frontend API: `http://localhost:8081/health`
-  - Trader runtime port: `8100`
-  - Source: `cmd/trader`
-- `jax-research`
-  - Health: `http://localhost:8091/health`
-  - Source: `cmd/research`
-- `ib-bridge`
-  - Health: `http://localhost:8092/health`
-  - Source: `services/ib-bridge`
-- Frontend
-  - Dev server: `http://localhost:5173`
-  - Source: `frontend`
+## Guardrails
 
-## Repository Map (Current)
+Trader behaviour remains deterministic. Research and AI components cannot create execution authority. Human approval and explicit safety gates remain required. No documentation reset changes runtime code or immutable validation results.
 
-- `cmd/`
-  - `trader/`: production runtime + frontend-facing API handlers
-  - `research/`: orchestration/research runtime + memory proxy/tools
-  - `artifact-approver/`, `shadow-validator/`, `jax-utcp-smoke/`: support tooling
-- `internal/`
-  - Shared runtime modules (artifacts, orchestration, persistence, providers)
-- `libs/`
-  - Reusable clients/adapters (auth, market data, UTCP)
-- `services/`
-  - External service boundary: `ib-bridge`
-- `frontend/`
-  - React dashboard consuming trader/research APIs
-- `db/postgres/migrations/`
-  - Runtime schema and migrations
-- `Docs/`
-  - ADRs, status, roadmap, runbooks, and archived reports
+## Setup and operations
 
-## Architecture Guardrails
-
-- Trader must stay deterministic and must not import research-only dependencies.
-- Research runtime owns the bounded Jax planner, Jax-native tools, and the
-  in-process Postgres memory system.
-- Artifact promotion requires trust-gate evidence (Gate2 deterministic replay + Gate3 promotion checks).
-- External Python services remain explicit boundaries; do not collapse them without ADR-level change.
-
-## Validation Baseline
-
-- Go changes: `gofmt` + targeted `go test` for touched packages.
-- Frontend changes: targeted `vitest`/`e2e` around affected API-facing flows.
-- Behavior-sensitive runtime changes: golden/replay verification before and after edits.
-
-## Primary Docs
-
-- `Docs/QUICKSTART.md` for local startup.
-- `Docs/STATUS.md` for current snapshot.
-- `Docs/ROADMAP.md` for active priorities.
-- `Docs/TODO.md` for tracked remaining work.
+- `Docs/SETUP/QUICKSTART.md`
+- `Docs/SETUP/IB_GUIDE.md`
+- `Docs/OPERATIONS/OPERATIONS.md`
+- `Docs/USER_GUIDES/USER_GUIDE.md`
+- `Docs/TESTING/LOCAL_PAPER_TRADING_TESTING.md`

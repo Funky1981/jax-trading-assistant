@@ -1,6 +1,6 @@
 {
   "name": "Jax Roadmap v2",
-  "generated_on": "2026-09-07",
+  "generated_on": "2026-09-16",
   "phases": 14,
   "governance": "Autonomous work-package execution within an authorised phase; external technical-lead review at phase gates and hard-stop decisions",
   "development_model_policy": {
@@ -10,8 +10,9 @@
   },
   "fincept_role": "Reference architecture/capability catalogue; no direct code copying",
   "live_execution": "Optional future gated phase only; not currently authorized",
-  "revision": "2026-09-07-autonomous-phase-development-governance",
+  "revision": "2026-09-16-doc-01-canonical-documentation-reset",
   "authoritative_roadmap": "Docs/ROADMAP.md",
+  "current_package": "Docs/BUILD/CURRENT_PACKAGE.md",
   "llm_cost_context_efficiency": "Cross-cutting requirement integrated into Phases 06 and 08 plus governance",
-  "pack_status": "Supporting roadmap detail; Docs/ROADMAP.md is authoritative. Phases 00 through 12 are COMPLETE / GO at their accepted capability gates. VAL-01 is COMPLETE / GO with FORWARD PAPER ADMISSION = NO-GO. VAL-02 is the current candidate-selection and scientific-preregistration package; ma_crossover_v1 was selected using outcome-blind structural feasibility criteria and VAL-03 has not started. Actual forward-paper evidence remains 0 days / 0 orders. HYP-EVENT-001A remains NOT VALIDATED and the 2025 holdout remains sealed. Commercial-readiness CR-01 through CR-02G are COMPLETE / GO as technical cleanup. Jax is currently focused on personal strategy validation; optional future commercialisation is DEFERRED / NOT A CURRENT OBJECTIVE. Phase 13 is NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE. Trading edge remains TRADING EDGE NOT DEMONSTRATED / INSUFFICIENT SAMPLE. Autonomous Development Mode is active from Phase 04 onward."
+  "pack_status": "Historical/supporting roadmap detail only. Docs/ROADMAP.md is authoritative and Docs/BUILD/CURRENT_PACKAGE.md routes current implementation. PAPER-01 is IMPLEMENTED / EXTERNAL REVIEW REQUIRED. PAPER-02 is NOT STARTED / NOT AUTHORIZED. Formal paper evidence and Phase 13 are not started; live-readiness is blocked. Trading edge is NOT DEMONSTRATED."
 }

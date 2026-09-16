@@ -97,7 +97,8 @@ Each review must write:
 | Missed opportunity | creates investigation item |
 | Bad paper trade | weakens setup family |
 | Good paper trade | adds evidence, no live promotion |
-| Repeated good paper evidence | may move to PAPER_PROVEN |
+| Repeated exploratory paper observations | remains exploratory; no edge claim |
+| Accepted formal forward-paper evidence | may inform a separately reviewed promotion decision |
 
 ## Forbidden
 

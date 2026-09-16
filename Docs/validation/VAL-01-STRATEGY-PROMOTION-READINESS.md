@@ -67,7 +67,7 @@ the Phase-12 registry and the retained run artifacts.
 | `etf_news_market_panic_reversal_v1` | `libs/strategytypes/strategy_etf_news_market_panic.go`; disabled paper instance | `INSUFFICIENT_EVIDENCE` | No complete historical event/price evidence bundle or forward evidence |
 | `etf_news_sector_momentum_v1` | `libs/strategytypes/strategy_etf_news_sector_momentum.go`; disabled paper instance | `INSUFFICIENT_EVIDENCE` | No complete historical/OOS/falsification package |
 | `etf_news_rates_bonds_rotation_v1` | `libs/strategytypes/strategy_etf_news_rates_rotation.go`; disabled paper instance | `INSUFFICIENT_EVIDENCE` | No complete historical/OOS/falsification package |
-| `SWING_BRAIN_V1` | `internal/decisioning/brains/swing`, `Docs/STRATEGIES/SWING_TRADING`; deterministic decisions `NO_TRADE`, `WATCH`, `SETUP_FORMING`, `TRADE_CANDIDATE` | `INSUFFICIENT_EVIDENCE` | Decision/risk rules are implemented and tested, but no frozen strategy-level research bundle, OOS/walk-forward evidence or calibration evidence exists |
+| `SWING_BRAIN_V1` | `internal/decisioning/brains/swing`, `Docs/archive/strategies/swing-pre-paper01`; deterministic decisions `NO_TRADE`, `WATCH`, `SETUP_FORMING`, `TRADE_CANDIDATE` | `INSUFFICIENT_EVIDENCE` | Decision/risk rules are implemented and tested, but no frozen strategy-level research bundle, OOS/walk-forward evidence or calibration evidence exists; the generic swing pack is historical |
 | `HYP-EVENT-001A` | Phase-12 private artifact and scientific closure; 2024 lineage is exploratory and promotion is closed | `CONTAMINATED_FOR_FORMAL_OOS` | Required development→validation→admission→freeze sequence was not durably recorded; 2025 remains sealed and survivorship is unresolved |
 
 ### Candidate definition details

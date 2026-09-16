@@ -1,70 +1,31 @@
-# jax-trading assistant
+# Jax Trading Assistant
 
-**Canonical docs live in `Docs/`** (see `Docs/README.md` for the index).
+Jax is an evidence-first market research and trading decision platform with deterministic decisioning, explicit provenance, and human-controlled paper boundaries.
 
-## Quick Links
+## Read first
 
-- Project overview: `Docs/PROJECT_OVERVIEW.md`
-- Status snapshot: `Docs/STATUS.md`
-- Roadmap: `Docs/ROADMAP.md`
-- Quick start: `Docs/QUICKSTART.md`
-- IB setup & bridge: `Docs/IB_GUIDE.md`
-- Operations runbook: `Docs/OPERATIONS.md`
-- User guide: `Docs/USER_GUIDE.md`
+- [Project overview](Docs/PROJECT_OVERVIEW.md)
+- [Product charter](Docs/JAX_PRODUCT_CHARTER.md)
+- [Roadmap](Docs/ROADMAP.md)
+- [Current build package](Docs/BUILD/CURRENT_PACKAGE.md)
+- [Current status](Docs/STATUS.md)
+- [Documentation authority](Docs/DOCUMENTATION-AUTHORITY.md)
 
-## Architecture
+PAPER-01 is implemented and requires external review. It does not demonstrate a trading edge, authorize PAPER-02, or permit live trading.
 
-Jax uses a **modular monolith** with two runtime entrypoints (ADR-0012):
+## Runtime
 
 | Runtime | Port | Role |
-|---------|------|------|
-| `cmd/trader` | 8100 | Deterministic trade execution — loads approved strategy artifacts only |
-| `cmd/research` | 8091 | Jax-owned orchestration, advisory planner, memory, and native tools |
+|---|---:|---|
+| `cmd/trader` | 8100 | Deterministic trader runtime and API |
+| `cmd/research` | 8091 | Research, orchestration, replay, and memory |
+| `ib-bridge` | 8092 | Explicit broker connectivity boundary |
+| frontend | 5173 | Operator dashboard |
 
-External boundaries kept as separate processes:
-- **jax-trader frontend API** (8081) — REST API served from `cmd/trader`
-- **ib-bridge** (8092) — Interactive Brokers Gateway adapter
-
-## Quick Start
+## Quick start
 
 ```powershell
 .\start.ps1
 ```
 
-Services start automatically, migrations are applied, the Vite frontend starts, and the dashboard opens.
-Trader and research runtimes load approved strategy artifacts from Postgres on startup.
-The compose topology does not start standalone orchestration or legacy market-data containers. Those seams now live inside `cmd/trader` and `cmd/research`.
-
-See `Docs/QUICKSTART.md` for full setup including IB Gateway connection.
-For local full-site research and paper-trading validation, use `Docs/LOCAL_PAPER_TRADING_TESTING.md`.
-
-## Environment
-
-Use local `.env` files (or shell env vars) for secrets and keep them untracked.
-
-- `JWT_SECRET` to enable authenticated frontend API mode
-- Assistant harness controls:
-  - `JAX_RUNTIME_MODE`
-  - `HARNESS_ENABLED`
-  - `HARNESS_SHADOW_MODE`
-  - `HARNESS_SESSION_RATE_LIMIT_PER_MINUTE`
-- Optional first-user bootstrap for auth-enabled environments:
-  - `AUTH_BOOTSTRAP_USERNAME`
-  - `AUTH_BOOTSTRAP_PASSWORD`
-  - `AUTH_BOOTSTRAP_ROLE` (`admin` or `user`, defaults to `admin`)
-
-## Testing (Go)
-
-- `scripts/test.ps1`
-- `go test ./...`
-- `make test`
-- Lint: `golangci-lint run ./...`
-
-## Storage
-
-Postgres schema: `db/postgres/schema.sql`.
-
-Quick local Postgres:
-
-- `docker compose up -d postgres`
-- Apply migrations with `docker compose up db-migrate` or `./scripts/migrate.ps1 up`
+See [Quickstart](Docs/SETUP/QUICKSTART.md) for setup details. Paper-trading validation remains hypothetical and bounded; use [local paper-trading testing](Docs/TESTING/LOCAL_PAPER_TRADING_TESTING.md) only when separately authorized.

@@ -1909,3 +1909,19 @@ INSUFFICIENT SAMPLE` and HYP-EVENT-001A remains `NOT VALIDATED`.
 - PAPER-02 prospective exploratory pilot, formal forward paper, Phase 13, and
   future commercialisation remain not started/deferred. No live broker or real
   order state is authorized.
+
+## RD-2026-09-16-03 - DOC-01 canonical documentation and build-routing reset
+
+- DOC-01 replaced the active documentation spine with one authority hierarchy:
+  charter, roadmap, status, capability matrix, current build package, then
+  domain detail.
+- PAPER-01 remains implemented and awaiting external review. PAPER-02,
+  formal forward-paper evidence, and Phase 13 remain not started or blocked.
+- `Docs/BUILD/CURRENT_PACKAGE.md` is the only current implementation router.
+- `Docs/PHASE_CONTRACTS/` is retired historical evidence; ProjectOS is
+  process-only; this roadmap-v2 pack is historical/supporting detail.
+- The trader model was consolidated at
+  `Docs/TRADING_BRAIN/JAX_TRADER_MODEL_V1.md`; the capability map is under
+  `Docs/BUILD/`.
+- No runtime code, immutable validation result, validation data, pilot, broker
+  action, or live-trading capability changed.

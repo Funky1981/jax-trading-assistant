@@ -1,32 +1,15 @@
-# Read This First — Codex Version
+# Project Management — Codex Routing Note
 
-This is the Codex-first version of ProjectOS.
+ProjectOS is retained for process templates and historical delivery records. It must not route current Jax work.
 
-Use this for Jax and personal projects.
+Before any Jax task, read the canonical documentation chain:
 
-Do not use Claude-specific workflow files for personal projects.
+1. `Docs/JAX_PRODUCT_CHARTER.md`
+2. `Docs/ROADMAP.md`
+3. `Docs/STATUS.md`
+4. `Docs/CAPABILITY_MATRIX.md`
+5. `Docs/BUILD/CURRENT_PACKAGE.md`
+6. `Docs/ARCHITECTURE.md` when architecture is affected
+7. The relevant domain documents and repository skill
 
-## Files Codex should care about first
-
-1. `/ai/AGENTS.md`
-2. `/project/brief.md`
-3. `/project/roadmap.md`
-4. `/project/backlog.md`
-5. `/project/current-focus.md`
-6. `/project/decisions.md`
-7. `/project/risks.md`
-8. `/project/releases.md`
-
-## First thing to do in any repo
-
-For an existing repo:
-
-```text
-Read /ai/commands/baseline-existing-project.md and follow it.
-```
-
-For a new repo:
-
-```text
-Help me complete /project/brief.md, /project/roadmap.md, and /project/backlog.md before writing code.
-```
+Do not derive current work from this directory's template roadmap, current-focus snapshot, old phase contracts, archived plans, or `Docs/Jax-Roadmap-v2/NEXT-WORK-PACKAGE.md` unless the canonical current package explicitly links one as supporting evidence.

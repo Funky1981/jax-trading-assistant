@@ -2,136 +2,73 @@
 
 ## Product truth
 
-Jax is an event-driven trading research assistant.
+Jax is an **EVENT-DRIVEN TRADING RESEARCH + DECISION SYSTEM**. It watches
+events and evidence, resolves affected assets, forms and challenges causal
+theses, rejects weak setups, requires human approval, starts with isolated
+exploratory paper, and learns from every decision including `NO_TRADE`.
 
-It watches market events, explains what is happening, rejects weak setups, surfaces only high-quality trade candidates, requires human approval, starts with paper trading, performs research/backtesting, and learns from every decision including no-trades.
+## Initial trader
 
-## Primary behaviour
+The initial trader is the **EVENT-DRIVEN SHORT-HORIZON SWING TRADER**.
+
+```text
+event/news
+→ asset resolution
+→ evidence
+→ causal thesis
+→ quant/technical context
+→ risk
+→ human approval
+→ exploratory paper
+→ continuous thesis monitoring
+→ exit
+→ learning
+```
+
+The initial horizon is 1–5 trading sessions, typically 2–3, with a hard
+maximum of five trading sessions. Events, news, and source-backed evidence are
+the catalyst. Technicals support, confirm, or veto; they are not a sole
+catalyst.
+
+## Required behaviour
 
 Jax must:
 
-1. Ingest or receive market events.
-2. Explain what happened and why it matters.
-3. Identify affected assets.
-4. Detect conflicting signals and weak setups.
-5. Default to `NO_TRADE`.
-6. Upgrade only when evidence justifies it.
-7. Surface high-quality candidates for review.
-8. Require human approval before paper trading.
-9. Store every decision.
-10. Review outcomes later, including no-trades.
-11. Use backtesting/research evidence before promoting setup families.
+1. Ingest or receive a market event with provenance.
+2. Resolve the issuer and affected instrument or remain unresolved.
+3. Corroborate evidence and expose contradictions and unknowns.
+4. Form a causal thesis with explicit invalidation conditions.
+5. Use deterministic quant and risk context as supporting gates.
+6. Default to `NO_TRADE`.
+7. Require human approval before every exploratory paper entry.
+8. Monitor relevant new evidence and exit deterministically or recommend exit.
+9. Store decisions, provenance, policy versions, and outcomes.
+10. Learn from watched, rejected, no-trade, and closed cases.
 
-## Default decision
+## Modes and evidence
 
-The default decision is:
+`EXPLORATORY_PAPER` is product-learning mode. It is paper-only and may evolve
+through prospective, versioned rules. It does not demonstrate an edge.
 
-```text
-NO_TRADE
-```
+`FORMAL_FORWARD_PAPER` is a later scientific mode with a frozen policy,
+future-only identity, preregistered gates, and separate authorization.
 
-`NO_TRADE` is not an error. It is the most common expected outcome.
+`DEMONSTRATED_EDGE` is an evidence conclusion, not a trading mode. Neither
+exploratory paper profitability nor a paper label implies it.
 
-## Product positioning
+## Non-negotiable boundaries
 
-Jax is not:
+- `NO_TRADE` is the normal/default decision.
+- Evidence comes before inference; no model-memory substitute for provenance.
+- Human approval is mandatory for exploratory entries.
+- Paper first; no live execution is currently authorized.
+- No autonomous broker execution, live orders, or guaranteed profit claims.
+- No day-trading or generic multi-week technical swing policy in the initial
+  trader.
 
-- a live trading bot
-- an auto-execution system
-- a signal spammer
-- a day-trading scalper
-- a generic LLM financial chatbot
-- a broker replacement
-- a guaranteed profit engine
+## Scientific position
 
-Jax is:
-
-- a market-event research assistant
-- a decision filter
-- a trade rejection engine
-- a swing-first research system
-- a paper-trading validation system
-- a learning/audit system
-
-## Trading modes
-
-### Current active mode
-
-```text
-Research + Paper Trading Only
-```
-
-### Current first trading style
-
-```text
-Swing trading
-```
-
-Swing trading is first because it fits the current system best:
-
-- less dependent on tick-level data
-- less sensitive to latency
-- suitable for event digestion
-- suitable for daily / 4-hour / multi-day confirmation
-- easier to backtest and review
-- better fit for human approval
-
-### Not active yet
-
-- day trading
-- long-term investing brain
-- live execution
-- autonomous trading
-- options trading
-- leverage/margin trading
-
-## Non-negotiable rules
-
-1. No live trading.
-2. No unattended execution.
-3. No auto-trading.
-4. Paper trading requires human approval.
-5. Every trade candidate requires evidence.
-6. Every no-trade must be logged.
-7. Every phase must include explicit exclusions.
-8. Every implementation must update the capability matrix.
-9. Every decision feature must include golden tests.
-10. If Jax cannot explain the edge, it must reject the setup.
-
-## Decision ladder
-
-```text
-NO_TRADE
-WATCH
-SETUP_FORMING
-TRADE_CANDIDATE
-PAPER_APPROVAL_REQUIRED
-APPROVED_FOR_PAPER
-PAPER_REJECTED
-PAPER_PROVEN
-```
-
-Live trading is not part of the current roadmap.
-
-## Success definition
-
-Jax is successful when it can process a market event and return:
-
-```text
-What happened?
-Why it matters?
-Which assets are affected?
-What signals conflict?
-Is there a trade edge?
-What decision is justified?
-What should be watched next?
-When should this be reviewed?
-```
-
-Most outputs should be:
-
-```text
-NO_TRADE
-```
-
-That is the point.
+`ma_crossover_v1` is closed after failed historical validation. Trading edge is
+not demonstrated. PAPER-01 is implemented and requires external review;
+PAPER-02 is not started or authorized; formal forward paper is not started;
+Phase 13 is blocked.
