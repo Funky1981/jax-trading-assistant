@@ -257,7 +257,7 @@ func (p *Position) Reassess(e RelevantEvidence, at time.Time, policyVersion stri
 	if e.Signal == EvidenceIrrelevant {
 		return nil
 	}
-	next := p.State
+	var next ThesisState
 	switch e.Signal {
 	case EvidenceStrengthens:
 		next = StateStrengthened
