@@ -302,8 +302,8 @@ change was made after observing the result.
 
 ## Result artifact hashes
 
-- `VAL-03R4-EXECUTION-AUTHORIZATION.json`:
-  `bb437cd90c2d670edec09d53def4e0b8cc5f2084ac8a49aa5ad2ef2ac51740cd`
+- `VAL-03R4B-EXECUTION-AUTHORIZATION.json`:
+  `620962836124c54992c21286fc133572c53197f84a825c7b9e4ccaac037e6114`
 - `VAL-03R4-RUN-STATE.json`:
   `3c6badcf508938770560f4e02c3ed634135ddffbec9a7af92d6533ed05773e60`
 - `VAL-03R4-PRIMARY.json`:
@@ -321,7 +321,6 @@ R4A1 execution freeze SHA
 
 ## Files changed
 
-- `Docs/validation/results/VAL-03R4-EXECUTION-AUTHORIZATION.json`
 - `Docs/validation/results/VAL-03R4-RUN-STATE.json`
 - `Docs/validation/results/VAL-03R4-PRIMARY.json`
 - `Docs/validation/results/VAL-03R4-FALSIFICATION.json`
