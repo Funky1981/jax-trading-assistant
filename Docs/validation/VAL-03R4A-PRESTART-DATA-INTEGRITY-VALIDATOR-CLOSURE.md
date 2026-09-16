@@ -4,6 +4,10 @@
 
 `VAL-03R4A = COMPLETE / EXTERNAL REVIEW REQUIRED`.
 
+`VAL-03R4A1` supersedes this document only for the active runner's preflight
+dispatch and execution-freeze identity. This R4A record remains historical and
+immutable; its forensic, preflight and freeze hashes are preserved unchanged.
+
 The single prior VAL-03R4 attempt was a pre-start abort. It did not create the
 formal recovery run marker, and no strategy outcome was exposed. The old R4
 authorization remains historical and is not reusable. R4B authorization is

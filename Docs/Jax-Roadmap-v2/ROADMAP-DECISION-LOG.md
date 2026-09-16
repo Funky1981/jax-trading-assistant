@@ -1,5 +1,25 @@
 # Roadmap Decision Log
 
+## RD-2026-09-16-15 - VAL-03R4A1 full execution-path preflight closure
+
+- `VAL-03R4` attempt #1 remains `PRE-START ABORTED`; `VAL-03R4A` remains the
+  accepted canonical-validator correction. Their evidence is historical and
+  unchanged.
+- `VAL-03R4A1` corrected the remaining dispatch defect: official
+  `--preflight-only` now invokes the same complete outcome-free combined
+  RAW/SPLIT/SPLIT+SPIN-OFF structural loader that future `--execute` invokes
+  before `STARTED_ONCE`.
+- The local hash-bound structural preflight passed for nine instruments and
+  2,688 combined synchronized sessions per instrument, with zero canonical
+  factor failures, zero SPLIT/SPLIT+SPIN-OFF differences and zero out-of-range
+  rows. No strategy signals, episodes, returns or outcomes were calculated.
+- The new R4A1 freeze binds the active runner/helper source identities and is
+  required by the future R4B authorization. The old R4 authorization remains
+  historical and unusable; R4B authorization is absent. Formal recovery run
+  count remains `0`, and forward paper and Phase 13 remain not started.
+- `VAL-03R4A1 = COMPLETE / EXTERNAL REVIEW REQUIRED`; `VAL-03R4B` remains not
+  authorized.
+
 ## RD-2026-09-15-14 - VAL-03R4A pre-start data-integrity validator closure
 
 - The single VAL-03R4 attempt aborted before `STARTED_ONCE` on the XLK

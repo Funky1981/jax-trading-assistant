@@ -15,6 +15,7 @@ const (
 	r4aPreflightSHA      = "2d5f7fc479b6777854987fe1954114a74a528015d0952ed086666aad635b777f"
 )
 
+//nolint:unused // historical R4A freeze identity set; R4A1 is the active freeze.
 var r4aRunnerPaths = map[string]string{
 	"main.go":            "cmd/val03r-recovery-oos/main.go",
 	"config.go":          "cmd/val03r-recovery-oos/config.go",
@@ -28,6 +29,7 @@ var r4aRunnerPaths = map[string]string{
 	"val03b_contract.go": "libs/marketdata/val03b_contract.go",
 }
 
+//nolint:unused // historical R4A freeze validator retained for auditability.
 func r4aValidateFreeze() error {
 	b, err := os.ReadFile(r4aFreezePath)
 	if err != nil {
