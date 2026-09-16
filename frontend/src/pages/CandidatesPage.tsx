@@ -116,12 +116,22 @@ function CandidateRow({ candidate }: { candidate: OperatorCandidateSummary }) {
             {candidateState(candidate)}
           </Badge>
           <Badge variant="outline">{decisionState(candidate)}</Badge>
+          {candidate.mode && <Badge variant="outline">{candidate.mode}</Badge>}
         </div>
         <div>
           <p className="text-sm font-medium">{planState(candidate)}</p>
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground" title={candidate.reason}>
             {candidate.reason}
           </p>
+          {(candidate.direction || candidate.expectedHorizonSessions || candidate.latestThesisState) && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {candidate.direction ?? 'Direction pending'}
+              {candidate.expectedHorizonSessions
+                ? ` · max ${candidate.expectedHorizonSessions} trading sessions`
+                : ''}
+              {candidate.latestThesisState ? ` · thesis ${candidate.latestThesisState}` : ''}
+            </p>
+          )}
         </div>
         <Button asChild variant="outline" size="sm">
           <Link to={`/candidates/${candidate.candidateId}/evidence`}>

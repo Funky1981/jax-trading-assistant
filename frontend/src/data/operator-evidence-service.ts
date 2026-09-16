@@ -99,6 +99,14 @@ export interface OperatorCandidateSummary {
   blockReason?: string;
   createdAt: string;
   expiresAt?: string;
+  mode?: 'EXPLORATORY_PAPER' | 'FORMAL_FORWARD_PAPER' | string;
+  eventId?: string;
+  issuerId?: string;
+  direction?: 'LONG' | 'SHORT' | string;
+  expectedHorizonSessions?: number;
+  latestThesisState?: string;
+  latestEvidenceAt?: string;
+  exitRecommendation?: string;
 }
 
 export const operatorEvidenceService = {
