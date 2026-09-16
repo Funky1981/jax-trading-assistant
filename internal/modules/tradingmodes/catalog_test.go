@@ -100,6 +100,26 @@ func TestDefaultCatalogIncludesSwingPaperMode(t *testing.T) {
 	}
 }
 
+func TestDefaultCatalogIncludesEventDrivenExploratoryPaperMode(t *testing.T) {
+	mode, ok := DefaultCatalog().Get("event_driven_exploratory_paper")
+	if !ok {
+		t.Fatal("expected event_driven_exploratory_paper mode")
+	}
+	if mode.RuntimeMode != "paper" || mode.ExecutionPolicy != "candidate_approval_only" || !mode.RiskDefaults.ApprovalRequired {
+		t.Fatalf("unsafe exploratory mode defaults = %#v", mode)
+	}
+	if len(mode.Strategies) != 1 || mode.Strategies[0].StrategyTypeID != "event_driven_short_horizon_swing_v1" {
+		t.Fatalf("unexpected exploratory strategies = %#v", mode.Strategies)
+	}
+	policy := ExploratoryPaperHorizonPolicy()
+	if err := policy.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if policy.MaxHoldDays != 5 || policy.RevalidationSchedule != "one_review_per_trading_session" {
+		t.Fatalf("exploratory horizon = %#v", policy)
+	}
+}
+
 func TestCatalogGetUnknownMode(t *testing.T) {
 	catalog := DefaultCatalog()
 	_, ok := catalog.Get("does_not_exist")

@@ -163,6 +163,33 @@ func DefaultCatalog() Catalog {
 			},
 			Strategies: swingStrategyRefs(),
 		},
+		{
+			ID:              "event_driven_exploratory_paper",
+			Name:            "Event-Driven Exploratory Paper",
+			Description:     "Exploratory paper-only event theses with corroborated evidence, bounded five-session holds, human-approved entry, and continuous thesis monitoring.",
+			AssetClass:      "EQUITY_OR_ETF",
+			RuntimeMode:     "paper",
+			ExecutionPolicy: "candidate_approval_only",
+			Universe:        nil,
+			RequiredData:    []string{"accepted_events", "issuer_asset_resolution", "evidence_packets", "quotes", "daily_candles", "quant_confirmation", "portfolio_risk", "session_calendar"},
+			RiskDefaults: RiskDefaults{
+				MaxTradesPerDay:  1,
+				MaxOpenPositions: 1,
+				RiskPerTradePct:  0.15,
+				MinConfidence:    0.65,
+				FlattenBy:        "daily_revalidation",
+				ApprovalRequired: true,
+			},
+			Strategies: []StrategyRef{{
+				StrategyTypeID: "event_driven_short_horizon_swing_v1",
+				Name:           "Event-Driven Short-Horizon Swing Trader",
+				Description:    "Maps a material event and source-backed mechanism into a human-approved exploratory paper thesis.",
+				DefaultConfig: map[string]any{
+					"mode": "EXPLORATORY_PAPER",
+					"horizonPolicy": ExploratoryPaperHorizonPolicy(),
+				},
+			}},
+		},
 	}}
 }
 

@@ -50,6 +50,26 @@ func SwingHorizonPolicy(holdTargetDays, maxHoldDays int) CandidateHorizonPolicy 
 	}
 }
 
+// ExploratoryPaperHorizonPolicy is the bounded PAPER-01 policy. Its unit is
+// trading sessions (the session calendar, not calendar days, enforces exits).
+func ExploratoryPaperHorizonPolicy() CandidateHorizonPolicy {
+	return CandidateHorizonPolicy{
+		Horizon:              HorizonSwing,
+		HoldTargetDays:       3,
+		MaxHoldDays:          5,
+		FlattenByClose:       false,
+		OvernightRiskAllowed: true,
+		WeekendHoldAllowed:   false,
+		RequiresDailyReview:  true,
+		RevalidationSchedule: "one_review_per_trading_session",
+		ThesisInvalidators: []string{
+			"event_thesis_invalidated",
+			"new_material_adverse_evidence",
+			"risk_kill",
+		},
+	}
+}
+
 func (p CandidateHorizonPolicy) Validate() error {
 	switch p.Horizon {
 	case HorizonResearchOnly:
