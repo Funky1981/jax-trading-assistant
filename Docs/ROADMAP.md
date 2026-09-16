@@ -30,11 +30,23 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03R4B — SINGLE RECOVERY FORMAL OOS EXECUTION COMPLETE; EXTERNAL REVIEW REQUIRED** |
-| Next package | **NO FORWARD-PAPER PACKAGE — HISTORICAL VALIDATION FAILED** |
+| VAL-03R4B | **COMPLETE / FAILED_VALIDATION / EXTERNALLY REVIEWED**; `ma_crossover_v1` is closed |
+| VAL-04A | **COMPLETE / GO**; validation harness hardening accepted |
+| Formal forward paper | **NO-GO** for `ma_crossover_v1`; trading edge not demonstrated |
+| Current implementation package | **PAPER-01 — EVENT-DRIVEN EXPLORATORY PAPER-TRADER LOOP; EXTERNAL REVIEW REQUIRED** |
+| VAL-04B | **DEFERRED / NOT THE CURRENT NEXT STEP** |
+| Next package | **PAPER-02 — PROSPECTIVE EXPLORATORY PILOT; NOT STARTED** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
+The current implementation package is PAPER-01: an event-driven exploratory
+paper-trader loop for product learning. It requires accepted events, canonical
+issuer/asset resolution, source-backed evidence and a causal mechanism,
+supporting quant/technical confirmation, portfolio risk, human approval, and
+isolated paper execution. It is not a formal forward paper and does not
+demonstrate a trading edge. PAPER-02 is prospective exploratory work and has
+not started; FORMAL_FORWARD_PAPER has not started; Phase 13 remains blocked;
+commercialisation remains deferred and is not the current objective.
 `VAL-03R1C` closes the bounded secondary-diagnostic production-wiring,
 mixed-stratum, persisted-breadth, and fail-closed-disposition findings without
 rerunning the contaminated VAL-03 experiment. A new independent OOS remains

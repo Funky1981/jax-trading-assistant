@@ -1887,3 +1887,25 @@ INSUFFICIENT SAMPLE` and HYP-EVENT-001A remains `NOT VALIDATED`.
 - VAL-04B — `OUTCOME-BLIND NEXT-CANDIDATE SELECTION` is `NOT AUTHORIZED`.
 - Phase 13 remains `NOT STARTED / BLOCKED`; optional future commercialisation
   remains `DEFERRED / NOT A CURRENT OBJECTIVE`.
+
+## RD-2026-09-16-02 - PAPER-01 event-driven exploratory paper loop
+
+- VAL-03R4B is terminally `COMPLETE / FAILED_VALIDATION / EXTERNALLY_REVIEWED`;
+  `ma_crossover_v1` is closed and the formal forward paper is `NO-GO`.
+- VAL-04A is `COMPLETE / GO`; VAL-04B is deferred and is not the current next
+  step.
+- The roadmap change is `GO PAPER-01`: implement an event-driven,
+  short-horizon exploratory paper-trader loop for product learning.
+- `EXPLORATORY_PAPER` and `FORMAL_FORWARD_PAPER` are distinct immutable modes.
+  Exploratory records cannot populate or be relabelled into a formal run.
+- The exploratory loop requires source-backed event/evidence identity,
+  canonical issuer/asset resolution, a causal mechanism, supporting
+  quant/technical confirmation, deterministic portfolio risk, human-approved
+  entry, an isolated `PAPER` venue with `ExecutionAuthority=NONE`, and
+  continuous one-review-per-trading-session thesis monitoring.
+- Holds are bounded to 1–5 trading sessions. Stop, target, thesis invalidation,
+  risk-kill, manual, and hard time-limit exits retain immutable provenance;
+  market-closed invalidation defers to the next known tradable session.
+- PAPER-02 prospective exploratory pilot, formal forward paper, Phase 13, and
+  future commercialisation remain not started/deferred. No live broker or real
+  order state is authorized.
