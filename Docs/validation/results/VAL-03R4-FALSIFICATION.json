@@ -1,0 +1,1387 @@
+{
+  "atr_0_90": {
+    "atr_scale": 0.9,
+    "episodes": 113,
+    "fast": 20,
+    "mean_net_return": 0.006389211101127401,
+    "medium": 50,
+    "replacement_allowed": false,
+    "slow": 200,
+    "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"
+  },
+  "atr_1_10": {
+    "atr_scale": 1.1,
+    "episodes": 100,
+    "fast": 20,
+    "mean_net_return": 0.007156123661891989,
+    "medium": 50,
+    "replacement_allowed": false,
+    "slow": 200,
+    "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"
+  },
+  "dispositions": [
+    {
+      "name": "matched_non_signal_placebo",
+      "status": "PASS",
+      "blocking": true
+    },
+    {
+      "name": "timestamp_placebo",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "secondary_sign_permutation",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "top_5_percent_exclusion",
+      "status": "FAIL",
+      "blocking": true,
+      "reason": "top-five removal eliminates the remaining primary or paired effect"
+    },
+    {
+      "name": "leave_one_instrument_out",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "regime_slices",
+      "status": "PASS",
+      "blocking": true
+    },
+    {
+      "name": "theme_slices",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "sma_19_49_199",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "sma_21_51_201",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "atr_0_90",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "atr_1_10",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "stress_cost",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "overlap_sensitivity",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    },
+    {
+      "name": "zero_and_buy_hold_baselines",
+      "status": "INFORMATIONAL",
+      "blocking": false
+    }
+  ],
+  "leave_one_instrument_out": [
+    {
+      "episode_count": 91,
+      "excluded_instrument": "SPY",
+      "mean_net_return": 0.009277722679244968
+    },
+    {
+      "episode_count": 90,
+      "excluded_instrument": "QQQ",
+      "mean_net_return": 0.009476032777784027
+    },
+    {
+      "episode_count": 97,
+      "excluded_instrument": "IWM",
+      "mean_net_return": 0.00831838206630922
+    },
+    {
+      "episode_count": 93,
+      "excluded_instrument": "DIA",
+      "mean_net_return": 0.007682409716772756
+    },
+    {
+      "episode_count": 100,
+      "excluded_instrument": "XLK",
+      "mean_net_return": 0.008306844278672903
+    },
+    {
+      "episode_count": 99,
+      "excluded_instrument": "XLF",
+      "mean_net_return": 0.008379028987050606
+    },
+    {
+      "episode_count": 105,
+      "excluded_instrument": "XLE",
+      "mean_net_return": 0.008765035454618604
+    },
+    {
+      "episode_count": 105,
+      "excluded_instrument": "TLT",
+      "mean_net_return": 0.008674786087716175
+    },
+    {
+      "episode_count": 84,
+      "excluded_instrument": "GLD",
+      "mean_net_return": 0.003123153208920267
+    }
+  ],
+  "matched_non_signal_placebo": {
+    "bootstrap_low": -0.021823754952016352,
+    "mean_difference": -0.010025923924926792,
+    "pairs": 80
+  },
+  "overlap_sensitivity": {
+    "episode_count": 70,
+    "mean_net_return": 0.004178844628464389,
+    "status": "EXECUTED_FROZEN_EARLIEST_SIGNAL",
+    "window_sessions": 20
+  },
+  "regime_slices": {
+    "slice_key": "regime",
+    "slices": {
+      "SPY_ABOVE_SMA200": {
+        "contribution": 0.7937176524567938,
+        "episode_count": 103,
+        "mean_net_return": 0.007705996625794115
+      },
+      "SPY_BELOW_SMA200": {
+        "contribution": 0.07780701091613992,
+        "episode_count": 5,
+        "mean_net_return": 0.015561402183227985
+      }
+    },
+    "status": "REPORTED_DESCRIPTIVELY"
+  },
+  "secondary_sign_permutation": {
+    "policy": "SECONDARY_DIRECTIONAL_PRICE_EFFECT_V1",
+    "status": "INFORMATIONAL",
+    "replicates": 10000,
+    "seed": 12614214559385995582,
+    "p_value": 0.8578142185781422,
+    "mixed_strata": 10,
+    "algorithm": "SHA256_INDEPENDENT_SIGN_ASSIGNMENT_V1",
+    "strata": [
+      "DIA-2025",
+      "DIA-2026",
+      "GLD-2025",
+      "GLD-2026",
+      "IWM-2025",
+      "IWM-2026",
+      "QQQ-2025",
+      "QQQ-2026",
+      "SPY-2025",
+      "SPY-2026",
+      "TLT-2025",
+      "TLT-2026",
+      "XLE-2025",
+      "XLF-2025",
+      "XLF-2026",
+      "XLK-2025"
+    ],
+    "mixed_strata_ids": [
+      "DIA-2025",
+      "GLD-2026",
+      "IWM-2025",
+      "QQQ-2025",
+      "SPY-2025",
+      "TLT-2025",
+      "TLT-2026",
+      "XLE-2025",
+      "XLF-2026",
+      "XLK-2025"
+    ],
+    "excluded_single_direction_strata_ids": [
+      "DIA-2026",
+      "GLD-2025",
+      "IWM-2026",
+      "QQQ-2026",
+      "SPY-2026",
+      "XLF-2025"
+    ],
+    "observations_used": 82,
+    "observations_excluded": 54,
+    "mixed_stratum_policy": "MIXED_INSTRUMENT_YEAR_ONLY_V1",
+    "null_statistic_policy": "SIGN_X_ABSOLUTE_MAGNITUDE_NULL_V1",
+    "observed_statistic": -0.005773892187999655,
+    "null_statistic_digest": "17b1c5d0d48091b62804fb7bb83af5320b8defdb70207b9636f49ebcbc39e3a8"
+  },
+  "seed_domain": "96a0a21ae6b4d25047da0b90e34bdc839b241e5bc4b2da5a37f89135bea9360a|falsification-v1|",
+  "sma_19_49_199": {
+    "atr_scale": 1,
+    "episodes": 109,
+    "fast": 19,
+    "mean_net_return": 0.007744540178614822,
+    "medium": 49,
+    "replacement_allowed": false,
+    "slow": 199,
+    "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"
+  },
+  "sma_21_51_201": {
+    "atr_scale": 1,
+    "episodes": 103,
+    "fast": 21,
+    "mean_net_return": 0.005815178851728701,
+    "medium": 51,
+    "replacement_allowed": false,
+    "slow": 201,
+    "status": "EXECUTED_FROZEN_FALSIFICATION_VARIANT"
+  },
+  "stress_cost": {
+    "mean_net_return": 0.0019403538184258732,
+    "model": "cost_4c9e2fbffb41d05b537eadf05b142c8f8d00ed46d672d75bca5f83a4269404f8"
+  },
+  "theme_slices": {
+    "slice_key": "theme",
+    "slices": {
+      "broad_equity": {
+        "contribution": 0.26763577558801954,
+        "episode_count": 61,
+        "mean_net_return": 0.00438747173095114
+      },
+      "rates_precious_metal": {
+        "contribution": 0.569851917986367,
+        "episode_count": 27,
+        "mean_net_return": 0.02110562659208767
+      },
+      "sector_equity": {
+        "contribution": 0.03403696979854741,
+        "episode_count": 20,
+        "mean_net_return": 0.0017018484899273705
+      }
+    },
+    "status": "REPORTED_DESCRIPTIVELY"
+  },
+  "timestamp_placebo": {
+    "future_matching": false,
+    "replicates": 10000,
+    "seed_sha256": "37114c390002d7f19e2fabb24dd4957a53e5c365f91afef2632025525acad3ea",
+    "selection_count": 160000,
+    "selection_digest": "d7055fea1675d5e804f56da9a9292abcc68c97c59a8a03d9b935dc5d261cc79d",
+    "status": "EXECUTED_DETERMINISTIC_CONSTRAINED_SELECTIONS"
+  },
+  "top_5_percent_exclusion": {
+    "disposition": {
+      "name": "top_5_percent_exclusion",
+      "status": "FAIL",
+      "blocking": true,
+      "reason": "top-five removal eliminates the remaining primary or paired effect"
+    },
+    "mean_after": 0.004458215031798755,
+    "mean_before": 0.008069672809008646,
+    "remaining_episode_count": 102,
+    "remaining_matched_pairs": 77,
+    "remaining_mean_paired_difference": -0.013627952033240803,
+    "removed": [
+      "GLD-2026-01-30",
+      "XLK-2025-10-13",
+      "GLD-2025-04-14",
+      "GLD-2025-11-13",
+      "IWM-2026-05-20",
+      "GLD-2026-01-27"
+    ],
+    "removed_count": 6,
+    "rule_version": "CEIL_5_PERCENT_V1"
+  },
+  "zero_and_buy_hold_baselines": {
+    "gross_vs_net": true,
+    "same_asset_buy_hold": [
+      {
+        "duration": 11,
+        "episode_id": "SPY-2025-02-07",
+        "return": -0.016207804248133284
+      },
+      {
+        "duration": 16,
+        "episode_id": "SPY-2025-07-01",
+        "return": 0.027833581751020686
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2025-07-25",
+        "return": 0.012282738281985228
+      },
+      {
+        "duration": 12,
+        "episode_id": "SPY-2025-08-25",
+        "return": 0.024026782933665336
+      },
+      {
+        "duration": 15,
+        "episode_id": "SPY-2025-09-12",
+        "return": 0.014507913407313167
+      },
+      {
+        "duration": 16,
+        "episode_id": "SPY-2025-10-06",
+        "return": 0.02158979391560356
+      },
+      {
+        "duration": 17,
+        "episode_id": "SPY-2025-10-29",
+        "return": -0.0363649656382512
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2025-11-25",
+        "return": 0.01881557782270571
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2025-12-26",
+        "return": 0.011562963609390131
+      },
+      {
+        "duration": 3,
+        "episode_id": "SPY-2026-01-28",
+        "return": -0.0014072574275908467
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2026-02-06",
+        "return": -0.0161730149981143
+      },
+      {
+        "duration": 9,
+        "episode_id": "SPY-2026-04-23",
+        "return": 0.032472740063313354
+      },
+      {
+        "duration": 14,
+        "episode_id": "SPY-2026-05-07",
+        "return": 0.026764453757500917
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2026-05-29",
+        "return": -0.019010802796017856
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2026-06-30",
+        "return": -0.02085906040268448
+      },
+      {
+        "duration": 2,
+        "episode_id": "SPY-2026-07-31",
+        "return": 0.029208475661827382
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2026-08-05",
+        "return": -0.006556653380247024
+      },
+      {
+        "duration": 4,
+        "episode_id": "QQQ-2025-01-06",
+        "return": -0.038109553073688684
+      },
+      {
+        "duration": 20,
+        "episode_id": "QQQ-2025-01-17",
+        "return": 0.028390024405124947
+      },
+      {
+        "duration": 4,
+        "episode_id": "QQQ-2025-02-19",
+        "return": -0.04716648413862223
+      },
+      {
+        "duration": 14,
+        "episode_id": "QQQ-2025-06-24",
+        "return": 0.027044976570859358
+      },
+      {
+        "duration": 11,
+        "episode_id": "QQQ-2025-07-16",
+        "return": 0.012526432744346172
+      },
+      {
+        "duration": 7,
+        "episode_id": "QQQ-2025-08-04",
+        "return": 0.02644192504289089
+      },
+      {
+        "duration": 20,
+        "episode_id": "QQQ-2025-08-14",
+        "return": 0.011831666091755899
+      },
+      {
+        "duration": 15,
+        "episode_id": "QQQ-2025-09-15",
+        "return": 0.02548050151026815
+      },
+      {
+        "duration": 14,
+        "episode_id": "QQQ-2025-10-07",
+        "return": 0.0374622156885418
+      },
+      {
+        "duration": 18,
+        "episode_id": "QQQ-2025-10-28",
+        "return": -0.07161849620038074
+      },
+      {
+        "duration": 20,
+        "episode_id": "QQQ-2025-11-26",
+        "return": 0.012627615198584685
+      },
+      {
+        "duration": 14,
+        "episode_id": "QQQ-2025-12-29",
+        "return": -0.019004904491481844
+      },
+      {
+        "duration": 9,
+        "episode_id": "QQQ-2026-01-22",
+        "return": -0.022558210833750203
+      },
+      {
+        "duration": 8,
+        "episode_id": "QQQ-2026-04-21",
+        "return": 0.036914558178881896
+      },
+      {
+        "duration": 3,
+        "episode_id": "QQQ-2026-05-04",
+        "return": 0.02504572541152883
+      },
+      {
+        "duration": 14,
+        "episode_id": "QQQ-2026-05-08",
+        "return": 0.03934624697336542
+      },
+      {
+        "duration": 20,
+        "episode_id": "QQQ-2026-06-01",
+        "return": -0.008081896551724088
+      },
+      {
+        "duration": 11,
+        "episode_id": "QQQ-2026-07-01",
+        "return": -0.041690785302792244
+      },
+      {
+        "duration": 2,
+        "episode_id": "IWM-2025-02-18",
+        "return": -0.005101814471407673
+      },
+      {
+        "duration": 17,
+        "episode_id": "IWM-2025-08-12",
+        "return": 0.04166301585910803
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2025-09-08",
+        "return": 0.03745271122320304
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2025-10-07",
+        "return": -0.016634050880626305
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2025-12-15",
+        "return": 0.05133019094032121
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2026-01-15",
+        "return": -0.010926598085494676
+      },
+      {
+        "duration": 12,
+        "episode_id": "IWM-2026-02-18",
+        "return": -0.044483375861675056
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2026-04-21",
+        "return": -0.016535177780179322
+      },
+      {
+        "duration": 16,
+        "episode_id": "IWM-2026-05-20",
+        "return": 0.05128113112753874
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2026-06-15",
+        "return": 0.0009137055837562524
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2026-08-03",
+        "return": -0.012298800362915308
+      },
+      {
+        "duration": 11,
+        "episode_id": "DIA-2025-02-05",
+        "return": -0.03382663847780132
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2025-07-15",
+        "return": 0.006382111981170446
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2025-08-13",
+        "return": 0.031670165721177534
+      },
+      {
+        "duration": 15,
+        "episode_id": "DIA-2025-09-12",
+        "return": 0.01631504005391249
+      },
+      {
+        "duration": 16,
+        "episode_id": "DIA-2025-10-06",
+        "return": 0.0205325633622071
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2025-10-29",
+        "return": 0.0005273149124658261
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2025-11-28",
+        "return": 0.02160897246700677
+      },
+      {
+        "duration": 8,
+        "episode_id": "DIA-2025-12-30",
+        "return": 0.02532823322650679
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2026-01-13",
+        "return": 0.02174621937798049
+      },
+      {
+        "duration": 12,
+        "episode_id": "DIA-2026-02-12",
+        "return": -0.019230769230769273
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2026-04-27",
+        "return": 0.02389251408422166
+      },
+      {
+        "duration": 14,
+        "episode_id": "DIA-2026-05-27",
+        "return": 0.031869947658484055
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2026-06-17",
+        "return": 0.004590783712362212
+      },
+      {
+        "duration": 6,
+        "episode_id": "DIA-2026-07-28",
+        "return": 0.03895035026604887
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2026-08-06",
+        "return": -0.003294938788390822
+      },
+      {
+        "duration": 3,
+        "episode_id": "XLK-2025-01-06",
+        "return": -0.04674999999999996
+      },
+      {
+        "duration": 13,
+        "episode_id": "XLK-2025-06-27",
+        "return": 0.031980076688935544
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLK-2025-07-18",
+        "return": 0.01730607244046234
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLK-2025-08-18",
+        "return": 0.02329338392756508
+      },
+      {
+        "duration": 3,
+        "episode_id": "XLK-2025-09-17",
+        "return": 0.028041462084015478
+      },
+      {
+        "duration": 13,
+        "episode_id": "XLK-2025-09-23",
+        "return": -0.009182474997330825
+      },
+      {
+        "duration": 11,
+        "episode_id": "XLK-2025-10-13",
+        "return": 0.07294886827985625
+      },
+      {
+        "duration": 16,
+        "episode_id": "XLK-2025-10-29",
+        "return": -0.10003306878306883
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-01-31",
+        "return": 0.019507389162561672
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-05-13",
+        "return": -0.0020545934840034974
+      },
+      {
+        "duration": 12,
+        "episode_id": "XLF-2025-06-12",
+        "return": 0.04587884806355502
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-07-02",
+        "return": -0.007203791469194365
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-08-12",
+        "return": 0.009494872768704976
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-09-11",
+        "return": -0.011860637509266136
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-12-12",
+        "return": -0.01721638274737225
+      },
+      {
+        "duration": 18,
+        "episode_id": "XLF-2026-07-09",
+        "return": 0.03375602786211829
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2026-08-05",
+        "return": -0.012332990750257067
+      },
+      {
+        "duration": 2,
+        "episode_id": "XLE-2025-04-01",
+        "return": -0.06931330472103014
+      },
+      {
+        "duration": 9,
+        "episode_id": "XLE-2025-09-15",
+        "return": 0.037208253467132746
+      },
+      {
+        "duration": 9,
+        "episode_id": "XLE-2025-09-29",
+        "return": -0.04792760585409461
+      },
+      {
+        "duration": 13,
+        "episode_id": "TLT-2025-10-02",
+        "return": 0.02644203949570456
+      },
+      {
+        "duration": 20,
+        "episode_id": "TLT-2025-10-22",
+        "return": -0.029800240148455504
+      },
+      {
+        "duration": 10,
+        "episode_id": "TLT-2026-02-25",
+        "return": -0.0324228292249612
+      },
+      {
+        "duration": 9,
+        "episode_id": "GLD-2025-01-21",
+        "return": 0.02221872665067437
+      },
+      {
+        "duration": 7,
+        "episode_id": "GLD-2025-02-04",
+        "return": 0.022159198336169528
+      },
+      {
+        "duration": 18,
+        "episode_id": "GLD-2025-02-14",
+        "return": 0.020209136754672175
+      },
+      {
+        "duration": 11,
+        "episode_id": "GLD-2025-03-14",
+        "return": 0.04572838789286471
+      },
+      {
+        "duration": 8,
+        "episode_id": "GLD-2025-04-01",
+        "return": 0.03347439988899703
+      },
+      {
+        "duration": 4,
+        "episode_id": "GLD-2025-04-14",
+        "return": 0.0628430943319973
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2025-04-22",
+        "return": -0.0019725162732593393
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2025-05-21",
+        "return": 0.016519715493788834
+      },
+      {
+        "duration": 4,
+        "episode_id": "GLD-2025-06-23",
+        "return": -0.012620054413741033
+      },
+      {
+        "duration": 19,
+        "episode_id": "GLD-2025-07-02",
+        "return": -0.019833903273082654
+      },
+      {
+        "duration": 19,
+        "episode_id": "GLD-2025-08-05",
+        "return": 0.04920726991492641
+      },
+      {
+        "duration": 4,
+        "episode_id": "GLD-2025-09-03",
+        "return": 0.021496498792159757
+      },
+      {
+        "duration": 9,
+        "episode_id": "GLD-2025-09-10",
+        "return": 0.03926568077511461
+      },
+      {
+        "duration": 5,
+        "episode_id": "GLD-2025-09-24",
+        "return": 0.0337988907924156
+      },
+      {
+        "duration": 4,
+        "episode_id": "GLD-2025-10-02",
+        "return": 0.0425067204301075
+      },
+      {
+        "duration": 3,
+        "episode_id": "GLD-2025-10-09",
+        "return": 0.03605049790499004
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2025-10-15",
+        "return": -0.013191870126549876
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2025-11-13",
+        "return": 0.06053047979188464
+      },
+      {
+        "duration": 6,
+        "episode_id": "GLD-2025-12-15",
+        "return": 0.039949717159019515
+      },
+      {
+        "duration": 16,
+        "episode_id": "GLD-2025-12-24",
+        "return": 0.04982232039953893
+      },
+      {
+        "duration": 3,
+        "episode_id": "GLD-2026-01-21",
+        "return": 0.046998918529199685
+      },
+      {
+        "duration": 2,
+        "episode_id": "GLD-2026-01-27",
+        "return": 0.025879724446099317
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2026-01-30",
+        "return": 0.12900624409575823
+      },
+      {
+        "duration": 12,
+        "episode_id": "GLD-2026-03-03",
+        "return": -0.1019544248346741
+      }
+    ],
+    "spy_buy_hold": [
+      {
+        "duration": 11,
+        "episode_id": "SPY-2025-02-07",
+        "return": -0.016207804248133284
+      },
+      {
+        "duration": 16,
+        "episode_id": "SPY-2025-07-01",
+        "return": 0.027833581751020686
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2025-07-25",
+        "return": 0.012282738281985228
+      },
+      {
+        "duration": 12,
+        "episode_id": "SPY-2025-08-25",
+        "return": 0.024026782933665336
+      },
+      {
+        "duration": 15,
+        "episode_id": "SPY-2025-09-12",
+        "return": 0.014507913407313167
+      },
+      {
+        "duration": 16,
+        "episode_id": "SPY-2025-10-06",
+        "return": 0.02158979391560356
+      },
+      {
+        "duration": 17,
+        "episode_id": "SPY-2025-10-29",
+        "return": -0.0363649656382512
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2025-11-25",
+        "return": 0.01881557782270571
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2025-12-26",
+        "return": 0.011562963609390131
+      },
+      {
+        "duration": 3,
+        "episode_id": "SPY-2026-01-28",
+        "return": -0.0014072574275908467
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2026-02-06",
+        "return": -0.0161730149981143
+      },
+      {
+        "duration": 9,
+        "episode_id": "SPY-2026-04-23",
+        "return": 0.032472740063313354
+      },
+      {
+        "duration": 14,
+        "episode_id": "SPY-2026-05-07",
+        "return": 0.026764453757500917
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2026-05-29",
+        "return": -0.019010802796017856
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2026-06-30",
+        "return": -0.02085906040268448
+      },
+      {
+        "duration": 2,
+        "episode_id": "SPY-2026-07-31",
+        "return": 0.029208475661827382
+      },
+      {
+        "duration": 20,
+        "episode_id": "SPY-2026-08-05",
+        "return": -0.006556653380247024
+      },
+      {
+        "duration": 4,
+        "episode_id": "QQQ-2025-01-06",
+        "return": -0.02683204445783527
+      },
+      {
+        "duration": 20,
+        "episode_id": "QQQ-2025-01-17",
+        "return": 0.01801321857259408
+      },
+      {
+        "duration": 4,
+        "episode_id": "QQQ-2025-02-19",
+        "return": -0.028289237008208734
+      },
+      {
+        "duration": 14,
+        "episode_id": "QQQ-2025-06-24",
+        "return": 0.023408070273560178
+      },
+      {
+        "duration": 11,
+        "episode_id": "QQQ-2025-07-16",
+        "return": 0.012299807815502994
+      },
+      {
+        "duration": 7,
+        "episode_id": "QQQ-2025-08-04",
+        "return": 0.020734737808449033
+      },
+      {
+        "duration": 20,
+        "episode_id": "QQQ-2025-08-14",
+        "return": 0.017678292233625825
+      },
+      {
+        "duration": 15,
+        "episode_id": "QQQ-2025-09-15",
+        "return": 0.015329493401061267
+      },
+      {
+        "duration": 14,
+        "episode_id": "QQQ-2025-10-07",
+        "return": 0.02236478925773966
+      },
+      {
+        "duration": 18,
+        "episode_id": "QQQ-2025-10-28",
+        "return": -0.043108955743988875
+      },
+      {
+        "duration": 20,
+        "episode_id": "QQQ-2025-11-26",
+        "return": 0.013879505331492403
+      },
+      {
+        "duration": 14,
+        "episode_id": "QQQ-2025-12-29",
+        "return": -0.014350238928205195
+      },
+      {
+        "duration": 9,
+        "episode_id": "QQQ-2026-01-22",
+        "return": -0.002848216231926104
+      },
+      {
+        "duration": 8,
+        "episode_id": "QQQ-2026-04-21",
+        "return": 0.01621659733483738
+      },
+      {
+        "duration": 3,
+        "episode_id": "QQQ-2026-05-04",
+        "return": 0.013591587347770107
+      },
+      {
+        "duration": 14,
+        "episode_id": "QQQ-2026-05-08",
+        "return": 0.027198044673772737
+      },
+      {
+        "duration": 20,
+        "episode_id": "QQQ-2026-06-01",
+        "return": -0.013552963554944952
+      },
+      {
+        "duration": 11,
+        "episode_id": "QQQ-2026-07-01",
+        "return": -0.00549906341985551
+      },
+      {
+        "duration": 2,
+        "episode_id": "IWM-2025-02-18",
+        "return": 0.0004917387883556223
+      },
+      {
+        "duration": 17,
+        "episode_id": "IWM-2025-08-12",
+        "return": 0.0036129072273651808
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2025-09-08",
+        "return": 0.03488605020262869
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2025-10-07",
+        "return": 0.007444983215218137
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2025-12-15",
+        "return": 0.016386202022878882
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2026-01-15",
+        "return": -0.017169795000432475
+      },
+      {
+        "duration": 12,
+        "episode_id": "IWM-2026-02-18",
+        "return": -0.01675830603649986
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2026-04-21",
+        "return": 0.03466121412959189
+      },
+      {
+        "duration": 16,
+        "episode_id": "IWM-2026-05-20",
+        "return": 0.00421044081013755
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2026-06-15",
+        "return": 0.000344576237492511
+      },
+      {
+        "duration": 20,
+        "episode_id": "IWM-2026-08-03",
+        "return": 0.008440371797062918
+      },
+      {
+        "duration": 11,
+        "episode_id": "DIA-2025-02-05",
+        "return": -0.009983663096750695
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2025-07-15",
+        "return": 0.03038124859717195
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2025-08-13",
+        "return": 0.023086855738265966
+      },
+      {
+        "duration": 15,
+        "episode_id": "DIA-2025-09-12",
+        "return": 0.014507913407313167
+      },
+      {
+        "duration": 16,
+        "episode_id": "DIA-2025-10-06",
+        "return": 0.02158979391560356
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2025-10-29",
+        "return": -0.0061704927620998
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2025-11-28",
+        "return": 0.013317423137549689
+      },
+      {
+        "duration": 8,
+        "episode_id": "DIA-2025-12-30",
+        "return": 0.011671566201938433
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2026-01-13",
+        "return": 0.0013892908827786155
+      },
+      {
+        "duration": 12,
+        "episode_id": "DIA-2026-02-12",
+        "return": -0.0019950417345128146
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2026-04-27",
+        "return": 0.054473423572136026
+      },
+      {
+        "duration": 14,
+        "episode_id": "DIA-2026-05-27",
+        "return": 0.00010663112295916655
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2026-06-17",
+        "return": -0.005977853856852455
+      },
+      {
+        "duration": 6,
+        "episode_id": "DIA-2026-07-28",
+        "return": 0.04029893103774462
+      },
+      {
+        "duration": 20,
+        "episode_id": "DIA-2026-08-06",
+        "return": 0.002788513916629931
+      },
+      {
+        "duration": 3,
+        "episode_id": "XLK-2025-01-06",
+        "return": -0.028338522312610803
+      },
+      {
+        "duration": 13,
+        "episode_id": "XLK-2025-06-27",
+        "return": 0.017266513330525646
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLK-2025-07-18",
+        "return": 0.023331265804666268
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLK-2025-08-18",
+        "return": 0.0262470456524444
+      },
+      {
+        "duration": 3,
+        "episode_id": "XLK-2025-09-17",
+        "return": 0.007478584054752435
+      },
+      {
+        "duration": 13,
+        "episode_id": "XLK-2025-09-23",
+        "return": -0.017290936178537608
+      },
+      {
+        "duration": 11,
+        "episode_id": "XLK-2025-10-13",
+        "return": 0.045482903967009936
+      },
+      {
+        "duration": 16,
+        "episode_id": "XLK-2025-10-29",
+        "return": -0.04586927913437633
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-01-31",
+        "return": -0.015016788432011041
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-05-13",
+        "return": 0.023051666354774625
+      },
+      {
+        "duration": 12,
+        "episode_id": "XLF-2025-06-12",
+        "return": 0.0319966583124478
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-07-02",
+        "return": 0.015471122178488228
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-08-12",
+        "return": 0.011319408909770567
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-09-11",
+        "return": 0.020620437956204274
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2025-12-12",
+        "return": 0.011709977542508687
+      },
+      {
+        "duration": 18,
+        "episode_id": "XLF-2026-07-09",
+        "return": 0.02563659331161494
+      },
+      {
+        "duration": 20,
+        "episode_id": "XLF-2026-08-05",
+        "return": -0.006556653380247024
+      },
+      {
+        "duration": 2,
+        "episode_id": "XLE-2025-04-01",
+        "return": -0.03306008467705601
+      },
+      {
+        "duration": 9,
+        "episode_id": "XLE-2025-09-15",
+        "return": 0.000529124525677771
+      },
+      {
+        "duration": 9,
+        "episode_id": "XLE-2025-09-29",
+        "return": -0.014948787956496123
+      },
+      {
+        "duration": 13,
+        "episode_id": "TLT-2025-10-02",
+        "return": 0.001940327467573999
+      },
+      {
+        "duration": 20,
+        "episode_id": "TLT-2025-10-22",
+        "return": -0.008217086750883063
+      },
+      {
+        "duration": 10,
+        "episode_id": "TLT-2026-02-25",
+        "return": -0.02444899607662121
+      },
+      {
+        "duration": 9,
+        "episode_id": "GLD-2025-01-21",
+        "return": -0.013450620543966174
+      },
+      {
+        "duration": 7,
+        "episode_id": "GLD-2025-02-04",
+        "return": 0.01513385721896654
+      },
+      {
+        "duration": 18,
+        "episode_id": "GLD-2025-02-14",
+        "return": -0.09733499214248309
+      },
+      {
+        "duration": 11,
+        "episode_id": "GLD-2025-03-14",
+        "return": -0.0060413298033014096
+      },
+      {
+        "duration": 8,
+        "episode_id": "GLD-2025-04-01",
+        "return": -0.03803260967480393
+      },
+      {
+        "duration": 4,
+        "episode_id": "GLD-2025-04-14",
+        "return": -0.0477972854032519
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2025-04-22",
+        "return": 0.09699683585293206
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2025-05-21",
+        "return": 0.019943019943019946
+      },
+      {
+        "duration": 4,
+        "episode_id": "GLD-2025-06-23",
+        "return": 0.017506991213409817
+      },
+      {
+        "duration": 19,
+        "episode_id": "GLD-2025-07-02",
+        "return": 0.019294722467668057
+      },
+      {
+        "duration": 19,
+        "episode_id": "GLD-2025-08-05",
+        "return": 0.017836419998410236
+      },
+      {
+        "duration": 4,
+        "episode_id": "GLD-2025-09-03",
+        "return": 0.009171037522113012
+      },
+      {
+        "duration": 9,
+        "episode_id": "GLD-2025-09-10",
+        "return": 0.013803540310006523
+      },
+      {
+        "duration": 5,
+        "episode_id": "GLD-2025-09-24",
+        "return": 0.015974100981852368
+      },
+      {
+        "duration": 4,
+        "episode_id": "GLD-2025-10-02",
+        "return": 0.004656785922177997
+      },
+      {
+        "duration": 3,
+        "episode_id": "GLD-2025-10-09",
+        "return": -0.014729293440257085
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2025-10-15",
+        "return": 0.024834288113733782
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2025-11-13",
+        "return": 0.02461751179776961
+      },
+      {
+        "duration": 6,
+        "episode_id": "GLD-2025-12-15",
+        "return": 0.012852789187756786
+      },
+      {
+        "duration": 16,
+        "episode_id": "GLD-2025-12-24",
+        "return": -0.01890999652496228
+      },
+      {
+        "duration": 3,
+        "episode_id": "GLD-2026-01-21",
+        "return": 0.004174820613176866
+      },
+      {
+        "duration": 2,
+        "episode_id": "GLD-2026-01-27",
+        "return": -0.004318198120651262
+      },
+      {
+        "duration": 20,
+        "episode_id": "GLD-2026-01-30",
+        "return": -0.004640505815133866
+      },
+      {
+        "duration": 12,
+        "episode_id": "GLD-2026-03-03",
+        "return": -0.032026172556959165
+      }
+    ],
+    "zero_return": 0
+  }
+}

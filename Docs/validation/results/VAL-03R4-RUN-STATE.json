@@ -1,0 +1,8 @@
+{
+  "contract_id": "jax.val-03r4.recovery-run-state/v2",
+  "performance_run_count": 1,
+  "status": "COMPLETED_ONCE",
+  "candidate": "ma_crossover_v1",
+  "recovery_boundary": "2025-01-01..2026-09-11",
+  "execution_freeze_sha256": "7f1ca6532c5ab6e6fab30aed3a53179eb236ef4ed1b294a7aed40c0275f5e830"
+}

@@ -30,8 +30,8 @@ decision remains `NO_TRADE`.
 | Phase 12 — Advanced Quant Research | **COMPLETE / GO**; HYP-EVENT-001A remains **NOT VALIDATED** |
 | Commercial-Readiness Cleanup Gate | **CR-02G COMPLETE / GO** |
 | Phase 13 — Optional Personal Live Execution | **NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER EVIDENCE** |
-| Current implementation package | **VAL-03R4A1 — FULL EXECUTION-PATH PREFLIGHT CLOSURE; EXTERNAL REVIEW REQUIRED** |
-| Next package | **VAL-03R4B — SINGLE RECOVERY FORMAL OOS EXECUTION; NOT AUTHORIZED** |
+| Current implementation package | **VAL-03R4B — SINGLE RECOVERY FORMAL OOS EXECUTION COMPLETE; EXTERNAL REVIEW REQUIRED** |
+| Next package | **NO FORWARD-PAPER PACKAGE — HISTORICAL VALIDATION FAILED** |
 
 The current package context is the `capability-reset` sequence. Package
 acceptance is recorded in the relevant evidence and review handovers.
@@ -53,11 +53,14 @@ remains unauthorized until the current single-use authorization checkpoint.
 rounded XLK 2016-02-11 RAW/SPLIT frame. No `STARTED_ONCE` marker, formal run
 state or result artifact was created. `VAL-03R4A` corrected the formal loader
 to use the canonical shared factor contract and completed an outcome-free
-structural preflight. `VAL-03R4A1` now routes official `--preflight-only` and
+structural preflight. `VAL-03R4A1` routed official `--preflight-only` and
 future pre-`STARTED_ONCE` execution through the same complete structural loader
-and binds a superseding freeze. The R4A1 freeze requires a new single-use R4B
-authorization; recovery performance remains unstarted. No forward paper or
-Phase 13 activity is implied.
+and bound a superseding freeze. The single authorized `VAL-03R4B` recovery
+execution then completed exactly once over `2025-01-01..2026-09-11`. Its
+base-cost mean was positive, but the matched non-signal placebo difference was
+negative with a bootstrap interval crossing zero, and the preregistered
+top-five contribution exclusion failed. The terminal classification is
+`FAILED_VALIDATION`; no forward paper or Phase 13 activity is implied.
 `VAL-03R1D` corrects the remaining secondary null-statistic integrity defect;
 its null now uses deterministic assigned signs multiplied by fixed absolute
 magnitudes, with outcome-free regression coverage. `VAL-03R2` freezes a new,

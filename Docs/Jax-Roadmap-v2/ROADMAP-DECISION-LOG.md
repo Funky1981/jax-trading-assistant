@@ -1,5 +1,24 @@
 # Roadmap Decision Log
 
+## RD-2026-09-16-16 - VAL-03R4B single recovery formal OOS execution
+
+- External authorization `GO_VAL03R4B_SINGLE_RECOVERY_OOS_EXECUTION` was
+  bound to the R4A1 freeze SHA
+  `7f1ca6532c5ab6e6fab30aed3a53179eb236ef4ed1b294a7aed40c0275f5e830` and
+  consumed exactly once for `ma_crossover_v1` over
+  `2025-01-01..2026-09-11`.
+- The run completed with `performance_run_count=1` and terminal classification
+  `FAILED_VALIDATION`. The base-cost mean was `0.806967%`, but the matched
+  actual-minus-placebo mean was `-1.002592%` with a non-positive bootstrap
+  lower bound; the registered top-five exclusion also failed.
+- All result artifacts are retained and hash-bound. The original contaminated
+  2023–2024 run was not rerun, no strategy or protocol term changed, and no
+  recovery boundary extension occurred.
+- `VAL-03R4B = COMPLETE / FAILED_VALIDATION / EXTERNAL REVIEW REQUIRED`.
+  Forward paper remains `NOT STARTED`; Phase 13 remains
+  `NOT STARTED / BLOCKED BY STRATEGY VALIDATION AND REAL FORWARD-PAPER
+  EVIDENCE`. Safety flags remain disabled.
+
 ## RD-2026-09-16-15 - VAL-03R4A1 full execution-path preflight closure
 
 - `VAL-03R4` attempt #1 remains `PRE-START ABORTED`; `VAL-03R4A` remains the
