@@ -1,5 +1,5 @@
 {
-  "version": "us-equities-regular-2026-09-to-12-v1",
+  "version": "us-equities-regular-2026-09-to-12-v2",
   "market": "US_EQUITIES_REGULAR",
   "timezone": "America/New_York",
   "openTime": "09:30",
@@ -7,14 +7,10 @@
   "coverageStart": "2026-09-17",
   "coverageEnd": "2026-12-17",
   "weekendDays": [0, 6],
-  "holidays": [
-    "2026-10-12",
-    "2026-11-11",
-    "2026-11-26"
-  ],
+  "holidays": ["2026-11-26"],
   "specialWindows": {
     "2026-11-27": {"openTime": "09:30", "closeTime": "13:00"}
   },
-  "provenance": "frozen US regular-equity session rule manifest for the configured PAPER universe",
+  "provenance": "corrected frozen 2026 NYSE/Nasdaq equity session manifest cross-checked against official exchange calendars; bank holidays where equities remain open are not closed sessions",
   "applicableMode": "PAPER"
 }

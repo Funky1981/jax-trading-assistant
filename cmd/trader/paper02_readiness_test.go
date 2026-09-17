@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+
+	"jax-trading-assistant/internal/modules/exploratorypaper"
+)
 
 func TestPaper02RuntimeReadinessUsesRealManifestsAndBlocksDisabledIntake(t *testing.T) {
 	t.Setenv("JAX_RUNTIME_MODE", "paper")
@@ -27,4 +32,31 @@ func TestPaper02RuntimeReadinessUsesRealManifestsAndBlocksDisabledIntake(t *test
 		t.Fatalf("unsafe runtime projection: %+v", readiness)
 	}
 	t.Logf("calendar=%s calendarHash=%s universe=%s universeHash=%s risk=%s riskHash=%s entry=%s entryHash=%s", readiness.CalendarVersion, readiness.CalendarHash, readiness.EligibleUniverseVersion, readiness.EligibleUniverseHash, readiness.RiskPolicyVersion, readiness.RiskPolicyHash, readiness.EntryPolicyVersion, readiness.EntryPolicyHash)
+}
+
+func TestPaper02ActualCalendarUsesExchangeSessions(t *testing.T) {
+	calendar, err := configuredExploratoryCalendar()
+	if err != nil {
+		t.Fatal(err)
+	}
+	location, _ := time.LoadLocation("America/New_York")
+	cases := []struct {
+		name string
+		at   time.Time
+		want exploratorypaper.MarketSession
+	}{
+		{"October 12", time.Date(2026, 10, 12, 12, 0, 0, 0, location), exploratorypaper.SessionOpen},
+		{"November 11", time.Date(2026, 11, 11, 12, 0, 0, 0, location), exploratorypaper.SessionOpen},
+		{"Thanksgiving", time.Date(2026, 11, 26, 12, 0, 0, 0, location), exploratorypaper.SessionClosed},
+		{"November 27 before close", time.Date(2026, 11, 27, 12, 59, 0, 0, location), exploratorypaper.SessionOpen},
+		{"November 27 after close", time.Date(2026, 11, 27, 13, 1, 0, 0, location), exploratorypaper.SessionClosed},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := calendar.SessionState(tc.at.UTC())
+			if err != nil || got != tc.want {
+				t.Fatalf("session=%s err=%v want=%s", got, err, tc.want)
+			}
+		})
+	}
 }

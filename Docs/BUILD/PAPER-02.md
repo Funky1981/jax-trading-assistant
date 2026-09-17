@@ -5,6 +5,10 @@ The default genuine prospective source remains disabled, so PAPER-02 remains
 **READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE** and no pilot identity or observation
 exists.
 
+The corrected calendar identity is `us-equities-regular-2026-09-to-12-v2`;
+readiness fails closed if the proposed 90-day pilot deadline exceeds its
+coverage.
+
 Status: **READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE**.
 
 PAPER-02 is a prospective exploratory pilot design and readiness package. The

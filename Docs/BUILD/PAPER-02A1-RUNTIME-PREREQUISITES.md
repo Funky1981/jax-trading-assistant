@@ -18,7 +18,7 @@ The activation preflight could not resolve four real-runtime prerequisites:
 
 ## Implemented closure
 
-- `config/paper-02/session-calendar-us-equities-2026-v1.json` is a bounded,
+- `config/paper-02/session-calendar-us-equities-2026-v2.json` is a bounded,
   timezone-aware `US_EQUITIES_REGULAR` calendar with explicit coverage,
   weekends, holidays, DST-aware `America/New_York` sessions, and an early-close
   window. Coverage outside the manifest fails closed.
@@ -41,8 +41,8 @@ The activation preflight could not resolve four real-runtime prerequisites:
 
 The resolved checked-in identities are:
 
-- Calendar: `us-equities-regular-2026-09-to-12-v1`, hash
-  `sha256:ad1a064f129ca9bc552ff73773dcb9d9f9c37a681dcab0325bec7e49d14a53c8`.
+- Calendar: `us-equities-regular-2026-09-to-12-v2`, hash
+  `sha256:e3cd198d1b80b267999e6250ad4b1440d872274cce5299e90aa2b31176c7071b`.
 - Eligible universe: `paper-02-us-equities-2026-v1`, hash
   `sha256:52d98a46bdd7fc8cc90de179ca0e51f1878517ce4d47b34b756e02a818a3f569`.
 - Risk: version `v269d7a37cb3e`, hash
@@ -79,3 +79,21 @@ activation occurred.
 External review must confirm the bounded calendar/universe/policy identities
 and provide/configure a genuine prospective event source before activation.
 PAPER-02 stays **READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE**, with sample `0 / 50`.
+
+## Calendar correction
+
+External review identified that October 12 and November 11 had incorrectly been
+classified as equity-market holidays. The corrected v2 manifest models exchange
+sessions rather than generic federal/bank holidays: both dates are regular open
+sessions; November 26 is closed for Thanksgiving; and November 27 is a
+09:30–13:00 America/New_York early-close session.
+
+The correction was cross-checked against the official [NYSE 2026 trading
+calendar](https://www.nyse.com/publicdocs/nyse/ICE_NYSE_2026_Yearly_Trading_Calendar.pdf),
+the [NYSE hours and holidays page](https://www.nyse.com/markets/hours-calendars),
+and the [Nasdaq 2026 equity holiday schedule](https://nasdaqtrader.com/Trader.aspx?id=Calendar).
+
+Readiness now requires the proposed maximum pilot deadline to remain within
+calendar coverage: `PilotStartTimestamp + MaximumDurationDays <= CalendarCoverageEnd`.
+For the 90-day PAPER-02 maximum, a proposed start that would exceed the frozen
+coverage end fails closed before activation.

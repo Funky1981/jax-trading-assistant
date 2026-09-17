@@ -116,8 +116,9 @@ func (s *postgresExploratoryReviewSource) LoadReviewObservation(ctx context.Cont
 func configuredExploratoryCalendar() (exploratorypaper.SessionCalendar, error) {
 	manifestPath := strings.TrimSpace(os.Getenv("PAPER_SESSION_CALENDAR_FILE"))
 	if manifestPath == "" {
-		manifestPath = "config/paper-02/session-calendar-us-equities-2026-v1.json"
+		manifestPath = "config/paper-02/session-calendar-us-equities-2026-v2.json"
 	}
+	manifestPath = resolveRuntimePath(manifestPath)
 	if manifest, err := exploratorypaper.LoadVersionedSessionCalendar(manifestPath); err == nil {
 		return manifest.SessionCalendar()
 	}

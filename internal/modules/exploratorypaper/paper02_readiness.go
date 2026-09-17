@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"time"
 )
 
 type ProspectiveEventSourceReadiness struct {
@@ -70,6 +71,8 @@ type Paper02ReadinessInput struct {
 	ExecutionAuthority     string
 	BrokerExecutionAllowed bool
 	MaximumLeverage        float64
+	PilotStartTimestamp    *time.Time
+	MaximumDurationDays    int
 }
 
 type Paper02Readiness struct {
@@ -91,6 +94,9 @@ type Paper02Readiness struct {
 	ExecutionAuthority          string                    `json:"executionAuthority"`
 	BrokerExecutionAllowed      bool                      `json:"brokerExecutionAllowed"`
 	MaximumLeverage             float64                   `json:"maximumLeverage"`
+	CalendarCoverageReady       bool                      `json:"calendarCoverageReady"`
+	CalendarCoverageEnd         string                    `json:"calendarCoverageEnd,omitempty"`
+	CalendarDeadline            string                    `json:"calendarDeadline,omitempty"`
 	OverallReady                bool                      `json:"overallReady"`
 	BlockingReasons             []string                  `json:"blockingReasons"`
 	RiskPolicy                  *RiskPolicyIdentity       `json:"riskPolicy,omitempty"`
@@ -117,6 +123,20 @@ func AssessPaper02Readiness(input Paper02ReadinessInput) Paper02Readiness {
 		result.CalendarReady = true
 		result.CalendarVersion = input.Calendar.Version
 		result.CalendarHash = input.Calendar.ContentHash()
+		result.CalendarCoverageEnd = input.Calendar.CoverageEnd
+		location, locationErr := time.LoadLocation(input.Calendar.Timezone)
+		if locationErr != nil || input.PilotStartTimestamp == nil || input.PilotStartTimestamp.IsZero() || input.PilotStartTimestamp.Location() != time.UTC || input.MaximumDurationDays <= 0 {
+			result.BlockingReasons = append(result.BlockingReasons, "pilot start and maximum duration are required to verify calendar coverage")
+		} else {
+			startDate := input.PilotStartTimestamp.In(location)
+			deadline := startDate.AddDate(0, 0, input.MaximumDurationDays)
+			result.CalendarDeadline = deadline.Format("2006-01-02")
+			if result.CalendarCoverageEnd == "" || result.CalendarDeadline > result.CalendarCoverageEnd {
+				result.BlockingReasons = append(result.BlockingReasons, fmt.Sprintf("calendar coverage ends before the maximum pilot deadline (%s > %s)", result.CalendarDeadline, result.CalendarCoverageEnd))
+			} else {
+				result.CalendarCoverageReady = true
+			}
+		}
 	}
 	result.EventSourceIdentity = input.EventSource.SourceIdentity
 	if !input.EventSource.Ready {

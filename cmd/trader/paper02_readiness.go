@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"jax-trading-assistant/internal/modules/exploratorypaper"
 	"jax-trading-assistant/libs/risk"
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	paper02CalendarPath = "config/paper-02/session-calendar-us-equities-2026-v1.json"
+	paper02CalendarPath = "config/paper-02/session-calendar-us-equities-2026-v2.json"
 	paper02UniversePath = "config/paper-02/eligible-universe-us-equities-2026-v1.json"
 	paper02EntryPath    = "config/paper-02/entry-policy-v1.json"
 	riskPolicyPath      = "config/risk-constraints.json"
@@ -56,8 +57,10 @@ func parseFloatDefault(key string, fallback float64) (float64, error) {
 // pilot, admits an opportunity, invokes a venue, or contacts an event source.
 func loadPaper02RuntimeReadiness() exploratorypaper.Paper02Readiness {
 	input := exploratorypaper.Paper02ReadinessInput{
-		RuntimeMode:        strings.ToUpper(runtimepolicy.CurrentMode().String()),
-		ExecutionAuthority: "NONE",
+		RuntimeMode:         strings.ToUpper(runtimepolicy.CurrentMode().String()),
+		ExecutionAuthority:  "NONE",
+		PilotStartTimestamp: func() *time.Time { now := time.Now().UTC(); return &now }(),
+		MaximumDurationDays: 90,
 	}
 
 	calendarPath := resolveRuntimePath(envOrDefault("PAPER_SESSION_CALENDAR_FILE", paper02CalendarPath))
