@@ -35,9 +35,10 @@ type EntrySnapshot struct {
 }
 
 type ExitSnapshot struct {
-	Order  papertrading.PaperOrder
-	Fill   papertrading.PaperFill
-	Ledger papertrading.PaperAccount
+	Order    papertrading.PaperOrder
+	Fill     papertrading.PaperFill
+	Ledger   papertrading.PaperAccount
+	Approval *ApprovalSnapshot
 }
 
 type Review struct {
@@ -397,6 +398,20 @@ func (s *PostgresStore) PersistOutcome(ctx context.Context, positionID string, e
 	if positionID != outcome.PositionID || exit.Fill.FillID != outcome.ExitFillID || exit.Order.OrderID != outcome.ExitOrderID {
 		return fmt.Errorf("outcome exit identity is inconsistent")
 	}
+	record, err := s.Get(ctx, positionID)
+	if err != nil {
+		return failClosed("load position for outcome close", err)
+	}
+	closedPosition := record.Position
+	if closedPosition.State != StateClosed {
+		if err := closedPosition.Close(outcome.ExitAt); err != nil {
+			return failClosed("close position for outcome", err)
+		}
+	}
+	positionPayload, err := json.Marshal(closedPosition)
+	if err != nil {
+		return failClosed("encode closed position", err)
+	}
 	if err := exit.Order.Validate(); err != nil {
 		return err
 	}
@@ -409,6 +424,11 @@ func (s *PostgresStore) PersistOutcome(ctx context.Context, positionID string, e
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	if exit.Approval != nil {
+		if err := persistWorkflowSnapshot(ctx, tx, *exit.Approval); err != nil {
+			return failClosed("persist exit workflow", err)
+		}
+	}
 	if err := persistPaperArtifacts(ctx, tx, exit.Order, exit.Fill, exit.Ledger); err != nil {
 		return failClosed("persist exit artifacts", err)
 	}
@@ -416,7 +436,7 @@ func (s *PostgresStore) PersistOutcome(ctx context.Context, positionID string, e
 	if err != nil {
 		return failClosed("persist outcome", err)
 	}
-	_, err = tx.Exec(ctx, `UPDATE exploratory_paper_lifecycles SET exit_order_id=$2,exit_fill_id=$3,outcome_id=$4,outcome_payload=$5,state='CLOSED',operational_state='CLOSED',next_review_at=NULL,updated_at=$6 WHERE position_id=$1`, positionID, outcome.ExitOrderID, outcome.ExitFillID, outcome.OutcomeID, payload, s.now().UTC())
+	_, err = tx.Exec(ctx, `UPDATE exploratory_paper_lifecycles SET exit_order_id=$2,exit_fill_id=$3,outcome_id=$4,outcome_payload=$5,position_payload=$6,state='CLOSED',operational_state='CLOSED',next_review_at=NULL,updated_at=$7 WHERE position_id=$1`, positionID, outcome.ExitOrderID, outcome.ExitFillID, outcome.OutcomeID, payload, positionPayload, s.now().UTC())
 	if err != nil {
 		return failClosed("close exploratory lifecycle", err)
 	}

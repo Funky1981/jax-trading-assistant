@@ -36,7 +36,7 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	thesis.ThesisID = "thesis-pg-" + suffix
 	thesis.EventID = "event-pg-" + suffix
 	thesis.CreatedAt, thesis.CandidateGeneratedAt, thesis.EventTimestamp = now, now, now.Add(-time.Hour)
-	approval := postgresApproval(t, "pg-"+suffix, now)
+	approval := postgresApproval(t, "pg-"+suffix, "LONG", now)
 	intent := approval.PaperIntent
 	binding := fixtureBinding(thesis)
 	binding.CandidateID = "candidate-pg-" + suffix
@@ -113,11 +113,45 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if _, err := store.ApplyEvidence(ctx, position.PositionID, conflict, now.Add(3*time.Hour), thesis.PolicyVersion); err == nil {
 		t.Fatal("conflicting same-ID evidence replay was accepted")
 	}
+
+	exitAt := now.Add(2 * time.Hour)
+	exitApproval := postgresApproval(t, "pg-exit-"+suffix, "SHORT", exitAt)
+	exitOrder, err := venue.Submit(papertrading.CreateOrderRequest{Workflow: exitApproval.Workflow, PaperIntent: exitApproval.PaperIntent, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: costModel, InstrumentID: thesis.InstrumentID, Quantity: 10, ReferencePrice: 104, OrderType: papertrading.OrderMarket, CreatedAt: exitAt, IdempotencyKey: "pg-exit-" + suffix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exitFills, err := venue.ProcessTick(papertrading.MarketTick{TickID: "tick-pg-exit-" + suffix, InstrumentID: thesis.InstrumentID, Bid: 103, Ask: 104, Last: 104, AvailableQuantity: 10, Timestamp: exitAt.Add(time.Second), ReceivedAt: exitAt.Add(time.Second), Session: papertrading.SessionOpen, Source: "paper-integration"})
+	if err != nil || len(exitFills) != 1 {
+		t.Fatalf("exit fills=%#v err=%v", exitFills, err)
+	}
+	exitAccount, err := ledger.ApplyFill(exitFills[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := restored.Position.Close(exitFills[0].FilledAt); err != nil {
+		t.Fatal(err)
+	}
+	outcome, err := BuildOutcomeFromFills(restored.Position, binding, fills[0], exitFills[0], ExitThesisInvalidated, 2, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PersistOutcome(ctx, position.PositionID, ExitSnapshot{Order: exitOrder, Fill: exitFills[0], Ledger: exitAccount, Approval: &exitApproval}, outcome); err != nil {
+		t.Fatal(err)
+	}
+	finalStore := NewPostgresStore(pool)
+	finalRecord, err := finalStore.Get(ctx, position.PositionID)
+	if err != nil || finalRecord.Outcome == nil || finalRecord.Outcome.ExitFillID != exitFills[0].FillID || finalRecord.Position.State != StateClosed {
+		t.Fatalf("final outcome was not restored: record=%#v err=%v", finalRecord, err)
+	}
 }
 
-func postgresApproval(t *testing.T, suffix string, now time.Time) ApprovalSnapshot {
+func postgresApproval(t *testing.T, suffix, direction string, now time.Time) ApprovalSnapshot {
 	t.Helper()
-	risk := acceptedRisk(t, "recommendation-"+suffix, now, 1000)
+	value := 1000.0
+	if direction == "SHORT" {
+		value = 1200
+	}
+	risk := acceptedRisk(t, "recommendation-"+suffix, now, value)
 	workflowStore := workflow.NewStore()
 	wf, err := workflowStore.Create(context.Background(), workflow.CreateRequest{RiskDecision: risk, Now: now, IdempotencyKey: suffix + "-create"})
 	if err != nil {
@@ -127,7 +161,7 @@ func postgresApproval(t *testing.T, suffix string, now time.Time) ApprovalSnapsh
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmation, err := workflow.NewConfirmation(wf, "AAPL", "LONG", now, now.Add(time.Hour))
+	confirmation, err := workflow.NewConfirmation(wf, "AAPL", direction, now, now.Add(time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
