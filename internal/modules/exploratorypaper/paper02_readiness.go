@@ -12,10 +12,11 @@ import (
 )
 
 type ProspectiveEventSourceReadiness struct {
-	Ready          bool   `json:"ready"`
-	SourceIdentity string `json:"sourceIdentity"`
-	Endpoint       string `json:"endpoint,omitempty"`
-	Reason         string `json:"reason,omitempty"`
+	Ready            bool   `json:"ready"`
+	SourceIdentity   string `json:"sourceIdentity"`
+	ProviderContract string `json:"providerContract,omitempty"`
+	EndpointIdentity string `json:"endpointIdentity,omitempty"`
+	Reason           string `json:"reason,omitempty"`
 }
 
 type RiskPolicyIdentity struct {
@@ -81,6 +82,8 @@ type Paper02Readiness struct {
 	CalendarHash                string                    `json:"calendarHash,omitempty"`
 	ProspectiveEventIntakeReady bool                      `json:"prospectiveEventIntakeReady"`
 	EventSourceIdentity         string                    `json:"eventSourceIdentity,omitempty"`
+	EventSourceContract         string                    `json:"eventSourceContract,omitempty"`
+	EventSourceEndpointIdentity string                    `json:"eventSourceEndpointIdentity,omitempty"`
 	EligibleUniverseReady       bool                      `json:"eligibleUniverseReady"`
 	EligibleUniverseVersion     string                    `json:"eligibleUniverseVersion,omitempty"`
 	EligibleUniverseHash        string                    `json:"eligibleUniverseHash,omitempty"`
@@ -139,6 +142,8 @@ func AssessPaper02Readiness(input Paper02ReadinessInput) Paper02Readiness {
 		}
 	}
 	result.EventSourceIdentity = input.EventSource.SourceIdentity
+	result.EventSourceContract = input.EventSource.ProviderContract
+	result.EventSourceEndpointIdentity = input.EventSource.EndpointIdentity
 	if !input.EventSource.Ready {
 		reason := input.EventSource.Reason
 		if reason == "" {

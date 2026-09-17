@@ -77,6 +77,7 @@ not promote a strategy or prove a trading edge.
 | PAPER-01B | **IMPLEMENTED / ACCEPTED DIRECTIONALLY** |
 | PAPER-01C | **ACCEPTED / EXTERNALLY REVIEWED** |
 | PAPER-02A1 | **GO / EXTERNALLY REVIEWED** |
+| PAPER-02A2 | **IMPLEMENTED / EXTERNAL CONFIGURATION REQUIRED** |
 | PAPER-02 | **READY FOR EXTERNAL REVIEW / NOT ACTIVE** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
@@ -105,6 +106,13 @@ PAPER-02 is READY FOR EXTERNAL REVIEW / NOT ACTIVE. Its canonical protocol is
 `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`. The exact
 activation decision and any later FORMAL-01 sequencing remain externally
 controlled. No prospective pilot may begin from this package.
+
+PAPER-02A2 records the canonical genuine prospective intake boundary in
+`Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md`. The optional World
+Monitor collector is the intended source; Jax accepts only its versioned
+`/api/v1/jax/events` contract and remains disabled by default. The implementation
+is complete for external configuration review, but PAPER-02 is not active and
+the sample remains `0 / 50`.
 
 ## Exploratory learning programme
 

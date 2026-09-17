@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -73,11 +75,19 @@ func loadPaper02RuntimeReadiness() exploratorypaper.Paper02Readiness {
 
 	configuredSource, err := loadWorldMonitorPullConfig(os.LookupEnv)
 	if err != nil {
-		input.EventSource = exploratorypaper.ProspectiveEventSourceReadiness{SourceIdentity: worldMonitorPullConsumer, Reason: err.Error()}
+		input.EventSource = exploratorypaper.ProspectiveEventSourceReadiness{
+			SourceIdentity:   worldMonitorPullConsumer,
+			ProviderContract: worldMonitorProviderContract,
+			Reason:           err.Error(),
+		}
 	} else if !configuredSource.Enabled {
-		input.EventSource = exploratorypaper.ProspectiveEventSourceReadiness{SourceIdentity: worldMonitorPullConsumer, Reason: "genuine prospective event intake is disabled"}
+		input.EventSource = exploratorypaper.ProspectiveEventSourceReadiness{
+			SourceIdentity:   configuredSource.SourceIdentity,
+			ProviderContract: configuredSource.ProviderContract,
+			Reason:           "genuine prospective event intake is disabled",
+		}
 	} else {
-		input.EventSource = exploratorypaper.ProspectiveEventSourceReadiness{Ready: true, SourceIdentity: worldMonitorPullConsumer, Endpoint: configuredSource.Endpoint}
+		input.EventSource = assessWorldMonitorPullSource(configuredSource, &http.Client{Timeout: 2 * time.Second})
 	}
 
 	universePath := resolveRuntimePath(envOrDefault("PAPER02_ELIGIBLE_UNIVERSE_FILE", paper02UniversePath))
@@ -141,4 +151,54 @@ func loadPaper02RuntimeReadiness() exploratorypaper.Paper02Readiness {
 	}
 	input.MaximumLeverage = maxLeverage
 	return exploratorypaper.AssessPaper02Readiness(input)
+}
+
+func assessWorldMonitorPullSource(config worldMonitorPullConfig, client *http.Client) exploratorypaper.ProspectiveEventSourceReadiness {
+	readiness := exploratorypaper.ProspectiveEventSourceReadiness{
+		SourceIdentity:   config.SourceIdentity,
+		ProviderContract: config.ProviderContract,
+		EndpointIdentity: config.EndpointIdentity,
+	}
+	if !config.Enabled {
+		readiness.Reason = "genuine prospective event intake is disabled"
+		return readiness
+	}
+	if client == nil {
+		client = &http.Client{Timeout: 2 * time.Second}
+	}
+	healthURL, err := worldMonitorHealthEndpoint(config.Endpoint)
+	if err != nil {
+		readiness.Reason = "World Monitor health endpoint is invalid: " + err.Error()
+		return readiness
+	}
+	req, err := http.NewRequest(http.MethodGet, healthURL, nil)
+	if err != nil {
+		readiness.Reason = "World Monitor health request could not be created: " + err.Error()
+		return readiness
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		readiness.Reason = "World Monitor prospective source is unavailable: " + err.Error()
+		return readiness
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		readiness.Reason = fmt.Sprintf("World Monitor prospective source is not ready: HTTP %d", resp.StatusCode)
+		return readiness
+	}
+	readiness.Ready = true
+	return readiness
+}
+
+func worldMonitorHealthEndpoint(endpoint string) (string, error) {
+	canonical, err := canonicalWorldMonitorEventsEndpoint(endpoint)
+	if err != nil {
+		return "", err
+	}
+	parsed, err := url.Parse(canonical)
+	if err != nil {
+		return "", err
+	}
+	parsed.Path = "/health"
+	return parsed.String(), nil
 }

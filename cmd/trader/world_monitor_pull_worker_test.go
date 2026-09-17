@@ -31,15 +31,43 @@ func TestLoadWorldMonitorPullConfigFailsClosedAndBoundsValues(t *testing.T) {
 	if err != nil || !valid.Enabled || valid.PageSize != 250 || valid.Interval != 5*time.Second || valid.Timeout != time.Second {
 		t.Fatalf("valid config = %+v, err=%v", valid, err)
 	}
+	if valid.SourceIdentity != worldMonitorPullConsumer || valid.ProviderContract != worldMonitorProviderContract || valid.EndpointIdentity == "" {
+		t.Fatalf("valid config did not bind canonical source identity: %+v", valid)
+	}
 	for _, values := range []map[string]string{
 		{"WORLD_MONITOR_PULL_ENABLED": "true"},
 		{"WORLD_MONITOR_PULL_ENABLED": "true", "WORLD_MONITOR_EVENTS_URL": "file:///tmp/events"},
 		{"WORLD_MONITOR_PULL_ENABLED": "true", "WORLD_MONITOR_EVENTS_URL": "http://wm/events", "WORLD_MONITOR_PULL_INTERVAL_SECONDS": "0"},
 		{"WORLD_MONITOR_PULL_ENABLED": "true", "WORLD_MONITOR_EVENTS_URL": "http://wm/events", "WORLD_MONITOR_PULL_PAGE_SIZE": "251"},
+		{"WORLD_MONITOR_PULL_ENABLED": "true", "WORLD_MONITOR_EVENTS_URL": "http://wm/api/v1/jax/events?token=secret"},
+		{"WORLD_MONITOR_PULL_ENABLED": "true", "WORLD_MONITOR_EVENTS_URL": "http://user:secret@wm/api/v1/jax/events"},
+		{"WORLD_MONITOR_PULL_ENABLED": "true", "WORLD_MONITOR_EVENTS_URL": "http://wm/api/v1/other-events"},
 	} {
 		if _, err := loadWorldMonitorPullConfig(lookup(values)); err == nil {
 			t.Fatalf("expected invalid config for %+v", values)
 		}
+	}
+}
+
+func TestWorldMonitorEndpointIdentityIsStableAndDoesNotExposeEndpoint(t *testing.T) {
+	first, err := loadWorldMonitorPullConfig(func(key string) (string, bool) {
+		values := map[string]string{"WORLD_MONITOR_PULL_ENABLED": "true", "WORLD_MONITOR_EVENTS_URL": "https://worldmonitor.example/api/v1/jax/events/"}
+		value, ok := values[key]
+		return value, ok
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := loadWorldMonitorPullConfig(func(key string) (string, bool) {
+		values := map[string]string{"WORLD_MONITOR_PULL_ENABLED": "true", "WORLD_MONITOR_EVENTS_URL": "https://worldmonitor.example/api/v1/jax/events"}
+		value, ok := values[key]
+		return value, ok
+	})
+	if err != nil || first.EndpointIdentity != second.EndpointIdentity || first.EndpointIdentity == "" {
+		t.Fatalf("endpoint identity was not stable: first=%+v second=%+v err=%v", first, second, err)
+	}
+	if strings.Contains(first.EndpointIdentity, "worldmonitor.example") || strings.Contains(first.EndpointIdentity, "secret") {
+		t.Fatalf("endpoint identity leaked endpoint data: %q", first.EndpointIdentity)
 	}
 }
 
@@ -119,7 +147,7 @@ func TestWorldMonitorPullTriggerPreservesOldPublicationAndHonestMissingPublicati
 	}
 	base.PublicationTime = nil
 	trigger, err = worldMonitorPullTrigger(base)
-	if err != nil || !trigger.TimestampUTC.Equal(collected) || trigger.RawPayload["publication_time_supplied"] != false {
+	if err != nil || !trigger.TimestampUTC.Equal(collected) || trigger.RawPayload["publication_time_supplied"] != false || trigger.RawPayload["publication_time"] != nil || trigger.RawPayload["timestamp_semantics"] != "collection_observation_time" {
 		t.Fatalf("missing-publication trigger = %+v, err=%v", trigger, err)
 	}
 }

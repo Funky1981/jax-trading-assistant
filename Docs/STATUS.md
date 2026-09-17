@@ -1,8 +1,8 @@
 # Jax Current Status
 
-PAPER-02A1: **GO / EXTERNALLY REVIEWED**. The default genuine
-prospective event source remains disabled, so readiness is blocked and no pilot
-is active.
+PAPER-02A1: **GO / EXTERNALLY REVIEWED**. PAPER-02A2 canonical genuine
+prospective-intake closure is implemented, but the default source remains
+disabled, so readiness is blocked and no pilot is active.
 
 This is the concise operational status. Roadmap sequencing is authoritative in
 `Docs/ROADMAP.md`; capability maturity is in `Docs/CAPABILITY_MATRIX.md`.
@@ -36,6 +36,7 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - PAPER-01B: `IMPLEMENTED / ACCEPTED DIRECTIONALLY`.
 - PAPER-01C: `ACCEPTED / EXTERNALLY REVIEWED`.
 - PAPER-02: `READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE`.
+- PAPER-02A2: `IMPLEMENTED / EXTERNAL CONFIGURATION REQUIRED`.
 - Trading edge: `NOT DEMONSTRATED`.
 - Phase 13: `NOT STARTED / BLOCKED`.
 - Optional future commercialisation: `DEFERRED / NOT A CURRENT OBJECTIVE`.
@@ -55,6 +56,8 @@ package.
 
 ## Next decision required
 
-Genuine prospective event intake remains disabled/unconfigured, and external
-activation review is required before activation. Do not start a prospective
-pilot or FORMAL_FORWARD_PAPER without a new external decision.
+Genuine prospective event intake remains disabled by default. The intended
+World Monitor source, endpoint contract, provenance and idempotency boundary
+are implemented, but the operator must configure and operate the optional
+source profile before activation review. Do not start a prospective pilot or
+FORMAL_FORWARD_PAPER without a new external decision.

@@ -1,6 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,10 +32,44 @@ func TestPaper02RuntimeReadinessUsesRealManifestsAndBlocksDisabledIntake(t *test
 	if readiness.ProspectiveEventIntakeReady || readiness.OverallReady {
 		t.Fatal("disabled genuine intake incorrectly made PAPER-02 ready")
 	}
+	if readiness.EventSourceIdentity != worldMonitorPullConsumer || readiness.EventSourceContract != worldMonitorProviderContract {
+		t.Fatalf("readiness did not expose the canonical disabled source identity: %+v", readiness)
+	}
 	if readiness.BrokerExecutionAllowed || readiness.ExecutionAuthority != "NONE" || readiness.RuntimeMode != "PAPER" {
 		t.Fatalf("unsafe runtime projection: %+v", readiness)
 	}
 	t.Logf("calendar=%s calendarHash=%s universe=%s universeHash=%s risk=%s riskHash=%s entry=%s entryHash=%s", readiness.CalendarVersion, readiness.CalendarHash, readiness.EligibleUniverseVersion, readiness.EligibleUniverseHash, readiness.RiskPolicyVersion, readiness.RiskPolicyHash, readiness.EntryPolicyVersion, readiness.EntryPolicyHash)
+}
+
+func TestPaper02ConfiguredSourceRequiresOperationalHealthAndUsesSafeIdentity(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/health" {
+			t.Fatalf("health probe path = %q", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	config, err := loadWorldMonitorPullConfig(func(key string) (string, bool) {
+		values := map[string]string{"WORLD_MONITOR_PULL_ENABLED": "true", "WORLD_MONITOR_EVENTS_URL": server.URL + worldMonitorEventsPath}
+		value, ok := values[key]
+		return value, ok
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ready := assessWorldMonitorPullSource(config, server.Client())
+	if !ready.Ready || ready.SourceIdentity != worldMonitorPullConsumer || ready.ProviderContract != worldMonitorProviderContract || ready.EndpointIdentity == "" || ready.Reason != "" {
+		t.Fatalf("healthy source was not represented as ready: %+v", ready)
+	}
+	encoded, err := json.Marshal(ready)
+	if err != nil || strings.Contains(string(encoded), server.URL) {
+		t.Fatalf("readiness leaked raw endpoint: %s err=%v", encoded, err)
+	}
+	server.Close()
+	blocked := assessWorldMonitorPullSource(config, &http.Client{Timeout: 100 * time.Millisecond})
+	if blocked.Ready || !strings.Contains(blocked.Reason, "unavailable") {
+		t.Fatalf("unavailable source was not blocked: %+v", blocked)
+	}
 }
 
 func TestPaper02ActualCalendarUsesExchangeSessions(t *testing.T) {

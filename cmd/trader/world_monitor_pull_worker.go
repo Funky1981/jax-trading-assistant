@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,14 +26,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const worldMonitorPullConsumer = "jax-genuine-event-pull-v1"
+const (
+	worldMonitorPullConsumer     = "jax-genuine-event-pull-v1"
+	worldMonitorProviderContract = "world-monitor-events/v1"
+	worldMonitorEventsPath       = "/api/v1/jax/events"
+)
 
 type worldMonitorPullConfig struct {
-	Enabled  bool
-	Endpoint string
-	Interval time.Duration
-	Timeout  time.Duration
-	PageSize int
+	Enabled          bool
+	Endpoint         string
+	EndpointIdentity string
+	SourceIdentity   string
+	ProviderContract string
+	Interval         time.Duration
+	Timeout          time.Duration
+	PageSize         int
 }
 
 type worldMonitorPullEvent struct {
@@ -88,15 +96,21 @@ func loadWorldMonitorPullConfig(lookup func(string) (string, bool)) (worldMonito
 	if err != nil {
 		return worldMonitorPullConfig{}, fmt.Errorf("WORLD_MONITOR_PULL_ENABLED must be true or false")
 	}
-	config := worldMonitorPullConfig{Enabled: enabled}
+	config := worldMonitorPullConfig{
+		Enabled:          enabled,
+		SourceIdentity:   worldMonitorPullConsumer,
+		ProviderContract: worldMonitorProviderContract,
+	}
 	if !enabled {
 		return config, nil
 	}
 	config.Endpoint = strings.TrimRight(value("WORLD_MONITOR_EVENTS_URL"), "/")
-	parsed, err := url.Parse(config.Endpoint)
-	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
-		return worldMonitorPullConfig{}, fmt.Errorf("WORLD_MONITOR_EVENTS_URL must be an absolute HTTP(S) URL")
+	canonicalEndpoint, err := canonicalWorldMonitorEventsEndpoint(config.Endpoint)
+	if err != nil {
+		return worldMonitorPullConfig{}, err
 	}
+	config.Endpoint = canonicalEndpoint
+	config.EndpointIdentity = worldMonitorEndpointIdentity(canonicalEndpoint)
 	intervalSeconds, err := boundedEnvironmentInt(value("WORLD_MONITOR_PULL_INTERVAL_SECONDS"), 30, 5, 3600)
 	if err != nil {
 		return worldMonitorPullConfig{}, err
@@ -112,6 +126,32 @@ func loadWorldMonitorPullConfig(lookup func(string) (string, bool)) (worldMonito
 	config.Interval = time.Duration(intervalSeconds) * time.Second
 	config.Timeout = time.Duration(timeoutSeconds) * time.Second
 	return config, nil
+}
+
+func canonicalWorldMonitorEventsEndpoint(raw string) (string, error) {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return "", fmt.Errorf("WORLD_MONITOR_EVENTS_URL must be an absolute HTTP(S) URL")
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("WORLD_MONITOR_EVENTS_URL must not contain credentials, query parameters, or fragments")
+	}
+	path := strings.TrimRight(parsed.Path, "/")
+	if path != worldMonitorEventsPath {
+		return "", fmt.Errorf("WORLD_MONITOR_EVENTS_URL must target %s", worldMonitorEventsPath)
+	}
+	parsed.Path = worldMonitorEventsPath
+	parsed.RawPath = ""
+	return parsed.String(), nil
+}
+
+func worldMonitorEndpointIdentity(endpoint string) string {
+	canonical, err := canonicalWorldMonitorEventsEndpoint(endpoint)
+	if err != nil {
+		return ""
+	}
+	digest := sha256.Sum256([]byte(canonical))
+	return "sha256:" + hex.EncodeToString(digest[:])
 }
 
 func worldMonitorDefaultString(value, fallback string) string {
@@ -173,7 +213,7 @@ func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 		result, err := worker.cycle(ctx)
 		if err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Printf("world_monitor_pull cycle failed endpoint=%q error=%q", config.Endpoint, err)
+				log.Printf("world_monitor_pull cycle failed endpoint_identity=%q error=%q", config.EndpointIdentity, err)
 			}
 		} else {
 			log.Printf("world_monitor_pull cycle committed cursor=%d fetched=%d ingested=%d duplicates=%d decisions_created=%d decisions_reused=%d intelligence_clusters=%d intelligence_unknowns=%d", result.Cursor, result.Fetched, result.Ingested, result.Duplicates, result.DecisionsCreated, result.DecisionsReused, result.IntelligenceClusters, result.IntelligenceUnknowns)
@@ -407,10 +447,14 @@ func worldMonitorPullTrigger(item worldMonitorPullEvent) (worldMonitorResearchTr
 	if item.CollectedAt.IsZero() || strings.TrimSpace(item.Title) == "" || strings.TrimSpace(item.EventID) == "" {
 		return worldMonitorResearchTrigger{}, fmt.Errorf("world monitor event %q is missing required persisted fields", item.EventID)
 	}
-	publication := item.CollectedAt
+	// The inbox schema requires a non-null event_time for deterministic
+	// ordering. When publication time is absent, this field is an observation
+	// timestamp only; it is never presented or persisted as publication time.
+	// The raw payload and operator read model retain publication as UNKNOWN.
+	eventTimestamp := item.CollectedAt.UTC()
 	publicationSupplied := false
 	if item.PublicationTime != nil {
-		publication = item.PublicationTime.UTC()
+		eventTimestamp = item.PublicationTime.UTC()
 		publicationSupplied = true
 	}
 	sourceURL := item.FeedURL
@@ -422,19 +466,24 @@ func worldMonitorPullTrigger(item worldMonitorPullEvent) (worldMonitorResearchTr
 		eventType = "unknown"
 	}
 	isSynthetic := false
+	var publicationPayload any
+	if item.PublicationTime != nil {
+		publicationPayload = item.PublicationTime
+	}
 	raw := map[string]any{
 		"kind": "world_monitor_persisted_rss_item", "world_monitor_event_id": item.EventID,
 		"persistence_sequence": item.PersistenceSeq, "source_id": item.SourceID, "source_name": item.SourceName,
 		"feed_url": item.FeedURL, "article_url": item.ArticleURL, "source_native_id": item.SourceNativeID,
-		"publication_time_supplied": publicationSupplied, "publication_time": item.PublicationTime,
-		"source_timestamp": item.SourceTimestamp, "first_seen_at": item.FirstSeenAt, "last_seen_at": item.LastSeenAt,
+		"publication_time_supplied": publicationSupplied, "publication_time": publicationPayload,
+		"timestamp_semantics": map[bool]string{true: "source_publication_time", false: "collection_observation_time"}[publicationSupplied],
+		"source_timestamp":    item.SourceTimestamp, "first_seen_at": item.FirstSeenAt, "last_seen_at": item.LastSeenAt,
 		"content_hash": item.ContentHash, "schema_version": item.SchemaVersion, "provenance": item.Provenance,
 		"raw_source_payload": item.RawSourcePayload,
 	}
 	collected := item.CollectedAt.UTC()
 	return worldMonitorResearchTrigger{
 		Source: "world-monitor", SourceEventID: item.EventID, EventType: eventType, Headline: item.Title,
-		Summary: item.Summary, SourceURLs: []string{sourceURL}, SourceCount: 1, TimestampUTC: publication,
+		Summary: item.Summary, SourceURLs: []string{sourceURL}, SourceCount: 1, TimestampUTC: eventTimestamp,
 		PossibleAffectedETFs: []string{}, AssetThemes: []string{}, Severity: "medium", SourceTier: "tier1",
 		Confidence: 0.5, ConfidenceReasons: []string{"Persisted by the continuous World Monitor RSS/Atom collector"},
 		Reason:     "Deterministic World Monitor pull ingestion; asset mapping remains unknown unless supplied by genuine evidence.",

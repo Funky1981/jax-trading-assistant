@@ -1,5 +1,10 @@
 # Continuous World Monitor pull integration
 
+The canonical Jax consumer identity is `jax-genuine-event-pull-v1` and the
+provider contract is `world-monitor-events/v1`. The pull worker accepts only
+the sibling integration service's `/api/v1/jax/events` path. Readiness exposes
+a deterministic endpoint identity, never a raw URL or credential.
+
 ## Operator commands
 
 From `C:\Projects\Jax`:
@@ -68,3 +73,8 @@ leverage fixed at 1x. The pull worker independently validates all six settings
 before it starts. It writes only genuine event records, deterministic decision
 records/current projection, and its integration cursor. Unknown assets remain
 unknown; no ETF is fabricated.
+
+When the provider has no publication timestamp, Jax retains publication as
+`UNKNOWN` and retains collection/first-seen timestamps separately. Collection
+time is not substituted into the publication field. Such an event remains
+subject to the normal evidence and timestamp eligibility gates.

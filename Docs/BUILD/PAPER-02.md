@@ -1,6 +1,8 @@
 # PAPER-02 — Prospective Exploratory Paper Pilot
 
-PAPER-02A1 prerequisite closure: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
+PAPER-02A1 prerequisite closure: **GO / EXTERNALLY REVIEWED**.
+PAPER-02A2 genuine prospective intake closure: **IMPLEMENTED / EXTERNAL
+CONFIGURATION REQUIRED**.
 The default genuine prospective source remains disabled, so PAPER-02 remains
 **READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE** and no pilot identity or observation
 exists.
@@ -39,6 +41,12 @@ non-trade classifications.
 The state machine is `DRAFT → READY_FOR_EXTERNAL_REVIEW → ACTIVE`. This package
 implements DRAFT and READY_FOR_EXTERNAL_REVIEW only. It does not activate
 PAPER-02 or start a prospective pilot.
+
+The canonical intake implementation and its remaining operator gate are recorded
+in `Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md`. The intended source is
+the optional sibling World Monitor collector and its `/api/v1/jax/events`
+contract; Jax remains disabled by default until that genuine source is explicitly
+configured and operationally reviewed.
 
 PAPER-02 IS EXPLORATORY AND CANNOT ESTABLISH TRADING EDGE.
 
