@@ -1,0 +1,27 @@
+{
+  "version": "paper-02-entry-policy-v1",
+  "mode": "PAPER",
+  "candidateRequirement": "CANDIDATE",
+  "evidencePolicy": "candidate-evidence-scoring-v1",
+  "riskAcceptance": "deterministic configured risk decision must be accepted",
+  "humanApproval": "explicit human approval bound to thesis, direction, stop, target, and horizon",
+  "paperAcknowledgement": "EXPLORATORY_PAPER_ONLY_NO_LIVE_NO_FORMAL",
+  "thesisContract": "paper-01-thesis-v1",
+  "simulatedVenue": "jax.paper.venue/v1",
+  "executionAuthority": "NONE",
+  "brokerExecutionAllowed": false,
+  "maximumLeverage": 1,
+  "boundFields": [
+    "candidateId",
+    "thesisId",
+    "workflowId",
+    "paperIntentId",
+    "thesisHash",
+    "evidenceSetHash",
+    "direction",
+    "protectiveStop",
+    "target",
+    "horizonSessions",
+    "paperOnlyAcknowledgement"
+  ]
+}

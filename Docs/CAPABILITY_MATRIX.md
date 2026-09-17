@@ -1,5 +1,8 @@
 # Jax Capability Matrix
 
+PAPER-02A1 prerequisite closure is implemented for external review. It does
+not activate PAPER-02; the default genuine prospective source is disabled.
+
 This matrix tracks capability maturity. It is supporting evidence for the
 authoritative active roadmap in `Docs/ROADMAP.md`; it is not itself the roadmap
 sequence or a phase-completion register.

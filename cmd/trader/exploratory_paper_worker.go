@@ -114,9 +114,16 @@ func (s *postgresExploratoryReviewSource) LoadReviewObservation(ctx context.Cont
 }
 
 func configuredExploratoryCalendar() (exploratorypaper.SessionCalendar, error) {
+	manifestPath := strings.TrimSpace(os.Getenv("PAPER_SESSION_CALENDAR_FILE"))
+	if manifestPath == "" {
+		manifestPath = "config/paper-02/session-calendar-us-equities-2026-v1.json"
+	}
+	if manifest, err := exploratorypaper.LoadVersionedSessionCalendar(manifestPath); err == nil {
+		return manifest.SessionCalendar()
+	}
 	raw := strings.TrimSpace(os.Getenv("PAPER_SESSION_CALENDAR_JSON"))
 	if raw == "" {
-		return exploratorypaper.SessionCalendar{}, fmt.Errorf("PAPER_SESSION_CALENDAR_JSON is not configured; calendar state is unknown")
+		return exploratorypaper.SessionCalendar{}, fmt.Errorf("versioned PAPER session calendar is unavailable at %q and PAPER_SESSION_CALENDAR_JSON is not configured; calendar state is unknown", manifestPath)
 	}
 	var calendar exploratorypaper.SessionCalendar
 	if err := json.Unmarshal([]byte(raw), &calendar); err != nil {

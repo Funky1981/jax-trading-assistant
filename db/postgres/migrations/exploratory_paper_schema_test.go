@@ -59,4 +59,13 @@ func TestExploratoryPaperMigrationsPreserveIdentityAndFirewall(t *testing.T) {
 			t.Fatalf("PAPER-02 migration missing %q", fragment)
 		}
 	}
+	hashes, err := os.ReadFile("000074_paper02_prerequisite_hashes.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fragment := range []string{"eligible_universe_hash", "risk_policy_hash", "entry_policy_hash", "PAPER-02 pilot identity is immutable"} {
+		if !strings.Contains(strings.ToLower(string(hashes)), strings.ToLower(fragment)) {
+			t.Fatalf("PAPER-02 prerequisite migration missing %q", fragment)
+		}
+	}
 }

@@ -1,0 +1,20 @@
+{
+  "version": "paper-02-us-equities-2026-v1",
+  "effectiveFrom": "2026-09-17",
+  "market": "US_EQUITIES_REGULAR",
+  "applicableMode": "PAPER",
+  "provenance": "configured PAPER market symbols from docker-compose.yml, resolved to canonical exchange identities",
+  "instruments": [
+    {"instrumentId": "NASDAQ:AAPL", "symbol": "AAPL", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NASDAQ:MSFT", "symbol": "MSFT", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NASDAQ:GOOGL", "symbol": "GOOGL", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NASDAQ:AMZN", "symbol": "AMZN", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NASDAQ:TSLA", "symbol": "TSLA", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NASDAQ:META", "symbol": "META", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NASDAQ:NVDA", "symbol": "NVDA", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NASDAQ:AMD", "symbol": "AMD", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NASDAQ:NFLX", "symbol": "NFLX", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NYSEARCA:SPY", "symbol": "SPY", "exchange": "NYSEARCA", "market": "US_EQUITIES_REGULAR"},
+    {"instrumentId": "NASDAQ:QQQ", "symbol": "QQQ", "exchange": "NASDAQ", "market": "US_EQUITIES_REGULAR"}
+  ]
+}

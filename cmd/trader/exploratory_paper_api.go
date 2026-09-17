@@ -22,6 +22,20 @@ func registerExploratoryPaperRoutes(mux *http.ServeMux, protect func(http.Handle
 	mux.HandleFunc("/api/v1/exploratory-paper/entry-queue", protect(exploratoryPaperEntryQueueHandler(store)))
 	mux.HandleFunc("/api/v1/exploratory-paper/pilot", protect(exploratoryPilotHandler(pilotStore, store)))
 	mux.HandleFunc("/api/v1/exploratory-paper/pilot/opportunities", protect(exploratoryPilotOpportunitiesHandler(pilotStore)))
+	mux.HandleFunc("/api/v1/exploratory-paper/pilot-readiness", protect(exploratoryPilotReadinessHandler))
+}
+
+func exploratoryPilotReadinessHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	jsonOK(w, map[string]any{
+		"mode":              exploratorypaper.PilotMode,
+		"formalEvidence":    false,
+		"notFormalEvidence": true,
+		"readiness":         loadPaper02RuntimeReadiness(),
+	})
 }
 
 // exploratoryPaperEntryQueueHandler is a handoff only: it accepts an entry

@@ -1,5 +1,10 @@
 # PAPER-02 — Prospective Exploratory Paper Pilot
 
+PAPER-02A1 prerequisite closure: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
+The default genuine prospective source remains disabled, so PAPER-02 remains
+**READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE** and no pilot identity or observation
+exists.
+
 Status: **READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE**.
 
 PAPER-02 is a prospective exploratory pilot design and readiness package. The

@@ -17,10 +17,20 @@ const (
 // SessionCalendar is explicit by design. An unknown calendar must not be
 // silently approximated with calendar-day arithmetic or caller-provided flags.
 type SessionCalendar struct {
-	Sessions  map[string]bool `json:"sessions"`
-	Timezone  string          `json:"timezone"`
-	OpenTime  string          `json:"openTime"`
-	CloseTime string          `json:"closeTime"`
+	Sessions       map[string]bool          `json:"sessions"`
+	Timezone       string                   `json:"timezone"`
+	OpenTime       string                   `json:"openTime"`
+	CloseTime      string                   `json:"closeTime"`
+	Version        string                   `json:"version,omitempty"`
+	Market         string                   `json:"market,omitempty"`
+	CoverageStart  string                   `json:"coverageStart,omitempty"`
+	CoverageEnd    string                   `json:"coverageEnd,omitempty"`
+	SessionWindows map[string]SessionWindow `json:"sessionWindows,omitempty"`
+}
+
+type SessionWindow struct {
+	OpenTime  string `json:"openTime"`
+	CloseTime string `json:"closeTime"`
 }
 
 func (c SessionCalendar) Validate() error {
@@ -60,6 +70,22 @@ func (c SessionCalendar) sessionWindow() (time.Duration, time.Duration, error) {
 		time.Duration(close.Hour())*time.Hour + time.Duration(close.Minute())*time.Minute, nil
 }
 
+func (c SessionCalendar) sessionWindowFor(day string) (time.Duration, time.Duration, error) {
+	if override, ok := c.SessionWindows[day]; ok {
+		open, err := time.Parse("15:04", override.OpenTime)
+		if err != nil {
+			return 0, 0, fmt.Errorf("session open time must be HH:MM: %w", err)
+		}
+		close, err := time.Parse("15:04", override.CloseTime)
+		if err != nil || !close.After(open) {
+			return 0, 0, fmt.Errorf("session close time must be after open time")
+		}
+		return time.Duration(open.Hour())*time.Hour + time.Duration(open.Minute())*time.Minute,
+			time.Duration(close.Hour())*time.Hour + time.Duration(close.Minute())*time.Minute, nil
+	}
+	return c.sessionWindow()
+}
+
 func (c SessionCalendar) dateKey(day time.Time) string {
 	location, err := time.LoadLocation(c.Timezone)
 	if err != nil {
@@ -84,7 +110,7 @@ func (c SessionCalendar) SessionState(at time.Time) (MarketSession, error) {
 	if !open {
 		return SessionClosed, nil
 	}
-	openOffset, closeOffset, err := c.sessionWindow()
+	openOffset, closeOffset, err := c.sessionWindowFor(key)
 	if err != nil {
 		return SessionUnknown, err
 	}
@@ -103,7 +129,7 @@ func (c SessionCalendar) sessionStart(day time.Time) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
-	openOffset, _, err := c.sessionWindow()
+	openOffset, _, err := c.sessionWindowFor(c.dateKey(day))
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -354,6 +380,20 @@ type PolicyVersions struct {
 	EntryPolicy     string `json:"entryPolicy"`
 	ExitPolicy      string `json:"exitPolicy"`
 	CostModel       string `json:"costModel"`
+}
+
+func (p PolicyVersions) Empty() bool {
+	return p == (PolicyVersions{})
+}
+
+func policyVersionsMatchPilot(p PolicyVersions, identity PilotIdentity) bool {
+	return p.TraderModel == identity.TraderModelVersion &&
+		p.ThesisContract == ContractVersion &&
+		p.CandidatePolicy == identity.EvidencePolicyVersion &&
+		p.RiskPolicy == identity.RiskPolicyVersion &&
+		p.EntryPolicy == identity.EntryPolicyVersion &&
+		p.ExitPolicy == identity.ExitPolicyVersion &&
+		p.CostModel == identity.CostModelVersion
 }
 
 func (p PolicyVersions) Validate() error {

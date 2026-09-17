@@ -30,12 +30,15 @@ func TestPaper02PilotLedgerRestartAndEvidenceIdempotency(t *testing.T) {
 
 	record := activePilotFixture(t)
 	record.Identity.PilotID = "pilot-restart-" + time.Now().UTC().Format("20060102150405.000000000")
+	record.Identity.EligibleUniverseHash = "sha256:universe-restart"
+	record.Identity.RiskPolicyHash = "sha256:risk-restart"
+	record.Identity.EntryPolicyHash = "sha256:entry-restart"
 	record.Status = PilotStatusActive
 	identityPayload, err := json.Marshal(record)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO exploratory_paper_pilots(pilot_id,mode,status,protocol_version,protocol_hash,created_at,payload,formal_evidence_eligible) VALUES($1,$2,$3,$4,$5,$6,$7,FALSE)`, record.Identity.PilotID, PilotMode, record.Status, record.Identity.ProtocolVersion, record.Identity.ProtocolContentHash, record.Identity.CreatedAt, identityPayload); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO exploratory_paper_pilots(pilot_id,mode,status,protocol_version,protocol_hash,created_at,eligible_universe_hash,risk_policy_hash,entry_policy_hash,payload,formal_evidence_eligible) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,FALSE)`, record.Identity.PilotID, PilotMode, record.Status, record.Identity.ProtocolVersion, record.Identity.ProtocolContentHash, record.Identity.CreatedAt, record.Identity.EligibleUniverseHash, record.Identity.RiskPolicyHash, record.Identity.EntryPolicyHash, identityPayload); err != nil {
 		t.Fatal(err)
 	}
 	cleanupPool := pool
@@ -83,7 +86,7 @@ func TestPaper02PilotLedgerRestartAndEvidenceIdempotency(t *testing.T) {
 	cleanupPool = restartedPool
 	restarted := NewPilotPostgresStore(restartedPool)
 	restored, err := restarted.GetPilot(ctx, record.Identity.PilotID)
-	if err != nil || restored.Status != PilotStatusActive || restored.Identity.ProtocolContentHash != record.Identity.ProtocolContentHash {
+	if err != nil || restored.Status != PilotStatusActive || restored.Identity.ProtocolContentHash != record.Identity.ProtocolContentHash || restored.Identity.EligibleUniverseHash != record.Identity.EligibleUniverseHash || restored.Identity.RiskPolicyHash != record.Identity.RiskPolicyHash || restored.Identity.EntryPolicyHash != record.Identity.EntryPolicyHash {
 		t.Fatalf("restored pilot = %+v, err=%v", restored, err)
 	}
 	opportunities, err := restarted.ListOpportunities(ctx, record.Identity.PilotID)

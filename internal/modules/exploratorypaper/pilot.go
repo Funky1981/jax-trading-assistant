@@ -145,6 +145,7 @@ type PilotIdentity struct {
 	TargetOpportunityCount     int        `json:"targetOpportunityCount"`
 	MaximumDurationDays        int        `json:"maximumDurationDays"`
 	EligibleUniverseVersion    string     `json:"eligibleUniverseVersion"`
+	EligibleUniverseHash       string     `json:"eligibleUniverseHash"`
 	EvidencePolicyVersion      string     `json:"evidencePolicyVersion"`
 	TraderModelVersion         string     `json:"traderModelVersion"`
 	RiskPolicyVersion          string     `json:"riskPolicyVersion"`
@@ -152,6 +153,8 @@ type PilotIdentity struct {
 	ExitPolicyVersion          string     `json:"exitPolicyVersion"`
 	CostModelVersion           string     `json:"costModelVersion"`
 	CalendarVersion            string     `json:"calendarVersion"`
+	RiskPolicyHash             string     `json:"riskPolicyHash"`
+	EntryPolicyHash            string     `json:"entryPolicyHash"`
 	CodeSHA                    string     `json:"codeSha"`
 }
 
@@ -162,10 +165,41 @@ func (i PilotIdentity) Validate(protocol PilotProtocol) error {
 	if i.PilotID == "" || i.Mode != PilotMode || i.ProtocolVersion != protocol.ProtocolVersion || i.ProtocolContentHash != ProtocolContentHash(protocol) || i.CreatedAt.IsZero() || i.CreatedAt.Location() != time.UTC || i.TargetOpportunityCount != protocol.TargetOpportunityCount || i.MaximumDurationDays != protocol.MaximumDurationDays || i.EligibleUniverseVersion != protocol.EligibleUniverseVersion || i.EvidencePolicyVersion == "" || i.TraderModelVersion == "" || i.RiskPolicyVersion == "" || i.EntryPolicyVersion == "" || i.ExitPolicyVersion == "" || i.CostModelVersion == "" || i.CalendarVersion == "" || i.CodeSHA == "" {
 		return fmt.Errorf("pilot identity is incomplete or does not match the frozen protocol")
 	}
+	for name, value := range map[string]string{"eligible universe hash": i.EligibleUniverseHash, "risk policy hash": i.RiskPolicyHash, "entry policy hash": i.EntryPolicyHash} {
+		if value != "" && !strings.HasPrefix(value, "sha256:") {
+			return fmt.Errorf("%s must be a sha256 content hash", name)
+		}
+	}
 	if i.StartTimestamp != nil && (i.StartTimestamp.IsZero() || i.StartTimestamp.Location() != time.UTC) {
 		return fmt.Errorf("pilot start timestamp must be UTC")
 	}
 	return nil
+}
+
+// NewPilotDraftFromReadiness binds a future pilot draft to the actual
+// prerequisite identities. It is intentionally not called by activation or
+// admission code; external review still controls the READY-to-ACTIVE step.
+func NewPilotDraftFromReadiness(pilotID string, protocol PilotProtocol, createdAt time.Time, readiness Paper02Readiness, codeSHA string) (PilotRecord, error) {
+	if !readiness.OverallReady || readiness.EntryPolicy == nil {
+		return PilotRecord{}, fmt.Errorf("cannot freeze PAPER-02 prerequisites while readiness is blocked")
+	}
+	versions := PolicyVersions{TraderModel: TraderModelVersion, CandidatePolicy: readiness.EntryPolicy.EvidencePolicy, RiskPolicy: readiness.RiskPolicyVersion, EntryPolicy: readiness.EntryPolicyVersion, ExitPolicy: "exit-policy-v1", CostModel: "diagnostic-cost-model-v1", ThesisContract: ContractVersion}
+	protocol.EligibleUniverseVersion = readiness.EligibleUniverseVersion
+	return newPilotDraftWithIdentity(pilotID, protocol, createdAt, versions, readiness.CalendarVersion, codeSHA, readiness.EligibleUniverseHash, readiness.RiskPolicyHash, readiness.EntryPolicyHash)
+}
+
+func newPilotDraftWithIdentity(pilotID string, protocol PilotProtocol, createdAt time.Time, versions PolicyVersions, calendarVersion, codeSHA, universeHash, riskHash, entryHash string) (PilotRecord, error) {
+	if err := protocol.Validate(); err != nil {
+		return PilotRecord{}, err
+	}
+	if pilotID == "" || createdAt.IsZero() || createdAt.Location() != time.UTC || calendarVersion == "" || codeSHA == "" {
+		return PilotRecord{}, fmt.Errorf("pilot draft identity is incomplete")
+	}
+	identity := PilotIdentity{PilotID: pilotID, Mode: PilotMode, ProtocolVersion: protocol.ProtocolVersion, ProtocolContentHash: ProtocolContentHash(protocol), CreatedAt: createdAt, TargetOpportunityCount: protocol.TargetOpportunityCount, MaximumDurationDays: protocol.MaximumDurationDays, EligibleUniverseVersion: protocol.EligibleUniverseVersion, EligibleUniverseHash: universeHash, EvidencePolicyVersion: versions.CandidatePolicy, TraderModelVersion: TraderModelVersion, RiskPolicyVersion: versions.RiskPolicy, EntryPolicyVersion: versions.EntryPolicy, ExitPolicyVersion: versions.ExitPolicy, CostModelVersion: versions.CostModel, CalendarVersion: calendarVersion, RiskPolicyHash: riskHash, EntryPolicyHash: entryHash, CodeSHA: codeSHA}
+	if err := identity.Validate(protocol); err != nil {
+		return PilotRecord{}, err
+	}
+	return PilotRecord{Identity: identity, Protocol: protocol, Status: PilotStatusDraft}, nil
 }
 
 type PilotRecord struct {
@@ -334,6 +368,7 @@ type OpportunityDecision struct {
 	TradeLifecycleID      string            `json:"tradeLifecycleId"`
 	EntryEvidenceIDs      []string          `json:"entryEvidenceIds"`
 	EntryAt               *time.Time        `json:"entryAt,omitempty"`
+	PolicyModelVersions   PolicyVersions    `json:"policyModelVersions,omitempty"`
 }
 
 type LatencyValue struct {

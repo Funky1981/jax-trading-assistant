@@ -57,6 +57,33 @@ func TestPilotProtocolIdentityRequiresExternalActivation(t *testing.T) {
 	}
 }
 
+func TestPilotPolicyIdentityMismatchFailsClosed(t *testing.T) {
+	pilot := activePilotFixture(t)
+	matching := PolicyVersions{TraderModel: pilot.Identity.TraderModelVersion, ThesisContract: ContractVersion, CandidatePolicy: pilot.Identity.EvidencePolicyVersion, RiskPolicy: pilot.Identity.RiskPolicyVersion, EntryPolicy: pilot.Identity.EntryPolicyVersion, ExitPolicy: pilot.Identity.ExitPolicyVersion, CostModel: pilot.Identity.CostModelVersion}
+	if !policyVersionsMatchPilot(matching, pilot.Identity) {
+		t.Fatal("matching policy identity was rejected")
+	}
+	matching.EntryPolicy = "entry-policy-tampered"
+	if policyVersionsMatchPilot(matching, pilot.Identity) {
+		t.Fatal("mismatched entry policy identity was accepted")
+	}
+}
+
+func TestPilotDraftFromReadinessCarriesFrozenPrerequisiteHashes(t *testing.T) {
+	readinessInput := paper02ReadinessFixture()
+	readiness := AssessPaper02Readiness(readinessInput)
+	record, err := NewPilotDraftFromReadiness("pilot-ready-identities", pilotTestProtocol(), time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC), readiness, "code-sha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.Identity.EligibleUniverseHash != readiness.EligibleUniverseHash || record.Identity.RiskPolicyHash != readiness.RiskPolicyHash || record.Identity.EntryPolicyHash != readiness.EntryPolicyHash {
+		t.Fatalf("readiness hashes were not frozen: %+v", record.Identity)
+	}
+	if record.Status != PilotStatusDraft || record.Identity.Mode != PilotMode {
+		t.Fatalf("unexpected draft state: %+v", record)
+	}
+}
+
 func TestPilotOpportunityBoundaryRetainsNonTradesAndMetrics(t *testing.T) {
 	pilot := activePilotFixture(t)
 	start := *pilot.Identity.StartTimestamp

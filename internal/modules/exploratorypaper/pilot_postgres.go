@@ -55,7 +55,7 @@ func (s *PilotPostgresStore) CreateDraft(ctx context.Context, record PilotRecord
 	if err != nil {
 		return err
 	}
-	_, err = s.pool.Exec(ctx, `INSERT INTO exploratory_paper_pilots(pilot_id,mode,status,protocol_version,protocol_hash,created_at,payload,formal_evidence_eligible) VALUES($1,$2,$3,$4,$5,$6,$7,FALSE) ON CONFLICT(pilot_id) DO NOTHING`, record.Identity.PilotID, PilotMode, record.Status, record.Identity.ProtocolVersion, record.Identity.ProtocolContentHash, record.Identity.CreatedAt, payload)
+	_, err = s.pool.Exec(ctx, `INSERT INTO exploratory_paper_pilots(pilot_id,mode,status,protocol_version,protocol_hash,created_at,eligible_universe_hash,risk_policy_hash,entry_policy_hash,payload,formal_evidence_eligible) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,FALSE) ON CONFLICT(pilot_id) DO NOTHING`, record.Identity.PilotID, PilotMode, record.Status, record.Identity.ProtocolVersion, record.Identity.ProtocolContentHash, record.Identity.CreatedAt, record.Identity.EligibleUniverseHash, record.Identity.RiskPolicyHash, record.Identity.EntryPolicyHash, payload)
 	if err != nil {
 		return failClosed("create PAPER-02 draft", err)
 	}
@@ -235,8 +235,12 @@ func (s *PilotPostgresStore) updateOpportunity(ctx context.Context, opportunity 
 }
 
 func (s *PilotPostgresStore) RecordDecision(ctx context.Context, pilotID, opportunityID string, decision OpportunityDecision) (PilotOpportunity, error) {
-	if _, err := s.admission(ctx, pilotID); err != nil {
+	pilot, err := s.admission(ctx, pilotID)
+	if err != nil {
 		return PilotOpportunity{}, err
+	}
+	if !decision.PolicyModelVersions.Empty() && !policyVersionsMatchPilot(decision.PolicyModelVersions, pilot.Identity) {
+		return PilotOpportunity{}, ErrPilotIdentityConflict
 	}
 	opportunity, err := s.loadOpportunity(ctx, pilotID, opportunityID)
 	if err != nil {

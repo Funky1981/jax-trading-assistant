@@ -1,5 +1,9 @@
 # Jax Current Status
 
+PAPER-02A1: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED**. The default genuine
+prospective event source remains disabled, so readiness is blocked and no pilot
+is active.
+
 This is the concise operational status. Roadmap sequencing is authoritative in
 `Docs/ROADMAP.md`; capability maturity is in `Docs/CAPABILITY_MATRIX.md`.
 

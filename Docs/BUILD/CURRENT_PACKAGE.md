@@ -1,5 +1,9 @@
 # Current Build Package
 
+PAPER-02A1: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED**. Versioned runtime
+prerequisite identities and a read-only readiness assessment are now present;
+PAPER-02 remains **READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE**.
+
 ## PAPER-01 — event-driven exploratory paper-trader package
 
 Status: **PAPER-02 READINESS / READY FOR EXTERNAL REVIEW / NOT ACTIVE**.
