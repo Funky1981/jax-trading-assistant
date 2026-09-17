@@ -40,7 +40,7 @@
 3339bdb4be2511787b00f77bd01adcc10b357f6f24a0c16988436e0247b6a155  00-current-issuer-asset-resolution/WP-00.01-fix-benchmark-manifest-execution-gate.md
 33c28befabe79c9400731859310cb55662a71a253b5d4aa5ab7bf65e792f8657  06-research-recommendation-engine/WP-06.05-freshness-evidence-sufficiency-gates.md
 340a43487055acf1ca592d3b00852c68b72cea4825da2e18a4b80eeaeea2ddac  references/RESEARCH-NOTES.md
-3665b584b6e2a195395d48f9eff247f44685d7c7e7c9236cf60e3b704c91a2f6  README.md
+8eea536cca536fcbf57edb52c0e34f97c9db70574daaaa4fa81d61779ea3b51e  README.md
 36957d0665cea1fa9cccf9a2c0b70dafcbfc4ca846c86f98dce8168e8db4fdf1  06-research-recommendation-engine/WP-06.07-ui-api-read-model-for-useful-recommendations.md
 36a04ec99e9bde26143cc5e0896d62ff14a53e7bd1f92412162ced64a2f456b0  02-data-platform-provider-architecture/README.md
 373482b1072f6e5f13d3cad94c5730b97e26bf022edcafd48dd55016bc9fd06b  10-workflow-hitl-operational-safety/GATE.md
@@ -190,6 +190,6 @@ fb58d49f0b89fceadfafe7b15f97c34bffea3f649aa470e67a5603ae34f06a6f  references/SOU
 fb5c68f10c21512c09b18f7692be887ff2eafc740e279a03019e8699e4fb2102  04-world-monitor-intelligence/WP-04.05-velocity-baseline-deviation-signals.md
 fb8c5bbd2e3bdd375d7d77992bda957e30ebd0b6d3b244d365b7a6af533e0257  11-high-fidelity-paper-trading/WP-11.08-IMPLEMENTATION-EVIDENCE.md
 fcdc0c69a63e62174cf1bc10eace1124c40b651d2b8522272fcd945a224e7247  07-evaluation-replay-backtesting/GATE.md
-fd1ed7c35c8caf3c40645d38671ee8a872abd5d2931ff964d866956a0fbea5ff  roadmap.json
+0d4b766778f716722b0d16b14883ff58eb3cc66f9f1d11f9c9adfc5d6f3df784  roadmap.json
 ffd5d2d07d574dd1421c893f4532f53669e507c926c2e60467fe5dd1e6c6d776  04-world-monitor-intelligence/WP-04.03-entity-issuer-geography-extraction.md
 ffd73a5a1cbf680f205a77b16945a2d785a668c9e41ad42ffabea8d0da198027  00-current-issuer-asset-resolution/WP-00.02-run-frozen-v4-issuer-benchmark.md

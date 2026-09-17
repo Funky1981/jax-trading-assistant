@@ -1,6 +1,6 @@
 # Current Build Package
 
-PAPER-02A1: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED**. Versioned runtime
+PAPER-02A1: **GO / EXTERNALLY REVIEWED**. Versioned runtime
 prerequisite identities and a read-only readiness assessment are now present;
 PAPER-02 remains **READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE**.
 
@@ -24,6 +24,7 @@ Read in this order:
 5. `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md`
 6. Relevant paper-trading contracts under `Docs/PAPER_TRADING/`
 
-The next decision is external review of PAPER-02 readiness. No prospective
-pilot, formal forward-paper run, Phase 13 work, broker execution, or live
-trading is authorized by this package.
+The remaining PAPER-02 activation blocker is genuine prospective event intake.
+External activation review is still required. No prospective pilot, formal
+forward-paper run, Phase 13 work, broker execution, or live trading is
+authorized by this package.

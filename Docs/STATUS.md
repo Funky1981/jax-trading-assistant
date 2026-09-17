@@ -1,6 +1,6 @@
 # Jax Current Status
 
-PAPER-02A1: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED**. The default genuine
+PAPER-02A1: **GO / EXTERNALLY REVIEWED**. The default genuine
 prospective event source remains disabled, so readiness is blocked and no pilot
 is active.
 
@@ -55,6 +55,6 @@ package.
 
 ## Next decision required
 
-External review of the PAPER-02 readiness package is required before
-activation. Do not start a prospective pilot or FORMAL_FORWARD_PAPER without a
-new external decision.
+Genuine prospective event intake remains disabled/unconfigured, and external
+activation review is required before activation. Do not start a prospective
+pilot or FORMAL_FORWARD_PAPER without a new external decision.

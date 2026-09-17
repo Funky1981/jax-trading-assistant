@@ -76,7 +76,7 @@ not promote a strategy or prove a trading edge.
 | PAPER-01A | **COMPLETE / SUPERSEDED BY PAPER-01B REMEDIATION** |
 | PAPER-01B | **IMPLEMENTED / ACCEPTED DIRECTIONALLY** |
 | PAPER-01C | **ACCEPTED / EXTERNALLY REVIEWED** |
-| PAPER-02A1 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED** |
+| PAPER-02A1 | **GO / EXTERNALLY REVIEWED** |
 | PAPER-02 | **READY FOR EXTERNAL REVIEW / NOT ACTIVE** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
@@ -157,6 +157,41 @@ provenance, adequate samples, falsification, and external review.
 Keep event resolution, evidence, quant, risk, workflow, approval, paper
 execution, monitoring, and outcomes behind their existing contracts. Do not
 create a parallel ledger or bypass the two-runtime modular-monolith boundary.
+
+## Deferred Context Engineering
+
+**Status: RECORD / DEFER — DO NOT IMPLEMENT.** Context Engineering is a future
+cross-cutting capability spanning the existing Phase 06 Research &
+Recommendation Engine and Phase 08 Controlled AI Tools & Durable Research
+Agents. Its canonical planning record is
+`Docs/CONTEXT_ENGINEERING_ROADMAP_RECORD.md`.
+
+The governing principle is **context is not storage**: durable stores retain
+raw evidence, research artifacts, task state and memory, while a future
+Context Builder assembles a bounded, provenance-aware package for the current
+research objective and JaxMind invocation. Evidence, Memory, State and Context
+remain distinct concepts.
+
+Implementation is deferred until trustworthy evidence acquisition and
+normalisation, provenance-aware retrieval, durable checkpoint/task state,
+forecasting/uncertainty/calibration, BlackBox/auditability, and
+Experience/Judgement dependencies are suitably available and externally
+reviewed. The future contract must include explicit context budgets,
+objective-relevant selection including contradictions and unknowns,
+reconstructable provenance, structured checkpoint/compaction, relevant-only
+memory retrieval, and integration with existing architecture rather than a
+second AI system.
+
+Context Quality Evaluation is mandatory. It must force checkpoint/compaction
+and resume, test objective/constraint retention, omitted-evidence retrieval,
+distinct evidence/memory/state handling, contradiction preservation,
+non-repetition, non-invention, non-premature completion, context
+reconstruction and stability under changed selection, while measuring bounded
+context quality, cost, retrieval volume, unnecessary context and evidence
+coverage where practical.
+
+This record changes no runtime behaviour and authorizes no PAPER-02 activation,
+formal paper, live execution or Phase 13 work.
 
 ## AI role
 

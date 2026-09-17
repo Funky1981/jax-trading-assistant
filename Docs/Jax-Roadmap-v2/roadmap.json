@@ -10,9 +10,25 @@
   },
   "fincept_role": "Reference architecture/capability catalogue; no direct code copying",
   "live_execution": "Optional future gated phase only; not currently authorized",
-  "revision": "2026-09-16-doc-01-canonical-documentation-reset",
+  "revision": "2026-09-17-context-engineering-roadmap-record",
   "authoritative_roadmap": "Docs/ROADMAP.md",
   "current_package": "Docs/BUILD/CURRENT_PACKAGE.md",
   "llm_cost_context_efficiency": "Cross-cutting requirement integrated into Phases 06 and 08 plus governance",
-  "pack_status": "Historical/supporting roadmap detail only. Docs/ROADMAP.md is authoritative and Docs/BUILD/CURRENT_PACKAGE.md routes current implementation. PAPER-01 is IMPLEMENTED / EXTERNAL REVIEW REQUIRED. PAPER-02 is NOT STARTED / NOT AUTHORIZED. Formal paper evidence and Phase 13 are not started; live-readiness is blocked. Trading edge is NOT DEMONSTRATED."
+  "context_engineering": {
+    "status": "RECORD / DEFER — DO NOT IMPLEMENT",
+    "canonical_record": "Docs/CONTEXT_ENGINEERING_ROADMAP_RECORD.md",
+    "roadmap_location": "Docs/ROADMAP.md#deferred-context-engineering",
+    "spans_phases": [6, 8],
+    "prerequisites": [
+      "trustworthy evidence acquisition and normalisation",
+      "provenance-aware evidence and memory retrieval",
+      "durable research task and checkpoint state",
+      "forecasting, uncertainty and calibration",
+      "BlackBox/auditability",
+      "Experience/Judgement integration"
+    ],
+    "context_quality_evaluation_mandatory": true,
+    "implementation_authorized": false
+  },
+  "pack_status": "Historical/supporting roadmap detail only. Docs/ROADMAP.md is authoritative and Docs/BUILD/CURRENT_PACKAGE.md routes current implementation. PAPER-01 is GO / EXTERNALLY REVIEWED. PAPER-02A1 is GO / EXTERNALLY REVIEWED. PAPER-02 is READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE. Genuine prospective event intake remains disabled/unconfigured. Formal forward paper and Phase 13 are not started; live trading is not authorized. Trading edge is NOT DEMONSTRATED."
 }
