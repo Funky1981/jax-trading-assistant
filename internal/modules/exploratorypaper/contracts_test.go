@@ -10,6 +10,16 @@ func fixtureThesis() TradeThesis {
 	return TradeThesis{ThesisID: "thesis-1", ContractVersion: ContractVersion, Mode: ExploratoryPaperMode, EventID: "event-1", IssuerID: "issuer-1", InstrumentID: "AAPL", Direction: DirectionLong, Exposure: "LONG", EventCategory: "earnings", EventTimestamp: now.Add(-time.Hour), CandidateGeneratedAt: now, CausalReason: "reported demand supports a near-term repricing", Evidence: []EvidenceReference{{EvidenceID: "e-1", SourceID: "source-1", SourceURL: "https://example.test/e-1", Quality: "high", ObservedAt: now}}, ExpectedMechanism: "new demand estimate changes next-session expectations", ExpectedHorizonSessions: 3, EntryRationale: "event plus corroborated evidence and confirmation", QuantTechnicalContext: "price above confirmed short-term trend with bounded volatility", RiskAssessment: "one position, one-times leverage, fixed stop", EntryPolicyVersion: "entry-v1", ProtectiveStop: 95, Target: 110, InvalidationConditions: []string{"issuer contradicts reported demand"}, CounterEvidence: []EvidenceReference{{EvidenceID: "e-2", SourceID: "source-2", SourceURL: "https://example.test/e-2", Quality: "medium", ObservedAt: now}}, Confidence: .78, Uncertainty: "reaction and timing remain uncertain", PolicyVersion: "policy-v1", CreatedAt: now}
 }
 
+func fixtureBinding(thesis TradeThesis) EntryBinding {
+	return EntryBinding{
+		Mode: ExploratoryPaperMode, CandidateID: "candidate-1", ThesisID: thesis.ThesisID,
+		TraderModelVersion: TraderModelVersion, WorkflowID: "wf-approved", PaperIntentID: "pint-approved",
+		Environment: "PAPER", ExecutionAuthority: "NONE", MaximumLeverage: 1,
+		PolicyVersions: PolicyVersions{TraderModel: TraderModelVersion, ThesisContract: thesis.ContractVersion, CandidatePolicy: "candidate-v1", RiskPolicy: "risk-v1", EntryPolicy: thesis.EntryPolicyVersion, ExitPolicy: "exit-v1", CostModel: "paper-cost-v1"},
+		BoundAt:        thesis.CreatedAt,
+	}
+}
+
 func TestThesisRequiresExploratoryIdentityAndFiveSessionBound(t *testing.T) {
 	thesis := fixtureThesis()
 	if err := thesis.Validate(); err != nil {
@@ -39,7 +49,8 @@ func TestCandidateTechnicalOnlyCannotBecomeCandidate(t *testing.T) {
 
 func TestRelevantEvidenceTransitionsAndIgnoresGenericNews(t *testing.T) {
 	now := time.Date(2026, 1, 2, 9, 0, 0, 0, time.UTC)
-	p, err := OpenPosition("position-1", fixtureThesis(), now, 100)
+	thesis := fixtureThesis()
+	p, err := OpenApprovedPosition("position-1", thesis, fixtureBinding(thesis), now, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +78,8 @@ func TestRelevantEvidenceTransitionsAndIgnoresGenericNews(t *testing.T) {
 func TestFiveTradingSessionHardExitSkipsWeekendAndClosedInvalidationDefers(t *testing.T) {
 	cal := SessionCalendar{Sessions: map[string]bool{"2026-01-02": true, "2026-01-03": false, "2026-01-04": false, "2026-01-05": true, "2026-01-06": true, "2026-01-07": true, "2026-01-08": true, "2026-01-09": true}}
 	now := time.Date(2026, 1, 2, 10, 0, 0, 0, time.UTC)
-	p, err := OpenPosition("p", fixtureThesis(), now, 100)
+	thesis := fixtureThesis()
+	p, err := OpenApprovedPosition("p", thesis, fixtureBinding(thesis), now, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,5 +143,74 @@ func TestEntryBindingRequiresExistingPaperWorkflowSafetyIdentity(t *testing.T) {
 	binding.Environment = "LIVE"
 	if err := binding.Validate(); err == nil {
 		t.Fatal("live binding accepted")
+	}
+}
+
+func TestOpenPositionCompatibilityGuardRequiresApprovalBinding(t *testing.T) {
+	if _, err := OpenPosition("position-1", fixtureThesis(), time.Date(2026, 1, 2, 9, 0, 0, 0, time.UTC), 100); err == nil {
+		t.Fatal("legacy exploratory position constructor bypassed approval binding")
+	}
+}
+
+func TestOpenApprovedPositionRejectsApprovalBindingTampering(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*EntryBinding, *TradeThesis, *string, *time.Time, *float64)
+	}{
+		{name: "thesis mismatch", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) {
+			b.ThesisID = "other-thesis"
+		}},
+		{name: "candidate missing", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) { b.CandidateID = "" }},
+		{name: "workflow missing", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) { b.WorkflowID = "" }},
+		{name: "paper intent missing", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) { b.PaperIntentID = "" }},
+		{name: "model version missing", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) { b.TraderModelVersion = "" }},
+		{name: "model version mismatch", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) {
+			b.TraderModelVersion = "other-model-v1"
+		}},
+		{name: "wrong mode", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) { b.Mode = FormalForwardMode }},
+		{name: "live environment", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) { b.Environment = "LIVE" }},
+		{name: "execution authority", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) {
+			b.ExecutionAuthority = "BROKER"
+		}},
+		{name: "broker execution enabled", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) {
+			b.BrokerExecutionAllowed = true
+		}},
+		{name: "leverage above one", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) { b.MaximumLeverage = 1.01 }},
+		{name: "leverage zero", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) { b.MaximumLeverage = 0 }},
+		{name: "policy versions incomplete", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) {
+			b.PolicyVersions = PolicyVersions{}
+		}},
+		{name: "binding timestamp missing", mutate: func(b *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, _ *float64) { b.BoundAt = time.Time{} }},
+		{name: "thesis validation fails", mutate: func(_ *EntryBinding, thesis *TradeThesis, _ *string, _ *time.Time, _ *float64) {
+			thesis.Mode = FormalForwardMode
+		}},
+		{name: "entry identity missing", mutate: func(_ *EntryBinding, _ *TradeThesis, id *string, _ *time.Time, _ *float64) { *id = "" }},
+		{name: "entry time missing", mutate: func(_ *EntryBinding, _ *TradeThesis, _ *string, at *time.Time, _ *float64) { *at = time.Time{} }},
+		{name: "entry price invalid", mutate: func(_ *EntryBinding, _ *TradeThesis, _ *string, _ *time.Time, price *float64) { *price = 0 }},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			thesis := fixtureThesis()
+			binding := fixtureBinding(thesis)
+			id := "position-1"
+			at := thesis.CreatedAt
+			price := 100.0
+			test.mutate(&binding, &thesis, &id, &at, &price)
+			if _, err := OpenApprovedPosition(id, thesis, binding, at, price); err == nil {
+				t.Fatal("tampered approval binding was accepted")
+			}
+		})
+	}
+}
+
+func TestOpenApprovedPositionAcceptsValidBinding(t *testing.T) {
+	thesis := fixtureThesis()
+	position, err := OpenApprovedPosition("position-1", thesis, fixtureBinding(thesis), thesis.CreatedAt, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if position.PositionID != "position-1" || position.Thesis.ThesisID != thesis.ThesisID || position.State != StateValid {
+		t.Fatalf("position=%#v", position)
 	}
 }

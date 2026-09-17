@@ -69,6 +69,7 @@ exploratory paper profitability nor a paper label implies it.
 ## Scientific position
 
 `ma_crossover_v1` is closed after failed historical validation. Trading edge is
-not demonstrated. PAPER-01 is implemented and requires external review;
+not demonstrated. PAPER-01 is implemented and requires external re-review after
+PAPER-01A remediation;
 PAPER-02 is not started or authorized; formal forward paper is not started;
 Phase 13 is blocked.

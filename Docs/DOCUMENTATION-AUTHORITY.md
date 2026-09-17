@@ -16,7 +16,7 @@ Domain Detail > Historical Material.
 
 ## Current routing
 
-The current package is the external review of PAPER-01. No lower-level or
+The current package is the external re-review of PAPER-01A. No lower-level or
 historical document can authorize PAPER-02, formal forward paper, or Phase 13.
 
 ## Non-authorities

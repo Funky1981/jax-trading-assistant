@@ -11,7 +11,7 @@ Jax is an evidence-first market research and trading decision platform. The repo
 - Current implementation routing: `Docs/BUILD/CURRENT_PACKAGE.md`
 - Documentation authority: `Docs/DOCUMENTATION-AUTHORITY.md`
 
-PAPER-01 is implemented and awaiting external review. It is exploratory and hypothetical. A demonstrated trading edge has not been established; PAPER-02, formal paper evidence, live-readiness, and Phase 13 are not authorized or are blocked as stated in the roadmap.
+PAPER-01 is implemented, PAPER-01A remediation is complete, and external re-review is required. It is exploratory and hypothetical. A demonstrated trading edge has not been established; PAPER-02, formal paper evidence, live-readiness, and Phase 13 are not authorized or are blocked as stated in the roadmap.
 
 ## Runtime topology
 

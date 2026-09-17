@@ -11,7 +11,7 @@ Jax is an evidence-first market research and trading decision platform with dete
 - [Current status](Docs/STATUS.md)
 - [Documentation authority](Docs/DOCUMENTATION-AUTHORITY.md)
 
-PAPER-01 is implemented and requires external review. It does not demonstrate a trading edge, authorize PAPER-02, or permit live trading.
+PAPER-01A remediation is complete and requires external re-review of PAPER-01. It does not demonstrate a trading edge, authorize PAPER-02, or permit live trading.
 
 ## Runtime
 

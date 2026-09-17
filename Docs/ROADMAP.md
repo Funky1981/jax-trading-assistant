@@ -72,7 +72,8 @@ not promote a strategy or prove a trading edge.
 
 | Area | Status |
 | --- | --- |
-| PAPER-01 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED** |
+| PAPER-01 | **IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED** |
+| PAPER-01A | **REMEDIATION COMPLETE / EXTERNAL RE-REVIEW REQUIRED** |
 | PAPER-02 | **PROSPECTIVE EXPLORATORY PAPER PILOT — NOT STARTED / NOT AUTHORIZED** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
@@ -86,13 +87,15 @@ contracts, lifecycle tests, paper-workflow proof, and operator context are
 documented in `Docs/BUILD/PAPER-01.md`,
 `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md`,
 `Docs/TRADING_BRAIN/JAX_TRADER_MODEL_V1.md`, and `Docs/PAPER_TRADING/`.
-The next action is external review of the implementation against those
-canonical documents.
+PAPER-01A closes the conditional review findings for approval-binding and
+canonical route terminology. The next action is external re-review of the
+implementation against those canonical documents.
 
 ## PAPER-02
 
 PAPER-02 is not started and not authorized. It requires external GO after
-PAPER-01 review and must begin with prospective real evidence, human-approved
+PAPER-01A re-review and must begin with a prospective exploratory pilot using
+prospective real evidence, human-approved
 entries, paper-only execution, bounded five-session horizons, monitoring, and
 stop conditions defined in `Docs/BUILD/PAPER-02.md`.
 

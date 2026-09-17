@@ -6,7 +6,9 @@ The lifecycle is a hypothetical record of a thesis, not an execution workflow:
 2. `APPROVAL_PENDING` — a human review is required.
 3. `PAPER_APPROVED` — a paper ticket may be recorded with explicit hypothetical labels.
 4. `MONITORING` — the thesis is checked across the bounded five-session window.
-5. `RECOVERY_REVIEW` — the defined recovery condition is assessed without rewriting history.
-6. `CLOSED` — exit rationale, outcome, ambiguity, and missing data are retained.
+5. `THESIS_REVIEW` — relevant evidence and thesis state are reassessed without rewriting history.
+6. `CLOSED` — deterministic exit reason, outcome, ambiguity, and missing data are retained.
 
-No state creates a broker order, execution instruction, trade, or fill.
+The existing isolated simulated paper venue may create paper orders and fills.
+No state creates a real order, broker order, live order, broker fill, live
+position, or live execution instruction.

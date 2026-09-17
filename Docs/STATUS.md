@@ -27,7 +27,8 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - Formal forward paper: `NOT STARTED`; historical formal result is NO-GO.
 - VAL-04A: `COMPLETE / GO`.
 - VAL-04B: `DEFERRED / NOT CURRENT NEXT STEP`.
-- PAPER-01: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`.
+- PAPER-01: `IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED`.
+- PAPER-01A: `REMEDIATION COMPLETE / EXTERNAL RE-REVIEW REQUIRED`.
 - PAPER-02: `NOT STARTED / NOT AUTHORIZED`.
 - Trading edge: `NOT DEMONSTRATED`.
 - Phase 13: `NOT STARTED / BLOCKED`.

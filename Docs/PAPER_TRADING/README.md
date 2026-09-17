@@ -4,12 +4,12 @@ Paper trading in this repository is hypothetical and evidence-bounded. A paper t
 
 ## Current package
 
-`Docs/BUILD/CURRENT_PACKAGE.md` routes to PAPER-01, which is implemented and awaiting external review. PAPER-02 is prospective, not started, and not authorized.
+`Docs/BUILD/CURRENT_PACKAGE.md` routes to PAPER-01, implemented with PAPER-01A remediation complete and external re-review required. PAPER-02 is prospective, not started, and not authorized.
 
 ## Contracts
 
 - `EXPLORATORY_VS_FORMAL.md` — evidence modes and firewall;
-- `TRADE_LIFECYCLE.md` — thesis, approval, monitoring, recovery, and close states;
+- `TRADE_LIFECYCLE.md` — thesis, approval, monitoring, thesis review, and close states;
 - `THESIS_MONITORING.md` — checkpoint and invalidation rules;
 - `APPROVAL_AND_EXIT_POLICY.md` — human approval and exit boundaries;
 - `OUTCOME_LEARNING.md` — post-decision review without retroactive rewriting;

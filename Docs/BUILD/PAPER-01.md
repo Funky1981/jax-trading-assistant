@@ -1,6 +1,6 @@
 # PAPER-01 — Event-Driven Exploratory Paper-Trader Package
 
-Status: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
+Status: **IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED**.
 
 ## Purpose
 
@@ -9,11 +9,12 @@ PAPER-01 makes the event-driven short-horizon trader model observable and review
 ## Scope
 
 - one candidate thesis at a time;
-- explicit entry assumptions, invalidation, recovery condition, and exit rationale;
-- human approval before a hypothetical paper ticket is recorded;
+- explicit entry assumptions, invalidation, thesis-review conditions, and exit rationale;
+- human approval before a simulated paper ticket is recorded;
 - five-session monitoring with thesis state, checkpoints, and provenance;
 - post-decision outcome review with unresolved and missing data preserved;
-- no broker order, live order, execution instruction, or fill.
+- isolated simulated paper orders and fills may use the existing paper venue;
+- no real order, broker order, live order, execution instruction, broker fill, or live position.
 
 ## Evidence boundary
 

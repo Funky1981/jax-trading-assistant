@@ -4,7 +4,9 @@
 package exploratorypaper
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 )
@@ -15,6 +17,8 @@ const (
 	ContractVersion      = "paper-01-thesis-v1"
 	TraderModelVersion   = "event-driven-short-horizon-swing-v1"
 )
+
+var ErrApprovalBindingRequired = errors.New("exploratory position requires a validated approval binding")
 
 type Direction string
 
@@ -96,7 +100,10 @@ func (b EntryBinding) Validate() error {
 	if b.Mode != ExploratoryPaperMode || b.CandidateID == "" || b.ThesisID == "" || b.TraderModelVersion == "" || b.WorkflowID == "" || b.PaperIntentID == "" {
 		return fmt.Errorf("entry binding identity is incomplete")
 	}
-	if b.Environment != "PAPER" || b.ExecutionAuthority != "NONE" || b.BrokerExecutionAllowed || b.MaximumLeverage <= 0 || b.MaximumLeverage > 1 || b.BoundAt.IsZero() {
+	if b.TraderModelVersion != TraderModelVersion {
+		return fmt.Errorf("entry binding trader model version is unsupported")
+	}
+	if b.Environment != "PAPER" || b.ExecutionAuthority != "NONE" || b.BrokerExecutionAllowed || math.IsNaN(b.MaximumLeverage) || math.IsInf(b.MaximumLeverage, 0) || b.MaximumLeverage <= 0 || b.MaximumLeverage > 1 || b.BoundAt.IsZero() || b.BoundAt.Location() != time.UTC {
 		return fmt.Errorf("entry binding violates paper safety boundary")
 	}
 	return b.PolicyVersions.Validate()
@@ -234,14 +241,36 @@ type RelevantEvidence struct {
 	Reason       string
 }
 
-func OpenPosition(id string, thesis TradeThesis, at time.Time, price float64) (Position, error) {
+// OpenApprovedPosition is the only constructor that can create an exploratory
+// position. The binding is the immutable bridge from candidate approval and
+// the existing paper workflow to this domain position.
+func OpenApprovedPosition(id string, thesis TradeThesis, binding EntryBinding, at time.Time, price float64) (Position, error) {
 	if err := thesis.Validate(); err != nil {
 		return Position{}, err
 	}
-	if id == "" || at.IsZero() || price <= 0 {
+	if err := binding.Validate(); err != nil {
+		return Position{}, fmt.Errorf("entry binding: %w", err)
+	}
+	if binding.ThesisID != thesis.ThesisID {
+		return Position{}, fmt.Errorf("entry binding thesis does not match position thesis")
+	}
+	if binding.PolicyVersions.ThesisContract != thesis.ContractVersion || binding.PolicyVersions.EntryPolicy != thesis.EntryPolicyVersion {
+		return Position{}, fmt.Errorf("entry binding policy versions do not match thesis")
+	}
+	if binding.BoundAt.After(at) {
+		return Position{}, fmt.Errorf("entry binding must precede or equal entry time")
+	}
+	if strings.TrimSpace(id) == "" || at.IsZero() || at.Location() != time.UTC || math.IsNaN(price) || math.IsInf(price, 0) || price <= 0 {
 		return Position{}, fmt.Errorf("position identity, entry time, and positive price are required")
 	}
 	return Position{PositionID: id, Thesis: thesis, EntryAt: at, EntryPrice: price, State: StateValid, OperationalState: StateValid}, nil
+}
+
+// OpenPosition is retained only as a safe compatibility guard. It cannot
+// create an exploratory position without the candidate/workflow/paper-intent
+// approval binding; callers must use OpenApprovedPosition.
+func OpenPosition(id string, thesis TradeThesis, at time.Time, price float64) (Position, error) {
+	return Position{}, fmt.Errorf("%w: use OpenApprovedPosition", ErrApprovalBindingRequired)
 }
 
 func (p *Position) Reassess(e RelevantEvidence, at time.Time, policyVersion string) error {
