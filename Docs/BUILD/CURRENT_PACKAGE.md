@@ -4,7 +4,7 @@
 
 Status: **PAPER-01 NO-GO / PAPER-01B IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED**.
 
-PAPER-01 is the current implementation package. It establishes the bounded event-driven exploratory paper-trader model: source-backed event intake, causal thesis formation, human approval, isolated paper lifecycle, session monitoring, and outcome review. It does not demonstrate a trading edge, authorize PAPER-02, create formal evidence, or permit live execution.
+PAPER-01C is the current implementation package. It closes the runtime-loop seam for the bounded event-driven exploratory paper-trader model: canonical source-backed event/evidence handoff, human-approved paper entry, isolated paper lifecycle, restart-safe scheduled review, deterministic exit approval, and outcome review. It does not run a pilot, demonstrate a trading edge, authorize PAPER-02, create formal evidence, or permit live execution.
 
 Read in this order:
 

@@ -13,6 +13,7 @@ import (
 	"jax-trading-assistant/internal/modules/papertrading"
 	"jax-trading-assistant/internal/modules/workflow"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -42,14 +43,22 @@ type ExitSnapshot struct {
 }
 
 type Review struct {
-	ReviewID       string     `json:"reviewId"`
-	PositionID     string     `json:"positionId"`
-	SessionNumber  int        `json:"sessionNumber"`
-	ScheduledAt    time.Time  `json:"scheduledAt"`
-	Status         string     `json:"status"`
-	EvidenceReview string     `json:"evidenceReviewId,omitempty"`
-	Reason         string     `json:"reason,omitempty"`
-	ProcessedAt    *time.Time `json:"processedAt,omitempty"`
+	ReviewID               string     `json:"reviewId"`
+	PositionID             string     `json:"positionId"`
+	SessionNumber          int        `json:"sessionNumber"`
+	ScheduledAt            time.Time  `json:"scheduledAt"`
+	Status                 string     `json:"status"`
+	EvidenceReview         string     `json:"evidenceReviewId,omitempty"`
+	Reason                 string     `json:"reason,omitempty"`
+	ExitAction             string     `json:"exitAction,omitempty"`
+	ExitReason             string     `json:"exitReason,omitempty"`
+	ExitApprovalWorkflowID string     `json:"exitApprovalWorkflowId,omitempty"`
+	ProcessedAt            *time.Time `json:"processedAt,omitempty"`
+}
+
+type ReviewRecord struct {
+	Lifecycle LifecycleRecord
+	Review    Review
 }
 
 type LifecycleRecord struct {
@@ -126,6 +135,160 @@ func (s *PostgresStore) SaveApprovedEntry(ctx context.Context, candidateID strin
 		return "", failClosed("commit exploratory entry", err)
 	}
 	return lifecycleID, nil
+}
+
+// QueueApprovedEntry is the narrow handoff from an already approved canonical
+// workflow to the exploratory runtime. The payload is treated as untrusted;
+// LoadApprovedEntries replaces its evidence with the persisted projection.
+func (s *PostgresStore) QueueApprovedEntry(ctx context.Context, entry EntryRequest) error {
+	if s == nil || s.pool == nil || strings.TrimSpace(entry.CandidateID) == "" || strings.TrimSpace(entry.Approval.Workflow.WorkflowID) == "" || strings.TrimSpace(entry.Approval.PaperIntent.IntentID) == "" {
+		return fmt.Errorf("%w: approved entry queue identity is incomplete", ErrFailedClosed)
+	}
+	if err := entry.Approval.Workflow.Validate(); err != nil || entry.Approval.Workflow.State != workflow.StatePaperIntentCreated || entry.Approval.Workflow.Confirmation == nil {
+		return fmt.Errorf("%w: queue requires a human-approved paper intent", ErrFailedClosed)
+	}
+	if err := entry.Approval.Workflow.Confirmation.ValidateFor(entry.Approval.Workflow, s.now().UTC()); err != nil {
+		return fmt.Errorf("%w: human approval is stale or mismatched", ErrFailedClosed)
+	}
+	if err := entry.Approval.PaperIntent.Validate(); err != nil {
+		return fmt.Errorf("%w: paper intent: %v", ErrFailedClosed, err)
+	}
+	payload, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+	requestID := queueIdentity(entry.CandidateID, entry.Approval.Workflow.WorkflowID, entry.Approval.PaperIntent.IntentID)
+	now := s.now().UTC()
+	result, err := s.pool.Exec(ctx, `INSERT INTO exploratory_paper_entry_queue(request_id,candidate_id,payload,status,created_at,updated_at) VALUES($1,$2,$3,'PENDING',$4,$4) ON CONFLICT(candidate_id) DO UPDATE SET payload=EXCLUDED.payload,updated_at=EXCLUDED.updated_at,status='PENDING' WHERE exploratory_paper_entry_queue.payload=EXCLUDED.payload`, requestID, entry.CandidateID, payload, now)
+	if err != nil {
+		return failClosed("queue approved entry", err)
+	}
+	if result.RowsAffected() == 0 {
+		var existing []byte
+		if err := s.pool.QueryRow(ctx, `SELECT payload FROM exploratory_paper_entry_queue WHERE candidate_id=$1`, entry.CandidateID).Scan(&existing); err != nil {
+			return failClosed("verify queued entry identity", err)
+		}
+		if string(existing) != string(payload) {
+			return failClosed("queued entry identity", ErrPersistenceConflict)
+		}
+	}
+	return nil
+}
+
+func queueIdentity(candidateID, workflowID, intentID string) string {
+	digest := sha256.Sum256([]byte(candidateID + "|" + workflowID + "|" + intentID))
+	return "epq_" + hex.EncodeToString(digest[:])
+}
+
+// LoadApprovedEntries is the production EntrySource. It loads the approved
+// workflow handoff, then replaces caller-provided evidence with the canonical
+// candidate_evidence_scores/items projection before the runtime can act.
+func (s *PostgresStore) LoadApprovedEntries(ctx context.Context) ([]EntryRequest, error) {
+	rows, err := s.pool.Query(ctx, `SELECT payload FROM exploratory_paper_entry_queue WHERE status='PENDING' ORDER BY created_at FOR UPDATE SKIP LOCKED`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []EntryRequest
+	for rows.Next() {
+		var payload []byte
+		if err := rows.Scan(&payload); err != nil {
+			return nil, err
+		}
+		var entry EntryRequest
+		if err := json.Unmarshal(payload, &entry); err != nil {
+			return nil, failClosed("decode approved entry queue", err)
+		}
+		if err := s.loadCanonicalEvidence(ctx, &entry); err != nil {
+			return nil, failClosed("load canonical evidence projection", err)
+		}
+		result = append(result, entry)
+	}
+	return result, rows.Err()
+}
+
+func (s *PostgresStore) loadCanonicalEvidence(ctx context.Context, entry *EntryRequest) error {
+	id, err := uuid.Parse(entry.CandidateID)
+	if err != nil {
+		return err
+	}
+	var decision string
+	if err := s.pool.QueryRow(ctx, `SELECT decision FROM genuine_event_decisions WHERE candidate_id=$1 AND is_current ORDER BY decision_at DESC LIMIT 1`, id).Scan(&decision); err != nil {
+		return err
+	}
+	if decision != string(DecisionCandidate) {
+		return fmt.Errorf("canonical event decision is not CANDIDATE")
+	}
+	var assessment EvidenceAssessment
+	var quality, overall float64
+	var status string
+	var ready, gate, broker, execution bool
+	var contradictoryItems, staleItems int
+	var scoredAt time.Time
+	err = s.pool.QueryRow(ctx, `SELECT quality_score::float8,overall_evidence_score::float8,evidence_status,evidence_ready,evidence_gate_ready,broker_execution_allowed,execution_instruction_created,contradictory_item_count,stale_item_count,scored_at FROM candidate_evidence_scores WHERE candidate_id=$1 ORDER BY scored_at DESC LIMIT 1`, id).Scan(&assessment.QualityScore, &overall, &status, &ready, &gate, &broker, &execution, &contradictoryItems, &staleItems, &scoredAt)
+	if err != nil {
+		return err
+	}
+	quality = assessment.QualityScore
+	if quality <= 0 || overall <= 0 {
+		return fmt.Errorf("canonical evidence quality is not sufficient")
+	}
+	items, err := s.pool.Query(ctx, `SELECT evidence_id::text,source_ref,observed_at,quality_score::float8,freshness_status,supports_candidate,contradicts_candidate FROM candidate_evidence_items WHERE candidate_id=$1 ORDER BY observed_at,evidence_id`, id)
+	if err != nil {
+		return err
+	}
+	defer items.Close()
+	var evidence []EvidenceReference
+	independent := map[string]struct{}{}
+	for items.Next() {
+		var item EvidenceReference
+		var sourceRef, freshness string
+		var qualityScore float64
+		var supports, contradicts bool
+		if err := items.Scan(&item.EvidenceID, &sourceRef, &item.ObservedAt, &qualityScore, &freshness, &supports, &contradicts); err != nil {
+			return err
+		}
+		if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(sourceRef)), "http") || strings.TrimSpace(sourceRef) == "" {
+			return fmt.Errorf("canonical evidence source URL is unavailable")
+		}
+		item.SourceID, item.SourceURL = sourceRef, sourceRef
+		item.Quality = fmt.Sprintf("%.3f/%s", qualityScore, freshness)
+		evidence = append(evidence, item)
+		independent[sourceRef] = struct{}{}
+		if supports && contradicts {
+			assessment.Contradictory = true
+		}
+	}
+	if err := items.Err(); err != nil {
+		return err
+	}
+	assessment.Provider = "candidate_evidence_scores"
+	assessment.PolicyVersion = "candidate-evidence-scoring-v1"
+	assessment.EvidenceSetFingerprint = EvidenceSetFingerprint(evidence)
+	assessment.ReviewedAt = scoredAt.UTC()
+	assessment.SourceBacked = len(evidence) > 0
+	assessment.QualityState = status
+	assessment.RequiredQualityScore = .70
+	assessment.EvidenceReady, assessment.EvidenceGateReady = ready, gate
+	assessment.Corroborated = len(independent) >= 2
+	assessment.IndependentSourceGroups = len(independent)
+	assessment.IssuerRelevant = strings.TrimSpace(entry.Candidate.IssuerID) != ""
+	assessment.InstrumentRelevant = strings.TrimSpace(entry.Candidate.InstrumentID) != ""
+	assessment.Contradictory = assessment.Contradictory || contradictoryItems > 0
+	assessment.Stale = staleItems > 0
+	assessment.Unknown = !assessment.SourceBacked || broker || execution
+	if assessment.QualityScore < assessment.RequiredQualityScore || overall < assessment.RequiredQualityScore {
+		assessment.QualityState = "insufficient"
+	}
+	entry.Candidate.Evidence = evidence
+	entry.Candidate.ReviewedEvidence = &assessment
+	entry.Candidate.CandidatePolicyVersion = assessment.PolicyVersion
+	return nil
+}
+
+func (s *PostgresStore) MarkEntryProcessed(ctx context.Context, candidateID string) error {
+	_, err := s.pool.Exec(ctx, `UPDATE exploratory_paper_entry_queue SET status='PROCESSED',updated_at=$2 WHERE candidate_id=$1 AND status='PENDING'`, candidateID, s.now().UTC())
+	return err
 }
 
 func validateApprovedEntry(thesis TradeThesis, binding EntryBinding, approval ApprovalSnapshot, position Position, entry EntrySnapshot) error {
@@ -326,6 +489,82 @@ func (s *PostgresStore) RecordReviewUnavailable(ctx context.Context, positionID 
 	_, err := s.pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='MISSING_DATA',payload=$4,processed_at=$3 WHERE review_id=$1 AND position_id=$2 AND status='PENDING'`, reviewID, positionID, at, payload)
 	if err != nil {
 		return failClosed("record unavailable review", err)
+	}
+	return nil
+}
+
+func (s *PostgresStore) FindByCandidate(ctx context.Context, candidateID string) (LifecycleRecord, bool, error) {
+	var positionID string
+	err := s.pool.QueryRow(ctx, `SELECT position_id FROM exploratory_paper_lifecycles WHERE candidate_id=$1 ORDER BY created_at LIMIT 1`, candidateID).Scan(&positionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return LifecycleRecord{}, false, nil
+	}
+	if err != nil {
+		return LifecycleRecord{}, false, err
+	}
+	record, err := s.Get(ctx, positionID)
+	return record, true, err
+}
+
+func (s *PostgresStore) ListDueReviews(ctx context.Context, now time.Time) ([]ReviewRecord, error) {
+	if now.IsZero() || now.Location() != time.UTC {
+		return nil, fmt.Errorf("due-review time must be UTC")
+	}
+	rows, err := s.pool.Query(ctx, `SELECT position_id,session_number FROM exploratory_paper_reviews WHERE status='PENDING' AND scheduled_at <= $1 ORDER BY scheduled_at,position_id FOR UPDATE SKIP LOCKED`, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []ReviewRecord
+	for rows.Next() {
+		var positionID string
+		var session int
+		if err := rows.Scan(&positionID, &session); err != nil {
+			return nil, err
+		}
+		record, err := s.Get(ctx, positionID)
+		if err != nil {
+			return nil, failClosed("restore due lifecycle", err)
+		}
+		var review Review
+		for _, candidate := range record.Reviews {
+			if candidate.SessionNumber == session {
+				review = candidate
+				break
+			}
+		}
+		if review.ReviewID == "" {
+			return nil, failClosed("restore due review", ErrPersistenceConflict)
+		}
+		result = append(result, ReviewRecord{Lifecycle: record, Review: review})
+	}
+	return result, rows.Err()
+}
+
+func (s *PostgresStore) PersistExitRecommendation(ctx context.Context, positionID string, decision ExitDecision, review Review) error {
+	if positionID == "" || review.PositionID != positionID || decision.Reason == "" {
+		return fmt.Errorf("exit recommendation identity is invalid")
+	}
+	record, err := s.Get(ctx, positionID)
+	if err != nil {
+		return failClosed("load exit recommendation lifecycle", err)
+	}
+	record.Position.OperationalState = StateExitRecommended
+	payload, err := json.Marshal(Review{ReviewID: review.ReviewID, PositionID: positionID, SessionNumber: review.SessionNumber, ScheduledAt: review.ScheduledAt, Status: "EXIT_RECOMMENDED", ExitAction: string(decision.Action), ExitReason: string(decision.Reason), ProcessedAt: review.ProcessedAt})
+	if err != nil {
+		return err
+	}
+	positionPayload, err := json.Marshal(record.Position)
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, `UPDATE exploratory_paper_lifecycles SET position_payload=$2,operational_state=$3,updated_at=$4 WHERE position_id=$1`, positionID, positionPayload, string(StateExitRecommended), s.now().UTC())
+	if err != nil {
+		return failClosed("persist exit recommendation position", err)
+	}
+	_, err = s.pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='EXIT_RECOMMENDED',payload=$3,processed_at=$2 WHERE review_id=$1 AND position_id=$4 AND status IN ('PENDING','COMPLETED')`, review.ReviewID, s.now().UTC(), payload, positionID)
+	if err != nil {
+		return failClosed("persist exit recommendation review", err)
 	}
 	return nil
 }
@@ -588,7 +827,10 @@ func (s *PostgresStore) ListActive(ctx context.Context, limit int) ([]LifecycleR
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	rows, err := s.pool.Query(ctx, `SELECT position_id FROM exploratory_paper_lifecycles WHERE state='ACTIVE' ORDER BY updated_at DESC LIMIT $1`, limit)
+	// INVALIDATED and EXIT_RECOMMENDED lifecycles remain operationally active
+	// until the separately approved simulated exit is persisted. Hiding them
+	// would make a pending human decision invisible to the operator.
+	rows, err := s.pool.Query(ctx, `SELECT position_id FROM exploratory_paper_lifecycles WHERE state <> 'CLOSED' ORDER BY updated_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}

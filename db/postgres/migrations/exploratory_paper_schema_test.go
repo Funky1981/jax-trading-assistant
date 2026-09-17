@@ -34,4 +34,20 @@ func TestExploratoryPaperMigrationsPreserveIdentityAndFirewall(t *testing.T) {
 	if !strings.Contains(strings.ToLower(string(executedPrice)), "add column if not exists executed_price") {
 		t.Fatal("paper fill executed-price migration missing")
 	}
+	runtimeLoop, err := os.ReadFile("000071_exploratory_paper_runtime_loop.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(strings.ToLower(string(runtimeLoop)), "exit_recommended") {
+		t.Fatal("runtime review migration missing durable exit recommendation state")
+	}
+	queue, err := os.ReadFile("000072_exploratory_paper_entry_queue.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fragment := range []string{"exploratory_paper_entry_queue", "unique", "paper-only handoff"} {
+		if !strings.Contains(strings.ToLower(string(queue)), fragment) {
+			t.Fatalf("entry queue migration missing %q", fragment)
+		}
+	}
 }

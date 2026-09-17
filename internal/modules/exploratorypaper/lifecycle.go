@@ -164,7 +164,11 @@ func (c SessionCalendar) HardExitDate(entryAt time.Time) (time.Time, error) {
 			return time.Time{}, err
 		}
 		if open {
-			sessions = append(sessions, d.UTC())
+			start, err := c.sessionStart(d)
+			if err != nil {
+				return time.Time{}, err
+			}
+			sessions = append(sessions, start)
 		}
 	}
 	if len(sessions) == 0 || sessions[0].In(location).Format("2006-01-02") != c.dateKey(entryAt) {
@@ -177,11 +181,41 @@ func (c SessionCalendar) HardExitDate(entryAt time.Time) (time.Time, error) {
 }
 
 func (c SessionCalendar) ReviewSessions(entryAt time.Time) ([]time.Time, error) {
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+	state, err := c.SessionState(entryAt)
+	if err != nil || state != SessionOpen {
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("entry must occur during a known tradable session")
+	}
 	last, err := c.HardExitDate(entryAt)
 	if err != nil {
 		return nil, err
 	}
-	return c.TradingSessionsBetween(entryAt, last)
+	location, _ := c.location()
+	var sessions []time.Time
+	for offset := 0; offset <= 370 && len(sessions) < 5; offset++ {
+		localEntry := entryAt.In(location)
+		d := time.Date(localEntry.Year(), localEntry.Month(), localEntry.Day(), 0, 0, 0, 0, location).AddDate(0, 0, offset)
+		open, err := c.IsTradingSession(d)
+		if err != nil {
+			return nil, err
+		}
+		if open {
+			start, err := c.sessionStart(d)
+			if err != nil {
+				return nil, err
+			}
+			sessions = append(sessions, start)
+		}
+	}
+	if len(sessions) != 5 || sessions[4] != last {
+		return nil, fmt.Errorf("calendar does not cover five trading-session review points")
+	}
+	return sessions, nil
 }
 
 type ExitReason string

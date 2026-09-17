@@ -1,6 +1,6 @@
 # PAPER-01 Existing Capability Map
 
-PAPER-01B reuses the established contracts and closes the operational gaps
+PAPER-01C reuses the established contracts and closes the runtime-loop gap
 identified by external review. It adds a durable exploratory lifecycle without
 creating a second workflow or paper ledger.
 

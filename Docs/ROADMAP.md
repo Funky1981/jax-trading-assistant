@@ -72,9 +72,10 @@ not promote a strategy or prove a trading edge.
 
 | Area | Status |
 | --- | --- |
-| PAPER-01 | **NO-GO / PENDING PAPER-01B EXTERNAL RE-REVIEW** |
+| PAPER-01 | **CONDITIONAL GO / PENDING PAPER-01C EXTERNAL RE-REVIEW** |
 | PAPER-01A | **COMPLETE / SUPERSEDED BY PAPER-01B REMEDIATION** |
-| PAPER-01B | **IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED** |
+| PAPER-01B | **IMPLEMENTED / ACCEPTED DIRECTIONALLY** |
+| PAPER-01C | **IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED** |
 | PAPER-02 | **NOT AUTHORIZED** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
@@ -88,10 +89,12 @@ contracts, lifecycle tests, paper-workflow proof, and operator context are
 documented in `Docs/BUILD/PAPER-01.md`,
 `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md`,
 `Docs/TRADING_BRAIN/JAX_TRADER_MODEL_V1.md`, and `Docs/PAPER_TRADING/`.
-PAPER-01 remains NO-GO pending external re-review of PAPER-01B. PAPER-01B
+PAPER-01 is CONDITIONAL GO pending external re-review of PAPER-01C. PAPER-01B
 adds durable exploratory identity, restart/reconciliation checks, canonical
 evidence gating, frozen provenance, idempotent reviews, deterministic
-accounting, and a minimal operator read model. It does not authorize a pilot.
+accounting, and a minimal operator read model. PAPER-01C closes the runtime
+entry/review loop through the approved-entry queue and scheduled worker. Neither
+package authorizes a pilot.
 
 ## PAPER-02
 

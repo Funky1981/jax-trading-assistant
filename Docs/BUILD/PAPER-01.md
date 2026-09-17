@@ -1,11 +1,12 @@
 # PAPER-01 — Event-Driven Exploratory Paper-Trader Package
 
-Status: **NO-GO / PAPER-01B IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED**.
+Status: **CONDITIONAL GO / PAPER-01C IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED**.
 
 ## Purpose
 
 PAPER-01 defines the event-driven short-horizon exploratory paper-trader
-capability. The current external decision is NO-GO pending PAPER-01B re-review.
+capability. The current external decision is CONDITIONAL GO pending PAPER-01C
+re-review.
 The implementation is not a claim of profitability or edge.
 
 ## Scope
@@ -17,6 +18,13 @@ The implementation is not a claim of profitability or edge.
 - post-decision outcome review with unresolved and missing data preserved;
 - isolated simulated paper orders and fills may use the existing paper venue;
 - no real order, broker order, live order, execution instruction, broker fill, or live position.
+
+PAPER-01C closes the runtime loop through the protected approved-entry queue
+and scheduled review worker. The queue accepts only an existing human approval
+in `PAPER_INTENT_CREATED`; it never grants approval. The worker reloads
+canonical `candidate_evidence_scores` and source-backed evidence, submits only
+to the isolated paper venue, persists the lifecycle, and records explicit
+missing-data or pending-human-exit states.
 
 PAPER-01 may create simulated paper orders, fills, ledger mutations, and paper
 positions inside the existing isolated paper venue. These artifacts are never

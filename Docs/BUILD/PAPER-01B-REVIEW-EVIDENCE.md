@@ -1,7 +1,7 @@
-# PAPER-01B External Review Evidence
+# PAPER-01B External Review Evidence (Superseded by PAPER-01C)
 
-Status: **IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED**. PAPER-01 remains
-**NO-GO** pending this review. No PAPER-02 pilot, formal run, historical
+Status: **IMPLEMENTED / ACCEPTED DIRECTIONALLY**. PAPER-01 is now
+**CONDITIONAL GO** pending PAPER-01C re-review. No PAPER-02 pilot, formal run, historical
 validation rerun, Phase 13 work, or live/broker action is part of this package.
 
 | External finding | Implementation | Tests | Persistence/runtime evidence | Documentation | Remaining limitation |
@@ -17,8 +17,9 @@ validation rerun, Phase 13 work, or live/broker action is part of this package.
 
 ## Exact safety position
 
-`PAPER-01B = IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED`; `PAPER-01 = NO-GO
-PENDING PAPER-01B EXTERNAL RE-REVIEW`; `PAPER-02 = NOT AUTHORIZED`;
+`PAPER-01B = IMPLEMENTED / ACCEPTED DIRECTIONALLY`; `PAPER-01C = IMPLEMENTED /
+EXTERNAL RE-REVIEW REQUIRED`; `PAPER-01 = CONDITIONAL GO / PENDING PAPER-01C
+EXTERNAL RE-REVIEW`; `PAPER-02 = NOT AUTHORIZED`;
 `FORMAL_FORWARD_PAPER = NOT STARTED`; demonstrated edge = NO; live trading and
 Phase 13 = NOT AUTHORIZED; optional commercialisation = DEFERRED / NOT A
 CURRENT OBJECTIVE.
