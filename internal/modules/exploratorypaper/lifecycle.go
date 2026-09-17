@@ -15,16 +15,109 @@ const (
 )
 
 // SessionCalendar is explicit by design. An unknown calendar must not be
-// silently approximated with calendar-day arithmetic.
-type SessionCalendar struct{ Sessions map[string]bool }
+// silently approximated with calendar-day arithmetic or caller-provided flags.
+type SessionCalendar struct {
+	Sessions  map[string]bool `json:"sessions"`
+	Timezone  string          `json:"timezone"`
+	OpenTime  string          `json:"openTime"`
+	CloseTime string          `json:"closeTime"`
+}
+
+func (c SessionCalendar) Validate() error {
+	if len(c.Sessions) == 0 || c.Timezone == "" {
+		return fmt.Errorf("trading session calendar is unknown")
+	}
+	if _, err := time.LoadLocation(c.Timezone); err != nil {
+		return fmt.Errorf("trading session timezone is unsupported: %w", err)
+	}
+	if _, _, err := c.sessionWindow(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c SessionCalendar) location() (*time.Location, error) {
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+	location, err := time.LoadLocation(c.Timezone)
+	if err != nil {
+		return nil, err
+	}
+	return location, nil
+}
+
+func (c SessionCalendar) sessionWindow() (time.Duration, time.Duration, error) {
+	open, err := time.Parse("15:04", c.OpenTime)
+	if err != nil {
+		return 0, 0, fmt.Errorf("session open time must be HH:MM: %w", err)
+	}
+	close, err := time.Parse("15:04", c.CloseTime)
+	if err != nil || !close.After(open) {
+		return 0, 0, fmt.Errorf("session close time must be after open time")
+	}
+	return time.Duration(open.Hour())*time.Hour + time.Duration(open.Minute())*time.Minute,
+		time.Duration(close.Hour())*time.Hour + time.Duration(close.Minute())*time.Minute, nil
+}
+
+func (c SessionCalendar) dateKey(day time.Time) string {
+	location, err := time.LoadLocation(c.Timezone)
+	if err != nil {
+		return ""
+	}
+	return day.In(location).Format("2006-01-02")
+}
+
+func (c SessionCalendar) SessionState(at time.Time) (MarketSession, error) {
+	location, err := c.location()
+	if err != nil || at.IsZero() || at.Location() != time.UTC {
+		if err != nil {
+			return SessionUnknown, err
+		}
+		return SessionUnknown, fmt.Errorf("session timestamp must be UTC")
+	}
+	key := at.In(location).Format("2006-01-02")
+	open, known := c.Sessions[key]
+	if !known {
+		return SessionUnknown, fmt.Errorf("trading session %s is unknown", key)
+	}
+	if !open {
+		return SessionClosed, nil
+	}
+	openOffset, closeOffset, err := c.sessionWindow()
+	if err != nil {
+		return SessionUnknown, err
+	}
+	local := at.In(location)
+	midnight := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, location)
+	openAt := midnight.Add(openOffset)
+	closeAt := midnight.Add(closeOffset)
+	if !local.Before(openAt) && local.Before(closeAt) {
+		return SessionOpen, nil
+	}
+	return SessionClosed, nil
+}
+
+func (c SessionCalendar) sessionStart(day time.Time) (time.Time, error) {
+	location, err := c.location()
+	if err != nil {
+		return time.Time{}, err
+	}
+	openOffset, _, err := c.sessionWindow()
+	if err != nil {
+		return time.Time{}, err
+	}
+	local := day.In(location)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, location).Add(openOffset).UTC(), nil
+}
 
 func (c SessionCalendar) IsTradingSession(day time.Time) (bool, error) {
-	if len(c.Sessions) == 0 {
-		return false, fmt.Errorf("trading session calendar is unknown")
+	if err := c.Validate(); err != nil {
+		return false, err
 	}
-	v, ok := c.Sessions[day.UTC().Format("2006-01-02")]
+	v, ok := c.Sessions[c.dateKey(day)]
 	if !ok {
-		return false, fmt.Errorf("trading session %s is unknown", day.UTC().Format("2006-01-02"))
+		return false, fmt.Errorf("trading session %s is unknown", c.dateKey(day))
 	}
 	return v, nil
 }
@@ -33,38 +126,48 @@ func (c SessionCalendar) TradingSessionsBetween(start, end time.Time) ([]time.Ti
 	if start.IsZero() || end.IsZero() || end.Before(start) {
 		return nil, fmt.Errorf("invalid session interval")
 	}
-	if len(c.Sessions) == 0 {
-		return nil, fmt.Errorf("trading session calendar is unknown")
+	if err := c.Validate(); err != nil {
+		return nil, err
 	}
 	var out []time.Time
-	for d := start.UTC().Truncate(24 * time.Hour); !d.After(end.UTC().Truncate(24 * time.Hour)); d = d.AddDate(0, 0, 1) {
+	location, _ := c.location()
+	startLocal, endLocal := start.In(location), end.In(location)
+	for d := time.Date(startLocal.Year(), startLocal.Month(), startLocal.Day(), 0, 0, 0, 0, location); !d.After(time.Date(endLocal.Year(), endLocal.Month(), endLocal.Day(), 0, 0, 0, 0, location)); d = d.AddDate(0, 0, 1) {
 		open, err := c.IsTradingSession(d)
 		if err != nil {
 			return nil, err
 		}
 		if open {
-			out = append(out, d)
+			out = append(out, d.UTC())
 		}
 	}
 	return out, nil
 }
 
 func (c SessionCalendar) HardExitDate(entryAt time.Time) (time.Time, error) {
-	if len(c.Sessions) == 0 {
-		return time.Time{}, fmt.Errorf("trading session calendar is unknown")
+	if err := c.Validate(); err != nil {
+		return time.Time{}, err
 	}
+	if state, err := c.SessionState(entryAt); err != nil || state != SessionOpen {
+		if err != nil {
+			return time.Time{}, err
+		}
+		return time.Time{}, fmt.Errorf("entry must occur during a known tradable session")
+	}
+	location, _ := c.location()
 	var sessions []time.Time
 	for offset := 0; offset <= 370 && len(sessions) < 5; offset++ {
-		d := entryAt.UTC().AddDate(0, 0, offset)
+		localEntry := entryAt.In(location)
+		d := time.Date(localEntry.Year(), localEntry.Month(), localEntry.Day(), 0, 0, 0, 0, location).AddDate(0, 0, offset)
 		open, err := c.IsTradingSession(d)
 		if err != nil {
 			return time.Time{}, err
 		}
 		if open {
-			sessions = append(sessions, d.UTC().Truncate(24*time.Hour))
+			sessions = append(sessions, d.UTC())
 		}
 	}
-	if len(sessions) == 0 || sessions[0].Format("2006-01-02") != entryAt.UTC().Format("2006-01-02") {
+	if len(sessions) == 0 || sessions[0].In(location).Format("2006-01-02") != c.dateKey(entryAt) {
 		return time.Time{}, fmt.Errorf("entry is not on a known trading session")
 	}
 	if len(sessions) < 5 {
@@ -122,11 +225,18 @@ func EvaluateExit(position Position, in ExitInput) (ExitDecision, error) {
 	if position.State == StateClosed {
 		return ExitDecision{}, fmt.Errorf("position is closed")
 	}
-	if in.Now.IsZero() || in.Calendar.Sessions == nil {
-		return ExitDecision{}, fmt.Errorf("exit evaluation requires a known calendar and time")
+	if err := in.Calendar.Validate(); err != nil || in.Now.IsZero() || in.Now.Location() != time.UTC {
+		if err != nil {
+			return ExitDecision{}, err
+		}
+		return ExitDecision{}, fmt.Errorf("exit evaluation requires a UTC timestamp")
 	}
-	if in.Session == SessionUnknown {
-		return ExitDecision{}, fmt.Errorf("unknown market session fails closed")
+	knownSession, err := in.Calendar.SessionState(in.Now)
+	if err != nil || in.Session == SessionUnknown || in.Session != knownSession {
+		if err != nil {
+			return ExitDecision{}, err
+		}
+		return ExitDecision{}, fmt.Errorf("caller session disagrees with explicit calendar")
 	}
 	reason := ExitReason("")
 	price := in.Bid
@@ -148,7 +258,7 @@ func EvaluateExit(position Position, in ExitInput) (ExitDecision, error) {
 	if err != nil {
 		return ExitDecision{}, err
 	}
-	if reason == "" && !in.Now.UTC().Truncate(24*time.Hour).Before(hard) {
+	if reason == "" && !in.Now.Before(hard) {
 		reason = ExitTimeLimit
 	}
 	if reason == "" {
@@ -172,7 +282,7 @@ func nextTradable(c SessionCalendar, after time.Time) (time.Time, error) {
 			return time.Time{}, err
 		}
 		if open {
-			return d, nil
+			return c.sessionStart(d)
 		}
 	}
 	return time.Time{}, fmt.Errorf("no next tradable session in calendar")

@@ -72,9 +72,10 @@ not promote a strategy or prove a trading edge.
 
 | Area | Status |
 | --- | --- |
-| PAPER-01 | **IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED** |
-| PAPER-01A | **REMEDIATION COMPLETE / EXTERNAL RE-REVIEW REQUIRED** |
-| PAPER-02 | **PROSPECTIVE EXPLORATORY PAPER PILOT — NOT STARTED / NOT AUTHORIZED** |
+| PAPER-01 | **NO-GO / PENDING PAPER-01B EXTERNAL RE-REVIEW** |
+| PAPER-01A | **COMPLETE / SUPERSEDED BY PAPER-01B REMEDIATION** |
+| PAPER-01B | **IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED** |
+| PAPER-02 | **NOT AUTHORIZED** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -87,17 +88,17 @@ contracts, lifecycle tests, paper-workflow proof, and operator context are
 documented in `Docs/BUILD/PAPER-01.md`,
 `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md`,
 `Docs/TRADING_BRAIN/JAX_TRADER_MODEL_V1.md`, and `Docs/PAPER_TRADING/`.
-PAPER-01A closes the conditional review findings for approval-binding and
-canonical route terminology. The next action is external re-review of the
-implementation against those canonical documents.
+PAPER-01 remains NO-GO pending external re-review of PAPER-01B. PAPER-01B
+adds durable exploratory identity, restart/reconciliation checks, canonical
+evidence gating, frozen provenance, idempotent reviews, deterministic
+accounting, and a minimal operator read model. It does not authorize a pilot.
 
 ## PAPER-02
 
-PAPER-02 is not started and not authorized. It requires external GO after
-PAPER-01A re-review and must begin with a prospective exploratory pilot using
-prospective real evidence, human-approved
-entries, paper-only execution, bounded five-session horizons, monitoring, and
-stop conditions defined in `Docs/BUILD/PAPER-02.md`.
+PAPER-02 is not started and not authorized. Its future bounded exploratory
+pilot definition is retained in `Docs/BUILD/PAPER-02.md`, but no pilot may
+begin from this package. The exact PAPER-02 versus FORMAL-01 sequencing remains
+subject to an external decision after PAPER-01B passes re-review.
 
 ## Exploratory learning programme
 

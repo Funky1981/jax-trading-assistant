@@ -4,6 +4,9 @@
 package exploratorypaper
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -48,6 +51,69 @@ type EvidenceReference struct {
 	ObservedAt time.Time `json:"observedAt"`
 }
 
+// EvidenceAssessment is the reviewed, canonical evidence result supplied by
+// the event/evidence projection. GenerateCandidate deliberately does not use
+// the legacy caller-declared EvidenceQuality or Corroborated fields.
+type EvidenceAssessment struct {
+	Provider                string    `json:"provider"`
+	PolicyVersion           string    `json:"policyVersion"`
+	EvidenceSetFingerprint  string    `json:"evidenceSetFingerprint"`
+	ReviewedAt              time.Time `json:"reviewedAt"`
+	SourceBacked            bool      `json:"sourceBacked"`
+	QualityState            string    `json:"qualityState"`
+	QualityScore            float64   `json:"qualityScore"`
+	RequiredQualityScore    float64   `json:"requiredQualityScore"`
+	EvidenceReady           bool      `json:"evidenceReady"`
+	EvidenceGateReady       bool      `json:"evidenceGateReady"`
+	Corroborated            bool      `json:"corroborated"`
+	Contradictory           bool      `json:"contradictory"`
+	Unknown                 bool      `json:"unknown"`
+	Stale                   bool      `json:"stale"`
+	IssuerRelevant          bool      `json:"issuerRelevant"`
+	InstrumentRelevant      bool      `json:"instrumentRelevant"`
+	IndependentSourceGroups int       `json:"independentSourceGroups"`
+}
+
+func (a EvidenceAssessment) ValidateFor(evidence []EvidenceReference, issuerID, instrumentID string) error {
+	if a.Provider != "candidate_evidence_scores" || strings.TrimSpace(a.PolicyVersion) == "" {
+		return fmt.Errorf("candidate evidence must come from the canonical reviewed score projection")
+	}
+	if a.ReviewedAt.IsZero() || a.ReviewedAt.Location() != time.UTC {
+		return fmt.Errorf("candidate evidence review timestamp must be UTC")
+	}
+	if !a.SourceBacked || a.Unknown || a.Stale || a.Contradictory || !a.IssuerRelevant || !a.InstrumentRelevant {
+		return fmt.Errorf("candidate evidence is unknown, stale, contradictory, or not relevant")
+	}
+	if !a.EvidenceReady || !a.EvidenceGateReady || !a.Corroborated || a.IndependentSourceGroups < 2 || independentSourceCount(evidence) < 2 {
+		return fmt.Errorf("candidate evidence corroboration gate is not ready")
+	}
+	if a.QualityState != "sufficient" || a.QualityScore < a.RequiredQualityScore || a.RequiredQualityScore <= 0 {
+		return fmt.Errorf("candidate evidence quality threshold is not met")
+	}
+	if len(evidence) == 0 || a.EvidenceSetFingerprint != EvidenceSetFingerprint(evidence) {
+		return fmt.Errorf("candidate evidence identity does not match the reviewed evidence set")
+	}
+	for _, item := range evidence {
+		if item.EvidenceID == "" || item.SourceID == "" || item.SourceURL == "" || item.ObservedAt.IsZero() || item.ObservedAt.Location() != time.UTC {
+			return fmt.Errorf("candidate evidence must remain source-backed and timestamped")
+		}
+	}
+	if strings.TrimSpace(issuerID) == "" || strings.TrimSpace(instrumentID) == "" {
+		return fmt.Errorf("candidate evidence relevance requires issuer and instrument")
+	}
+	return nil
+}
+
+func independentSourceCount(evidence []EvidenceReference) int {
+	sources := make(map[string]struct{}, len(evidence))
+	for _, item := range evidence {
+		if item.SourceID != "" {
+			sources[item.SourceID] = struct{}{}
+		}
+	}
+	return len(sources)
+}
+
 type TradeThesis struct {
 	ThesisID                string              `json:"thesisId"`
 	ContractVersion         string              `json:"contractVersion"`
@@ -78,6 +144,35 @@ type TradeThesis struct {
 	CreatedAt               time.Time           `json:"createdAt"`
 }
 
+type FrozenThesis struct {
+	Thesis          TradeThesis `json:"thesis"`
+	ThesisHash      string      `json:"thesisHash"`
+	EvidenceSetHash string      `json:"evidenceSetHash"`
+	FrozenAt        time.Time   `json:"frozenAt"`
+}
+
+func FreezeThesis(thesis TradeThesis, at time.Time) (FrozenThesis, error) {
+	if err := thesis.Validate(); err != nil {
+		return FrozenThesis{}, err
+	}
+	if at.IsZero() || at.Location() != time.UTC {
+		return FrozenThesis{}, fmt.Errorf("frozen thesis time must be UTC")
+	}
+	return FrozenThesis{Thesis: thesis, ThesisHash: ThesisContentHash(thesis), EvidenceSetHash: EvidenceSetFingerprint(append(append([]EvidenceReference{}, thesis.Evidence...), thesis.CounterEvidence...)), FrozenAt: at}, nil
+}
+
+func ThesisContentHash(thesis TradeThesis) string {
+	data, _ := json.Marshal(thesis)
+	digest := sha256.Sum256(data)
+	return "sha256:" + hex.EncodeToString(digest[:])
+}
+
+func EvidenceSetFingerprint(evidence []EvidenceReference) string {
+	data, _ := json.Marshal(evidence)
+	digest := sha256.Sum256(data)
+	return "sha256:" + hex.EncodeToString(digest[:])
+}
+
 // EntryBinding is the immutable bridge between an exploratory thesis and the
 // existing approved paper workflow. The actual order/fill/ledger remains owned
 // by internal/modules/papertrading.
@@ -93,11 +188,13 @@ type EntryBinding struct {
 	BrokerExecutionAllowed bool           `json:"brokerExecutionAllowed"`
 	MaximumLeverage        float64        `json:"maximumLeverage"`
 	PolicyVersions         PolicyVersions `json:"policyVersions"`
+	ThesisContentHash      string         `json:"thesisContentHash"`
+	EvidenceSetHash        string         `json:"evidenceSetHash"`
 	BoundAt                time.Time      `json:"boundAt"`
 }
 
 func (b EntryBinding) Validate() error {
-	if b.Mode != ExploratoryPaperMode || b.CandidateID == "" || b.ThesisID == "" || b.TraderModelVersion == "" || b.WorkflowID == "" || b.PaperIntentID == "" {
+	if b.Mode != ExploratoryPaperMode || b.CandidateID == "" || b.ThesisID == "" || b.TraderModelVersion == "" || b.WorkflowID == "" || b.PaperIntentID == "" || b.ThesisContentHash == "" || b.EvidenceSetHash == "" {
 		return fmt.Errorf("entry binding identity is incomplete")
 	}
 	if b.TraderModelVersion != TraderModelVersion {
@@ -160,22 +257,24 @@ const (
 )
 
 type CandidateInput struct {
-	EventID               string
-	IssuerID              string
-	InstrumentID          string
-	EventCategory         string
-	EventTimestamp        time.Time
-	GeneratedAt           time.Time
-	SourceURL             string
-	Evidence              []EvidenceReference
-	EvidenceQuality       float64
-	Corroborated          bool
-	CausalMechanism       string
-	QuantContext          string
-	RiskAssessment        string
-	TechnicalConfirmation string
-	TechnicalOnly         bool
-	Direction             Direction
+	EventID                string
+	IssuerID               string
+	InstrumentID           string
+	EventCategory          string
+	EventTimestamp         time.Time
+	GeneratedAt            time.Time
+	SourceURL              string
+	Evidence               []EvidenceReference
+	EvidenceQuality        float64
+	Corroborated           bool
+	ReviewedEvidence       *EvidenceAssessment
+	CandidatePolicyVersion string
+	CausalMechanism        string
+	QuantContext           string
+	RiskAssessment         string
+	TechnicalConfirmation  string
+	TechnicalOnly          bool
+	Direction              Direction
 }
 
 type CandidateResult struct {
@@ -191,8 +290,14 @@ func GenerateCandidate(in CandidateInput) (CandidateResult, error) {
 	if in.TechnicalOnly || strings.TrimSpace(in.CausalMechanism) == "" {
 		return CandidateResult{Decision: DecisionNoTrade, Reason: "technical confirmation cannot be the sole catalyst"}, nil
 	}
-	if len(in.Evidence) == 0 || !in.Corroborated || in.EvidenceQuality <= 0 {
-		return CandidateResult{Decision: DecisionWatch, Reason: "candidate requires material corroborated evidence with quality"}, nil
+	if in.ReviewedEvidence == nil {
+		return CandidateResult{Decision: DecisionWatch, Reason: "candidate requires a canonical reviewed evidence assessment"}, nil
+	}
+	if err := in.ReviewedEvidence.ValidateFor(in.Evidence, in.IssuerID, in.InstrumentID); err != nil {
+		return CandidateResult{Decision: DecisionWatch, Reason: err.Error()}, nil
+	}
+	if strings.TrimSpace(in.CandidatePolicyVersion) == "" {
+		return CandidateResult{Decision: DecisionWatch, Reason: "candidate evidence policy version is required"}, nil
 	}
 	if strings.TrimSpace(in.QuantContext) == "" || strings.TrimSpace(in.RiskAssessment) == "" || strings.TrimSpace(in.TechnicalConfirmation) == "" {
 		return CandidateResult{Decision: DecisionWatch, Reason: "candidate requires quant, risk, and technical context"}, nil
@@ -214,14 +319,18 @@ type Transition struct {
 }
 
 type Position struct {
-	PositionID       string       `json:"positionId"`
-	Thesis           TradeThesis  `json:"thesis"`
-	EntryAt          time.Time    `json:"entryAt"`
-	EntryPrice       float64      `json:"entryPrice"`
-	State            ThesisState  `json:"state"`
-	OperationalState ThesisState  `json:"operationalState"`
-	Transitions      []Transition `json:"transitions"`
-	ClosedAt         *time.Time   `json:"closedAt,omitempty"`
+	PositionID        string            `json:"positionId"`
+	Thesis            TradeThesis       `json:"thesis"`
+	EntryAt           time.Time         `json:"entryAt"`
+	EntryPrice        float64           `json:"entryPrice"`
+	State             ThesisState       `json:"state"`
+	OperationalState  ThesisState       `json:"operationalState"`
+	Transitions       []Transition      `json:"transitions"`
+	FrozenThesisHash  string            `json:"frozenThesisHash"`
+	EvidenceSetHash   string            `json:"evidenceSetHash"`
+	BindingHash       string            `json:"bindingHash"`
+	ProcessedEvidence map[string]string `json:"processedEvidence"`
+	ClosedAt          *time.Time        `json:"closedAt,omitempty"`
 }
 
 type EvidenceSignal string
@@ -254,6 +363,13 @@ func OpenApprovedPosition(id string, thesis TradeThesis, binding EntryBinding, a
 	if binding.ThesisID != thesis.ThesisID {
 		return Position{}, fmt.Errorf("entry binding thesis does not match position thesis")
 	}
+	frozen, err := FreezeThesis(thesis, at)
+	if err != nil {
+		return Position{}, err
+	}
+	if binding.ThesisContentHash != frozen.ThesisHash || binding.EvidenceSetHash != frozen.EvidenceSetHash {
+		return Position{}, fmt.Errorf("entry binding does not match frozen thesis provenance")
+	}
 	if binding.PolicyVersions.ThesisContract != thesis.ContractVersion || binding.PolicyVersions.EntryPolicy != thesis.EntryPolicyVersion {
 		return Position{}, fmt.Errorf("entry binding policy versions do not match thesis")
 	}
@@ -263,7 +379,31 @@ func OpenApprovedPosition(id string, thesis TradeThesis, binding EntryBinding, a
 	if strings.TrimSpace(id) == "" || at.IsZero() || at.Location() != time.UTC || math.IsNaN(price) || math.IsInf(price, 0) || price <= 0 {
 		return Position{}, fmt.Errorf("position identity, entry time, and positive price are required")
 	}
-	return Position{PositionID: id, Thesis: thesis, EntryAt: at, EntryPrice: price, State: StateValid, OperationalState: StateValid}, nil
+	return Position{PositionID: id, Thesis: thesis, EntryAt: at, EntryPrice: price, State: StateValid, OperationalState: StateValid, FrozenThesisHash: frozen.ThesisHash, EvidenceSetHash: frozen.EvidenceSetHash, BindingHash: bindingIdentity(binding), ProcessedEvidence: map[string]string{}}, nil
+}
+
+func (p Position) VerifyFrozenIdentity() error {
+	if p.FrozenThesisHash == "" || p.FrozenThesisHash != ThesisContentHash(p.Thesis) {
+		return fmt.Errorf("frozen thesis identity mismatch")
+	}
+	evidenceHash := EvidenceSetFingerprint(append(append([]EvidenceReference{}, p.Thesis.Evidence...), p.Thesis.CounterEvidence...))
+	if p.EvidenceSetHash == "" || p.EvidenceSetHash != evidenceHash {
+		return fmt.Errorf("frozen evidence identity mismatch")
+	}
+	return nil
+}
+
+func (p Position) VerifyApprovalBinding(binding EntryBinding) error {
+	if err := binding.Validate(); err != nil {
+		return err
+	}
+	if p.BindingHash == "" || p.BindingHash != bindingIdentity(binding) {
+		return fmt.Errorf("frozen approval binding identity mismatch")
+	}
+	if binding.ThesisID != p.Thesis.ThesisID || binding.ThesisContentHash != p.FrozenThesisHash || binding.EvidenceSetHash != p.EvidenceSetHash {
+		return fmt.Errorf("approval binding does not match frozen position")
+	}
+	return nil
 }
 
 // OpenPosition is retained only as a safe compatibility guard. It cannot
@@ -277,9 +417,26 @@ func (p *Position) Reassess(e RelevantEvidence, at time.Time, policyVersion stri
 	if p.State == StateClosed {
 		return fmt.Errorf("closed position cannot be reassessed")
 	}
-	if e.Reference.EvidenceID == "" || e.Reference.SourceID == "" || e.Reference.SourceURL == "" || at.IsZero() {
+	if e.Reference.EvidenceID == "" || e.Reference.SourceID == "" || e.Reference.SourceURL == "" || at.IsZero() || at.Location() != time.UTC || strings.TrimSpace(policyVersion) == "" {
 		return fmt.Errorf("reassessment requires timestamped source evidence")
 	}
+	if e.Signal != EvidenceIrrelevant && e.Signal != EvidenceStrengthens && e.Signal != EvidenceContradicts && e.Signal != EvidenceInvalidates {
+		return fmt.Errorf("unsupported evidence signal %q", e.Signal)
+	}
+	if err := p.VerifyFrozenIdentity(); err != nil {
+		return err
+	}
+	if p.ProcessedEvidence == nil {
+		p.ProcessedEvidence = map[string]string{}
+	}
+	fingerprint := relevantEvidenceFingerprint(e)
+	if prior, ok := p.ProcessedEvidence[e.Reference.EvidenceID]; ok {
+		if prior != fingerprint {
+			return fmt.Errorf("processed evidence identity conflicts with prior content")
+		}
+		return nil
+	}
+	p.ProcessedEvidence[e.Reference.EvidenceID] = fingerprint
 	if e.IssuerID != p.Thesis.IssuerID || e.InstrumentID != p.Thesis.InstrumentID {
 		return nil
 	}
@@ -316,9 +473,21 @@ func (p *Position) Close(at time.Time) error {
 	if p.State == StateClosed {
 		return fmt.Errorf("position already closed")
 	}
-	if at.IsZero() {
+	if at.IsZero() || at.Location() != time.UTC {
 		return fmt.Errorf("close time is required")
 	}
 	p.State, p.OperationalState, p.ClosedAt = StateClosed, StateClosed, &at
 	return nil
+}
+
+func relevantEvidenceFingerprint(e RelevantEvidence) string {
+	data, _ := json.Marshal(struct {
+		Reference    EvidenceReference
+		IssuerID     string
+		InstrumentID string
+		Signal       EvidenceSignal
+		Reason       string
+	}{e.Reference, e.IssuerID, e.InstrumentID, e.Signal, e.Reason})
+	digest := sha256.Sum256(data)
+	return "sha256:" + hex.EncodeToString(digest[:])
 }

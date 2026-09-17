@@ -1,10 +1,12 @@
 # PAPER-01 — Event-Driven Exploratory Paper-Trader Package
 
-Status: **IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED**.
+Status: **NO-GO / PAPER-01B IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED**.
 
 ## Purpose
 
-PAPER-01 makes the event-driven short-horizon trader model observable and reviewable through bounded exploratory paper-trader scenarios. It is a contract and evidence-collection package, not a claim of profitability or edge.
+PAPER-01 defines the event-driven short-horizon exploratory paper-trader
+capability. The current external decision is NO-GO pending PAPER-01B re-review.
+The implementation is not a claim of profitability or edge.
 
 ## Scope
 
@@ -15,6 +17,11 @@ PAPER-01 makes the event-driven short-horizon trader model observable and review
 - post-decision outcome review with unresolved and missing data preserved;
 - isolated simulated paper orders and fills may use the existing paper venue;
 - no real order, broker order, live order, execution instruction, broker fill, or live position.
+
+PAPER-01 may create simulated paper orders, fills, ledger mutations, and paper
+positions inside the existing isolated paper venue. These artifacts are never
+broker/live execution and are explicitly labelled `EXPLORATORY_PAPER` and
+`NOT FORMAL EVIDENCE`.
 
 ## Evidence boundary
 

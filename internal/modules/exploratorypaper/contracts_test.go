@@ -7,16 +7,18 @@ import (
 
 func fixtureThesis() TradeThesis {
 	now := time.Date(2026, 1, 2, 9, 0, 0, 0, time.UTC)
-	return TradeThesis{ThesisID: "thesis-1", ContractVersion: ContractVersion, Mode: ExploratoryPaperMode, EventID: "event-1", IssuerID: "issuer-1", InstrumentID: "AAPL", Direction: DirectionLong, Exposure: "LONG", EventCategory: "earnings", EventTimestamp: now.Add(-time.Hour), CandidateGeneratedAt: now, CausalReason: "reported demand supports a near-term repricing", Evidence: []EvidenceReference{{EvidenceID: "e-1", SourceID: "source-1", SourceURL: "https://example.test/e-1", Quality: "high", ObservedAt: now}}, ExpectedMechanism: "new demand estimate changes next-session expectations", ExpectedHorizonSessions: 3, EntryRationale: "event plus corroborated evidence and confirmation", QuantTechnicalContext: "price above confirmed short-term trend with bounded volatility", RiskAssessment: "one position, one-times leverage, fixed stop", EntryPolicyVersion: "entry-v1", ProtectiveStop: 95, Target: 110, InvalidationConditions: []string{"issuer contradicts reported demand"}, CounterEvidence: []EvidenceReference{{EvidenceID: "e-2", SourceID: "source-2", SourceURL: "https://example.test/e-2", Quality: "medium", ObservedAt: now}}, Confidence: .78, Uncertainty: "reaction and timing remain uncertain", PolicyVersion: "policy-v1", CreatedAt: now}
+	return TradeThesis{ThesisID: "thesis-1", ContractVersion: ContractVersion, Mode: ExploratoryPaperMode, EventID: "event-1", IssuerID: "issuer-1", InstrumentID: "AAPL", Direction: DirectionLong, Exposure: "LONG", EventCategory: "earnings", EventTimestamp: now.Add(-time.Hour), CandidateGeneratedAt: now, CausalReason: "reported demand supports a near-term repricing", Evidence: []EvidenceReference{{EvidenceID: "e-1", SourceID: "source-1", SourceURL: "https://example.test/e-1", Quality: "high", ObservedAt: now}, {EvidenceID: "e-3", SourceID: "source-3", SourceURL: "https://example.test/e-3", Quality: "high", ObservedAt: now}}, ExpectedMechanism: "new demand estimate changes next-session expectations", ExpectedHorizonSessions: 3, EntryRationale: "event plus corroborated evidence and confirmation", QuantTechnicalContext: "price above confirmed short-term trend with bounded volatility", RiskAssessment: "one position, one-times leverage, fixed stop", EntryPolicyVersion: "entry-v1", ProtectiveStop: 95, Target: 110, InvalidationConditions: []string{"issuer contradicts reported demand"}, CounterEvidence: []EvidenceReference{{EvidenceID: "e-2", SourceID: "source-2", SourceURL: "https://example.test/e-2", Quality: "medium", ObservedAt: now}}, Confidence: .78, Uncertainty: "reaction and timing remain uncertain", PolicyVersion: "policy-v1", CreatedAt: now}
 }
 
 func fixtureBinding(thesis TradeThesis) EntryBinding {
+	frozen, _ := FreezeThesis(thesis, thesis.CreatedAt)
 	return EntryBinding{
 		Mode: ExploratoryPaperMode, CandidateID: "candidate-1", ThesisID: thesis.ThesisID,
 		TraderModelVersion: TraderModelVersion, WorkflowID: "wf-approved", PaperIntentID: "pint-approved",
 		Environment: "PAPER", ExecutionAuthority: "NONE", MaximumLeverage: 1,
-		PolicyVersions: PolicyVersions{TraderModel: TraderModelVersion, ThesisContract: thesis.ContractVersion, CandidatePolicy: "candidate-v1", RiskPolicy: "risk-v1", EntryPolicy: thesis.EntryPolicyVersion, ExitPolicy: "exit-v1", CostModel: "paper-cost-v1"},
-		BoundAt:        thesis.CreatedAt,
+		PolicyVersions:    PolicyVersions{TraderModel: TraderModelVersion, ThesisContract: thesis.ContractVersion, CandidatePolicy: "candidate-v1", RiskPolicy: "risk-v1", EntryPolicy: thesis.EntryPolicyVersion, ExitPolicy: "exit-v1", CostModel: "paper-cost-v1"},
+		ThesisContentHash: frozen.ThesisHash, EvidenceSetHash: frozen.EvidenceSetHash,
+		BoundAt: thesis.CreatedAt,
 	}
 }
 
@@ -76,7 +78,7 @@ func TestRelevantEvidenceTransitionsAndIgnoresGenericNews(t *testing.T) {
 }
 
 func TestFiveTradingSessionHardExitSkipsWeekendAndClosedInvalidationDefers(t *testing.T) {
-	cal := SessionCalendar{Sessions: map[string]bool{"2026-01-02": true, "2026-01-03": false, "2026-01-04": false, "2026-01-05": true, "2026-01-06": true, "2026-01-07": true, "2026-01-08": true, "2026-01-09": true}}
+	cal := SessionCalendar{Sessions: map[string]bool{"2026-01-02": true, "2026-01-03": false, "2026-01-04": false, "2026-01-05": true, "2026-01-06": true, "2026-01-07": true, "2026-01-08": true, "2026-01-09": true}, Timezone: "UTC", OpenTime: "09:00", CloseTime: "17:00"}
 	now := time.Date(2026, 1, 2, 10, 0, 0, 0, time.UTC)
 	thesis := fixtureThesis()
 	p, err := OpenApprovedPosition("p", thesis, fixtureBinding(thesis), now, 100)
@@ -124,7 +126,8 @@ func TestEvidenceFirewall(t *testing.T) {
 func TestOutcomeBindsModeHorizonExitAndPolicyVersions(t *testing.T) {
 	now := time.Date(2026, 1, 2, 10, 0, 0, 0, time.UTC)
 	versions := PolicyVersions{TraderModel: TraderModelVersion, ThesisContract: ContractVersion, CandidatePolicy: "candidate-v1", RiskPolicy: "risk-v1", EntryPolicy: "entry-v1", ExitPolicy: "exit-v1", CostModel: "paper-cost-v1"}
-	outcome := Outcome{OutcomeID: "outcome-1", Mode: ExploratoryPaperMode, TraderModelVersion: TraderModelVersion, ThesisID: "thesis-1", EventID: "event-1", IssuerID: "issuer-1", InstrumentID: "AAPL", EntryAt: now, ExitAt: now.AddDate(0, 0, 2), EntryPrice: 100, ExitPrice: 104, Costs: 1, NetReturn: 39, SessionsHeld: 2, ExitReason: ExitThesisInvalidated, MFE: 6, MAE: -2, PolicyVersions: versions, Checkpoints: []Checkpoint{{Sessions: 1, Price: 102, NetReturn: 19}, {Sessions: 2, Price: 104, NetReturn: 39}}}
+	thesis := fixtureThesis()
+	outcome := Outcome{OutcomeID: "outcome-1", Mode: ExploratoryPaperMode, TraderModelVersion: TraderModelVersion, ThesisID: thesis.ThesisID, ThesisHash: ThesisContentHash(thesis), PositionID: "position-1", EventID: thesis.EventID, IssuerID: thesis.IssuerID, InstrumentID: thesis.InstrumentID, Direction: DirectionLong, Quantity: 10, EntryOrderID: "entry-order", EntryFillID: "entry-fill", ExitOrderID: "exit-order", ExitFillID: "exit-fill", EntryAt: now, ExitAt: now.AddDate(0, 0, 2), EntryPrice: 100, ExitPrice: 104, EntryCosts: .4, ExitCosts: .6, TotalCosts: 1, Costs: 1, GrossPnL: 40, NetPnL: 39, ReturnDenominator: 1000, NetReturn: .039, SessionsHeld: 2, ExitReason: ExitThesisInvalidated, MFE: 40, MAE: -10, ExcursionStatus: "COMPLETE", ExcursionKnown: true, PricePath: []PriceObservation{{ObservationID: "p1", At: now.Add(time.Hour), Price: 102, Source: "paper"}, {ObservationID: "p2", At: now.Add(2 * time.Hour), Price: 99, Source: "paper"}, {ObservationID: "p3", At: now.AddDate(0, 0, 2), Price: 104, Source: "paper"}}, CostModelVersion: "paper-cost-v1", PolicyVersions: versions, Checkpoints: []Checkpoint{{PositionID: "position-1", ThesisID: thesis.ThesisID, Sessions: 1, At: now.Add(time.Hour), Price: 102, PriceSource: "paper", EvidenceReviewID: "review-1", GrossPnL: 20, NetPnL: 19, NetReturn: .019, DataQuality: "complete"}, {PositionID: "position-1", ThesisID: thesis.ThesisID, Sessions: 2, At: now.AddDate(0, 0, 2), Price: 104, PriceSource: "paper", EvidenceReviewID: "review-2", GrossPnL: 40, NetPnL: 39, NetReturn: .039, DataQuality: "complete"}}}
 	if err := outcome.Validate(); err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +139,7 @@ func TestOutcomeBindsModeHorizonExitAndPolicyVersions(t *testing.T) {
 
 func TestEntryBindingRequiresExistingPaperWorkflowSafetyIdentity(t *testing.T) {
 	versions := PolicyVersions{TraderModel: TraderModelVersion, ThesisContract: ContractVersion, CandidatePolicy: "candidate-v1", RiskPolicy: "risk-v1", EntryPolicy: "entry-v1", ExitPolicy: "exit-v1", CostModel: "paper-cost-v1"}
-	binding := EntryBinding{Mode: ExploratoryPaperMode, CandidateID: "candidate-1", ThesisID: "thesis-1", TraderModelVersion: TraderModelVersion, WorkflowID: "workflow-1", PaperIntentID: "paper-intent-1", Environment: "PAPER", ExecutionAuthority: "NONE", MaximumLeverage: 1, PolicyVersions: versions, BoundAt: time.Date(2026, 1, 2, 10, 0, 0, 0, time.UTC)}
+	binding := EntryBinding{Mode: ExploratoryPaperMode, CandidateID: "candidate-1", ThesisID: "thesis-1", TraderModelVersion: TraderModelVersion, WorkflowID: "workflow-1", PaperIntentID: "paper-intent-1", Environment: "PAPER", ExecutionAuthority: "NONE", MaximumLeverage: 1, PolicyVersions: versions, ThesisContentHash: "sha256:thesis", EvidenceSetHash: "sha256:evidence", BoundAt: time.Date(2026, 1, 2, 10, 0, 0, 0, time.UTC)}
 	if err := binding.Validate(); err != nil {
 		t.Fatal(err)
 	}

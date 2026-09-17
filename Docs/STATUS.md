@@ -27,8 +27,9 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - Formal forward paper: `NOT STARTED`; historical formal result is NO-GO.
 - VAL-04A: `COMPLETE / GO`.
 - VAL-04B: `DEFERRED / NOT CURRENT NEXT STEP`.
-- PAPER-01: `IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED`.
-- PAPER-01A: `REMEDIATION COMPLETE / EXTERNAL RE-REVIEW REQUIRED`.
+- PAPER-01: `NO-GO PENDING PAPER-01B EXTERNAL RE-REVIEW`.
+- PAPER-01A: `COMPLETE / SUPERSEDED BY PAPER-01B`.
+- PAPER-01B: `IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED`.
 - PAPER-02: `NOT STARTED / NOT AUTHORIZED`.
 - Trading edge: `NOT DEMONSTRATED`.
 - Phase 13: `NOT STARTED / BLOCKED`.
@@ -48,5 +49,6 @@ maximum leverage 1x. No pilot trade was started by DOC-01.
 
 ## Next decision required
 
-External review of PAPER-01 against the canonical documentation and the
-implementation. Do not start PAPER-02 without external GO.
+External review of PAPER-01B against the canonical documentation and the
+implementation. Do not start PAPER-02 or FORMAL_FORWARD_PAPER without a new
+external decision; the sequencing between them remains undecided here.

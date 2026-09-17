@@ -1,8 +1,11 @@
-# PAPER-01A Runtime Audit
+# PAPER-01A Runtime Audit (Superseded by PAPER-01B)
 
 Date: 2026-09-17
 Scope: repository-backed audit of the PAPER-01 exploratory layer. This audit
-does not authorize PAPER-02 or a prospective pilot.
+does not authorize PAPER-02 or a prospective pilot. Current implementation
+evidence is in `PAPER-01B-IMPLEMENTATION-AUDIT.md` and
+`PAPER-01B-REVIEW-EVIDENCE.md`; the test-only findings below are retained as
+historical audit context.
 
 ## Findings
 

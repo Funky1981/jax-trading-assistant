@@ -215,6 +215,9 @@ func main() {
 	}
 	go startMobileNotificationDispatcher(ctx, dbPool)
 	go startWorldMonitorPullWorker(ctx, dbPool)
+	if cfg.RuntimeMode == runtimepolicy.ModePaper {
+		go startExploratoryPaperReviewWorker(ctx, dbPool)
+	}
 
 	// Health check endpoint
 	mux.HandleFunc("/health", handleHealth(sigGen))

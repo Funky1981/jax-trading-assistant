@@ -16,7 +16,8 @@ func TestEventToApprovedPaperEntryAdverseEvidenceAndPaperExit(t *testing.T) {
 	candidate, err := GenerateCandidate(CandidateInput{
 		EventID: thesis.EventID, IssuerID: thesis.IssuerID, InstrumentID: thesis.InstrumentID,
 		EventCategory: thesis.EventCategory, EventTimestamp: thesis.EventTimestamp, GeneratedAt: thesis.CandidateGeneratedAt,
-		SourceURL: thesis.Evidence[0].SourceURL, Evidence: thesis.Evidence, EvidenceQuality: .9, Corroborated: true,
+		SourceURL: thesis.Evidence[0].SourceURL, Evidence: thesis.Evidence,
+		ReviewedEvidence: &EvidenceAssessment{Provider: "candidate_evidence_scores", PolicyVersion: "candidate-v1", EvidenceSetFingerprint: EvidenceSetFingerprint(thesis.Evidence), ReviewedAt: now, SourceBacked: true, QualityState: "sufficient", QualityScore: .9, RequiredQualityScore: .7, EvidenceReady: true, EvidenceGateReady: true, Corroborated: true, IssuerRelevant: true, InstrumentRelevant: true, IndependentSourceGroups: 2}, CandidatePolicyVersion: "candidate-v1",
 		CausalMechanism: thesis.ExpectedMechanism, QuantContext: thesis.QuantTechnicalContext,
 		RiskAssessment: thesis.RiskAssessment, TechnicalConfirmation: "confirmed short-term price support", Direction: DirectionLong,
 	})
@@ -34,8 +35,9 @@ func TestEventToApprovedPaperEntryAdverseEvidenceAndPaperExit(t *testing.T) {
 		Mode: ExploratoryPaperMode, CandidateID: "candidate-1", ThesisID: thesis.ThesisID,
 		TraderModelVersion: TraderModelVersion, WorkflowID: wf.WorkflowID, PaperIntentID: intent.IntentID,
 		Environment: "PAPER", ExecutionAuthority: "NONE", MaximumLeverage: 1,
-		PolicyVersions: PolicyVersions{TraderModel: TraderModelVersion, ThesisContract: thesis.ContractVersion, CandidatePolicy: "candidate-v1", RiskPolicy: "paper-01-policy", EntryPolicy: thesis.EntryPolicyVersion, ExitPolicy: "exit-v1", CostModel: costModel.ModelID},
-		BoundAt:        now,
+		PolicyVersions:    PolicyVersions{TraderModel: TraderModelVersion, ThesisContract: thesis.ContractVersion, CandidatePolicy: "candidate-v1", RiskPolicy: "paper-01-policy", EntryPolicy: thesis.EntryPolicyVersion, ExitPolicy: "exit-v1", CostModel: costModel.ModelID},
+		ThesisContentHash: ThesisContentHash(thesis), EvidenceSetHash: EvidenceSetFingerprint(append(append([]EvidenceReference{}, thesis.Evidence...), thesis.CounterEvidence...)),
+		BoundAt: now,
 	}
 	if err := binding.Validate(); err != nil {
 		t.Fatal(err)
@@ -67,8 +69,9 @@ func TestEventToApprovedPaperEntryAdverseEvidenceAndPaperExit(t *testing.T) {
 		t.Fatalf("position state=%#v", position)
 	}
 
-	exitAt := now.AddDate(0, 0, 1).Add(2 * time.Hour)
-	exitDecision, err := EvaluateExit(position, ExitInput{Now: exitAt, Session: SessionOpen, Bid: 104, ThesisInvalidated: true, Calendar: SessionCalendar{Sessions: map[string]bool{"2026-01-02": true, "2026-01-03": false, "2026-01-04": false, "2026-01-05": true, "2026-01-06": true, "2026-01-07": true, "2026-01-08": true}}})
+	exitAt := time.Date(2026, 1, 5, 10, 0, 0, 0, time.UTC)
+	calendar := SessionCalendar{Sessions: map[string]bool{"2026-01-02": true, "2026-01-03": false, "2026-01-04": false, "2026-01-05": true, "2026-01-06": true, "2026-01-07": true, "2026-01-08": true}, Timezone: "UTC", OpenTime: "09:00", CloseTime: "17:00"}
+	exitDecision, err := EvaluateExit(position, ExitInput{Now: exitAt, Session: SessionOpen, Bid: 104, ThesisInvalidated: true, Calendar: calendar})
 	if err != nil || exitDecision.Action != ExitNow || exitDecision.Reason != ExitThesisInvalidated {
 		t.Fatalf("exit decision=%#v err=%v", exitDecision, err)
 	}
@@ -95,15 +98,10 @@ func TestEventToApprovedPaperEntryAdverseEvidenceAndPaperExit(t *testing.T) {
 	if position.State != StateClosed || len(position.Transitions) != 1 {
 		t.Fatalf("closed position=%#v", position)
 	}
-	outcome := Outcome{
-		OutcomeID: "outcome-1", Mode: ExploratoryPaperMode, TraderModelVersion: TraderModelVersion,
-		ThesisID: thesis.ThesisID, EventID: thesis.EventID, IssuerID: thesis.IssuerID, InstrumentID: thesis.InstrumentID,
-		EntryAt: position.EntryAt, ExitAt: exitAt.Add(3 * time.Second), EntryPrice: fills[0].Price, ExitPrice: exitFills[0].Price,
-		Costs: fills[0].Costs.Commission + exitFills[0].Costs.Commission, NetReturn: exitFills[0].Price - fills[0].Price,
-		SessionsHeld: 2, ExitReason: exitDecision.Reason, MFE: 4, MAE: -1,
-		ThesisTransitions: position.Transitions, NewEvidence: []EvidenceReference{{EvidenceID: "adverse-1", SourceID: "issuer-source", SourceURL: "https://example.test/adverse", Quality: "high", ObservedAt: now.AddDate(0, 0, 1)}},
-		Checkpoints:    []Checkpoint{{Sessions: 1, Price: 101, NetReturn: 1}, {Sessions: 2, Price: exitFills[0].Price, NetReturn: exitFills[0].Price - fills[0].Price}},
-		PolicyVersions: binding.PolicyVersions,
+	path := []PriceObservation{{ObservationID: "entry-path", At: fills[0].FilledAt, Price: fills[0].Price, Source: "paper-tick"}, {ObservationID: "adverse-path", At: now.AddDate(0, 0, 1), Price: 99, Source: "paper-tick"}, {ObservationID: "exit-path", At: exitFills[0].FilledAt, Price: exitFills[0].Price, Source: "paper-tick"}}
+	outcome, err := BuildOutcomeFromFills(position, binding, fills[0], exitFills[0], exitDecision.Reason, 2, path, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 	if err := outcome.Validate(); err != nil {
 		t.Fatal(err)

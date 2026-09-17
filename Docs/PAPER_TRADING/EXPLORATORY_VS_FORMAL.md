@@ -11,3 +11,8 @@ Formal evidence requires a separately approved package with frozen rules, predec
 ## Firewall
 
 Exploratory observations must not be used to claim a demonstrated edge, promote a strategy, or satisfy a formal evidence gate. The repository must preserve the distinction in filenames, status labels, reports, and review decisions.
+
+Persisted exploratory lifecycle rows are immutably labelled `EXPLORATORY_PAPER`
+and `formal_evidence_eligible=false`. The read model exposes `NOT FORMAL
+EVIDENCE`. There is no supported relabelling or promotion path; future formal
+sampling and policy decisions remain a separate, not-started stage.

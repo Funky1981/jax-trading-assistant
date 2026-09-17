@@ -7,4 +7,6 @@ This compatibility document points to the current authority chain. It is not a h
 - Evidence firewall: `Docs/PAPER_TRADING/EXPLORATORY_VS_FORMAL.md`
 - Authority hierarchy: `Docs/DOCUMENTATION-AUTHORITY.md`
 
-Current decision: PAPER-01A remediation is complete and awaits external re-review; PAPER-02 and formal paper evidence are not authorized.
+Current decision: PAPER-01 is NO-GO pending PAPER-01B external re-review;
+PAPER-01B is implemented and awaits that review. PAPER-02 and formal paper
+evidence are not authorized.

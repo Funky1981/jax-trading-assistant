@@ -1,0 +1,11 @@
+DROP TRIGGER IF EXISTS trg_reject_exploratory_outcome_mutation ON exploratory_paper_outcomes;
+DROP TRIGGER IF EXISTS trg_reject_exploratory_checkpoint_mutation ON exploratory_paper_checkpoints;
+DROP TRIGGER IF EXISTS trg_reject_exploratory_reassessment_mutation ON exploratory_paper_evidence_reassessments;
+DROP TRIGGER IF EXISTS trg_protect_exploratory_thesis_identity ON exploratory_paper_lifecycles;
+DROP FUNCTION IF EXISTS reject_exploratory_append_only_mutation();
+DROP FUNCTION IF EXISTS protect_exploratory_thesis_identity();
+DROP TABLE IF EXISTS exploratory_paper_outcomes;
+DROP TABLE IF EXISTS exploratory_paper_checkpoints;
+DROP TABLE IF EXISTS exploratory_paper_reviews;
+DROP TABLE IF EXISTS exploratory_paper_evidence_reassessments;
+DROP TABLE IF EXISTS exploratory_paper_lifecycles;

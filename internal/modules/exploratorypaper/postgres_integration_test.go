@@ -1,0 +1,151 @@
+package exploratorypaper
+
+import (
+	"context"
+	"os"
+	"testing"
+	"time"
+
+	"jax-trading-assistant/internal/modules/papertrading"
+	"jax-trading-assistant/internal/modules/workflow"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// This test is opt-in because package tests must remain runnable without a
+// local database. CI/review execution sets PAPER01B_DATABASE_URL after the
+// normal migration service is healthy.
+func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
+	databaseURL := os.Getenv("PAPER01B_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("PAPER01B_DATABASE_URL is not configured")
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	suffix := now.Format("20060102150405.000000")
+	thesis := fixtureThesis()
+	thesis.ThesisID = "thesis-pg-" + suffix
+	thesis.EventID = "event-pg-" + suffix
+	thesis.CreatedAt, thesis.CandidateGeneratedAt, thesis.EventTimestamp = now, now, now.Add(-time.Hour)
+	approval := postgresApproval(t, "pg-"+suffix, now)
+	intent := approval.PaperIntent
+	binding := fixtureBinding(thesis)
+	binding.CandidateID = "candidate-pg-" + suffix
+	binding.WorkflowID, binding.PaperIntentID, binding.BoundAt = approval.Workflow.WorkflowID, intent.IntentID, now
+	binding.ThesisContentHash, binding.EvidenceSetHash = ThesisContentHash(thesis), EvidenceSetFingerprint(append(append([]EvidenceReference{}, thesis.Evidence...), thesis.CounterEvidence...))
+	costModel := papertrading.DefaultCostModel()
+	venue, err := papertrading.NewPaperVenue(papertrading.DefaultPaperCapabilityContract(), costModel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	order, err := venue.Submit(papertrading.CreateOrderRequest{Workflow: approval.Workflow, PaperIntent: intent, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: costModel, InstrumentID: thesis.InstrumentID, Quantity: 10, ReferencePrice: 100, OrderType: papertrading.OrderMarket, CreatedAt: now, IdempotencyKey: "pg-entry-" + suffix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledger, err := papertrading.NewPaperLedger("account-pg-"+suffix, "USD", 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fills, err := venue.ProcessTick(papertrading.MarketTick{TickID: "tick-pg-" + suffix, InstrumentID: thesis.InstrumentID, Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 10, Timestamp: now.Add(time.Second), ReceivedAt: now.Add(time.Second), Session: papertrading.SessionOpen, Source: "paper-integration"})
+	if err != nil || len(fills) != 1 {
+		t.Fatalf("fills=%#v err=%v", fills, err)
+	}
+	account, err := ledger.ApplyFill(fills[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	position, err := OpenApprovedPosition("position-pg-"+suffix, thesis, binding, fills[0].FilledAt, fills[0].Price)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := NewPostgresStore(pool)
+	lifecycleID, err := store.SaveApprovedEntry(ctx, binding.CandidateID, thesis, binding, approval, position, EntrySnapshot{Order: order, Fill: fills[0], Ledger: account})
+	if err != nil {
+		t.Fatal(err)
+	}
+	calendar := SessionCalendar{Sessions: map[string]bool{now.Format("2006-01-02"): true, now.AddDate(0, 0, 1).Format("2006-01-02"): true, now.AddDate(0, 0, 2).Format("2006-01-02"): true, now.AddDate(0, 0, 3).Format("2006-01-02"): true, now.AddDate(0, 0, 4).Format("2006-01-02"): true}, Timezone: "UTC", OpenTime: "00:00", CloseTime: "23:59"}
+	schedule, err := BuildReviewSchedule(position, calendar)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PersistReviewSchedule(ctx, position.PositionID, schedule); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PersistReviewSchedule(ctx, position.PositionID, schedule); err != nil {
+		t.Fatal(err)
+	}
+
+	// Recreate the store to model a process restart. Get must restore and
+	// validate the durable workflow/paper identities, not only JSON state.
+	store = NewPostgresStore(pool)
+	restored, err := store.Get(ctx, position.PositionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restored.LifecycleID != lifecycleID || restored.Thesis.Thesis.ThesisID != thesis.ThesisID || restored.Binding.WorkflowID != approval.Workflow.WorkflowID || restored.Binding.PaperIntentID != intent.IntentID || restored.EntryOrder.OrderID != order.OrderID || restored.EntryFill.FillID != fills[0].FillID || restored.Position.PositionID != position.PositionID || len(restored.Reviews) != 5 {
+		t.Fatalf("restored lifecycle lost identity: %#v", restored)
+	}
+	if err := store.RecordReviewUnavailable(ctx, position.PositionID, 1, now.Add(2*time.Hour), "integration fixture has no required observation"); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RecordReviewUnavailable(ctx, position.PositionID, 1, now.Add(3*time.Hour), "duplicate scheduler delivery"); err != nil {
+		t.Fatal(err)
+	}
+
+	evidence := RelevantEvidence{Reference: EvidenceReference{EvidenceID: "evidence-pg-" + suffix, SourceID: "source-pg", SourceURL: "https://example.test/pg", Quality: "high", ObservedAt: now}, IssuerID: thesis.IssuerID, InstrumentID: thesis.InstrumentID, Signal: EvidenceInvalidates, Reason: "restart integration invalidation"}
+	if _, err := store.ApplyEvidence(ctx, position.PositionID, evidence, now.Add(time.Hour), thesis.PolicyVersion); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.ApplyEvidence(ctx, position.PositionID, evidence, now.Add(2*time.Hour), thesis.PolicyVersion); err != nil {
+		t.Fatal(err)
+	}
+	conflict := evidence
+	conflict.Reason = "conflicting replay"
+	if _, err := store.ApplyEvidence(ctx, position.PositionID, conflict, now.Add(3*time.Hour), thesis.PolicyVersion); err == nil {
+		t.Fatal("conflicting same-ID evidence replay was accepted")
+	}
+}
+
+func postgresApproval(t *testing.T, suffix string, now time.Time) ApprovalSnapshot {
+	t.Helper()
+	risk := acceptedRisk(t, "recommendation-"+suffix, now, 1000)
+	workflowStore := workflow.NewStore()
+	wf, err := workflowStore.Create(context.Background(), workflow.CreateRequest{RiskDecision: risk, Now: now, IdempotencyKey: suffix + "-create"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wf, err = workflowStore.RequestHumanConfirmation(context.Background(), workflow.TransitionRequest{WorkflowID: wf.WorkflowID, Actor: "system", ActorRole: workflow.ActorSystem, IdempotencyKey: suffix + "-await", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err := workflow.NewConfirmation(wf, "AAPL", "LONG", now, now.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err = confirmation.WithDecision("operator-1", workflow.ConfirmationApprove)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wf, err = workflowStore.Confirm(context.Background(), workflow.HumanConfirmationRequest{WorkflowID: wf.WorkflowID, Confirmation: confirmation, Actor: "operator-1", ActorRole: workflow.ActorHuman, IdempotencyKey: suffix + "-approve", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wf, intent, err := workflowStore.CreatePaperIntent(context.Background(), workflow.PaperIntentRequest{WorkflowID: wf.WorkflowID, Actor: "system", ActorRole: workflow.ActorSystem, IdempotencyKey: suffix + "-intent", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, err := workflowStore.Events(context.Background(), wf.WorkflowID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ApprovalSnapshot{Workflow: wf, Events: events, PaperIntent: intent}
+}
