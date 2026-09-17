@@ -50,4 +50,13 @@ func TestExploratoryPaperMigrationsPreserveIdentityAndFirewall(t *testing.T) {
 			t.Fatalf("entry queue migration missing %q", fragment)
 		}
 	}
+	pilot, err := os.ReadFile("000073_paper02_pilot_readiness.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fragment := range []string{"exploratory_paper_pilots", "READY_FOR_EXTERNAL_REVIEW", "exploratory_paper_opportunities", "exploratory_paper_pilot_evidence", "formal_evidence_eligible = FALSE"} {
+		if !strings.Contains(strings.ToLower(string(pilot)), strings.ToLower(fragment)) {
+			t.Fatalf("PAPER-02 migration missing %q", fragment)
+		}
+	}
 }

@@ -1,0 +1,13 @@
+DROP TRIGGER IF EXISTS trg_reject_paper02_evidence_mutation ON exploratory_paper_pilot_evidence;
+DROP TRIGGER IF EXISTS trg_reject_paper02_opportunity_event_mutation ON exploratory_paper_opportunity_events;
+DROP TRIGGER IF EXISTS trg_protect_paper02_pilot_identity ON exploratory_paper_pilots;
+DROP FUNCTION IF EXISTS reject_paper02_append_only_mutation();
+DROP FUNCTION IF EXISTS protect_paper02_pilot_identity();
+DROP INDEX IF EXISTS idx_exploratory_paper_pilot_incidents_pilot;
+DROP TABLE IF EXISTS exploratory_paper_pilot_incidents;
+DROP TABLE IF EXISTS exploratory_paper_pilot_market_observations;
+DROP TABLE IF EXISTS exploratory_paper_pilot_evidence;
+DROP TABLE IF EXISTS exploratory_paper_opportunity_events;
+DROP INDEX IF EXISTS idx_exploratory_paper_opportunities_pilot;
+DROP TABLE IF EXISTS exploratory_paper_opportunities;
+DROP TABLE IF EXISTS exploratory_paper_pilots;

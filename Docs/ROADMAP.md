@@ -72,11 +72,11 @@ not promote a strategy or prove a trading edge.
 
 | Area | Status |
 | --- | --- |
-| PAPER-01 | **CONDITIONAL GO / PENDING PAPER-01C EXTERNAL RE-REVIEW** |
+| PAPER-01 | **GO / EXTERNALLY REVIEWED** |
 | PAPER-01A | **COMPLETE / SUPERSEDED BY PAPER-01B REMEDIATION** |
 | PAPER-01B | **IMPLEMENTED / ACCEPTED DIRECTIONALLY** |
-| PAPER-01C | **IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED** |
-| PAPER-02 | **NOT AUTHORIZED** |
+| PAPER-01C | **ACCEPTED / EXTERNALLY REVIEWED** |
+| PAPER-02 | **READY FOR EXTERNAL REVIEW / NOT ACTIVE** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -89,19 +89,21 @@ contracts, lifecycle tests, paper-workflow proof, and operator context are
 documented in `Docs/BUILD/PAPER-01.md`,
 `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md`,
 `Docs/TRADING_BRAIN/JAX_TRADER_MODEL_V1.md`, and `Docs/PAPER_TRADING/`.
-PAPER-01 is CONDITIONAL GO pending external re-review of PAPER-01C. PAPER-01B
-adds durable exploratory identity, restart/reconciliation checks, canonical
-evidence gating, frozen provenance, idempotent reviews, deterministic
-accounting, and a minimal operator read model. PAPER-01C closes the runtime
-entry/review loop through the approved-entry queue and scheduled worker. Neither
-package authorizes a pilot.
+PAPER-01 is GO / EXTERNALLY REVIEWED. PAPER-01B adds durable exploratory
+identity, restart/reconciliation checks, canonical evidence gating, frozen
+provenance, idempotent reviews, deterministic accounting, and a minimal
+operator read model. PAPER-01C closes the runtime entry/review loop through the
+approved-entry queue and scheduled worker. PAPER-02 readiness adds a frozen
+prospective protocol, pilot identity, non-trade opportunity ledger, new-
+evidence classification, latency capture, incidents, descriptive metrics, and
+operator read models. It does not activate a pilot.
 
 ## PAPER-02
 
-PAPER-02 is not started and not authorized. Its future bounded exploratory
-pilot definition is retained in `Docs/BUILD/PAPER-02.md`, but no pilot may
-begin from this package. The exact PAPER-02 versus FORMAL-01 sequencing remains
-subject to an external decision after PAPER-01B passes re-review.
+PAPER-02 is READY FOR EXTERNAL REVIEW / NOT ACTIVE. Its canonical protocol is
+`Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`. The exact
+activation decision and any later FORMAL-01 sequencing remain externally
+controlled. No prospective pilot may begin from this package.
 
 ## Exploratory learning programme
 
@@ -188,13 +190,13 @@ alone means a demonstrated trading edge.
 
 ```text
 PAPER-01
-IMPLEMENTED / EXTERNAL REVIEW REQUIRED
+GO / EXTERNALLY REVIEWED
 
 ↓
 
 PAPER-02
 PROSPECTIVE EXPLORATORY PAPER PILOT
-NOT STARTED / NOT AUTHORIZED
+READY FOR EXTERNAL REVIEW / NOT ACTIVE
 
 ↓
 
@@ -228,9 +230,10 @@ NOT STARTED / BLOCKED
 
 ## Deferred work
 
-VAL-04B, PAPER-02, FORMAL-01, live-readiness, Phase 13, and commercialisation
-are not current implementation work. Old plans, phase contracts, and ProjectOS
-templates cannot authorize them.
+VAL-04B, FORMAL-01, live-readiness, Phase 13, and commercialisation are not
+current implementation work. PAPER-02 is a readiness package only; an external
+activation decision is still required. Old plans, phase contracts, and
+ProjectOS templates cannot authorize it.
 
 ## Current success criterion
 

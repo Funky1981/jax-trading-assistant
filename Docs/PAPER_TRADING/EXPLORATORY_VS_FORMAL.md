@@ -2,11 +2,19 @@
 
 ## Exploratory paper
 
-Exploratory paper work is bounded observation of an implemented contract. It may expose workflow defects, ambiguity, missing provenance, and operational questions. It is not a performance claim and must remain labelled exploratory.
+Exploratory paper work is bounded prospective observation of an implemented
+contract. PAPER-02 readiness defines the intake boundary, durable opportunity
+ledger, non-trade retention, new-evidence classification, latency capture,
+market quality, incident controls, and descriptive metrics. It may expose
+workflow defects, ambiguity, missing provenance, and operational questions. It
+is not a performance claim and must remain labelled exploratory.
 
 ## Formal paper evidence
 
-Formal evidence requires a separately approved package with frozen rules, predeclared sampling, complete provenance, explicit missing-data treatment, and independent review. Formal evidence has not started in the current roadmap state.
+Formal evidence requires a separately approved package with frozen rules,
+predeclared sampling, complete provenance, explicit missing-data treatment, and
+independent review. PAPER-02 cannot establish formal evidence and
+`FORMAL_FORWARD_PAPER` has not started.
 
 ## Firewall
 

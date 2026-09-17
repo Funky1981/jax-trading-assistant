@@ -16,9 +16,12 @@ import (
 
 func registerExploratoryPaperRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool) {
 	store := exploratorypaper.NewPostgresStore(pool)
+	pilotStore := exploratorypaper.NewPilotPostgresStore(pool)
 	mux.HandleFunc("/api/v1/exploratory-paper/positions", protect(exploratoryPaperPositionsHandler(store)))
 	mux.HandleFunc("/api/v1/exploratory-paper/positions/", protect(exploratoryPaperPositionHandler(store)))
 	mux.HandleFunc("/api/v1/exploratory-paper/entry-queue", protect(exploratoryPaperEntryQueueHandler(store)))
+	mux.HandleFunc("/api/v1/exploratory-paper/pilot", protect(exploratoryPilotHandler(pilotStore, store)))
+	mux.HandleFunc("/api/v1/exploratory-paper/pilot/opportunities", protect(exploratoryPilotOpportunitiesHandler(pilotStore)))
 }
 
 // exploratoryPaperEntryQueueHandler is a handoff only: it accepts an entry
@@ -44,6 +47,54 @@ func exploratoryPaperEntryQueueHandler(store *exploratorypaper.PostgresStore) ht
 			return
 		}
 		jsonOK(w, map[string]any{"queued": true, "candidateId": entry.CandidateID, "mode": exploratorypaper.ExploratoryPaperMode, "execution": "ISOLATED_SIMULATED_PAPER_ONLY"})
+	}
+}
+
+// The PAPER-02 surface is read-only in this package. There is deliberately no
+// activation endpoint; external review must perform that handoff separately.
+func exploratoryPilotHandler(pilotStore *exploratorypaper.PilotPostgresStore, lifecycleStore *exploratorypaper.PostgresStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		pilotID := strings.TrimSpace(r.URL.Query().Get("pilotId"))
+		if pilotID == "" {
+			http.Error(w, "pilotId is required", http.StatusBadRequest)
+			return
+		}
+		model, err := pilotStore.ReadModel(r.Context(), pilotID)
+		if err != nil {
+			http.Error(w, "PAPER-02 read model unavailable: "+err.Error(), http.StatusServiceUnavailable)
+			return
+		}
+		active, err := lifecycleStore.ListActive(r.Context(), 200)
+		if err != nil {
+			http.Error(w, "exploratory lifecycle read model unavailable: "+err.Error(), http.StatusServiceUnavailable)
+			return
+		}
+		model.ActivePositions = active
+		jsonOK(w, model)
+	}
+}
+
+func exploratoryPilotOpportunitiesHandler(store *exploratorypaper.PilotPostgresStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		pilotID := strings.TrimSpace(r.URL.Query().Get("pilotId"))
+		if pilotID == "" {
+			http.Error(w, "pilotId is required", http.StatusBadRequest)
+			return
+		}
+		opportunities, err := store.ListOpportunities(r.Context(), pilotID)
+		if err != nil {
+			http.Error(w, "PAPER-02 opportunities unavailable: "+err.Error(), http.StatusServiceUnavailable)
+			return
+		}
+		jsonOK(w, map[string]any{"mode": exploratorypaper.PilotMode, "formalEvidence": false, "notFormalEvidence": true, "opportunities": opportunities})
 	}
 }
 

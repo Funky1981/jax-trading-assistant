@@ -27,11 +27,11 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - Formal forward paper: `NOT STARTED`; historical formal result is NO-GO.
 - VAL-04A: `COMPLETE / GO`.
 - VAL-04B: `DEFERRED / NOT CURRENT NEXT STEP`.
-- PAPER-01: `CONDITIONAL GO / PENDING PAPER-01C EXTERNAL RE-REVIEW`.
+- PAPER-01: `GO / EXTERNALLY REVIEWED`.
 - PAPER-01A: `COMPLETE / SUPERSEDED BY PAPER-01B`.
 - PAPER-01B: `IMPLEMENTED / ACCEPTED DIRECTIONALLY`.
-- PAPER-01C: `IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED`.
-- PAPER-02: `NOT STARTED / NOT AUTHORIZED`.
+- PAPER-01C: `ACCEPTED / EXTERNALLY REVIEWED`.
+- PAPER-02: `READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE`.
 - Trading edge: `NOT DEMONSTRATED`.
 - Phase 13: `NOT STARTED / BLOCKED`.
 - Optional future commercialisation: `DEFERRED / NOT A CURRENT OBJECTIVE`.
@@ -46,10 +46,11 @@ sessions, typical 2–3, hard maximum 5.
 
 Live trading, broker execution, autonomous execution, and real order mutation
 are disabled. Exploratory paper uses `PAPER`, `ExecutionAuthority=NONE`, and
-maximum leverage 1x. No pilot trade was started by DOC-01.
+maximum leverage 1x. No PAPER-02 pilot observation or trade was started by this
+package.
 
 ## Next decision required
 
-External review of PAPER-01C against the canonical documentation and the
-implementation. Do not start PAPER-02 or FORMAL_FORWARD_PAPER without a new
-external decision; the sequencing between them remains undecided here.
+External review of the PAPER-02 readiness package is required before
+activation. Do not start a prospective pilot or FORMAL_FORWARD_PAPER without a
+new external decision.

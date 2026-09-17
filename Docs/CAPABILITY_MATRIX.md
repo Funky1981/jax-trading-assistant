@@ -29,8 +29,9 @@ changes.
 The event-driven trader model and PAPER-01 exploratory thesis/lifecycle contracts
 are implemented and covered by automated tests. Operator review context and the
 exploratory/formal evidence firewall are implemented for the bounded package.
-This does not demonstrate a trading edge. PAPER-02, formal paper evidence, and
-live-readiness remain unauthorized or blocked as stated in `Docs/ROADMAP.md`.
+This does not demonstrate a trading edge. PAPER-02 readiness is implemented for
+external review but remains inactive; formal paper evidence and live-readiness
+remain blocked as stated in `Docs/ROADMAP.md`.
 
 ## Capability matrix
 
@@ -40,9 +41,10 @@ live-readiness remain unauthorized or blocked as stated in `Docs/ROADMAP.md`.
 | Capability matrix | DESIGNED | Docs | Matrix exists and is maintained | `Docs/CAPABILITY_MATRIX.md` | N/A | Must be updated every phase |
 | Phase 0 capability reset | DESIGNED | Docs | Historical reset evidence | `Docs/PHASE_CONTRACTS/00_CAPABILITY_RESET.md` | N/A | Retired historical contract; not current routing |
 | Event-driven short-horizon trader model | TESTED | Trading Brain | Deterministic model tests and capability map | `Docs/TRADING_BRAIN/JAX_TRADER_MODEL_V1.md`, `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md` | `internal/modules/exploratorypaper`, related package tests | Implemented package capability; edge not demonstrated |
-| PAPER-01 exploratory thesis and lifecycle contracts | TESTED | Paper Trading | Contract, persistence, runtime-loop, restart/reconciliation, and bounded operator-read-model tests | `Docs/BUILD/PAPER-01.md`, `Docs/BUILD/PAPER-01B-REVIEW-EVIDENCE.md`, `Docs/BUILD/PAPER-01C-RUNTIME-AUDIT.md`, `Docs/PAPER_TRADING/` | `internal/modules/exploratorypaper`, `cmd/trader/exploratory_paper_*` | PAPER-01 is CONDITIONAL GO pending external PAPER-01C re-review; not formal evidence |
+| PAPER-01 exploratory thesis and lifecycle contracts | TESTED | Paper Trading | Contract, persistence, runtime-loop, restart/reconciliation, and bounded operator-read-model tests | `Docs/BUILD/PAPER-01.md`, `Docs/BUILD/PAPER-01B-REVIEW-EVIDENCE.md`, `Docs/BUILD/PAPER-01C-RUNTIME-AUDIT.md`, `Docs/PAPER_TRADING/` | `internal/modules/exploratorypaper`, `cmd/trader/exploratory_paper_*` | PAPER-01 GO / EXTERNALLY REVIEWED; not formal evidence |
+| PAPER-02 prospective pilot readiness | TESTED | Paper Trading | Frozen protocol, pilot identity, non-trade opportunity ledger, new-evidence classification, latency/market quality, incidents, metrics, and read model | `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`, `Docs/BUILD/PAPER-02-READINESS-EVIDENCE.md` | `internal/modules/exploratorypaper/pilot*.go`, migration 000073 | READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE; no edge claim |
 | Exploratory/formal evidence firewall | TESTED | Paper Trading | Explicit mode labels and review boundary | `Docs/PAPER_TRADING/EXPLORATORY_VS_FORMAL.md` | `internal/modules/exploratorypaper` | Prevents exploratory observations from becoming promotion evidence |
-| Demonstrated trading edge | PLANNED | Research and Evidence | Separately authorized formal evidence | `Docs/BUILD/PAPER-02.md` | Not started | Not demonstrated by PAPER-01; PAPER-02 is not authorized |
+| Demonstrated trading edge | PLANNED | Research and Evidence | Separately authorized formal evidence | `Docs/BUILD/PAPER-02.md` | Not started | Not demonstrated by PAPER-01 or PAPER-02 |
 | Decision Core Phase 1 | TESTED | Decision Core | Unit tests + FTSE golden fixture | `internal/decisioning/core` | `internal/decisioning/core/decision_test.go`, `tests/golden/decision_runner_test.go` | Deterministic structured decision core implemented; Phase 2 Event Intelligence feeds enriched events into this core |
 | Event intake | TESTED | Decisioning | Structured event schema + golden input decode | `internal/decisioning/core/event.go` | `tests/golden/events` | Structured event input only; no scraping or article parsing |
 | Genuine World Monitor ingestion | PROVEN | Data Ingestion and Replay | Genuine collector connectivity plus authenticated runtime delivery and persistence evidence | `cmd/trader/world_monitor_research_*`, `scripts/prove-live-world-monitor-ingestion.ps1`; sender in `Jax-World-News-Monitor/scripts/jax-live-ingestion.mts` | `cmd/trader/world_monitor_research_*_test.go`; World Monitor `tests/jax-live-ingestion.test.mts` | On 2026-07-21 the bounded deterministic RSS sender observed 83 genuine items across BBC World, CNBC, and Federal Reserve, delivered six qualifying events, and Jax accepted, persisted, and normalized all six with genuine URLs, source timestamps, `is_synthetic=false`, and unknown asset mappings. A repeat cycle deduplicated all six. No candidate, approval, execution instruction, order intent, broker order, trade, or fill was created. AI analysis and natural candidate generation remain unproven. Persisted raw payload is the replay source. |

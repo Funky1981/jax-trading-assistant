@@ -2,9 +2,14 @@
 
 ## PAPER-01 — event-driven exploratory paper-trader package
 
-Status: **PAPER-01 NO-GO / PAPER-01B IMPLEMENTED / EXTERNAL RE-REVIEW REQUIRED**.
+Status: **PAPER-02 READINESS / READY FOR EXTERNAL REVIEW / NOT ACTIVE**.
 
-PAPER-01C is the current implementation package. It closes the runtime-loop seam for the bounded event-driven exploratory paper-trader model: canonical source-backed event/evidence handoff, human-approved paper entry, isolated paper lifecycle, restart-safe scheduled review, deterministic exit approval, and outcome review. It does not run a pilot, demonstrate a trading edge, authorize PAPER-02, create formal evidence, or permit live execution.
+PAPER-01C is accepted and externally reviewed. The current package prepares
+PAPER-02 readiness: a frozen prospective exploratory protocol, durable pilot
+identity, non-trade opportunity ledger, new-evidence/latency capture, market
+quality, incidents, descriptive metrics, and protected operator read models.
+It does not activate PAPER-02, start a pilot, demonstrate a trading edge,
+create formal evidence, or permit live execution.
 
 Read in this order:
 
@@ -15,6 +20,6 @@ Read in this order:
 5. `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md`
 6. Relevant paper-trading contracts under `Docs/PAPER_TRADING/`
 
-The next decision is external re-review of PAPER-01B. No pilot, formal
-forward-paper run, Phase 13 work, broker execution, or live trading is
-authorized by this package.
+The next decision is external review of PAPER-02 readiness. No prospective
+pilot, formal forward-paper run, Phase 13 work, broker execution, or live
+trading is authorized by this package.
