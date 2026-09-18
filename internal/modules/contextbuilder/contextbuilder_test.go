@@ -320,7 +320,7 @@ func TestRankingBudgetAndOmissionBehaviour(t *testing.T) {
 		request.Budget.Evidence = 8
 		recalculateCBBudget(&request.Budget)
 		large := buildCB(t, request)
-		if !(len(tight.Package.SelectedEvidence) < len(medium.Package.SelectedEvidence) && len(medium.Package.SelectedEvidence) <= len(large.Package.SelectedEvidence)) {
+		if len(tight.Package.SelectedEvidence) >= len(medium.Package.SelectedEvidence) || len(medium.Package.SelectedEvidence) > len(large.Package.SelectedEvidence) {
 			t.Fatal("budget pressure did not degrade monotonically")
 		}
 	})

@@ -110,15 +110,9 @@ func Build(ctx context.Context, request BuildRequest) (BuildResult, error) {
 	}
 	memorySelected, memoryOmissions, memoryDeferred := selectMemory(memoryCandidates, request, records, memorySelections)
 
-	for _, warning := range evidenceResult.Warnings {
-		report.Warnings = append(report.Warnings, warning)
-	}
-	for _, warning := range counterResult.Warnings {
-		report.Warnings = append(report.Warnings, warning)
-	}
-	for _, warning := range memoryResult.Warnings {
-		report.Warnings = append(report.Warnings, warning)
-	}
+	report.Warnings = append(report.Warnings, evidenceResult.Warnings...)
+	report.Warnings = append(report.Warnings, counterResult.Warnings...)
+	report.Warnings = append(report.Warnings, memoryResult.Warnings...)
 	report.KnownMissing = append(report.KnownMissing, counterResult.KnownMissing...)
 	report.Omissions = append(report.Omissions, evidenceOmissions...)
 	report.Omissions = append(report.Omissions, counterOmissions...)
@@ -127,9 +121,10 @@ func Build(ctx context.Context, request BuildRequest) (BuildResult, error) {
 	report.DeferredReferences = append(report.DeferredReferences, counterDeferred...)
 	report.DeferredReferences = append(report.DeferredReferences, memoryDeferred...)
 
-	if counterResult.SearchStatus == SearchNotPerformed {
+	switch counterResult.SearchStatus {
+	case SearchNotPerformed:
 		report.Warnings = append(report.Warnings, "COUNTER_EVIDENCE_NOT_SEARCHED")
-	} else if counterResult.SearchStatus == SearchNoResults {
+	case SearchNoResults:
 		report.Warnings = append(report.Warnings, "NO_COUNTER_EVIDENCE_FOUND")
 	}
 	if evidenceResult.SearchStatus == SearchNoResults {
