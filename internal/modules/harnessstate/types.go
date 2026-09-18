@@ -147,6 +147,7 @@ type FailureEvent struct {
 	TaskID          string                        `json:"task_id"`
 	StateVersion    int                           `json:"state_version"`
 	Failure         harnesscontracts.FailureState `json:"failure"`
+	NextAction      string                        `json:"next_action"`
 	CreatedAt       time.Time                     `json:"created_at"`
 }
 
@@ -512,6 +513,36 @@ func generatedRecordID(prefix, hash, operationKey string) string {
 	// intentional checkpoints of identical content distinct while preserving
 	// retry identity through the idempotency map/column.
 	return prefix + "-" + hash[len("sha256:"):len("sha256:")+16] + "-" + operationKey
+}
+
+type eventIdentity struct {
+	Operation      string `json:"operation"`
+	TaskID         string `json:"task_id"`
+	IdempotencyKey string `json:"idempotency_key"`
+}
+
+func generatedEventID(operation, taskID, idempotencyKey string) string {
+	hash, _ := harnesscontracts.CanonicalHash(eventIdentity{Operation: operation, TaskID: taskID, IdempotencyKey: idempotencyKey})
+	return operation + "-" + hash[len("sha256:"):]
+}
+
+func failureEventSemanticHash(failure harnesscontracts.FailureState, nextAction string) string {
+	hash, _ := harnesscontracts.CanonicalHash(struct {
+		Failure    harnesscontracts.FailureState `json:"failure"`
+		NextAction string                        `json:"next_action"`
+	}{Failure: failure, NextAction: nextAction})
+	return hash
+}
+
+func retryEventSemanticHash(nextAction string) string {
+	hash, _ := harnesscontracts.CanonicalHash(struct {
+		NextAction string `json:"next_action"`
+	}{NextAction: nextAction})
+	return hash
+}
+
+func failureEventMatches(event FailureEvent, taskID string, failure harnesscontracts.FailureState, nextAction string) bool {
+	return event.TaskID == taskID && failureEventSemanticHash(event.Failure, event.NextAction) == failureEventSemanticHash(failure, nextAction)
 }
 
 func clone[T any](value T) T {

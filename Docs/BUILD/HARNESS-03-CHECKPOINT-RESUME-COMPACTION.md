@@ -36,6 +36,12 @@ and derived compaction operations.
 - `harness_compactions` stores derived records, never canonical state.
 - `harness_failure_events` and `harness_retry_events` preserve operational history.
 
+The external-review correction required no schema migration: the existing event
+primary key now stores a deterministic application-generated hash of operation,
+task ID, and idempotency key, while the JSON event payload carries the semantic
+content used for replay comparison. Migration `000075` remains additive and
+unchanged.
+
 `MemoryStore` implements the same semantics for deterministic offline tests and
 supports snapshot/restore to model a process boundary.
 
@@ -46,9 +52,12 @@ the in-memory store serializes it. A stale writer receives an explicit
 `VersionConflictError`; last-writer-wins is not permitted.
 
 State, checkpoint, compaction, failure, and retry operations use explicit
-idempotency identities. A repeated identical request returns the durable record
-with `Applied=false`; reuse with different semantic content returns
-`ErrIdempotencyConflict`.
+idempotency identities. Failure and retry event identities are deterministic
+hashes of the operation type, task ID, and caller key; caller keys are never
+used as globally unique event IDs. A repeated identical request returns the
+durable record with `Applied=false`; reuse with different semantic content
+returns `ErrIdempotencyConflict`, including different failure state or next
+action.
 
 ## Checkpoint contract and integrity
 
@@ -95,10 +104,13 @@ mismatches.
 ## Failure/retry, security, and isolation
 
 Operational failures are versioned failed states plus durable failure events.
-Retry appends a new running state and retry event; the previous failed state
-remains readable in history. The tool-failure fixture persists successful work,
-records a failed required tool, simulates restart, retries idempotently, and
-continues without repeating completed work.
+In PostgreSQL, the state-version append, latest-version update, and matching
+failure/retry event insert run in one transaction; event persistence errors are
+returned and roll back the state transition. Retry appends a new running state
+and retry event; the previous failed state remains readable in history. The
+tool-failure fixture persists successful work, records a failed required tool,
+simulates restart, retries idempotently, and continues without repeating
+completed work.
 
 Validation rejects API keys, authorization/cookie headers, passwords, broker
 credentials, database URLs, bearer tokens, and similar secret material from
@@ -112,7 +124,8 @@ policy, or evidence-selection paths. Migration 000075 contains only new
 
 ## Test evidence
 
-`TestHarness03BehaviouralGates` contains 65 meaningful subtests covering
+`TestHarness03BehaviouralGates` contains 65 meaningful subtests, supplemented
+by focused failure/retry idempotency tests, covering
 creation, historical state, optimistic concurrency, state/checkpoint
 idempotency, deterministic and corruption-detecting hashes, fresh-session
 recovery, checkpoint content, resume identity, repeated compaction,

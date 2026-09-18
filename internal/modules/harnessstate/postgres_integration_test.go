@@ -11,6 +11,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"jax-trading-assistant/internal/modules/harnesscontracts"
 )
 
 func TestPostgresStoreRoundTripAndConcurrency(t *testing.T) {
@@ -40,13 +41,16 @@ func TestPostgresStoreRoundTripAndConcurrency(t *testing.T) {
 	}
 
 	taskID := fmt.Sprintf("integration-harness-%d", time.Now().UTC().UnixNano())
+	secondTaskID := taskID + "-second"
 	defer func() {
-		_, _ = db.ExecContext(ctx, `DELETE FROM harness_retry_events WHERE task_id=$1`, taskID)
-		_, _ = db.ExecContext(ctx, `DELETE FROM harness_failure_events WHERE task_id=$1`, taskID)
-		_, _ = db.ExecContext(ctx, `DELETE FROM harness_compactions WHERE task_id=$1`, taskID)
-		_, _ = db.ExecContext(ctx, `DELETE FROM harness_checkpoints WHERE task_id=$1`, taskID)
-		_, _ = db.ExecContext(ctx, `DELETE FROM harness_task_state_versions WHERE task_id=$1`, taskID)
-		_, _ = db.ExecContext(ctx, `DELETE FROM harness_tasks WHERE task_id=$1`, taskID)
+		for _, cleanupTaskID := range []string{taskID, secondTaskID} {
+			_, _ = db.ExecContext(ctx, `DELETE FROM harness_retry_events WHERE task_id=$1`, cleanupTaskID)
+			_, _ = db.ExecContext(ctx, `DELETE FROM harness_failure_events WHERE task_id=$1`, cleanupTaskID)
+			_, _ = db.ExecContext(ctx, `DELETE FROM harness_compactions WHERE task_id=$1`, cleanupTaskID)
+			_, _ = db.ExecContext(ctx, `DELETE FROM harness_checkpoints WHERE task_id=$1`, cleanupTaskID)
+			_, _ = db.ExecContext(ctx, `DELETE FROM harness_task_state_versions WHERE task_id=$1`, cleanupTaskID)
+			_, _ = db.ExecContext(ctx, `DELETE FROM harness_tasks WHERE task_id=$1`, cleanupTaskID)
+		}
 	}()
 	objective := fixtureObjective()
 	state := fixtureState()
@@ -97,5 +101,57 @@ func TestPostgresStoreRoundTripAndConcurrency(t *testing.T) {
 	bundle, err := store.ResumeTask(ctx, ResumeRequest{TaskID: taskID})
 	if err != nil || bundle.State.State.StateVersion != 2 || bundle.Checkpoint.CheckpointID != cp.CheckpointID {
 		t.Fatalf("resume failed: %+v %v", bundle, err)
+	}
+
+	failure := harnesscontracts.FailureState{Attempt: 1, Retryable: true, Classification: "tool_unavailable", Reason: "integration retrieval failed"}
+	failureResult, err := store.RecordFailure(ctx, taskID, 2, failure, "Retry integration retrieval.", "integration-failure-key")
+	if err != nil || !failureResult.Applied {
+		t.Fatalf("failure transition failed: %+v %v", failureResult, err)
+	}
+	duplicateFailure, err := store.RecordFailure(ctx, taskID, 999, failure, "Retry integration retrieval.", "integration-failure-key")
+	if err != nil || duplicateFailure.Applied {
+		t.Fatalf("duplicate failure replay failed: %v", err)
+	}
+	conflictingFailure := failure
+	conflictingFailure.Reason = "different integration failure"
+	if _, err := store.RecordFailure(ctx, taskID, 999, conflictingFailure, "Retry integration retrieval.", "integration-failure-key"); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("conflicting failure replay was accepted: %v", err)
+	}
+
+	retryResult, err := store.RecordRetry(ctx, taskID, failureResult.State.State.StateVersion, "Retry integration tool.", "integration-retry-key")
+	if err != nil || !retryResult.Applied {
+		t.Fatalf("retry transition failed: %+v %v", retryResult, err)
+	}
+	duplicateRetry, err := store.RecordRetry(ctx, taskID, 999, "Retry integration tool.", "integration-retry-key")
+	if err != nil || duplicateRetry.Applied {
+		t.Fatalf("duplicate retry replay failed: %v", err)
+	}
+	if _, err := store.RecordRetry(ctx, taskID, 999, "Different integration retry.", "integration-retry-key"); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("conflicting retry replay was accepted: %v", err)
+	}
+
+	second := state
+	second.State.TaskID = secondTaskID
+	if _, err := store.CreateTask(ctx, CreateTaskRequest{TaskID: secondTaskID, Objective: objective, InitialState: second}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.RecordFailure(ctx, secondTaskID, 1, failure, "Retry integration retrieval.", "integration-failure-key"); err != nil {
+		t.Fatalf("task-scoped failure identity collided: %v", err)
+	}
+	secondFailure, err := store.LoadLatestState(ctx, secondTaskID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.RecordRetry(ctx, secondTaskID, secondFailure.State.StateVersion, "Retry integration tool.", "integration-retry-key"); err != nil {
+		t.Fatalf("task-scoped retry identity collided: %v", err)
+	}
+
+	resumeCheckpoint, err := store.CreateCheckpoint(ctx, CreateCheckpointRequest{TaskID: taskID, StateVersion: retryResult.State.State.StateVersion, IdempotencyKey: "integration-resume-after-retry", CreatedAt: fixtureTime.Add(5 * time.Minute)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resumed, err := store.ResumeTask(ctx, ResumeRequest{TaskID: taskID, CheckpointID: resumeCheckpoint.CheckpointID})
+	if err != nil || len(resumed.FailureHistory) != 1 || len(resumed.RetryHistory) != 1 {
+		t.Fatalf("failure/retry history did not survive resume: %+v %v", resumed, err)
 	}
 }

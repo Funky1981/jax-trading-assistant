@@ -39,8 +39,10 @@ forced into this package.
 append-only versions, optimistic concurrency, idempotent checkpoints,
 fresh-session resume bundles, failure/retry history, and deterministic
 structured compaction. PostgreSQL is the durable store and `MemoryStore` is a
-semantically equivalent offline fixture store. Compaction is derived and never
-canonical storage.
+semantically equivalent offline fixture store. Failure/retry transitions are
+atomic in PostgreSQL, and their event identities are task-scoped hashes with
+semantic conflict detection. Compaction is derived and never canonical
+storage.
 
 The pre-existing `internal/modules/harness` package is a separate legacy
 advisory/chat implementation. HARNESS-01 does not rename, refactor, integrate,

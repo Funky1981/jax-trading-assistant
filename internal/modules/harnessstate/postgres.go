@@ -84,19 +84,30 @@ func (s *PostgresStore) AppendStateVersion(ctx context.Context, taskID string, e
 		return AppendStateResult{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	result, err := s.appendStateVersionTx(ctx, tx, taskID, expectedVersion, state, idempotencyKey)
+	if err != nil {
+		return AppendStateResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return AppendStateResult{}, err
+	}
+	return result, nil
+}
+
+func (s *PostgresStore) appendStateVersionTx(ctx context.Context, tx *sql.Tx, taskID string, expectedVersion int, state DurableState, idempotencyKey string) (AppendStateResult, error) {
 	var current int
 	var objectivePayload []byte
-	if err = tx.QueryRowContext(ctx, `SELECT latest_state_version, objective FROM harness_tasks WHERE task_id=$1 FOR UPDATE`, taskID).Scan(&current, &objectivePayload); err == sql.ErrNoRows {
+	if err := tx.QueryRowContext(ctx, `SELECT latest_state_version, objective FROM harness_tasks WHERE task_id=$1 FOR UPDATE`, taskID).Scan(&current, &objectivePayload); err == sql.ErrNoRows {
 		return AppendStateResult{}, ErrNotFound
 	} else if err != nil {
 		return AppendStateResult{}, err
 	}
 	var objective harnesscontracts.ResearchObjective
-	if err = json.Unmarshal(objectivePayload, &objective); err != nil {
+	if err := json.Unmarshal(objectivePayload, &objective); err != nil {
 		return AppendStateResult{}, fmt.Errorf("%w: objective JSON: %v", ErrIntegrity, err)
 	}
 	state = prepareNextState(state, objective, taskID, expectedVersion+1)
-	if err = state.Validate(objective); err != nil {
+	if err := state.Validate(objective); err != nil {
 		return AppendStateResult{}, wrapValidation(err)
 	}
 	hash, err := stateHash(state)
@@ -114,9 +125,6 @@ func (s *PostgresStore) AppendStateVersion(ctx context.Context, taskID string, e
 		var existing DurableState
 		if err := json.Unmarshal(existingPayload, &existing); err != nil {
 			return AppendStateResult{}, fmt.Errorf("%w: state JSON: %v", ErrIntegrity, err)
-		}
-		if err := tx.Commit(); err != nil {
-			return AppendStateResult{}, err
 		}
 		return AppendStateResult{State: existing, Applied: false}, nil
 	}
@@ -136,10 +144,42 @@ func (s *PostgresStore) AppendStateVersion(ctx context.Context, taskID string, e
 	if _, err = tx.ExecContext(ctx, `UPDATE harness_tasks SET latest_state_version=$2, updated_at=$3 WHERE task_id=$1`, taskID, expectedVersion+1, state.State.UpdatedAt); err != nil {
 		return AppendStateResult{}, err
 	}
-	if err = tx.Commit(); err != nil {
-		return AppendStateResult{}, err
-	}
 	return AppendStateResult{State: state, Applied: true}, nil
+}
+
+func loadStateVersionTx(ctx context.Context, tx *sql.Tx, taskID string, version int) (DurableState, error) {
+	var payload []byte
+	var storedHash string
+	var objectivePayload []byte
+	err := tx.QueryRowContext(ctx, `SELECT v.payload, v.state_hash, t.objective FROM harness_task_state_versions v JOIN harness_tasks t ON t.task_id=v.task_id WHERE v.task_id=$1 AND v.state_version=$2`, taskID, version).Scan(&payload, &storedHash, &objectivePayload)
+	if err == sql.ErrNoRows {
+		return DurableState{}, ErrNotFound
+	}
+	if err != nil {
+		return DurableState{}, err
+	}
+	var state DurableState
+	var objective harnesscontracts.ResearchObjective
+	if err := json.Unmarshal(payload, &state); err != nil {
+		return DurableState{}, fmt.Errorf("%w: state JSON: %v", ErrIntegrity, err)
+	}
+	if err := json.Unmarshal(objectivePayload, &objective); err != nil {
+		return DurableState{}, fmt.Errorf("%w: objective JSON: %v", ErrIntegrity, err)
+	}
+	if err := verifyState(state, objective, storedHash); err != nil {
+		return DurableState{}, err
+	}
+	return state, nil
+}
+
+func loadLatestStateTx(ctx context.Context, tx *sql.Tx, taskID string) (DurableState, error) {
+	var latestVersion int
+	if err := tx.QueryRowContext(ctx, `SELECT latest_state_version FROM harness_tasks WHERE task_id=$1 FOR UPDATE`, taskID).Scan(&latestVersion); err == sql.ErrNoRows {
+		return DurableState{}, ErrNotFound
+	} else if err != nil {
+		return DurableState{}, err
+	}
+	return loadStateVersionTx(ctx, tx, taskID, latestVersion)
 }
 
 func (s *PostgresStore) LoadStateVersion(ctx context.Context, taskID string, version int) (DurableState, error) {
@@ -280,14 +320,33 @@ func (s *PostgresStore) ListCheckpoints(ctx context.Context, taskID string) ([]C
 }
 
 func (s *PostgresStore) RecordFailure(ctx context.Context, taskID string, expectedVersion int, failure harnesscontracts.FailureState, nextAction, idempotencyKey string) (AppendStateResult, error) {
+	if err := validateOperationKey(idempotencyKey); err != nil {
+		return AppendStateResult{}, err
+	}
 	if failure.Reason == "" {
 		return AppendStateResult{}, fmt.Errorf("%w: failure reason is required", ErrInvalid)
 	}
-	var priorVersion int
-	lookupErr := s.db.QueryRowContext(ctx, `SELECT state_version FROM harness_failure_events WHERE event_id=$1`, "failure-"+idempotencyKey).Scan(&priorVersion)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return AppendStateResult{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	eventID := generatedEventID("failure", taskID, idempotencyKey)
+	var eventPayload []byte
+	lookupErr := tx.QueryRowContext(ctx, `SELECT payload FROM harness_failure_events WHERE event_id=$1`, eventID).Scan(&eventPayload)
 	if lookupErr == nil {
-		state, err := s.LoadStateVersion(ctx, taskID, priorVersion)
+		var event FailureEvent
+		if err := json.Unmarshal(eventPayload, &event); err != nil {
+			return AppendStateResult{}, fmt.Errorf("%w: failure event JSON: %v", ErrIntegrity, err)
+		}
+		if !failureEventMatches(event, taskID, failure, nextAction) {
+			return AppendStateResult{}, ErrIdempotencyConflict
+		}
+		state, err := loadStateVersionTx(ctx, tx, taskID, event.StateVersion)
 		if err != nil {
+			return AppendStateResult{}, err
+		}
+		if err := tx.Commit(); err != nil {
 			return AppendStateResult{}, err
 		}
 		return AppendStateResult{State: state, Applied: false}, nil
@@ -295,31 +354,56 @@ func (s *PostgresStore) RecordFailure(ctx context.Context, taskID string, expect
 	if lookupErr != sql.ErrNoRows {
 		return AppendStateResult{}, lookupErr
 	}
-	state, err := s.LoadLatestState(ctx, taskID)
+	state, err := loadLatestStateTx(ctx, tx, taskID)
 	if err != nil {
 		return AppendStateResult{}, err
 	}
 	state.State.Status = harnesscontracts.TaskStatusFailed
 	state.State.Failure = failure
 	state.State.NextAction = nextAction
-	result, err := s.AppendStateVersion(ctx, taskID, expectedVersion, state, idempotencyKey)
+	result, err := s.appendStateVersionTx(ctx, tx, taskID, expectedVersion, state, idempotencyKey)
 	if err != nil {
 		return AppendStateResult{}, err
 	}
-	if result.Applied {
-		event := FailureEvent{ContractVersion: FailureRecordVersion, EventID: "failure-" + idempotencyKey, TaskID: taskID, StateVersion: result.State.State.StateVersion, Failure: failure, CreatedAt: result.State.State.UpdatedAt}
-		payload, _ := json.Marshal(event)
-		_, _ = s.db.ExecContext(ctx, `INSERT INTO harness_failure_events (event_id, task_id, state_version, payload, created_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (event_id) DO NOTHING`, event.EventID, taskID, event.StateVersion, payload, event.CreatedAt)
+	event := FailureEvent{ContractVersion: FailureRecordVersion, EventID: eventID, TaskID: taskID, StateVersion: result.State.State.StateVersion, Failure: failure, NextAction: nextAction, CreatedAt: result.State.State.UpdatedAt}
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return AppendStateResult{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO harness_failure_events (event_id, task_id, state_version, payload, created_at) VALUES ($1,$2,$3,$4,$5)`, event.EventID, taskID, event.StateVersion, payload, event.CreatedAt); err != nil {
+		return AppendStateResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return AppendStateResult{}, err
 	}
 	return result, nil
 }
 
 func (s *PostgresStore) RecordRetry(ctx context.Context, taskID string, expectedVersion int, nextAction, idempotencyKey string) (AppendStateResult, error) {
-	var priorVersion int
-	lookupErr := s.db.QueryRowContext(ctx, `SELECT state_version FROM harness_retry_events WHERE event_id=$1`, "retry-"+idempotencyKey).Scan(&priorVersion)
+	if err := validateOperationKey(idempotencyKey); err != nil {
+		return AppendStateResult{}, err
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return AppendStateResult{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	eventID := generatedEventID("retry", taskID, idempotencyKey)
+	var eventPayload []byte
+	lookupErr := tx.QueryRowContext(ctx, `SELECT payload FROM harness_retry_events WHERE event_id=$1`, eventID).Scan(&eventPayload)
 	if lookupErr == nil {
-		state, err := s.LoadStateVersion(ctx, taskID, priorVersion)
+		var event RetryEvent
+		if err := json.Unmarshal(eventPayload, &event); err != nil {
+			return AppendStateResult{}, fmt.Errorf("%w: retry event JSON: %v", ErrIntegrity, err)
+		}
+		if event.TaskID != taskID || retryEventSemanticHash(event.NextAction) != retryEventSemanticHash(nextAction) {
+			return AppendStateResult{}, ErrIdempotencyConflict
+		}
+		state, err := loadStateVersionTx(ctx, tx, taskID, event.StateVersion)
 		if err != nil {
+			return AppendStateResult{}, err
+		}
+		if err := tx.Commit(); err != nil {
 			return AppendStateResult{}, err
 		}
 		return AppendStateResult{State: state, Applied: false}, nil
@@ -327,7 +411,7 @@ func (s *PostgresStore) RecordRetry(ctx context.Context, taskID string, expected
 	if lookupErr != sql.ErrNoRows {
 		return AppendStateResult{}, lookupErr
 	}
-	state, err := s.LoadLatestState(ctx, taskID)
+	state, err := loadLatestStateTx(ctx, tx, taskID)
 	if err != nil {
 		return AppendStateResult{}, err
 	}
@@ -335,14 +419,20 @@ func (s *PostgresStore) RecordRetry(ctx context.Context, taskID string, expected
 	state.State.Status = harnesscontracts.TaskStatusRunning
 	state.State.Failure = harnesscontracts.FailureState{}
 	state.State.NextAction = nextAction
-	result, err := s.AppendStateVersion(ctx, taskID, expectedVersion, state, idempotencyKey)
+	result, err := s.appendStateVersionTx(ctx, tx, taskID, expectedVersion, state, idempotencyKey)
 	if err != nil {
 		return AppendStateResult{}, err
 	}
-	if result.Applied {
-		event := RetryEvent{ContractVersion: RetryRecordVersion, EventID: "retry-" + idempotencyKey, TaskID: taskID, StateVersion: result.State.State.StateVersion, Attempt: attempt, NextAction: nextAction, CreatedAt: result.State.State.UpdatedAt}
-		payload, _ := json.Marshal(event)
-		_, _ = s.db.ExecContext(ctx, `INSERT INTO harness_retry_events (event_id, task_id, state_version, payload, created_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (event_id) DO NOTHING`, event.EventID, taskID, event.StateVersion, payload, event.CreatedAt)
+	event := RetryEvent{ContractVersion: RetryRecordVersion, EventID: eventID, TaskID: taskID, StateVersion: result.State.State.StateVersion, Attempt: attempt, NextAction: nextAction, CreatedAt: result.State.State.UpdatedAt}
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return AppendStateResult{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO harness_retry_events (event_id, task_id, state_version, payload, created_at) VALUES ($1,$2,$3,$4,$5)`, event.EventID, taskID, event.StateVersion, payload, event.CreatedAt); err != nil {
+		return AppendStateResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return AppendStateResult{}, err
 	}
 	return result, nil
 }

@@ -324,7 +324,7 @@ func TestHarness03BehaviouralGates(t *testing.T) {
 		}
 	})
 	t.Run("failure duplicate is idempotent", func(t *testing.T) {
-		result, err := store.RecordFailure(ctx, initial.State.TaskID, 999, harnesscontracts.FailureState{Attempt: 1, Retryable: true, Classification: "tool_unavailable", Reason: "same durable failure"}, "Retry failed retrieval.", "failure-1")
+		result, err := store.RecordFailure(ctx, initial.State.TaskID, 999, harnesscontracts.FailureState{Attempt: 1, Retryable: true, Classification: "tool_unavailable", Reason: "required retrieval tool unavailable"}, "Retry failed retrieval.", "failure-1")
 		if err != nil || result.Applied {
 			t.Fatalf("duplicate failure was not idempotent: %+v %v", result, err)
 		}
@@ -694,6 +694,61 @@ func TestHarness03BehaviouralGates(t *testing.T) {
 	})
 	if t.Failed() {
 		t.Logf("fixture task reached v%d", mustTask(t, store, initial.State.TaskID).LatestVersion)
+	}
+}
+
+func TestHarness03FailureRetryIdempotency(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	objective := fixtureObjective()
+	firstState := fixtureState()
+	secondState := fixtureState()
+	secondState.State.TaskID = "task-harness-03-second"
+	if _, err := store.CreateTask(ctx, CreateTaskRequest{TaskID: firstState.State.TaskID, Objective: objective, InitialState: firstState}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.CreateTask(ctx, CreateTaskRequest{TaskID: secondState.State.TaskID, Objective: objective, InitialState: secondState}); err != nil {
+		t.Fatal(err)
+	}
+	failure := harnesscontracts.FailureState{Attempt: 1, Retryable: true, Classification: "tool_unavailable", Reason: "retrieval tool unavailable"}
+
+	first, err := store.RecordFailure(ctx, firstState.State.TaskID, 1, failure, "Retry retrieval.", "shared-failure-key")
+	if err != nil || !first.Applied {
+		t.Fatalf("initial failure transition failed: %+v %v", first, err)
+	}
+	duplicate, err := store.RecordFailure(ctx, firstState.State.TaskID, 999, failure, "Retry retrieval.", "shared-failure-key")
+	if err != nil || duplicate.Applied {
+		t.Fatalf("same failure replay was not idempotent: %+v %v", duplicate, err)
+	}
+	conflictingFailure := failure
+	conflictingFailure.Reason = "different failure reason"
+	if _, err := store.RecordFailure(ctx, firstState.State.TaskID, 999, conflictingFailure, "Retry retrieval.", "shared-failure-key"); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("different failure content was accepted: %v", err)
+	}
+	if _, err := store.RecordFailure(ctx, firstState.State.TaskID, 999, failure, "Different next action.", "shared-failure-key"); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("different failure next action was accepted: %v", err)
+	}
+
+	second, err := store.RecordFailure(ctx, secondState.State.TaskID, 1, failure, "Retry retrieval.", "shared-failure-key")
+	if err != nil || !second.Applied {
+		t.Fatalf("same failure key collided across tasks: %+v %v", second, err)
+	}
+
+	retry, err := store.RecordRetry(ctx, firstState.State.TaskID, first.State.State.StateVersion, "Retry tool now.", "shared-retry-key")
+	if err != nil || !retry.Applied {
+		t.Fatalf("initial retry transition failed: %+v %v", retry, err)
+	}
+	retryDuplicate, err := store.RecordRetry(ctx, firstState.State.TaskID, 999, "Retry tool now.", "shared-retry-key")
+	if err != nil || retryDuplicate.Applied {
+		t.Fatalf("same retry replay was not idempotent: %+v %v", retryDuplicate, err)
+	}
+	if _, err := store.RecordRetry(ctx, firstState.State.TaskID, 999, "Different retry action.", "shared-retry-key"); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("different retry content was accepted: %v", err)
+	}
+
+	secondRetry, err := store.RecordRetry(ctx, secondState.State.TaskID, second.State.State.StateVersion, "Retry tool now.", "shared-retry-key")
+	if err != nil || !secondRetry.Applied {
+		t.Fatalf("same retry key collided across tasks: %+v %v", secondRetry, err)
 	}
 }
 

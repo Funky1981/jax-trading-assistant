@@ -79,6 +79,10 @@ func (s *MemoryStore) AppendStateVersion(_ context.Context, taskID string, expec
 	if !ok {
 		return AppendStateResult{}, ErrNotFound
 	}
+	return appendStateVersionLocked(taskID, task, expectedVersion, state, idempotencyKey)
+}
+
+func appendStateVersionLocked(taskID string, task *memoryTask, expectedVersion int, state DurableState, idempotencyKey string) (AppendStateResult, error) {
 	state = prepareNextState(state, task.record.Objective, taskID, expectedVersion+1)
 	if err := state.Validate(task.record.Objective); err != nil {
 		return AppendStateResult{}, wrapValidation(err)
@@ -238,68 +242,84 @@ func (s *MemoryStore) ListCheckpoints(_ context.Context, taskID string) ([]Check
 }
 
 func (s *MemoryStore) RecordFailure(ctx context.Context, taskID string, expectedVersion int, failure harnesscontracts.FailureState, nextAction, idempotencyKey string) (AppendStateResult, error) {
+	if err := validateOperationKey(idempotencyKey); err != nil {
+		return AppendStateResult{}, err
+	}
 	if failure.Reason == "" {
 		return AppendStateResult{}, fmt.Errorf("%w: failure reason is required", ErrInvalid)
 	}
-	s.mu.RLock()
-	if task, ok := s.tasks[taskID]; ok {
-		for _, event := range task.failures {
-			if event.EventID == "failure-"+idempotencyKey {
-				state := task.states[event.StateVersion]
-				s.mu.RUnlock()
-				return AppendStateResult{State: clone(state), Applied: false}, nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	task, ok := s.tasks[taskID]
+	if !ok {
+		return AppendStateResult{}, ErrNotFound
+	}
+	eventID := generatedEventID("failure", taskID, idempotencyKey)
+	for _, event := range task.failures {
+		if event.EventID == eventID {
+			if !failureEventMatches(event, taskID, failure, nextAction) {
+				return AppendStateResult{}, ErrIdempotencyConflict
 			}
+			state, exists := task.states[event.StateVersion]
+			if !exists {
+				return AppendStateResult{}, fmt.Errorf("%w: failure event state missing", ErrIntegrity)
+			}
+			return AppendStateResult{State: clone(state), Applied: false}, nil
 		}
 	}
-	s.mu.RUnlock()
-	state, err := s.LoadLatestState(ctx, taskID)
-	if err != nil {
-		return AppendStateResult{}, err
+	state, exists := task.states[task.record.LatestVersion]
+	if !exists {
+		return AppendStateResult{}, fmt.Errorf("%w: latest task state missing", ErrIntegrity)
 	}
+	state = clone(state)
 	state.State.Status = harnesscontracts.TaskStatusFailed
 	state.State.Failure = failure
 	state.State.NextAction = nextAction
-	result, err := s.AppendStateVersion(ctx, taskID, expectedVersion, state, idempotencyKey)
+	result, err := appendStateVersionLocked(taskID, task, expectedVersion, state, idempotencyKey)
 	if err != nil {
 		return AppendStateResult{}, err
 	}
-	if result.Applied {
-		s.mu.Lock()
-		s.tasks[taskID].failures = append(s.tasks[taskID].failures, FailureEvent{ContractVersion: FailureRecordVersion, EventID: "failure-" + idempotencyKey, TaskID: taskID, StateVersion: result.State.State.StateVersion, Failure: failure, CreatedAt: result.State.State.UpdatedAt})
-		s.mu.Unlock()
-	}
+	task.failures = append(task.failures, FailureEvent{ContractVersion: FailureRecordVersion, EventID: eventID, TaskID: taskID, StateVersion: result.State.State.StateVersion, Failure: failure, NextAction: nextAction, CreatedAt: result.State.State.UpdatedAt})
 	return result, nil
 }
 
 func (s *MemoryStore) RecordRetry(ctx context.Context, taskID string, expectedVersion int, nextAction, idempotencyKey string) (AppendStateResult, error) {
-	s.mu.RLock()
-	if task, ok := s.tasks[taskID]; ok {
-		for _, event := range task.retries {
-			if event.EventID == "retry-"+idempotencyKey {
-				state := task.states[event.StateVersion]
-				s.mu.RUnlock()
-				return AppendStateResult{State: clone(state), Applied: false}, nil
-			}
-		}
-	}
-	s.mu.RUnlock()
-	state, err := s.LoadLatestState(ctx, taskID)
-	if err != nil {
+	if err := validateOperationKey(idempotencyKey); err != nil {
 		return AppendStateResult{}, err
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	task, ok := s.tasks[taskID]
+	if !ok {
+		return AppendStateResult{}, ErrNotFound
+	}
+	eventID := generatedEventID("retry", taskID, idempotencyKey)
+	for _, event := range task.retries {
+		if event.EventID == eventID {
+			if event.TaskID != taskID || retryEventSemanticHash(event.NextAction) != retryEventSemanticHash(nextAction) {
+				return AppendStateResult{}, ErrIdempotencyConflict
+			}
+			state, exists := task.states[event.StateVersion]
+			if !exists {
+				return AppendStateResult{}, fmt.Errorf("%w: retry event state missing", ErrIntegrity)
+			}
+			return AppendStateResult{State: clone(state), Applied: false}, nil
+		}
+	}
+	state, exists := task.states[task.record.LatestVersion]
+	if !exists {
+		return AppendStateResult{}, fmt.Errorf("%w: latest task state missing", ErrIntegrity)
+	}
+	state = clone(state)
 	attempt := state.State.Failure.Attempt + 1
 	state.State.Status = harnesscontracts.TaskStatusRunning
 	state.State.Failure = harnesscontracts.FailureState{}
 	state.State.NextAction = nextAction
-	result, err := s.AppendStateVersion(ctx, taskID, expectedVersion, state, idempotencyKey)
+	result, err := appendStateVersionLocked(taskID, task, expectedVersion, state, idempotencyKey)
 	if err != nil {
 		return AppendStateResult{}, err
 	}
-	if result.Applied {
-		s.mu.Lock()
-		s.tasks[taskID].retries = append(s.tasks[taskID].retries, RetryEvent{ContractVersion: RetryRecordVersion, EventID: "retry-" + idempotencyKey, TaskID: taskID, StateVersion: result.State.State.StateVersion, Attempt: attempt, NextAction: nextAction, CreatedAt: result.State.State.UpdatedAt})
-		s.mu.Unlock()
-	}
+	task.retries = append(task.retries, RetryEvent{ContractVersion: RetryRecordVersion, EventID: eventID, TaskID: taskID, StateVersion: result.State.State.StateVersion, Attempt: attempt, NextAction: nextAction, CreatedAt: result.State.State.UpdatedAt})
 	return result, nil
 }
 
