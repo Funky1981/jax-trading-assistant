@@ -40,7 +40,7 @@ func (s *PostgresStore) CreateTask(ctx context.Context, request CreateTaskReques
 	if err != nil {
 		return TaskRecord{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	record := TaskRecord{ContractVersion: ContractVersion, TaskID: request.TaskID, Objective: clone(request.Objective), LatestVersion: 1, CreatedAt: request.InitialState.State.CreatedAt, UpdatedAt: request.InitialState.State.UpdatedAt}
 	objectivePayload, err := json.Marshal(record.Objective)
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *PostgresStore) AppendStateVersion(ctx context.Context, taskID string, e
 	if err != nil {
 		return AppendStateResult{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var current int
 	var objectivePayload []byte
 	if err = tx.QueryRowContext(ctx, `SELECT latest_state_version, objective FROM harness_tasks WHERE task_id=$1 FOR UPDATE`, taskID).Scan(&current, &objectivePayload); err == sql.ErrNoRows {
@@ -260,7 +260,7 @@ func (s *PostgresStore) ListCheckpoints(ctx context.Context, taskID string) ([]C
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	result := []CheckpointRecord{}
 	for rows.Next() {
 		var payload []byte
@@ -398,12 +398,12 @@ func (s *PostgresStore) loadEvents(ctx context.Context, taskID string, maxStateV
 	for failureRows.Next() {
 		var payload []byte
 		if err := failureRows.Scan(&payload); err != nil {
-			failureRows.Close()
+			_ = failureRows.Close()
 			return nil, nil, err
 		}
 		var event FailureEvent
 		if err := json.Unmarshal(payload, &event); err != nil {
-			failureRows.Close()
+			_ = failureRows.Close()
 			return nil, nil, fmt.Errorf("%w: failure JSON: %v", ErrIntegrity, err)
 		}
 		failures = append(failures, event)
@@ -415,7 +415,7 @@ func (s *PostgresStore) loadEvents(ctx context.Context, taskID string, maxStateV
 	if err != nil {
 		return nil, nil, err
 	}
-	defer retryRows.Close()
+	defer func() { _ = retryRows.Close() }()
 	var retries []RetryEvent
 	for retryRows.Next() {
 		var payload []byte
@@ -519,7 +519,7 @@ func (s *PostgresStore) ListCompactions(ctx context.Context, taskID string) ([]C
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []CompactionRecord
 	for rows.Next() {
 		var payload []byte

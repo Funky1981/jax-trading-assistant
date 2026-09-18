@@ -38,10 +38,11 @@ func fixtureTool(id, status string) harnesscontracts.ToolReference {
 	started := fixtureTime
 	completed := fixtureTime.Add(time.Minute)
 	tool := harnesscontracts.ToolReference{ContractVersion: harnesscontracts.ToolReferenceContractV1, ToolInvocationID: id, ToolID: "retrieval-fixture", ToolVersion: "v1", Purpose: "Retrieve deterministic offline evidence", InputHash: inputHash, InputReference: "fixture-input:" + id, StartedAt: started, Status: status, Redacted: true}
-	if status == harnesscontracts.ToolStatusFailed {
+	switch status {
+	case harnesscontracts.ToolStatusFailed:
 		tool.CompletedAt = &completed
 		tool.FailureClassification = "tool_unavailable"
-	} else if status == harnesscontracts.ToolStatusSucceeded {
+	case harnesscontracts.ToolStatusSucceeded:
 		outputHash, _ := harnesscontracts.CanonicalHash(map[string]string{"output": id})
 		tool.CompletedAt = &completed
 		tool.OutputHash = outputHash
