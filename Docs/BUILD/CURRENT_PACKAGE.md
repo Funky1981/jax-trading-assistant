@@ -1,9 +1,10 @@
 # Current Build Package
 
-HARNESS-00: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / DOCUMENTATION ONLY**.
+HARNESS-01: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / FOUNDATION CONTRACTS**.
 The active PAPER-02-2026-01 exploratory pilot is frozen and remains unchanged.
-No HARNESS runtime package, Context Builder, evaluator, memory change, or
-retrieval change is authorized by this current package.
+No Context Builder, evaluator execution, memory behavior, retrieval behavior,
+JaxMind call, orchestration, or trading integration is authorized by this
+current package.
 
 PAPER-02A3 is activated under the frozen prospective protocol. The pilot is
 `ACTIVE / EXPLORATORY_PAPER`, targets 50 genuine prospective opportunities, and
@@ -12,7 +13,7 @@ has sample `0 / 50` at handover. Runtime remains `PAPER`,
 maximum leverage 1x. Formal forward paper, demonstrated edge, live trading,
 and Phase 13 remain unauthorized.
 
-## HARNESS-00 — documentation architecture package
+## HARNESS-01 — foundation contracts package
 
 Read in this order:
 
@@ -25,9 +26,11 @@ Read in this order:
 7. `Docs/HARNESS/EVALUATION.md`
 8. `Docs/HARNESS/ROADMAP.md`
 9. `Docs/HARNESS/ENGINEERING-HARNESS-GAP-ANALYSIS.md`
+10. `Docs/BUILD/HARNESS-01-FOUNDATION-CONTRACTS.md`
 
-This package is documentation/specification only. Stop after HARNESS-00;
-HARNESS-01 requires a separate reviewed authorization. The package must not
+The implementation is limited to `internal/modules/harnesscontracts` and its
+deterministic tests plus canonical documentation updates. Stop after HARNESS-01;
+HARNESS-02 requires a separate reviewed authorization. The package must not
 alter the active PAPER-02 runtime or behavior.
 
 ## PAPER-01 / PAPER-02 — event-driven exploratory paper-trader reference

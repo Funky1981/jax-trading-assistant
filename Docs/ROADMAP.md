@@ -83,8 +83,9 @@ not promote a strategy or prove a trading edge.
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
-| HARNESS-00 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / DOCUMENTATION ONLY** |
-| Harness runtime | **NOT IMPLEMENTED** |
+| HARNESS-00 | **GO / EXTERNALLY REVIEWED** |
+| HARNESS-01 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / FOUNDATION CONTRACTS** |
+| Harness runtime/retrieval | **NOT IMPLEMENTED / NOT INTEGRATED** |
 | Optional future commercialisation | **DEFERRED / NOT A CURRENT OBJECTIVE** |
 
 ## PAPER-01
@@ -184,20 +185,22 @@ create a parallel ledger or bypass the two-runtime modular-monolith boundary.
 
 ## Harness architecture programme
 
-HARNESS-00 is **IMPLEMENTED / EXTERNAL REVIEW REQUIRED** and is documentation
-only. It defines two separate concerns: the Codex engineering harness and the
-Jax runtime/research harness around JaxMind. Its canonical architecture,
-evaluation specification, detailed roadmap, and engineering gap analysis are
-in `Docs/HARNESS/`.
+HARNESS-00 is **GO / EXTERNALLY REVIEWED**. HARNESS-01 is **IMPLEMENTED /
+EXTERNAL REVIEW REQUIRED** and adds only versioned, deterministic foundation
+contracts in `internal/modules/harnesscontracts`, with no runtime integration.
+The two separate concerns remain the Codex engineering harness and the Jax
+runtime/research harness around JaxMind. Their canonical architecture,
+evaluation specification, detailed roadmap, gap analysis, and HARNESS-01 build
+evidence are in `Docs/HARNESS/` and `Docs/BUILD/`.
 
-HARNESS-00 must not enter the active PAPER-02 runtime, modify its context or
+HARNESS-01 must not enter the active PAPER-02 runtime, modify its context or
 evidence selection, alter policies or thresholds, affect the 50-opportunity
-sample, or begin FORMAL_FORWARD_PAPER. HARNESS-01 and all later packages remain
-gated. The harness runtime is not implemented.
+sample, or begin FORMAL_FORWARD_PAPER. HARNESS-02 and all later packages remain
+gated. The harness runtime is not integrated.
 
 ## Deferred Context Engineering
 
-**Status: RECORD / RECONCILED BY HARNESS-00 — DO NOT IMPLEMENT.** Context
+**Status: RECORD / RECONCILED BY HARNESS-00 AND HARNESS-01 FOUNDATION — DO NOT IMPLEMENT AS A SEPARATE TRACK.** Context
 Engineering is a future cross-cutting capability spanning the existing Phase 06
 Research & Recommendation Engine and Phase 08 Controlled AI Tools & Durable
 Research Agents. Its retained planning record is

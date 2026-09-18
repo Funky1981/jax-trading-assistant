@@ -1,7 +1,8 @@
 # Jax Harness Implementation Roadmap
 
-Status: **HARNESS-00 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
-Execution status: **no HARNESS runtime package is authorized by this document**.
+Status: **HARNESS-01 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
+Execution status: **foundation contracts only; no harness runtime integration is
+authorized by this document**.
 
 This is the detailed roadmap referenced by `Docs/ROADMAP.md`. It is subordinate
 to the product charter, current roadmap, status, capability matrix, and current
@@ -51,6 +52,20 @@ mutation, formal paper, live execution, or Phase 13.
 
 ## HARNESS-01 — Foundation and contracts
 
+**Status:** IMPLEMENTED / EXTERNAL REVIEW REQUIRED.
+
+**Implementation evidence:** `internal/modules/harnesscontracts` contains the
+stdlib-only versioned contracts and deterministic validation suite. The package
+implements contract identity, fail-closed validation, SHA-256 context-package
+content hashing, budget invariants, provenance references, engineering
+verification metadata, and clean-exit evidence. Persistence is deferred; no
+runtime integration or model/tool execution was added.
+
+**Isolation evidence:** The package is not imported by `cmd/trader`; no
+PAPER-02 code, policy, identity, evidence selection, intake, or sample state
+was changed. The older `internal/modules/harness` package remains untouched and
+is not silently designated as the new foundation package.
+
 **Purpose:** Version and validate the conceptual contracts needed by a future
 single-controller harness: `ResearchObjective`, `TaskState`, `Checkpoint`,
 `HarnessRun`, structured outputs, evaluator inputs/results, permissions, and
@@ -59,13 +74,17 @@ stable references.
 **Dependencies:** HARNESS-00 external review; existing canonical evidence,
 provenance, BlackBox/audit, Experience/Judgment, and ADR-0012 boundaries.
 
-**Deliverables:** Reviewed schemas/interfaces, state transition rules, identity
-and hash policy, tool permission tiers, migration/compatibility plan, and
-read-only test fixtures. No trading integration.
+**Deliverables:** Versioned Go contracts, validation rules, deterministic hash
+policy, engineering-harness state/verification/clean-exit contracts, and
+read-only deterministic fixtures. No trading integration or persistence
+migration.
 
-**Tests:** Schema round trips, version compatibility, invalid transitions,
-unknown/missing fields, hash stability, fresh-session fixture loading, and
-permission denial tests.
+**Tests:** More than 40 meaningful contract and negative-path cases covering
+objective/state validity, fresh-session sufficiency, canonical hashing and
+ordering, budget overflow/reserve rules, evidence/memory boundaries, checkpoint
+and tool lifecycle, structured output, evaluator decisions, provenance,
+engineering state, verification trust, clean-exit evidence, secrets, and
+execution isolation.
 
 **Acceptance criteria:** A fresh session can load a valid task state; invalid or
 ambiguous states fail closed; contracts do not conflate evidence, memory,
@@ -75,8 +94,9 @@ state, and context; no trader import boundary is weakened.
 unversioned output, hidden policy, or a contract that requires one model's
 private format.
 
-**Does not authorize:** Context selection, JaxMind calls, evidence/memory
-retrieval changes, PAPER-02 integration, or execution.
+**Does not authorize:** HARNESS-02, context selection, JaxMind calls,
+evidence/memory retrieval changes, compaction, evaluator execution,
+orchestration, PAPER-02 integration, or execution.
 
 ## HARNESS-02 — Retrieval and Context Builder
 
@@ -268,5 +288,5 @@ explicit non-authorizations, and durable handoff. A phase is not complete merely
 because code or documentation exists. External review is required before the
 next phase becomes current work.
 
-The next authorized package after HARNESS-00 is **not selected here**. This
-roadmap stops at HARNESS-00 as requested.
+The next package after HARNESS-01 is **HARNESS-02**, but it is not started or
+authorized by this handover. Stop after HARNESS-01 pending external review.

@@ -1,6 +1,6 @@
 # Engineering Harness Gap Analysis
 
-Status: **HARNESS-00 AUDIT COMPLETE / EXTERNAL REVIEW REQUIRED**.
+Status: **HARNESS-01 FOUNDATION IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
 
 This audit covers the infrastructure that enables Codex or another coding agent
 to work safely and recoverably in the Jax repository. It does not assess the
@@ -94,7 +94,11 @@ The engineering harness should eventually define:
 - `EngineeringHarnessRun` — correlation of the above without copying giant
   source files or command outputs unnecessarily.
 
-These are future contract proposals, not HARNESS-00 implementation tasks.
+HARNESS-01 implements these as dependency-light contracts in
+`internal/modules/harnesscontracts`; it does not implement orchestration,
+durable persistence, command execution, or a fresh-session runner. The
+remaining gaps are validation consumers, repository-state consistency checks,
+checkpoint persistence/resume, and evidence-producing clean-exit tooling.
 
 ## 4. Current strengths to preserve
 
@@ -122,10 +126,26 @@ The roadmap should address, in order:
 
 These priorities remain separate from the Jax runtime/research harness phases.
 
-## 6. Explicit non-actions in HARNESS-00
+## 6. HARNESS-01 implementation notes
 
-This audit does not rewrite `AGENTS.md`, ProjectOS files, archived plans, CI,
-runtime code, or trading documentation outside the canonical routing updates.
+The verification registry is declarative metadata populated only with existing
+repository commands. It is not a shell-execution engine and must not execute
+untrusted command strings. Clean-exit validation requires runtime isolation,
+check evidence, commit/push state, zero divergence, complete handover, and
+exact-SHA CI evidence before a successful result can be recorded.
+
+Persistence was intentionally deferred because the contracts are testable as
+pure values and no HARNESS-01 requirement justified a new datastore or a
+second audit ledger. Later persistence must use existing repository conventions
+and remain outside the active PAPER-02 path.
+
+## 7. Explicit non-actions in HARNESS-01
+
+This package does not rewrite `AGENTS.md`, ProjectOS files, archived plans, CI,
+runtime code, or trading behavior outside the canonical routing updates. It
+does not implement retrieval, memory behavior, compaction, LLM calls,
+evaluation execution, orchestration, PAPER-02 integration, formal paper, live
+trading, or Phase 13.
 The ProjectOS instructions are retained as historical/process material because
 the active documentation authority explicitly says they must not route current
 Jax work.

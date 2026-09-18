@@ -1,6 +1,6 @@
 # Jax Harness Architecture Specification
 
-Status: **HARNESS-00 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**
+Status: **HARNESS-00 GO / HARNESS-01 FOUNDATION IMPLEMENTED / EXTERNAL REVIEW REQUIRED**
 Scope: **documentation and architecture only**
 Runtime status: **not implemented**
 
@@ -451,3 +451,29 @@ JaxMind changes, evidence retrieval, memory retrieval, evaluators, tools,
 multi-agent orchestration, BlackBox persistence, database migrations, trading,
 risk, candidate logic, strategy logic, broker execution, formal forward paper,
 Phase 13, or any PAPER-02 change.
+
+## 17. HARNESS-01 implementation boundary
+
+HARNESS-01 implements only the foundation contracts described by this
+architecture. The canonical package is
+`internal/modules/harnesscontracts`, a Go-standard-library package with no
+model provider, retrieval, memory, evaluator, persistence, HTTP, broker, or
+execution behavior. Its deterministic `ContextPackage` hash covers the
+version, objective/task identity, budget, constraints, policy references,
+selected/counter evidence, selected memory, current state, questions,
+assumptions, tool references, and checkpoint reference. Volatile creation and
+audit timestamps are deliberately excluded from that content hash; audit
+metadata remains separately validated.
+
+The package also defines the minimum engineering-harness contracts:
+`EngineeringObjective`, `RepositoryState`, `DocumentationMap`,
+`VerificationPlan`, `EngineeringCheckpoint`, `CleanExitReport`, and
+`EngineeringHarnessRun`. `RepositoryState` distinguishes repository HEAD and
+starting SHA from `FrozenExperimentalCodeSHA`; the latter remains the identity
+of the active PAPER-02 runtime and is not changed by harness work.
+
+The existing `internal/modules/harness` package predates HARNESS-01 and serves
+legacy advisory/chat paths. It remains unchanged and is not treated as the
+canonical foundation implementation. HARNESS-01 is deliberately not imported
+by `cmd/trader`; retrieval, ContextBuilder behavior, memory retrieval,
+compaction, evaluator execution, and JaxMind integration remain future work.

@@ -1,11 +1,11 @@
 # Jax Harness Documentation
 
-Status: **HARNESS-00 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
+Status: **HARNESS-01 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
 
-This directory is the canonical documentation surface for the future Jax
-harness programme. HARNESS-00 is architecture and roadmap documentation only;
-it does not implement a runtime harness, change JaxMind, alter evidence or
-memory retrieval, or change any trading path.
+This directory is the canonical documentation surface for the Jax harness
+programme. HARNESS-01 adds versioned, dependency-light foundation contracts and
+deterministic tests; it does not implement retrieval, model calls, evaluation,
+memory behavior, or any trading path.
 
 ## Canonical documents
 
@@ -17,6 +17,19 @@ memory retrieval, or change any trading path.
   HARNESS-01 through conditional advanced orchestration.
 - [Engineering Harness Gap Analysis](ENGINEERING-HARNESS-GAP-ANALYSIS.md) —
   the current repository audit and durable documentation gaps.
+
+## HARNESS-01 implementation surface
+
+The foundation contracts live in `internal/modules/harnesscontracts`. The
+package uses only the Go standard library and is intentionally not imported by
+`cmd/trader`. It provides versioned validation for research objectives, task
+state, context packages, budgets, canonical evidence and memory references,
+checkpoints, tool records, structured outputs, evaluator results, provenance,
+harness runs, engineering state, verification plans, and clean-exit reports.
+
+The pre-existing `internal/modules/harness` package is a separate legacy
+advisory/chat implementation. HARNESS-01 does not rename, refactor, integrate,
+or reinterpret that package; it is not the foundation contract package.
 
 ## Authority and reconciliation
 
@@ -32,6 +45,7 @@ research/orchestration paths. Harness work must respect that boundary.
 
 ## Non-authorizations
 
-HARNESS-00 does not authorize HARNESS-01, PAPER-02 runtime changes, formal
-forward paper, live trading, Phase 13, or any multi-agent orchestration. Each
-later package requires its own gate and review.
+HARNESS-01 does not authorize HARNESS-02, retrieval, context construction,
+JaxMind calls, compaction, evaluator execution, orchestration, PAPER-02 runtime
+changes, formal forward paper, live trading, Phase 13, or any multi-agent
+orchestration. Each later package requires its own gate and review.
