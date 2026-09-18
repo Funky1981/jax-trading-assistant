@@ -1,8 +1,10 @@
 # Jax Capability Matrix
 
 PAPER-02A1 is GO / EXTERNALLY REVIEWED. PAPER-02A2 implements the canonical
-genuine prospective World Monitor intake boundary, but it does not activate
-PAPER-02; the source remains disabled by default pending operator configuration.
+genuine prospective World Monitor intake boundary and PAPER-02A3 records
+activation of PAPER-02-2026-01. The pilot is active in exploratory paper mode;
+its frozen identity and runtime safety state remain separate from formal
+evidence and demonstrated-edge claims.
 
 This matrix tracks capability maturity. It is supporting evidence for the
 authoritative active roadmap in `Docs/ROADMAP.md`; it is not itself the roadmap
@@ -34,20 +36,24 @@ The event-driven trader model and PAPER-01 exploratory thesis/lifecycle contract
 are implemented and covered by automated tests. Operator review context and the
 exploratory/formal evidence firewall are implemented for the bounded package.
 This does not demonstrate a trading edge. PAPER-02 readiness is implemented for
-external review but remains inactive; formal paper evidence and live-readiness
-remain blocked as stated in `Docs/ROADMAP.md`.
+external review; PAPER-02 is now active exploratory paper and remains unable to
+establish a demonstrated edge. Formal paper evidence and live-readiness remain
+blocked as stated in `Docs/ROADMAP.md`.
 
 ## Capability matrix
 
 | Capability | Status | Owner Area | Evidence Required | Code Path | Test Path | Notes |
 |---|---:|---|---|---|---|---|
+| Harness architecture specification | DESIGNED | Docs / Harness | External review of two-harness architecture and isolation contract | `Docs/HARNESS/ARCHITECTURE.md` | Documentation review; exact-SHA CI | HARNESS-00 documentation only; no runtime implementation |
+| Harness evaluation specification | DESIGNED | Docs / Harness | Scenario, metric, reconstruction, and ablation review | `Docs/HARNESS/EVALUATION.md` | Future harness laboratory | Evaluation contract only; no runner or evaluator implemented |
+| Engineering harness gap analysis | DESIGNED | Docs / Harness | Repository audit and durable-state gap review | `Docs/HARNESS/ENGINEERING-HARNESS-GAP-ANALYSIS.md` | Documentation review | Existing strengths and missing contracts recorded |
 | Product charter | DESIGNED | Docs | Approved product truth | `Docs/JAX_PRODUCT_CHARTER.md` | N/A | Source of truth |
 | Capability matrix | DESIGNED | Docs | Matrix exists and is maintained | `Docs/CAPABILITY_MATRIX.md` | N/A | Must be updated every phase |
 | Phase 0 capability reset | DESIGNED | Docs | Historical reset evidence | `Docs/PHASE_CONTRACTS/00_CAPABILITY_RESET.md` | N/A | Retired historical contract; not current routing |
 | Event-driven short-horizon trader model | TESTED | Trading Brain | Deterministic model tests and capability map | `Docs/TRADING_BRAIN/JAX_TRADER_MODEL_V1.md`, `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md` | `internal/modules/exploratorypaper`, related package tests | Implemented package capability; edge not demonstrated |
 | PAPER-01 exploratory thesis and lifecycle contracts | TESTED | Paper Trading | Contract, persistence, runtime-loop, restart/reconciliation, and bounded operator-read-model tests | `Docs/BUILD/PAPER-01.md`, `Docs/BUILD/PAPER-01B-REVIEW-EVIDENCE.md`, `Docs/BUILD/PAPER-01C-RUNTIME-AUDIT.md`, `Docs/PAPER_TRADING/` | `internal/modules/exploratorypaper`, `cmd/trader/exploratory_paper_*` | PAPER-01 GO / EXTERNALLY REVIEWED; not formal evidence |
-| PAPER-02 prospective pilot readiness | TESTED | Paper Trading | Frozen protocol, pilot identity, non-trade opportunity ledger, new-evidence classification, latency/market quality, incidents, metrics, and read model | `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`, `Docs/BUILD/PAPER-02-READINESS-EVIDENCE.md` | `internal/modules/exploratorypaper/pilot*.go`, migration 000073 | READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE; no edge claim |
-| PAPER-02 genuine prospective event intake | TESTED | Data Ingestion and Paper Trading | Canonical World Monitor source contract, safe configuration identity, provenance/timestamp preservation, cursor/page idempotency, evidence compatibility, pre-activation exclusion | `cmd/trader/world_monitor_pull_worker.go`, `Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md` | `cmd/trader/world_monitor_pull_worker_test.go`, `cmd/trader/paper02_readiness_test.go`, `internal/modules/exploratorypaper/pilot_test.go` | IMPLEMENTED / EXTERNAL CONFIGURATION REQUIRED; source disabled by default, no PAPER-02 opportunity admitted |
+| PAPER-02 prospective pilot readiness | TESTED | Paper Trading | Frozen protocol, pilot identity, non-trade opportunity ledger, new-evidence classification, latency/market quality, incidents, metrics, and read model | `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`, `Docs/BUILD/PAPER-02-READINESS-EVIDENCE.md` | `internal/modules/exploratorypaper/pilot*.go`, migration 000073 | ACTIVE / EXPLORATORY_PAPER / FROZEN; no edge claim |
+| PAPER-02 genuine prospective event intake | TESTED | Data Ingestion and Paper Trading | Canonical World Monitor source contract, safe configuration identity, provenance/timestamp preservation, cursor/page idempotency, evidence compatibility, pre-activation exclusion | `cmd/trader/world_monitor_pull_worker.go`, `Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md` | `cmd/trader/world_monitor_pull_worker_test.go`, `cmd/trader/paper02_readiness_test.go`, `internal/modules/exploratorypaper/pilot_test.go` | ACTIVATED / FROZEN source identity; no opportunity was created by activation |
 | Exploratory/formal evidence firewall | TESTED | Paper Trading | Explicit mode labels and review boundary | `Docs/PAPER_TRADING/EXPLORATORY_VS_FORMAL.md` | `internal/modules/exploratorypaper` | Prevents exploratory observations from becoming promotion evidence |
 | Demonstrated trading edge | PLANNED | Research and Evidence | Separately authorized formal evidence | `Docs/BUILD/PAPER-02.md` | Not started | Not demonstrated by PAPER-01 or PAPER-02 |
 | Decision Core Phase 1 | TESTED | Decision Core | Unit tests + FTSE golden fixture | `internal/decisioning/core` | `internal/decisioning/core/decision_test.go`, `tests/golden/decision_runner_test.go` | Deterministic structured decision core implemented; Phase 2 Event Intelligence feeds enriched events into this core |

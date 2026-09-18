@@ -36,6 +36,8 @@ replace product or roadmap truth.
 
 - `ARCHITECTURE.md`
 - `ARCHITECTURE/ADR/`
+- `HARNESS/` — canonical engineering and runtime/research harness architecture,
+  evaluation, roadmap, and gap analysis.
 
 ## Trading
 

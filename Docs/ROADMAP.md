@@ -78,10 +78,13 @@ not promote a strategy or prove a trading edge.
 | PAPER-01C | **ACCEPTED / EXTERNALLY REVIEWED** |
 | PAPER-02A1 | **GO / EXTERNALLY REVIEWED** |
 | PAPER-02A2 | **IMPLEMENTED / EXTERNAL CONFIGURATION REQUIRED** |
-| PAPER-02 | **READY FOR EXTERNAL REVIEW / NOT ACTIVE** |
+| PAPER-02A3 | **ACTIVATED / EXTERNALLY REVIEWED** |
+| PAPER-02 | **ACTIVE / EXPLORATORY_PAPER / FROZEN** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
+| HARNESS-00 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / DOCUMENTATION ONLY** |
+| Harness runtime | **NOT IMPLEMENTED** |
 | Optional future commercialisation | **DEFERRED / NOT A CURRENT OBJECTIVE** |
 
 ## PAPER-01
@@ -102,17 +105,30 @@ operator read models. It does not activate a pilot.
 
 ## PAPER-02
 
-PAPER-02 is READY FOR EXTERNAL REVIEW / NOT ACTIVE. Its canonical protocol is
-`Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`. The exact
-activation decision and any later FORMAL-01 sequencing remain externally
-controlled. No prospective pilot may begin from this package.
+PAPER-02-2026-01 is active in `EXPLORATORY_PAPER` mode under
+`paper-02-protocol-v1`. Its target is 50 genuine prospective opportunities over
+the frozen 90-calendar-day window ending 2026-12-17. The pilot remains
+exploratory and cannot establish demonstrated edge. Its sample is `0 / 50` at
+the HARNESS-00 handover, and only observations first seen at or after the
+activation timestamp may be admitted.
 
-PAPER-02A2 records the canonical genuine prospective intake boundary in
-`Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md`. The optional World
-Monitor collector is the intended source; Jax accepts only its versioned
-`/api/v1/jax/events` contract and remains disabled by default. The implementation
-is complete for external configuration review, but PAPER-02 is not active and
-the sample remains `0 / 50`.
+PAPER-02A2 defines the genuine prospective World Monitor intake boundary and
+PAPER-02A3 records activation. The source identity, calendar, universe, risk,
+entry, candidate/evidence, trader, thesis, exit, and cost identities remain
+frozen. Retain WATCH, NO_TRADE, unresolved, rejected, missing-data, and approved
+cases. No historical replay may be used as a prospective observation.
+
+Runtime safety remains `PAPER`, `ExecutionAuthority=NONE`, broker execution
+disabled, execution disabled, maximum leverage 1x, and no live/broker/IB order
+path. The trader intake worker was not started during activation and no genuine
+opportunity, order, fill, position, or formal evidence row was created by
+activation. Existing restart-test fixtures cannot contribute to the production
+pilot sample.
+
+The canonical protocol remains
+`Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`; the activation and
+current runtime state are recorded in the durable handover and current status
+documents.
 
 ## Exploratory learning programme
 
@@ -166,13 +182,29 @@ Keep event resolution, evidence, quant, risk, workflow, approval, paper
 execution, monitoring, and outcomes behind their existing contracts. Do not
 create a parallel ledger or bypass the two-runtime modular-monolith boundary.
 
+## Harness architecture programme
+
+HARNESS-00 is **IMPLEMENTED / EXTERNAL REVIEW REQUIRED** and is documentation
+only. It defines two separate concerns: the Codex engineering harness and the
+Jax runtime/research harness around JaxMind. Its canonical architecture,
+evaluation specification, detailed roadmap, and engineering gap analysis are
+in `Docs/HARNESS/`.
+
+HARNESS-00 must not enter the active PAPER-02 runtime, modify its context or
+evidence selection, alter policies or thresholds, affect the 50-opportunity
+sample, or begin FORMAL_FORWARD_PAPER. HARNESS-01 and all later packages remain
+gated. The harness runtime is not implemented.
+
 ## Deferred Context Engineering
 
-**Status: RECORD / DEFER — DO NOT IMPLEMENT.** Context Engineering is a future
-cross-cutting capability spanning the existing Phase 06 Research &
-Recommendation Engine and Phase 08 Controlled AI Tools & Durable Research
-Agents. Its canonical planning record is
-`Docs/CONTEXT_ENGINEERING_ROADMAP_RECORD.md`.
+**Status: RECORD / RECONCILED BY HARNESS-00 — DO NOT IMPLEMENT.** Context
+Engineering is a future cross-cutting capability spanning the existing Phase 06
+Research & Recommendation Engine and Phase 08 Controlled AI Tools & Durable
+Research Agents. Its retained planning record is
+`Docs/CONTEXT_ENGINEERING_ROADMAP_RECORD.md`; the canonical detailed
+architecture and future implementation gates are now in
+`Docs/HARNESS/ARCHITECTURE.md`, `Docs/HARNESS/EVALUATION.md`, and
+`Docs/HARNESS/ROADMAP.md`.
 
 The governing principle is **context is not storage**: durable stores retain
 raw evidence, research artifacts, task state and memory, while a future

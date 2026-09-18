@@ -1,15 +1,19 @@
 # Deferred Context Engineering Roadmap Record
 
-Status: **RECORD / DEFER — DO NOT IMPLEMENT**
+Status: **RECORD / RECONCILED BY HARNESS-00 — DO NOT IMPLEMENT**
 
 This is a planning record only. It does not authorize Context Engineering
 implementation, a new AI runtime, a new memory/RAG subsystem, PAPER-02
 activation, formal forward paper, live execution, or Phase 13.
 
 The canonical roadmap location is
-[`Docs/ROADMAP.md`](ROADMAP.md#deferred-context-engineering). This record holds
-the deferred architectural contract and validation requirements referenced by
-that roadmap section.
+[`Docs/ROADMAP.md`](ROADMAP.md#deferred-context-engineering). This record is a
+retained pre-HARNESS-00 planning record. The canonical detailed architecture,
+evaluation contract, and gated implementation sequence are now
+[`Docs/HARNESS/ARCHITECTURE.md`](HARNESS/ARCHITECTURE.md),
+[`Docs/HARNESS/EVALUATION.md`](HARNESS/EVALUATION.md), and
+[`Docs/HARNESS/ROADMAP.md`](HARNESS/ROADMAP.md). This record remains useful for
+history and prerequisite traceability but is not a competing roadmap.
 
 ## Architectural placement and prerequisites
 
@@ -47,11 +51,14 @@ The target shape is:
 
 ```text
 Research Objective
+  -> Task Controller
   -> Context Builder
-  -> relevant Evidence + relevant Memory + current State
+  -> relevant Evidence + Counter-Evidence + relevant Memory + current State
   -> bounded Context Package
   -> JaxMind
   -> structured output
+  -> Independent Evaluator
+  -> PASS / REVISE / ABSTAIN
 ```
 
 The anti-pattern is:
@@ -195,9 +202,12 @@ formal evidence, or activate PAPER-02.
 
 This package records and defers the requirement. It does not implement it.
 
-- PAPER-02 remains `READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE` with sample `0 / 50`.
-- PAPER-02 remains blocked only because genuine prospective event intake is
-  disabled/unconfigured.
+HARNESS-00 now records the reconciled two-harness architecture. No HARNESS
+runtime implementation is authorized by this record, and no integration with
+the active PAPER-02 pilot is permitted.
+
+- PAPER-02-2026-01 is `ACTIVE / EXPLORATORY_PAPER / FROZEN` with sample `0 / 50`
+  at the HARNESS-00 handover.
 - No event-source remediation is included here.
 - No PAPER-02 opportunity, pilot, order, fill, trade or position is created.
 - No formal forward paper, demonstrated edge, live trading or Phase 13 work is

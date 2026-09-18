@@ -16,8 +16,17 @@ Domain Detail > Historical Material.
 
 ## Current routing
 
-The current package is the external re-review of PAPER-01A. No lower-level or
-historical document can authorize PAPER-02, formal forward paper, or Phase 13.
+The active product package is PAPER-02-2026-01 exploratory paper observation
+collection, with the pilot identity and policies frozen as recorded in the
+current handover and `Docs/STATUS.md`. HARNESS-00 is an orthogonal,
+documentation-only architecture package and does not change that pilot. No
+lower-level or historical document can authorize formal forward paper, live
+execution, or Phase 13.
+
+The detailed harness sources are `Docs/HARNESS/ARCHITECTURE.md`,
+`Docs/HARNESS/EVALUATION.md`, `Docs/HARNESS/ROADMAP.md`, and
+`Docs/HARNESS/ENGINEERING-HARNESS-GAP-ANALYSIS.md`. They do not authorize
+HARNESS-01 or any runtime implementation.
 
 ## Non-authorities
 

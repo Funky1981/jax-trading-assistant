@@ -1,8 +1,12 @@
 # Jax Current Status
 
-PAPER-02A1: **GO / EXTERNALLY REVIEWED**. PAPER-02A2 canonical genuine
-prospective-intake closure is implemented, but the default source remains
-disabled, so readiness is blocked and no pilot is active.
+PAPER-02A3: **ACTIVATED**. PAPER-02-2026-01 is **ACTIVE / EXPLORATORY_PAPER**
+under the frozen `paper-02-protocol-v1` contract. The pilot target is 50
+genuine prospective opportunities; the sample is `0 / 50` at the HARNESS-00
+handover. PAPER-02 remains exploratory and cannot establish demonstrated edge.
+
+HARNESS-00: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / DOCUMENTATION ONLY**.
+The harness runtime is not implemented and has not entered PAPER-02.
 
 This is the concise operational status. Roadmap sequencing is authoritative in
 `Docs/ROADMAP.md`; capability maturity is in `Docs/CAPABILITY_MATRIX.md`.
@@ -10,7 +14,8 @@ This is the concise operational status. Roadmap sequencing is authoritative in
 ## Current branch context
 
 - Branch: `capability-reset`
-- PAPER-01 baseline: `cc512d7df7d258a4630d39ff64270390b55fb1f7`
+- Current code SHA: `521a4917c5e6be639ed8571cf383f22d99f1d077`
+- PAPER-02 pilot: `PAPER-02-2026-01`
 - Current build routing: `Docs/BUILD/CURRENT_PACKAGE.md`
 
 ## Runtime architecture
@@ -35,8 +40,11 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - PAPER-01A: `COMPLETE / SUPERSEDED BY PAPER-01B`.
 - PAPER-01B: `IMPLEMENTED / ACCEPTED DIRECTIONALLY`.
 - PAPER-01C: `ACCEPTED / EXTERNALLY REVIEWED`.
-- PAPER-02: `READY_FOR_EXTERNAL_REVIEW / NOT ACTIVE`.
-- PAPER-02A2: `IMPLEMENTED / EXTERNAL CONFIGURATION REQUIRED`.
+- PAPER-02A2: `READINESS VERIFIED`.
+- PAPER-02A3: `ACTIVATED`.
+- PAPER-02: `ACTIVE / EXPLORATORY_PAPER / FROZEN`.
+- Harness architecture: `HARNESS-00 IMPLEMENTED / EXTERNAL REVIEW REQUIRED`.
+- Harness runtime: `NOT IMPLEMENTED`.
 - Trading edge: `NOT DEMONSTRATED`.
 - Phase 13: `NOT STARTED / BLOCKED`.
 - Optional future commercialisation: `DEFERRED / NOT A CURRENT OBJECTIVE`.
@@ -51,13 +59,17 @@ sessions, typical 2–3, hard maximum 5.
 
 Live trading, broker execution, autonomous execution, and real order mutation
 are disabled. Exploratory paper uses `PAPER`, `ExecutionAuthority=NONE`, and
-maximum leverage 1x. No PAPER-02 pilot observation or trade was started by this
-package.
+maximum leverage 1x. No genuine PAPER-02 opportunity, order, fill, position, or
+formal evidence row was created by activation. Five pre-existing
+`pilot-restart-*` integration fixtures remain excluded from the production
+sample.
 
-## Next decision required
+## Next authorized work
 
-Genuine prospective event intake remains disabled by default. The intended
-World Monitor source, endpoint contract, provenance and idempotency boundary
-are implemented, but the operator must configure and operate the optional
-source profile before activation review. Do not start a prospective pilot or
-FORMAL_FORWARD_PAPER without a new external decision.
+Collect genuine prospective observations only. Admit an opportunity only when
+its immutable first-seen timestamp is at or after the activation timestamp
+recorded in the durable PAPER-02 handover. Retain all eligible outcomes,
+including WATCH, NO_TRADE, unresolved, rejected, missing-data, and approved
+cases. Do not tune policies, alter the frozen pilot identity, replay historical
+events as prospective observations, start FORMAL_FORWARD_PAPER, implement
+HARNESS-01, implement Context Engineering, or begin Phase 13.
