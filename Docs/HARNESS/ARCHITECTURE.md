@@ -1,6 +1,6 @@
 # Jax Harness Architecture Specification
 
-Status: **HARNESS-00 GO / HARNESS-01 FOUNDATION IMPLEMENTED / EXTERNAL REVIEW REQUIRED**
+Status: **HARNESS-00 GO / HARNESS-01 GO / HARNESS-02 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**
 Scope: **documentation and architecture only**
 Runtime status: **not implemented**
 
@@ -477,3 +477,30 @@ legacy advisory/chat paths. It remains unchanged and is not treated as the
 canonical foundation implementation. HARNESS-01 is deliberately not imported
 by `cmd/trader`; retrieval, ContextBuilder behavior, memory retrieval,
 compaction, evaluator execution, and JaxMind integration remain future work.
+
+## 18. HARNESS-02 implementation boundary
+
+HARNESS-02 implements the offline selection seam in
+`internal/modules/contextbuilder`. It is a read-only research-side package with
+three explicit interfaces: `EvidenceRetriever`, `ContradictionRetriever`, and
+`MemoryRetriever`. Retrievers return canonical references and metadata; they do
+not own evidence, memory, task state, or audit persistence. The current package
+uses deterministic fixture adapters because the existing production stores do
+not yet expose a safe, reviewed adapter matching the HARNESS-01 reference
+contracts. No competing evidence or memory store was created.
+
+`Build` validates a `ResearchObjective`, `TaskState`, `ContextBudget`, build
+policy, explicit reference time, and retriever results. It retrieves supporting
+and counter-evidence through separate operations, selects evidence and memory
+separately, preserves required constraints and the mandatory counter-evidence
+reserve, and returns a bounded `ContextPackage` plus an audit-only
+`BuildReport`. Ranking is multi-factor rather than similarity-only and uses
+explicit deterministic tie-breaking. Future-dated, stale, policy-ineligible,
+duplicate, and budget-omitted material is excluded or recorded with a reason;
+retrievable budget-omitted material may receive a stable deferred reference.
+
+The builder uses the HARNESS-01 canonical ContextPackage hash and does not
+claim research sufficiency, exact model-context reconstruction, evaluator
+PASS, candidate creation, or trading authorization. No model/tokenizer,
+JaxMind, persistence, automatic tool loop, compaction, or production PAPER-02
+path is present. `cmd/trader` has no import of the package.

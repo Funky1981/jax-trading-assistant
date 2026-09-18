@@ -1,10 +1,10 @@
 # Current Build Package
 
-HARNESS-01: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / FOUNDATION CONTRACTS**.
+HARNESS-02: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / RETRIEVAL & CONTEXT BUILDER**.
 The active PAPER-02-2026-01 exploratory pilot is frozen and remains unchanged.
-No Context Builder, evaluator execution, memory behavior, retrieval behavior,
-JaxMind call, orchestration, or trading integration is authorized by this
-current package.
+No model call, JaxMind integration, evaluator execution, task-state
+persistence, compaction, full memory behavior, orchestration, or trading
+integration is authorized by this current package.
 
 PAPER-02A3 is activated under the frozen prospective protocol. The pilot is
 `ACTIVE / EXPLORATORY_PAPER`, targets 50 genuine prospective opportunities, and
@@ -13,7 +13,7 @@ has sample `0 / 50` at handover. Runtime remains `PAPER`,
 maximum leverage 1x. Formal forward paper, demonstrated edge, live trading,
 and Phase 13 remain unauthorized.
 
-## HARNESS-01 — foundation contracts package
+## HARNESS-02 — retrieval and context-builder package
 
 Read in this order:
 
@@ -27,11 +27,12 @@ Read in this order:
 8. `Docs/HARNESS/ROADMAP.md`
 9. `Docs/HARNESS/ENGINEERING-HARNESS-GAP-ANALYSIS.md`
 10. `Docs/BUILD/HARNESS-01-FOUNDATION-CONTRACTS.md`
+11. `Docs/BUILD/HARNESS-02-RETRIEVAL-CONTEXT-BUILDER.md`
 
-The implementation is limited to `internal/modules/harnesscontracts` and its
-deterministic tests plus canonical documentation updates. Stop after HARNESS-01;
-HARNESS-02 requires a separate reviewed authorization. The package must not
-alter the active PAPER-02 runtime or behavior.
+The implementation is limited to `internal/modules/contextbuilder`, its
+deterministic offline tests, and canonical documentation updates. Stop after
+HARNESS-02; HARNESS-03 requires a separate reviewed authorization. The package
+must not alter the active PAPER-02 runtime or behavior.
 
 ## PAPER-01 / PAPER-02 — event-driven exploratory paper-trader reference
 

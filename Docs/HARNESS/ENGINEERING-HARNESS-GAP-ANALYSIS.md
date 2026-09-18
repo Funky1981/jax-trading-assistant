@@ -1,6 +1,6 @@
 # Engineering Harness Gap Analysis
 
-Status: **HARNESS-01 FOUNDATION IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
+Status: **HARNESS-02 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
 
 This audit covers the infrastructure that enables Codex or another coding agent
 to work safely and recoverably in the Jax repository. It does not assess the
@@ -149,3 +149,12 @@ trading, or Phase 13.
 The ProjectOS instructions are retained as historical/process material because
 the active documentation authority explicitly says they must not route current
 Jax work.
+
+## 8. HARNESS-02 scope note
+
+HARNESS-02 is a runtime/research-harness package only. It does not close the
+engineering-harness gaps above: there is still no command executor, durable
+engineering checkpoint store, fresh-session runner, current-state consistency
+checker, or machine-enforced clean-exit consumer. Its `BuildReport` records
+retrieval and context-construction evidence for later observability, but it is
+not an engineering handoff or definition-of-done report.

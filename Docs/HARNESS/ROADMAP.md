@@ -1,8 +1,9 @@
 # Jax Harness Implementation Roadmap
 
-Status: **HARNESS-01 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
-Execution status: **foundation contracts only; no harness runtime integration is
-authorized by this document**.
+Status: **HARNESS-02 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
+Execution status: **foundation contracts and offline retrieval/context
+construction only; no model or harness runtime integration is authorized by
+this document**.
 
 This is the detailed roadmap referenced by `Docs/ROADMAP.md`. It is subordinate
 to the product charter, current roadmap, status, capability matrix, and current
@@ -100,6 +101,22 @@ orchestration, PAPER-02 integration, or execution.
 
 ## HARNESS-02 — Retrieval and Context Builder
 
+**Status:** IMPLEMENTED / EXTERNAL REVIEW REQUIRED.
+
+**Implementation evidence:** `internal/modules/contextbuilder` provides
+read-only evidence, contradiction, and memory retriever interfaces plus
+deterministic fixture adapters. The builder uses explicit reference time,
+separate supporting/counter-evidence budgets, deterministic multi-factor
+ranking and tie-breaking, source-diversity preference, temporal fail-closed
+rules, omission/deferred references, and HARNESS-01 canonical package hashing.
+The offline suite contains 53 named behavioral cases. No production adapter,
+model call, JaxMind integration, persistence, or trading integration was added.
+
+**Isolation evidence:** `cmd/trader` does not import
+`internal/modules/contextbuilder`; no PAPER-02 code, state, policy, intake,
+evidence selection, or sample was changed. The package is research-side and
+read-only.
+
 **Purpose:** Build bounded, objective-specific Context Packages from evidence,
 counter-evidence, memory, state, constraints, and tool references.
 
@@ -122,8 +139,9 @@ produce sufficiency; package hash/references are reconstructable.
 truncation, memory presented as evidence, or non-deterministic selection with
 no trace.
 
-**Does not authorize:** Trading decisions, PAPER-02 context changes, or a new
-AI subsystem outside the research boundary.
+**Does not authorize:** HARNESS-03, model/JaxMind calls, evaluator execution,
+task-state persistence, full memory architecture, trading decisions, PAPER-02
+context/evidence changes, or a new AI subsystem outside the research boundary.
 
 ## HARNESS-03 — Checkpointing, resumability, and compaction
 
@@ -288,5 +306,5 @@ explicit non-authorizations, and durable handoff. A phase is not complete merely
 because code or documentation exists. External review is required before the
 next phase becomes current work.
 
-The next package after HARNESS-01 is **HARNESS-02**, but it is not started or
-authorized by this handover. Stop after HARNESS-01 pending external review.
+The next package after HARNESS-02 is **HARNESS-03**, but it is not started or
+authorized by this handover. Stop after HARNESS-02 pending external review.

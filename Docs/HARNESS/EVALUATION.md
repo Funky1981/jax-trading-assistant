@@ -1,6 +1,7 @@
 # Jax Harness Evaluation Specification
 
-Status: **DESIGNED / FUTURE LABORATORY; not implemented in HARNESS-00**.
+Status: **DESIGNED / HARNESS-02 FOUNDATION FIXTURES IMPLEMENTED / EXTERNAL
+REVIEW REQUIRED**.
 
 This specification defines how the engineering harness and the separate
 Jax runtime/research harness will be evaluated. It deliberately does not define
@@ -175,6 +176,15 @@ producer is not independent enough for acceptance.
 
 ## 8. Laboratory non-scope
 
-HARNESS-00 creates no harness runner, fixtures, metrics collector, evaluator,
-retriever, memory service, context builder, multi-agent route, or database
-schema. It records the required future test contract only.
+HARNESS-00 created the laboratory specification only. HARNESS-02 adds the
+minimum deterministic offline fixture coverage for the foundation selection
+seam in `internal/modules/contextbuilder`; it does not implement HARNESS-07,
+a harness runner, metrics collector, evaluator runtime, memory service,
+production retriever, model route, multi-agent route, or database schema.
+
+The current fixture suite has 53 named behavioral cases covering context
+overload, contradiction hiding, missing data, budget reduction, duplicate versus
+independent corroboration, temporal/future leakage, deterministic ordering and
+hashing, memory/evidence separation, deferred references, build reports,
+retriever failure, and PAPER-02 import isolation. These are foundation tests,
+not laboratory quality claims or trading evidence.
