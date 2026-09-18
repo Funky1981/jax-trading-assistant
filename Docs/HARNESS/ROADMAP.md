@@ -1,6 +1,6 @@
 # Jax Harness Implementation Roadmap
 
-Status: **HARNESS-02 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
+Status: **HARNESS-03 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
 Execution status: **foundation contracts and offline retrieval/context
 construction only; no model or harness runtime integration is authorized by
 this document**.
@@ -169,6 +169,12 @@ be recovered.
 **Does not authorize:** Outcome leakage, historical replay as prospective input,
 or PAPER-02 ledger mutation.
 
+**Implementation status:** HARNESS-03 is implemented in
+`internal/modules/harnessstate` and is pending external review. It provides the
+versioned store, isolated PostgreSQL migration, deterministic compaction,
+resume bundle, failure/retry state, and ContextBuilder resume seam described
+above. HARNESS-04 remains unimplemented and unauthorized.
+
 ## HARNESS-04 — Memory architecture
 
 **Purpose:** Integrate relevant Experience/Judgment lessons without treating
@@ -306,5 +312,5 @@ explicit non-authorizations, and durable handoff. A phase is not complete merely
 because code or documentation exists. External review is required before the
 next phase becomes current work.
 
-The next package after HARNESS-02 is **HARNESS-03**, but it is not started or
-authorized by this handover. Stop after HARNESS-02 pending external review.
+The next package after HARNESS-03 is **HARNESS-04**, but it is not started or
+authorized by this handover. Stop after HARNESS-03 pending external review.

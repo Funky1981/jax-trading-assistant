@@ -139,6 +139,12 @@ pure values and no HARNESS-01 requirement justified a new datastore or a
 second audit ledger. Later persistence must use existing repository conventions
 and remain outside the active PAPER-02 path.
 
+HARNESS-03 closes the research-side durable-state gap with the repository's
+PostgreSQL conventions and an equivalent in-memory contract store. It does not
+close the separate engineering-harness command executor, clean-exit consumer,
+or CI evidence gaps. The new store is append/version based, preserves history,
+and is isolated from the active PAPER-02 tables.
+
 ## 7. Explicit non-actions in HARNESS-01
 
 This package does not rewrite `AGENTS.md`, ProjectOS files, archived plans, CI,
@@ -158,3 +164,11 @@ engineering checkpoint store, fresh-session runner, current-state consistency
 checker, or machine-enforced clean-exit consumer. Its `BuildReport` records
 retrieval and context-construction evidence for later observability, but it is
 not an engineering handoff or definition-of-done report.
+
+## 9. HARNESS-03 scope note
+
+HARNESS-03 implements `internal/modules/harnessstate` for durable research task
+state, checkpoints, resume bundles, failure/retry history, and deterministic
+derived compaction. It provides a clean `ResumeBundle` to HARNESS-02
+ContextBuilder. It does not integrate JaxMind, execute tools autonomously,
+persist canonical evidence/memory payloads, or enter `cmd/trader`/PAPER-02.

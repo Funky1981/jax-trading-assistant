@@ -1,6 +1,6 @@
 # Jax Harness Documentation
 
-Status: **HARNESS-02 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
+Status: **HARNESS-03 IMPLEMENTED / EXTERNAL REVIEW REQUIRED**.
 
 This directory is the canonical documentation surface for the Jax harness
 programme. HARNESS-01 adds versioned, dependency-light foundation contracts and
@@ -35,6 +35,13 @@ deferred-reference records, and an auditable `BuildReport`. It currently has
 offline fixture adapters only; no production evidence or memory adapter was
 forced into this package.
 
+`internal/modules/harnessstate` provides HARNESS-03 durable task state,
+append-only versions, optimistic concurrency, idempotent checkpoints,
+fresh-session resume bundles, failure/retry history, and deterministic
+structured compaction. PostgreSQL is the durable store and `MemoryStore` is a
+semantically equivalent offline fixture store. Compaction is derived and never
+canonical storage.
+
 The pre-existing `internal/modules/harness` package is a separate legacy
 advisory/chat implementation. HARNESS-01 does not rename, refactor, integrate,
 or reinterpret that package; it is not the foundation contract package.
@@ -53,7 +60,7 @@ research/orchestration paths. Harness work must respect that boundary.
 
 ## Non-authorizations
 
-HARNESS-02 does not authorize HARNESS-03, task-state persistence, compaction,
-JaxMind calls, evaluator execution, orchestration, PAPER-02 runtime or context
-changes, formal forward paper, live trading, Phase 13, or any multi-agent
-orchestration. Each later package requires its own gate and review.
+HARNESS-03 remains research infrastructure only. It does not authorize
+HARNESS-04, JaxMind calls, evaluator execution, orchestration, PAPER-02
+runtime/context changes, formal forward paper, live trading, Phase 13, or any
+multi-agent orchestration. Each later package requires its own gate and review.

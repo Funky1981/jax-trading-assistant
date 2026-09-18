@@ -1,6 +1,6 @@
 # Current Build Package
 
-HARNESS-02: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / RETRIEVAL & CONTEXT BUILDER**.
+HARNESS-03: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / CHECKPOINT, RESUME & COMPACTION**.
 The active PAPER-02-2026-01 exploratory pilot is frozen and remains unchanged.
 No model call, JaxMind integration, evaluator execution, task-state
 persistence, compaction, full memory behavior, orchestration, or trading
@@ -13,7 +13,7 @@ has sample `0 / 50` at handover. Runtime remains `PAPER`,
 maximum leverage 1x. Formal forward paper, demonstrated edge, live trading,
 and Phase 13 remain unauthorized.
 
-## HARNESS-02 — retrieval and context-builder package
+## HARNESS-03 — checkpoint, resume, and compaction package
 
 Read in this order:
 
@@ -28,11 +28,13 @@ Read in this order:
 9. `Docs/HARNESS/ENGINEERING-HARNESS-GAP-ANALYSIS.md`
 10. `Docs/BUILD/HARNESS-01-FOUNDATION-CONTRACTS.md`
 11. `Docs/BUILD/HARNESS-02-RETRIEVAL-CONTEXT-BUILDER.md`
+12. `Docs/BUILD/HARNESS-03-CHECKPOINT-RESUME-COMPACTION.md`
 
-The implementation is limited to `internal/modules/contextbuilder`, its
-deterministic offline tests, and canonical documentation updates. Stop after
-HARNESS-02; HARNESS-03 requires a separate reviewed authorization. The package
-must not alter the active PAPER-02 runtime or behavior.
+The implementation is limited to `internal/modules/harnessstate`, its
+isolated PostgreSQL migration, deterministic offline tests, and canonical
+documentation updates. Stop after HARNESS-03; HARNESS-04 requires a separate
+reviewed authorization. The package must not alter the active PAPER-02 runtime
+or behavior.
 
 ## PAPER-01 / PAPER-02 — event-driven exploratory paper-trader reference
 

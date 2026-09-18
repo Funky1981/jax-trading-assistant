@@ -6,7 +6,8 @@ genuine prospective opportunities; the sample is `0 / 50` at the HARNESS-00
 handover. PAPER-02 remains exploratory and cannot establish demonstrated edge.
 
 HARNESS-01: **GO / EXTERNALLY REVIEWED / FOUNDATION CONTRACTS**.
-HARNESS-02: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / OFFLINE CONTEXT BUILDER**.
+HARNESS-02: **IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE CONTEXT BUILDER**.
+HARNESS-03: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / CHECKPOINT-RESUME-COMPACTION**.
 The harness runtime/JaxMind is not integrated and has not entered PAPER-02.
 
 This is the concise operational status. Roadmap sequencing is authoritative in
@@ -48,7 +49,8 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - PAPER-02: `ACTIVE / EXPLORATORY_PAPER / FROZEN`.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
 - Harness foundation contracts: `HARNESS-01 GO / EXTERNALLY REVIEWED`.
-- Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNAL REVIEW REQUIRED / OFFLINE`.
+- Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE`.
+- Harness durable task state: `HARNESS-03 IMPLEMENTED / EXTERNAL REVIEW REQUIRED`.
 - Harness JaxMind/evaluator runtime: `NOT IMPLEMENTED / NOT INTEGRATED`.
 - Trading edge: `NOT DEMONSTRATED`.
 - Phase 13: `NOT STARTED / BLOCKED`.
@@ -77,4 +79,4 @@ recorded in the durable PAPER-02 handover. Retain all eligible outcomes,
 including WATCH, NO_TRADE, unresolved, rejected, missing-data, and approved
 cases. Do not tune policies, alter the frozen pilot identity, replay historical
 events as prospective observations, start FORMAL_FORWARD_PAPER, implement
-HARNESS-03, integrate JaxMind, or begin Phase 13.
+HARNESS-04, integrate JaxMind, or begin Phase 13.

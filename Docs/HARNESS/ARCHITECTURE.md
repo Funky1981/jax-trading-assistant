@@ -475,8 +475,11 @@ of the active PAPER-02 runtime and is not changed by harness work.
 The existing `internal/modules/harness` package predates HARNESS-01 and serves
 legacy advisory/chat paths. It remains unchanged and is not treated as the
 canonical foundation implementation. HARNESS-01 is deliberately not imported
-by `cmd/trader`; retrieval, ContextBuilder behavior, memory retrieval,
-compaction, evaluator execution, and JaxMind integration remain future work.
+by `cmd/trader`; retrieval and ContextBuilder behavior are implemented by
+HARNESS-02, while compaction, evaluator execution, and JaxMind integration
+remain separately gated. HARNESS-03 implements the research-side durable
+checkpoint/resume/compaction seam in `internal/modules/harnessstate` without
+owning evidence, memory, or any trading path.
 
 ## 18. HARNESS-02 implementation boundary
 
@@ -502,5 +505,6 @@ retrievable budget-omitted material may receive a stable deferred reference.
 The builder uses the HARNESS-01 canonical ContextPackage hash and does not
 claim research sufficiency, exact model-context reconstruction, evaluator
 PASS, candidate creation, or trading authorization. No model/tokenizer,
-JaxMind, persistence, automatic tool loop, compaction, or production PAPER-02
-path is present. `cmd/trader` has no import of the package.
+JaxMind, automatic tool loop, or production PAPER-02 path is present.
+HARNESS-03 supplies persistence and derived compaction in a separate package;
+`cmd/trader` has no import of either harness package.

@@ -108,6 +108,13 @@ ablation. Do not collapse them into one score.
 - **EngineeringCleanExitRate** — completed tasks leave required diff, tests,
   status, handoff, and known-failure evidence.
 
+HARNESS-03 adds deterministic infrastructure gates for the long-horizon
+scenarios: fresh-session recovery from only a durable TaskID, forced repeated
+compaction with hard-constraint retention, unresolved contradiction retention,
+unknown retention, decision provenance, tool-failure restart, duplicate retry
+handling, and state-history reconstruction. These gates are infrastructure
+evidence, not model-quality or trading-edge evidence.
+
 ## 4. Baseline and ablations
 
 The laboratory must compare at least:
