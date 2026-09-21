@@ -34,7 +34,8 @@ func ValidatePostgresDSN(dsn string) error {
 	if err != nil {
 		return fmt.Errorf("invalid disposable PostgreSQL test configuration")
 	}
-	if !strings.HasPrefix(config.ConnConfig.Database, "jax_paper02r_test") {
+	database := config.ConnConfig.Database
+	if database != "jax_paper02r_test" && !strings.HasPrefix(database, "jax_paper02r_test_") {
 		return fmt.Errorf("integration tests require a database named jax_paper02r_test or jax_paper02r_test_<suffix>; production databases are forbidden")
 	}
 	return nil

@@ -2,6 +2,7 @@ package exploratorypaper
 
 import (
 	"context"
+	"errors"
 	"jax-trading-assistant/internal/testsupport"
 	"testing"
 	"time"
@@ -112,7 +113,19 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	}
 
 	exitAt := now.Add(2 * time.Hour)
-	exitApproval := postgresApproval(t, "pg-exit-"+suffix, "SHORT", exitAt)
+	exitDecision := ExitDecision{Action: ExitNow, Reason: ExitThesisInvalidated}
+	if len(restored.Reviews) == 0 {
+		t.Fatal("restored lifecycle has no review for durable exit approval")
+	}
+	review := restored.Reviews[1]
+	exitRecommendationID := exitRecommendationIdentity(review, exitDecision)
+	if err := store.PersistExitRecommendation(ctx, position.PositionID, exitDecision, review); err != nil {
+		t.Fatal(err)
+	}
+	exitApproval := postgresExitApproval(t, exitRecommendationID, "pg-exit-"+suffix, "SHORT", exitAt, position.PositionID, review.ReviewID, binding.WorkflowID, binding.PaperIntentID)
+	if _, err := store.ApproveExit(ctx, restored, exitDecision, ReviewObservation{}); !errors.Is(err, ErrHumanApprovalPending) {
+		t.Fatalf("exit approval source before operator decision err=%v, want ErrHumanApprovalPending", err)
+	}
 	exitOrder, err := venue.Submit(papertrading.CreateOrderRequest{Workflow: exitApproval.Workflow, PaperIntent: exitApproval.PaperIntent, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: costModel, InstrumentID: thesis.InstrumentID, Quantity: 10, ReferencePrice: 104, OrderType: papertrading.OrderMarket, CreatedAt: exitAt, IdempotencyKey: "pg-exit-" + suffix})
 	if err != nil {
 		t.Fatal(err)
@@ -128,19 +141,14 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if err := restored.Position.Close(exitFills[0].FilledAt); err != nil {
 		t.Fatal(err)
 	}
-	exitDecision := ExitDecision{Action: ExitNow, Reason: ExitThesisInvalidated}
-	if len(restored.Reviews) == 0 {
-		t.Fatal("restored lifecycle has no review for durable exit approval")
-	}
-	review := restored.Reviews[1]
-	if err := store.PersistExitRecommendation(ctx, position.PositionID, exitDecision, review); err != nil {
-		t.Fatal(err)
-	}
-	review.ExitRecommendationID = exitRecommendationIdentity(review, exitDecision)
-	review.ExitAction = string(exitDecision.Action)
-	review.ExitReason = string(exitDecision.Reason)
 	if err := store.PersistExitApproval(ctx, position.PositionID, review, exitApproval); err != nil {
 		t.Fatal(err)
+	}
+	if err := store.PersistExitApproval(ctx, position.PositionID, review, exitApproval); err != nil {
+		t.Fatalf("same durable exit approval replay was not idempotent: %v", err)
+	}
+	if sourceApproval, err := store.ApproveExit(ctx, restored, exitDecision, ReviewObservation{}); err != nil || sourceApproval.Workflow.WorkflowID != exitApproval.Workflow.WorkflowID {
+		t.Fatalf("durable exit approval source = %#v, err=%v", sourceApproval, err)
 	}
 	outcome, err := BuildOutcomeFromFills(restored.Position, binding, fills[0], exitFills[0], ExitThesisInvalidated, 2, nil, nil)
 	if err != nil {
@@ -158,12 +166,28 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 }
 
 func postgresApproval(t *testing.T, suffix, direction string, now time.Time) ApprovalSnapshot {
+	return postgresApprovalForRecommendation(t, "recommendation-"+suffix, suffix, direction, now)
+}
+
+func postgresExitApproval(t *testing.T, recommendationID, suffix, direction string, now time.Time, positionID, reviewID, entryWorkflowID, entryPaperIntentID string) ApprovalSnapshot {
+	approval := postgresApprovalForRecommendation(t, recommendationID, suffix, direction, now)
+	approval.ExitBinding = &ExitApprovalBinding{
+		PositionID:         positionID,
+		ReviewID:           reviewID,
+		RecommendationID:   recommendationID,
+		EntryWorkflowID:    entryWorkflowID,
+		EntryPaperIntentID: entryPaperIntentID,
+	}
+	return approval
+}
+
+func postgresApprovalForRecommendation(t *testing.T, recommendationID, suffix, direction string, now time.Time) ApprovalSnapshot {
 	t.Helper()
 	value := 1000.0
 	if direction == "SHORT" {
 		value = 1200
 	}
-	risk := acceptedRisk(t, "recommendation-"+suffix, now, value)
+	risk := acceptedRisk(t, recommendationID, now, value)
 	workflowStore := workflow.NewStore()
 	wf, err := workflowStore.Create(context.Background(), workflow.CreateRequest{RiskDecision: risk, Now: now, IdempotencyKey: suffix + "-create"})
 	if err != nil {

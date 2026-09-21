@@ -292,7 +292,7 @@ func selectEvidenceLike(candidates []rankedEvidence, request BuildRequest, recor
 			candidates[index].candidate.PolicyRequired = true
 		}
 	}
-	ordered, duplicateOmissions := uniqueAndRankEvidence(candidates, records)
+	ordered, duplicateOmissions := uniqueAndRankEvidence(candidates, request, records, counter)
 	omissions := append([]Omission(nil), duplicateOmissions...)
 	deferred := []DeferredReference{}
 	chosen := []rankedEvidence{}
@@ -421,24 +421,33 @@ func eligibleEvidence(candidate EvidenceCandidate, policy BuildPolicy, reference
 	status := temporalStatus(candidate.Reference, referenceTime, policy.StaleAfter)
 	record.TemporalStatus = status
 	if status == TemporalFuture && policy.ExcludeFutureEvidence {
+		markRejectedRecord(record, ReasonOmittedFuture, "evidence is after the explicit reference time")
 		*omissions = append(*omissions, Omission{Kind: kind, CanonicalReference: id, ReasonCode: ReasonOmittedFuture, Reason: "evidence is after the explicit reference time"})
 		return false
 	}
 	if status == TemporalStale && policy.ExcludeStaleEvidence {
+		markRejectedRecord(record, ReasonOmittedStale, "evidence exceeded the explicit staleness interval")
 		*omissions = append(*omissions, Omission{Kind: kind, CanonicalReference: id, ReasonCode: ReasonOmittedStale, Reason: "evidence exceeded the explicit staleness interval"})
 		return false
 	}
 	if policy.RequireKnownObservationTime && candidate.Reference.ObservedAt == nil {
+		markRejectedRecord(record, ReasonOmittedUnknownTiming, "observation time is unknown")
 		*omissions = append(*omissions, Omission{Kind: kind, CanonicalReference: id, ReasonCode: ReasonOmittedUnknownTiming, Reason: "observation time is unknown"})
 		return false
 	}
 	return true
 }
 
-func uniqueAndRankEvidence(candidates []rankedEvidence, records map[string]RetrievalRecord) ([]rankedEvidence, []Omission) {
+func uniqueAndRankEvidence(candidates []rankedEvidence, request BuildRequest, records map[string]RetrievalRecord, counter bool) ([]rankedEvidence, []Omission) {
 	best := map[string]rankedEvidence{}
 	omissions := []Omission{}
 	for _, candidate := range candidates {
+		record := records[candidate.recordID]
+		if !eligibleEvidence(candidate.candidate, request.Policy, request.ReferenceTime, counter, &record, &omissions, nil) {
+			records[candidate.recordID] = record
+			continue
+		}
+		records[candidate.recordID] = record
 		key := candidate.candidate.DeduplicationKey
 		if key == "" {
 			key = "id:" + candidate.candidate.Reference.EvidenceID

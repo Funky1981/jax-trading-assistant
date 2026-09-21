@@ -3,7 +3,22 @@ package main
 import (
 	"testing"
 	"time"
+
+	"jax-trading-assistant/internal/modules/exploratorypaper"
 )
+
+func TestNewExploratoryPaperRuntimeWiresDurableExitApprovalSource(t *testing.T) {
+	runtime, err := newExploratoryPaperRuntime(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.ExitApprover == nil {
+		t.Fatal("production exploratory PAPER runtime has no exit approval source")
+	}
+	if _, ok := runtime.ExitApprover.(*exploratorypaper.PostgresStore); !ok {
+		t.Fatalf("production exploratory PAPER runtime exit approval source = %T, want *exploratorypaper.PostgresStore", runtime.ExitApprover)
+	}
+}
 
 func TestExploratoryWorkerHealthTracksFailuresAndLastSuccess(t *testing.T) {
 	at := time.Date(2026, 9, 21, 12, 0, 0, 0, time.UTC)

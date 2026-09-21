@@ -129,11 +129,17 @@ func exploratoryPaperPositionsHandler(store *exploratorypaper.PostgresStore) htt
 
 func exploratoryPaperPositionHandler(store *exploratorypaper.PostgresStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
+		tail := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/v1/exploratory-paper/positions/"), "/")
+		parts := strings.Split(tail, "/")
+		if len(parts) == 2 && (parts[1] == "exit-approval" || parts[1] == "exit-rejection") {
+			handleExploratoryExitDecision(w, r, store, parts[0], parts[1])
+			return
+		}
+		if r.Method != http.MethodGet || len(parts) != 1 {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		positionID := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/v1/exploratory-paper/positions/"), "/")
+		positionID := parts[0]
 		if positionID == "" {
 			http.Error(w, "position ID is required", http.StatusBadRequest)
 			return
@@ -149,6 +155,53 @@ func exploratoryPaperPositionHandler(store *exploratorypaper.PostgresStore) http
 		}
 		jsonOK(w, exploratoryPaperReadModelFromRecord(record))
 	}
+}
+
+// handleExploratoryExitDecision is the existing protected operator/API handoff
+// for the durable workflow approval architecture. It accepts a complete
+// workflow snapshot, not an approval boolean, and the store validates every
+// identity against the requested lifecycle review before persisting it.
+func handleExploratoryExitDecision(w http.ResponseWriter, r *http.Request, store *exploratorypaper.PostgresStore, positionID, action string) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if runtimepolicy.CurrentMode() != runtimepolicy.ModePaper {
+		http.Error(w, "exploratory paper exit approval requires PAPER runtime mode", http.StatusConflict)
+		return
+	}
+	actor := strings.TrimSpace(actorFromRequest(r))
+	if actor == "" || actor == "anonymous" {
+		http.Error(w, "explicit human operator identity is required", http.StatusForbidden)
+		return
+	}
+	var approval exploratorypaper.ApprovalSnapshot
+	if err := json.NewDecoder(r.Body).Decode(&approval); err != nil {
+		http.Error(w, "invalid exit workflow approval payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if approval.Workflow.Confirmation == nil || approval.Workflow.Confirmation.Actor != actor {
+		http.Error(w, "exit decision actor does not match the authenticated operator", http.StatusForbidden)
+		return
+	}
+	wantState := workflow.StatePaperIntentCreated
+	if action == "exit-rejection" {
+		wantState = workflow.StateHumanRejected
+	}
+	if approval.Workflow.State != wantState {
+		http.Error(w, "exit decision state does not match the requested action", http.StatusBadRequest)
+		return
+	}
+	if err := store.PersistExitDecision(r.Context(), positionID, approval); err != nil {
+		http.Error(w, "exit decision was rejected: "+err.Error(), http.StatusConflict)
+		return
+	}
+	record, err := store.Get(r.Context(), positionID)
+	if err != nil {
+		http.Error(w, "exit decision persisted but lifecycle could not be reloaded: "+err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+	jsonOK(w, exploratoryPaperReadModelFromRecord(record))
 }
 
 type exploratoryPaperReadModel struct {

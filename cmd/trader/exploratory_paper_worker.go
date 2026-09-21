@@ -21,19 +21,10 @@ import (
 // reviews obtain canonical evidence and persisted market observations. Missing
 // inputs remain explicit; this worker never fabricates a review or approval.
 func startExploratoryPaperReviewWorker(ctx context.Context, pool *pgxpool.Pool) {
-	store := exploratorypaper.NewPostgresStore(pool)
-	venue, err := papertrading.NewPaperVenue(papertrading.DefaultPaperCapabilityContract(), papertrading.DefaultCostModel())
+	runtime, err := newExploratoryPaperRuntime(pool)
 	if err != nil {
+		log.Printf("exploratory_paper_runtime_initialization_failed error=%q", err)
 		return
-	}
-	runtime := &exploratorypaper.Runtime{
-		Mode:      runtimepolicy.CurrentMode().String(),
-		Store:     store,
-		Entries:   store,
-		Reviews:   &postgresExploratoryReviewSource{pool: pool},
-		Venue:     venue,
-		CostModel: papertrading.DefaultCostModel(),
-		Now:       func() time.Time { return time.Now().UTC() },
 	}
 	health := exploratoryWorkerHealth{}
 	run := func() {
@@ -64,6 +55,24 @@ func startExploratoryPaperReviewWorker(ctx context.Context, pool *pgxpool.Pool) 
 			run()
 		}
 	}
+}
+
+func newExploratoryPaperRuntime(pool *pgxpool.Pool) (*exploratorypaper.Runtime, error) {
+	store := exploratorypaper.NewPostgresStore(pool)
+	venue, err := papertrading.NewPaperVenue(papertrading.DefaultPaperCapabilityContract(), papertrading.DefaultCostModel())
+	if err != nil {
+		return nil, err
+	}
+	return &exploratorypaper.Runtime{
+		Mode:         runtimepolicy.CurrentMode().String(),
+		Store:        store,
+		Entries:      store,
+		Reviews:      &postgresExploratoryReviewSource{pool: pool},
+		ExitApprover: store,
+		Venue:        venue,
+		CostModel:    papertrading.DefaultCostModel(),
+		Now:          func() time.Time { return time.Now().UTC() },
+	}, nil
 }
 
 type exploratoryWorkerHealth struct {

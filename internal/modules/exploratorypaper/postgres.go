@@ -24,9 +24,23 @@ var (
 )
 
 type ApprovalSnapshot struct {
-	Workflow    workflow.Workflow
-	Events      []workflow.TransitionEvent
-	PaperIntent workflow.PaperIntent
+	Workflow    workflow.Workflow          `json:"workflow"`
+	Events      []workflow.TransitionEvent `json:"events"`
+	PaperIntent workflow.PaperIntent       `json:"paperIntent"`
+	ExitBinding *ExitApprovalBinding       `json:"exitBinding,omitempty"`
+}
+
+// ExitApprovalBinding links an operator's existing workflow approval artifact
+// to the exact durable recommendation and lifecycle that requested it. The
+// workflow and paper intent remain owned by the existing workflow architecture;
+// this binding prevents an otherwise valid paper workflow from being replayed
+// against a different position or review.
+type ExitApprovalBinding struct {
+	PositionID         string `json:"positionId"`
+	ReviewID           string `json:"reviewId"`
+	RecommendationID   string `json:"recommendationId"`
+	EntryWorkflowID    string `json:"entryWorkflowId"`
+	EntryPaperIntentID string `json:"entryPaperIntentId"`
 }
 
 type EntrySnapshot struct {
@@ -590,10 +604,66 @@ func exitRecommendationIdentity(review Review, decision ExitDecision) string {
 	return "exitrec_" + hex.EncodeToString(digest[:])
 }
 
+// ApproveExit is the production exit-approval source. It reads the durable
+// operator decision written through the protected exploratory-paper API and
+// never infers approval from an exit recommendation alone.
+func (s *PostgresStore) ApproveExit(ctx context.Context, lifecycle LifecycleRecord, decision ExitDecision, _ ReviewObservation) (ApprovalSnapshot, error) {
+	if s == nil || s.pool == nil {
+		return ApprovalSnapshot{}, fmt.Errorf("%w: database is unavailable", ErrFailedClosed)
+	}
+	for _, candidate := range lifecycle.Reviews {
+		if candidate.PositionID != lifecycle.Position.PositionID {
+			continue
+		}
+		var storedStatus string
+		var payload []byte
+		err := s.pool.QueryRow(ctx, `SELECT status,payload FROM exploratory_paper_reviews WHERE review_id=$1 AND position_id=$2`, candidate.ReviewID, lifecycle.Position.PositionID).Scan(&storedStatus, &payload)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return ApprovalSnapshot{}, failClosed("load durable exit approval", err)
+		}
+		var review Review
+		if err := json.Unmarshal(payload, &review); err != nil {
+			return ApprovalSnapshot{}, failClosed("decode durable exit approval review", err)
+		}
+		review.Status = storedStatus
+		if review.ExitRecommendationID != exitRecommendationIdentity(candidate, decision) {
+			continue
+		}
+		switch storedStatus {
+		case "EXIT_APPROVED", "EXIT_REJECTED":
+			if review.ExitApproval == nil {
+				return ApprovalSnapshot{}, failClosed("durable exit decision is missing its workflow snapshot", ErrPersistenceConflict)
+			}
+			if err := validateExitApproval(lifecycle, review, *review.ExitApproval, s.now().UTC()); err != nil {
+				return ApprovalSnapshot{}, failClosed("validate durable exit decision", err)
+			}
+			return *review.ExitApproval, nil
+		case "EXIT_RECOMMENDED":
+			return ApprovalSnapshot{}, ErrHumanApprovalPending
+		}
+	}
+	return ApprovalSnapshot{}, ErrHumanApprovalPending
+}
+
 func (s *PostgresStore) PersistExitApproval(ctx context.Context, positionID string, review Review, approval ApprovalSnapshot) error {
 	if positionID == "" || review.PositionID != positionID || approval.Workflow.State != workflow.StatePaperIntentCreated {
 		return fmt.Errorf("exit approval identity is invalid")
 	}
+	record, err := s.Get(ctx, positionID)
+	if err != nil {
+		return failClosed("load exit approval lifecycle", err)
+	}
+	canonical, err := canonicalExitReview(record, review.ReviewID)
+	if err != nil {
+		return err
+	}
+	if err := validateExitApproval(record, canonical, approval, s.now().UTC()); err != nil {
+		return failClosed("validate exit approval", err)
+	}
+	review = canonical
 	review.Status = "EXIT_APPROVED"
 	review.ExitApprovalWorkflowID = approval.Workflow.WorkflowID
 	review.ExitApproval = &approval
@@ -603,9 +673,12 @@ func (s *PostgresStore) PersistExitApproval(ctx context.Context, positionID stri
 	if err != nil {
 		return err
 	}
-	_, err = s.pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='EXIT_APPROVED',payload=$3,processed_at=$2 WHERE review_id=$1 AND position_id=$4 AND status IN ('EXIT_RECOMMENDED','EXIT_APPROVED')`, review.ReviewID, now, payload, positionID)
+	result, err := s.pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='EXIT_APPROVED',payload=$3,processed_at=$2 WHERE review_id=$1 AND position_id=$4 AND status='EXIT_RECOMMENDED'`, review.ReviewID, now, payload, positionID)
 	if err != nil {
 		return failClosed("persist exit approval", err)
+	}
+	if result.RowsAffected() == 0 {
+		return verifyPersistedExitDecision(ctx, positionID, review.ReviewID, "EXIT_APPROVED", approval, s.pool)
 	}
 	return nil
 }
@@ -614,6 +687,18 @@ func (s *PostgresStore) PersistExitRejection(ctx context.Context, positionID str
 	if positionID == "" || review.PositionID != positionID || rejection.Workflow.State != workflow.StateHumanRejected {
 		return fmt.Errorf("exit rejection identity is invalid")
 	}
+	record, err := s.Get(ctx, positionID)
+	if err != nil {
+		return failClosed("load exit rejection lifecycle", err)
+	}
+	canonical, err := canonicalExitReview(record, review.ReviewID)
+	if err != nil {
+		return err
+	}
+	if err := validateExitApproval(record, canonical, rejection, s.now().UTC()); err != nil {
+		return failClosed("validate exit rejection", err)
+	}
+	review = canonical
 	review.Status = "EXIT_REJECTED"
 	review.ExitApprovalWorkflowID = rejection.Workflow.WorkflowID
 	review.ExitApproval = &rejection
@@ -623,11 +708,125 @@ func (s *PostgresStore) PersistExitRejection(ctx context.Context, positionID str
 	if err != nil {
 		return err
 	}
-	_, err = s.pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='EXIT_REJECTED',payload=$3,processed_at=$2 WHERE review_id=$1 AND position_id=$4 AND status IN ('EXIT_RECOMMENDED','EXIT_APPROVED')`, review.ReviewID, now, payload, positionID)
+	result, err := s.pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='EXIT_REJECTED',payload=$3,processed_at=$2 WHERE review_id=$1 AND position_id=$4 AND status='EXIT_RECOMMENDED'`, review.ReviewID, now, payload, positionID)
 	if err != nil {
 		return failClosed("persist exit rejection", err)
 	}
+	if result.RowsAffected() == 0 {
+		return verifyPersistedExitDecision(ctx, positionID, review.ReviewID, "EXIT_REJECTED", rejection, s.pool)
+	}
 	return nil
+}
+
+func verifyPersistedExitDecision(ctx context.Context, positionID, reviewID, status string, approval ApprovalSnapshot, pool *pgxpool.Pool) error {
+	var storedStatus string
+	var payload []byte
+	if err := pool.QueryRow(ctx, `SELECT status,payload FROM exploratory_paper_reviews WHERE review_id=$1 AND position_id=$2`, reviewID, positionID).Scan(&storedStatus, &payload); err != nil {
+		return failClosed("verify persisted exit decision", err)
+	}
+	if storedStatus != status {
+		return failClosed("exit decision conflict", ErrPersistenceConflict)
+	}
+	var stored Review
+	if err := json.Unmarshal(payload, &stored); err != nil || stored.ExitApproval == nil {
+		if err != nil {
+			return failClosed("decode persisted exit decision", err)
+		}
+		return failClosed("persisted exit decision is incomplete", ErrPersistenceConflict)
+	}
+	left, err := json.Marshal(*stored.ExitApproval)
+	if err != nil {
+		return failClosed("encode persisted exit decision", err)
+	}
+	right, err := json.Marshal(approval)
+	if err != nil {
+		return failClosed("encode exit decision", err)
+	}
+	if string(left) != string(right) {
+		return failClosed("exit decision conflict", ErrPersistenceConflict)
+	}
+	return nil
+}
+
+// PersistExitDecision is the protected operator/API handoff. The request must
+// carry the existing workflow snapshot plus the explicit exit binding; the
+// server chooses the durable review from that binding and never trusts a
+// caller-supplied review payload.
+func (s *PostgresStore) PersistExitDecision(ctx context.Context, positionID string, approval ApprovalSnapshot) error {
+	if approval.ExitBinding == nil || approval.ExitBinding.PositionID != positionID {
+		return fmt.Errorf("exit decision binding is invalid")
+	}
+	record, err := s.Get(ctx, positionID)
+	if err != nil {
+		return failClosed("load exit decision lifecycle", err)
+	}
+	review, err := canonicalExitReview(record, approval.ExitBinding.ReviewID)
+	if err != nil {
+		return err
+	}
+	switch approval.Workflow.State {
+	case workflow.StatePaperIntentCreated:
+		return s.PersistExitApproval(ctx, positionID, review, approval)
+	case workflow.StateHumanRejected:
+		return s.PersistExitRejection(ctx, positionID, review, approval)
+	default:
+		return fmt.Errorf("exit decision must be an explicit paper approval or rejection")
+	}
+}
+
+func canonicalExitReview(record LifecycleRecord, reviewID string) (Review, error) {
+	for _, review := range record.Reviews {
+		if review.ReviewID == reviewID {
+			if review.PositionID != record.Position.PositionID || review.ExitRecommendationID == "" {
+				return Review{}, fmt.Errorf("review is not a durable exit recommendation")
+			}
+			return review, nil
+		}
+	}
+	return Review{}, fmt.Errorf("exit review %q was not found", reviewID)
+}
+
+func validateExitApproval(record LifecycleRecord, review Review, approval ApprovalSnapshot, now time.Time) error {
+	if approval.ExitBinding == nil || approval.ExitBinding.PositionID != record.Position.PositionID || approval.ExitBinding.ReviewID != review.ReviewID || approval.ExitBinding.RecommendationID != review.ExitRecommendationID || approval.ExitBinding.EntryWorkflowID != record.Binding.WorkflowID || approval.ExitBinding.EntryPaperIntentID != record.Binding.PaperIntentID {
+		return fmt.Errorf("exit approval is not bound to the requested position, review, recommendation, and entry paper identity")
+	}
+	if err := approval.Workflow.Validate(); err != nil {
+		return err
+	}
+	if err := workflow.ValidateAuditEvents(approval.Events); err != nil || len(approval.Events) == 0 || approval.Events[len(approval.Events)-1].WorkflowID != approval.Workflow.WorkflowID || approval.Events[len(approval.Events)-1].NextState != approval.Workflow.State || approval.Events[len(approval.Events)-1].Sequence != approval.Workflow.Revision {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("exit approval workflow audit does not match its durable state")
+	}
+	if approval.Workflow.RecommendationID != review.ExitRecommendationID || approval.Workflow.Confirmation == nil {
+		return fmt.Errorf("exit approval workflow is not bound to the recommendation")
+	}
+	confirmation := approval.Workflow.Confirmation
+	if err := confirmation.ValidateFor(approval.Workflow, now); err != nil {
+		return err
+	}
+	wantDirection := DirectionLong
+	if record.Thesis.Thesis.Direction == DirectionLong {
+		wantDirection = DirectionShort
+	}
+	if confirmation.InstrumentID != record.Thesis.Thesis.InstrumentID || confirmation.Direction != string(wantDirection) {
+		return fmt.Errorf("exit approval confirmation is not bound to the open position")
+	}
+	switch approval.Workflow.State {
+	case workflow.StatePaperIntentCreated:
+		if confirmation.Decision != workflow.ConfirmationApprove || approval.PaperIntent.WorkflowID != approval.Workflow.WorkflowID || approval.PaperIntent.RecommendationID != review.ExitRecommendationID || approval.PaperIntent.InstrumentID != record.Thesis.Thesis.InstrumentID || approval.PaperIntent.Direction != string(wantDirection) {
+			return fmt.Errorf("exit paper intent is not bound to the approved recommendation")
+		}
+		return approval.PaperIntent.Validate()
+	case workflow.StateHumanRejected:
+		if confirmation.Decision != workflow.ConfirmationReject || approval.PaperIntent.IntentID != "" {
+			return fmt.Errorf("exit rejection contains an invalid paper intent")
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported exit approval state %q", approval.Workflow.State)
+	}
 }
 
 func (s *PostgresStore) ApplyEvidence(ctx context.Context, positionID string, evidence RelevantEvidence, at time.Time, policyVersion string) (Position, error) {

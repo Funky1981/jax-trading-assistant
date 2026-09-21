@@ -335,6 +335,50 @@ func TestRankingBudgetAndOmissionBehaviour(t *testing.T) {
 			t.Fatal("duplicate underlying story was treated as independent corroboration")
 		}
 	})
+	t.Run("as-of eligible duplicate outranks higher-ranked future duplicate", func(t *testing.T) {
+		past := cbEvidence("past-duplicate", harnesscontracts.EvidenceSupporting, "provider-a", "same-story", 2, RankingFactors{ObjectiveRelevance: 10})
+		future := cbEvidence("future-duplicate", harnesscontracts.EvidenceSupporting, "provider-b", "same-story", 2, RankingFactors{ObjectiveRelevance: 100})
+		futureAt := cbReferenceTime.Add(time.Hour)
+		future.Reference.ObservedAt = &futureAt
+		request, _, _, _ := cbRequest([]EvidenceCandidate{past, future}, []EvidenceCandidate{cbEvidence("counter-1", harnesscontracts.EvidenceContradictory, "provider-c", "counter", 3, RankingFactors{ObjectiveRelevance: 80})}, nil)
+		result := buildCB(t, request)
+		if !containsString(result.Report.PackageSelectedIDs(), "past-duplicate") || containsString(result.Report.PackageSelectedIDs(), "future-duplicate") {
+			t.Fatalf("eligible past duplicate was displaced: selected=%v", result.Report.PackageSelectedIDs())
+		}
+		if !recordHasReason(result.Report, "future-duplicate", ReasonOmittedFuture) {
+			t.Fatal("future duplicate was not truthfully audited as future")
+		}
+	})
+	t.Run("as-of eligible duplicate outranks higher-ranked policy-ineligible duplicate", func(t *testing.T) {
+		past := cbEvidence("eligible-duplicate", harnesscontracts.EvidenceSupporting, "provider-a", "same-story", 2, RankingFactors{ObjectiveRelevance: 10})
+		ineligible := cbEvidence("ineligible-duplicate", harnesscontracts.EvidenceSupporting, "provider-b", "same-story", 2, RankingFactors{ObjectiveRelevance: 100})
+		ineligible.PolicyEligible = false
+		ineligible.PolicyReason = "source policy is not eligible at this reference"
+		request, _, _, _ := cbRequest([]EvidenceCandidate{past, ineligible}, []EvidenceCandidate{cbEvidence("counter-1", harnesscontracts.EvidenceContradictory, "provider-c", "counter", 3, RankingFactors{ObjectiveRelevance: 80})}, nil)
+		result := buildCB(t, request)
+		if !containsString(result.Report.PackageSelectedIDs(), "eligible-duplicate") || containsString(result.Report.PackageSelectedIDs(), "ineligible-duplicate") {
+			t.Fatalf("eligible duplicate was displaced: selected=%v", result.Report.PackageSelectedIDs())
+		}
+		if !recordHasReason(result.Report, "ineligible-duplicate", ReasonOmittedPolicy) {
+			t.Fatal("policy-ineligible duplicate was not truthfully audited")
+		}
+	})
+	t.Run("all future or policy-ineligible duplicates remain omitted", func(t *testing.T) {
+		future := cbEvidence("future-only", harnesscontracts.EvidenceSupporting, "provider-a", "same-story", 2, RankingFactors{ObjectiveRelevance: 100})
+		futureAt := cbReferenceTime.Add(time.Hour)
+		future.Reference.ObservedAt = &futureAt
+		ineligible := cbEvidence("ineligible-only", harnesscontracts.EvidenceSupporting, "provider-b", "same-story", 2, RankingFactors{ObjectiveRelevance: 90})
+		ineligible.PolicyEligible = false
+		ineligible.PolicyReason = "source policy is not eligible at this reference"
+		request, _, _, _ := cbRequest([]EvidenceCandidate{future, ineligible}, []EvidenceCandidate{cbEvidence("counter-1", harnesscontracts.EvidenceContradictory, "provider-c", "counter", 3, RankingFactors{ObjectiveRelevance: 80})}, nil)
+		result := buildCB(t, request)
+		if len(result.Package.SelectedEvidence) != 0 {
+			t.Fatalf("ineligible duplicate entered context: %#v", result.Package.SelectedEvidence)
+		}
+		if !recordHasReason(result.Report, "future-only", ReasonOmittedFuture) || !recordHasReason(result.Report, "ineligible-only", ReasonOmittedPolicy) {
+			t.Fatalf("duplicate omissions were not explicit: %#v", result.Report.RetrievalRecords)
+		}
+	})
 	t.Run("independent source groups are preferred", func(t *testing.T) {
 		first := cbEvidence("same-source-high", harnesscontracts.EvidenceSupporting, "provider-a", "story-a", 2, RankingFactors{ObjectiveRelevance: 100})
 		second := cbEvidence("same-source-next", harnesscontracts.EvidenceSupporting, "provider-a", "story-b", 2, RankingFactors{ObjectiveRelevance: 99})
@@ -661,6 +705,15 @@ func recalculateCBBudget(budget *harnesscontracts.ContextBudget) {
 func recordHasTemporalStatus(report BuildReport, evidenceID, status string) bool {
 	for _, record := range report.RetrievalRecords {
 		if record.EvidenceReference != nil && record.EvidenceReference.EvidenceID == evidenceID && record.TemporalStatus == status {
+			return true
+		}
+	}
+	return false
+}
+
+func recordHasReason(report BuildReport, evidenceID, reasonCode string) bool {
+	for _, record := range report.RetrievalRecords {
+		if record.EvidenceReference != nil && record.EvidenceReference.EvidenceID == evidenceID && record.ReasonCode == reasonCode {
 			return true
 		}
 	}
