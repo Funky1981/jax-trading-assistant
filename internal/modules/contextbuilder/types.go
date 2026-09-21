@@ -327,7 +327,7 @@ func (request BuildRequest) Validate() error {
 	if err := request.Budget.Validate(); err != nil {
 		return err
 	}
-	if request.TaskState.ObjectiveID != request.Objective.ObjectiveID || request.TaskState.ObjectiveVersion != request.Objective.Version || !validUTCTime(request.ReferenceTime) || request.EvidenceRetriever == nil || request.ContradictionRetriever == nil {
+	if request.TaskState.ObjectiveID != request.Objective.ObjectiveID || request.TaskState.ObjectiveVersion != request.Objective.Version || !validUTCTime(request.ReferenceTime) || request.TaskState.CreatedAt.After(request.ReferenceTime) || request.TaskState.UpdatedAt.After(request.ReferenceTime) || request.EvidenceRetriever == nil || request.ContradictionRetriever == nil {
 		return fmt.Errorf("context build request is incomplete or identity-mismatched")
 	}
 	if err := request.Policy.Validate(request.Budget); err != nil {

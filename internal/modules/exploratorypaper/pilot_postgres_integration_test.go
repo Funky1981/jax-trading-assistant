@@ -3,7 +3,7 @@ package exploratorypaper
 import (
 	"context"
 	"encoding/json"
-	"os"
+	"jax-trading-assistant/internal/testsupport"
 	"testing"
 	"time"
 
@@ -11,13 +11,7 @@ import (
 )
 
 func TestPaper02PilotLedgerRestartAndEvidenceIdempotency(t *testing.T) {
-	databaseURL := os.Getenv("PAPER02_DATABASE_URL")
-	if databaseURL == "" {
-		databaseURL = os.Getenv("PAPER01B_DATABASE_URL")
-	}
-	if databaseURL == "" {
-		t.Skip("PAPER02_DATABASE_URL/PAPER01B_DATABASE_URL is not configured")
-	}
+	databaseURL := testsupport.PostgresDSN(t, "PAPER02_DATABASE_URL")
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {

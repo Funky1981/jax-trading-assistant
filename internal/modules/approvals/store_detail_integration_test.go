@@ -3,7 +3,7 @@ package approvals
 import (
 	"context"
 	"errors"
-	"os"
+	"jax-trading-assistant/internal/testsupport"
 	"strings"
 	"testing"
 	"time"
@@ -73,19 +73,16 @@ func TestApprovalDetailPersistedStatesAndDuplicateSafety(t *testing.T) {
 
 func testApprovalDetailPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	dsn := strings.TrimSpace(os.Getenv("TEST_DATABASE_URL"))
-	if dsn == "" {
-		dsn = "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"
-	}
+	dsn := testsupport.PostgresDSN(t, "TEST_DATABASE_URL")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
-		t.Skipf("skip DB-backed approval detail test: %v", err)
+		t.Fatalf("required disposable DB-backed approval detail test: %v", err)
 	}
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		t.Skipf("skip DB-backed approval detail test: %v", err)
+		t.Fatalf("required disposable DB-backed approval detail test: %v", err)
 	}
 	t.Cleanup(pool.Close)
 	return pool
@@ -132,7 +129,7 @@ func insertApprovalDetailFixture(t *testing.T, ctx context.Context, pool *pgxpoo
 				paper_only, broker_execution_allowed, execution_instruction_created,
 				live_trading_allowed, leverage_allowed, reject_reasons, warning_reasons, review_notes
 			) VALUES (
-				$1, $2, $3, $3::text, $4, 'long', 'test', 'test', 100, 99, 102, 1, 1, 1,
+				$1, $2, $3, $3::uuid::text, $4, 'long', 'test', 'test', 100, 99, 102, 1, 1, 1,
 				2, 'sufficient', 'ready_for_risk_review', 'ready_for_approval_review',
 				'paper_ticket_ready', true, false, false, false, false, '{}', '{}', NULL
 			)

@@ -17,18 +17,41 @@ type PriceObservation struct {
 	Source        string    `json:"source"`
 }
 
+// ExcursionCoverage records whether the retained price path is sufficient to
+// support complete MFE/MAE claims. A non-empty path alone is not sufficient.
+type ExcursionCoverage struct {
+	Status                   string    `json:"status"`
+	WindowStart              time.Time `json:"windowStart,omitempty"`
+	WindowEnd                time.Time `json:"windowEnd,omitempty"`
+	ExpectedObservationCount int       `json:"expectedObservationCount,omitempty"`
+	KnownGaps                []string  `json:"knownGaps,omitempty"`
+	Cadence                  string    `json:"cadence,omitempty"`
+	SourceProvenance         bool      `json:"sourceProvenance"`
+}
+
+const EconomicAccountingVersion = "paper-economic-accounting-v2"
+
 type Checkpoint struct {
-	PositionID       string    `json:"positionId"`
-	ThesisID         string    `json:"thesisId"`
-	Sessions         int       `json:"sessions"`
-	At               time.Time `json:"at"`
-	Price            float64   `json:"price"`
-	PriceSource      string    `json:"priceSource"`
-	EvidenceReviewID string    `json:"evidenceReviewId"`
-	GrossPnL         float64   `json:"grossPnl"`
-	NetPnL           float64   `json:"netPnl"`
-	NetReturn        float64   `json:"netReturn"`
-	DataQuality      string    `json:"dataQuality"`
+	PositionID           string    `json:"positionId"`
+	ThesisID             string    `json:"thesisId"`
+	Sessions             int       `json:"sessions"`
+	At                   time.Time `json:"at"`
+	Price                float64   `json:"price"`
+	PriceSource          string    `json:"priceSource"`
+	EvidenceReviewID     string    `json:"evidenceReviewId"`
+	GrossPnL             float64   `json:"grossPnl"`
+	NetPnL               float64   `json:"netPnl"`
+	NetReturn            float64   `json:"netReturn"`
+	DataQuality          string    `json:"dataQuality"`
+	CommissionCost       float64   `json:"commissionCost,omitempty"`
+	SpreadCost           float64   `json:"spreadCost,omitempty"`
+	SlippageCost         float64   `json:"slippageCost,omitempty"`
+	AccountingVersion    string    `json:"accountingVersion,omitempty"`
+	QuoteMode            string    `json:"quoteMode,omitempty"`
+	LiquidityMode        string    `json:"liquidityMode,omitempty"`
+	ActualQuoteAvailable bool      `json:"actualQuoteAvailable,omitempty"`
+	ObservedAt           time.Time `json:"observedAt,omitempty"`
+	ReceivedAt           time.Time `json:"receivedAt,omitempty"`
 }
 
 type Outcome struct {
@@ -71,6 +94,11 @@ type Outcome struct {
 	Checkpoints        []Checkpoint        `json:"checkpoints"`
 	PolicyVersions     PolicyVersions      `json:"policyVersions"`
 	CostModelVersion   string              `json:"costModelVersion"`
+	AccountingVersion  string              `json:"accountingVersion,omitempty"`
+	EntrySpreadCost    float64             `json:"entrySpreadCost,omitempty"`
+	EntrySlippageCost  float64             `json:"entrySlippageCost,omitempty"`
+	ExitSpreadCost     float64             `json:"exitSpreadCost,omitempty"`
+	ExitSlippageCost   float64             `json:"exitSlippageCost,omitempty"`
 }
 
 func (o Outcome) Validate() error {
@@ -93,6 +121,14 @@ func (o Outcome) Validate() error {
 	}
 	if !finiteNonNegative(o.EntryCosts) || !finiteNonNegative(o.ExitCosts) || !finiteNonNegative(o.TotalCosts) || math.Abs(o.TotalCosts-(o.EntryCosts+o.ExitCosts)) > 1e-9 || math.Abs(o.Costs-o.TotalCosts) > 1e-9 {
 		return fmt.Errorf("outcome costs are inconsistent")
+	}
+	if o.AccountingVersion != "" && o.AccountingVersion != EconomicAccountingVersion {
+		return fmt.Errorf("unsupported economic accounting version %q", o.AccountingVersion)
+	}
+	for name, value := range map[string]float64{"entry spread": o.EntrySpreadCost, "entry slippage": o.EntrySlippageCost, "exit spread": o.ExitSpreadCost, "exit slippage": o.ExitSlippageCost} {
+		if !finiteNonNegative(value) {
+			return fmt.Errorf("%s attribution is invalid", name)
+		}
 	}
 	direction := 1.0
 	if o.Direction == DirectionShort {
@@ -124,11 +160,21 @@ func (o Outcome) Validate() error {
 		if c.PositionID != o.PositionID || c.ThesisID != o.ThesisID || c.Sessions < 1 || c.Sessions > o.SessionsHeld || c.At.IsZero() || c.At.Location() != time.UTC || c.At.Before(o.EntryAt) || c.At.After(o.ExitAt) || !finitePositive(c.Price) || c.PriceSource == "" || c.DataQuality == "" {
 			return fmt.Errorf("checkpoint identity, session, timestamp, or price provenance is invalid")
 		}
+		if c.AccountingVersion != "" && c.AccountingVersion != EconomicAccountingVersion {
+			return fmt.Errorf("checkpoint accounting version is unsupported")
+		}
+		if !finiteNonNegative(c.CommissionCost) || !finiteNonNegative(c.SpreadCost) || !finiteNonNegative(c.SlippageCost) {
+			return fmt.Errorf("checkpoint cost attribution is invalid")
+		}
 		if seen[c.Sessions] {
 			return fmt.Errorf("duplicate checkpoint at session %d", c.Sessions)
 		}
 		expectedGross = (c.Price - o.EntryPrice) * o.Quantity * direction
-		expectedNet := expectedGross - o.TotalCosts
+		checkpointCosts := o.TotalCosts
+		if c.AccountingVersion == EconomicAccountingVersion {
+			checkpointCosts = c.CommissionCost
+		}
+		expectedNet := expectedGross - checkpointCosts
 		if math.Abs(c.GrossPnL-expectedGross) > 1e-9 || math.Abs(c.NetPnL-expectedNet) > 1e-9 || math.Abs(c.NetReturn-(expectedNet/o.ReturnDenominator)) > 1e-9 {
 			return fmt.Errorf("checkpoint arithmetic is inconsistent")
 		}
@@ -138,6 +184,17 @@ func (o Outcome) Validate() error {
 }
 
 func BuildOutcomeFromFills(position Position, binding EntryBinding, entry, exit papertrading.PaperFill, exitReason ExitReason, sessions int, path []PriceObservation, checkpoints []Checkpoint) (Outcome, error) {
+	return buildOutcomeFromFills(position, binding, entry, exit, exitReason, sessions, path, checkpoints, ExcursionCoverage{Status: "LEGACY_UNVERIFIED"}, true)
+}
+
+// BuildOutcomeFromFillsWithCoverage is the corrected PAPER runtime contract.
+// Modeled spread/slippage are embedded in fill prices and are retained only as
+// attribution; commission is the only additional economic deduction.
+func BuildOutcomeFromFillsWithCoverage(position Position, binding EntryBinding, entry, exit papertrading.PaperFill, exitReason ExitReason, sessions int, path []PriceObservation, checkpoints []Checkpoint, coverage ExcursionCoverage) (Outcome, error) {
+	return buildOutcomeFromFills(position, binding, entry, exit, exitReason, sessions, path, checkpoints, coverage, false)
+}
+
+func buildOutcomeFromFills(position Position, binding EntryBinding, entry, exit papertrading.PaperFill, exitReason ExitReason, sessions int, path []PriceObservation, checkpoints []Checkpoint, coverage ExcursionCoverage, legacyPathComplete bool) (Outcome, error) {
 	if err := position.VerifyFrozenIdentity(); err != nil {
 		return Outcome{}, err
 	}
@@ -153,8 +210,8 @@ func BuildOutcomeFromFills(position Position, binding EntryBinding, entry, exit 
 	if entry.InstrumentID != position.Thesis.InstrumentID || exit.InstrumentID != entry.InstrumentID || entry.Direction != string(position.Thesis.Direction) || exit.Direction == entry.Direction || entry.Quantity != exit.Quantity {
 		return Outcome{}, fmt.Errorf("fills do not match the exploratory position")
 	}
-	entryCosts := entry.Costs.SpreadCost + entry.Costs.SlippageCost + entry.Costs.Commission
-	exitCosts := exit.Costs.SpreadCost + exit.Costs.SlippageCost + exit.Costs.Commission
+	entryCosts := entry.Costs.Commission
+	exitCosts := exit.Costs.Commission
 	direction := 1.0
 	if position.Thesis.Direction == DirectionShort {
 		direction = -1
@@ -163,13 +220,25 @@ func BuildOutcomeFromFills(position Position, binding EntryBinding, entry, exit 
 	total := entryCosts + exitCosts
 	net := gross - total
 	denominator := entry.Price * entry.Quantity
-	outcome := Outcome{OutcomeID: "outcome_" + ThesisContentHash(position.Thesis)[7:23], Mode: ExploratoryPaperMode, TraderModelVersion: TraderModelVersion, ThesisID: position.Thesis.ThesisID, ThesisHash: position.FrozenThesisHash, PositionID: position.PositionID, EventID: position.Thesis.EventID, IssuerID: position.Thesis.IssuerID, InstrumentID: position.Thesis.InstrumentID, Direction: position.Thesis.Direction, Quantity: entry.Quantity, EntryOrderID: entry.OrderID, EntryFillID: entry.FillID, ExitOrderID: exit.OrderID, ExitFillID: exit.FillID, EntryAt: entry.FilledAt, ExitAt: exit.FilledAt, EntryPrice: entry.Price, ExitPrice: exit.Price, EntryCosts: entryCosts, ExitCosts: exitCosts, TotalCosts: total, Costs: total, GrossPnL: gross, NetPnL: net, ReturnDenominator: denominator, NetReturn: net / denominator, SessionsHeld: sessions, ExitReason: exitReason, ExcursionStatus: "UNKNOWN", PolicyVersions: binding.PolicyVersions, CostModelVersion: entry.Costs.ModelID, PricePath: append([]PriceObservation(nil), path...), ThesisTransitions: append([]Transition(nil), position.Transitions...), Checkpoints: checkpoints}
-	if len(path) > 0 {
+	outcome := Outcome{OutcomeID: "outcome_" + ThesisContentHash(position.Thesis)[7:23], Mode: ExploratoryPaperMode, TraderModelVersion: TraderModelVersion, ThesisID: position.Thesis.ThesisID, ThesisHash: position.FrozenThesisHash, PositionID: position.PositionID, EventID: position.Thesis.EventID, IssuerID: position.Thesis.IssuerID, InstrumentID: position.Thesis.InstrumentID, Direction: position.Thesis.Direction, Quantity: entry.Quantity, EntryOrderID: entry.OrderID, EntryFillID: entry.FillID, ExitOrderID: exit.OrderID, ExitFillID: exit.FillID, EntryAt: entry.FilledAt, ExitAt: exit.FilledAt, EntryPrice: entry.Price, ExitPrice: exit.Price, EntryCosts: entryCosts, ExitCosts: exitCosts, TotalCosts: total, Costs: total, GrossPnL: gross, NetPnL: net, ReturnDenominator: denominator, NetReturn: net / denominator, SessionsHeld: sessions, ExitReason: exitReason, ExcursionStatus: "UNKNOWN", PolicyVersions: binding.PolicyVersions, CostModelVersion: entry.Costs.ModelID, AccountingVersion: EconomicAccountingVersion, EntrySpreadCost: entry.Costs.SpreadCost, EntrySlippageCost: entry.Costs.SlippageCost, ExitSpreadCost: exit.Costs.SpreadCost, ExitSlippageCost: exit.Costs.SlippageCost, PricePath: append([]PriceObservation(nil), path...), ThesisTransitions: append([]Transition(nil), position.Transitions...), Checkpoints: checkpoints}
+	if legacyPathComplete && len(path) > 0 {
 		mfe, mae, err := calculateExcursions(outcome.Direction, outcome.Quantity, outcome.EntryPrice, path)
 		if err != nil {
 			return Outcome{}, err
 		}
 		outcome.MFE, outcome.MAE, outcome.ExcursionKnown, outcome.ExcursionStatus = mfe, mae, true, "COMPLETE"
+	} else if coverage.Status == "COMPLETE" {
+		if coverage.WindowStart.IsZero() || coverage.WindowEnd.IsZero() || coverage.WindowEnd.Before(coverage.WindowStart) || coverage.ExpectedObservationCount <= 0 || len(coverage.KnownGaps) > 0 || !coverage.SourceProvenance || coverage.Cadence == "" || len(path) < coverage.ExpectedObservationCount {
+			outcome.ExcursionStatus = "INCOMPLETE"
+		} else {
+			mfe, mae, err := calculateExcursions(outcome.Direction, outcome.Quantity, outcome.EntryPrice, path)
+			if err != nil {
+				return Outcome{}, err
+			}
+			outcome.MFE, outcome.MAE, outcome.ExcursionKnown, outcome.ExcursionStatus = mfe, mae, true, "COMPLETE"
+		}
+	} else if coverage.Status == "UNKNOWN" {
+		outcome.ExcursionStatus = "UNKNOWN"
 	} else {
 		outcome.ExcursionStatus = "INCOMPLETE"
 	}

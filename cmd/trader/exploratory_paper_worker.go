@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -34,9 +35,23 @@ func startExploratoryPaperReviewWorker(ctx context.Context, pool *pgxpool.Pool) 
 		CostModel: papertrading.DefaultCostModel(),
 		Now:       func() time.Time { return time.Now().UTC() },
 	}
+	health := exploratoryWorkerHealth{}
 	run := func() {
-		_ = runtime.RunEntryCycle(ctx)
-		_ = runtime.RunDueReviews(ctx)
+		now := time.Now().UTC()
+		if err := runtime.RunEntryCycle(ctx); err != nil {
+			health.entryFailure(now, err)
+			log.Printf("exploratory_paper_cycle_failed operation=entry timestamp=%s category=entry_cycle retryable=true consecutive_failures=%d error=%q", now.Format(time.RFC3339Nano), health.entryConsecutiveFailures, err)
+		} else {
+			health.entrySuccess(now)
+			log.Printf("exploratory_paper_cycle_succeeded operation=entry timestamp=%s last_success=%s consecutive_failures=0", now.Format(time.RFC3339Nano), health.lastEntrySuccess.Format(time.RFC3339Nano))
+		}
+		if err := runtime.RunDueReviews(ctx); err != nil {
+			health.reviewFailure(now, err)
+			log.Printf("exploratory_paper_cycle_failed operation=review timestamp=%s category=review_cycle retryable=true consecutive_failures=%d error=%q", now.Format(time.RFC3339Nano), health.reviewConsecutiveFailures, err)
+		} else {
+			health.reviewSuccess(now)
+			log.Printf("exploratory_paper_cycle_succeeded operation=review timestamp=%s last_success=%s consecutive_failures=0", now.Format(time.RFC3339Nano), health.lastReviewSuccess.Format(time.RFC3339Nano))
+		}
 	}
 	run()
 	ticker := time.NewTicker(time.Minute)
@@ -49,6 +64,31 @@ func startExploratoryPaperReviewWorker(ctx context.Context, pool *pgxpool.Pool) 
 			run()
 		}
 	}
+}
+
+type exploratoryWorkerHealth struct {
+	lastEntrySuccess          time.Time
+	lastReviewSuccess         time.Time
+	entryConsecutiveFailures  int
+	reviewConsecutiveFailures int
+}
+
+func (h *exploratoryWorkerHealth) entrySuccess(at time.Time) {
+	h.lastEntrySuccess = at
+	h.entryConsecutiveFailures = 0
+}
+
+func (h *exploratoryWorkerHealth) reviewSuccess(at time.Time) {
+	h.lastReviewSuccess = at
+	h.reviewConsecutiveFailures = 0
+}
+
+func (h *exploratoryWorkerHealth) entryFailure(_ time.Time, _ error) {
+	h.entryConsecutiveFailures++
+}
+
+func (h *exploratoryWorkerHealth) reviewFailure(_ time.Time, _ error) {
+	h.reviewConsecutiveFailures++
 }
 
 type postgresExploratoryReviewSource struct{ pool *pgxpool.Pool }
@@ -109,8 +149,15 @@ func (s *postgresExploratoryReviewSource) LoadReviewObservation(ctx context.Cont
 	if err != nil {
 		return exploratorypaper.ReviewObservation{}, err
 	}
-	tick := papertrading.MarketTick{TickID: fmt.Sprintf("review-%s-%d", record.Position.PositionID, review.SessionNumber), InstrumentID: record.Thesis.Thesis.InstrumentID, Bid: price, Ask: price, Last: price, AvailableQuantity: record.EntryFill.Quantity, Timestamp: observedAt, ReceivedAt: time.Now().UTC(), Session: papertrading.Session(state), Source: source}
-	return exploratorypaper.ReviewObservation{Tick: tick, Price: price, PriceSource: source, Evidence: evidence, Calendar: calendar, Ledger: ledger, Path: []exploratorypaper.PriceObservation{{ObservationID: tick.TickID, At: observedAt, Price: price, Source: source}}}, nil
+	receivedAt := time.Now().UTC()
+	tick := papertrading.MarketTick{TickID: fmt.Sprintf("review-%s-%d", record.Position.PositionID, review.SessionNumber), InstrumentID: record.Thesis.Thesis.InstrumentID, Bid: price, Ask: price, Last: price, AvailableQuantity: record.EntryFill.Quantity, Timestamp: observedAt, ReceivedAt: receivedAt, Session: papertrading.Session(state), Source: source}
+	return exploratorypaper.ReviewObservation{
+		Tick: tick, Price: price, PriceSource: source, Evidence: evidence, Calendar: calendar, Ledger: ledger,
+		QuoteMode: "MODELED_CANDLE_CLOSE", LiquidityMode: "MODELED_POSITION_CAPACITY", ActualQuoteAvailable: false,
+		ObservedAt: observedAt, ReceivedAt: receivedAt,
+		Excursion: exploratorypaper.ExcursionCoverage{Status: "INCOMPLETE", WindowStart: record.Position.EntryAt, WindowEnd: observedAt, ExpectedObservationCount: review.SessionNumber, Cadence: "one_observation_per_review", SourceProvenance: true, KnownGaps: []string{"candle-close-only-review-observation"}},
+		Path:      []exploratorypaper.PriceObservation{{ObservationID: tick.TickID, At: observedAt, Price: price, Source: source}},
+	}, nil
 }
 
 func configuredExploratoryCalendar() (exploratorypaper.SessionCalendar, error) {

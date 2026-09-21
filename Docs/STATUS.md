@@ -1,5 +1,11 @@
 # Jax Current Status
 
+PAPER-02R: **IMPLEMENTED / VALIDATION REQUIRED / HISTORICAL INCIDENT
+PRESERVED**. The corrective package is routed through
+`Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md`. It does not
+continue PAPER-02-2026-01, change its frozen identity, start FORMAL_FORWARD_PAPER,
+or authorize broker/live execution.
+
 PAPER-02A3: **ACTIVATED**. PAPER-02-2026-01 is **ACTIVE / EXPLORATORY_PAPER**
 under the frozen `paper-02-protocol-v1` contract. The pilot target is 50
 genuine prospective opportunities; the sample is `0 / 50` at the HARNESS-00

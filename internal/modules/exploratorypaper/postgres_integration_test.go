@@ -2,7 +2,7 @@ package exploratorypaper
 
 import (
 	"context"
-	"os"
+	"jax-trading-assistant/internal/testsupport"
 	"testing"
 	"time"
 
@@ -16,10 +16,7 @@ import (
 // local database. CI/review execution sets PAPER01B_DATABASE_URL after the
 // normal migration service is healthy.
 func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
-	databaseURL := os.Getenv("PAPER01B_DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("PAPER01B_DATABASE_URL is not configured")
-	}
+	databaseURL := testsupport.PostgresDSN(t, "PAPER01B_DATABASE_URL")
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
@@ -131,6 +128,20 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if err := restored.Position.Close(exitFills[0].FilledAt); err != nil {
 		t.Fatal(err)
 	}
+	exitDecision := ExitDecision{Action: ExitNow, Reason: ExitThesisInvalidated}
+	if len(restored.Reviews) == 0 {
+		t.Fatal("restored lifecycle has no review for durable exit approval")
+	}
+	review := restored.Reviews[1]
+	if err := store.PersistExitRecommendation(ctx, position.PositionID, exitDecision, review); err != nil {
+		t.Fatal(err)
+	}
+	review.ExitRecommendationID = exitRecommendationIdentity(review, exitDecision)
+	review.ExitAction = string(exitDecision.Action)
+	review.ExitReason = string(exitDecision.Reason)
+	if err := store.PersistExitApproval(ctx, position.PositionID, review, exitApproval); err != nil {
+		t.Fatal(err)
+	}
 	outcome, err := BuildOutcomeFromFills(restored.Position, binding, fills[0], exitFills[0], ExitThesisInvalidated, 2, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +151,8 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	}
 	finalStore := NewPostgresStore(pool)
 	finalRecord, err := finalStore.Get(ctx, position.PositionID)
-	if err != nil || finalRecord.Outcome == nil || finalRecord.Outcome.ExitFillID != exitFills[0].FillID || finalRecord.Position.State != StateClosed {
+	approvedReview := finalRecord.Reviews[1]
+	if err != nil || finalRecord.Outcome == nil || finalRecord.Outcome.ExitFillID != exitFills[0].FillID || finalRecord.Position.State != StateClosed || approvedReview.Status != "COMPLETED" || approvedReview.ExitApproval == nil {
 		t.Fatalf("final outcome was not restored: record=%#v err=%v", finalRecord, err)
 	}
 }

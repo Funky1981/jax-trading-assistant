@@ -364,7 +364,7 @@ func selectEvidenceLike(candidates []rankedEvidence, request BuildRequest, recor
 }
 
 func selectMemory(candidates []rankedMemory, request BuildRequest, records map[string]RetrievalRecord, selected map[string]MemoryCandidate) ([]rankedMemory, []Omission, []DeferredReference) {
-	ordered, omissions := uniqueAndRankMemory(candidates, records)
+	ordered, omissions := uniqueAndRankMemory(candidates, request.ReferenceTime, records)
 	deferred := []DeferredReference{}
 	chosen := []rankedMemory{}
 	used := int64(0)
@@ -373,6 +373,15 @@ func selectMemory(candidates []rankedMemory, request BuildRequest, records map[s
 		if !candidate.candidate.PolicyEligible {
 			markRejected(records, candidate.recordID, ReasonOmittedPolicy, candidate.candidate.PolicyReason)
 			omissions = append(omissions, Omission{Kind: MemoryItemKind, CanonicalReference: id, ReasonCode: ReasonOmittedPolicy, Reason: nonEmptyReason(candidate.candidate.PolicyReason, "memory is not policy eligible")})
+			continue
+		}
+		temporal := memoryTemporalStatus(candidate.candidate.Reference, request.ReferenceTime)
+		record := records[candidate.recordID]
+		record.TemporalStatus = temporal
+		records[candidate.recordID] = record
+		if temporal == TemporalFuture {
+			markRejected(records, candidate.recordID, ReasonOmittedFuture, "memory was created after the explicit reference time")
+			omissions = append(omissions, Omission{Kind: MemoryItemKind, CanonicalReference: id, ReasonCode: ReasonOmittedFuture, Reason: "memory was created after the explicit reference time"})
 			continue
 		}
 		if request.Policy.ExcludeRegimeMismatchMemory && candidate.candidate.RegimeStatus == RegimeMismatch {
@@ -455,13 +464,15 @@ func uniqueAndRankEvidence(candidates []rankedEvidence, records map[string]Retri
 	return ordered, omissions
 }
 
-func uniqueAndRankMemory(candidates []rankedMemory, records map[string]RetrievalRecord) ([]rankedMemory, []Omission) {
+func uniqueAndRankMemory(candidates []rankedMemory, referenceTime time.Time, records map[string]RetrievalRecord) ([]rankedMemory, []Omission) {
 	best := map[string]rankedMemory{}
 	omissions := []Omission{}
 	for _, candidate := range candidates {
 		key := candidate.candidate.Reference.MemoryID
 		if existing, ok := best[key]; ok {
-			if memoryLess(candidate, existing) {
+			candidateFuture := candidate.candidate.Reference.CreatedAt.After(referenceTime)
+			existingFuture := existing.candidate.Reference.CreatedAt.After(referenceTime)
+			if (existingFuture && !candidateFuture) || (!existingFuture && !candidateFuture && memoryLess(candidate, existing)) {
 				markRejected(records, existing.recordID, ReasonOmittedDuplicate, "duplicate memory reference was superseded")
 				omissions = append(omissions, Omission{Kind: MemoryItemKind, CanonicalReference: key, ReasonCode: ReasonOmittedDuplicate, Reason: "duplicate memory reference was superseded"})
 				best[key] = candidate
@@ -505,6 +516,13 @@ func memoryLess(left, right rankedMemory) bool {
 		return left.candidate.EstimatedUnits < right.candidate.EstimatedUnits
 	}
 	return left.candidate.Reference.MemoryID < right.candidate.Reference.MemoryID
+}
+
+func memoryTemporalStatus(reference harnesscontracts.MemoryReference, asOf time.Time) string {
+	if reference.CreatedAt.After(asOf) {
+		return TemporalFuture
+	}
+	return TemporalFresh
 }
 
 func sourceKey(candidate EvidenceCandidate) string {

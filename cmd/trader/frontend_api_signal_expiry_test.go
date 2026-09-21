@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"jax-trading-assistant/internal/testsupport"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -18,21 +18,18 @@ import (
 func testFrontendAPIPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
-	dsn := strings.TrimSpace(os.Getenv("TEST_DATABASE_URL"))
-	if dsn == "" {
-		dsn = "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"
-	}
+	dsn := testsupport.PostgresDSN(t, "TEST_DATABASE_URL")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
-		t.Skipf("skip DB-backed frontend API test: %v", err)
+		t.Fatal("disposable test database unavailable")
 	}
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		t.Skipf("skip DB-backed frontend API test: %v", err)
+		t.Fatal("disposable test database unavailable")
 	}
 
 	t.Cleanup(pool.Close)

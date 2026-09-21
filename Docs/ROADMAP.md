@@ -80,6 +80,7 @@ not promote a strategy or prove a trading edge.
 | PAPER-02A2 | **IMPLEMENTED / EXTERNAL CONFIGURATION REQUIRED** |
 | PAPER-02A3 | **ACTIVATED / EXTERNALLY REVIEWED** |
 | PAPER-02 | **ACTIVE / EXPLORATORY_PAPER / FROZEN** |
+| PAPER-02R | **IMPLEMENTED / VALIDATION REQUIRED / INCIDENT PRESERVED** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -131,6 +132,12 @@ The canonical protocol remains
 `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`; the activation and
 current runtime state are recorded in the durable handover and current status
 documents.
+
+PAPER-02R is the corrective incident-preservation and paper-runtime-readiness
+package. It preserves the frozen PAPER-02 history, corrects durable exit
+approval, economic accounting, ledger reconciliation, data-quality semantics,
+and required PostgreSQL validation. It has prospective engineering effect only;
+it does not continue the pilot or create a demonstrated-edge claim.
 
 ## Exploratory learning programme
 

@@ -51,16 +51,22 @@ type EntrySource interface {
 }
 
 type ReviewObservation struct {
-	Tick              papertrading.MarketTick
-	Price             float64
-	PriceSource       string
-	Evidence          []RelevantEvidence
-	Path              []PriceObservation
-	Calendar          SessionCalendar
-	Ledger            papertrading.PaperAccount
-	ThesisInvalidated bool
-	RiskKill          bool
-	ManualOperator    bool
+	Tick                 papertrading.MarketTick
+	Price                float64
+	PriceSource          string
+	Evidence             []RelevantEvidence
+	Path                 []PriceObservation
+	Calendar             SessionCalendar
+	Ledger               papertrading.PaperAccount
+	Excursion            ExcursionCoverage
+	QuoteMode            string
+	LiquidityMode        string
+	ActualQuoteAvailable bool
+	ObservedAt           time.Time
+	ReceivedAt           time.Time
+	ThesisInvalidated    bool
+	RiskKill             bool
+	ManualOperator       bool
 }
 
 type ReviewSource interface {
@@ -81,6 +87,8 @@ type RuntimeStore interface {
 	ApplyEvidence(context.Context, string, RelevantEvidence, time.Time, string) (Position, error)
 	PersistCheckpoint(context.Context, Checkpoint) error
 	PersistExitRecommendation(context.Context, string, ExitDecision, Review) error
+	PersistExitApproval(context.Context, string, Review, ApprovalSnapshot) error
+	PersistExitRejection(context.Context, string, Review, ApprovalSnapshot) error
 	PersistOutcome(context.Context, string, ExitSnapshot, Outcome) error
 }
 
@@ -217,6 +225,9 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 	if err != nil {
 		return err
 	}
+	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: r.Venue.Snapshot(), Account: account}, entry.Now.UTC()); result.Status != papertrading.ReconciliationClean {
+		return fmt.Errorf("%w: entry ledger reconciliation failed: %v", ErrFailedClosed, result.ReasonCodes)
+	}
 	position, err := OpenApprovedPosition(entry.PositionID, entry.Thesis, EntryBindingFrom(entry), fills[0].FilledAt, fills[0].Price)
 	if err != nil {
 		return err
@@ -289,14 +300,14 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 			return err
 		}
 	}
-	entryCosts := item.Lifecycle.EntryFill.Costs.SpreadCost + item.Lifecycle.EntryFill.Costs.SlippageCost + item.Lifecycle.EntryFill.Costs.Commission
+	entryCosts := item.Lifecycle.EntryFill.Costs.Commission
 	direction := 1.0
 	if position.Thesis.Direction == DirectionShort {
 		direction = -1
 	}
 	gross := (observation.Price - position.EntryPrice) * item.Lifecycle.EntryFill.Quantity * direction
 	denominator := position.EntryPrice * item.Lifecycle.EntryFill.Quantity
-	checkpoint := Checkpoint{PositionID: position.PositionID, ThesisID: position.Thesis.ThesisID, Sessions: item.Review.SessionNumber, At: observation.Tick.Timestamp, Price: observation.Price, PriceSource: observation.PriceSource, EvidenceReviewID: item.Review.ReviewID, GrossPnL: gross, NetPnL: gross - entryCosts, NetReturn: (gross - entryCosts) / denominator, DataQuality: "COMPLETE"}
+	checkpoint := Checkpoint{PositionID: position.PositionID, ThesisID: position.Thesis.ThesisID, Sessions: item.Review.SessionNumber, At: observation.Tick.Timestamp, Price: observation.Price, PriceSource: observation.PriceSource, EvidenceReviewID: item.Review.ReviewID, GrossPnL: gross, NetPnL: gross - entryCosts, NetReturn: (gross - entryCosts) / denominator, DataQuality: "COMPLETE", CommissionCost: entryCosts, SpreadCost: item.Lifecycle.EntryFill.Costs.SpreadCost, SlippageCost: item.Lifecycle.EntryFill.Costs.SlippageCost, AccountingVersion: EconomicAccountingVersion, QuoteMode: observation.QuoteMode, LiquidityMode: observation.LiquidityMode, ActualQuoteAvailable: observation.ActualQuoteAvailable, ObservedAt: observation.ObservedAt, ReceivedAt: observation.ReceivedAt}
 	if err := r.Store.PersistCheckpoint(ctx, checkpoint); err != nil {
 		return err
 	}
@@ -304,14 +315,38 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if err != nil || decision.Action == NoExit {
 		return err
 	}
-	if r.ExitApprover == nil {
-		return ErrHumanApprovalPending
+	if item.Review.ExitApproval == nil {
+		if err := r.Store.PersistExitRecommendation(ctx, item.Lifecycle.Position.PositionID, decision, item.Review); err != nil {
+			return err
+		}
+		if r.ExitApprover == nil {
+			return ErrHumanApprovalPending
+		}
+		approval, approvalErr := r.ExitApprover.ApproveExit(ctx, item.Lifecycle, decision, observation)
+		if approvalErr != nil {
+			return ErrHumanApprovalPending
+		}
+		if approval.Workflow.State == workflow.StateHumanRejected {
+			item.Review.ExitRecommendationID = exitRecommendationIdentity(item.Review, decision)
+			item.Review.ExitAction = string(decision.Action)
+			item.Review.ExitReason = string(decision.Reason)
+			if err := r.Store.PersistExitRejection(ctx, item.Lifecycle.Position.PositionID, item.Review, approval); err != nil {
+				return err
+			}
+			return nil
+		}
+		if err := approval.Workflow.Validate(); err != nil || approval.Workflow.State != workflow.StatePaperIntentCreated {
+			return fmt.Errorf("%w: exit approval is not a human-approved paper intent", ErrFailedClosed)
+		}
+		item.Review.ExitRecommendationID = exitRecommendationIdentity(item.Review, decision)
+		item.Review.ExitAction = string(decision.Action)
+		item.Review.ExitReason = string(decision.Reason)
+		if err := r.Store.PersistExitApproval(ctx, item.Lifecycle.Position.PositionID, item.Review, approval); err != nil {
+			return err
+		}
+		item.Review.ExitApproval = &approval
 	}
-	approval, err := r.ExitApprover.ApproveExit(ctx, item.Lifecycle, decision, observation)
-	if err != nil {
-		_ = r.Store.PersistExitRecommendation(ctx, item.Lifecycle.Position.PositionID, decision, item.Review)
-		return ErrHumanApprovalPending
-	}
+	approval := *item.Review.ExitApproval
 	if err := approval.Workflow.Validate(); err != nil || approval.Workflow.State != workflow.StatePaperIntentCreated {
 		return fmt.Errorf("%w: exit approval is not a human-approved paper intent", ErrFailedClosed)
 	}
@@ -339,7 +374,17 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if err != nil {
 		return err
 	}
-	outcome, err := BuildOutcomeFromFills(position, item.Lifecycle.Binding, item.Lifecycle.EntryFill, fills[0], decision.Reason, item.Review.SessionNumber, observation.Path, item.Lifecycle.Checkpoints)
+	reconciliationAt := observation.ReceivedAt
+	if reconciliationAt.IsZero() {
+		reconciliationAt = observation.Tick.ReceivedAt
+	}
+	if reconciliationAt.IsZero() {
+		reconciliationAt = observation.Tick.Timestamp
+	}
+	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: r.Venue.Snapshot(), Account: account}, reconciliationAt.UTC()); result.Status != papertrading.ReconciliationClean {
+		return fmt.Errorf("%w: exit ledger reconciliation failed: %v", ErrFailedClosed, result.ReasonCodes)
+	}
+	outcome, err := BuildOutcomeFromFillsWithCoverage(position, item.Lifecycle.Binding, item.Lifecycle.EntryFill, fills[0], decision.Reason, item.Review.SessionNumber, observation.Path, item.Lifecycle.Checkpoints, observation.Excursion)
 	if err != nil {
 		return err
 	}

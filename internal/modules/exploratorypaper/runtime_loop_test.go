@@ -27,15 +27,20 @@ func (s availableReviewSource) LoadReviewObservation(context.Context, LifecycleR
 }
 
 type runtimeStore struct {
-	record      LifecycleRecord
-	found       bool
-	processed   int
-	scheduled   int
-	due         []ReviewRecord
-	missing     int
-	checkpoints int
-	ledger      papertrading.PaperAccount
-	outcome     *Outcome
+	record            LifecycleRecord
+	found             bool
+	processed         int
+	scheduled         int
+	due               []ReviewRecord
+	missing           int
+	checkpoints       int
+	recommended       int
+	approved          int
+	rejected          int
+	checkpointIDs     map[int]bool
+	recommendationIDs map[string]bool
+	ledger            papertrading.PaperAccount
+	outcome           *Outcome
 }
 
 func (s *runtimeStore) FindByCandidate(_ context.Context, candidateID string) (LifecycleRecord, bool, error) {
@@ -73,10 +78,32 @@ func (s *runtimeStore) ApplyEvidence(context.Context, string, RelevantEvidence, 
 	return s.record.Position, nil
 }
 func (s *runtimeStore) PersistCheckpoint(context.Context, Checkpoint) error {
-	s.checkpoints++
+	if s.checkpointIDs == nil {
+		s.checkpointIDs = map[int]bool{}
+	}
+	if !s.checkpointIDs[1] {
+		s.checkpointIDs[1] = true
+		s.checkpoints++
+	}
 	return nil
 }
-func (s *runtimeStore) PersistExitRecommendation(context.Context, string, ExitDecision, Review) error {
+
+func (s *runtimeStore) PersistExitRecommendation(_ context.Context, _ string, _ ExitDecision, review Review) error {
+	if s.recommendationIDs == nil {
+		s.recommendationIDs = map[string]bool{}
+	}
+	if !s.recommendationIDs[review.ReviewID] {
+		s.recommendationIDs[review.ReviewID] = true
+		s.recommended++
+	}
+	return nil
+}
+func (s *runtimeStore) PersistExitApproval(context.Context, string, Review, ApprovalSnapshot) error {
+	s.approved++
+	return nil
+}
+func (s *runtimeStore) PersistExitRejection(context.Context, string, Review, ApprovalSnapshot) error {
+	s.rejected++
 	return nil
 }
 func (s *runtimeStore) PersistOutcome(context.Context, string, ExitSnapshot, Outcome) error {
@@ -196,10 +223,18 @@ func TestRuntimeLoopProcessesDueReviewAndPreservesMissingData(t *testing.T) {
 	exitWorkflow, exitIntent := approvedIntent(t, "review-exit", "SHORT", exitTime)
 	observation := ReviewObservation{Tick: papertrading.MarketTick{TickID: "review-tick", InstrumentID: thesis.InstrumentID, Bid: 94, Ask: 95, Last: 94, AvailableQuantity: 10, Timestamp: exitTime, ReceivedAt: exitTime, Session: papertrading.SessionOpen, Source: "canonical-market"}, Price: 94, PriceSource: "canonical-market", Evidence: []RelevantEvidence{{Reference: EvidenceReference{EvidenceID: "runtime-invalidation", SourceID: "issuer-source", SourceURL: "https://example.test/invalidation", Quality: "high", ObservedAt: exitTime}, IssuerID: thesis.IssuerID, InstrumentID: thesis.InstrumentID, Signal: EvidenceInvalidates, Reason: "issuer correction invalidates the mechanism"}}, Calendar: calendar, Ledger: store.ledger, Path: []PriceObservation{{ObservationID: "review-path", At: exitTime, Price: 94, Source: "canonical-market"}}, ThesisInvalidated: true}
 	runtime := &Runtime{Mode: "PAPER", Store: store, Entries: runtimeEntrySource{}, Reviews: availableReviewSource{observation: observation}, ExitApprover: runtimeExitApprover{approval: ApprovalSnapshot{Workflow: exitWorkflow, PaperIntent: exitIntent}}, Venue: venue, CostModel: costs, Now: func() time.Time { return now.Add(3 * time.Hour) }}
+	noApprovalRuntime := *runtime
+	noApprovalRuntime.ExitApprover = nil
+	if err := noApprovalRuntime.RunDueReviews(context.Background()); err != nil {
+		t.Fatalf("recommendation without approver returned unexpected error: %v", err)
+	}
+	if store.recommended != 1 || store.outcome != nil {
+		t.Fatalf("exit recommendation was not durable before approval: recommended=%d outcome=%#v", store.recommended, store.outcome)
+	}
 	if err := runtime.RunDueReviews(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if store.checkpoints != 1 || store.missing != 0 || store.outcome == nil || store.outcome.ExitReason != ExitThesisInvalidated {
+	if store.checkpoints != 1 || store.missing != 0 || store.recommended != 1 || store.approved != 1 || store.outcome == nil || store.outcome.ExitReason != ExitThesisInvalidated || store.outcome.ExcursionStatus != "INCOMPLETE" || store.outcome.ExcursionKnown {
 		t.Fatalf("due review was not processed through approved exit: checkpoints=%d missing=%d outcome=%#v", store.checkpoints, store.missing, store.outcome)
 	}
 	store.due = []ReviewRecord{{Lifecycle: store.record, Review: Review{ReviewID: "review-2", PositionID: entry.PositionID, SessionNumber: 2, ScheduledAt: now.Add(time.Hour), Status: "PENDING"}}}

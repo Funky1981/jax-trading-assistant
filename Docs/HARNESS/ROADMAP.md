@@ -175,6 +175,12 @@ versioned store, isolated PostgreSQL migration, deterministic compaction,
 resume bundle, failure/retry state, and ContextBuilder resume seam described
 above. HARNESS-04 remains unimplemented and unauthorized.
 
+PAPER-02R includes only narrow corrective validation at this boundary: the
+PostgreSQL same-key checkpoint/compaction race is serialized by the task row,
+replay tests assert final durable identities and uniqueness, and as-of context
+assembly rejects future task state and omits future memory. This does not start
+HARNESS-04 or authorize integration with PAPER-02/JaxMind.
+
 ## HARNESS-04 — Memory architecture
 
 **Purpose:** Integrate relevant Experience/Judgment lessons without treating

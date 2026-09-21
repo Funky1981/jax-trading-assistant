@@ -207,16 +207,19 @@ func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 		replayer: eventdecisions.Replayer{Store: eventdecisions.NewStore(pool), Evaluator: eventdecisions.Evaluator{Ruleset: rules, Catalog: catalog}, Resolver: &resolver, Origin: eventdecisions.DecisionOriginLive},
 		now:      func() time.Time { return time.Now().UTC() },
 	}
+	health := worldMonitorPullHealth{}
 	ticker := time.NewTicker(config.Interval)
 	defer ticker.Stop()
 	for {
 		result, err := worker.cycle(ctx)
 		if err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Printf("world_monitor_pull cycle failed endpoint_identity=%q error=%q", config.EndpointIdentity, err)
+				health.failure(nowUTC(worker.now), err)
+				log.Printf("world_monitor_pull cycle failed endpoint_identity=%q error=%q consecutive_failures=%d last_success=%s", config.EndpointIdentity, err, health.ConsecutiveFailures, health.LastSuccess.Format(time.RFC3339Nano))
 			}
 		} else {
-			log.Printf("world_monitor_pull cycle committed cursor=%d fetched=%d ingested=%d duplicates=%d decisions_created=%d decisions_reused=%d intelligence_clusters=%d intelligence_unknowns=%d", result.Cursor, result.Fetched, result.Ingested, result.Duplicates, result.DecisionsCreated, result.DecisionsReused, result.IntelligenceClusters, result.IntelligenceUnknowns)
+			health.success(nowUTC(worker.now), result.Cursor)
+			log.Printf("world_monitor_pull cycle committed cursor=%d fetched=%d ingested=%d duplicates=%d decisions_created=%d decisions_reused=%d intelligence_clusters=%d intelligence_unknowns=%d consecutive_failures=0 last_success=%s", result.Cursor, result.Fetched, result.Ingested, result.Duplicates, result.DecisionsCreated, result.DecisionsReused, result.IntelligenceClusters, result.IntelligenceUnknowns, health.LastSuccess.Format(time.RFC3339Nano))
 		}
 		select {
 		case <-ctx.Done():
@@ -224,6 +227,36 @@ func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 		case <-ticker.C:
 		}
 	}
+}
+
+type worldMonitorPullHealth struct {
+	LastSuccess         time.Time
+	LastFailure         time.Time
+	LastCursor          int64
+	LastError           string
+	ConsecutiveFailures int
+}
+
+func (h *worldMonitorPullHealth) success(at time.Time, cursor int64) {
+	h.LastSuccess = at
+	h.LastCursor = cursor
+	h.LastError = ""
+	h.ConsecutiveFailures = 0
+}
+
+func (h *worldMonitorPullHealth) failure(at time.Time, err error) {
+	h.LastFailure = at
+	h.ConsecutiveFailures++
+	if err != nil {
+		h.LastError = err.Error()
+	}
+}
+
+func nowUTC(now func() time.Time) time.Time {
+	if now == nil {
+		return time.Now().UTC()
+	}
+	return now().UTC()
 }
 
 func (w *worldMonitorPullWorker) cycle(ctx context.Context) (worldMonitorPullResult, error) {

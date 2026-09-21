@@ -1,5 +1,12 @@
 # Current Build Package
 
+PAPER-02R: **IMPLEMENTED / VALIDATION REQUIRED / INCIDENT PRESERVATION &
+CORRECTED PAPER-RUNTIME READINESS**. Read
+`Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md` for the
+active corrective package. The exact pre-existing reviewed PostgreSQL/test
+files are incorporated as input and are not discarded merely to obtain a clean
+worktree.
+
 HARNESS-03: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / CHECKPOINT, RESUME & COMPACTION**.
 The active PAPER-02-2026-01 exploratory pilot is frozen and remains unchanged.
 No model call, JaxMind integration, evaluator execution, task-state
@@ -30,11 +37,18 @@ Read in this order:
 11. `Docs/BUILD/HARNESS-02-RETRIEVAL-CONTEXT-BUILDER.md`
 12. `Docs/BUILD/HARNESS-03-CHECKPOINT-RESUME-COMPACTION.md`
 
-The implementation is limited to `internal/modules/harnessstate`, its
-isolated PostgreSQL migration, deterministic offline tests, and canonical
-documentation updates. Stop after HARNESS-03; HARNESS-04 requires a separate
-reviewed authorization. The package must not alter the active PAPER-02 runtime
-or behavior.
+HARNESS-03 remains a separately reviewed capability reference. Its runtime is
+not integrated with JaxMind or PAPER-02, and HARNESS-04 remains unimplemented
+and unauthorized.
+
+## PAPER-02R — incident preservation and corrected runtime readiness
+
+The current corrective package is documented in
+`Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md`. It includes
+the exact previously reviewed dirty test/integration work as pre-existing
+input, validates and completes it, and preserves the frozen PAPER-02 incident
+boundary. It does not continue the pilot, start HARNESS-04, enable broker
+execution, or enable live trading.
 
 ## PAPER-01 / PAPER-02 — event-driven exploratory paper-trader reference
 
@@ -62,3 +76,7 @@ PAPER-02 work. The implementation is documented in
 `Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md`; no formal forward-paper
 run, Phase 13 work, broker execution, or live trading is authorized by this
 package.
+
+The historical incident and preservation boundary are documented in
+`Docs/PAPER_TRADING/PAPER-02-2026-01-INCIDENT-REVIEW.md`. PAPER-02R does not
+rewrite the frozen protocol or historical sample.

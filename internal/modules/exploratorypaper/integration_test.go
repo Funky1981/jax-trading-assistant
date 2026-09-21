@@ -2,6 +2,7 @@ package exploratorypaper
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
@@ -105,6 +106,24 @@ func TestEventToApprovedPaperEntryAdverseEvidenceAndPaperExit(t *testing.T) {
 	}
 	if err := outcome.Validate(); err != nil {
 		t.Fatal(err)
+	}
+	if outcome.AccountingVersion != EconomicAccountingVersion || outcome.EntryCosts != fills[0].Costs.Commission || outcome.ExitCosts != exitFills[0].Costs.Commission {
+		t.Fatalf("economic accounting attributed embedded execution costs twice: %#v", outcome)
+	}
+	if got, want := account.Cash-10000, outcome.NetPnL; math.Abs(got-want) > 1e-9 {
+		t.Fatalf("ledger cash delta=%v, outcome net P&L=%v", got, want)
+	}
+	corrected, err := BuildOutcomeFromFillsWithCoverage(position, binding, fills[0], exitFills[0], exitDecision.Reason, 2, path, nil, ExcursionCoverage{Status: "COMPLETE", WindowStart: fills[0].FilledAt, WindowEnd: exitFills[0].FilledAt, ExpectedObservationCount: len(path), Cadence: "every-fill", SourceProvenance: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !corrected.ExcursionKnown || corrected.ExcursionStatus != "COMPLETE" {
+		t.Fatalf("complete coverage did not produce known excursions: %#v", corrected)
+	}
+	checkpointGross := (101.0 - fills[0].Price) * fills[0].Quantity
+	corrected.Checkpoints = []Checkpoint{{PositionID: position.PositionID, ThesisID: position.Thesis.ThesisID, Sessions: 1, At: fills[0].FilledAt.Add(time.Hour), Price: 101, PriceSource: "paper-tick", EvidenceReviewID: "checkpoint-1", GrossPnL: checkpointGross, NetPnL: checkpointGross - fills[0].Costs.Commission, NetReturn: (checkpointGross - fills[0].Costs.Commission) / (fills[0].Price * fills[0].Quantity), DataQuality: "COMPLETE", CommissionCost: fills[0].Costs.Commission, SpreadCost: fills[0].Costs.SpreadCost, SlippageCost: fills[0].Costs.SlippageCost, AccountingVersion: EconomicAccountingVersion}}
+	if err := corrected.Validate(); err != nil {
+		t.Fatalf("checkpoint accounting did not validate independently of future exit costs: %v", err)
 	}
 }
 

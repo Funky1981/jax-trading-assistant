@@ -479,7 +479,7 @@ func TestHarness03BehaviouralGates(t *testing.T) {
 		budget := fixtureBudget()
 		policy := contextbuilder.DefaultBuildPolicy()
 		policy.Model = harnesscontracts.ModelReference{Provider: "fixture-provider", Model: "fixture-model", Version: "v1"}
-		request, err := bundle.BuildRequest(policy, budget, fixtureTime, fixtureEvidenceRetriever{}, fixtureCounterRetriever{}, nil)
+		request, err := bundle.BuildRequest(policy, budget, bundle.State.State.UpdatedAt, fixtureEvidenceRetriever{}, fixtureCounterRetriever{}, nil)
 		if err != nil || request.CheckpointReference == nil || len(request.ToolReferences) == 0 {
 			t.Fatalf("BuildRequest seam failed: %+v %v", request, err)
 		}
@@ -491,7 +491,7 @@ func TestHarness03BehaviouralGates(t *testing.T) {
 		}
 		policy := contextbuilder.DefaultBuildPolicy()
 		policy.Model = harnesscontracts.ModelReference{Provider: "fixture-provider", Model: "fixture-model", Version: "v1"}
-		request, err := bundle.BuildRequest(policy, fixtureBudget(), fixtureTime, fixtureEvidenceRetriever{}, fixtureCounterRetriever{}, nil)
+		request, err := bundle.BuildRequest(policy, fixtureBudget(), bundle.State.State.UpdatedAt, fixtureEvidenceRetriever{}, fixtureCounterRetriever{}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

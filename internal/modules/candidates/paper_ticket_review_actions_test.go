@@ -3,7 +3,7 @@ package candidates
 import (
 	"context"
 	"encoding/json"
-	"os"
+	"jax-trading-assistant/internal/testsupport"
 	"strings"
 	"testing"
 	"time"
@@ -139,25 +139,22 @@ func TestPaperTicketReviewAddNoteDoesNotExposeOrCreateExecutionControls(t *testi
 func testCandidatePaperTicketPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
-	dsn := strings.TrimSpace(os.Getenv("TEST_DATABASE_URL"))
-	if dsn == "" {
-		dsn = "postgresql://jax:jax@localhost:5433/jax?sslmode=disable"
-	}
+	dsn := testsupport.PostgresDSN(t, "TEST_DATABASE_URL")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
-		t.Skipf("skip DB-backed paper ticket test: %v", err)
+		t.Fatalf("required disposable DB-backed paper ticket test: %v", err)
 	}
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		t.Skipf("skip DB-backed paper ticket test: %v", err)
+		t.Fatalf("required disposable DB-backed paper ticket test: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `ALTER TABLE candidate_paper_tickets ADD COLUMN IF NOT EXISTS review_notes TEXT`); err != nil {
 		pool.Close()
-		t.Skipf("skip DB-backed paper ticket test; schema not ready: %v", err)
+		t.Fatalf("required disposable DB-backed paper ticket test; schema not ready: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		CREATE OR REPLACE FUNCTION append_review_note(existing TEXT, new_note TEXT)
@@ -173,7 +170,7 @@ func testCandidatePaperTicketPool(t *testing.T) *pgxpool.Pool {
 		$$
 	`); err != nil {
 		pool.Close()
-		t.Skipf("skip DB-backed paper ticket test; note helper not ready: %v", err)
+		t.Fatalf("required disposable DB-backed paper ticket test; note helper not ready: %v", err)
 	}
 
 	t.Cleanup(pool.Close)

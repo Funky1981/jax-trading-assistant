@@ -507,6 +507,28 @@ func TestTemporalMemoryAndDeterminism(t *testing.T) {
 			t.Fatal("regime-mismatched memory was selected")
 		}
 	})
+	t.Run("future memory is omitted at the explicit reference time", func(t *testing.T) {
+		request, _, _, memory := cbBaseRequest(t)
+		memory.result.Candidates[0].Reference.CreatedAt = cbReferenceTime.Add(time.Minute)
+		result := buildCB(t, request)
+		if len(result.Package.SelectedMemory) != 0 || !containsString(result.Report.OmissionReferences(), "memory-1") {
+			t.Fatalf("future memory was selected or not audited: %#v", result.Report)
+		}
+		foundFuture := false
+		for _, record := range result.Report.RetrievalRecords {
+			if record.MemoryReference != nil && record.MemoryReference.MemoryID == "memory-1" && record.ReasonCode == ReasonOmittedFuture && record.TemporalStatus == TemporalFuture {
+				foundFuture = true
+			}
+		}
+		if !foundFuture {
+			t.Fatal("future memory omission did not retain temporal audit state")
+		}
+	})
+	t.Run("future task state is rejected at the explicit reference time", func(t *testing.T) {
+		request, _, _, _ := cbBaseRequest(t)
+		request.TaskState.UpdatedAt = cbReferenceTime.Add(time.Minute)
+		requireBuildError(t, request)
+	})
 	t.Run("memory not searched is reported", func(t *testing.T) {
 		request, _, _, _ := cbBaseRequest(t)
 		request.MemoryRetriever = nil

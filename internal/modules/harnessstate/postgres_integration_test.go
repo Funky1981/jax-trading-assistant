@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"jax-trading-assistant/internal/testsupport"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,10 +16,7 @@ import (
 )
 
 func TestPostgresStoreRoundTripAndConcurrency(t *testing.T) {
-	dsn := os.Getenv("HARNESS_POSTGRES_DSN")
-	if dsn == "" {
-		t.Skip("HARNESS_POSTGRES_DSN is not configured")
-	}
+	dsn := testsupport.PostgresDSN(t, "HARNESS_POSTGRES_DSN")
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatal(err)

@@ -43,17 +43,19 @@ type ExitSnapshot struct {
 }
 
 type Review struct {
-	ReviewID               string     `json:"reviewId"`
-	PositionID             string     `json:"positionId"`
-	SessionNumber          int        `json:"sessionNumber"`
-	ScheduledAt            time.Time  `json:"scheduledAt"`
-	Status                 string     `json:"status"`
-	EvidenceReview         string     `json:"evidenceReviewId,omitempty"`
-	Reason                 string     `json:"reason,omitempty"`
-	ExitAction             string     `json:"exitAction,omitempty"`
-	ExitReason             string     `json:"exitReason,omitempty"`
-	ExitApprovalWorkflowID string     `json:"exitApprovalWorkflowId,omitempty"`
-	ProcessedAt            *time.Time `json:"processedAt,omitempty"`
+	ReviewID               string            `json:"reviewId"`
+	PositionID             string            `json:"positionId"`
+	SessionNumber          int               `json:"sessionNumber"`
+	ScheduledAt            time.Time         `json:"scheduledAt"`
+	Status                 string            `json:"status"`
+	EvidenceReview         string            `json:"evidenceReviewId,omitempty"`
+	Reason                 string            `json:"reason,omitempty"`
+	ExitAction             string            `json:"exitAction,omitempty"`
+	ExitReason             string            `json:"exitReason,omitempty"`
+	ExitApprovalWorkflowID string            `json:"exitApprovalWorkflowId,omitempty"`
+	ExitRecommendationID   string            `json:"exitRecommendationId,omitempty"`
+	ExitApproval           *ApprovalSnapshot `json:"exitApproval,omitempty"`
+	ProcessedAt            *time.Time        `json:"processedAt,omitempty"`
 }
 
 type ReviewRecord struct {
@@ -510,7 +512,7 @@ func (s *PostgresStore) ListDueReviews(ctx context.Context, now time.Time) ([]Re
 	if now.IsZero() || now.Location() != time.UTC {
 		return nil, fmt.Errorf("due-review time must be UTC")
 	}
-	rows, err := s.pool.Query(ctx, `SELECT position_id,session_number FROM exploratory_paper_reviews WHERE status='PENDING' AND scheduled_at <= $1 ORDER BY scheduled_at,position_id FOR UPDATE SKIP LOCKED`, now)
+	rows, err := s.pool.Query(ctx, `SELECT r.position_id,r.session_number FROM exploratory_paper_reviews r JOIN exploratory_paper_lifecycles l ON l.position_id=r.position_id WHERE l.state <> 'CLOSED' AND r.status IN ('PENDING','EXIT_RECOMMENDED','EXIT_APPROVED') AND r.scheduled_at <= $1 ORDER BY r.scheduled_at,r.position_id FOR UPDATE OF r SKIP LOCKED`, now)
 	if err != nil {
 		return nil, err
 	}
@@ -550,7 +552,13 @@ func (s *PostgresStore) PersistExitRecommendation(ctx context.Context, positionI
 		return failClosed("load exit recommendation lifecycle", err)
 	}
 	record.Position.OperationalState = StateExitRecommended
-	payload, err := json.Marshal(Review{ReviewID: review.ReviewID, PositionID: positionID, SessionNumber: review.SessionNumber, ScheduledAt: review.ScheduledAt, Status: "EXIT_RECOMMENDED", ExitAction: string(decision.Action), ExitReason: string(decision.Reason), ProcessedAt: review.ProcessedAt})
+	review.Status = "EXIT_RECOMMENDED"
+	review.ExitAction = string(decision.Action)
+	review.ExitReason = string(decision.Reason)
+	review.ExitRecommendationID = exitRecommendationIdentity(review, decision)
+	now := s.now().UTC()
+	review.ProcessedAt = &now
+	payload, err := json.Marshal(review)
 	if err != nil {
 		return err
 	}
@@ -558,13 +566,66 @@ func (s *PostgresStore) PersistExitRecommendation(ctx context.Context, positionI
 	if err != nil {
 		return err
 	}
-	_, err = s.pool.Exec(ctx, `UPDATE exploratory_paper_lifecycles SET position_payload=$2,operational_state=$3,updated_at=$4 WHERE position_id=$1`, positionID, positionPayload, string(StateExitRecommended), s.now().UTC())
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return failClosed("begin exit recommendation", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	_, err = tx.Exec(ctx, `UPDATE exploratory_paper_lifecycles SET position_payload=$2,operational_state=$3,next_review_at=NULL,updated_at=$4 WHERE position_id=$1`, positionID, positionPayload, string(StateExitRecommended), now)
 	if err != nil {
 		return failClosed("persist exit recommendation position", err)
 	}
-	_, err = s.pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='EXIT_RECOMMENDED',payload=$3,processed_at=$2 WHERE review_id=$1 AND position_id=$4 AND status IN ('PENDING','COMPLETED')`, review.ReviewID, s.now().UTC(), payload, positionID)
+	_, err = tx.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='EXIT_RECOMMENDED',payload=$3,processed_at=$2 WHERE review_id=$1 AND position_id=$4 AND status IN ('PENDING','COMPLETED','EXIT_RECOMMENDED')`, review.ReviewID, now, payload, positionID)
 	if err != nil {
 		return failClosed("persist exit recommendation review", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return failClosed("commit exit recommendation", err)
+	}
+	return nil
+}
+
+func exitRecommendationIdentity(review Review, decision ExitDecision) string {
+	digest := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|%s", review.PositionID, review.ReviewID, decision.Action, decision.Reason)))
+	return "exitrec_" + hex.EncodeToString(digest[:])
+}
+
+func (s *PostgresStore) PersistExitApproval(ctx context.Context, positionID string, review Review, approval ApprovalSnapshot) error {
+	if positionID == "" || review.PositionID != positionID || approval.Workflow.State != workflow.StatePaperIntentCreated {
+		return fmt.Errorf("exit approval identity is invalid")
+	}
+	review.Status = "EXIT_APPROVED"
+	review.ExitApprovalWorkflowID = approval.Workflow.WorkflowID
+	review.ExitApproval = &approval
+	now := s.now().UTC()
+	review.ProcessedAt = &now
+	payload, err := json.Marshal(review)
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='EXIT_APPROVED',payload=$3,processed_at=$2 WHERE review_id=$1 AND position_id=$4 AND status IN ('EXIT_RECOMMENDED','EXIT_APPROVED')`, review.ReviewID, now, payload, positionID)
+	if err != nil {
+		return failClosed("persist exit approval", err)
+	}
+	return nil
+}
+
+func (s *PostgresStore) PersistExitRejection(ctx context.Context, positionID string, review Review, rejection ApprovalSnapshot) error {
+	if positionID == "" || review.PositionID != positionID || rejection.Workflow.State != workflow.StateHumanRejected {
+		return fmt.Errorf("exit rejection identity is invalid")
+	}
+	review.Status = "EXIT_REJECTED"
+	review.ExitApprovalWorkflowID = rejection.Workflow.WorkflowID
+	review.ExitApproval = &rejection
+	now := s.now().UTC()
+	review.ProcessedAt = &now
+	payload, err := json.Marshal(review)
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='EXIT_REJECTED',payload=$3,processed_at=$2 WHERE review_id=$1 AND position_id=$4 AND status IN ('EXIT_RECOMMENDED','EXIT_APPROVED')`, review.ReviewID, now, payload, positionID)
+	if err != nil {
+		return failClosed("persist exit rejection", err)
 	}
 	return nil
 }
@@ -679,6 +740,9 @@ func (s *PostgresStore) PersistOutcome(ctx context.Context, positionID string, e
 	if err != nil {
 		return failClosed("close exploratory lifecycle", err)
 	}
+	if _, err := tx.Exec(ctx, `UPDATE exploratory_paper_reviews SET status='COMPLETED',processed_at=$2 WHERE position_id=$1 AND status='EXIT_APPROVED'`, positionID, s.now().UTC()); err != nil {
+		return failClosed("close exit review", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return failClosed("commit outcome", err)
 	}
@@ -736,12 +800,14 @@ func (s *PostgresStore) Get(ctx context.Context, positionID string) (LifecycleRe
 	for rows.Next() {
 		var review Review
 		var payload []byte
-		if err := rows.Scan(&review.ReviewID, &review.PositionID, &review.SessionNumber, &review.ScheduledAt, &review.Status, &payload, &review.ProcessedAt); err != nil {
+		var storedStatus string
+		if err := rows.Scan(&review.ReviewID, &review.PositionID, &review.SessionNumber, &review.ScheduledAt, &storedStatus, &payload, &review.ProcessedAt); err != nil {
 			return record, err
 		}
 		if err := json.Unmarshal(payload, &review); err != nil {
 			return record, failClosed("decode review", err)
 		}
+		review.Status = storedStatus
 		record.Reviews = append(record.Reviews, review)
 	}
 	rows, err = s.pool.Query(ctx, `SELECT payload FROM exploratory_paper_checkpoints WHERE position_id=$1 ORDER BY session_number`, positionID)

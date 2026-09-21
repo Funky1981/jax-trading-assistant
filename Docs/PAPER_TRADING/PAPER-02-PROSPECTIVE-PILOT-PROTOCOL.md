@@ -188,3 +188,10 @@ requires explicit external authorization. Once active, protocol, universe,
 target, duration, metrics, risk boundaries, versions, and code SHA are frozen.
 Any later change requires a new version with an explicit reason and only has
 prospective effect. Existing opportunities cannot be rewritten.
+
+Historical incident cross-reference: the preserved PAPER-02-2026-01 incident
+and the corrective PAPER-02R readiness boundary are recorded in
+`Docs/PAPER_TRADING/PAPER-02-2026-01-INCIDENT-REVIEW.md` and
+`Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md`. This
+cross-reference does not alter the frozen protocol, pilot identity, sample, or
+activation semantics.

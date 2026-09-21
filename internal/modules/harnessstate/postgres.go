@@ -75,6 +75,27 @@ func (s *PostgresStore) LoadTask(ctx context.Context, taskID string) (TaskRecord
 	return record, nil
 }
 
+func loadTaskTx(ctx context.Context, tx *sql.Tx, taskID string, forUpdate bool) (TaskRecord, error) {
+	query := `SELECT task_id, objective, latest_state_version, created_at, updated_at FROM harness_tasks WHERE task_id=$1`
+	if forUpdate {
+		query += ` FOR UPDATE`
+	}
+	var record TaskRecord
+	var objective []byte
+	err := tx.QueryRowContext(ctx, query, taskID).Scan(&record.TaskID, &objective, &record.LatestVersion, &record.CreatedAt, &record.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return TaskRecord{}, ErrNotFound
+	}
+	if err != nil {
+		return TaskRecord{}, err
+	}
+	if err := json.Unmarshal(objective, &record.Objective); err != nil {
+		return TaskRecord{}, fmt.Errorf("%w: objective JSON: %v", ErrIntegrity, err)
+	}
+	record.ContractVersion = ContractVersion
+	return record, nil
+}
+
 func (s *PostgresStore) AppendStateVersion(ctx context.Context, taskID string, expectedVersion int, state DurableState, idempotencyKey string) (AppendStateResult, error) {
 	if err := validateOperationKey(idempotencyKey); err != nil {
 		return AppendStateResult{}, err
@@ -219,7 +240,12 @@ func (s *PostgresStore) CreateCheckpoint(ctx context.Context, request CreateChec
 	if err := validateOperationKey(request.IdempotencyKey); err != nil {
 		return CheckpointRecord{}, err
 	}
-	task, err := s.LoadTask(ctx, request.TaskID)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return CheckpointRecord{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	task, err := loadTaskTx(ctx, tx, request.TaskID, true)
 	if err != nil {
 		return CheckpointRecord{}, err
 	}
@@ -227,7 +253,7 @@ func (s *PostgresStore) CreateCheckpoint(ctx context.Context, request CreateChec
 	if version == 0 {
 		version = task.LatestVersion
 	}
-	state, err := s.LoadStateVersion(ctx, request.TaskID, version)
+	state, err := loadStateVersionTx(ctx, tx, request.TaskID, version)
 	if err != nil {
 		return CheckpointRecord{}, err
 	}
@@ -240,10 +266,13 @@ func (s *PostgresStore) CreateCheckpoint(ctx context.Context, request CreateChec
 		return CheckpointRecord{}, err
 	}
 	var existingID, existingHash string
-	lookupErr := s.db.QueryRowContext(ctx, `SELECT checkpoint_id, content_hash FROM harness_checkpoints WHERE task_id=$1 AND idempotency_key=$2`, request.TaskID, request.IdempotencyKey).Scan(&existingID, &existingHash)
+	lookupErr := tx.QueryRowContext(ctx, `SELECT checkpoint_id, content_hash FROM harness_checkpoints WHERE task_id=$1 AND idempotency_key=$2`, request.TaskID, request.IdempotencyKey).Scan(&existingID, &existingHash)
 	if lookupErr == nil {
 		if existingHash != hash {
 			return CheckpointRecord{}, ErrIdempotencyConflict
+		}
+		if err := tx.Commit(); err != nil {
+			return CheckpointRecord{}, err
 		}
 		return s.LoadCheckpoint(ctx, existingID)
 	}
@@ -266,9 +295,12 @@ func (s *PostgresStore) CreateCheckpoint(ctx context.Context, request CreateChec
 	if err != nil {
 		return CheckpointRecord{}, err
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO harness_checkpoints (checkpoint_id, task_id, state_version, content_hash, payload, idempotency_key, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`, id, request.TaskID, version, hash, payload, request.IdempotencyKey, createdAt)
+	_, err = tx.ExecContext(ctx, `INSERT INTO harness_checkpoints (checkpoint_id, task_id, state_version, content_hash, payload, idempotency_key, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`, id, request.TaskID, version, hash, payload, request.IdempotencyKey, createdAt)
 	if err != nil {
 		return CheckpointRecord{}, mapDatabaseError(err, ErrAlreadyExists)
+	}
+	if err := tx.Commit(); err != nil {
+		return CheckpointRecord{}, err
 	}
 	return record, nil
 }
@@ -365,6 +397,12 @@ func (s *PostgresStore) RecordFailure(ctx context.Context, taskID string, expect
 	if err != nil {
 		return AppendStateResult{}, err
 	}
+	if !result.Applied {
+		if err := tx.Commit(); err != nil {
+			return AppendStateResult{}, err
+		}
+		return result, nil
+	}
 	event := FailureEvent{ContractVersion: FailureRecordVersion, EventID: eventID, TaskID: taskID, StateVersion: result.State.State.StateVersion, Failure: failure, NextAction: nextAction, CreatedAt: result.State.State.UpdatedAt}
 	payload, err := json.Marshal(event)
 	if err != nil {
@@ -422,6 +460,12 @@ func (s *PostgresStore) RecordRetry(ctx context.Context, taskID string, expected
 	result, err := s.appendStateVersionTx(ctx, tx, taskID, expectedVersion, state, idempotencyKey)
 	if err != nil {
 		return AppendStateResult{}, err
+	}
+	if !result.Applied {
+		if err := tx.Commit(); err != nil {
+			return AppendStateResult{}, err
+		}
+		return result, nil
 	}
 	event := RetryEvent{ContractVersion: RetryRecordVersion, EventID: eventID, TaskID: taskID, StateVersion: result.State.State.StateVersion, Attempt: attempt, NextAction: nextAction, CreatedAt: result.State.State.UpdatedAt}
 	payload, err := json.Marshal(event)
@@ -498,6 +542,10 @@ func (s *PostgresStore) loadEvents(ctx context.Context, taskID string, maxStateV
 		}
 		failures = append(failures, event)
 	}
+	if err := failureRows.Err(); err != nil {
+		_ = failureRows.Close()
+		return nil, nil, err
+	}
 	if err := failureRows.Close(); err != nil {
 		return nil, nil, err
 	}
@@ -525,7 +573,12 @@ func (s *PostgresStore) CompactTask(ctx context.Context, request CompactRequest)
 	if err := validateOperationKey(request.IdempotencyKey); err != nil {
 		return CompactionRecord{}, err
 	}
-	task, err := s.LoadTask(ctx, request.TaskID)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return CompactionRecord{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	task, err := loadTaskTx(ctx, tx, request.TaskID, true)
 	if err != nil {
 		return CompactionRecord{}, err
 	}
@@ -533,7 +586,7 @@ func (s *PostgresStore) CompactTask(ctx context.Context, request CompactRequest)
 	if version == 0 {
 		version = task.LatestVersion
 	}
-	state, err := s.LoadStateVersion(ctx, request.TaskID, version)
+	state, err := loadStateVersionTx(ctx, tx, request.TaskID, version)
 	if err != nil {
 		return CompactionRecord{}, err
 	}
@@ -550,10 +603,13 @@ func (s *PostgresStore) CompactTask(ctx context.Context, request CompactRequest)
 		return CompactionRecord{}, err
 	}
 	var existingID, existingHash string
-	lookupErr := s.db.QueryRowContext(ctx, `SELECT compaction_id, content_hash FROM harness_compactions WHERE task_id=$1 AND idempotency_key=$2`, request.TaskID, request.IdempotencyKey).Scan(&existingID, &existingHash)
+	lookupErr := tx.QueryRowContext(ctx, `SELECT compaction_id, content_hash FROM harness_compactions WHERE task_id=$1 AND idempotency_key=$2`, request.TaskID, request.IdempotencyKey).Scan(&existingID, &existingHash)
 	if lookupErr == nil {
 		if existingHash != hash {
 			return CompactionRecord{}, ErrIdempotencyConflict
+		}
+		if err := tx.Commit(); err != nil {
+			return CompactionRecord{}, err
 		}
 		return s.LoadCompaction(ctx, existingID)
 	}
@@ -576,8 +632,11 @@ func (s *PostgresStore) CompactTask(ctx context.Context, request CompactRequest)
 	if err != nil {
 		return CompactionRecord{}, err
 	}
-	if _, err = s.db.ExecContext(ctx, `INSERT INTO harness_compactions (compaction_id, task_id, state_version, content_hash, payload, idempotency_key, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`, id, request.TaskID, version, hash, payload, request.IdempotencyKey, createdAt); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO harness_compactions (compaction_id, task_id, state_version, content_hash, payload, idempotency_key, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`, id, request.TaskID, version, hash, payload, request.IdempotencyKey, createdAt); err != nil {
 		return CompactionRecord{}, mapDatabaseError(err, ErrAlreadyExists)
+	}
+	if err := tx.Commit(); err != nil {
+		return CompactionRecord{}, err
 	}
 	return record, nil
 }
