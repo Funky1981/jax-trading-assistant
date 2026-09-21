@@ -150,6 +150,22 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if sourceApproval, err := store.ApproveExit(ctx, restored, exitDecision, ReviewObservation{}); err != nil || sourceApproval.Workflow.WorkflowID != exitApproval.Workflow.WorkflowID {
 		t.Fatalf("durable exit approval source = %#v, err=%v", sourceApproval, err)
 	}
+	rejectionDecision := ExitDecision{Action: ExitNow, Reason: ExitRiskKill}
+	rejectionReview := restored.Reviews[2]
+	rejectionRecommendationID := exitRecommendationIdentity(rejectionReview, rejectionDecision)
+	if err := store.PersistExitRecommendation(ctx, position.PositionID, rejectionDecision, rejectionReview); err != nil {
+		t.Fatal(err)
+	}
+	exitRejection := postgresExitRejection(t, rejectionRecommendationID, "pg-reject-"+suffix, "SHORT", exitAt, position.PositionID, rejectionReview.ReviewID, binding.WorkflowID, binding.PaperIntentID)
+	if err := store.PersistExitDecision(ctx, position.PositionID, exitRejection); err != nil {
+		t.Fatalf("durable exit rejection was not persisted: %v", err)
+	}
+	if err := store.PersistExitDecision(ctx, position.PositionID, exitRejection); err != nil {
+		t.Fatalf("same durable exit rejection replay was not idempotent: %v", err)
+	}
+	if sourceRejection, err := store.ApproveExit(ctx, restored, rejectionDecision, ReviewObservation{}); err != nil || sourceRejection.Workflow.State != workflow.StateHumanRejected {
+		t.Fatalf("durable exit rejection source = %#v, err=%v", sourceRejection, err)
+	}
 	outcome, err := BuildOutcomeFromFills(restored.Position, binding, fills[0], exitFills[0], ExitThesisInvalidated, 2, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -160,7 +176,8 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	finalStore := NewPostgresStore(pool)
 	finalRecord, err := finalStore.Get(ctx, position.PositionID)
 	approvedReview := finalRecord.Reviews[1]
-	if err != nil || finalRecord.Outcome == nil || finalRecord.Outcome.ExitFillID != exitFills[0].FillID || finalRecord.Position.State != StateClosed || approvedReview.Status != "COMPLETED" || approvedReview.ExitApproval == nil {
+	rejectedReview := finalRecord.Reviews[2]
+	if err != nil || finalRecord.Outcome == nil || finalRecord.Outcome.ExitFillID != exitFills[0].FillID || finalRecord.Position.State != StateClosed || approvedReview.Status != "COMPLETED" || approvedReview.ExitApproval == nil || rejectedReview.Status != "EXIT_REJECTED" || rejectedReview.ExitApproval == nil {
 		t.Fatalf("final outcome was not restored: record=%#v err=%v", finalRecord, err)
 	}
 }
@@ -179,6 +196,37 @@ func postgresExitApproval(t *testing.T, recommendationID, suffix, direction stri
 		EntryPaperIntentID: entryPaperIntentID,
 	}
 	return approval
+}
+
+func postgresExitRejection(t *testing.T, recommendationID, suffix, direction string, now time.Time, positionID, reviewID, entryWorkflowID, entryPaperIntentID string) ApprovalSnapshot {
+	t.Helper()
+	risk := acceptedRisk(t, recommendationID, now, 1200)
+	workflowStore := workflow.NewStore()
+	wf, err := workflowStore.Create(context.Background(), workflow.CreateRequest{RiskDecision: risk, Now: now, IdempotencyKey: suffix + "-create"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wf, err = workflowStore.RequestHumanConfirmation(context.Background(), workflow.TransitionRequest{WorkflowID: wf.WorkflowID, Actor: "system", ActorRole: workflow.ActorSystem, IdempotencyKey: suffix + "-await", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err := workflow.NewConfirmation(wf, "AAPL", direction, now, now.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err = confirmation.WithDecision("operator-1", workflow.ConfirmationReject)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wf, err = workflowStore.Confirm(context.Background(), workflow.HumanConfirmationRequest{WorkflowID: wf.WorkflowID, Confirmation: confirmation, Actor: "operator-1", ActorRole: workflow.ActorHuman, IdempotencyKey: suffix + "-reject", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, err := workflowStore.Events(context.Background(), wf.WorkflowID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ApprovalSnapshot{Workflow: wf, Events: events, ExitBinding: &ExitApprovalBinding{PositionID: positionID, ReviewID: reviewID, RecommendationID: recommendationID, EntryWorkflowID: entryWorkflowID, EntryPaperIntentID: entryPaperIntentID}}
 }
 
 func postgresApprovalForRecommendation(t *testing.T, recommendationID, suffix, direction string, now time.Time) ApprovalSnapshot {

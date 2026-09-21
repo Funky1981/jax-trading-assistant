@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"jax-trading-assistant/internal/modules/exploratorypaper"
 	"jax-trading-assistant/internal/modules/workflow"
+	"jax-trading-assistant/libs/auth"
 	"jax-trading-assistant/libs/runtimepolicy"
 
 	"github.com/jackc/pgx/v5"
@@ -157,11 +159,16 @@ func exploratoryPaperPositionHandler(store *exploratorypaper.PostgresStore) http
 	}
 }
 
+type exploratoryExitDecisionStore interface {
+	PersistExitDecision(context.Context, string, exploratorypaper.ApprovalSnapshot) error
+	Get(context.Context, string) (exploratorypaper.LifecycleRecord, error)
+}
+
 // handleExploratoryExitDecision is the existing protected operator/API handoff
 // for the durable workflow approval architecture. It accepts a complete
 // workflow snapshot, not an approval boolean, and the store validates every
 // identity against the requested lifecycle review before persisting it.
-func handleExploratoryExitDecision(w http.ResponseWriter, r *http.Request, store *exploratorypaper.PostgresStore, positionID, action string) {
+func handleExploratoryExitDecision(w http.ResponseWriter, r *http.Request, store exploratoryExitDecisionStore, positionID, action string) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -170,8 +177,8 @@ func handleExploratoryExitDecision(w http.ResponseWriter, r *http.Request, store
 		http.Error(w, "exploratory paper exit approval requires PAPER runtime mode", http.StatusConflict)
 		return
 	}
-	actor := strings.TrimSpace(actorFromRequest(r))
-	if actor == "" || actor == "anonymous" {
+	actor, authenticated := authenticatedExploratoryExitActor(r)
+	if !authenticated {
 		http.Error(w, "explicit human operator identity is required", http.StatusForbidden)
 		return
 	}
@@ -202,6 +209,20 @@ func handleExploratoryExitDecision(w http.ResponseWriter, r *http.Request, store
 		return
 	}
 	jsonOK(w, exploratoryPaperReadModelFromRecord(record))
+}
+
+func authenticatedExploratoryExitActor(r *http.Request) (string, bool) {
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok || claims == nil {
+		return "", false
+	}
+	if userID, ok := auth.UserIDFromContext(r.Context()); ok && strings.TrimSpace(userID) != "" {
+		return strings.TrimSpace(userID), true
+	}
+	if username, ok := auth.UsernameFromContext(r.Context()); ok && strings.TrimSpace(username) != "" {
+		return strings.TrimSpace(username), true
+	}
+	return "", false
 }
 
 type exploratoryPaperReadModel struct {
