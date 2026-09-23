@@ -23,22 +23,32 @@ import (
 func startExploratoryPaperReviewWorker(ctx context.Context, pool *pgxpool.Pool) {
 	runtime, err := newExploratoryPaperRuntime(pool)
 	if err != nil {
+		ops01WorkerConfigured("entry_worker", "INIT_FAILED")
+		ops01WorkerConfigured("review_worker", "INIT_FAILED")
 		log.Printf("exploratory_paper_runtime_initialization_failed error=%q", err)
 		return
 	}
+	ops01WorkerStarted("entry_worker")
+	ops01WorkerStarted("review_worker")
+	defer ops01WorkerStopped("entry_worker")
+	defer ops01WorkerStopped("review_worker")
 	health := exploratoryWorkerHealth{}
 	run := func() {
 		now := time.Now().UTC()
-		if err := runtime.RunEntryCycle(ctx); err != nil {
-			health.entryFailure(now, err)
-			log.Printf("exploratory_paper_cycle_failed operation=entry timestamp=%s category=entry_cycle retryable=true consecutive_failures=%d error=%q", now.Format(time.RFC3339Nano), health.entryConsecutiveFailures, err)
+		entryErr := runtime.RunEntryCycle(ctx)
+		ops01WorkerRun("entry_worker", now, entryErr)
+		if entryErr != nil {
+			health.entryFailure(now, entryErr)
+			log.Printf("exploratory_paper_cycle_failed operation=entry timestamp=%s category=entry_cycle retryable=true consecutive_failures=%d error=%q", now.Format(time.RFC3339Nano), health.entryConsecutiveFailures, entryErr)
 		} else {
 			health.entrySuccess(now)
 			log.Printf("exploratory_paper_cycle_succeeded operation=entry timestamp=%s last_success=%s consecutive_failures=0", now.Format(time.RFC3339Nano), health.lastEntrySuccess.Format(time.RFC3339Nano))
 		}
-		if err := runtime.RunDueReviews(ctx); err != nil {
-			health.reviewFailure(now, err)
-			log.Printf("exploratory_paper_cycle_failed operation=review timestamp=%s category=review_cycle retryable=true consecutive_failures=%d error=%q", now.Format(time.RFC3339Nano), health.reviewConsecutiveFailures, err)
+		reviewErr := runtime.RunDueReviews(ctx)
+		ops01WorkerRun("review_worker", now, reviewErr)
+		if reviewErr != nil {
+			health.reviewFailure(now, reviewErr)
+			log.Printf("exploratory_paper_cycle_failed operation=review timestamp=%s category=review_cycle retryable=true consecutive_failures=%d error=%q", now.Format(time.RFC3339Nano), health.reviewConsecutiveFailures, reviewErr)
 		} else {
 			health.reviewSuccess(now)
 			log.Printf("exploratory_paper_cycle_succeeded operation=review timestamp=%s last_success=%s consecutive_failures=0", now.Format(time.RFC3339Nano), health.lastReviewSuccess.Format(time.RFC3339Nano))
@@ -59,7 +69,15 @@ func startExploratoryPaperReviewWorker(ctx context.Context, pool *pgxpool.Pool) 
 
 func newExploratoryPaperRuntime(pool *pgxpool.Pool) (*exploratorypaper.Runtime, error) {
 	store := exploratorypaper.NewPostgresStore(pool)
-	venue, err := papertrading.NewPaperVenue(papertrading.DefaultPaperCapabilityContract(), papertrading.DefaultCostModel())
+	contract := papertrading.DefaultPaperCapabilityContract()
+	costModel := papertrading.DefaultCostModel()
+	var venue *papertrading.PaperVenue
+	var err error
+	if pool == nil {
+		venue, err = papertrading.NewPaperVenue(contract, costModel)
+	} else {
+		venue, err = store.RestorePaperVenue(context.Background(), contract, costModel)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +88,7 @@ func newExploratoryPaperRuntime(pool *pgxpool.Pool) (*exploratorypaper.Runtime, 
 		Reviews:      &postgresExploratoryReviewSource{pool: pool},
 		ExitApprover: store,
 		Venue:        venue,
-		CostModel:    papertrading.DefaultCostModel(),
+		CostModel:    costModel,
 		Now:          func() time.Time { return time.Now().UTC() },
 	}, nil
 }
@@ -136,7 +154,7 @@ func (s *postgresExploratoryReviewSource) LoadReviewObservation(ctx context.Cont
 		if err := items.Scan(&item.EvidenceID, &sourceRef, &item.ObservedAt, &quality, &supports, &contradicts); err != nil {
 			return exploratorypaper.ReviewObservation{}, err
 		}
-		if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(sourceRef)), "http") {
+		if !isDurableEvidenceReference(sourceRef) {
 			return exploratorypaper.ReviewObservation{}, fmt.Errorf("review evidence source provenance is incomplete")
 		}
 		item.SourceID, item.SourceURL, item.Quality = sourceRef, sourceRef, fmt.Sprintf("%.3f", quality)
@@ -167,6 +185,22 @@ func (s *postgresExploratoryReviewSource) LoadReviewObservation(ctx context.Cont
 		Excursion: exploratorypaper.ExcursionCoverage{Status: "INCOMPLETE", WindowStart: record.Position.EntryAt, WindowEnd: observedAt, ExpectedObservationCount: review.SessionNumber, Cadence: "one_observation_per_review", SourceProvenance: true, KnownGaps: []string{"candle-close-only-review-observation"}},
 		Path:      []exploratorypaper.PriceObservation{{ObservationID: tick.TickID, At: observedAt, Price: price, Source: source}},
 	}, nil
+}
+
+func isDurableEvidenceReference(sourceRef string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(sourceRef))
+	if normalized == "" {
+		return false
+	}
+	if strings.HasPrefix(normalized, "http://") || strings.HasPrefix(normalized, "https://") {
+		return true
+	}
+	for _, prefix := range []string{"event_normalized:", "world_monitor_research_inbox:", "candles:"} {
+		if strings.HasPrefix(normalized, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func configuredExploratoryCalendar() (exploratorypaper.SessionCalendar, error) {
@@ -201,6 +235,7 @@ func loadPaperLedger(ctx context.Context, pool *pgxpool.Pool, fillID string) (pa
 		return papertrading.PaperAccount{}, err
 	}
 	account.Environment = papertrading.Environment(environment)
+	account.Positions = map[string]papertrading.LedgerPosition{}
 	rows, err := pool.Query(ctx, `SELECT event_id,contract_version,fill_id,order_id,workflow_id,instrument_id,direction,quantity::float8,price::float8,fee::float8,cash_delta::float8,realized_pnl::float8,occurred_at FROM paper_ledger_events WHERE account_id=$1 ORDER BY occurred_at,event_id`, accountID)
 	if err != nil {
 		return papertrading.PaperAccount{}, err
@@ -211,10 +246,27 @@ func loadPaperLedger(ctx context.Context, pool *pgxpool.Pool, fillID string) (pa
 		if err := rows.Scan(&event.EventID, &event.ContractVersion, &event.FillID, &event.OrderID, &event.WorkflowID, &event.InstrumentID, &event.Direction, &event.Quantity, &event.Price, &event.Fee, &event.CashDelta, &event.RealizedPnL, &event.OccurredAt); err != nil {
 			return papertrading.PaperAccount{}, err
 		}
+		event.OccurredAt = event.OccurredAt.UTC()
 		account.Events = append(account.Events, event)
 	}
 	if err := rows.Err(); err != nil {
 		return papertrading.PaperAccount{}, err
+	}
+	for _, event := range account.Events {
+		position := account.Positions[event.InstrumentID]
+		if event.Direction == "LONG" {
+			notional := event.Price * event.Quantity
+			quantity := position.Quantity + event.Quantity
+			position = papertrading.LedgerPosition{InstrumentID: event.InstrumentID, Quantity: quantity, AverageCost: (position.Quantity*position.AverageCost + notional) / quantity}
+			account.Positions[event.InstrumentID] = position
+			continue
+		}
+		position.Quantity -= event.Quantity
+		if position.Quantity <= 0 {
+			delete(account.Positions, event.InstrumentID)
+		} else {
+			account.Positions[event.InstrumentID] = position
+		}
 	}
 	return account, nil
 }

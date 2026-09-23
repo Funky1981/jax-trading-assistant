@@ -14,6 +14,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
+	"jax-trading-assistant/internal/modules/eventdecisions"
+	"jax-trading-assistant/internal/modules/instruments"
 	"jax-trading-assistant/internal/modules/tradingmodes"
 )
 
@@ -496,10 +498,6 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 	if err := p.attachCandidateMetadata(ctx, candidate.ID, row, signalID, symbol, strategyID, route, chart, entry, stop, target); err != nil {
 		return nil, worldMonitorPromotionOutcome{}, false, err
 	}
-	if err := p.markInboxCandidateCreated(ctx, row.ID, candidate.ID); err != nil {
-		return nil, worldMonitorPromotionOutcome{}, false, err
-	}
-
 	eventID := ""
 	if row.NormalizedEventID != nil {
 		eventID = row.NormalizedEventID.String()
@@ -534,6 +532,12 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 	}
 	if riskPromoted != nil {
 		promoted.Route = riskPromoted.Route
+	}
+	if err := p.markInboxCandidateCreated(ctx, row.ID, candidate.ID); err != nil {
+		return nil, worldMonitorPromotionOutcome{}, false, err
+	}
+	if err := p.bindEventDecisionCandidate(ctx, row.ID, candidate.ID); err != nil {
+		return nil, worldMonitorPromotionOutcome{}, false, err
 	}
 	return promoted, riskOutcome, true, nil
 }
@@ -868,6 +872,38 @@ func (p *worldMonitorOpportunityPromoter) markInboxCandidateCreated(ctx context.
 	`, inboxID, worldMonitorInboxStatusCandidateCreated, candidateID)
 	if err != nil {
 		return fmt.Errorf("mark world monitor inbox candidate created: %w", err)
+	}
+	return nil
+}
+
+func (p *worldMonitorOpportunityPromoter) bindEventDecisionCandidate(ctx context.Context, inboxID, candidateID uuid.UUID) error {
+	rules, err := eventdecisions.LoadRuleset("config/genuine-event-decision-v2.json")
+	if err != nil {
+		rules, err = eventdecisions.LoadRuleset("../../config/genuine-event-decision-v2.json")
+	}
+	if err != nil {
+		return fmt.Errorf("load World Monitor event decision rules: %w", err)
+	}
+	catalog, err := instruments.LoadDefaultCatalog()
+	if err != nil {
+		return fmt.Errorf("load World Monitor instrument catalog: %w", err)
+	}
+	events, err := eventdecisions.NewStore(p.pool).LoadSelectedEvents(ctx, inboxID.String(), 1)
+	if err != nil {
+		return fmt.Errorf("load World Monitor candidate event: %w", err)
+	}
+	if len(events) != 1 || events[0].Candidate == nil || events[0].Candidate.ID != candidateID {
+		return fmt.Errorf("world monitor candidate event projection is incomplete")
+	}
+	result, err := (eventdecisions.Evaluator{Ruleset: rules, Catalog: catalog}).Evaluate(events[0])
+	if err != nil {
+		return fmt.Errorf("evaluate World Monitor candidate promotion: %w", err)
+	}
+	if result.Decision != eventdecisions.DecisionCandidate || result.CandidateID == nil || *result.CandidateID != candidateID {
+		return fmt.Errorf("world monitor candidate promotion is not ready: decision=%s", result.Decision)
+	}
+	if err := eventdecisions.NewStore(p.pool).PersistCandidatePromotion(ctx, events[0], result, rules, eventdecisions.DecisionOriginLive, "candidate_promotion_after_risk_review", p.now().UTC()); err != nil {
+		return fmt.Errorf("persist World Monitor candidate promotion: %w", err)
 	}
 	return nil
 }

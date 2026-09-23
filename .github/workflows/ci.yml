@@ -101,6 +101,7 @@ jobs:
       TEST_DATABASE_URL: postgresql://jax:jax@localhost:5432/jax_paper02r_test?sslmode=disable
       PAPER01B_DATABASE_URL: postgresql://jax:jax@localhost:5432/jax_paper02r_test?sslmode=disable
       PAPER02_DATABASE_URL: postgresql://jax:jax@localhost:5432/jax_paper02r_test?sslmode=disable
+      OPS01_DATABASE_URL: postgresql://jax:jax@localhost:5432/jax_paper02r_test?sslmode=disable
       HARNESS_POSTGRES_DSN: postgresql://jax:jax@localhost:5432/jax_paper02r_test?sslmode=disable
       MIGRATIONS_DIR: db/postgres/migrations
     services:
@@ -136,8 +137,12 @@ jobs:
         run: >-
           go test -count=1 ./cmd/trader
           -run 'Test(SignalsListHandlerExpiresLegacyPendingSignals|RecommendationsListHandlerExcludesExpiredPendingSignals|SignalApproveRejectsExpiredPendingSignal|SignalApproveBlocksETFEntryBypass)$'
+      - name: required OPS-01 operational PostgreSQL proof
+        run: go test -count=1 ./cmd/trader -run '^TestOPS01OperationalReadinessProof$' -v
       - name: required replay and lifecycle race tests
         run: >-
           go test -race -count=1
           ./internal/modules/harnessstate
           ./internal/modules/exploratorypaper
+      - name: required OPS-01 Linux race proof
+        run: go test -race -count=1 ./cmd/trader -run '^TestOPS01OperationalReadinessProof$' -v

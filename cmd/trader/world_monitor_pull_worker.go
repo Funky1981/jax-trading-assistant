@@ -175,29 +175,35 @@ func boundedEnvironmentInt(raw string, fallback, minimum, maximum int) (int, err
 func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 	config, err := loadWorldMonitorPullConfig(os.LookupEnv)
 	if err != nil {
+		ops01WorkerConfigured("world_monitor", "CONFIG_INVALID")
 		log.Printf("world monitor pull worker disabled: invalid configuration: %v", err)
 		return
 	}
 	if !config.Enabled {
+		ops01WorkerConfigured("world_monitor", "DISABLED")
 		log.Printf("world monitor pull worker disabled")
 		return
 	}
 	if _, err := eventdecisions.ReadEnvironmentSafetyState(); err != nil {
+		ops01WorkerConfigured("world_monitor", "SAFETY_BLOCKED")
 		log.Printf("world monitor pull worker failed closed: %v", err)
 		return
 	}
 	rules, err := eventdecisions.LoadRuleset("config/genuine-event-decision-v2.json")
 	if err != nil {
+		ops01WorkerConfigured("world_monitor", "CONFIG_INVALID")
 		log.Printf("world monitor pull worker failed closed: %v", err)
 		return
 	}
 	catalog, err := instruments.LoadDefaultCatalog()
 	if err != nil {
+		ops01WorkerConfigured("world_monitor", "CONFIG_INVALID")
 		log.Printf("world monitor pull worker failed closed: %v", err)
 		return
 	}
 	assetRules, err := assetresolution.LoadRuleset("config/event-asset-resolution-v1.json")
 	if err != nil {
+		ops01WorkerConfigured("world_monitor", "CONFIG_INVALID")
 		log.Printf("world monitor pull worker failed closed: %v", err)
 		return
 	}
@@ -207,6 +213,8 @@ func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 		replayer: eventdecisions.Replayer{Store: eventdecisions.NewStore(pool), Evaluator: eventdecisions.Evaluator{Ruleset: rules, Catalog: catalog}, Resolver: &resolver, Origin: eventdecisions.DecisionOriginLive},
 		now:      func() time.Time { return time.Now().UTC() },
 	}
+	ops01WorkerStarted("world_monitor")
+	defer ops01WorkerStopped("world_monitor")
 	health := worldMonitorPullHealth{}
 	ticker := time.NewTicker(config.Interval)
 	defer ticker.Stop()
@@ -215,10 +223,26 @@ func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 		if err != nil {
 			if !errors.Is(err, context.Canceled) {
 				health.failure(nowUTC(worker.now), err)
+				ops01WorkerRun("world_monitor", health.LastAttempt, err)
+				if persistErr := persistWorldMonitorPullHealth(ctx, worker, health, result, err); persistErr != nil {
+					log.Printf("world_monitor_pull health persistence failed error=%q", persistErr)
+				}
 				log.Printf("world_monitor_pull cycle failed endpoint_identity=%q error=%q consecutive_failures=%d last_success=%s", config.EndpointIdentity, err, health.ConsecutiveFailures, health.LastSuccess.Format(time.RFC3339Nano))
 			}
 		} else {
+			health.LastFetched = result.Fetched
+			health.LastIngested = result.Ingested
+			health.LastDuplicates = result.Duplicates
+			health.LastDecisionsCreated = result.DecisionsCreated
+			health.LastDecisionsReused = result.DecisionsReused
 			health.success(nowUTC(worker.now), result.Cursor)
+			if result.Fetched == 0 {
+				health.Status = "NO_EVENTS"
+			}
+			ops01WorkerRun("world_monitor", health.LastAttempt, nil)
+			if persistErr := persistWorldMonitorPullHealth(ctx, worker, health, result, nil); persistErr != nil {
+				log.Printf("world_monitor_pull health persistence failed error=%q", persistErr)
+			}
 			log.Printf("world_monitor_pull cycle committed cursor=%d fetched=%d ingested=%d duplicates=%d decisions_created=%d decisions_reused=%d intelligence_clusters=%d intelligence_unknowns=%d consecutive_failures=0 last_success=%s", result.Cursor, result.Fetched, result.Ingested, result.Duplicates, result.DecisionsCreated, result.DecisionsReused, result.IntelligenceClusters, result.IntelligenceUnknowns, health.LastSuccess.Format(time.RFC3339Nano))
 		}
 		select {
@@ -230,26 +254,103 @@ func startWorldMonitorPullWorker(ctx context.Context, pool *pgxpool.Pool) {
 }
 
 type worldMonitorPullHealth struct {
-	LastSuccess         time.Time
-	LastFailure         time.Time
-	LastCursor          int64
-	LastError           string
-	ConsecutiveFailures int
+	LastAttempt          time.Time
+	LastSuccess          time.Time
+	LastFailure          time.Time
+	LastCursor           int64
+	LastError            string
+	ConsecutiveFailures  int
+	LastFetched          int
+	LastIngested         int
+	LastDuplicates       int
+	LastDecisionsCreated int
+	LastDecisionsReused  int
+	Status               string
 }
 
 func (h *worldMonitorPullHealth) success(at time.Time, cursor int64) {
+	h.LastAttempt = at
 	h.LastSuccess = at
 	h.LastCursor = cursor
 	h.LastError = ""
 	h.ConsecutiveFailures = 0
+	h.Status = "PROCESSED"
 }
 
 func (h *worldMonitorPullHealth) failure(at time.Time, err error) {
+	h.LastAttempt = at
 	h.LastFailure = at
 	h.ConsecutiveFailures++
+	h.Status = classifyWorldMonitorPullFailure(err)
 	if err != nil {
 		h.LastError = err.Error()
 	}
+}
+
+func classifyWorldMonitorPullFailure(err error) string {
+	if err == nil {
+		return "PROCESSED"
+	}
+	message := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(message, "fetch world monitor page"), strings.Contains(message, "world monitor returned http"):
+		return "UPSTREAM_UNAVAILABLE"
+	case strings.Contains(message, "decide world monitor"):
+		return "DECISION_FAILED"
+	case strings.Contains(message, "persist world monitor"), strings.Contains(message, "ingest world monitor"), strings.Contains(message, "world monitor cursor"):
+		return "PERSISTENCE_FAILED"
+	default:
+		return "WORKER_FAILURE"
+	}
+}
+
+func persistWorldMonitorPullHealth(ctx context.Context, worker *worldMonitorPullWorker, health worldMonitorPullHealth, result worldMonitorPullResult, cycleErr error) error {
+	if worker == nil || worker.pool == nil || worker.config.Endpoint == "" {
+		return nil
+	}
+	metadata := map[string]any{
+		"last_attempt_at":       ops01NullableTime(health.LastAttempt),
+		"last_success_at":       ops01NullableTime(health.LastSuccess),
+		"last_failure_at":       ops01NullableTime(health.LastFailure),
+		"last_committed_cursor": health.LastCursor,
+		"last_fetched":          health.LastFetched,
+		"last_ingested":         health.LastIngested,
+		"last_duplicates":       health.LastDuplicates,
+		"decisions_created":     health.LastDecisionsCreated,
+		"decisions_reused":      health.LastDecisionsReused,
+		"consecutive_failures":  health.ConsecutiveFailures,
+		"status":                health.Status,
+		"last_error":            nullableString(health.LastError),
+	}
+	if cycleErr != nil {
+		metadata["failure_classification"] = health.Status
+	}
+	payload, err := json.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+	_, err = worker.pool.Exec(ctx, `
+		INSERT INTO world_monitor_pull_cursors (consumer_name,source_endpoint_identity,last_committed_position,diagnostic_metadata)
+		VALUES ($1,$2,$3,$4::jsonb)
+		ON CONFLICT (consumer_name,source_endpoint_identity) DO UPDATE SET
+			diagnostic_metadata=world_monitor_pull_cursors.diagnostic_metadata || EXCLUDED.diagnostic_metadata,
+			updated_at=NOW()
+	`, worldMonitorPullConsumer, worker.config.Endpoint, result.Cursor, payload)
+	return err
+}
+
+func ops01NullableTime(value time.Time) any {
+	if value.IsZero() {
+		return nil
+	}
+	return value.UTC()
+}
+
+func nullableString(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
 }
 
 func nowUTC(now func() time.Time) time.Time {
@@ -514,13 +615,57 @@ func worldMonitorPullTrigger(item worldMonitorPullEvent) (worldMonitorResearchTr
 		"raw_source_payload": item.RawSourcePayload,
 	}
 	collected := item.CollectedAt.UTC()
+	confidence := 0.5
+	if supplied, ok := worldMonitorProviderFloat(item.RawSourcePayload, "confidence"); ok && supplied >= 0 && supplied <= 1 {
+		confidence = supplied
+	}
 	return worldMonitorResearchTrigger{
 		Source: "world-monitor", SourceEventID: item.EventID, EventType: eventType, Headline: item.Title,
 		Summary: item.Summary, SourceURLs: []string{sourceURL}, SourceCount: 1, TimestampUTC: eventTimestamp,
-		PossibleAffectedETFs: []string{}, AssetThemes: []string{}, Severity: "medium", SourceTier: "tier1",
-		Confidence: 0.5, ConfidenceReasons: []string{"Persisted by the continuous World Monitor RSS/Atom collector"},
+		PossibleAffectedETFs: worldMonitorProviderStringSlice(item.RawSourcePayload, "possible_affected_etfs"), AssetThemes: worldMonitorProviderStringSlice(item.RawSourcePayload, "asset_themes"), Severity: "medium", SourceTier: "tier1",
+		Confidence: confidence, ConfidenceReasons: []string{"Persisted by the continuous World Monitor RSS/Atom collector"},
 		Reason:     "Deterministic World Monitor pull ingestion; asset mapping remains unknown unless supplied by genuine evidence.",
 		RawPayload: raw, IsSynthetic: &isSynthetic, CollectionTimestamp: &collected, DiscoveryMethod: "rss",
 		DeterministicAnalysis: "world-monitor-pull-v1", AllowStalePublication: true, AllowNewsTradeLanguage: true,
 	}, nil
+}
+
+func worldMonitorProviderFloat(payload map[string]any, key string) (float64, bool) {
+	value, ok := payload[key]
+	if !ok {
+		return 0, false
+	}
+	switch number := value.(type) {
+	case float64:
+		return number, true
+	case float32:
+		return float64(number), true
+	case int:
+		return float64(number), true
+	case int64:
+		return float64(number), true
+	default:
+		return 0, false
+	}
+}
+
+func worldMonitorProviderStringSlice(payload map[string]any, key string) []string {
+	value, ok := payload[key]
+	if !ok {
+		return []string{}
+	}
+	result := []string{}
+	switch values := value.(type) {
+	case []string:
+		result = append(result, values...)
+	case []any:
+		for _, item := range values {
+			if text, ok := item.(string); ok {
+				result = append(result, text)
+			}
+		}
+	case string:
+		result = append(result, values)
+	}
+	return result
 }

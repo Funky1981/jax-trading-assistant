@@ -101,6 +101,88 @@ func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 	return &PostgresStore{pool: pool, now: func() time.Time { return time.Now().UTC() }}
 }
 
+// RestorePaperVenue rebuilds the paper-only venue from its durable order and
+// fill artifacts. A runtime restart must not silently replace durable venue
+// state with a fresh in-memory venue.
+func (s *PostgresStore) RestorePaperVenue(ctx context.Context, contract papertrading.CapabilityContract, costModel papertrading.CostModel) (*papertrading.PaperVenue, error) {
+	if s == nil || s.pool == nil {
+		return nil, fmt.Errorf("paper venue restore requires a database")
+	}
+	orders := map[string]papertrading.PaperOrder{}
+	orderRows, err := s.pool.Query(ctx, `
+		SELECT order_id,contract_version,venue_id,environment,paper_intent_id,workflow_id,recommendation_id,risk_decision_id,confirmation_id,
+		       instrument_id,direction,quantity,remaining_quantity,filled_quantity,order_type,limit_price,cost_model_id,created_at,activates_at,status
+		FROM paper_orders ORDER BY created_at,order_id
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("load paper orders for restore: %w", err)
+	}
+	for orderRows.Next() {
+		var order papertrading.PaperOrder
+		var environment, direction, orderType, status string
+		var limitPrice *float64
+		if err := orderRows.Scan(&order.OrderID, &order.ContractVersion, &order.VenueID, &environment, &order.PaperIntentID, &order.WorkflowID, &order.RecommendationID, &order.RiskDecisionID, &order.ConfirmationID, &order.InstrumentID, &direction, &order.Quantity, &order.RemainingQuantity, &order.FilledQuantity, &orderType, &limitPrice, &order.CostModelID, &order.CreatedAt, &order.ActivatesAt, &status); err != nil {
+			orderRows.Close()
+			return nil, fmt.Errorf("scan paper order for restore: %w", err)
+		}
+		order.Environment = papertrading.Environment(environment)
+		order.Direction = direction
+		order.OrderType = papertrading.OrderType(orderType)
+		order.Status = papertrading.PaperOrderStatus(status)
+		order.CreatedAt = order.CreatedAt.UTC()
+		order.ActivatesAt = order.ActivatesAt.UTC()
+		if limitPrice != nil {
+			order.LimitPrice = *limitPrice
+		}
+		orders[order.OrderID] = order
+	}
+	if err := orderRows.Err(); err != nil {
+		orderRows.Close()
+		return nil, fmt.Errorf("read paper orders for restore: %w", err)
+	}
+	orderRows.Close()
+
+	fills := map[string]papertrading.PaperFill{}
+	lastTick := time.Time{}
+	fillRows, err := s.pool.Query(ctx, `
+		SELECT fill_id,contract_version,order_id,paper_intent_id,workflow_id,instrument_id,direction,quantity,price,
+		       cost_model_id,mid_price,spread_cost,slippage_cost,commission,executed_price,filled_at,tick_id
+		FROM paper_fills ORDER BY filled_at,fill_id
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("load paper fills for restore: %w", err)
+	}
+	for fillRows.Next() {
+		var fill papertrading.PaperFill
+		var direction string
+		var executedPrice *float64
+		if err := fillRows.Scan(&fill.FillID, &fill.ContractVersion, &fill.OrderID, &fill.PaperIntentID, &fill.WorkflowID, &fill.InstrumentID, &direction, &fill.Quantity, &fill.Price, &fill.Costs.ModelID, &fill.Costs.MidPrice, &fill.Costs.SpreadCost, &fill.Costs.SlippageCost, &fill.Costs.Commission, &executedPrice, &fill.FilledAt, &fill.TickID); err != nil {
+			fillRows.Close()
+			return nil, fmt.Errorf("scan paper fill for restore: %w", err)
+		}
+		fill.Direction = direction
+		fill.FilledAt = fill.FilledAt.UTC()
+		if executedPrice != nil {
+			fill.Costs.ExecutedPrice = *executedPrice
+		} else {
+			fill.Costs.ExecutedPrice = fill.Price
+		}
+		fills[fill.FillID] = fill
+		if lastTick.IsZero() || fill.FilledAt.After(lastTick) {
+			lastTick = fill.FilledAt
+		}
+	}
+	if err := fillRows.Err(); err != nil {
+		fillRows.Close()
+		return nil, fmt.Errorf("read paper fills for restore: %w", err)
+	}
+	fillRows.Close()
+	return papertrading.RestorePaperVenue(papertrading.VenueSnapshot{
+		Contract: contract, CostModel: costModel, Orders: orders, Fills: fills,
+		ProcessedTicks: map[string]string{}, CommandKeys: map[string]string{}, LastTick: lastTick,
+	})
+}
+
 func (s *PostgresStore) SaveApprovedEntry(ctx context.Context, candidateID string, thesis TradeThesis, binding EntryBinding, approval ApprovalSnapshot, position Position, entry EntrySnapshot) (string, error) {
 	if s == nil || s.pool == nil {
 		return "", fmt.Errorf("%w: database is unavailable", ErrFailedClosed)
@@ -264,7 +346,8 @@ func (s *PostgresStore) loadCanonicalEvidence(ctx context.Context, entry *EntryR
 		if err := items.Scan(&item.EvidenceID, &sourceRef, &item.ObservedAt, &qualityScore, &freshness, &supports, &contradicts); err != nil {
 			return err
 		}
-		if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(sourceRef)), "http") || strings.TrimSpace(sourceRef) == "" {
+		item.ObservedAt = item.ObservedAt.UTC()
+		if !validCanonicalEvidenceSourceRef(sourceRef) {
 			return fmt.Errorf("canonical evidence source URL is unavailable")
 		}
 		item.SourceID, item.SourceURL = sourceRef, sourceRef
@@ -300,6 +383,22 @@ func (s *PostgresStore) loadCanonicalEvidence(ctx context.Context, entry *EntryR
 	entry.Candidate.ReviewedEvidence = &assessment
 	entry.Candidate.CandidatePolicyVersion = assessment.PolicyVersion
 	return nil
+}
+
+func validCanonicalEvidenceSourceRef(sourceRef string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(sourceRef))
+	if normalized == "" {
+		return false
+	}
+	if strings.HasPrefix(normalized, "http://") || strings.HasPrefix(normalized, "https://") {
+		return true
+	}
+	for _, prefix := range []string{"event_normalized:", "world_monitor_research_inbox:", "candles:"} {
+		if strings.HasPrefix(normalized, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *PostgresStore) MarkEntryProcessed(ctx context.Context, candidateID string) error {
@@ -892,7 +991,7 @@ func checkpointIdentity(c Checkpoint) string {
 
 func (s *PostgresStore) PersistOutcome(ctx context.Context, positionID string, exit ExitSnapshot, outcome Outcome) error {
 	if err := outcome.Validate(); err != nil {
-		return err
+		return fmt.Errorf("outcome: %w", err)
 	}
 	if positionID != outcome.PositionID || exit.Fill.FillID != outcome.ExitFillID || exit.Order.OrderID != outcome.ExitOrderID {
 		return fmt.Errorf("outcome exit identity is inconsistent")
@@ -912,10 +1011,10 @@ func (s *PostgresStore) PersistOutcome(ctx context.Context, positionID string, e
 		return failClosed("encode closed position", err)
 	}
 	if err := exit.Order.Validate(); err != nil {
-		return err
+		return fmt.Errorf("exit order: %w", err)
 	}
 	if err := exit.Fill.Validate(); err != nil {
-		return err
+		return fmt.Errorf("exit fill: %w", err)
 	}
 	payload, _ := json.Marshal(outcome)
 	tx, err := s.pool.Begin(ctx)

@@ -196,6 +196,83 @@ func (s *Store) Begin(ctx context.Context) (pgx.Tx, error) {
 	return s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
 }
 
+// PersistCandidatePromotion records the versioned decision produced after a
+// structured candidate has completed evidence and risk review. The initial
+// live decision remains immutable; this version becomes the current
+// candidate-linked projection.
+func (s *Store) PersistCandidatePromotion(ctx context.Context, event Event, result Result, rules Ruleset, origin DecisionOrigin, decisionContext string, decisionAt time.Time) error {
+	if s == nil || s.pool == nil || event.InboxID == uuid.Nil || result.Decision != DecisionCandidate || result.CandidateID == nil || *result.CandidateID == uuid.Nil {
+		return fmt.Errorf("candidate promotion decision is incomplete")
+	}
+	if len(event.SourceURLs) == 0 || strings.TrimSpace(event.SourceURLs[0]) == "" {
+		return fmt.Errorf("candidate promotion decision requires a source URL")
+	}
+	if decisionAt.IsZero() {
+		decisionAt = time.Now().UTC()
+	}
+	fingerprint, replayID, err := replayIdentity(event, rules.Version)
+	if err != nil {
+		return err
+	}
+	identitySuffix := ":candidate:" + result.CandidateID.String()
+	fingerprint += identitySuffix
+	replayID += identitySuffix
+	mappingJSON, err := json.Marshal(result.AssetMappingProvenance)
+	if err != nil {
+		return err
+	}
+	replayMetadata, err := json.Marshal(map[string]any{
+		"candidateWriterInvoked": true,
+		"sourceStatus":           event.Status,
+		"decisionOrigin":         origin,
+		"decisionContext":        decisionContext,
+	})
+	if err != nil {
+		return err
+	}
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	lockKey := event.InboxID.String() + ":" + rules.Version
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, lockKey); err != nil {
+		return fmt.Errorf("lock candidate promotion decision: %w", err)
+	}
+	var existing bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM genuine_event_decisions WHERE source_inbox_event_id=$1 AND ruleset_version=$2 AND candidate_id=$3 AND decision='CANDIDATE' AND is_current)`, event.InboxID, rules.Version, *result.CandidateID).Scan(&existing); err != nil {
+		return err
+	}
+	if existing {
+		return tx.Commit(ctx)
+	}
+	var version int
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(decision_version),0)+1 FROM genuine_event_decisions WHERE source_inbox_event_id=$1`, event.InboxID).Scan(&version); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE genuine_event_decisions SET is_current=false,updated_at=$2 WHERE source_inbox_event_id=$1 AND is_current`, event.InboxID, decisionAt); err != nil {
+		return fmt.Errorf("retire prior candidate promotion decision: %w", err)
+	}
+	_, err = tx.Exec(ctx, `
+		INSERT INTO genuine_event_decisions (
+			source_inbox_event_id,normalized_event_id,source_event_identity,decision,decision_version,
+			ruleset_version,processor_identity,processing_mode,decision_at,event_publication_at,event_collection_at,event_receipt_at,
+			source,source_url,event_type,severity,evidence_score,evidence_score_source,confidence,affected_assets,unknown_assets,
+			asset_mapping_provenance,reasons,blocking_reasons,missing_evidence,trust_gate_state,risk_review_state,candidate_id,
+			replay_identity,input_fingerprint,replay_metadata,is_current,created_at,updated_at,
+			is_initial,decision_origin,decision_context
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,'deterministic',$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,true,$8,$8,false,$31,$32)
+	`, event.InboxID, event.NormalizedEventID, event.Source+":"+event.SourceEventID, result.Decision, version,
+		rules.Version, rules.ProcessorIdentity, decisionAt, event.PublicationAt, event.CollectionAt, event.ReceiptAt,
+		event.Source, event.SourceURLs[0], event.EventType, event.Severity, result.EvidenceScore, result.EvidenceScoreSource, event.Confidence,
+		result.AffectedAssets, result.UnknownAssets, mappingJSON, result.Reasons, result.BlockingReasons, result.MissingEvidence,
+		result.TrustGateState, result.RiskReviewState, *result.CandidateID, replayID, fingerprint, replayMetadata, origin, decisionContext)
+	if err != nil {
+		return fmt.Errorf("persist candidate promotion decision: %w", err)
+	}
+	return tx.Commit(ctx)
+}
+
 func persistDecision(ctx context.Context, tx pgx.Tx, event Event, result Result, rules Ruleset, decisionAt time.Time, fingerprint, replayIdentity string, origin DecisionOrigin, decisionContext string) (PersistedDecision, bool, error) {
 	lockKey := event.InboxID.String() + ":" + rules.Version
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, lockKey); err != nil {

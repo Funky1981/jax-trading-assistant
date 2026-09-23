@@ -149,7 +149,9 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 	}
 
 	input := entry.Candidate
-	input.ReviewedEvidence = &entry.Evidence
+	if input.ReviewedEvidence == nil {
+		return fmt.Errorf("%w: canonical reviewed evidence projection is missing", ErrCanonicalProjection)
+	}
 	result, err := GenerateCandidate(input)
 	if err != nil {
 		return fmt.Errorf("candidate projection: %w", err)
@@ -228,11 +230,16 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: r.Venue.Snapshot(), Account: account}, entry.Now.UTC()); result.Status != papertrading.ReconciliationClean {
 		return fmt.Errorf("%w: entry ledger reconciliation failed: %v", ErrFailedClosed, result.ReasonCodes)
 	}
+	venueSnapshot := r.Venue.Snapshot()
+	persistedOrder, ok := venueSnapshot.Orders[order.OrderID]
+	if !ok {
+		return fmt.Errorf("%w: filled entry order is missing from venue snapshot", ErrFailedClosed)
+	}
 	position, err := OpenApprovedPosition(entry.PositionID, entry.Thesis, EntryBindingFrom(entry), fills[0].FilledAt, fills[0].Price)
 	if err != nil {
 		return err
 	}
-	lifecycleID, err := r.Store.SaveApprovedEntry(ctx, entry.CandidateID, entry.Thesis, EntryBindingFrom(entry), entry.Approval, position, EntrySnapshot{Order: order, Fill: fills[0], Ledger: account})
+	lifecycleID, err := r.Store.SaveApprovedEntry(ctx, entry.CandidateID, entry.Thesis, EntryBindingFrom(entry), entry.Approval, position, EntrySnapshot{Order: persistedOrder, Fill: fills[0], Ledger: account})
 	if err != nil {
 		return err
 	}
@@ -352,7 +359,7 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	}
 	ledger, err := papertrading.RestorePaperLedger(observation.Ledger)
 	if err != nil {
-		return err
+		return fmt.Errorf("restore review ledger: %w", err)
 	}
 	costModel := r.CostModel
 	if costModel.ModelID == "" {
@@ -364,7 +371,7 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	}
 	order, err := r.Venue.Submit(papertrading.CreateOrderRequest{Workflow: approval.Workflow, PaperIntent: approval.PaperIntent, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: costModel, InstrumentID: position.Thesis.InstrumentID, Quantity: item.Lifecycle.EntryFill.Quantity, ReferencePrice: observation.Price, OrderType: papertrading.OrderMarket, CreatedAt: createdAt, IdempotencyKey: approval.PaperIntent.IntentID})
 	if err != nil {
-		return err
+		return fmt.Errorf("submit exit order: %w", err)
 	}
 	fills, err := r.Venue.ProcessTickWithSafety(observation.Tick, false)
 	if err != nil || len(fills) != 1 {
@@ -372,7 +379,7 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	}
 	account, err := ledger.ApplyFill(fills[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("apply exit fill to ledger: %w", err)
 	}
 	reconciliationAt := observation.ReceivedAt
 	if reconciliationAt.IsZero() {
@@ -381,12 +388,17 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if reconciliationAt.IsZero() {
 		reconciliationAt = observation.Tick.Timestamp
 	}
-	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: r.Venue.Snapshot(), Account: account}, reconciliationAt.UTC()); result.Status != papertrading.ReconciliationClean {
+	venueSnapshot := r.Venue.Snapshot()
+	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: venueSnapshot, Account: account}, reconciliationAt.UTC()); result.Status != papertrading.ReconciliationClean {
 		return fmt.Errorf("%w: exit ledger reconciliation failed: %v", ErrFailedClosed, result.ReasonCodes)
+	}
+	persistedOrder, ok := venueSnapshot.Orders[order.OrderID]
+	if !ok {
+		return fmt.Errorf("%w: filled exit order is missing from venue snapshot", ErrFailedClosed)
 	}
 	outcome, err := BuildOutcomeFromFillsWithCoverage(position, item.Lifecycle.Binding, item.Lifecycle.EntryFill, fills[0], decision.Reason, item.Review.SessionNumber, observation.Path, item.Lifecycle.Checkpoints, observation.Excursion)
 	if err != nil {
-		return err
+		return fmt.Errorf("build exit outcome: %w", err)
 	}
-	return r.Store.PersistOutcome(ctx, position.PositionID, ExitSnapshot{Order: order, Fill: fills[0], Ledger: account, Approval: &approval}, outcome)
+	return r.Store.PersistOutcome(ctx, position.PositionID, ExitSnapshot{Order: persistedOrder, Fill: fills[0], Ledger: account, Approval: &approval}, outcome)
 }

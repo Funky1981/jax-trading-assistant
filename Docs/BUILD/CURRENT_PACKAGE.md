@@ -1,7 +1,8 @@
 # Current Build Package
 
-PAPER-02R: **IMPLEMENTED / VALIDATION REQUIRED / INCIDENT PRESERVATION &
-CORRECTED PAPER-RUNTIME READINESS**. Read
+PAPER-02R: **GO / EXTERNALLY REVIEWED / INCIDENT PRESERVATION & CORRECTED
+PAPER-RUNTIME READINESS**. Reviewed SHA: `c188721af5d3fe466c7999bf3ce01859f125537a`.
+Read
 `Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md` for the
 active corrective package. The exact pre-existing reviewed PostgreSQL/test
 files are incorporated as input and are not discarded merely to obtain a clean
@@ -43,12 +44,21 @@ and unauthorized.
 
 ## PAPER-02R — incident preservation and corrected runtime readiness
 
-The current corrective package is documented in
+The externally reviewed corrective package is documented in
 `Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md`. It includes
 the exact previously reviewed dirty test/integration work as pre-existing
 input, validates and completes it, and preserves the frozen PAPER-02 incident
 boundary. It does not continue the pilot, start HARNESS-04, enable broker
 execution, or enable live trading.
+
+## OPS-01 — corrected runtime operational readiness
+
+The operational readiness and end-to-end proof is documented in
+`Docs/BUILD/OPS-01-CORRECTED-RUNTIME-OPERATIONAL-READINESS.md`. OPS-01
+validates bounded PAPER runtime operation, durable World Monitor diagnostics,
+approval identity, restart recovery, and accounting reconciliation. It does
+not establish a strategy edge or authorize a new pilot, broker execution, or
+live trading.
 
 ## PAPER-01 / PAPER-02 — event-driven exploratory paper-trader reference
 
