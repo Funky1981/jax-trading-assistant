@@ -2,7 +2,9 @@
 
 Status: **IMPLEMENTED / VALIDATION COMPLETE / EXTERNAL REVIEW REQUIRED / PAPER-ONLY**
 
-PAPER-02R reviewed baseline: `8a53193278274f0c5ee7e7b41052c8017c144204`.
+PAPER-02R reviewed SHA: `c188721af5d3fe466c7999bf3ce01859f125537a`.
+
+OPS-01 account-scope correction baseline: `8a53193278274f0c5ee7e7b41052c8017c144204`.
 
 OPS-01 validates that the corrected Jax runtime can operate its existing
 World Monitor, candidate, approval, exploratory PAPER, persistence, restart,

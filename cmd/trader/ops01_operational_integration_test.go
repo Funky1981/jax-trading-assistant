@@ -302,11 +302,35 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	otherAccountID := accountID + "-other"
 	wrongAccountEntry := entry
-	wrongAccountEntry.Ledger.AccountID = accountID + "-other"
+	wrongAccountEntry.Ledger.AccountID = otherAccountID
 	wrongEntryBody, err := json.Marshal(wrongAccountEntry)
 	if err != nil {
 		t.Fatal(err)
+	}
+	readQueueState := func() (int, string, []byte, time.Time, error) {
+		var count int
+		if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM exploratory_paper_entry_queue WHERE candidate_id=$1`, candidateID).Scan(&count); err != nil {
+			return 0, "", nil, time.Time{}, err
+		}
+		if count == 0 {
+			return 0, "", nil, time.Time{}, nil
+		}
+		var status string
+		var payload []byte
+		var updatedAt time.Time
+		if err := pool.QueryRow(ctx, `SELECT status,payload,updated_at FROM exploratory_paper_entry_queue WHERE candidate_id=$1`, candidateID).Scan(&status, &payload, &updatedAt); err != nil {
+			return 0, "", nil, time.Time{}, err
+		}
+		return count, status, payload, updatedAt, nil
+	}
+	beforeQueueCount, beforeQueueStatus, beforeQueuePayload, beforeQueueUpdatedAt, err := readQueueState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if beforeQueueCount != 1 {
+		t.Fatalf("expected one durable queue row before cross-account request, got %d", beforeQueueCount)
 	}
 	t.Setenv("PAPER_ACCOUNT_ID", accountID)
 	accountAMux := http.NewServeMux()
@@ -318,12 +342,19 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if wrongEntryResponse.Code != http.StatusBadRequest {
 		t.Fatalf("cross-account entry status=%d body=%s, want bad request", wrongEntryResponse.Code, wrongEntryResponse.Body.String())
 	}
-	var queuedCount int
-	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM exploratory_paper_entry_queue WHERE candidate_id=$1 AND status='PENDING'`, candidateID).Scan(&queuedCount); err != nil {
+	afterQueueCount, afterQueueStatus, afterQueuePayload, afterQueueUpdatedAt, err := readQueueState()
+	if err != nil {
 		t.Fatal(err)
 	}
-	if queuedCount != 1 {
-		t.Fatalf("cross-account entry changed queue count=%d, want 1", queuedCount)
+	if afterQueueCount != beforeQueueCount || afterQueueStatus != beforeQueueStatus || string(afterQueuePayload) != string(beforeQueuePayload) || !afterQueueUpdatedAt.Equal(beforeQueueUpdatedAt) {
+		t.Fatalf("cross-account entry mutated durable queue state: before=(count=%d status=%s payload=%s updated_at=%s) after=(count=%d status=%s payload=%s updated_at=%s)", beforeQueueCount, beforeQueueStatus, string(beforeQueuePayload), beforeQueueUpdatedAt.UTC().Format(time.RFC3339Nano), afterQueueCount, afterQueueStatus, string(afterQueuePayload), afterQueueUpdatedAt.UTC().Format(time.RFC3339Nano))
+	}
+	var durableEntry exploratorypaper.EntryRequest
+	if err := json.Unmarshal(afterQueuePayload, &durableEntry); err != nil {
+		t.Fatal(err)
+	}
+	if durableEntry.Ledger.AccountID != accountID {
+		t.Fatalf("durable queue row was replaced with account %q, want account %q", durableEntry.Ledger.AccountID, accountID)
 	}
 	positionsRequest := httptest.NewRequest(http.MethodGet, "/api/v1/exploratory-paper/positions", nil)
 	positionsRequest.Header.Set("Authorization", "Bearer "+token)
@@ -332,7 +363,6 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if positionsResponse.Code != http.StatusOK || !strings.Contains(positionsResponse.Body.String(), positionID) {
 		t.Fatalf("account A positions status=%d body=%s", positionsResponse.Code, positionsResponse.Body.String())
 	}
-	otherAccountID := accountID + "-other"
 	t.Setenv("PAPER_ACCOUNT_ID", otherAccountID)
 	accountBMux := http.NewServeMux()
 	registerExploratoryPaperRoutes(accountBMux, manager.MiddlewareFunc, pool)
