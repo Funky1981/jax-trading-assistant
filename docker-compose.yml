@@ -57,6 +57,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-jax}:${POSTGRES_PASSWORD:-jax}@postgres:5432/${POSTGRES_DB:-jax}?sslmode=disable}
       JAX_RUNTIME_MODE: ${JAX_TRADER_RUNTIME_MODE:-paper}
+      PAPER_ACCOUNT_ID: ${PAPER_ACCOUNT_ID:-}
       PAPER_SESSION_CALENDAR_FILE: ${PAPER_SESSION_CALENDAR_FILE:-config/paper-02/session-calendar-us-equities-2026-v2.json}
       PAPER02_ELIGIBLE_UNIVERSE_FILE: ${PAPER02_ELIGIBLE_UNIVERSE_FILE:-config/paper-02/eligible-universe-us-equities-2026-v1.json}
       PAPER02_ENTRY_POLICY_FILE: ${PAPER02_ENTRY_POLICY_FILE:-config/paper-02/entry-policy-v1.json}

@@ -1,15 +1,24 @@
 # Jax Current Status
 
+OPS-02A: **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / DEPLOYMENT PREP**.
+The artifact forensics and canonical closure are recorded in
+`Docs/BUILD/OPS-02A-PAPER-02-ARTIFACT-FORENSICS-WORLD-MONITOR-DEPLOYMENT-PREP.md`.
+
+OPS-01: **GO / EXTERNALLY REVIEWED**. Reviewed SHA:
+`7776e763a38f941ab0d704619bcbe3361921b591`.
+
 PAPER-02R: **GO / EXTERNALLY REVIEWED / HISTORICAL INCIDENT
 PRESERVED**. The corrective package is routed through
 `Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md`. It does not
 continue PAPER-02-2026-01, change its frozen identity, start FORMAL_FORWARD_PAPER,
 or authorize broker/live execution.
 
-PAPER-02A3: **ACTIVATED**. PAPER-02-2026-01 is **ACTIVE / EXPLORATORY_PAPER**
-under the frozen `paper-02-protocol-v1` contract. The pilot target is 50
-genuine prospective opportunities; the sample is `0 / 50` at the HARNESS-00
-handover. PAPER-02 remains exploratory and cannot establish demonstrated edge.
+PAPER-02A3: **ACTIVATED / SUPERSEDED BY OPS-02A**. The frozen pilot was
+subsequently closed through its canonical incident path.
+
+PAPER-02-2026-01: **ABORTED / HISTORICALLY PRESERVED / 0 GENUINE
+PROSPECTIVE OPPORTUNITIES**. It was an operational pilot failure, not a failed
+trading strategy; no trading-edge conclusion can be drawn.
 
 HARNESS-01: **GO / EXTERNALLY REVIEWED / FOUNDATION CONTRACTS**.
 HARNESS-02: **IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE CONTEXT BUILDER**.
@@ -51,8 +60,10 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - PAPER-01B: `IMPLEMENTED / ACCEPTED DIRECTIONALLY`.
 - PAPER-01C: `ACCEPTED / EXTERNALLY REVIEWED`.
 - PAPER-02A2: `READINESS VERIFIED`.
-- PAPER-02A3: `ACTIVATED`.
-- PAPER-02: `ACTIVE / EXPLORATORY_PAPER / FROZEN`.
+- OPS-01: `GO / EXTERNALLY REVIEWED` at `7776e763a38f941ab0d704619bcbe3361921b591`.
+- OPS-02A: `EXECUTED / PAPER-02 HISTORICALLY PRESERVED / DEPLOYMENT PREP`.
+- PAPER-02A3: `ACTIVATED / SUPERSEDED BY OPS-02A`.
+- PAPER-02: `ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES`.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
 - Harness foundation contracts: `HARNESS-01 GO / EXTERNALLY REVIEWED`.
 - Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE`.
@@ -73,16 +84,14 @@ sessions, typical 2–3, hard maximum 5.
 Live trading, broker execution, autonomous execution, and real order mutation
 are disabled. Exploratory paper uses `PAPER`, `ExecutionAuthority=NONE`, and
 maximum leverage 1x. No genuine PAPER-02 opportunity, order, fill, position, or
-formal evidence row was created by activation. Five pre-existing
-`pilot-restart-*` integration fixtures remain excluded from the production
-sample.
+formal evidence row was created by activation. The 16 pre-activation
+`position-pg-*`/`account-pg-*` PostgreSQL integration fixtures remain preserved
+and excluded from the production sample.
 
 ## Next authorized work
 
-Collect genuine prospective observations only. Admit an opportunity only when
-its immutable first-seen timestamp is at or after the activation timestamp
-recorded in the durable PAPER-02 handover. Retain all eligible outcomes,
-including WATCH, NO_TRADE, unresolved, rejected, missing-data, and approved
-cases. Do not tune policies, alter the frozen pilot identity, replay historical
-events as prospective observations, start FORMAL_FORWARD_PAPER, implement
-HARNESS-04, integrate JaxMind, or begin Phase 13.
+Do not continue PAPER-02-2026-01 or reinterpret its preserved history. The next
+safe step is separately reviewed corrected PAPER runtime deployment preparation
+with an explicitly configured isolated `PAPER_ACCOUNT_ID`; no strategy research,
+HARNESS-04, FORMAL_FORWARD_PAPER, broker execution, or live trading is
+authorized by this status.

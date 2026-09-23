@@ -1,5 +1,13 @@
 # Current Build Package
 
+OPS-02A: **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / DEPLOYMENT PREP**.
+The artifact-forensics, canonical closure, World Monitor verification, and
+Compose account-wiring record is in
+`Docs/BUILD/OPS-02A-PAPER-02-ARTIFACT-FORENSICS-WORLD-MONITOR-DEPLOYMENT-PREP.md`.
+
+OPS-01: **GO / EXTERNALLY REVIEWED** at
+`7776e763a38f941ab0d704619bcbe3361921b591`.
+
 PAPER-02R: **GO / EXTERNALLY REVIEWED / INCIDENT PRESERVATION & CORRECTED
 PAPER-RUNTIME READINESS**. Reviewed SHA: `c188721af5d3fe466c7999bf3ce01859f125537a`.
 Read
@@ -9,14 +17,16 @@ files are incorporated as input and are not discarded merely to obtain a clean
 worktree.
 
 HARNESS-03: **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / CHECKPOINT, RESUME & COMPACTION**.
-The active PAPER-02-2026-01 exploratory pilot is frozen and remains unchanged.
+The historical PAPER-02-2026-01 exploratory pilot is frozen and remains
+unchanged after its OPS-02A abort.
 No model call, JaxMind integration, evaluator execution, task-state
 persistence, compaction, full memory behavior, orchestration, or trading
 integration is authorized by this current package.
 
-PAPER-02A3 is activated under the frozen prospective protocol. The pilot is
-`ACTIVE / EXPLORATORY_PAPER`, targets 50 genuine prospective opportunities, and
-has sample `0 / 50` at handover. Runtime remains `PAPER`,
+PAPER-02A3 activated the frozen prospective protocol. OPS-02A closes
+`PAPER-02-2026-01` as `ABORTED / HISTORICALLY PRESERVED / 0 GENUINE
+PROSPECTIVE OPPORTUNITIES` after classifying all 16 pre-activation economic
+rows as PostgreSQL integration-test fixtures. Runtime remains `PAPER`,
 `ExecutionAuthority=NONE`, broker execution disabled, execution disabled, and
 maximum leverage 1x. Formal forward paper, demonstrated edge, live trading,
 and Phase 13 remain unauthorized.
@@ -62,14 +72,16 @@ live trading.
 
 ## PAPER-01 / PAPER-02 — event-driven exploratory paper-trader reference
 
-Status: **PAPER-02 ACTIVE / EXPLORATORY_PAPER / FROZEN**.
+Status: **PAPER-02 ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES**.
 
 PAPER-01C is accepted and externally reviewed. PAPER-02A2 supplied the frozen
 prospective exploratory protocol, durable pilot identity, non-trade opportunity
 ledger, new-evidence/latency capture, market quality, incidents, descriptive
-metrics, and protected operator read models; PAPER-02A3 activated the pilot.
-The pilot remains exploratory, cannot demonstrate an edge, and does not create
-formal evidence or permit live execution.
+metrics, and protected operator read models; PAPER-02A3 activated the pilot and
+OPS-02A later recorded its canonical abort.
+The pilot was an operational failure, not a failed trading strategy. It cannot
+demonstrate an edge, does not create formal evidence, and does not permit live
+execution.
 
 Read in this order:
 

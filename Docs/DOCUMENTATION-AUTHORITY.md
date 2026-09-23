@@ -16,11 +16,11 @@ Domain Detail > Historical Material.
 
 ## Current routing
 
-The active product package is PAPER-02-2026-01 exploratory paper observation
-collection, with the pilot identity and policies frozen as recorded in the
-current handover and `Docs/STATUS.md`. HARNESS-00 is an orthogonal,
-documentation-only architecture package and does not change that pilot. No
-lower-level or historical document can authorize formal forward paper, live
+The current product package is OPS-02A artifact forensics, PAPER-02 historical
+preservation, and corrected PAPER deployment preparation as recorded in
+`Docs/STATUS.md` and `Docs/BUILD/CURRENT_PACKAGE.md`. PAPER-02-2026-01 remains
+frozen and historically preserved after canonical abort; no lower-level or
+historical document can authorize its continuation, formal forward paper, live
 execution, or Phase 13.
 
 The detailed harness sources are `Docs/HARNESS/ARCHITECTURE.md`,

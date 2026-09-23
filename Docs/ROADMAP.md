@@ -78,9 +78,10 @@ not promote a strategy or prove a trading edge.
 | PAPER-01C | **ACCEPTED / EXTERNALLY REVIEWED** |
 | PAPER-02A1 | **GO / EXTERNALLY REVIEWED** |
 | PAPER-02A2 | **IMPLEMENTED / EXTERNAL CONFIGURATION REQUIRED** |
-| PAPER-02A3 | **ACTIVATED / EXTERNALLY REVIEWED** |
-| PAPER-02 | **ACTIVE / EXPLORATORY_PAPER / FROZEN** |
+| PAPER-02A3 | **ACTIVATED / EXTERNALLY REVIEWED / SUPERSEDED BY OPS-02A** |
+| PAPER-02 | **ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES** |
 | PAPER-02R | **GO / EXTERNALLY REVIEWED / INCIDENT PRESERVED** |
+| OPS-02A | **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / DEPLOYMENT PREP** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -108,15 +109,16 @@ operator read models. It does not activate a pilot.
 
 ## PAPER-02
 
-PAPER-02-2026-01 is active in `EXPLORATORY_PAPER` mode under
-`paper-02-protocol-v1`. Its target is 50 genuine prospective opportunities over
-the frozen 90-calendar-day window ending 2026-12-17. The pilot remains
-exploratory and cannot establish demonstrated edge. Its sample is `0 / 50` at
-the HARNESS-00 handover, and only observations first seen at or after the
-activation timestamp may be admitted.
+PAPER-02-2026-01 was activated in `EXPLORATORY_PAPER` mode under
+`paper-02-protocol-v1`, with a target of 50 genuine prospective opportunities
+over the frozen 90-calendar-day window ending 2026-12-17. OPS-02A canonically
+aborted it after proving that the 16 persisted economic rows were pre-activation
+PostgreSQL integration-test fixtures. The final genuine prospective sample is
+`0 / 50`; the pilot is historically preserved and cannot establish a trading
+edge.
 
-PAPER-02A2 defines the genuine prospective World Monitor intake boundary and
-PAPER-02A3 records activation. The source identity, calendar, universe, risk,
+PAPER-02A2 defined the genuine prospective World Monitor intake boundary and
+PAPER-02A3 recorded activation. OPS-02A records the closure incident. The source identity, calendar, universe, risk,
 entry, candidate/evidence, trader, thesis, exit, and cost identities remain
 frozen. Retain WATCH, NO_TRADE, unresolved, rejected, missing-data, and approved
 cases. No historical replay may be used as a prospective observation.
@@ -130,7 +132,7 @@ pilot sample.
 
 The canonical protocol remains
 `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`; the activation and
-current runtime state are recorded in the durable handover and current status
+closure state are recorded in the durable database and current status
 documents.
 
 PAPER-02R is the corrective incident-preservation and paper-runtime-readiness

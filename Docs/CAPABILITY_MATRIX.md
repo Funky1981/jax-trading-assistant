@@ -1,10 +1,11 @@
 # Jax Capability Matrix
 
-PAPER-02A1 is GO / EXTERNALLY REVIEWED. PAPER-02A2 implements the canonical
-genuine prospective World Monitor intake boundary and PAPER-02A3 records
-activation of PAPER-02-2026-01. The pilot is active in exploratory paper mode;
-its frozen identity and runtime safety state remain separate from formal
-evidence and demonstrated-edge claims.
+PAPER-02A1 is GO / EXTERNALLY REVIEWED. PAPER-02A2 implemented the canonical
+genuine prospective World Monitor intake boundary and PAPER-02A3 recorded
+activation of PAPER-02-2026-01. OPS-02A subsequently classified the preserved
+pre-activation fixtures and canonically aborted the operational pilot. Its frozen
+identity and historical records remain separate from formal evidence and
+demonstrated-edge claims.
 
 This matrix tracks capability maturity. It is supporting evidence for the
 authoritative active roadmap in `Docs/ROADMAP.md`; it is not itself the roadmap
@@ -37,7 +38,8 @@ are implemented and covered by automated tests. Operator review context and the
 exploratory/formal evidence firewall are implemented for the bounded package.
 This does not demonstrate a trading edge. PAPER-02 readiness is implemented for
 external review; PAPER-02 is now active exploratory paper and remains unable to
-establish a demonstrated edge. Formal paper evidence and live-readiness remain
+establish a demonstrated edge. The pilot is now historically preserved and
+aborted with zero genuine prospective opportunities. Formal paper evidence and live-readiness remain
 blocked as stated in `Docs/ROADMAP.md`.
 
 ## Capability matrix
@@ -55,9 +57,9 @@ blocked as stated in `Docs/ROADMAP.md`.
 | Phase 0 capability reset | DESIGNED | Docs | Historical reset evidence | `Docs/PHASE_CONTRACTS/00_CAPABILITY_RESET.md` | N/A | Retired historical contract; not current routing |
 | Event-driven short-horizon trader model | TESTED | Trading Brain | Deterministic model tests and capability map | `Docs/TRADING_BRAIN/JAX_TRADER_MODEL_V1.md`, `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md` | `internal/modules/exploratorypaper`, related package tests | Implemented package capability; edge not demonstrated |
 | PAPER-01 exploratory thesis and lifecycle contracts | TESTED | Paper Trading | Contract, persistence, runtime-loop, restart/reconciliation, and bounded operator-read-model tests | `Docs/BUILD/PAPER-01.md`, `Docs/BUILD/PAPER-01B-REVIEW-EVIDENCE.md`, `Docs/BUILD/PAPER-01C-RUNTIME-AUDIT.md`, `Docs/PAPER_TRADING/` | `internal/modules/exploratorypaper`, `cmd/trader/exploratory_paper_*` | PAPER-01 GO / EXTERNALLY REVIEWED; not formal evidence |
-| PAPER-02 prospective pilot readiness | TESTED | Paper Trading | Frozen protocol, pilot identity, non-trade opportunity ledger, new-evidence classification, latency/market quality, incidents, metrics, and read model | `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`, `Docs/BUILD/PAPER-02-READINESS-EVIDENCE.md` | `internal/modules/exploratorypaper/pilot*.go`, migration 000073 | ACTIVE / EXPLORATORY_PAPER / FROZEN; no edge claim |
+| PAPER-02 prospective pilot readiness | TESTED | Paper Trading | Frozen protocol, pilot identity, non-trade opportunity ledger, new-evidence classification, latency/market quality, incidents, metrics, and read model | `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`, `Docs/BUILD/PAPER-02-READINESS-EVIDENCE.md` | `internal/modules/exploratorypaper/pilot*.go`, migration 000073 | ABORTED / HISTORICALLY PRESERVED / 0 genuine prospective opportunities; no edge claim |
 | PAPER-02R incident preservation and corrected runtime readiness | TESTED | Paper Trading / Platform | Historical incident preservation, durable exit recommendation/approval, corrected economic accounting, ledger reconciliation, honest market-data/excursion coverage, isolated required PostgreSQL CI, and narrow HARNESS temporal/replay corrections | `Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md`, `Docs/PAPER_TRADING/PAPER-02-2026-01-INCIDENT-REVIEW.md` | `internal/modules/exploratorypaper`, `internal/modules/harnessstate`, `internal/testsupport`, required CI job | GO / EXTERNALLY REVIEWED; no pilot continuation or edge claim |
-| PAPER-02 genuine prospective event intake | TESTED | Data Ingestion and Paper Trading | Canonical World Monitor source contract, safe configuration identity, provenance/timestamp preservation, cursor/page idempotency, evidence compatibility, pre-activation exclusion | `cmd/trader/world_monitor_pull_worker.go`, `Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md` | `cmd/trader/world_monitor_pull_worker_test.go`, `cmd/trader/paper02_readiness_test.go`, `internal/modules/exploratorypaper/pilot_test.go` | ACTIVATED / FROZEN source identity; no opportunity was created by activation |
+| PAPER-02 genuine prospective event intake | TESTED | Data Ingestion and Paper Trading | Canonical World Monitor source contract, safe configuration identity, provenance/timestamp preservation, cursor/page idempotency, evidence compatibility, pre-activation exclusion | `cmd/trader/world_monitor_pull_worker.go`, `Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md` | `cmd/trader/world_monitor_pull_worker_test.go`, `cmd/trader/paper02_readiness_test.go`, `internal/modules/exploratorypaper/pilot_test.go` | Historical activation boundary preserved; no genuine opportunity was created; pilot later aborted by OPS-02A |
 | Exploratory/formal evidence firewall | TESTED | Paper Trading | Explicit mode labels and review boundary | `Docs/PAPER_TRADING/EXPLORATORY_VS_FORMAL.md` | `internal/modules/exploratorypaper` | Prevents exploratory observations from becoming promotion evidence |
 | Demonstrated trading edge | PLANNED | Research and Evidence | Separately authorized formal evidence | `Docs/BUILD/PAPER-02.md` | Not started | Not demonstrated by PAPER-01 or PAPER-02 |
 | Decision Core Phase 1 | TESTED | Decision Core | Unit tests + FTSE golden fixture | `internal/decisioning/core` | `internal/decisioning/core/decision_test.go`, `tests/golden/decision_runner_test.go` | Deterministic structured decision core implemented; Phase 2 Event Intelligence feeds enriched events into this core |
