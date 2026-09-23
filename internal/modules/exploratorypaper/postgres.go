@@ -93,20 +93,65 @@ type LifecycleRecord struct {
 }
 
 type PostgresStore struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
+	pool      *pgxpool.Pool
+	now       func() time.Time
+	accountID string
 }
 
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 	return &PostgresStore{pool: pool, now: func() time.Time { return time.Now().UTC() }}
 }
 
-// RestorePaperVenue rebuilds the paper-only venue from its durable order and
-// fill artifacts. A runtime restart must not silently replace durable venue
-// state with a fresh in-memory venue.
+func NewPostgresStoreForAccount(pool *pgxpool.Pool, accountID string) *PostgresStore {
+	return &PostgresStore{pool: pool, accountID: strings.TrimSpace(accountID), now: func() time.Time { return time.Now().UTC() }}
+}
+
+func (s *PostgresStore) requireAccount(accountID string) error {
+	accountID = strings.TrimSpace(accountID)
+	if accountID == "" {
+		return fmt.Errorf("paper account identity is missing")
+	}
+	if s.accountID != "" && accountID != s.accountID {
+		return fmt.Errorf("paper account identity %q does not match runtime account %q", accountID, s.accountID)
+	}
+	return nil
+}
+
+func (s *PostgresStore) requireFillAccount(ctx context.Context, fillID string) error {
+	if s.accountID == "" {
+		return nil
+	}
+	var accountID string
+	if err := s.pool.QueryRow(ctx, `SELECT account_id FROM paper_ledger_events WHERE fill_id=$1`, fillID).Scan(&accountID); err != nil {
+		return fmt.Errorf("fill %s account ownership is unavailable: %w", fillID, err)
+	}
+	if accountID != s.accountID {
+		return fmt.Errorf("fill %s belongs to paper account %q, runtime account is %q", fillID, accountID, s.accountID)
+	}
+	return nil
+}
+
+// RestorePaperVenue is intentionally unavailable without an explicit account
+// scope. A runtime restart must not silently combine economic artifacts from
+// multiple paper accounts.
 func (s *PostgresStore) RestorePaperVenue(ctx context.Context, contract papertrading.CapabilityContract, costModel papertrading.CostModel) (*papertrading.PaperVenue, error) {
+	return nil, fmt.Errorf("paper venue restore requires an explicit paper account")
+}
+
+// RestorePaperVenueForAccount rebuilds the paper-only venue from durable
+// artifacts owned by accountID. Ownership is derived only from the durable
+// ledger event for each fill; missing or conflicting ownership fails closed.
+func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, accountID string, contract papertrading.CapabilityContract, costModel papertrading.CostModel) (*papertrading.PaperVenue, error) {
 	if s == nil || s.pool == nil {
 		return nil, fmt.Errorf("paper venue restore requires a database")
+	}
+	accountID = strings.TrimSpace(accountID)
+	if accountID == "" {
+		return nil, fmt.Errorf("paper venue restore requires a non-empty paper account")
+	}
+	orderOwners, fillOwners, err := s.loadPaperArtifactOwnership(ctx)
+	if err != nil {
+		return nil, failClosed("restore paper artifact ownership", err)
 	}
 	orders := map[string]papertrading.PaperOrder{}
 	orderRows, err := s.pool.Query(ctx, `
@@ -134,7 +179,9 @@ func (s *PostgresStore) RestorePaperVenue(ctx context.Context, contract papertra
 		if limitPrice != nil {
 			order.LimitPrice = *limitPrice
 		}
-		orders[order.OrderID] = order
+		if orderOwners[order.OrderID] == accountID {
+			orders[order.OrderID] = order
+		}
 	}
 	if err := orderRows.Err(); err != nil {
 		orderRows.Close()
@@ -167,9 +214,11 @@ func (s *PostgresStore) RestorePaperVenue(ctx context.Context, contract papertra
 		} else {
 			fill.Costs.ExecutedPrice = fill.Price
 		}
-		fills[fill.FillID] = fill
-		if lastTick.IsZero() || fill.FilledAt.After(lastTick) {
-			lastTick = fill.FilledAt
+		if fillOwners[fill.FillID] == accountID {
+			fills[fill.FillID] = fill
+			if lastTick.IsZero() || fill.FilledAt.After(lastTick) {
+				lastTick = fill.FilledAt
+			}
 		}
 	}
 	if err := fillRows.Err(); err != nil {
@@ -183,9 +232,66 @@ func (s *PostgresStore) RestorePaperVenue(ctx context.Context, contract papertra
 	})
 }
 
+func (s *PostgresStore) loadPaperArtifactOwnership(ctx context.Context) (map[string]string, map[string]string, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT f.fill_id,f.order_id,le.account_id,le.order_id
+		FROM paper_fills f
+		LEFT JOIN paper_ledger_events le ON le.fill_id=f.fill_id
+		ORDER BY f.fill_id
+	`)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	orderOwners := map[string]string{}
+	fillOwners := map[string]string{}
+	for rows.Next() {
+		var fillID, orderID string
+		var accountID, ledgerOrderID *string
+		if err := rows.Scan(&fillID, &orderID, &accountID, &ledgerOrderID); err != nil {
+			return nil, nil, err
+		}
+		if accountID == nil || ledgerOrderID == nil || strings.TrimSpace(*accountID) == "" {
+			return nil, nil, fmt.Errorf("fill %s has no provable paper account owner", fillID)
+		}
+		if *ledgerOrderID != orderID {
+			return nil, nil, fmt.Errorf("fill %s ledger order %s conflicts with fill order %s", fillID, *ledgerOrderID, orderID)
+		}
+		fillOwners[fillID] = *accountID
+		if prior, ok := orderOwners[orderID]; ok && prior != *accountID {
+			return nil, nil, fmt.Errorf("order %s has conflicting paper account owners %s and %s", orderID, prior, *accountID)
+		}
+		orderOwners[orderID] = *accountID
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	orderRows, err := s.pool.Query(ctx, `SELECT order_id FROM paper_orders ORDER BY order_id`)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer orderRows.Close()
+	for orderRows.Next() {
+		var orderID string
+		if err := orderRows.Scan(&orderID); err != nil {
+			return nil, nil, err
+		}
+		if _, ok := orderOwners[orderID]; !ok {
+			return nil, nil, fmt.Errorf("order %s has no provable paper account owner", orderID)
+		}
+	}
+	if err := orderRows.Err(); err != nil {
+		return nil, nil, err
+	}
+	return orderOwners, fillOwners, nil
+}
+
 func (s *PostgresStore) SaveApprovedEntry(ctx context.Context, candidateID string, thesis TradeThesis, binding EntryBinding, approval ApprovalSnapshot, position Position, entry EntrySnapshot) (string, error) {
 	if s == nil || s.pool == nil {
 		return "", fmt.Errorf("%w: database is unavailable", ErrFailedClosed)
+	}
+	if err := s.requireAccount(entry.Ledger.AccountID); err != nil {
+		return "", failClosed("approved entry account binding", err)
 	}
 	if strings.TrimSpace(candidateID) == "" || binding.CandidateID != candidateID {
 		return "", fmt.Errorf("%w: candidate identity is incomplete", ErrFailedClosed)
@@ -242,6 +348,9 @@ func (s *PostgresStore) QueueApprovedEntry(ctx context.Context, entry EntryReque
 	if s == nil || s.pool == nil || strings.TrimSpace(entry.CandidateID) == "" || strings.TrimSpace(entry.Approval.Workflow.WorkflowID) == "" || strings.TrimSpace(entry.Approval.PaperIntent.IntentID) == "" {
 		return fmt.Errorf("%w: approved entry queue identity is incomplete", ErrFailedClosed)
 	}
+	if err := s.requireAccount(entry.Ledger.AccountID); err != nil {
+		return failClosed("queue approved entry account binding", err)
+	}
 	if err := entry.Approval.Workflow.Validate(); err != nil || entry.Approval.Workflow.State != workflow.StatePaperIntentCreated || entry.Approval.Workflow.Confirmation == nil {
 		return fmt.Errorf("%w: queue requires a human-approved paper intent", ErrFailedClosed)
 	}
@@ -296,6 +405,14 @@ func (s *PostgresStore) LoadApprovedEntries(ctx context.Context) ([]EntryRequest
 		var entry EntryRequest
 		if err := json.Unmarshal(payload, &entry); err != nil {
 			return nil, failClosed("decode approved entry queue", err)
+		}
+		if s.accountID != "" {
+			if strings.TrimSpace(entry.Ledger.AccountID) == "" {
+				return nil, failClosed("approved entry account binding", fmt.Errorf("queued entry has no paper account identity"))
+			}
+			if entry.Ledger.AccountID != s.accountID {
+				continue
+			}
 		}
 		if err := s.loadCanonicalEvidence(ctx, &entry); err != nil {
 			return nil, failClosed("load canonical evidence projection", err)
@@ -610,7 +727,13 @@ func (s *PostgresStore) RecordReviewUnavailable(ctx context.Context, positionID 
 
 func (s *PostgresStore) FindByCandidate(ctx context.Context, candidateID string) (LifecycleRecord, bool, error) {
 	var positionID string
-	err := s.pool.QueryRow(ctx, `SELECT position_id FROM exploratory_paper_lifecycles WHERE candidate_id=$1 ORDER BY created_at LIMIT 1`, candidateID).Scan(&positionID)
+	query := `SELECT l.position_id FROM exploratory_paper_lifecycles l WHERE l.candidate_id=$1 ORDER BY l.created_at LIMIT 1`
+	args := []any{candidateID}
+	if s.accountID != "" {
+		query = `SELECT l.position_id FROM exploratory_paper_lifecycles l JOIN paper_ledger_events e ON e.fill_id=l.entry_fill_id WHERE l.candidate_id=$1 AND e.account_id=$2 ORDER BY l.created_at LIMIT 1`
+		args = append(args, s.accountID)
+	}
+	err := s.pool.QueryRow(ctx, query, args...).Scan(&positionID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LifecycleRecord{}, false, nil
 	}
@@ -625,7 +748,13 @@ func (s *PostgresStore) ListDueReviews(ctx context.Context, now time.Time) ([]Re
 	if now.IsZero() || now.Location() != time.UTC {
 		return nil, fmt.Errorf("due-review time must be UTC")
 	}
-	rows, err := s.pool.Query(ctx, `SELECT r.position_id,r.session_number FROM exploratory_paper_reviews r JOIN exploratory_paper_lifecycles l ON l.position_id=r.position_id WHERE l.state <> 'CLOSED' AND r.status IN ('PENDING','EXIT_RECOMMENDED','EXIT_APPROVED') AND r.scheduled_at <= $1 ORDER BY r.scheduled_at,r.position_id FOR UPDATE OF r SKIP LOCKED`, now)
+	query := `SELECT r.position_id,r.session_number FROM exploratory_paper_reviews r JOIN exploratory_paper_lifecycles l ON l.position_id=r.position_id WHERE l.state <> 'CLOSED' AND r.status IN ('PENDING','EXIT_RECOMMENDED','EXIT_APPROVED') AND r.scheduled_at <= $1 ORDER BY r.scheduled_at,r.position_id FOR UPDATE OF r SKIP LOCKED`
+	args := []any{now}
+	if s.accountID != "" {
+		query = `SELECT r.position_id,r.session_number FROM exploratory_paper_reviews r JOIN exploratory_paper_lifecycles l ON l.position_id=r.position_id JOIN paper_ledger_events e ON e.fill_id=l.entry_fill_id WHERE l.state <> 'CLOSED' AND e.account_id=$2 AND r.status IN ('PENDING','EXIT_RECOMMENDED','EXIT_APPROVED') AND r.scheduled_at <= $1 ORDER BY r.scheduled_at,r.position_id FOR UPDATE OF r SKIP LOCKED`
+		args = append(args, s.accountID)
+	}
+	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1000,6 +1129,9 @@ func (s *PostgresStore) PersistOutcome(ctx context.Context, positionID string, e
 	if err != nil {
 		return failClosed("load position for outcome close", err)
 	}
+	if err := s.requireAccount(exit.Ledger.AccountID); err != nil {
+		return failClosed("exit account binding", err)
+	}
 	closedPosition := record.Position
 	if closedPosition.State != StateClosed {
 		if err := closedPosition.Close(outcome.ExitAt); err != nil {
@@ -1056,6 +1188,9 @@ func (s *PostgresStore) Get(ctx context.Context, positionID string) (LifecycleRe
 	err := s.pool.QueryRow(ctx, `SELECT lifecycle_id,candidate_id,thesis_hash,evidence_set_hash,thesis_payload,binding_payload,workflow_id,paper_intent_id,position_id,position_payload,entry_order_id,entry_fill_id,outcome_payload,frozen_at FROM exploratory_paper_lifecycles WHERE position_id=$1`, positionID).Scan(&lifecycleID, &candidateID, &thesisHash, &evidenceHash, &thesisPayload, &bindingPayload, &workflowID, &paperIntentID, &record.Position.PositionID, &positionPayload, &entryOrderID, &entryFillID, &outcomePayload, &frozenAt)
 	if err != nil {
 		return record, err
+	}
+	if err := s.requireFillAccount(ctx, entryFillID); err != nil {
+		return record, failClosed("verify lifecycle paper account", err)
 	}
 	if err := json.Unmarshal(thesisPayload, &record.Thesis.Thesis); err != nil {
 		return record, failClosed("decode frozen thesis", err)
@@ -1194,7 +1329,13 @@ func (s *PostgresStore) ListActive(ctx context.Context, limit int) ([]LifecycleR
 	// INVALIDATED and EXIT_RECOMMENDED lifecycles remain operationally active
 	// until the separately approved simulated exit is persisted. Hiding them
 	// would make a pending human decision invisible to the operator.
-	rows, err := s.pool.Query(ctx, `SELECT position_id FROM exploratory_paper_lifecycles WHERE state <> 'CLOSED' ORDER BY updated_at DESC LIMIT $1`, limit)
+	query := `SELECT l.position_id FROM exploratory_paper_lifecycles l WHERE l.state <> 'CLOSED' ORDER BY l.updated_at DESC LIMIT $1`
+	args := []any{limit}
+	if s.accountID != "" {
+		query = `SELECT l.position_id FROM exploratory_paper_lifecycles l JOIN paper_ledger_events e ON e.fill_id=l.entry_fill_id WHERE l.state <> 'CLOSED' AND e.account_id=$2 ORDER BY l.updated_at DESC LIMIT $1`
+		args = append(args, s.accountID)
+	}
+	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,6 @@
 # OPS-01 — Corrected Runtime Operational Readiness & End-to-End Proof
 
-Status: **IMPLEMENTED / VALIDATED LOCALLY / PAPER-ONLY**
+Status: **IMPLEMENTED / VALIDATION COMPLETE / EXTERNAL REVIEW REQUIRED / PAPER-ONLY**
 
 PAPER-02R reviewed SHA: `c188721af5d3fe466c7999bf3ce01859f125537a`.
 
@@ -13,6 +13,8 @@ authorize broker execution, or authorize live trading.
 ## Operational boundaries
 
 - Runtime mode must be explicit `PAPER`.
+- `PAPER_ACCOUNT_ID` must explicitly identify the paper account owned by the
+  runtime process.
 - Execution authority is `NONE`.
 - Broker execution and live trading remain disabled.
 - Maximum leverage remains bounded at 1x.
@@ -55,11 +57,13 @@ market observations:
 4. preserve the immutable initial event decision and persist a versioned
    candidate-linked promotion decision after the candidate gates are ready;
 5. create and replay an explicit canonical entry approval;
-6. queue and consume the approved entry through the real exploratory runtime;
+6. queue and consume the approved entry through the real account-scoped
+   exploratory runtime;
 7. persist the simulated entry order, fill, ledger event, lifecycle, and review
    schedule with stable identities;
-8. restart through the production runtime constructor, restore the durable
-   paper venue, and create a durable `EXIT_RECOMMENDED` review;
+8. restart through the production runtime constructor, restore only the
+   configured account's durable paper venue, and create a durable
+   `EXIT_RECOMMENDED` review;
 9. submit an authenticated exit approval through the protected API boundary;
 10. restart again, resume the approved review, simulate the exit fill, close the
     lifecycle, and reconcile the durable economic artifacts.
@@ -76,8 +80,17 @@ durable exit recommendation-before-approval ordering, and the closed outcome.
   normalized World Monitor records and market-candle observations.
 - Runtime entry and exit persistence records the venue's post-fill order state,
   not the pre-fill `NEW` artifact.
-- PostgreSQL reloads paper orders and fills into the paper venue at runtime
-  construction, and reloads ledger events into a validated paper account.
+- PostgreSQL reloads only the configured paper account's orders and fills into
+  the paper venue at runtime construction, and reloads ledger events into a
+  validated paper account. Ownership is derived from the durable ledger event
+  for each fill because paper orders and fills do not carry an account column.
+- A missing or conflicting ledger owner is rejected closed; an unowned order
+  cannot be silently ignored.
+- Entry queue payloads, lifecycle restoration, due-review selection, and exit
+  persistence remain bound to the configured account. Entry and review ledger
+  identities are checked before any new simulated economic action.
+- Multiple valid paper accounts may coexist in one PostgreSQL database without
+  entering one another's venue or reconciliation scope.
 - Database timestamp values are normalized to UTC at the runtime boundary.
 
 ## Required validation

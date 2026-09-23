@@ -94,6 +94,7 @@ type RuntimeStore interface {
 
 type Runtime struct {
 	Mode         string
+	AccountID    string
 	Store        RuntimeStore
 	Entries      EntrySource
 	Reviews      ReviewSource
@@ -106,6 +107,9 @@ type Runtime struct {
 func (r *Runtime) validate() error {
 	if r == nil || strings.ToUpper(strings.TrimSpace(r.Mode)) != "PAPER" {
 		return ErrRuntimeMode
+	}
+	if strings.TrimSpace(r.AccountID) == "" {
+		return fmt.Errorf("%w: paper account identity is missing", ErrFailedClosed)
 	}
 	if r.Store == nil || r.Entries == nil || r.Reviews == nil || r.Venue == nil {
 		return fmt.Errorf("%w: runtime dependencies are incomplete", ErrFailedClosed)
@@ -138,6 +142,9 @@ func (r *Runtime) RunEntryCycle(ctx context.Context) error {
 func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 	if strings.TrimSpace(entry.CandidateID) == "" {
 		return fmt.Errorf("%w: candidate identity is incomplete", ErrCanonicalProjection)
+	}
+	if entry.Ledger.AccountID != r.AccountID {
+		return fmt.Errorf("%w: entry paper account %q does not match runtime account %q", ErrFailedClosed, entry.Ledger.AccountID, r.AccountID)
 	}
 	if existing, found, err := r.Store.FindByCandidate(ctx, entry.CandidateID); err != nil {
 		return err
@@ -295,6 +302,9 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if err != nil {
 		_ = r.Store.RecordReviewUnavailable(ctx, item.Review.PositionID, item.Review.SessionNumber, r.Now().UTC(), err.Error())
 		return ErrReviewInputsUnavailable
+	}
+	if observation.Ledger.AccountID != r.AccountID {
+		return fmt.Errorf("%w: review paper account %q does not match runtime account %q", ErrFailedClosed, observation.Ledger.AccountID, r.AccountID)
 	}
 	if observation.Price <= 0 || observation.PriceSource == "" || len(observation.Evidence) == 0 {
 		_ = r.Store.RecordReviewUnavailable(ctx, item.Review.PositionID, item.Review.SessionNumber, r.Now().UTC(), "required evidence or market observation was unavailable")

@@ -8,6 +8,7 @@ import (
 )
 
 func TestNewExploratoryPaperRuntimeWiresDurableExitApprovalSource(t *testing.T) {
+	t.Setenv("PAPER_ACCOUNT_ID", "worker-test-account")
 	runtime, err := newExploratoryPaperRuntime(nil)
 	if err != nil {
 		t.Fatal(err)

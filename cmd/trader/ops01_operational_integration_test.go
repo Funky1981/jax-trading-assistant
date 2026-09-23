@@ -40,8 +40,13 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	now := time.Date(2026, 9, 23, 14, 0, 0, 0, time.UTC)
+	now, err := ops01TestNow(ctx, pool)
+	if err != nil {
+		t.Fatal(err)
+	}
 	suffix := strings.ReplaceAll(uuid.NewString(), "-", "")
+	accountID := "ops01-account-" + suffix
+	t.Setenv("PAPER_ACCOUNT_ID", accountID)
 	eventID := "ops01-provider-" + suffix
 	strategyInstanceID := uuid.New()
 	var candidateID string
@@ -217,10 +222,11 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	thesis := ops01Thesis(eventID, now)
 	approval := ops01ApprovedApproval(t, riskDecision, now, "ops01-entry-operator", workflow.ConfirmationApprove, "LONG")
 	calendar := ops01Calendar(now)
-	ledger, err := papertrading.NewPaperLedger("ops01-account-"+suffix, "USD", 10000)
+	ledger, err := papertrading.NewPaperLedger(accountID, "USD", 10000)
 	if err != nil {
 		t.Fatal(err)
 	}
+	ledgerSnapshot := ledger.Snapshot()
 	runtime, err := newExploratoryPaperRuntime(pool)
 	if err != nil {
 		t.Fatal(err)
@@ -232,7 +238,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		Evidence:    exploratorypaper.EvidenceAssessment{Provider: "candidate_evidence_scores", PolicyVersion: "candidate-evidence-scoring-v1", ReviewedAt: now, SourceBacked: true, QualityState: "sufficient", QualityScore: .9, RequiredQualityScore: .7, EvidenceReady: true, EvidenceGateReady: true, Corroborated: true, IssuerRelevant: true, InstrumentRelevant: true, IndependentSourceGroups: 2},
 		Thesis:      thesis, RiskDecision: riskDecision, Approval: approval, PositionID: "ops01-position-" + suffix, Quantity: 10,
 		Tick:  papertrading.MarketTick{TickID: "ops01-entry-tick-" + suffix, InstrumentID: "QQQ", Bid: 99.5, Ask: 100.5, Last: 100, AvailableQuantity: 10, Timestamp: entryAt.Add(2 * time.Second), ReceivedAt: entryAt.Add(2 * time.Second), Session: papertrading.SessionOpen, Source: "ops01-market-substitute"},
-		Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: papertrading.DefaultCostModel(), Ledger: ledger.Snapshot(), Calendar: calendar, Now: entryAt,
+		Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: papertrading.DefaultCostModel(), Ledger: ledgerSnapshot, Calendar: calendar, Now: entryAt,
 	}
 	store := runtime.Store.(*exploratorypaper.PostgresStore)
 	if err := store.QueueApprovedEntry(ctx, entry); err != nil {
@@ -371,6 +377,18 @@ func (s *ops01FixtureReviewSource) LoadReviewObservation(ctx context.Context, re
 	}
 	tick := papertrading.MarketTick{TickID: "ops01-review-" + record.Position.PositionID + "-" + string(rune('0'+review.SessionNumber)), InstrumentID: record.Thesis.Thesis.InstrumentID, Bid: s.price - 0.5, Ask: s.price + 0.5, Last: s.price, AvailableQuantity: record.EntryFill.Quantity, Timestamp: observedAt, ReceivedAt: observedAt, Session: papertrading.SessionOpen, Source: "ops01-market-substitute"}
 	return exploratorypaper.ReviewObservation{Tick: tick, Price: s.price, PriceSource: "ops01-market-substitute", Evidence: evidence, Calendar: s.calendar, Ledger: ledger, QuoteMode: "MODELED_CANDLE_CLOSE", LiquidityMode: "MODELED_POSITION_CAPACITY", ActualQuoteAvailable: false, ObservedAt: observedAt, ReceivedAt: observedAt, ThesisInvalidated: true, Path: []exploratorypaper.PriceObservation{{ObservationID: tick.TickID, At: observedAt, Price: s.price, Source: "ops01-market-substitute"}}, Excursion: exploratorypaper.ExcursionCoverage{Status: "INCOMPLETE", WindowStart: record.Position.EntryAt, WindowEnd: observedAt, ExpectedObservationCount: review.SessionNumber, Cadence: "ops01-fixture", SourceProvenance: true}}, nil
+}
+
+func ops01TestNow(ctx context.Context, pool *pgxpool.Pool) (time.Time, error) {
+	fallback := time.Date(2026, 9, 23, 14, 0, 0, 0, time.UTC)
+	var latest time.Time
+	if err := pool.QueryRow(ctx, `SELECT COALESCE(MAX(filled_at), $1) FROM paper_fills`, fallback).Scan(&latest); err != nil {
+		return time.Time{}, err
+	}
+	if latest.Before(fallback) {
+		latest = fallback
+	}
+	return latest.UTC().Add(time.Hour), nil
 }
 
 func ops01Thesis(eventID string, now time.Time) exploratorypaper.TradeThesis {

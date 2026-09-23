@@ -68,7 +68,11 @@ func startExploratoryPaperReviewWorker(ctx context.Context, pool *pgxpool.Pool) 
 }
 
 func newExploratoryPaperRuntime(pool *pgxpool.Pool) (*exploratorypaper.Runtime, error) {
-	store := exploratorypaper.NewPostgresStore(pool)
+	accountID := strings.TrimSpace(os.Getenv("PAPER_ACCOUNT_ID"))
+	if accountID == "" {
+		return nil, fmt.Errorf("exploratory paper runtime requires PAPER_ACCOUNT_ID")
+	}
+	store := exploratorypaper.NewPostgresStoreForAccount(pool, accountID)
 	contract := papertrading.DefaultPaperCapabilityContract()
 	costModel := papertrading.DefaultCostModel()
 	var venue *papertrading.PaperVenue
@@ -76,13 +80,14 @@ func newExploratoryPaperRuntime(pool *pgxpool.Pool) (*exploratorypaper.Runtime, 
 	if pool == nil {
 		venue, err = papertrading.NewPaperVenue(contract, costModel)
 	} else {
-		venue, err = store.RestorePaperVenue(context.Background(), contract, costModel)
+		venue, err = store.RestorePaperVenueForAccount(context.Background(), accountID, contract, costModel)
 	}
 	if err != nil {
 		return nil, err
 	}
 	return &exploratorypaper.Runtime{
 		Mode:         runtimepolicy.CurrentMode().String(),
+		AccountID:    accountID,
 		Store:        store,
 		Entries:      store,
 		Reviews:      &postgresExploratoryReviewSource{pool: pool},

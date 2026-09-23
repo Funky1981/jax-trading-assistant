@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"jax-trading-assistant/internal/testsupport"
+	"math"
 	"testing"
 	"time"
 
@@ -23,7 +24,9 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pool.Close()
+	t.Cleanup(func() {
+		pool.Close()
+	})
 	if err := pool.Ping(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -61,12 +64,17 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	persistedEntryOrder, ok := venue.Snapshot().Orders[order.OrderID]
+	if !ok {
+		t.Fatalf("filled entry order %s was not present in venue snapshot", order.OrderID)
+	}
+	assertOrderReconcilesWithFills(t, persistedEntryOrder, fills)
 	position, err := OpenApprovedPosition("position-pg-"+suffix, thesis, binding, fills[0].FilledAt, fills[0].Price)
 	if err != nil {
 		t.Fatal(err)
 	}
 	store := NewPostgresStore(pool)
-	lifecycleID, err := store.SaveApprovedEntry(ctx, binding.CandidateID, thesis, binding, approval, position, EntrySnapshot{Order: order, Fill: fills[0], Ledger: account})
+	lifecycleID, err := store.SaveApprovedEntry(ctx, binding.CandidateID, thesis, binding, approval, position, EntrySnapshot{Order: persistedEntryOrder, Fill: fills[0], Ledger: account})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,6 +142,11 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if err != nil || len(exitFills) != 1 {
 		t.Fatalf("exit fills=%#v err=%v", exitFills, err)
 	}
+	persistedExitOrder, ok := venue.Snapshot().Orders[exitOrder.OrderID]
+	if !ok {
+		t.Fatalf("filled exit order %s was not present in venue snapshot", exitOrder.OrderID)
+	}
+	assertOrderReconcilesWithFills(t, persistedExitOrder, exitFills)
 	exitAccount, err := ledger.ApplyFill(exitFills[0])
 	if err != nil {
 		t.Fatal(err)
@@ -170,7 +183,7 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := store.PersistOutcome(ctx, position.PositionID, ExitSnapshot{Order: exitOrder, Fill: exitFills[0], Ledger: exitAccount, Approval: &exitApproval}, outcome); err != nil {
+	if err := store.PersistOutcome(ctx, position.PositionID, ExitSnapshot{Order: persistedExitOrder, Fill: exitFills[0], Ledger: exitAccount, Approval: &exitApproval}, outcome); err != nil {
 		t.Fatal(err)
 	}
 	finalStore := NewPostgresStore(pool)
@@ -179,6 +192,162 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	rejectedReview := finalRecord.Reviews[2]
 	if err != nil || finalRecord.Outcome == nil || finalRecord.Outcome.ExitFillID != exitFills[0].FillID || finalRecord.Position.State != StateClosed || approvedReview.Status != "COMPLETED" || approvedReview.ExitApproval == nil || rejectedReview.Status != "EXIT_REJECTED" || rejectedReview.ExitApproval == nil {
 		t.Fatalf("final outcome was not restored: record=%#v err=%v", finalRecord, err)
+	}
+}
+
+type scopedPaperArtifact struct {
+	account  papertrading.PaperAccount
+	order    papertrading.PaperOrder
+	fill     papertrading.PaperFill
+	approval ApprovalSnapshot
+}
+
+func TestPostgresPaperVenueRestoreIsAccountScoped(t *testing.T) {
+	databaseURL := testsupport.PostgresDSN(t, "PAPER01B_DATABASE_URL")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		pool.Close()
+	})
+	if err := pool.Ping(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	suffix := now.Format("20060102150405.000000")
+	accountA := "scope-account-a-" + suffix
+	accountB := "scope-account-b-" + suffix
+	artifactA := persistScopedPaperArtifact(t, ctx, pool, accountA, "scope-a-"+suffix, now)
+	artifactB := persistScopedPaperArtifact(t, ctx, pool, accountB, "scope-b-"+suffix, now.Add(time.Minute))
+	store := NewPostgresStore(pool)
+	costModel := papertrading.DefaultCostModel()
+	contract := papertrading.DefaultPaperCapabilityContract()
+
+	venueA, err := store.RestorePaperVenueForAccount(ctx, accountA, contract, costModel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshotA := venueA.Snapshot()
+	if len(snapshotA.Orders) != 1 || len(snapshotA.Fills) != 1 {
+		t.Fatalf("account A restore orders=%d fills=%d", len(snapshotA.Orders), len(snapshotA.Fills))
+	}
+	if _, ok := snapshotA.Orders[artifactB.order.OrderID]; ok {
+		t.Fatal("account A venue restored account B order")
+	}
+	if _, ok := snapshotA.Fills[artifactB.fill.FillID]; ok {
+		t.Fatal("account A venue restored account B fill")
+	}
+	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: snapshotA, Account: artifactA.account}, now.Add(2*time.Minute)); result.Status != papertrading.ReconciliationClean {
+		t.Fatalf("account A reconciliation=%#v", result)
+	}
+
+	venueB, err := store.RestorePaperVenueForAccount(ctx, accountB, contract, costModel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshotB := venueB.Snapshot()
+	if len(snapshotB.Orders) != 1 || len(snapshotB.Fills) != 1 {
+		t.Fatalf("account B restore orders=%d fills=%d", len(snapshotB.Orders), len(snapshotB.Fills))
+	}
+	if _, ok := snapshotB.Orders[artifactA.order.OrderID]; ok {
+		t.Fatal("account B venue restored account A order")
+	}
+	if _, ok := snapshotB.Fills[artifactA.fill.FillID]; ok {
+		t.Fatal("account B venue restored account A fill")
+	}
+	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: snapshotB, Account: artifactB.account}, now.Add(2*time.Minute)); result.Status != papertrading.ReconciliationClean {
+		t.Fatalf("account B reconciliation=%#v", result)
+	}
+
+	unownedOrder := artifactA.order
+	unownedOrder.OrderID = "unowned-order-" + suffix
+	unownedOrder.PaperIntentID = "unowned-intent-" + suffix
+	_, err = pool.Exec(ctx, `
+		INSERT INTO paper_orders (order_id,contract_version,venue_id,environment,paper_intent_id,workflow_id,recommendation_id,risk_decision_id,confirmation_id,instrument_id,direction,quantity,remaining_quantity,filled_quantity,order_type,limit_price,cost_model_id,created_at,activates_at,status)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+	`, unownedOrder.OrderID, unownedOrder.ContractVersion, unownedOrder.VenueID, string(unownedOrder.Environment), unownedOrder.PaperIntentID, unownedOrder.WorkflowID, unownedOrder.RecommendationID, unownedOrder.RiskDecisionID, unownedOrder.ConfirmationID, unownedOrder.InstrumentID, unownedOrder.Direction, unownedOrder.Quantity, unownedOrder.RemainingQuantity, unownedOrder.FilledQuantity, string(unownedOrder.OrderType), nullableFloat(unownedOrder.LimitPrice), unownedOrder.CostModelID, unownedOrder.CreatedAt, unownedOrder.ActivatesAt, string(unownedOrder.Status))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM paper_orders WHERE order_id=$1`, unownedOrder.OrderID)
+	})
+	if _, err := store.RestorePaperVenueForAccount(ctx, accountA, contract, costModel); err == nil {
+		t.Fatal("unowned paper order was silently ignored during account-scoped restore")
+	}
+}
+
+func persistScopedPaperArtifact(t *testing.T, ctx context.Context, pool *pgxpool.Pool, accountID, suffix string, now time.Time) scopedPaperArtifact {
+	t.Helper()
+	approval := postgresApproval(t, suffix, "LONG", now)
+	venue, err := papertrading.NewPaperVenue(papertrading.DefaultPaperCapabilityContract(), papertrading.DefaultCostModel())
+	if err != nil {
+		t.Fatal(err)
+	}
+	order, err := venue.Submit(papertrading.CreateOrderRequest{Workflow: approval.Workflow, PaperIntent: approval.PaperIntent, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: papertrading.DefaultCostModel(), InstrumentID: "AAPL", Quantity: 10, ReferencePrice: 100, OrderType: papertrading.OrderMarket, CreatedAt: now, IdempotencyKey: suffix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fills, err := venue.ProcessTick(papertrading.MarketTick{TickID: "tick-" + suffix, InstrumentID: "AAPL", Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 10, Timestamp: now.Add(time.Second), ReceivedAt: now.Add(time.Second), Session: papertrading.SessionOpen, Source: "account-scope-test"})
+	if err != nil || len(fills) != 1 {
+		t.Fatalf("scoped artifact fills=%#v err=%v", fills, err)
+	}
+	ledger, err := papertrading.NewPaperLedger(accountID, "USD", 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	account, err := ledger.ApplyFill(fills[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	persistedOrder, ok := venue.Snapshot().Orders[order.OrderID]
+	if !ok {
+		t.Fatalf("scoped artifact order %s was not present after fill", order.OrderID)
+	}
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := persistWorkflowSnapshot(ctx, tx, approval); err != nil {
+		_ = tx.Rollback(ctx)
+		t.Fatal(err)
+	}
+	if err := persistPaperArtifacts(ctx, tx, persistedOrder, fills[0], account); err != nil {
+		_ = tx.Rollback(ctx)
+		t.Fatal(err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	return scopedPaperArtifact{account: account, order: persistedOrder, fill: fills[0], approval: approval}
+}
+
+func assertOrderReconcilesWithFills(t *testing.T, order papertrading.PaperOrder, fills []papertrading.PaperFill) {
+	t.Helper()
+	var durableFillQuantity float64
+	for _, fill := range fills {
+		if fill.OrderID != order.OrderID {
+			t.Fatalf("fill %s references order %s, want %s", fill.FillID, fill.OrderID, order.OrderID)
+		}
+		durableFillQuantity += fill.Quantity
+	}
+	if math.Abs(order.FilledQuantity-durableFillQuantity) > 1e-9 {
+		t.Fatalf("order %s filled quantity=%v, durable fill quantity=%v", order.OrderID, order.FilledQuantity, durableFillQuantity)
+	}
+	if math.Abs(order.RemainingQuantity+order.FilledQuantity-order.Quantity) > 1e-9 {
+		t.Fatalf("order %s quantity identity failed: quantity=%v filled=%v remaining=%v", order.OrderID, order.Quantity, order.FilledQuantity, order.RemainingQuantity)
+	}
+	switch {
+	case order.FilledQuantity == 0 && order.Status != papertrading.OrderNew && order.Status != papertrading.OrderActive:
+		t.Fatalf("order %s status=%s is invalid for an unfilled order", order.OrderID, order.Status)
+	case order.RemainingQuantity == 0 && order.Status != papertrading.OrderFilled:
+		t.Fatalf("order %s status=%s is invalid for a fully filled order", order.OrderID, order.Status)
+	case order.FilledQuantity > 0 && order.RemainingQuantity > 0 && order.Status != papertrading.OrderPartiallyFilled:
+		t.Fatalf("order %s status=%s is invalid for a partially filled order", order.OrderID, order.Status)
 	}
 }
 
