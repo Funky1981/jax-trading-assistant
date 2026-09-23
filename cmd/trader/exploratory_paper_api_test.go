@@ -6,12 +6,15 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"jax-trading-assistant/internal/modules/exploratorypaper"
 	"jax-trading-assistant/internal/modules/workflow"
 	"jax-trading-assistant/libs/auth"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type exploratoryExitDecisionStoreStub struct {
@@ -112,5 +115,53 @@ func TestExploratoryExitDecisionHandlerTreatsMissingJWTClaimsAsForbidden(t *test
 	handleExploratoryExitDecision(rec, req, store, "position-1", "exit-approval")
 	if rec.Code != http.StatusForbidden || store.persistCalls != 0 {
 		t.Fatalf("status=%d persistCalls=%d, want forbidden and no persistence", rec.Code, store.persistCalls)
+	}
+}
+
+func TestExploratoryOperationalRoutesFailClosedWithoutConfiguredAccount(t *testing.T) {
+	t.Setenv("PAPER_ACCOUNT_ID", "")
+	mux := http.NewServeMux()
+	registerExploratoryPaperRoutes(mux, func(next http.HandlerFunc) http.HandlerFunc { return next }, nil)
+
+	for _, path := range []string{
+		"/api/v1/exploratory-paper/positions",
+		"/api/v1/exploratory-paper/positions/position-a",
+		"/api/v1/exploratory-paper/positions/position-a/exit-approval",
+		"/api/v1/exploratory-paper/entry-queue",
+	} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		if strings.HasSuffix(path, "entry-queue") || strings.Contains(path, "exit-approval") {
+			req.Method = http.MethodPost
+		}
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusServiceUnavailable {
+			t.Fatalf("path %s status=%d body=%s, want service unavailable", path, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+func TestExploratoryEntryQueueRejectsCrossAccountPayloadBeforePersistence(t *testing.T) {
+	t.Setenv("PAPER_ACCOUNT_ID", "account-a")
+	t.Setenv("JAX_RUNTIME_MODE", "paper")
+	var pool pgxpool.Pool
+	store := exploratorypaper.NewPostgresStoreForAccount(&pool, "account-a")
+	entry := exploratorypaper.EntryRequest{
+		CandidateID: "candidate-a",
+		Approval: exploratorypaper.ApprovalSnapshot{
+			Workflow:    workflow.Workflow{WorkflowID: "workflow-a"},
+			PaperIntent: workflow.PaperIntent{IntentID: "intent-a"},
+		},
+	}
+	entry.Ledger.AccountID = "account-b"
+	body, err := json.Marshal(entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/exploratory-paper/entry-queue", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	exploratoryPaperEntryQueueHandler(store)(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s, want bad request", rec.Code, rec.Body.String())
 	}
 }

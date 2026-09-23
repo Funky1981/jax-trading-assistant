@@ -3,13 +3,13 @@ package exploratorypaper
 import (
 	"context"
 	"errors"
-	"jax-trading-assistant/internal/testsupport"
 	"math"
 	"testing"
 	"time"
 
 	"jax-trading-assistant/internal/modules/papertrading"
 	"jax-trading-assistant/internal/modules/workflow"
+	"jax-trading-assistant/internal/testsupport"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -73,7 +73,10 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := NewPostgresStore(pool)
+	accountID := account.AccountID
+	t.Setenv("JAX_RUNTIME_MODE", "paper")
+	t.Setenv("PAPER_ACCOUNT_ID", accountID)
+	store := NewPostgresStoreForAccount(pool, accountID)
 	lifecycleID, err := store.SaveApprovedEntry(ctx, binding.CandidateID, thesis, binding, approval, position, EntrySnapshot{Order: persistedEntryOrder, Fill: fills[0], Ledger: account})
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +95,7 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 
 	// Recreate the store to model a process restart. Get must restore and
 	// validate the durable workflow/paper identities, not only JSON state.
-	store = NewPostgresStore(pool)
+	store = NewPostgresStoreForAccount(pool, accountID)
 	restored, err := store.Get(ctx, position.PositionID)
 	if err != nil {
 		t.Fatal(err)
@@ -223,11 +226,12 @@ func TestPostgresPaperVenueRestoreIsAccountScoped(t *testing.T) {
 	accountB := "scope-account-b-" + suffix
 	artifactA := persistScopedPaperArtifact(t, ctx, pool, accountA, "scope-a-"+suffix, now)
 	artifactB := persistScopedPaperArtifact(t, ctx, pool, accountB, "scope-b-"+suffix, now.Add(time.Minute))
-	store := NewPostgresStore(pool)
+	storeA := NewPostgresStoreForAccount(pool, accountA)
+	storeB := NewPostgresStoreForAccount(pool, accountB)
 	costModel := papertrading.DefaultCostModel()
 	contract := papertrading.DefaultPaperCapabilityContract()
 
-	venueA, err := store.RestorePaperVenueForAccount(ctx, accountA, contract, costModel)
+	venueA, err := storeA.RestorePaperVenueForAccount(ctx, accountA, contract, costModel)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,8 +248,11 @@ func TestPostgresPaperVenueRestoreIsAccountScoped(t *testing.T) {
 	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: snapshotA, Account: artifactA.account}, now.Add(2*time.Minute)); result.Status != papertrading.ReconciliationClean {
 		t.Fatalf("account A reconciliation=%#v", result)
 	}
+	if _, err := storeA.RestorePaperVenueForAccount(ctx, accountB, contract, costModel); err == nil {
+		t.Fatal("account A scoped store restored account B")
+	}
 
-	venueB, err := store.RestorePaperVenueForAccount(ctx, accountB, contract, costModel)
+	venueB, err := storeB.RestorePaperVenueForAccount(ctx, accountB, contract, costModel)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +283,7 @@ func TestPostgresPaperVenueRestoreIsAccountScoped(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM paper_orders WHERE order_id=$1`, unownedOrder.OrderID)
 	})
-	if _, err := store.RestorePaperVenueForAccount(ctx, accountA, contract, costModel); err == nil {
+	if _, err := storeA.RestorePaperVenueForAccount(ctx, accountA, contract, costModel); err == nil {
 		t.Fatal("unowned paper order was silently ignored during account-scoped restore")
 	}
 }

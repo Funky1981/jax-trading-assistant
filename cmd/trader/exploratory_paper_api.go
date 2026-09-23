@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 
 	"jax-trading-assistant/internal/modules/exploratorypaper"
@@ -17,14 +18,40 @@ import (
 )
 
 func registerExploratoryPaperRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool) {
-	store := exploratorypaper.NewPostgresStore(pool)
+	operationalStore, operationalErr := newExploratoryOperationalStore(pool)
+	historicalReadOnlyStore := exploratorypaper.NewPostgresStore(pool)
 	pilotStore := exploratorypaper.NewPilotPostgresStore(pool)
-	mux.HandleFunc("/api/v1/exploratory-paper/positions", protect(exploratoryPaperPositionsHandler(store)))
-	mux.HandleFunc("/api/v1/exploratory-paper/positions/", protect(exploratoryPaperPositionHandler(store)))
-	mux.HandleFunc("/api/v1/exploratory-paper/entry-queue", protect(exploratoryPaperEntryQueueHandler(store)))
-	mux.HandleFunc("/api/v1/exploratory-paper/pilot", protect(exploratoryPilotHandler(pilotStore, store)))
+	if operationalErr != nil {
+		unavailableHandler := unavailableExploratoryOperationalHandler(operationalErr)
+		mux.HandleFunc("/api/v1/exploratory-paper/positions", protect(unavailableHandler))
+		mux.HandleFunc("/api/v1/exploratory-paper/positions/", protect(unavailableHandler))
+		mux.HandleFunc("/api/v1/exploratory-paper/entry-queue", protect(unavailableHandler))
+	} else {
+		mux.HandleFunc("/api/v1/exploratory-paper/positions", protect(exploratoryPaperPositionsHandler(operationalStore)))
+		mux.HandleFunc("/api/v1/exploratory-paper/positions/", protect(exploratoryPaperPositionHandler(operationalStore)))
+		mux.HandleFunc("/api/v1/exploratory-paper/entry-queue", protect(exploratoryPaperEntryQueueHandler(operationalStore)))
+	}
+	mux.HandleFunc("/api/v1/exploratory-paper/pilot", protect(exploratoryPilotHandler(pilotStore, historicalReadOnlyStore)))
 	mux.HandleFunc("/api/v1/exploratory-paper/pilot/opportunities", protect(exploratoryPilotOpportunitiesHandler(pilotStore)))
 	mux.HandleFunc("/api/v1/exploratory-paper/pilot-readiness", protect(exploratoryPilotReadinessHandler))
+}
+
+func newExploratoryOperationalStore(pool *pgxpool.Pool) (*exploratorypaper.PostgresStore, error) {
+	accountID := strings.TrimSpace(os.Getenv("PAPER_ACCOUNT_ID"))
+	if accountID == "" {
+		return nil, errors.New("exploratory paper operational routes require PAPER_ACCOUNT_ID")
+	}
+	return exploratorypaper.NewPostgresStoreForAccount(pool, accountID), nil
+}
+
+func unavailableExploratoryOperationalHandler(err error) http.HandlerFunc {
+	message := "exploratory paper operational routes unavailable"
+	if err != nil {
+		message += ": " + err.Error()
+	}
+	return func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, message, http.StatusServiceUnavailable)
+	}
 }
 
 func exploratoryPilotReadinessHandler(w http.ResponseWriter, r *http.Request) {

@@ -302,17 +302,87 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	wrongAccountEntry := entry
+	wrongAccountEntry.Ledger.AccountID = accountID + "-other"
+	wrongEntryBody, err := json.Marshal(wrongAccountEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PAPER_ACCOUNT_ID", accountID)
+	accountAMux := http.NewServeMux()
+	registerExploratoryPaperRoutes(accountAMux, manager.MiddlewareFunc, pool)
+	wrongEntryRequest := httptest.NewRequest(http.MethodPost, "/api/v1/exploratory-paper/entry-queue", strings.NewReader(string(wrongEntryBody)))
+	wrongEntryRequest.Header.Set("Authorization", "Bearer "+token)
+	wrongEntryResponse := httptest.NewRecorder()
+	accountAMux.ServeHTTP(wrongEntryResponse, wrongEntryRequest)
+	if wrongEntryResponse.Code != http.StatusBadRequest {
+		t.Fatalf("cross-account entry status=%d body=%s, want bad request", wrongEntryResponse.Code, wrongEntryResponse.Body.String())
+	}
+	var queuedCount int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM exploratory_paper_entry_queue WHERE candidate_id=$1 AND status='PENDING'`, candidateID).Scan(&queuedCount); err != nil {
+		t.Fatal(err)
+	}
+	if queuedCount != 1 {
+		t.Fatalf("cross-account entry changed queue count=%d, want 1", queuedCount)
+	}
+	positionsRequest := httptest.NewRequest(http.MethodGet, "/api/v1/exploratory-paper/positions", nil)
+	positionsRequest.Header.Set("Authorization", "Bearer "+token)
+	positionsResponse := httptest.NewRecorder()
+	accountAMux.ServeHTTP(positionsResponse, positionsRequest)
+	if positionsResponse.Code != http.StatusOK || !strings.Contains(positionsResponse.Body.String(), positionID) {
+		t.Fatalf("account A positions status=%d body=%s", positionsResponse.Code, positionsResponse.Body.String())
+	}
+	otherAccountID := accountID + "-other"
+	t.Setenv("PAPER_ACCOUNT_ID", otherAccountID)
+	accountBMux := http.NewServeMux()
+	registerExploratoryPaperRoutes(accountBMux, manager.MiddlewareFunc, pool)
+	otherPositionsRequest := httptest.NewRequest(http.MethodGet, "/api/v1/exploratory-paper/positions", nil)
+	otherPositionsRequest.Header.Set("Authorization", "Bearer "+token)
+	otherPositionsResponse := httptest.NewRecorder()
+	accountBMux.ServeHTTP(otherPositionsResponse, otherPositionsRequest)
+	if otherPositionsResponse.Code != http.StatusOK || strings.Contains(otherPositionsResponse.Body.String(), positionID) {
+		t.Fatalf("account B positions status=%d body=%s; account A position was exposed", otherPositionsResponse.Code, otherPositionsResponse.Body.String())
+	}
+	otherPositionRequest := httptest.NewRequest(http.MethodGet, "/api/v1/exploratory-paper/positions/"+positionID, nil)
+	otherPositionRequest.Header.Set("Authorization", "Bearer "+token)
+	otherPositionResponse := httptest.NewRecorder()
+	accountBMux.ServeHTTP(otherPositionResponse, otherPositionRequest)
+	if otherPositionResponse.Code == http.StatusOK {
+		t.Fatalf("account B position lookup exposed account A position: %s", otherPositionResponse.Body.String())
+	}
+	t.Setenv("PAPER_ACCOUNT_ID", accountID)
 	body, err := json.Marshal(exitApproval)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Setenv("PAPER_ACCOUNT_ID", otherAccountID)
+	accountBMux = http.NewServeMux()
+	registerExploratoryPaperRoutes(accountBMux, manager.MiddlewareFunc, pool)
+	crossAccountExitRequest := httptest.NewRequest(http.MethodPost, "/api/v1/exploratory-paper/positions/"+positionID+"/exit-approval", strings.NewReader(string(body)))
+	crossAccountExitRequest.Header.Set("Authorization", "Bearer "+token)
+	crossAccountExitRequest.Header.Set("X-User-ID", "spoofed-operator")
+	crossAccountExitResponse := httptest.NewRecorder()
+	accountBMux.ServeHTTP(crossAccountExitResponse, crossAccountExitRequest)
+	if crossAccountExitResponse.Code == http.StatusOK {
+		t.Fatalf("account B exit approval was accepted: %s", crossAccountExitResponse.Body.String())
+	}
+	unchangedRecord, err := restartedStore.Get(ctx, positionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, storedReview := range unchangedRecord.Reviews {
+		if storedReview.ReviewID == review.ReviewID && storedReview.ExitApproval != nil {
+			t.Fatalf("cross-account exit approval mutated review %s", review.ReviewID)
+		}
+	}
+	t.Setenv("PAPER_ACCOUNT_ID", accountID)
+	accountAMux = http.NewServeMux()
+	registerExploratoryPaperRoutes(accountAMux, manager.MiddlewareFunc, pool)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/exploratory-paper/positions/"+positionID+"/exit-approval", strings.NewReader(string(body)))
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("X-User-ID", "spoofed-operator")
 	rec := httptest.NewRecorder()
-	manager.MiddlewareFunc(func(w http.ResponseWriter, r *http.Request) {
-		handleExploratoryExitDecision(w, r, restartedStore, positionID, "exit-approval")
-	})(rec, req)
+	accountAMux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("exit approval API status=%d body=%s", rec.Code, rec.Body.String())
 	}

@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED / VALIDATION COMPLETE / EXTERNAL REVIEW REQUIRED / PAPER-ONLY**
 
-PAPER-02R reviewed SHA: `c188721af5d3fe466c7999bf3ce01859f125537a`.
+PAPER-02R reviewed baseline: `8a53193278274f0c5ee7e7b41052c8017c144204`.
 
 OPS-01 validates that the corrected Jax runtime can operate its existing
 World Monitor, candidate, approval, exploratory PAPER, persistence, restart,
@@ -15,6 +15,12 @@ authorize broker execution, or authorize live trading.
 - Runtime mode must be explicit `PAPER`.
 - `PAPER_ACCOUNT_ID` must explicitly identify the paper account owned by the
   runtime process.
+- The protected operational exploratory-paper API and the worker use the same
+  explicit `PAPER_ACCOUNT_ID`; entry queue, active positions, position lookup,
+  and exit approval/rejection are account-scoped before any persistence or
+  economic action.
+- If `PAPER_ACCOUNT_ID` is missing, the mutable operational routes fail closed
+  and do not construct an unscoped operational store.
 - Execution authority is `NONE`.
 - Broker execution and live trading remain disabled.
 - Maximum leverage remains bounded at 1x.
@@ -91,6 +97,12 @@ durable exit recommendation-before-approval ordering, and the closed outcome.
   identities are checked before any new simulated economic action.
 - Multiple valid paper accounts may coexist in one PostgreSQL database without
   entering one another's venue or reconciliation scope.
+- The PAPER-02 pilot read model remains an explicitly separate read-only
+  historical boundary. It may use the unscoped lifecycle projection for the
+  frozen historical view; it is never used by the mutable operational routes.
+- A scoped store cannot restore a different account's paper venue. The
+  configured store scope is authoritative, and API payload or URL identities
+  cannot override it.
 - Database timestamp values are normalized to UTC at the runtime boundary.
 
 ## Required validation

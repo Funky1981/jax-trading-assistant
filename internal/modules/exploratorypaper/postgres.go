@@ -149,6 +149,9 @@ func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, account
 	if accountID == "" {
 		return nil, fmt.Errorf("paper venue restore requires a non-empty paper account")
 	}
+	if err := s.requireAccount(accountID); err != nil {
+		return nil, fmt.Errorf("paper venue restore account scope: %w", err)
+	}
 	orderOwners, fillOwners, err := s.loadPaperArtifactOwnership(ctx)
 	if err != nil {
 		return nil, failClosed("restore paper artifact ownership", err)
