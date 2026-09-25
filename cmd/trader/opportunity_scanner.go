@@ -31,7 +31,6 @@ func newOpportunityScanner(pool *pgxpool.Pool) *opportunityScanner {
 }
 
 func startOpportunityScanner(ctx context.Context, pool *pgxpool.Pool) {
-	scanner := newOpportunityScanner(pool)
 	for {
 		state, err := loadAIScannerState(ctx, pool)
 		interval := 5 * time.Minute
@@ -39,7 +38,7 @@ func startOpportunityScanner(ctx context.Context, pool *pgxpool.Pool) {
 			interval = time.Duration(state.IntervalSeconds) * time.Second
 		}
 
-		if _, err := scanner.ScanOnce(ctx); err != nil {
+		if _, err := runOpportunityScannerOnce(ctx, pool, true); err != nil {
 			log.Printf("opportunity scanner: %v", err)
 		}
 

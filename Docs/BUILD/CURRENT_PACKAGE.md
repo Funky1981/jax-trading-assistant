@@ -5,6 +5,11 @@ The artifact-forensics, canonical closure, World Monitor verification, and
 Compose account-wiring record is in
 `Docs/BUILD/OPS-02A-PAPER-02-ARTIFACT-FORENSICS-WORLD-MONITOR-DEPLOYMENT-PREP.md`.
 
+OPS-02B1: **IMPLEMENTED / VALIDATED / OPS-02B DEPLOYMENT STILL BLOCKED**.
+Read `Docs/BUILD/OPS-02B1-SAFE-DEPLOYMENT-PREFLIGHT-CORRECTION.md`. The
+process-level worker gates are ready, but this correction did not start the
+controlled `jax-trader` deployment proof.
+
 OPS-01: **GO / EXTERNALLY REVIEWED** at
 `7776e763a38f941ab0d704619bcbe3361921b591`.
 

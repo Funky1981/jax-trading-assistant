@@ -114,6 +114,7 @@ func evaluateTraderReadiness(
 		brokerStatus["skipped"] = true
 	}
 	checks["broker"] = brokerStatus
+	checks["workers"] = cfg.WorkerGates.readiness()
 
 	payload := map[string]any{
 		"service":          "jax-trader",

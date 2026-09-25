@@ -54,6 +54,7 @@ type Config struct {
 	MaxOpenPositions    int
 	MaxDailyLoss        float64
 	DefaultOrderType    string
+	WorkerGates         workerStartupGates
 }
 
 func main() {
@@ -78,6 +79,7 @@ func main() {
 	if err := validateStartupProviderPolicy(cfg.RuntimeMode); err != nil {
 		log.Fatalf("startup provider policy failed: %v", err)
 	}
+	cfg.WorkerGates.logStartupState()
 	etfCatalog, err := instruments.LoadDefaultCatalog()
 	if err != nil {
 		log.Fatalf("failed to load ETF instrument catalog: %v", err)
@@ -201,19 +203,27 @@ func main() {
 
 	// ADR-0012 Phase 6: launch in-process replacements for removed microservices.
 	// startMarketIngester replaces jax-market; startFrontendAPIServer replaces jax-api.
-	go startMarketIngester(ctx, dbPool)
+	launchWorkerIfEnabled(cfg.WorkerGates.MarketIngesterEnabled, "market ingester", func() {
+		go startMarketIngester(ctx, dbPool)
+	})
 	go startFrontendAPIServer(ctx, dbPool, registry, strategyTypeRegistry, rawStore)
 
 	// Always-on trade watcher: continuously evaluates enabled strategy instances
 	// and creates candidate trades independent of browser presence.
-	go startTradeWatcher(ctx, dbPool, sigGen)
+	launchWorkerIfEnabled(cfg.WorkerGates.TradeWatcherEnabled, "trade watcher", func() {
+		go startTradeWatcher(ctx, dbPool, sigGen)
+	})
 	if cfg.RuntimeMode == runtimepolicy.ModePaper {
-		go startOpportunityScanner(ctx, dbPool)
+		launchWorkerIfEnabled(cfg.WorkerGates.OpportunityScannerEnabled, "opportunity scanner", func() {
+			go startOpportunityScanner(ctx, dbPool)
+		})
 	}
 	if execService != nil && cfg.RuntimeMode == runtimepolicy.ModePaper {
 		go startExecutionInstructionWorker(ctx, dbPool, execService)
 	}
-	go startMobileNotificationDispatcher(ctx, dbPool)
+	launchWorkerIfEnabled(cfg.WorkerGates.MobileNotificationDispatcherEnabled, "mobile notification dispatcher", func() {
+		go startMobileNotificationDispatcher(ctx, dbPool)
+	})
 	go startWorldMonitorPullWorker(ctx, dbPool)
 	if cfg.RuntimeMode == runtimepolicy.ModePaper {
 		go startExploratoryPaperReviewWorker(ctx, dbPool)
@@ -283,6 +293,11 @@ func loadConfig() (Config, error) {
 		Port:        os.Getenv("PORT"),
 		IBBridgeURL: os.Getenv("IB_BRIDGE_URL"),
 	}
+	workerGates, err := loadWorkerStartupGates()
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.WorkerGates = workerGates
 	mode, explicitMode, err := runtimepolicy.ResolveModeFromEnv()
 	if err != nil {
 		return Config{}, err
