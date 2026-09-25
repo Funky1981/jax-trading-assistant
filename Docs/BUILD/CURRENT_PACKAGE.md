@@ -10,6 +10,14 @@ Read `Docs/BUILD/OPS-02B1-SAFE-DEPLOYMENT-PREFLIGHT-CORRECTION.md`. The
 process-level worker gates are ready, but this correction did not start the
 controlled `jax-trader` deployment proof.
 
+OPS-02B3 / OPS-02B: **IMPLEMENTED / CONTROLLED PROOF COMPLETE / EXTERNAL
+REVIEW REQUIRED**. Read
+`Docs/BUILD/OPS-02B-CONTROLLED-PAPER-RUNTIME-DEPLOYMENT-PROOF.md`. The twelve
+historical World Monitor integration-test fixtures were disabled in the normal
+database with explicit operator approval, historical evidence was preserved,
+and the bounded PAPER runtime passed with execution and all four gated workers
+disabled. No new pilot or live execution is authorized.
+
 OPS-01: **GO / EXTERNALLY REVIEWED** at
 `7776e763a38f941ab0d704619bcbe3361921b591`.
 
