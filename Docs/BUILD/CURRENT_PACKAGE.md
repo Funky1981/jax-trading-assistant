@@ -18,6 +18,12 @@ database with explicit operator approval, historical evidence was preserved,
 and the bounded PAPER runtime passed with execution and all four gated workers
 disabled. No new pilot or live execution is authorized.
 
+OPS-02C1: **IMPLEMENTED / CANONICAL FIXTURE CLOSURE COMPLETE / EXTERNAL REVIEW
+REQUIRED**. Read `Docs/BUILD/OPS-02C1-PILOT-TEST-FIXTURE-CLOSURE.md`. The five
+confirmed historical `pilot-restart-*` fixtures were transitioned from ACTIVE
+to ABORTED through admission-blocking `RecordIncident` calls. All dependent
+evidence was preserved and PAPER-02 remains unchanged.
+
 OPS-01: **GO / EXTERNALLY REVIEWED** at
 `7776e763a38f941ab0d704619bcbe3361921b591`.
 

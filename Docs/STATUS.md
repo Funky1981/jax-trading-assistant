@@ -14,6 +14,12 @@ fixtures are disabled, their dependent evidence is preserved, and the bounded
 PAPER runtime proof is recorded in
 `Docs/BUILD/OPS-02B-CONTROLLED-PAPER-RUNTIME-DEPLOYMENT-PROOF.md`.
 
+OPS-02C1: **IMPLEMENTED / CANONICAL FIXTURE CLOSURE COMPLETE / EXTERNAL REVIEW
+REQUIRED**. The five confirmed historical `pilot-restart-*` fixtures are now
+ABORTED through the canonical admission-blocking incident path. The closure
+record is in `Docs/BUILD/OPS-02C1-PILOT-TEST-FIXTURE-CLOSURE.md`; historical
+evidence and PAPER-02 were preserved.
+
 OPS-01: **GO / EXTERNALLY REVIEWED**. Reviewed SHA:
 `7776e763a38f941ab0d704619bcbe3361921b591`.
 
@@ -73,6 +79,7 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - OPS-01: `GO / EXTERNALLY REVIEWED` at `7776e763a38f941ab0d704619bcbe3361921b591`.
 - OPS-02A: `EXECUTED / PAPER-02 HISTORICALLY PRESERVED / DEPLOYMENT PREP`.
 - OPS-02B3 / OPS-02B: `IMPLEMENTED / CONTROLLED PROOF COMPLETE / EXTERNAL REVIEW REQUIRED`.
+- OPS-02C1: `IMPLEMENTED / CANONICAL FIXTURE CLOSURE COMPLETE / EXTERNAL REVIEW REQUIRED`.
 - PAPER-02A3: `ACTIVATED / SUPERSEDED BY OPS-02A`.
 - PAPER-02: `ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES`.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
