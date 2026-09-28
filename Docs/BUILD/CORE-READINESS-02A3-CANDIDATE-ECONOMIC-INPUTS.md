@@ -40,6 +40,15 @@ remains `risk_pending` / `risk_not_ready`; with an explicit input, 02A3 still
 stops before current-account portfolio risk. No candidate approval, PaperIntent,
 paper order, or execution instruction is created by this package.
 
+Until CORE-READINESS-02A4 implements the canonical current-account
+portfolio-risk and approved-PAPER handoff, the legacy approval service rejects
+every `world-monitor` `APPROVE` action, regardless of historical candidate
+risk/gate fields or whether `CandidateEconomicInput` exists. The guard is in
+`approvals.Service.Decide`, so protected HTTP and mobile-token approval callers
+share it. `CandidateEconomicInput` is a request-level exposure contract, not
+portfolio approval. World Monitor rejection, snooze, and reanalysis actions
+remain available.
+
 ## Risk removal and public route boundary
 
 The World Monitor canonical path no longer uses `RiskReviewConfig{}` or

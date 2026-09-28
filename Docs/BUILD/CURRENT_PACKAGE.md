@@ -11,7 +11,10 @@ CORE-READINESS-02A3 adds a typed append-only candidate economic-input contract,
 removes proof/default sizing from the World Monitor canonical path, and leaves
 the incomplete public entry queue unavailable until 02A4. See
 `Docs/BUILD/CORE-READINESS-02A3-CANDIDATE-ECONOMIC-INPUTS.md`. CORE-READINESS-02A4
-remains a separate package and is not implemented here.
+remains a separate package and is not implemented here. Until then, legacy
+World Monitor APPROVE actions are blocked in the shared approval service,
+regardless of historical risk/gate fields or presence of CandidateEconomicInput;
+that input is not portfolio approval. Safe non-approval actions remain enabled.
 
 Read `Docs/BUILD/CORE-READINESS-01-WORKING-JAX-V1-AUDIT.md`. Its bounded
 blockers are JWT-bound candidate actor identity, server-owned candidate/risk/

@@ -77,7 +77,9 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - CORE-READINESS-02: `RECOMMENDED / SEPARATE AUTHORIZATION REQUIRED`.
 - CORE-READINESS-02A3: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; canonical
   candidate economic inputs and compile recovery only. CORE-READINESS-02A4 is
-  not implemented; Working Jax remains not ready.
+  not implemented; Working Jax remains not ready. Legacy World Monitor
+  APPROVE actions are service-level blocked until the canonical current-account
+  portfolio-risk handoff exists; CandidateEconomicInput is not approval.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
 - Harness foundation contracts: `HARNESS-01 GO / EXTERNALLY REVIEWED`.
 - Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE`.

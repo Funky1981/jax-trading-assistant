@@ -353,6 +353,10 @@ func handleApprovalDecision(w http.ResponseWriter, r *http.Request, svc candidat
 		case approvalsmod.ErrCandidateExpired:
 			http.Error(w, err.Error(), http.StatusGone)
 		default:
+			if errors.Is(err, approvalsmod.ErrCanonicalPaperHandoffRequired) {
+				http.Error(w, "canonical PAPER portfolio-risk handoff is not yet available", http.StatusConflict)
+				return
+			}
 			if errors.Is(err, approvalsmod.ErrInstrumentPolicy) {
 				http.Error(w, err.Error(), http.StatusForbidden)
 				return

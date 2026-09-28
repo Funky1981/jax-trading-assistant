@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -64,14 +65,18 @@ type ApprovalRequest struct {
 func (s *Service) Decide(ctx context.Context, req ApprovalRequest) (*Approval, error) {
 	// Verify candidate is awaiting_approval and not expired.
 	var status string
+	var source string
 	var expiresAt *time.Time
 	var signalID *uuid.UUID
 	var approvalEligibility candidatesmod.ApprovalEligibilityResult
 	err := s.pool.QueryRow(ctx,
-		`SELECT status, expires_at, signal_id FROM candidate_trades WHERE id = $1`, req.CandidateID,
-	).Scan(&status, &expiresAt, &signalID)
+		`SELECT status, expires_at, signal_id, COALESCE(source, '') FROM candidate_trades WHERE id = $1`, req.CandidateID,
+	).Scan(&status, &expiresAt, &signalID, &source)
 	if err != nil {
 		return nil, fmt.Errorf("approvals.Service.Decide: candidate lookup: %w", err)
+	}
+	if req.Decision == DecisionApproved && strings.EqualFold(strings.TrimSpace(source), "world-monitor") {
+		return nil, ErrCanonicalPaperHandoffRequired
 	}
 	if expiresAt != nil && time.Now().UTC().After(*expiresAt) {
 		return nil, ErrCandidateExpired
@@ -353,11 +358,12 @@ func mobileRiskLabel(entryPrice, stopLoss float64) string {
 // ── Sentinel errors ───────────────────────────────────────────────────────────
 
 var (
-	ErrCandidateExpired             = fmt.Errorf("candidate has expired and cannot be approved")
-	ErrNotAwaitingApproval          = fmt.Errorf("candidate is not in awaiting_approval state")
-	ErrCandidateMissingSignal       = fmt.Errorf("candidate is missing signal linkage required for paper execution")
-	ErrCandidateNotApprovalEligible = fmt.Errorf("candidate is not eligible for approval review")
-	ErrInstrumentPolicy             = errors.New("instrument policy rejected approval")
+	ErrCandidateExpired              = fmt.Errorf("candidate has expired and cannot be approved")
+	ErrNotAwaitingApproval           = fmt.Errorf("candidate is not in awaiting_approval state")
+	ErrCandidateMissingSignal        = fmt.Errorf("candidate is missing signal linkage required for paper execution")
+	ErrCandidateNotApprovalEligible  = fmt.Errorf("candidate is not eligible for approval review")
+	ErrCanonicalPaperHandoffRequired = errors.New("canonical PAPER portfolio-risk handoff is not yet available for World Monitor approvals")
+	ErrInstrumentPolicy              = errors.New("instrument policy rejected approval")
 )
 
 func (s *Service) ensureApprovalReviewEligible(ctx context.Context, candidateID uuid.UUID) (candidatesmod.ApprovalEligibilityResult, error) {

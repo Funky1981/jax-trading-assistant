@@ -23,7 +23,7 @@ func TestDecisionConstants(t *testing.T) {
 // TestSentinelErrors confirms all sentinel errors are distinct so callers can
 // distinguish them with errors.Is.
 func TestSentinelErrors_AreDistinct(t *testing.T) {
-	for _, e := range []error{ErrCandidateExpired, ErrNotAwaitingApproval, ErrCandidateMissingSignal, ErrCandidateNotApprovalEligible} {
+	for _, e := range []error{ErrCandidateExpired, ErrNotAwaitingApproval, ErrCandidateMissingSignal, ErrCandidateNotApprovalEligible, ErrCanonicalPaperHandoffRequired} {
 		if e == nil {
 			t.Fatalf("sentinel error must not be nil: %v", e)
 		}
@@ -36,6 +36,9 @@ func TestSentinelErrors_AreDistinct(t *testing.T) {
 	}
 	if errors.Is(ErrCandidateNotApprovalEligible, ErrNotAwaitingApproval) {
 		t.Error("ErrCandidateNotApprovalEligible and ErrNotAwaitingApproval must be distinct")
+	}
+	if errors.Is(ErrCanonicalPaperHandoffRequired, ErrNotAwaitingApproval) || errors.Is(ErrCanonicalPaperHandoffRequired, ErrCandidateNotApprovalEligible) {
+		t.Error("ErrCanonicalPaperHandoffRequired must remain distinguishable from existing approval errors")
 	}
 }
 
