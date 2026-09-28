@@ -69,7 +69,37 @@ exploratory paper profitability nor a paper label implies it.
 ## Scientific position
 
 `ma_crossover_v1` is closed after failed historical validation. Trading edge is
-not demonstrated. PAPER-01 is implemented and requires external re-review after
-PAPER-01A remediation;
-PAPER-02 is not started or authorized; formal forward paper is not started;
-Phase 13 is blocked.
+not demonstrated. PAPER-01 is the accepted foundation. `PAPER-02-2026-01` is
+`ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES`.
+PAPER-02R, OPS-01, OPS-02B, and OPS-02C1 are `GO / EXTERNALLY REVIEWED`.
+
+OPS-02B proved bounded PAPER runtime operational integrity against PostgreSQL
+and genuine World Monitor input, with execution disabled, broker execution
+skipped, an isolated PAPER account, and zero unexpected economic writes. This
+operational proof does not prove a strategy, predictive skill, profitability,
+an economic edge, or readiness for formal forward paper. Trading edge remains
+`NOT DEMONSTRATED`; `FORMAL_FORWARD_PAPER` is `NOT STARTED`; live execution is
+not authorized.
+
+`CORE-READINESS-01` is the next package. It audits whether the current system
+can reliably complete the minimum Working Jax v1 loop below without an
+architectural rewrite. It is an audit first and does not select a strategy or
+authorize a pilot.
+
+The current Working Jax v1 criterion is:
+
+```text
+data
+→ analysis
+→ decision
+→ risk
+→ human approval
+→ paper trade
+→ monitor
+→ exit
+→ outcome
+```
+
+Only after CORE-READINESS-01 may a separately selected and preregistered
+exploratory economic hypothesis be considered. A new prospective pilot is
+`NOT STARTED / NOT AUTHORIZED`. HARNESS-04 is `NOT STARTED / DEFERRED`.

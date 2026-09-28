@@ -4,7 +4,10 @@ Paper trading in this repository is hypothetical and evidence-bounded. A paper t
 
 ## Current package
 
-`Docs/BUILD/CURRENT_PACKAGE.md` routes to PAPER-01, implemented with PAPER-01A remediation complete and external re-review required. PAPER-02 is prospective, not started, and not authorized.
+`Docs/BUILD/CURRENT_PACKAGE.md` routes to CORE-READINESS-01, a Working Jax v1
+scientific-readiness audit. PAPER-02-2026-01 is aborted and historically
+preserved with zero genuine prospective opportunities. No new pilot is started
+or authorized.
 
 ## Contracts
 

@@ -1,33 +1,24 @@
 # Jax Current Status
 
-OPS-02A: **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / DEPLOYMENT PREP**.
-The artifact forensics and canonical closure are recorded in
-`Docs/BUILD/OPS-02A-PAPER-02-ARTIFACT-FORENSICS-WORLD-MONITOR-DEPLOYMENT-PREP.md`.
+PAPER-02-2026-01: **ABORTED / HISTORICALLY PRESERVED / 0 GENUINE
+PROSPECTIVE OPPORTUNITIES**. Its artifact forensics and canonical closure are
+recorded in `Docs/BUILD/OPS-02A-PAPER-02-ARTIFACT-FORENSICS-WORLD-MONITOR-DEPLOYMENT-PREP.md`.
 
-OPS-02B1: **IMPLEMENTED / VALIDATED / OPS-02B DEPLOYMENT STILL BLOCKED**.
-The safe preflight correction and restored World Monitor evidence are recorded
-in `Docs/BUILD/OPS-02B1-SAFE-DEPLOYMENT-PREFLIGHT-CORRECTION.md`.
+PAPER-02R: **GO / EXTERNALLY REVIEWED**. Historical incident preservation and
+corrected PAPER-runtime readiness are complete; the package did not continue
+PAPER-02 or demonstrate an edge.
 
-OPS-02B3 / OPS-02B: **IMPLEMENTED / CONTROLLED PROOF COMPLETE / EXTERNAL
-REVIEW REQUIRED**. The twelve authorised historical World Monitor test
-fixtures are disabled, their dependent evidence is preserved, and the bounded
-PAPER runtime proof is recorded in
-`Docs/BUILD/OPS-02B-CONTROLLED-PAPER-RUNTIME-DEPLOYMENT-PROOF.md`.
-
-OPS-02C1: **IMPLEMENTED / CANONICAL FIXTURE CLOSURE COMPLETE / EXTERNAL REVIEW
-REQUIRED**. The five confirmed historical `pilot-restart-*` fixtures are now
-ABORTED through the canonical admission-blocking incident path. The closure
-record is in `Docs/BUILD/OPS-02C1-PILOT-TEST-FIXTURE-CLOSURE.md`; historical
-evidence and PAPER-02 were preserved.
-
-OPS-01: **GO / EXTERNALLY REVIEWED**. Reviewed SHA:
+OPS-01: **GO / EXTERNALLY REVIEWED** at
 `7776e763a38f941ab0d704619bcbe3361921b591`.
 
-PAPER-02R: **GO / EXTERNALLY REVIEWED / HISTORICAL INCIDENT
-PRESERVED**. The corrective package is routed through
-`Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md`. It does not
-continue PAPER-02-2026-01, change its frozen identity, start FORMAL_FORWARD_PAPER,
-or authorize broker/live execution.
+OPS-02B: **GO / EXTERNALLY REVIEWED**. Its bounded PAPER runtime proof and
+authorised disablement of twelve historical strategy fixtures are recorded in
+`Docs/BUILD/OPS-02B-CONTROLLED-PAPER-RUNTIME-DEPLOYMENT-PROOF.md`.
+
+OPS-02C1: **GO / EXTERNALLY REVIEWED**. The five confirmed historical
+`pilot-restart-*` fixtures were closed through the canonical admission-blocking
+incident path; historical evidence and PAPER-02 were preserved. See
+`Docs/BUILD/OPS-02C1-PILOT-TEST-FIXTURE-CLOSURE.md`.
 
 PAPER-02A3: **ACTIVATED / SUPERSEDED BY OPS-02A**. The frozen pilot was
 subsequently closed through its canonical incident path.
@@ -44,7 +35,7 @@ The harness runtime/JaxMind is not integrated and has not entered PAPER-02.
 This is the concise operational status. Roadmap sequencing is authoritative in
 `Docs/ROADMAP.md`; capability maturity is in `Docs/CAPABILITY_MATRIX.md`.
 
-## Current branch context
+## Historical branch context at HARNESS-02 start
 
 - Branch: `capability-reset`
 - Repository HEAD at HARNESS-02 start: `ebd6be95437d5c260724a92997678634a3f2a096`
@@ -77,11 +68,12 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - PAPER-01C: `ACCEPTED / EXTERNALLY REVIEWED`.
 - PAPER-02A2: `READINESS VERIFIED`.
 - OPS-01: `GO / EXTERNALLY REVIEWED` at `7776e763a38f941ab0d704619bcbe3361921b591`.
-- OPS-02A: `EXECUTED / PAPER-02 HISTORICALLY PRESERVED / DEPLOYMENT PREP`.
-- OPS-02B3 / OPS-02B: `IMPLEMENTED / CONTROLLED PROOF COMPLETE / EXTERNAL REVIEW REQUIRED`.
-- OPS-02C1: `IMPLEMENTED / CANONICAL FIXTURE CLOSURE COMPLETE / EXTERNAL REVIEW REQUIRED`.
+- OPS-02A: `EXECUTED / PAPER-02 HISTORICALLY PRESERVED / SUPERSEDED BY OPS-02B AND OPS-02C1`.
+- OPS-02B: `GO / EXTERNALLY REVIEWED`.
+- OPS-02C1: `GO / EXTERNALLY REVIEWED`.
 - PAPER-02A3: `ACTIVATED / SUPERSEDED BY OPS-02A`.
 - PAPER-02: `ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES`.
+- CORE-READINESS-01: `NEXT / WORKING JAX V1 SCIENTIFIC READINESS AUDIT`.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
 - Harness foundation contracts: `HARNESS-01 GO / EXTERNALLY REVIEWED`.
 - Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE`.
@@ -99,17 +91,28 @@ sessions, typical 2–3, hard maximum 5.
 
 ## Safety state
 
-Live trading, broker execution, autonomous execution, and real order mutation
-are disabled. Exploratory paper uses `PAPER`, `ExecutionAuthority=NONE`, and
-maximum leverage 1x. No genuine PAPER-02 opportunity, order, fill, position, or
-formal evidence row was created by activation. The 16 pre-activation
-`position-pg-*`/`account-pg-*` PostgreSQL integration fixtures remain preserved
-and excluded from the production sample.
+OPS-02B proved bounded PAPER runtime operation against real PostgreSQL and
+genuine World Monitor input with execution disabled, broker execution skipped,
+an isolated PAPER account, and zero unexpected economic writes. This was a
+controlled proof; it does not claim that the runtime is running now or that
+every component is proven. Live execution remains unauthorized. PAPER-02
+created zero genuine prospective opportunities and remains aborted. The
+16 pre-activation `position-pg-*`/`account-pg-*` PostgreSQL integration
+fixtures remain preserved and excluded from the production sample.
+
+The last reviewed database checkpoints were six ABORTED exploratory pilots and
+zero ACTIVE pilots after OPS-02C1, and zero enabled strategy instances after
+OPS-02B fixture disablement. These are the recorded package results, not a new
+database query in this documentation update.
 
 ## Next authorized work
 
 Do not continue PAPER-02-2026-01 or reinterpret its preserved history. The next
-safe step is separately reviewed corrected PAPER runtime deployment preparation
-with an explicitly configured isolated `PAPER_ACCOUNT_ID`; no strategy research,
-HARNESS-04, FORMAL_FORWARD_PAPER, broker execution, or live trading is
-authorized by this status.
+authorized package is CORE-READINESS-01: an audit of the current repository and
+reviewed runtime evidence against the minimum trustworthy Working Jax v1 loop.
+It must determine whether controlled economic-hypothesis testing can begin
+without architectural rewrite. It does not select a hypothesis. A separately
+selected and preregistered exploratory economic hypothesis may be considered
+only after that audit. A new prospective pilot is not started or authorized;
+HARNESS-04 is deferred, FORMAL_FORWARD_PAPER is not started, and broker/live
+execution is not authorized.

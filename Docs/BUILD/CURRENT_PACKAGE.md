@@ -1,28 +1,40 @@
 # Current Build Package
 
-OPS-02A: **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / DEPLOYMENT PREP**.
+Current routing: **CORE-READINESS-01 — WORKING JAX V1 / SCIENTIFIC READINESS
+AUDIT**. This is an audit-first package; it does not select a strategy or
+authorize a pilot.
+
+OPS-02A: **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / SUPERSEDED BY OPS-02B AND OPS-02C1**.
 The artifact-forensics, canonical closure, World Monitor verification, and
 Compose account-wiring record is in
 `Docs/BUILD/OPS-02A-PAPER-02-ARTIFACT-FORENSICS-WORLD-MONITOR-DEPLOYMENT-PREP.md`.
 
-OPS-02B1: **IMPLEMENTED / VALIDATED / OPS-02B DEPLOYMENT STILL BLOCKED**.
+OPS-02B1: **IMPLEMENTED / VALIDATED / SUPERSEDED BY OPS-02B3**.
 Read `Docs/BUILD/OPS-02B1-SAFE-DEPLOYMENT-PREFLIGHT-CORRECTION.md`. The
-process-level worker gates are ready, but this correction did not start the
-controlled `jax-trader` deployment proof.
+process-level worker gates were a prerequisite for the later controlled
+`jax-trader` deployment proof.
 
-OPS-02B3 / OPS-02B: **IMPLEMENTED / CONTROLLED PROOF COMPLETE / EXTERNAL
-REVIEW REQUIRED**. Read
+OPS-02B3 / OPS-02B: **GO / EXTERNALLY REVIEWED**. Read
 `Docs/BUILD/OPS-02B-CONTROLLED-PAPER-RUNTIME-DEPLOYMENT-PROOF.md`. The twelve
 historical World Monitor integration-test fixtures were disabled in the normal
 database with explicit operator approval, historical evidence was preserved,
-and the bounded PAPER runtime passed with execution and all four gated workers
-disabled. No new pilot or live execution is authorized.
+and the bounded PAPER runtime passed with execution disabled and the broker
+skipped. The proof recorded an isolated PAPER account and zero unexpected
+economic writes. It proves operational integrity for that controlled run, not
+strategy quality or an economic edge. No new pilot or live execution is
+authorized.
 
-OPS-02C1: **IMPLEMENTED / CANONICAL FIXTURE CLOSURE COMPLETE / EXTERNAL REVIEW
-REQUIRED**. Read `Docs/BUILD/OPS-02C1-PILOT-TEST-FIXTURE-CLOSURE.md`. The five
+OPS-02C1: **GO / EXTERNALLY REVIEWED**. Read
+`Docs/BUILD/OPS-02C1-PILOT-TEST-FIXTURE-CLOSURE.md`. The five
 confirmed historical `pilot-restart-*` fixtures were transitioned from ACTIVE
 to ABORTED through admission-blocking `RecordIncident` calls. All dependent
 evidence was preserved and PAPER-02 remains unchanged.
+
+At the OPS-02C1 closure checkpoint, the normal database held six ABORTED
+exploratory pilots and zero ACTIVE pilots. OPS-02B verified zero enabled
+strategy instances after disabling the twelve confirmed test fixtures. These
+are the last reviewed database results recorded by those packages, not a fresh
+database query for this routing update.
 
 OPS-01: **GO / EXTERNALLY REVIEWED** at
 `7776e763a38f941ab0d704619bcbe3361921b591`.
@@ -31,7 +43,7 @@ PAPER-02R: **GO / EXTERNALLY REVIEWED / INCIDENT PRESERVATION & CORRECTED
 PAPER-RUNTIME READINESS**. Reviewed SHA: `c188721af5d3fe466c7999bf3ce01859f125537a`.
 Read
 `Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md` for the
-active corrective package. The exact pre-existing reviewed PostgreSQL/test
+reviewed package record. The exact pre-existing reviewed PostgreSQL/test
 files are incorporated as input and are not discarded merely to obtain a clean
 worktree.
 
@@ -111,12 +123,12 @@ Read in this order:
 5. `Docs/BUILD/PAPER-01-CAPABILITY-MAP.md`
 6. Relevant paper-trading contracts under `Docs/PAPER_TRADING/`
 
-The PAPER-02 activation decision is complete, but the pilot remains exploratory
-and frozen. Genuine prospective observation collection is the only active
-PAPER-02 work. The implementation is documented in
-`Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md`; no formal forward-paper
-run, Phase 13 work, broker execution, or live trading is authorized by this
-package.
+The PAPER-02 activation decision was historically recorded, then the pilot was
+canonically aborted by OPS-02A. Prospective observation collection is not
+active. Its frozen protocol and intake implementation remain historical
+records; they do not authorize a new pilot. No formal forward-paper run,
+strategy selection, Phase 13 work, broker execution, or live trading is
+authorized by this package.
 
 The historical incident and preservation boundary are documented in
 `Docs/PAPER_TRADING/PAPER-02-2026-01-INCIDENT-REVIEW.md`. PAPER-02R does not

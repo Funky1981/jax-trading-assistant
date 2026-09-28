@@ -81,10 +81,12 @@ not promote a strategy or prove a trading edge.
 | PAPER-02A3 | **ACTIVATED / EXTERNALLY REVIEWED / SUPERSEDED BY OPS-02A** |
 | PAPER-02 | **ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES** |
 | PAPER-02R | **GO / EXTERNALLY REVIEWED / INCIDENT PRESERVED** |
-| OPS-02A | **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / DEPLOYMENT PREP** |
+| OPS-01 | **GO / EXTERNALLY REVIEWED** |
+| OPS-02A | **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / SUPERSEDED BY OPS-02B AND OPS-02C1** |
 | OPS-02B1 | **IMPLEMENTED / VALIDATED / SUPERSEDED BY OPS-02B3** |
-| OPS-02B3 / OPS-02B | **IMPLEMENTED / CONTROLLED PROOF COMPLETE / EXTERNAL REVIEW REQUIRED** |
-| OPS-02C1 | **IMPLEMENTED / CANONICAL FIXTURE CLOSURE COMPLETE / EXTERNAL REVIEW REQUIRED** |
+| OPS-02B3 / OPS-02B | **GO / EXTERNALLY REVIEWED** |
+| OPS-02C1 | **GO / EXTERNALLY REVIEWED** |
+| CORE-READINESS-01 | **NEXT / WORKING JAX V1 SCIENTIFIC READINESS AUDIT** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -108,7 +110,8 @@ operator read model. PAPER-01C closes the runtime entry/review loop through the
 approved-entry queue and scheduled worker. PAPER-02 readiness adds a frozen
 prospective protocol, pilot identity, non-trade opportunity ledger, new-
 evidence classification, latency capture, incidents, descriptive metrics, and
-operator read models. It does not activate a pilot.
+operator read models. That readiness work preceded the historical PAPER-02
+activation and subsequent OPS-02A abort.
 
 ## PAPER-02
 
@@ -126,12 +129,15 @@ entry, candidate/evidence, trader, thesis, exit, and cost identities remain
 frozen. Retain WATCH, NO_TRADE, unresolved, rejected, missing-data, and approved
 cases. No historical replay may be used as a prospective observation.
 
-Runtime safety remains `PAPER`, `ExecutionAuthority=NONE`, broker execution
-disabled, execution disabled, maximum leverage 1x, and no live/broker/IB order
-path. The trader intake worker was not started during activation and no genuine
-opportunity, order, fill, position, or formal evidence row was created by
-activation. Existing restart-test fixtures cannot contribute to the production
-pilot sample.
+During the OPS-02B controlled proof, runtime safety was `PAPER`,
+`ExecutionAuthority=NONE`, broker execution and execution were disabled, maximum
+leverage was 1x, and the broker was skipped. No unexpected economic write
+occurred. This proves operational integrity for that bounded run; it does not
+prove a strategy, predictive skill, profitability, an economic edge, or
+formal-forward readiness. The PAPER-02 activation created no genuine
+opportunity, order, fill, position, or formal-evidence row; the pilot was later
+aborted. Existing integration-test fixtures are excluded from its production
+sample.
 
 The canonical protocol remains
 `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`; the activation and
@@ -281,60 +287,103 @@ exists; `TESTED` means automated coverage; `PROVEN` means evidence supports a
 specific claim; `COMPLETE / GO` is a technical-lead gate. None of these terms
 alone means a demonstrated trading edge.
 
+## Working Jax v1 readiness criterion
+
+CORE-READINESS-01 must audit the current repository and reviewed runtime
+evidence against this minimum end-to-end loop:
+
+```text
+data
+→ analysis
+→ decision
+→ risk
+→ human approval
+→ paper trade
+→ monitor
+→ exit
+→ outcome
+```
+
+The audit must determine whether this loop is sufficiently trustworthy to
+begin controlled economic-hypothesis testing without an architectural rewrite.
+Successful startup or bounded operational proof does not establish that every
+component or transition is proven. The scientific stage must start from an
+explicit economic hypothesis and predefined failure criteria. OPS-02B did not
+prove a strategy, predictive skill, profitability, an economic edge, or
+formal-forward readiness. Do not revive `ma_crossover_v1` or reinterpret its
+failed frozen recovery validation; do not select a strategy family in
+CORE-READINESS-01.
+
 ## Current development sequence
 
 ```text
 PAPER-01
-GO / EXTERNALLY REVIEWED
+ACCEPTED FOUNDATION
 
 ↓
 
 PAPER-02
-PROSPECTIVE EXPLORATORY PAPER PILOT
-READY FOR EXTERNAL REVIEW / NOT ACTIVE
+ABORTED / HISTORICALLY PRESERVED /
+0 GENUINE PROSPECTIVE OPPORTUNITIES
+
+↓
+
+PAPER-02R / OPS-01 / OPS-02B / OPS-02C1
+CORRECTED RUNTIME AND OPERATIONAL INTEGRITY
+GO / EXTERNALLY REVIEWED
+
+↓
+
+CORE-READINESS-01
+WORKING JAX V1 / SCIENTIFIC READINESS AUDIT
+NEXT
+
+↓
+
+ONLY AFTER THAT AUDIT:
+A SEPARATELY SELECTED AND PREREGISTERED
+EXPLORATORY ECONOMIC HYPOTHESIS
+
+↓
+
+FUTURE EXPLORATORY PROSPECTIVE PILOT
+NOT STARTED / NOT AUTHORIZED
 
 ↓
 
 PAPER-03
-EXPLORATORY OUTCOME ANALYSIS
-PLANNED
+OUTCOME ANALYSIS
+FUTURE
 
 ↓
 
 PAPER-04
-PLAYBOOK SELECTION / PREREGISTRATION
-PLANNED
+PLAYBOOK SELECTION + PREREGISTRATION
+FUTURE
 
 ↓
 
 FORMAL-01
-FORMAL FORWARD-PAPER VALIDATION
-PLANNED
-
-↓
-
-LIVE-READINESS GATE
-BLOCKED
-
-↓
-
-PHASE 13
-OPTIONAL PERSONAL LIVE EXECUTION
-NOT STARTED / BLOCKED
+FORMAL FORWARD PAPER
+FUTURE / SEPARATE AUTHORIZATION
 ```
 
 ## Deferred work
 
-VAL-04B, FORMAL-01, live-readiness, Phase 13, and commercialisation are not
-current implementation work. PAPER-02 is a readiness package only; an external
-activation decision is still required. Old plans, phase contracts, and
-ProjectOS templates cannot authorize it.
+CORE-READINESS-01 is the next authorized work and must remain an audit first.
+Only after it may a separately selected and preregistered exploratory economic
+hypothesis be considered. No strategy is selected by this roadmap update.
+PAPER-03, PAPER-04, and FORMAL-01 remain future work; FORMAL-01 requires
+separate authorization. VAL-04B, HARNESS-04, live-readiness, Phase 13, and
+commercialisation are not current implementation work. No new prospective
+pilot is authorized; live execution remains unauthorized.
 
 ## Current success criterion
 
-The current success criterion is a coherent, externally reviewable PAPER-01
-control plane and implementation that preserves safety and makes the next
-decision unambiguous. It is not profitability.
+The current success criterion is a completed CORE-READINESS-01 audit that
+identifies only the blockers that must be resolved before controlled economic-
+hypothesis testing can begin. It is not strategy selection or a profitability
+claim.
 
 ## North Star
 
