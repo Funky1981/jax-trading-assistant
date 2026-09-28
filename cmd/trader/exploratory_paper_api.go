@@ -25,11 +25,9 @@ func registerExploratoryPaperRoutes(mux *http.ServeMux, protect func(http.Handle
 		unavailableHandler := unavailableExploratoryOperationalHandler(operationalErr)
 		mux.HandleFunc("/api/v1/exploratory-paper/positions", protect(unavailableHandler))
 		mux.HandleFunc("/api/v1/exploratory-paper/positions/", protect(unavailableHandler))
-		mux.HandleFunc("/api/v1/exploratory-paper/entry-queue", protect(unavailableHandler))
 	} else {
 		mux.HandleFunc("/api/v1/exploratory-paper/positions", protect(exploratoryPaperPositionsHandler(operationalStore)))
 		mux.HandleFunc("/api/v1/exploratory-paper/positions/", protect(exploratoryPaperPositionHandler(operationalStore)))
-		mux.HandleFunc("/api/v1/exploratory-paper/entry-queue", protect(exploratoryPaperEntryQueueHandler(operationalStore)))
 	}
 	mux.HandleFunc("/api/v1/exploratory-paper/pilot", protect(exploratoryPilotHandler(pilotStore, historicalReadOnlyStore)))
 	mux.HandleFunc("/api/v1/exploratory-paper/pilot/opportunities", protect(exploratoryPilotOpportunitiesHandler(pilotStore)))
@@ -65,32 +63,6 @@ func exploratoryPilotReadinessHandler(w http.ResponseWriter, r *http.Request) {
 		"notFormalEvidence": true,
 		"readiness":         loadPaper02RuntimeReadiness(),
 	})
-}
-
-// exploratoryPaperEntryQueueHandler is a handoff only: it accepts an entry
-// after the existing human-approved workflow has reached PAPER_INTENT_CREATED.
-// It never approves, creates a broker order, or executes anything.
-func exploratoryPaperEntryQueueHandler(store *exploratorypaper.PostgresStore) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		if runtimepolicy.CurrentMode() != runtimepolicy.ModePaper {
-			http.Error(w, "exploratory paper entry queue requires PAPER runtime mode", http.StatusConflict)
-			return
-		}
-		var entry exploratorypaper.EntryRequest
-		if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
-			http.Error(w, "invalid approved entry payload: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err := store.QueueApprovedEntry(r.Context(), entry); err != nil {
-			http.Error(w, "approved entry was rejected: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		jsonOK(w, map[string]any{"queued": true, "candidateId": entry.CandidateID, "mode": exploratorypaper.ExploratoryPaperMode, "execution": "ISOLATED_SIMULATED_PAPER_ONLY"})
-	}
 }
 
 // The PAPER-02 surface is read-only in this package. There is deliberately no

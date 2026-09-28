@@ -90,7 +90,7 @@ func newExploratoryPaperRuntime(pool *pgxpool.Pool) (*exploratorypaper.Runtime, 
 		AccountID:    accountID,
 		Store:        store,
 		Entries:      store,
-		Reviews:      &postgresExploratoryReviewSource{pool: pool},
+		Reviews:      &postgresExploratoryReviewSource{pool: pool, now: func() time.Time { return time.Now().UTC() }},
 		ExitApprover: store,
 		Venue:        venue,
 		CostModel:    costModel,
@@ -123,24 +123,42 @@ func (h *exploratoryWorkerHealth) reviewFailure(_ time.Time, _ error) {
 	h.reviewConsecutiveFailures++
 }
 
-type postgresExploratoryReviewSource struct{ pool *pgxpool.Pool }
+type postgresExploratoryReviewSource struct {
+	pool         *pgxpool.Pool
+	now          func() time.Time
+	marketPolicy *marketDataSafetyPolicy // non-nil only for explicit isolated test injection
+}
 
 func (s *postgresExploratoryReviewSource) LoadReviewObservation(ctx context.Context, record exploratorypaper.LifecycleRecord, review exploratorypaper.Review) (exploratorypaper.ReviewObservation, error) {
 	calendar, err := configuredExploratoryCalendar()
 	if err != nil {
 		return exploratorypaper.ReviewObservation{}, err
 	}
-	var observedAt time.Time
-	var price float64
-	var source string
-	err = s.pool.QueryRow(ctx, `SELECT timestamp,close::float8,source FROM candles WHERE UPPER(symbol)=UPPER($1) AND timestamp >= $2 ORDER BY timestamp LIMIT 1`, record.Thesis.Thesis.InstrumentID, review.ScheduledAt).Scan(&observedAt, &price, &source)
+	var policy marketDataSafetyPolicy
+	if s.marketPolicy != nil {
+		policy = *s.marketPolicy
+	} else {
+		policy, err = marketDataSafetyPolicyFromEnv()
+	}
+	if err != nil {
+		return exploratorypaper.ReviewObservation{}, fmt.Errorf("review market-data policy unavailable: %w", err)
+	}
+	reviewAsOf := time.Now().UTC()
+	if s.now != nil {
+		reviewAsOf = s.now().UTC()
+	}
+	observations, err := loadBoundedCandles(ctx, s.pool, record.Thesis.Thesis.InstrumentID, reviewAsOf, policy, 1)
 	if err != nil {
 		return exploratorypaper.ReviewObservation{}, fmt.Errorf("market observation unavailable: %w", err)
 	}
-	observedAt = observedAt.UTC()
-	if price <= 0 || strings.TrimSpace(source) == "" {
-		return exploratorypaper.ReviewObservation{}, fmt.Errorf("market observation provenance is incomplete")
+	if len(observations) == 0 {
+		return exploratorypaper.ReviewObservation{}, fmt.Errorf("market observation unavailable: no fresh bounded candle")
 	}
+	marketObservation := observations[0]
+	if marketObservation.ProviderAt.Before(review.ScheduledAt) {
+		return exploratorypaper.ReviewObservation{}, fmt.Errorf("market observation predates scheduled review")
+	}
+	observedAt, receivedAt, price, source := marketObservation.ProviderAt.UTC(), marketObservation.ReceivedAt.UTC(), marketObservation.Last, marketObservation.Source
 	state, err := calendar.SessionState(observedAt)
 	if err != nil {
 		return exploratorypaper.ReviewObservation{}, err
@@ -181,12 +199,11 @@ func (s *postgresExploratoryReviewSource) LoadReviewObservation(ctx context.Cont
 	if err != nil {
 		return exploratorypaper.ReviewObservation{}, err
 	}
-	receivedAt := time.Now().UTC()
 	tick := papertrading.MarketTick{TickID: fmt.Sprintf("review-%s-%d", record.Position.PositionID, review.SessionNumber), InstrumentID: record.Thesis.Thesis.InstrumentID, Bid: price, Ask: price, Last: price, AvailableQuantity: record.EntryFill.Quantity, Timestamp: observedAt, ReceivedAt: receivedAt, Session: papertrading.Session(state), Source: source}
 	return exploratorypaper.ReviewObservation{
 		Tick: tick, Price: price, PriceSource: source, Evidence: evidence, Calendar: calendar, Ledger: ledger,
 		QuoteMode: "MODELED_CANDLE_CLOSE", LiquidityMode: "MODELED_POSITION_CAPACITY", ActualQuoteAvailable: false,
-		ObservedAt: observedAt, ReceivedAt: receivedAt,
+		ObservedAt: observedAt, ReceivedAt: receivedAt, MarketTimeframe: marketObservation.Timeframe, MarketAsOf: marketObservation.AsOf, MarketProvenance: marketObservation.Provenance,
 		Excursion: exploratorypaper.ExcursionCoverage{Status: "INCOMPLETE", WindowStart: record.Position.EntryAt, WindowEnd: observedAt, ExpectedObservationCount: review.SessionNumber, Cadence: "one_observation_per_review", SourceProvenance: true, KnownGaps: []string{"candle-close-only-review-observation"}},
 		Path:      []exploratorypaper.PriceObservation{{ObservationID: tick.TickID, At: observedAt, Price: price, Source: source}},
 	}, nil

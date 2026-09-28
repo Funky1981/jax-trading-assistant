@@ -83,7 +83,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	`, strategyInstanceID, "ops01-"+suffix, `{"symbols":["QQQ"]}`, "ops01-"+suffix); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO quotes(symbol,price,bid,ask,bid_size,ask_size,volume,timestamp,exchange) VALUES('QQQ',100,99.5,100.5,1000,1000,100000,$1,'ops01-provider-substitute') ON CONFLICT (symbol) DO UPDATE SET price=EXCLUDED.price,bid=EXCLUDED.bid,ask=EXCLUDED.ask,bid_size=EXCLUDED.bid_size,ask_size=EXCLUDED.ask_size,volume=EXCLUDED.volume,timestamp=EXCLUDED.timestamp,exchange=EXCLUDED.exchange`, now); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO quotes(symbol,price,bid,ask,bid_size,ask_size,volume,timestamp,exchange,provider,received_at) VALUES('QQQ',100,99.5,100.5,1000,1000,100000,$1,'fixture-exchange','ops01-provider-substitute',$1) ON CONFLICT (symbol) DO UPDATE SET price=EXCLUDED.price,bid=EXCLUDED.bid,ask=EXCLUDED.ask,bid_size=EXCLUDED.bid_size,ask_size=EXCLUDED.ask_size,volume=EXCLUDED.volume,timestamp=EXCLUDED.timestamp,exchange=EXCLUDED.exchange,provider=EXCLUDED.provider,received_at=EXCLUDED.received_at`, now); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(ctx, `DELETE FROM candles WHERE symbol='QQQ' AND source='ops01-provider-substitute'`); err != nil {
@@ -92,7 +92,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		at := now.Add(-time.Duration(25-i) * time.Hour)
 		closePrice := 95.0 + float64(i)*0.25
-		if _, err := pool.Exec(ctx, `INSERT INTO candles(symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,market_data_classification) VALUES('QQQ',$1,$2,$2,$3,$2,$4,$2,'1h','ops01-provider-substitute','provider_observation','substitute')`, at, closePrice, closePrice-0.5, 10000+i); err != nil {
+		if _, err := pool.Exec(ctx, `INSERT INTO candles(symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,market_data_classification,ingested_at) VALUES('QQQ',$1,$2,$2,$3,$2,$4,$2,'1h','ops01-provider-substitute','provider_observation','substitute',$1)`, at, closePrice, closePrice-0.5, 10000+i); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -193,6 +193,10 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	}
 
 	promoter := newWorldMonitorOpportunityPromoter(pool)
+	promoter.marketPolicy = &marketDataSafetyPolicy{AllowedSources: []string{"ops01-provider-substitute"}, Timeframe: "1h", MaxAge: 48 * time.Hour, allowNonProductionSources: true}
+	promoter.economicPolicy = &candidateEconomicPolicy{PolicyVersion: "ops01-fixture-policy-v1", IdentityPolicy: "ops01-fixture-identity-v1", IdentitySource: "ops01-test-fixture",
+		SizingPolicyID: "ops01-risk-request", SizingPolicyVersion: "v1", RiskAllocation: .01, RequestedLeverage: 1,
+		Instruments: map[string]candidateEconomicIdentity{"QQQ": {InstrumentID: "instrument-test-qqq", IssuerID: "issuer-test-qqq"}}}
 	promoter.now = func() time.Time { return now }
 	rows, err := promoter.loadPromotionRows(ctx, 250)
 	if err != nil {
@@ -213,11 +217,42 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		t.Fatalf("production opportunity promotion promoted=%#v outcomes=%#v err=%v", promoted, outcomes, err)
 	}
 	candidateID = promoted.CandidateID
-	riskReview := outcomes[len(outcomes)-1].RiskReview
-	if riskReview == nil || !riskReview.Result.RiskReady {
-		t.Fatalf("candidate/risk path was not ready: %#v", outcomes)
+	if outcomes[len(outcomes)-1].ReasonCode != "portfolio_risk_not_performed" || outcomes[len(outcomes)-1].RiskReview != nil {
+		t.Fatalf("02A3 must persist explicit inputs but stop before account-dependent portfolio risk: %#v", outcomes)
 	}
-	riskDecision := ops01SyntheticRisk(t, candidateID, now)
+	var economicInputCount int
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM candidate_economic_inputs WHERE candidate_id=$1::uuid`, candidateID).Scan(&economicInputCount); err != nil || economicInputCount != 1 {
+		t.Fatalf("OPS-01 fixture economic input count=%d err=%v", economicInputCount, err)
+	}
+	riskDecision := ops01SyntheticRisk(t, candidateID, now, accountID)
+	// Continue the pre-existing OPS-01 runtime lifecycle proof with explicitly
+	// synthetic disposable risk evidence. This does not represent production
+	// portfolio risk or change the 02A3 fail-closed candidate state.
+	if _, err := pool.Exec(ctx, `UPDATE candidate_trades SET gate_status='ready_for_risk_review',risk_status='ready_for_approval_review',approval_status='approval_review_ready' WHERE id=$1::uuid`, candidateID); err != nil {
+		t.Fatal(err)
+	}
+	rules, err = eventdecisions.LoadRuleset("config/genuine-event-decision-v2.json")
+	if err != nil {
+		rules, err = eventdecisions.LoadRuleset("../../config/genuine-event-decision-v2.json")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, err = instruments.LoadDefaultCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	selectedEvents, err := eventdecisions.NewStore(pool).LoadSelectedEvents(ctx, promotionRow.ID.String(), 1)
+	if err != nil || len(selectedEvents) != 1 {
+		t.Fatalf("load downstream OPS-01 event fixture events=%d err=%v", len(selectedEvents), err)
+	}
+	fixtureDecision, err := (eventdecisions.Evaluator{Ruleset: rules, Catalog: catalog}).Evaluate(selectedEvents[0])
+	if err != nil || fixtureDecision.Decision != eventdecisions.DecisionCandidate {
+		t.Fatalf("evaluate downstream OPS-01 disposable fixture decision=%+v err=%v", fixtureDecision, err)
+	}
+	if err := eventdecisions.NewStore(pool).PersistCandidatePromotion(ctx, selectedEvents[0], fixtureDecision, rules, eventdecisions.DecisionOriginReplay, "OPS01_disposable_synthetic_risk_fixture_after_02A3_boundary", now); err != nil {
+		t.Fatal(err)
+	}
 
 	thesis := ops01Thesis(eventID, now)
 	approval := ops01ApprovedApproval(t, riskDecision, now, "ops01-entry-operator", workflow.ConfirmationApprove, "LONG")
@@ -292,7 +327,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		t.Fatalf("exit recommendation was not durable: %#v", review)
 	}
 
-	exitApproval := ops01ApprovalForRecommendation(t, review.ExitRecommendationID, now.Add(24*time.Hour), "ops01-exit-operator")
+	exitApproval := ops01ApprovalForRecommendation(t, review.ExitRecommendationID, now.Add(24*time.Hour), "ops01-exit-operator", accountID)
 	exitApproval.ExitBinding = &exploratorypaper.ExitApprovalBinding{PositionID: positionID, ReviewID: review.ReviewID, RecommendationID: review.ExitRecommendationID, EntryWorkflowID: record.Binding.WorkflowID, EntryPaperIntentID: record.Binding.PaperIntentID}
 	manager, err := auth.NewJWTManager(auth.Config{Secret: []byte("ops01-test-secret"), Expiry: time.Hour})
 	if err != nil {
@@ -339,8 +374,8 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	wrongEntryRequest.Header.Set("Authorization", "Bearer "+token)
 	wrongEntryResponse := httptest.NewRecorder()
 	accountAMux.ServeHTTP(wrongEntryResponse, wrongEntryRequest)
-	if wrongEntryResponse.Code != http.StatusBadRequest {
-		t.Fatalf("cross-account entry status=%d body=%s, want bad request", wrongEntryResponse.Code, wrongEntryResponse.Body.String())
+	if wrongEntryResponse.Code != http.StatusNotFound {
+		t.Fatalf("public entry-queue status=%d body=%s, want unregistered route 404 until 02A4", wrongEntryResponse.Code, wrongEntryResponse.Body.String())
 	}
 	afterQueueCount, afterQueueStatus, afterQueuePayload, afterQueueUpdatedAt, err := readQueueState()
 	if err != nil {
@@ -480,15 +515,9 @@ func (s *ops01FixtureReviewSource) LoadReviewObservation(ctx context.Context, re
 }
 
 func ops01TestNow(ctx context.Context, pool *pgxpool.Pool) (time.Time, error) {
-	fallback := time.Date(2026, 9, 23, 14, 0, 0, 0, time.UTC)
-	var latest time.Time
-	if err := pool.QueryRow(ctx, `SELECT COALESCE(MAX(filled_at), $1) FROM paper_fills`, fallback).Scan(&latest); err != nil {
-		return time.Time{}, err
-	}
-	if latest.Before(fallback) {
-		latest = fallback
-	}
-	return latest.UTC().Add(time.Hour), nil
+	_ = ctx
+	_ = pool
+	return time.Now().UTC(), nil
 }
 
 func ops01Thesis(eventID string, now time.Time) exploratorypaper.TradeThesis {
@@ -545,15 +574,15 @@ func ops01ApprovedApproval(t *testing.T, risk portfoliorisk.RiskDecision, at tim
 	return exploratorypaper.ApprovalSnapshot{Workflow: wf, Events: events}
 }
 
-func ops01ApprovalForRecommendation(t *testing.T, recommendationID string, at time.Time, actor string) exploratorypaper.ApprovalSnapshot {
-	risk := ops01SyntheticRisk(t, recommendationID, at)
+func ops01ApprovalForRecommendation(t *testing.T, recommendationID string, at time.Time, actor, accountID string) exploratorypaper.ApprovalSnapshot {
+	risk := ops01SyntheticRisk(t, recommendationID, at, accountID)
 	return ops01ApprovedApproval(t, risk, at, actor, workflow.ConfirmationApprove, "SHORT")
 }
 
-func ops01SyntheticRisk(t *testing.T, recommendationID string, at time.Time) portfoliorisk.RiskDecision {
+func ops01SyntheticRisk(t *testing.T, recommendationID string, at time.Time, accountID string) portfoliorisk.RiskDecision {
 	t.Helper()
 	snapshot, err := portfoliorisk.BuildSnapshot(portfoliorisk.PortfolioSnapshot{
-		AccountID: "ops01-account", AsOf: at, CapturedAt: at, Provider: "ops01-fixture", Currency: "USD", Synthetic: true,
+		AccountID: accountID, AsOf: at, CapturedAt: at, Provider: "ops01-fixture", Currency: "USD", Synthetic: true,
 		Cash: portfoliorisk.KnownNumber(10000, "fixture"), Equity: portfoliorisk.KnownNumber(10000, "fixture"),
 		Positions:      []portfoliorisk.Position{{InstrumentID: "MSFT", InstrumentResolved: true, Currency: "USD", SignedQuantity: 1, Price: portfoliorisk.KnownNumber(100, "fixture"), MarketValue: portfoliorisk.KnownNumber(100, "fixture"), CostBasis: portfoliorisk.UnknownNumber("not supplied"), ValuationAsOf: at, PriceSource: "fixture", Provenance: []string{"fixture"}}},
 		ValuationBasis: "frozen", Provenance: []string{"ops01-fixture"},

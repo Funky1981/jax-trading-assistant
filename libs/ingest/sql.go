@@ -9,15 +9,17 @@ import (
 
 // QuoteData represents a market quote for SQL storage
 type QuoteData struct {
-	Symbol    string
-	Price     float64
-	Bid       float64
-	Ask       float64
-	BidSize   int64
-	AskSize   int64
-	Volume    int64
-	Timestamp time.Time
-	Exchange  string
+	Symbol     string
+	Price      float64
+	Bid        float64
+	Ask        float64
+	BidSize    int64
+	AskSize    int64
+	Volume     int64
+	Timestamp  time.Time
+	Exchange   string
+	Provider   string
+	ReceivedAt time.Time
 }
 
 // CandleData represents OHLCV candle data for SQL storage
@@ -35,8 +37,8 @@ type CandleData struct {
 const (
 	// StoreQuoteQuery is the SQL for upserting a quote
 	StoreQuoteQuery = `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, provider, received_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
 		ON CONFLICT (symbol) DO UPDATE SET
 			price = EXCLUDED.price,
 			bid = EXCLUDED.bid,
@@ -46,6 +48,8 @@ const (
 			volume = EXCLUDED.volume,
 			timestamp = EXCLUDED.timestamp,
 			exchange = EXCLUDED.exchange,
+			provider = EXCLUDED.provider,
+			received_at = EXCLUDED.received_at,
 			updated_at = NOW()
 	`
 
@@ -65,6 +69,9 @@ const (
 
 // StoreQuote stores a quote in the database
 func StoreQuote(ctx context.Context, db *sql.DB, quote QuoteData) error {
+	if quote.Provider == "" || quote.ReceivedAt.IsZero() {
+		return fmt.Errorf("quote provider identity and receipt timestamp are required")
+	}
 	_, err := db.ExecContext(ctx, StoreQuoteQuery,
 		quote.Symbol,
 		quote.Price,
@@ -75,6 +82,8 @@ func StoreQuote(ctx context.Context, db *sql.DB, quote QuoteData) error {
 		quote.Volume,
 		quote.Timestamp,
 		quote.Exchange,
+		quote.Provider,
+		quote.ReceivedAt,
 	)
 	return err
 }

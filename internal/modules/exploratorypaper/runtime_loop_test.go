@@ -2,6 +2,7 @@ package exploratorypaper
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -33,6 +34,7 @@ type runtimeStore struct {
 	scheduled         int
 	due               []ReviewRecord
 	missing           int
+	missingErr        error
 	checkpoints       int
 	recommended       int
 	approved          int
@@ -72,7 +74,7 @@ func (s *runtimeStore) ListDueReviews(context.Context, time.Time) ([]ReviewRecor
 }
 func (s *runtimeStore) RecordReviewUnavailable(context.Context, string, int, time.Time, string) error {
 	s.missing++
-	return nil
+	return s.missingErr
 }
 func (s *runtimeStore) ApplyEvidence(context.Context, string, RelevantEvidence, time.Time, string) (Position, error) {
 	return s.record.Position, nil
@@ -225,6 +227,24 @@ func TestRuntimeLoopRejectsReviewForDifferentAccountBeforeVenueAction(t *testing
 	}
 	if after := len(venue.Snapshot().Orders); after != before {
 		t.Fatalf("mismatched review mutated venue: before=%d after=%d", before, after)
+	}
+}
+
+func TestRuntimeLoopSurfacesReviewUnavailablePersistenceFailure(t *testing.T) {
+	now := time.Date(2026, 1, 2, 10, 0, 0, 0, time.UTC)
+	venue, err := papertrading.NewPaperVenue(papertrading.DefaultPaperCapabilityContract(), papertrading.DefaultCostModel())
+	if err != nil {
+		t.Fatal(err)
+	}
+	persistErr := errors.New("review unavailable persistence failed")
+	store := &runtimeStore{due: []ReviewRecord{{Review: Review{ReviewID: "review-persist-failure", PositionID: "position-1", SessionNumber: 1}}}, missingErr: persistErr}
+	runtime := &Runtime{Mode: "PAPER", AccountID: "account-1", Store: store, Entries: runtimeEntrySource{}, Reviews: runtimeReviewSource{}, Venue: venue, Now: func() time.Time { return now }}
+	err = runtime.RunDueReviews(context.Background())
+	if !errors.Is(err, ErrReviewUnavailablePersistence) || !errors.Is(err, persistErr) {
+		t.Fatalf("RunDueReviews error = %v, want persistence error surfaced", err)
+	}
+	if store.missing != 1 {
+		t.Fatalf("review-unavailable persistence attempts = %d, want 1", store.missing)
 	}
 }
 

@@ -312,6 +312,9 @@ func (venue *PaperVenue) Snapshot() VenueSnapshot {
 func fillIdentity(fill PaperFill) string {
 	copyFill := fill
 	copyFill.FillID = ""
+	// Keep artifact identity stable across PostgreSQL's microsecond timestamp
+	// precision when fills are restored and validated after a restart.
+	copyFill.FilledAt = canonicalPersistedTime(copyFill.FilledAt)
 	data, _ := json.Marshal(copyFill)
 	digest := sha256.Sum256(data)
 	return "pfl_" + hex.EncodeToString(digest[:])

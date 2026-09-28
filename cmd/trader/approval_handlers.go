@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
 	paperoutcomesmod "jax-trading-assistant/internal/modules/paperoutcomes"
+	"jax-trading-assistant/libs/auth"
 )
 
 // registerApprovalRoutes registers all human-approval-flow endpoints on mux.
@@ -322,13 +324,22 @@ type approvalDecisionBody struct {
 	ExpiryAt *time.Time `json:"expiryAt"`
 }
 
-func handleApprovalDecision(w http.ResponseWriter, r *http.Request, svc *approvalsmod.Service, candidateID uuid.UUID, decision string) {
+type candidateDecisionService interface {
+	Decide(context.Context, approvalsmod.ApprovalRequest) (*approvalsmod.Approval, error)
+	GetByCandidate(context.Context, uuid.UUID) (*approvalsmod.ApprovalDetail, error)
+}
+
+func handleApprovalDecision(w http.ResponseWriter, r *http.Request, svc candidateDecisionService, candidateID uuid.UUID, decision string) {
 	var body approvalDecisionBody
 	if r.ContentLength > 0 {
 		_ = json.NewDecoder(r.Body).Decode(&body)
 	}
 
-	actor := actorFromRequest(r)
+	actor, ok := authenticatedCandidateDecisionActor(r)
+	if !ok {
+		http.Error(w, "authenticated operator identity is required", http.StatusForbidden)
+		return
+	}
 	req := approvalsmod.ApprovalRequest{
 		CandidateID: candidateID,
 		Decision:    decision,
@@ -378,7 +389,7 @@ type paperTicketReviewActionBody struct {
 	Note string `json:"note"`
 }
 
-func handleApprovalSnooze(w http.ResponseWriter, r *http.Request, svc *approvalsmod.Service, candidateID uuid.UUID) {
+func handleApprovalSnooze(w http.ResponseWriter, r *http.Request, svc candidateDecisionService, candidateID uuid.UUID) {
 	var body snoozeBody
 	if r.ContentLength > 0 {
 		_ = json.NewDecoder(r.Body).Decode(&body)
@@ -386,7 +397,11 @@ func handleApprovalSnooze(w http.ResponseWriter, r *http.Request, svc *approvals
 	if body.SnoozeHours <= 0 {
 		body.SnoozeHours = 4
 	}
-	actor := actorFromRequest(r)
+	actor, ok := authenticatedCandidateDecisionActor(r)
+	if !ok {
+		http.Error(w, "authenticated operator identity is required", http.StatusForbidden)
+		return
+	}
 	req := approvalsmod.ApprovalRequest{
 		CandidateID: candidateID,
 		Decision:    approvalsmod.DecisionSnoozed,
@@ -412,10 +427,27 @@ func handleApprovalSnooze(w http.ResponseWriter, r *http.Request, svc *approvals
 	jsonOK(w, detail)
 }
 
-// actorFromRequest extracts the actor identity from JWT claims or falls back to
-// the X-User-ID header, then to "anonymous".
+// authenticatedCandidateDecisionActor binds durable candidate mutations to
+// validated JWT claims. Caller-controlled identity headers are deliberately
+// ignored for this provenance-sensitive path.
+func authenticatedCandidateDecisionActor(r *http.Request) (string, bool) {
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok || claims == nil {
+		return "", false
+	}
+	if userID, ok := auth.UserIDFromContext(r.Context()); ok && strings.TrimSpace(userID) != "" {
+		return strings.TrimSpace(userID), true
+	}
+	if username, ok := auth.UsernameFromContext(r.Context()); ok && strings.TrimSpace(username) != "" {
+		return strings.TrimSpace(username), true
+	}
+	return "", false
+}
+
+// actorFromRequest retains the existing chat/session convention only. Durable
+// candidate mutation handlers must use authenticatedCandidateDecisionActor.
 func actorFromRequest(r *http.Request) string {
-	if id := r.Header.Get("X-User-ID"); id != "" {
+	if id := strings.TrimSpace(r.Header.Get("X-User-ID")); id != "" {
 		return id
 	}
 	return "anonymous"

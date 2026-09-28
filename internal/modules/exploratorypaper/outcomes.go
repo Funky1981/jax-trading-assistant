@@ -52,6 +52,9 @@ type Checkpoint struct {
 	ActualQuoteAvailable bool      `json:"actualQuoteAvailable,omitempty"`
 	ObservedAt           time.Time `json:"observedAt,omitempty"`
 	ReceivedAt           time.Time `json:"receivedAt,omitempty"`
+	MarketTimeframe      string    `json:"marketTimeframe,omitempty"`
+	MarketAsOf           time.Time `json:"marketAsOf,omitempty"`
+	MarketProvenance     string    `json:"marketProvenance,omitempty"`
 }
 
 type Outcome struct {

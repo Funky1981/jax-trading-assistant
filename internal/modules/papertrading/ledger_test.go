@@ -73,6 +73,22 @@ func TestRestorePaperLedgerRejectsStateThatDoesNotMatchEvents(t *testing.T) {
 	}
 }
 
+func TestPaperLedgerIdentitySurvivesPostgresTimestampPrecision(t *testing.T) {
+	now := time.Date(2026, 9, 8, 10, 0, 0, 123456789, time.UTC)
+	ledger, err := NewPaperLedger("paper-account", "USD", 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	account, err := ledger.ApplyFill(testFill("postgres-time", "LONG", 1, 100, 0, now))
+	if err != nil {
+		t.Fatal(err)
+	}
+	account.Events[0].OccurredAt = account.Events[0].OccurredAt.Truncate(time.Microsecond)
+	if _, err := RestorePaperLedger(account); err != nil {
+		t.Fatalf("ledger identity changed after PostgreSQL timestamp precision: %v", err)
+	}
+}
+
 func testFill(id, direction string, quantity, price, fee float64, at time.Time) PaperFill {
 	fill := PaperFill{ContractVersion: FillContractVersion, FillID: id, OrderID: "order-" + id, PaperIntentID: "intent-" + id, WorkflowID: "workflow-" + id, InstrumentID: "AAPL", Direction: direction, Quantity: quantity, Price: price, FilledAt: at, TickID: "tick-" + id, Costs: CostBreakdown{ModelID: "cost-v1", Commission: fee, ExecutedPrice: price}}
 	fill.FillID = fillIdentity(fill)

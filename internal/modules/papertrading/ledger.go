@@ -238,7 +238,7 @@ func ledgerEventIdentity(event LedgerEvent) string {
 		CashDelta       float64   `json:"cash_delta"`
 		RealizedPnL     float64   `json:"realized_pnl"`
 		OccurredAt      time.Time `json:"occurred_at"`
-	}{event.ContractVersion, event.FillID, event.OrderID, event.WorkflowID, event.InstrumentID, event.Direction, event.Quantity, event.Price, event.Fee, event.CashDelta, event.RealizedPnL, event.OccurredAt})
+	}{event.ContractVersion, event.FillID, event.OrderID, event.WorkflowID, event.InstrumentID, event.Direction, event.Quantity, event.Price, event.Fee, event.CashDelta, event.RealizedPnL, canonicalPersistedTime(event.OccurredAt)})
 	digest := sha256.Sum256(data)
 	return "ple_" + hex.EncodeToString(digest[:])
 }

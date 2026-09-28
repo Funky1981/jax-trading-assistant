@@ -14,9 +14,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	candidatesmod "jax-trading-assistant/internal/modules/candidates"
-	"jax-trading-assistant/internal/modules/eventdecisions"
-	"jax-trading-assistant/internal/modules/instruments"
 	"jax-trading-assistant/internal/modules/tradingmodes"
+	"jax-trading-assistant/libs/marketdata"
 )
 
 const (
@@ -29,8 +28,10 @@ const (
 var errWorldMonitorNoUsableQuote = errors.New("world monitor quote has no usable price")
 
 type worldMonitorOpportunityPromoter struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
+	pool           *pgxpool.Pool
+	now            func() time.Time
+	marketPolicy   *marketDataSafetyPolicy  // non-nil only for explicit isolated test injection
+	economicPolicy *candidateEconomicPolicy // non-nil only for explicit policy injection
 }
 
 type worldMonitorPromotionResult struct {
@@ -83,14 +84,21 @@ type worldMonitorInboxPromotionRow struct {
 }
 
 type worldMonitorChartConfirmation struct {
-	Confirmed           bool      `json:"confirmed"`
-	ReasonCode          string    `json:"reasonCode"`
-	Reason              string    `json:"reason"`
-	CandleCount         int       `json:"candleCount"`
-	LastClose           float64   `json:"lastClose,omitempty"`
-	SMA20               float64   `json:"sma20,omitempty"`
-	FiveCandleChangePct float64   `json:"fiveCandleChangePct,omitempty"`
-	CheckedAt           time.Time `json:"checkedAt"`
+	Confirmed           bool                           `json:"confirmed"`
+	ReasonCode          string                         `json:"reasonCode"`
+	Reason              string                         `json:"reason"`
+	CandleCount         int                            `json:"candleCount"`
+	LastClose           float64                        `json:"lastClose,omitempty"`
+	SMA20               float64                        `json:"sma20,omitempty"`
+	FiveCandleChangePct float64                        `json:"fiveCandleChangePct,omitempty"`
+	CheckedAt           time.Time                      `json:"checkedAt"`
+	Source              string                         `json:"source,omitempty"`
+	Timeframe           string                         `json:"timeframe,omitempty"`
+	AsOf                time.Time                      `json:"asOf,omitempty"`
+	EarliestCandleAt    time.Time                      `json:"earliestCandleAt,omitempty"`
+	LatestCandleAt      time.Time                      `json:"latestCandleAt,omitempty"`
+	LatestReceivedAt    time.Time                      `json:"latestReceivedAt,omitempty"`
+	EntryObservation    marketdata.EconomicObservation `json:"entryObservation"`
 }
 
 func newWorldMonitorOpportunityPromoter(pool *pgxpool.Pool) *worldMonitorOpportunityPromoter {
@@ -176,41 +184,36 @@ func (p *worldMonitorOpportunityPromoter) reviewCandidateRisk(ctx context.Contex
 	if err != nil {
 		return nil, worldMonitorPromotionOutcome{}, fmt.Errorf("load risk candidate: %w", err)
 	}
-	evidence, err := store.LatestEvidenceScore(ctx, candidateID)
+	policy := p.economicPolicy
+	if policy == nil {
+		loaded, loadErr := loadCandidateEconomicPolicy()
+		if loadErr != nil {
+			if err := store.MarkEconomicInputUnavailable(ctx, candidateID, "canonical_economic_inputs_unavailable"); err != nil {
+				return nil, worldMonitorPromotionOutcome{}, err
+			}
+			return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "canonical_economic_inputs_unavailable", loadErr.Error(), candidateID.String(), nil), nil
+		}
+		policy = &loaded
+	}
+	input, err := policy.build(candidate.Symbol, candidateID, p.now())
 	if err != nil {
-		return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "latest_evidence_score_missing", err.Error(), candidateID.String(), nil), nil
+		if persistErr := store.MarkEconomicInputUnavailable(ctx, candidateID, "canonical_economic_inputs_unavailable"); persistErr != nil {
+			return nil, worldMonitorPromotionOutcome{}, persistErr
+		}
+		return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "canonical_economic_inputs_unavailable", err.Error(), candidateID.String(), nil), nil
 	}
-	gate := candidatesmod.EvaluateCandidateGate(*candidate, evidence, p.now())
-	if !gate.GateReady || gate.GateStatus != candidatesmod.GateStatusReadyForRiskReview {
-		return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "gate_not_ready", fmt.Sprintf("Trust gate is %s and requires %s.", gate.GateStatus, gate.NextRequiredPhase), candidateID.String(), nil), nil
+	if err := store.PersistCandidateEconomicInput(ctx, input); err != nil {
+		if persistErr := store.MarkEconomicInputUnavailable(ctx, candidateID, "candidate_economic_input_persistence_failed"); persistErr != nil {
+			return nil, worldMonitorPromotionOutcome{}, persistErr
+		}
+		return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "candidate_economic_input_persistence_failed", err.Error(), candidateID.String(), nil), nil
 	}
-	cfg := candidatesmod.RiskReviewConfig{}
-	risk := candidatesmod.ReviewCandidateRisk(*candidate, gate, cfg)
-	eligibility := candidatesmod.EvaluateApprovalEligibility(*candidate, evidence, gate, risk, p.now())
-	slippageSource := "absent_interpreted_as_zero_by_existing_risk_engine"
-	if candidate.SlippageAllowance != nil {
-		slippageSource = "candidate_persisted"
+	// 02A3 persists only the explicit exposure request. Account-dependent
+	// portfolio risk and the durable entry handoff are intentionally deferred.
+	if err := store.MarkEconomicInputUnavailable(ctx, candidateID, "portfolio_risk_not_performed"); err != nil {
+		return nil, worldMonitorPromotionOutcome{}, err
 	}
-	persistence := candidatesmod.RiskReviewPersistence{
-		Result: risk, ApprovalEligibility: eligibility,
-		AccountEquitySource: "proof risk-model assumption",
-		SlippageSource:      slippageSource, RiskPolicySource: "existing RiskReviewConfig defaults",
-		PositionNotional: roundPrice(risk.PositionSize * risk.EntryPrice),
-	}
-	if err := store.PersistRiskReview(ctx, *candidate, persistence); err != nil {
-		return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "risk_result_persistence_failed", err.Error(), candidateID.String(), &persistence), nil
-	}
-	reason := fmt.Sprintf("Risk review returned %s; next phase is %s.", risk.RiskStatus, risk.NextRequiredPhase)
-	status := "blocked"
-	if risk.RiskReady {
-		status = "promoted"
-	}
-	outcome := promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, status, string(risk.RiskStatus), reason, candidateID.String(), &persistence)
-	promoted := &worldMonitorPromotedOpportunity{InboxID: inboxID.String(), CandidateID: candidateID.String(), Symbol: candidate.Symbol, Route: risk.NextRequiredPhase}
-	if eventID.Valid {
-		promoted.EventID = eventID.UUID.String()
-	}
-	return promoted, outcome, nil
+	return nil, promotionOutcomeIDs(inboxID, eventID, candidate.Symbol, "blocked", "portfolio_risk_not_performed", "Canonical economic inputs were persisted; current PAPER account portfolio risk and the 02A4 handoff have not been performed.", candidateID.String(), nil), nil
 }
 
 func promotionOutcomeIDs(inboxID uuid.UUID, eventID uuid.NullUUID, symbol, status, reasonCode, reason, candidateID string, risk *candidatesmod.RiskReviewPersistence) worldMonitorPromotionOutcome {
@@ -370,7 +373,7 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 		}
 		return nil, worldMonitorPromotionOutcome{}, false, err
 	}
-	entry, err := p.latestEntryPrice(ctx, symbol)
+	entryObservation, err := p.latestEntryPrice(ctx, symbol)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, errWorldMonitorNoUsableQuote) {
 			return nil, promotionOutcome(row, symbol, "skipped", "no_quote", fmt.Sprintf("No usable quote is available for %s.", symbol), ""), false, nil
@@ -378,6 +381,7 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 		return nil, worldMonitorPromotionOutcome{}, false, err
 	}
 
+	entry := entryObservation.Last
 	stop := roundPrice(entry * 0.98)
 	target := roundPrice(entry * 1.04)
 	confidence := row.Confidence
@@ -390,6 +394,7 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 	if chart.ReasonCode == "insufficient_candles" {
 		return nil, promotionOutcome(row, symbol, "skipped", chart.ReasonCode, chart.Reason, ""), false, nil
 	}
+	chart.EntryObservation = entryObservation
 
 	candidateSvc := candidatesmod.NewService(candidatesmod.NewStore(p.pool))
 	horizonPolicy := tradingmodes.SwingHorizonPolicy(3, 10)
@@ -534,9 +539,6 @@ func (p *worldMonitorOpportunityPromoter) promoteSymbol(ctx context.Context, row
 		promoted.Route = riskPromoted.Route
 	}
 	if err := p.markInboxCandidateCreated(ctx, row.ID, candidate.ID); err != nil {
-		return nil, worldMonitorPromotionOutcome{}, false, err
-	}
-	if err := p.bindEventDecisionCandidate(ctx, row.ID, candidate.ID); err != nil {
 		return nil, worldMonitorPromotionOutcome{}, false, err
 	}
 	return promoted, riskOutcome, true, nil
@@ -709,30 +711,20 @@ func (p *worldMonitorOpportunityPromoter) findStrategyInstance(ctx context.Conte
 
 func (p *worldMonitorOpportunityPromoter) confirmChart(ctx context.Context, symbol string) (worldMonitorChartConfirmation, error) {
 	checkedAt := p.now()
-	rows, err := p.pool.Query(ctx, `
-		SELECT close::float8
-		FROM candles
-		WHERE symbol = $1
-		ORDER BY timestamp DESC
-		LIMIT 30
-	`, symbol)
+	policy, err := p.marketDataPolicy()
+	if err != nil {
+		return worldMonitorChartConfirmation{}, fmt.Errorf("chart market-data policy unavailable: %w", err)
+	}
+	observations, err := loadBoundedCandles(ctx, p.pool, symbol, checkedAt, policy, 30)
 	if err != nil {
 		return worldMonitorChartConfirmation{}, fmt.Errorf("load chart candles for %s: %w", symbol, err)
 	}
-	defer rows.Close()
-
-	closesDesc := []float64{}
-	for rows.Next() {
-		var close float64
-		if err := rows.Scan(&close); err != nil {
-			return worldMonitorChartConfirmation{}, fmt.Errorf("scan chart candle for %s: %w", symbol, err)
+	closesDesc := make([]float64, 0, len(observations))
+	for _, observation := range observations {
+		if len(closesDesc) > 0 && observations[len(closesDesc)-1].Source != observation.Source {
+			return worldMonitorChartConfirmation{}, fmt.Errorf("chart confirmation cannot mix market-data providers")
 		}
-		if close > 0 {
-			closesDesc = append(closesDesc, close)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return worldMonitorChartConfirmation{}, err
+		closesDesc = append(closesDesc, observation.Last)
 	}
 	if len(closesDesc) < 20 {
 		return worldMonitorChartConfirmation{
@@ -741,6 +733,8 @@ func (p *worldMonitorOpportunityPromoter) confirmChart(ctx context.Context, symb
 			Reason:      fmt.Sprintf("Needs chart confirmation: only %d recent candles are available for %s; at least 20 are required.", len(closesDesc), symbol),
 			CandleCount: len(closesDesc),
 			CheckedAt:   checkedAt,
+			Timeframe:   policy.Timeframe,
+			AsOf:        checkedAt,
 		}, nil
 	}
 
@@ -767,6 +761,12 @@ func (p *worldMonitorOpportunityPromoter) confirmChart(ctx context.Context, symb
 		SMA20:               roundPrice(sma20),
 		FiveCandleChangePct: math.Round(fiveChange*100) / 100,
 		CheckedAt:           checkedAt,
+		Source:              observations[0].Source,
+		Timeframe:           policy.Timeframe,
+		AsOf:                checkedAt,
+		EarliestCandleAt:    observations[len(observations)-1].ProviderAt,
+		LatestCandleAt:      observations[0].ProviderAt,
+		LatestReceivedAt:    observations[0].ReceivedAt,
 	}
 	if last < sma20 {
 		out.Confirmed = false
@@ -786,20 +786,23 @@ func (p *worldMonitorOpportunityPromoter) confirmChart(ctx context.Context, symb
 	return out, nil
 }
 
-func (p *worldMonitorOpportunityPromoter) latestEntryPrice(ctx context.Context, symbol string) (float64, error) {
-	var price float64
-	err := p.pool.QueryRow(ctx, `
-		SELECT COALESCE(NULLIF(price, 0), NULLIF((COALESCE(bid, 0) + COALESCE(ask, 0)) / 2, 0))
-		FROM quotes
-		WHERE symbol = $1
-	`, symbol).Scan(&price)
+func (p *worldMonitorOpportunityPromoter) latestEntryPrice(ctx context.Context, symbol string) (marketdata.EconomicObservation, error) {
+	policy, err := p.marketDataPolicy()
 	if err != nil {
-		return 0, fmt.Errorf("latest quote for %s: %w", symbol, err)
+		return marketdata.EconomicObservation{}, fmt.Errorf("entry market-data policy unavailable: %w", err)
 	}
-	if price <= 0 {
-		return 0, fmt.Errorf("%w for %s", errWorldMonitorNoUsableQuote, symbol)
+	observation, err := loadCanonicalQuoteObservation(ctx, p.pool, symbol, p.now().UTC(), policy)
+	if err != nil {
+		return marketdata.EconomicObservation{}, fmt.Errorf("latest quote for %s: %w", symbol, err)
 	}
-	return roundPrice(price), nil
+	return observation, nil
+}
+
+func (p *worldMonitorOpportunityPromoter) marketDataPolicy() (marketDataSafetyPolicy, error) {
+	if p.marketPolicy != nil {
+		return *p.marketPolicy, nil
+	}
+	return marketDataSafetyPolicyFromEnv()
 }
 
 func (p *worldMonitorOpportunityPromoter) createStrategySignal(ctx context.Context, instanceID uuid.UUID, strategyID, symbol string, confidence, entry, stop, target float64, reasoning string, expiresAt time.Time) (uuid.UUID, error) {
@@ -848,7 +851,6 @@ func (p *worldMonitorOpportunityPromoter) attachCandidateMetadata(ctx context.Co
 	payload, _ := json.Marshal(map[string]any{
 		"worldMonitor":      metadata,
 		"chartConfirmation": chart,
-		"sizing":            worldMonitorSuggestedSizing(entry, stop, target),
 	})
 	_, err := p.pool.Exec(ctx, `
 		UPDATE candidate_trades
@@ -876,38 +878,6 @@ func (p *worldMonitorOpportunityPromoter) markInboxCandidateCreated(ctx context.
 	return nil
 }
 
-func (p *worldMonitorOpportunityPromoter) bindEventDecisionCandidate(ctx context.Context, inboxID, candidateID uuid.UUID) error {
-	rules, err := eventdecisions.LoadRuleset("config/genuine-event-decision-v2.json")
-	if err != nil {
-		rules, err = eventdecisions.LoadRuleset("../../config/genuine-event-decision-v2.json")
-	}
-	if err != nil {
-		return fmt.Errorf("load World Monitor event decision rules: %w", err)
-	}
-	catalog, err := instruments.LoadDefaultCatalog()
-	if err != nil {
-		return fmt.Errorf("load World Monitor instrument catalog: %w", err)
-	}
-	events, err := eventdecisions.NewStore(p.pool).LoadSelectedEvents(ctx, inboxID.String(), 1)
-	if err != nil {
-		return fmt.Errorf("load World Monitor candidate event: %w", err)
-	}
-	if len(events) != 1 || events[0].Candidate == nil || events[0].Candidate.ID != candidateID {
-		return fmt.Errorf("world monitor candidate event projection is incomplete")
-	}
-	result, err := (eventdecisions.Evaluator{Ruleset: rules, Catalog: catalog}).Evaluate(events[0])
-	if err != nil {
-		return fmt.Errorf("evaluate World Monitor candidate promotion: %w", err)
-	}
-	if result.Decision != eventdecisions.DecisionCandidate || result.CandidateID == nil || *result.CandidateID != candidateID {
-		return fmt.Errorf("world monitor candidate promotion is not ready: decision=%s", result.Decision)
-	}
-	if err := eventdecisions.NewStore(p.pool).PersistCandidatePromotion(ctx, events[0], result, rules, eventdecisions.DecisionOriginLive, "candidate_promotion_after_risk_review", p.now().UTC()); err != nil {
-		return fmt.Errorf("persist World Monitor candidate promotion: %w", err)
-	}
-	return nil
-}
-
 func (p *worldMonitorOpportunityPromoter) reasoning(row worldMonitorInboxPromotionRow, symbol string) string {
 	parts := []string{
 		fmt.Sprintf("World Monitor highlighted %s for %s.", symbol, strings.TrimSpace(row.Headline)),
@@ -921,45 +891,4 @@ func (p *worldMonitorOpportunityPromoter) reasoning(row worldMonitorInboxPromoti
 
 func roundPrice(value float64) float64 {
 	return math.Round(value*100) / 100
-}
-
-func worldMonitorSuggestedSizing(entry, stop, target float64) map[string]any {
-	if entry <= 0 || stop <= 0 {
-		return map[string]any{
-			"model":  "paper_fixed_risk_v1",
-			"status": "unavailable",
-			"reason": "entry and stop are required for sizing",
-		}
-	}
-	riskPerShare := math.Abs(entry - stop)
-	if riskPerShare <= 0 {
-		return map[string]any{
-			"model":  "paper_fixed_risk_v1",
-			"status": "unavailable",
-			"reason": "stop must differ from entry for sizing",
-		}
-	}
-	const riskBudget = 100.0
-	shares := math.Max(1, math.Floor(riskBudget/riskPerShare))
-	rewardPerShare := 0.0
-	if target > 0 {
-		rewardPerShare = math.Abs(target - entry)
-	}
-	sizing := map[string]any{
-		"model":          "paper_fixed_risk_v1",
-		"status":         "available",
-		"riskBudget":     riskBudget,
-		"shares":         shares,
-		"quantity":       shares,
-		"notional":       roundPrice(shares * entry),
-		"riskPerShare":   roundPrice(riskPerShare),
-		"riskToStop":     roundPrice(shares * riskPerShare),
-		"source":         "world-monitor-promoter",
-		"reviewRequired": true,
-	}
-	if rewardPerShare > 0 {
-		sizing["rewardToTarget"] = roundPrice(shares * rewardPerShare)
-		sizing["riskReward"] = roundPrice(rewardPerShare / riskPerShare)
-	}
-	return sizing
 }

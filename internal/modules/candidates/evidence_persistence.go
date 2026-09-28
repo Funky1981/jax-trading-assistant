@@ -3,11 +3,84 @@ package candidates
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// PersistCandidateEconomicInput appends the explicit economic request. Exact
+// replays are idempotent; a conflicting request for the same candidate fails.
+func (s *Store) PersistCandidateEconomicInput(ctx context.Context, input CandidateEconomicInput) error {
+	validated, err := BuildCandidateEconomicInput(input, input.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("validate candidate economic input: %w", err)
+	}
+	payload, err := json.Marshal(validated)
+	if err != nil {
+		return fmt.Errorf("marshal candidate economic input: %w", err)
+	}
+	_, err = s.pool.Exec(ctx, `
+		INSERT INTO candidate_economic_inputs (
+			candidate_id, contract_version, instrument_id, issuer_id, identity_source,
+			identity_policy_version, risk_allocation, requested_leverage, sizing_policy_id,
+			sizing_policy_version, content_identity, created_at, payload
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		ON CONFLICT (candidate_id) DO NOTHING
+	`, validated.CandidateID, validated.ContractVersion, validated.InstrumentID, validated.IssuerID,
+		validated.IdentitySource, validated.IdentityPolicyVersion, validated.RiskAllocation, validated.RequestedLeverage,
+		validated.SizingPolicyID, validated.SizingPolicyVersion, validated.ContentIdentity, validated.CreatedAt, payload)
+	if err != nil {
+		return fmt.Errorf("insert candidate economic input: %w", err)
+	}
+	var existingIdentity string
+	if err := s.pool.QueryRow(ctx, `SELECT content_identity FROM candidate_economic_inputs WHERE candidate_id=$1`, validated.CandidateID).Scan(&existingIdentity); err != nil {
+		return fmt.Errorf("verify candidate economic input replay: %w", err)
+	}
+	if existingIdentity != validated.ContentIdentity {
+		return errors.New("conflicting candidate economic input replay")
+	}
+	return nil
+}
+
+func (s *Store) GetCandidateEconomicInput(ctx context.Context, candidateID uuid.UUID) (CandidateEconomicInput, error) {
+	var payload []byte
+	err := s.pool.QueryRow(ctx, `SELECT payload FROM candidate_economic_inputs WHERE candidate_id=$1`, candidateID).Scan(&payload)
+	if err != nil {
+		return CandidateEconomicInput{}, fmt.Errorf("load candidate economic input: %w", err)
+	}
+	var input CandidateEconomicInput
+	if err := json.Unmarshal(payload, &input); err != nil {
+		return CandidateEconomicInput{}, fmt.Errorf("decode candidate economic input: %w", err)
+	}
+	validated, err := BuildCandidateEconomicInput(input, input.CreatedAt)
+	if err != nil {
+		return CandidateEconomicInput{}, fmt.Errorf("validate stored candidate economic input: %w", err)
+	}
+	return validated, nil
+}
+
+// MarkEconomicInputUnavailable keeps research candidates non-approvable until
+// the canonical identity and sizing-request contract is present.
+func (s *Store) MarkEconomicInputUnavailable(ctx context.Context, candidateID uuid.UUID, reason string) error {
+	if strings.TrimSpace(reason) == "" {
+		reason = "canonical_economic_inputs_unavailable"
+	}
+	_, err := s.pool.Exec(ctx, `
+		UPDATE candidate_trades
+		SET risk_status=$2, approval_status=$3, gate_status=$4,
+			reject_reasons=CASE WHEN $5 = ANY(COALESCE(reject_reasons, ARRAY[]::text[])) THEN COALESCE(reject_reasons, ARRAY[]::text[])
+				ELSE array_append(COALESCE(reject_reasons, ARRAY[]::text[]), $5) END,
+			updated_at=NOW()
+		WHERE id=$1
+	`, candidateID, RiskStatusPending, ApprovalStatusRiskNotReady, GateStatusRiskPending, reason)
+	if err != nil {
+		return fmt.Errorf("mark candidate economic input unavailable: %w", err)
+	}
+	return nil
+}
 
 type RiskReviewPersistence struct {
 	Result              RiskReviewResult          `json:"result"`

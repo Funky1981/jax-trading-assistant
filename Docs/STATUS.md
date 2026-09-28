@@ -75,6 +75,9 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - PAPER-02: `ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES`.
 - CORE-READINESS-01: `COMPLETE / BLOCKED_BEFORE_HYPOTHESIS_DESIGN`.
 - CORE-READINESS-02: `RECOMMENDED / SEPARATE AUTHORIZATION REQUIRED`.
+- CORE-READINESS-02A3: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; canonical
+  candidate economic inputs and compile recovery only. CORE-READINESS-02A4 is
+  not implemented; Working Jax remains not ready.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
 - Harness foundation contracts: `HARNESS-01 GO / EXTERNALLY REVIEWED`.
 - Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE`.

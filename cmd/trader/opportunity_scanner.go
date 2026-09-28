@@ -11,8 +11,9 @@ import (
 )
 
 type opportunityScanner struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
+	pool         *pgxpool.Pool
+	now          func() time.Time
+	marketPolicy *marketDataSafetyPolicy
 }
 
 type opportunityScannerResult struct {
@@ -69,6 +70,7 @@ func (s *opportunityScanner) ScanOnce(ctx context.Context) (opportunityScannerRe
 	}
 
 	promoter := newWorldMonitorOpportunityPromoter(s.pool)
+	promoter.marketPolicy = s.marketPolicy
 	rows, err := promoter.loadPromotionRows(ctx, worldMonitorPromoterMaxLimit)
 	if err != nil {
 		return opportunityScannerResult{}, err

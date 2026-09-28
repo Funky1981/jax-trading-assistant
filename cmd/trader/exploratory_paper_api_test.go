@@ -127,7 +127,6 @@ func TestExploratoryOperationalRoutesFailClosedWithoutConfiguredAccount(t *testi
 		"/api/v1/exploratory-paper/positions",
 		"/api/v1/exploratory-paper/positions/position-a",
 		"/api/v1/exploratory-paper/positions/position-a/exit-approval",
-		"/api/v1/exploratory-paper/entry-queue",
 	} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		if strings.HasSuffix(path, "entry-queue") || strings.Contains(path, "exit-approval") {
@@ -139,29 +138,24 @@ func TestExploratoryOperationalRoutesFailClosedWithoutConfiguredAccount(t *testi
 			t.Fatalf("path %s status=%d body=%s, want service unavailable", path, rec.Code, rec.Body.String())
 		}
 	}
+	entryQueue := httptest.NewRecorder()
+	mux.ServeHTTP(entryQueue, httptest.NewRequest(http.MethodPost, "/api/v1/exploratory-paper/entry-queue", strings.NewReader(`{"candidateId":"candidate-test"}`)))
+	if entryQueue.Code != http.StatusNotFound {
+		t.Fatalf("entry queue status=%d, want unregistered route 404", entryQueue.Code)
+	}
 }
 
 func TestExploratoryEntryQueueRejectsCrossAccountPayloadBeforePersistence(t *testing.T) {
 	t.Setenv("PAPER_ACCOUNT_ID", "account-a")
 	t.Setenv("JAX_RUNTIME_MODE", "paper")
 	var pool pgxpool.Pool
-	store := exploratorypaper.NewPostgresStoreForAccount(&pool, "account-a")
-	entry := exploratorypaper.EntryRequest{
-		CandidateID: "candidate-a",
-		Approval: exploratorypaper.ApprovalSnapshot{
-			Workflow:    workflow.Workflow{WorkflowID: "workflow-a"},
-			PaperIntent: workflow.PaperIntent{IntentID: "intent-a"},
-		},
-	}
-	entry.Ledger.AccountID = "account-b"
-	body, err := json.Marshal(entry)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/exploratory-paper/entry-queue", bytes.NewReader(body))
+	body := `{"candidateId":"candidate-a","quantity":10,"approval":{},"paperIntent":{},"ledger":{"accountId":"account-b"}}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/exploratory-paper/entry-queue", strings.NewReader(body))
 	rec := httptest.NewRecorder()
-	exploratoryPaperEntryQueueHandler(store)(rec, req)
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status=%d body=%s, want bad request", rec.Code, rec.Body.String())
+	mux := http.NewServeMux()
+	registerExploratoryPaperRoutes(mux, func(next http.HandlerFunc) http.HandlerFunc { return next }, &pool)
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status=%d body=%s, want unregistered route", rec.Code, rec.Body.String())
 	}
 }

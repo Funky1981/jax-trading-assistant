@@ -86,12 +86,20 @@ func NewClient(config *Config) (*Client, error) {
 
 // GetQuote fetches a quote with provider fallback.
 func (c *Client) GetQuote(ctx context.Context, symbol string) (*Quote, error) {
+	quote, _, err := c.GetQuoteWithSource(ctx, symbol)
+	return quote, err
+}
+
+// GetQuoteWithSource returns the provider that actually supplied the quote.
+// Provider identity is explicit provenance and must not be inferred from the
+// exchange reported by a provider.
+func (c *Client) GetQuoteWithSource(ctx context.Context, symbol string) (*Quote, string, error) {
 	// Try providers in priority order
 	var lastErr error
 	for _, provider := range c.providers {
 		quote, err := provider.GetQuote(ctx, symbol)
 		if err == nil {
-			return quote, nil
+			return quote, strings.ToLower(strings.TrimSpace(provider.Name())), nil
 		}
 		lastErr = err
 		log.Printf("%s provider failed for %s: %v", provider.Name(), symbol, err)
@@ -99,9 +107,9 @@ func (c *Client) GetQuote(ctx context.Context, symbol string) (*Quote, error) {
 	}
 
 	if lastErr != nil {
-		return nil, fmt.Errorf("%w: %v", ErrNoProviderAvailable, lastErr)
+		return nil, "", fmt.Errorf("%w: %v", ErrNoProviderAvailable, lastErr)
 	}
-	return nil, ErrNoProviderAvailable
+	return nil, "", ErrNoProviderAvailable
 }
 
 // GetCandles fetches historical candles with provider fallback

@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	approvalsmod "jax-trading-assistant/internal/modules/approvals"
 )
 
 func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
@@ -20,10 +18,15 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	instanceID := uuid.New()
+	instanceName := "ai-suggestion-test-" + uuid.NewString()
+	if _, err := pool.Exec(ctx, `INSERT INTO strategy_instances(id,name,strategy_type_id,strategy_id,enabled,session_timezone,flatten_by_close_time,config,config_hash) VALUES($1,$2,'etf_news_sector_momentum_v1','etf_news_sector_momentum_v1',TRUE,'America/New_York','15:55','{"symbols":["SOXX"]}'::jsonb,$2)`, instanceID, instanceName); err != nil {
+		t.Fatalf("insert disposable strategy instance: %v", err)
+	}
 
 	_, err := pool.Exec(ctx, `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, updated_at)
-		VALUES ('SOXX', 240.00, 239.95, 240.05, 100, 100, 100000, NOW(), 'TEST', NOW())
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, provider, received_at, updated_at)
+		VALUES ('SOXX', 240.00, 239.95, 240.05, 100, 100, 100000, NOW(), 'TEST', 'core-readiness-fixture', NOW(), NOW())
 		ON CONFLICT (symbol) DO UPDATE
 		SET price = EXCLUDED.price,
 		    bid = EXCLUDED.bid,
@@ -31,6 +34,8 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 		    bid_size = EXCLUDED.bid_size,
 		    ask_size = EXCLUDED.ask_size,
 		    timestamp = EXCLUDED.timestamp,
+		    provider = EXCLUDED.provider,
+		    received_at = EXCLUDED.received_at,
 		    updated_at = EXCLUDED.updated_at
 	`)
 	if err != nil {
@@ -49,7 +54,9 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/suggestions/promote", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 
-	aiSuggestionPromoteHandler(pool)(rec, req)
+	promoter := newWorldMonitorOpportunityPromoter(pool)
+	promoter.marketPolicy = &marketDataSafetyPolicy{AllowedSources: []string{"core-readiness-fixture"}, Timeframe: "1h", MaxAge: 5 * time.Minute, allowNonProductionSources: true}
+	aiSuggestionPromoteHandlerWithPromoter(pool, promoter)(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
@@ -58,7 +65,7 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if response.Route != "approval_required" || response.Status != "awaiting_approval" {
+	if response.Route != "candidate_repair_required" || response.Status != "blocked" {
 		t.Fatalf("unexpected response: %+v", response)
 	}
 
@@ -70,6 +77,7 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM candidate_approvals WHERE candidate_id = $1::uuid`, response.CandidateID)
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM candidate_trades WHERE id = $1::uuid`, response.CandidateID)
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM strategy_signals WHERE id = $1::uuid`, response.SignalID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM strategy_instances WHERE id = $1`, instanceID)
 	})
 
 	var status string
@@ -81,8 +89,8 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	`, response.CandidateID).Scan(&status, &signalID); err != nil {
 		t.Fatalf("query candidate: %v", err)
 	}
-	if status != "awaiting_approval" || signalID != response.SignalID {
-		t.Fatalf("candidate status/signal = %q/%q, want awaiting_approval/%q", status, signalID, response.SignalID)
+	if status != "blocked" || signalID != response.SignalID {
+		t.Fatalf("candidate status/signal = %q/%q, want blocked/%q", status, signalID, response.SignalID)
 	}
 
 	var executionCount int
@@ -97,66 +105,15 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 		t.Fatalf("execution instruction count = %d, want 0 before approval", executionCount)
 	}
 
-	candidateID, err := uuid.Parse(response.CandidateID)
-	if err != nil {
-		t.Fatalf("parse candidate id: %v", err)
+	var approvalCount, ticketCount int
+	if err := pool.QueryRow(ctx, `SELECT
+		(SELECT COUNT(*) FROM candidate_approvals WHERE candidate_id=$1::uuid),
+		(SELECT COUNT(*) FROM candidate_paper_tickets WHERE candidate_id=$1::uuid)
+	`, response.CandidateID).Scan(&approvalCount, &ticketCount); err != nil {
+		t.Fatal(err)
 	}
-	approval, err := approvalsmod.NewService(pool).Decide(ctx, approvalsmod.ApprovalRequest{
-		CandidateID: candidateID,
-		Decision:    approvalsmod.DecisionApproved,
-		ApprovedBy:  "test-operator",
-	})
-	if err != nil {
-		t.Fatalf("approve candidate: %v", err)
-	}
-	if approval.Decision != approvalsmod.DecisionApproved {
-		t.Fatalf("approval decision = %q, want approved", approval.Decision)
-	}
-
-	var approvedStatus string
-	var approvalStatus string
-	if err := pool.QueryRow(ctx, `
-		SELECT status, approval_status
-		FROM candidate_trades
-		WHERE id = $1::uuid
-	`, response.CandidateID).Scan(&approvedStatus, &approvalStatus); err != nil {
-		t.Fatalf("query approved candidate: %v", err)
-	}
-	if approvedStatus != "approved" {
-		t.Fatalf("candidate status after approval = %q, want approved", approvedStatus)
-	}
-	if approvalStatus != "paper_ticket_ready" {
-		t.Fatalf("approval status after approval = %q, want paper_ticket_ready", approvalStatus)
-	}
-	if err := pool.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM execution_instructions
-		WHERE candidate_id = $1::uuid AND approval_id = $2
-	`, response.CandidateID, approval.ID).Scan(&executionCount); err != nil {
-		t.Fatalf("query execution instructions after approval: %v", err)
-	}
-	if executionCount != 0 {
-		t.Fatalf("execution instruction count after approval = %d, want 0", executionCount)
-	}
-
-	var ticketCount int
-	var paperOnly, brokerAllowed, instructionCreated, liveAllowed, leverageAllowed bool
-	var ticketStatus string
-	if err := pool.QueryRow(ctx, `
-		SELECT COUNT(*), bool_and(paper_only), bool_or(broker_execution_allowed),
-		       bool_or(execution_instruction_created), bool_or(live_trading_allowed),
-		       bool_or(leverage_allowed), max(status)
-		FROM candidate_paper_tickets
-		WHERE candidate_id = $1::uuid AND source_approval_id = $2
-	`, response.CandidateID, approval.ID).Scan(&ticketCount, &paperOnly, &brokerAllowed, &instructionCreated, &liveAllowed, &leverageAllowed, &ticketStatus); err != nil {
-		t.Fatalf("query candidate paper tickets after approval: %v", err)
-	}
-	if ticketCount != 1 {
-		t.Fatalf("candidate paper ticket count = %d, want 1", ticketCount)
-	}
-	if ticketStatus != "paper_ticket_created" || !paperOnly || brokerAllowed || instructionCreated || liveAllowed || leverageAllowed {
-		t.Fatalf("persisted paper ticket is not review-only: status=%q paperOnly=%v broker=%v instruction=%v live=%v leverage=%v",
-			ticketStatus, paperOnly, brokerAllowed, instructionCreated, liveAllowed, leverageAllowed)
+	if approvalCount != 0 || ticketCount != 0 {
+		t.Fatalf("structurally incomplete manual suggestion crossed approval boundary: approvals=%d tickets=%d", approvalCount, ticketCount)
 	}
 }
 

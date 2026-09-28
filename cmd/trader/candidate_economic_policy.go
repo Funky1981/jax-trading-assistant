@@ -1,0 +1,70 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	candidatesmod "jax-trading-assistant/internal/modules/candidates"
+)
+
+const candidateEconomicPolicyEnv = "JAX_CANDIDATE_ECONOMIC_POLICY_FILE"
+
+type candidateEconomicPolicy struct {
+	PolicyVersion       string                               `json:"policy_version"`
+	IdentityPolicy      string                               `json:"identity_policy_version"`
+	IdentitySource      string                               `json:"identity_source"`
+	SizingPolicyID      string                               `json:"sizing_policy_id"`
+	SizingPolicyVersion string                               `json:"sizing_policy_version"`
+	RiskAllocation      float64                              `json:"risk_allocation"`
+	RequestedLeverage   float64                              `json:"requested_leverage"`
+	Instruments         map[string]candidateEconomicIdentity `json:"instruments"`
+}
+
+type candidateEconomicIdentity struct {
+	InstrumentID string `json:"instrument_id"`
+	IssuerID     string `json:"issuer_id"`
+}
+
+func loadCandidateEconomicPolicy() (candidateEconomicPolicy, error) {
+	path := strings.TrimSpace(os.Getenv(candidateEconomicPolicyEnv))
+	if path == "" {
+		return candidateEconomicPolicy{}, errors.New("canonical_economic_inputs_unavailable: explicit policy file is not configured")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return candidateEconomicPolicy{}, fmt.Errorf("canonical_economic_inputs_unavailable: read policy: %w", err)
+	}
+	var policy candidateEconomicPolicy
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&policy); err != nil {
+		return candidateEconomicPolicy{}, fmt.Errorf("canonical_economic_inputs_unavailable: decode policy: %w", err)
+	}
+	if strings.TrimSpace(policy.PolicyVersion) == "" || strings.TrimSpace(policy.IdentityPolicy) == "" ||
+		strings.TrimSpace(policy.IdentitySource) == "" || strings.TrimSpace(policy.SizingPolicyID) == "" ||
+		strings.TrimSpace(policy.SizingPolicyVersion) == "" || len(policy.Instruments) == 0 {
+		return candidateEconomicPolicy{}, errors.New("canonical_economic_inputs_unavailable: policy provenance and explicit instrument mappings are required")
+	}
+	return policy, nil
+}
+
+func (p candidateEconomicPolicy) build(symbol string, candidateID uuid.UUID, now time.Time) (candidatesmod.CandidateEconomicInput, error) {
+	identity, ok := p.Instruments[strings.ToUpper(strings.TrimSpace(symbol))]
+	if !ok || strings.TrimSpace(identity.InstrumentID) == "" || strings.TrimSpace(identity.IssuerID) == "" {
+		return candidatesmod.CandidateEconomicInput{}, errors.New("canonical_economic_inputs_unavailable: explicit instrument and issuer identity mapping is missing")
+	}
+	if p.RiskAllocation <= 0 || p.RequestedLeverage <= 0 || strings.TrimSpace(p.PolicyVersion) == "" {
+		return candidatesmod.CandidateEconomicInput{}, errors.New("canonical_economic_inputs_unavailable: explicit sizing request is missing")
+	}
+	return candidatesmod.BuildCandidateEconomicInput(candidatesmod.CandidateEconomicInput{
+		CandidateID: candidateID, InstrumentID: identity.InstrumentID, IssuerID: identity.IssuerID,
+		IdentitySource: p.IdentitySource, IdentityPolicyVersion: p.IdentityPolicy,
+		RiskAllocation: p.RiskAllocation, RequestedLeverage: p.RequestedLeverage,
+		SizingPolicyID: p.SizingPolicyID, SizingPolicyVersion: p.SizingPolicyVersion,
+	}, now)
+}

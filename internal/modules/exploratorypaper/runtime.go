@@ -18,11 +18,12 @@ import (
 )
 
 var (
-	ErrRuntimeMode             = errors.New("exploratory paper runtime requires PAPER mode")
-	ErrHumanApprovalPending    = errors.New("exploratory paper exit requires explicit human approval")
-	ErrReviewInputsUnavailable = errors.New("exploratory paper review inputs are unavailable")
-	ErrCanonicalProjection     = errors.New("canonical evidence projection is unavailable or invalid")
-	ErrRuntimeIdentityConflict = errors.New("exploratory paper runtime identity conflict")
+	ErrRuntimeMode                  = errors.New("exploratory paper runtime requires PAPER mode")
+	ErrHumanApprovalPending         = errors.New("exploratory paper exit requires explicit human approval")
+	ErrReviewInputsUnavailable      = errors.New("exploratory paper review inputs are unavailable")
+	ErrReviewUnavailablePersistence = errors.New("exploratory paper review-unavailable persistence failed")
+	ErrCanonicalProjection          = errors.New("canonical evidence projection is unavailable or invalid")
+	ErrRuntimeIdentityConflict      = errors.New("exploratory paper runtime identity conflict")
 )
 
 // EntryRequest is produced by the existing accepted event-driven path. The
@@ -64,6 +65,9 @@ type ReviewObservation struct {
 	ActualQuoteAvailable bool
 	ObservedAt           time.Time
 	ReceivedAt           time.Time
+	MarketTimeframe      string
+	MarketAsOf           time.Time
+	MarketProvenance     string
 	ThesisInvalidated    bool
 	RiskKill             bool
 	ManualOperator       bool
@@ -300,14 +304,18 @@ func (r *Runtime) RunDueReviews(ctx context.Context) error {
 func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	observation, err := r.Reviews.LoadReviewObservation(ctx, item.Lifecycle, item.Review)
 	if err != nil {
-		_ = r.Store.RecordReviewUnavailable(ctx, item.Review.PositionID, item.Review.SessionNumber, r.Now().UTC(), err.Error())
+		if persistErr := r.Store.RecordReviewUnavailable(ctx, item.Review.PositionID, item.Review.SessionNumber, r.Now().UTC(), err.Error()); persistErr != nil {
+			return fmt.Errorf("%w: %w", ErrReviewUnavailablePersistence, persistErr)
+		}
 		return ErrReviewInputsUnavailable
 	}
 	if observation.Ledger.AccountID != r.AccountID {
 		return fmt.Errorf("%w: review paper account %q does not match runtime account %q", ErrFailedClosed, observation.Ledger.AccountID, r.AccountID)
 	}
 	if observation.Price <= 0 || observation.PriceSource == "" || len(observation.Evidence) == 0 {
-		_ = r.Store.RecordReviewUnavailable(ctx, item.Review.PositionID, item.Review.SessionNumber, r.Now().UTC(), "required evidence or market observation was unavailable")
+		if persistErr := r.Store.RecordReviewUnavailable(ctx, item.Review.PositionID, item.Review.SessionNumber, r.Now().UTC(), "required evidence or market observation was unavailable"); persistErr != nil {
+			return fmt.Errorf("%w: %w", ErrReviewUnavailablePersistence, persistErr)
+		}
 		return ErrReviewInputsUnavailable
 	}
 	position := item.Lifecycle.Position
@@ -324,7 +332,7 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	}
 	gross := (observation.Price - position.EntryPrice) * item.Lifecycle.EntryFill.Quantity * direction
 	denominator := position.EntryPrice * item.Lifecycle.EntryFill.Quantity
-	checkpoint := Checkpoint{PositionID: position.PositionID, ThesisID: position.Thesis.ThesisID, Sessions: item.Review.SessionNumber, At: observation.Tick.Timestamp, Price: observation.Price, PriceSource: observation.PriceSource, EvidenceReviewID: item.Review.ReviewID, GrossPnL: gross, NetPnL: gross - entryCosts, NetReturn: (gross - entryCosts) / denominator, DataQuality: "COMPLETE", CommissionCost: entryCosts, SpreadCost: item.Lifecycle.EntryFill.Costs.SpreadCost, SlippageCost: item.Lifecycle.EntryFill.Costs.SlippageCost, AccountingVersion: EconomicAccountingVersion, QuoteMode: observation.QuoteMode, LiquidityMode: observation.LiquidityMode, ActualQuoteAvailable: observation.ActualQuoteAvailable, ObservedAt: observation.ObservedAt, ReceivedAt: observation.ReceivedAt}
+	checkpoint := Checkpoint{PositionID: position.PositionID, ThesisID: position.Thesis.ThesisID, Sessions: item.Review.SessionNumber, At: observation.Tick.Timestamp, Price: observation.Price, PriceSource: observation.PriceSource, EvidenceReviewID: item.Review.ReviewID, GrossPnL: gross, NetPnL: gross - entryCosts, NetReturn: (gross - entryCosts) / denominator, DataQuality: "COMPLETE", CommissionCost: entryCosts, SpreadCost: item.Lifecycle.EntryFill.Costs.SpreadCost, SlippageCost: item.Lifecycle.EntryFill.Costs.SlippageCost, AccountingVersion: EconomicAccountingVersion, QuoteMode: observation.QuoteMode, LiquidityMode: observation.LiquidityMode, ActualQuoteAvailable: observation.ActualQuoteAvailable, ObservedAt: observation.ObservedAt, ReceivedAt: observation.ReceivedAt, MarketTimeframe: observation.MarketTimeframe, MarketAsOf: observation.MarketAsOf, MarketProvenance: observation.MarketProvenance}
 	if err := r.Store.PersistCheckpoint(ctx, checkpoint); err != nil {
 		return err
 	}

@@ -129,9 +129,18 @@ func orderIdentity(order PaperOrder) string {
 	copyOrder.RemainingQuantity = 0
 	copyOrder.FilledQuantity = 0
 	copyOrder.Status = ""
+	// PostgreSQL timestamps have microsecond precision. Hashing sub-microsecond
+	// clock values makes an otherwise unchanged durable order fail identity
+	// validation after a database round trip.
+	copyOrder.CreatedAt = canonicalPersistedTime(copyOrder.CreatedAt)
+	copyOrder.ActivatesAt = canonicalPersistedTime(copyOrder.ActivatesAt)
 	data, _ := json.Marshal(copyOrder)
 	digest := sha256.Sum256(data)
 	return "pord_" + hex.EncodeToString(digest[:])
+}
+
+func canonicalPersistedTime(value time.Time) time.Time {
+	return value.UTC().Truncate(time.Microsecond)
 }
 
 func directionMultiplier(direction string) float64 {

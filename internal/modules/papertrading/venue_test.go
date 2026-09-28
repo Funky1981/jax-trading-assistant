@@ -140,6 +140,36 @@ func TestPaperVenueRestoresFractionalStateWithoutDuplicateTick(t *testing.T) {
 	}
 }
 
+func TestPaperArtifactIdentitySurvivesPostgresTimestampPrecision(t *testing.T) {
+	now := time.Date(2026, 9, 8, 10, 0, 0, 123456789, time.UTC)
+	wf, intent := approvedPaperArtifacts(t, now)
+	contract, costs := DefaultPaperCapabilityContract(), DefaultCostModel()
+	venue, err := NewPaperVenue(contract, costs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	order, err := venue.Submit(CreateOrderRequest{Workflow: wf, PaperIntent: intent, Venue: contract, CostModel: costs, InstrumentID: "AAPL", Quantity: 1, ReferencePrice: 100, OrderType: OrderMarket, CreatedAt: now, IdempotencyKey: "postgres-time-precision"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	order.CreatedAt = order.CreatedAt.Truncate(time.Microsecond)
+	order.ActivatesAt = order.ActivatesAt.Truncate(time.Microsecond)
+	if err := order.Validate(); err != nil {
+		t.Fatalf("order identity changed after PostgreSQL timestamp precision: %v", err)
+	}
+	tickAt := now.Add(2 * time.Second)
+	tick := MarketTick{TickID: "postgres-time-precision", InstrumentID: "AAPL", Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 1, Timestamp: tickAt, ReceivedAt: tickAt, Session: SessionOpen, Source: "fixture"}
+	fills, err := venue.ProcessTick(tick)
+	if err != nil || len(fills) != 1 {
+		t.Fatalf("precision fixture fill = %#v, %v", fills, err)
+	}
+	fill := fills[0]
+	fill.FilledAt = fill.FilledAt.Truncate(time.Microsecond)
+	if err := fill.Validate(); err != nil {
+		t.Fatalf("fill identity changed after PostgreSQL timestamp precision: %v", err)
+	}
+}
+
 func approvedPaperArtifacts(t *testing.T, now time.Time) (workflow.Workflow, workflow.PaperIntent) {
 	t.Helper()
 	store := workflow.NewStore()

@@ -140,14 +140,15 @@ func startMarketIngester(ctx context.Context, pool *pgxpool.Pool) {
 
 // ingestQuote fetches and upserts the latest quote for symbol.
 func ingestQuote(ctx context.Context, pool *pgxpool.Pool, client *marketdata.Client, symbol string) error {
-	quote, err := client.GetQuote(ctx, symbol)
+	quote, provider, err := client.GetQuoteWithSource(ctx, symbol)
 	if err != nil {
 		return fmt.Errorf("get quote: %w", err)
 	}
+	receivedAt := time.Now().UTC()
 
 	_, err = pool.Exec(ctx, `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, provider, received_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
 		ON CONFLICT (symbol) DO UPDATE SET
 			price      = EXCLUDED.price,
 			bid        = EXCLUDED.bid,
@@ -157,9 +158,11 @@ func ingestQuote(ctx context.Context, pool *pgxpool.Pool, client *marketdata.Cli
 			volume     = EXCLUDED.volume,
 			timestamp  = EXCLUDED.timestamp,
 			exchange   = EXCLUDED.exchange,
+			provider   = EXCLUDED.provider,
+			received_at = EXCLUDED.received_at,
 			updated_at = NOW()`,
 		quote.Symbol, quote.Price, quote.Bid, quote.Ask,
-		quote.BidSize, quote.AskSize, quote.Volume, quote.Timestamp, quote.Exchange,
+		quote.BidSize, quote.AskSize, quote.Volume, quote.Timestamp, quote.Exchange, provider, receivedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("upsert quote: %w", err)

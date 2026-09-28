@@ -1,10 +1,17 @@
 # Current Build Package
 
-Current routing: **CORE-READINESS-02 — CANONICAL APPROVED-PAPER SEAM AND
-MARKET-DATA PROOF**, recommended by CORE-READINESS-01 and awaiting separate
-technical-lead authorization. CORE-READINESS-01 verdict:
+Current routing: **CORE-READINESS-02A3 — CANONICAL CANDIDATE ECONOMIC INPUTS
+AND COMPILE RECOVERY**, implemented and awaiting external review. This narrow
+correction does not authorize the full CORE-READINESS-02 handoff or mark
+Working Jax ready. CORE-READINESS-01 verdict:
 **BLOCKED_BEFORE_HYPOTHESIS_DESIGN**. No strategy is selected and no pilot or
 economic activity is authorized.
+
+CORE-READINESS-02A3 adds a typed append-only candidate economic-input contract,
+removes proof/default sizing from the World Monitor canonical path, and leaves
+the incomplete public entry queue unavailable until 02A4. See
+`Docs/BUILD/CORE-READINESS-02A3-CANDIDATE-ECONOMIC-INPUTS.md`. CORE-READINESS-02A4
+remains a separate package and is not implemented here.
 
 Read `Docs/BUILD/CORE-READINESS-01-WORKING-JAX-V1-AUDIT.md`. Its bounded
 blockers are JWT-bound candidate actor identity, server-owned candidate/risk/

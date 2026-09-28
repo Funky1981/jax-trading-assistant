@@ -17,6 +17,7 @@ import (
 )
 
 func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
+	t.Setenv(candidateEconomicPolicyEnv, "")
 	pool := testFrontendAPIPool(t)
 	requireWorldMonitorSmokeSchema(t, pool)
 
@@ -45,8 +46,8 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 		t.Fatalf("insert strategy instance: %v", err)
 	}
 	_, err = pool.Exec(ctx, `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, updated_at)
-		VALUES ('QQQ', 500.00, 499.95, 500.05, 100, 100, 100000, NOW(), 'TEST', NOW())
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, provider, received_at, updated_at)
+		VALUES ('QQQ', 500.00, 499.95, 500.05, 100, 100, 100000, $1, 'TEST', 'core-readiness-fixture', $1, NOW())
 		ON CONFLICT (symbol) DO UPDATE
 		SET price = EXCLUDED.price,
 		    bid = EXCLUDED.bid,
@@ -54,8 +55,10 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 		    bid_size = EXCLUDED.bid_size,
 		    ask_size = EXCLUDED.ask_size,
 		    timestamp = EXCLUDED.timestamp,
+		    provider = EXCLUDED.provider,
+		    received_at = EXCLUDED.received_at,
 		    updated_at = EXCLUDED.updated_at
-	`)
+	`, now)
 	if err != nil {
 		t.Fatalf("insert quote: %v", err)
 	}
@@ -70,6 +73,7 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	}
 
 	promoter := newWorldMonitorOpportunityPromoter(pool)
+	promoter.marketPolicy = disposableMarketDataPolicy()
 	row, err := loadWorldMonitorPromotionRowForTest(ctx, t, promoter, trigger.SourceEventID)
 	if err != nil {
 		t.Fatalf("load promotion row: %v", err)
@@ -140,11 +144,11 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	if !strings.HasPrefix(rawSourceRef, "event_raw:") || !strings.Contains(sourcePayloadRef, row.ID.String()) || !strings.Contains(decisionLogRef, receipt.EventID) {
 		t.Fatalf("provenance refs not retained: raw=%q payload=%q normalized=%q", rawSourceRef, sourcePayloadRef, decisionLogRef)
 	}
-	if !json.Valid(metadata) || !containsJSONKey(metadata, "worldMonitor") || !containsJSONKey(metadata, "sizing") {
-		t.Fatalf("metadata should include source URLs and sizing evidence, got %s", string(metadata))
+	if !json.Valid(metadata) || !containsJSONKey(metadata, "worldMonitor") || containsJSONKey(metadata, "sizing") {
+		t.Fatalf("metadata should include source URLs and must not contain invented sizing evidence, got %s", string(metadata))
 	}
-	if !strings.Contains(string(metadata), `"sourceURLs"`) || !strings.Contains(string(metadata), `"shares": 10`) || !strings.Contains(string(metadata), trigger.SourceURLs[0]) {
-		t.Fatalf("metadata should include calculated 10-share paper size and monitor URL, got %s", string(metadata))
+	if !strings.Contains(string(metadata), `"sourceURLs"`) || strings.Contains(string(metadata), `"riskBudget"`) || !strings.Contains(string(metadata), trigger.SourceURLs[0]) {
+		t.Fatalf("metadata should retain monitor URL without fabricated risk sizing, got %s", string(metadata))
 	}
 	assertSwingPaperMetadata(t, metadata)
 
@@ -167,28 +171,42 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 	`, promoted.CandidateID).Scan(&evidenceItemCount, &evidenceStatus, &evidenceReady, &evidenceGateReady, &gateStatus); err != nil {
 		t.Fatalf("query persisted evidence evaluation: %v", err)
 	}
-	if evidenceItemCount != 2 || evidenceStatus != "sufficient" || !evidenceReady || !evidenceGateReady || gateStatus != "ready_for_risk_review" {
+	if evidenceItemCount != 2 || evidenceStatus != "sufficient" || !evidenceReady || !evidenceGateReady || gateStatus != candidatesmod.GateStatusRiskPending {
 		t.Fatalf("unexpected evidence/gate result: items=%d evidence=%s ready=%v gateReady=%v gate=%s", evidenceItemCount, evidenceStatus, evidenceReady, evidenceGateReady, gateStatus)
 	}
-	if outcomes[2].RiskReview == nil || !outcomes[2].RiskReview.Result.RiskReady || outcomes[2].RiskReview.Result.RiskStatus != candidatesmod.RiskStatusReadyForApprovalReview {
-		t.Fatalf("gate-ready candidate did not enter real risk path: %+v", outcomes[2])
+	if outcomes[2].ReasonCode != "canonical_economic_inputs_unavailable" || outcomes[2].RiskReview != nil {
+		t.Fatalf("candidate without explicit economic configuration did not fail closed: %+v", outcomes[2])
 	}
-	if !outcomes[2].RiskReview.ApprovalEligibility.ApprovalEligible || outcomes[2].RiskReview.Result.ApprovalGranted || outcomes[2].RiskReview.Result.BrokerExecutionAllowed || outcomes[2].RiskReview.Result.ExecutionInstructionCreated {
-		t.Fatalf("risk review crossed or failed approval safety boundary: %+v", outcomes[2].RiskReview)
+	var canonicalInputCount, approvalCount, paperTicketCount, paperOrderCount, instructionCount int
+	if err := pool.QueryRow(ctx, `SELECT
+		(SELECT COUNT(*) FROM candidate_economic_inputs WHERE candidate_id=$1::uuid),
+		(SELECT COUNT(*) FROM candidate_approvals WHERE candidate_id=$1::uuid),
+		(SELECT COUNT(*) FROM candidate_paper_tickets WHERE candidate_id=$1::uuid),
+		(SELECT COUNT(*) FROM paper_orders WHERE recommendation_id=$1::text),
+		(SELECT COUNT(*) FROM execution_instructions WHERE candidate_id=$1::uuid)
+	`, promoted.CandidateID).Scan(&canonicalInputCount, &approvalCount, &paperTicketCount, &paperOrderCount, &instructionCount); err != nil {
+		t.Fatalf("query fail-closed safety boundaries: %v", err)
+	}
+	if canonicalInputCount != 0 || approvalCount != 0 || paperTicketCount != 0 || paperOrderCount != 0 || instructionCount != 0 {
+		t.Fatalf("missing policy crossed safety boundary: inputs=%d approvals=%d tickets=%d paperOrders=%d instructions=%d", canonicalInputCount, approvalCount, paperTicketCount, paperOrderCount, instructionCount)
 	}
 	var persistedRiskStatus, persistedApprovalStatus string
-	var persistedPosition, persistedLoss float64
-	var riskMetadata []byte
+	var persistedPosition *float64
 	if err := pool.QueryRow(ctx, `
-		SELECT risk_status, approval_status, position_size::float8,
-		       max_slippage_adjusted_loss::float8, metadata->'riskReview'
+		SELECT risk_status, approval_status, position_size::float8
 		FROM candidate_trades WHERE id=$1::uuid
-	`, promoted.CandidateID).Scan(&persistedRiskStatus, &persistedApprovalStatus, &persistedPosition, &persistedLoss, &riskMetadata); err != nil {
-		t.Fatalf("query persisted risk review: %v", err)
+	`, promoted.CandidateID).Scan(&persistedRiskStatus, &persistedApprovalStatus, &persistedPosition); err != nil {
+		t.Fatalf("query persisted economic readiness: %v", err)
 	}
-	if persistedRiskStatus != "ready_for_approval_review" || persistedApprovalStatus != "approval_review_ready" || persistedPosition != 10 || persistedLoss != 100 || !json.Valid(riskMetadata) {
-		t.Fatalf("risk result not persisted: status=%s approval=%s position=%f loss=%f metadata=%s", persistedRiskStatus, persistedApprovalStatus, persistedPosition, persistedLoss, riskMetadata)
+	if persistedRiskStatus != candidatesmod.RiskStatusPending || persistedApprovalStatus != candidatesmod.ApprovalStatusRiskNotReady || persistedPosition != nil {
+		t.Fatalf("candidate became approvable without economic inputs: risk=%s approval=%s position=%v", persistedRiskStatus, persistedApprovalStatus, persistedPosition)
 	}
+	if outcomes[2].RiskReview == nil {
+		return
+	}
+
+	// Legacy assertions below remain useful once explicit canonical economic
+	// inputs and the full 02A4 account-risk handoff are implemented.
 	firstMaterialResult := outcomes[2].RiskReview.Result
 	reprocessed, _, err := promoter.reviewCandidateRisk(ctx, uuid.MustParse(promoted.CandidateID), row.ID, uuid.NullUUID{UUID: *row.NormalizedEventID, Valid: true})
 	if err != nil || reprocessed == nil {
@@ -376,8 +394,8 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 		t.Fatalf("insert strategy instance: %v", err)
 	}
 	_, err = pool.Exec(ctx, `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, updated_at)
-		VALUES ('QQQ', 500.00, 499.95, 500.05, 100, 100, 100000, NOW(), 'TEST', NOW())
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, provider, received_at, updated_at)
+		VALUES ('QQQ', 500.00, 499.95, 500.05, 100, 100, 100000, $1, 'TEST', 'core-readiness-fixture', $1, NOW())
 		ON CONFLICT (symbol) DO UPDATE
 		SET price = EXCLUDED.price,
 		    bid = EXCLUDED.bid,
@@ -385,8 +403,10 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 		    bid_size = EXCLUDED.bid_size,
 		    ask_size = EXCLUDED.ask_size,
 		    timestamp = EXCLUDED.timestamp,
+		    provider = EXCLUDED.provider,
+		    received_at = EXCLUDED.received_at,
 		    updated_at = EXCLUDED.updated_at
-	`)
+	`, now)
 	if err != nil {
 		t.Fatalf("insert quote: %v", err)
 	}
@@ -401,6 +421,7 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 	}
 
 	promoter := newWorldMonitorOpportunityPromoter(pool)
+	promoter.marketPolicy = disposableMarketDataPolicy()
 	row, err := loadWorldMonitorPromotionRowForTest(ctx, t, promoter, trigger.SourceEventID)
 	if err != nil {
 		t.Fatalf("load promotion row: %v", err)
@@ -605,8 +626,8 @@ func insertWorldMonitorChartCandles(t *testing.T, ctx context.Context, pool *pgx
 		ts := now.Add(time.Duration(i-len(closes)) * time.Minute)
 		timestamps = append(timestamps, ts)
 		_, err := pool.Exec(ctx, `
-			INSERT INTO candles (symbol, timestamp, open, high, low, close, volume, vwap)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $6)
+			INSERT INTO candles (symbol, timestamp, open, high, low, close, volume, vwap, timeframe, source, timestamp_semantics, market_data_classification, ingested_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $6, '1m', 'core-readiness-fixture', 'test_fixture', 'synthetic', NOW())
 			ON CONFLICT DO NOTHING
 		`, symbol, ts, close-0.2, close+0.5, close-0.5, close, 1000+i)
 		if err != nil {
@@ -620,6 +641,10 @@ func insertWorldMonitorChartCandles(t *testing.T, ctx context.Context, pool *pgx
 			_, _ = pool.Exec(cleanupCtx, `DELETE FROM candles WHERE symbol = $1 AND timestamp = $2 AND volume = $3`, symbol, ts, 1000+i)
 		}
 	})
+}
+
+func disposableMarketDataPolicy() *marketDataSafetyPolicy {
+	return &marketDataSafetyPolicy{AllowedSources: []string{"core-readiness-fixture"}, Timeframe: "1m", MaxAge: time.Hour, allowNonProductionSources: true}
 }
 
 func containsJSONKey(raw []byte, key string) bool {

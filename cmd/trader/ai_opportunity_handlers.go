@@ -33,6 +33,10 @@ type aiSuggestionPromoteResponse struct {
 }
 
 func aiSuggestionPromoteHandler(pool *pgxpool.Pool) http.HandlerFunc {
+	return aiSuggestionPromoteHandlerWithPromoter(pool, newWorldMonitorOpportunityPromoter(pool))
+}
+
+func aiSuggestionPromoteHandlerWithPromoter(pool *pgxpool.Pool, promoter *worldMonitorOpportunityPromoter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -47,7 +51,7 @@ func aiSuggestionPromoteHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
-		response, err := promoteAISuggestion(r.Context(), pool, req)
+		response, err := promoteAISuggestionWithPromoter(r.Context(), pool, req, promoter)
 		if err != nil {
 			switch {
 			case errors.Is(err, errAISuggestionPromotionInput):
@@ -65,7 +69,7 @@ func aiSuggestionPromoteHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 var errAISuggestionPromotionInput = errors.New("invalid ai suggestion promotion input")
 
-func promoteAISuggestion(ctx context.Context, pool *pgxpool.Pool, req aiSuggestionPromoteRequest) (aiSuggestionPromoteResponse, error) {
+func promoteAISuggestionWithPromoter(ctx context.Context, pool *pgxpool.Pool, req aiSuggestionPromoteRequest, promoter *worldMonitorOpportunityPromoter) (aiSuggestionPromoteResponse, error) {
 	symbol := strings.ToUpper(strings.TrimSpace(req.Symbol))
 	action := strings.ToUpper(strings.TrimSpace(req.Action))
 	if symbol == "" {
@@ -92,11 +96,12 @@ func promoteAISuggestion(ctx context.Context, pool *pgxpool.Pool, req aiSuggesti
 		return aiSuggestionPromoteResponse{}, err
 	}
 
-	entry, err := newWorldMonitorOpportunityPromoter(pool).latestEntryPrice(ctx, symbol)
+	entry, err := promoter.latestEntryPrice(ctx, symbol)
 	if err != nil {
 		return aiSuggestionPromoteResponse{}, err
 	}
-	stop, target := aiSuggestionRiskPrices(action, entry)
+	entryPrice := entry.Last
+	stop, target := aiSuggestionRiskPrices(action, entryPrice)
 	reasoning := strings.TrimSpace(req.Reasoning)
 	if reasoning == "" {
 		reasoning = fmt.Sprintf("AI suggestion promoted by operator for %s %s.", action, symbol)
@@ -107,7 +112,7 @@ func promoteAISuggestion(ctx context.Context, pool *pgxpool.Pool, req aiSuggesti
 	}
 	expiresAt := time.Now().UTC().Add(worldMonitorCandidateTTL)
 
-	signalID, err := createAISuggestionSignal(ctx, pool, instanceID, strategyID, symbol, action, confidence, entry, stop, target, reasoning, expiresAt)
+	signalID, err := createAISuggestionSignal(ctx, pool, instanceID, strategyID, symbol, action, confidence, entryPrice, stop, target, reasoning, expiresAt)
 	if err != nil {
 		return aiSuggestionPromoteResponse{}, err
 	}
@@ -119,7 +124,7 @@ func promoteAISuggestion(ctx context.Context, pool *pgxpool.Pool, req aiSuggesti
 		StrategyID:         strategyID,
 		Symbol:             symbol,
 		SignalType:         action,
-		EntryPrice:         &entry,
+		EntryPrice:         &entryPrice,
 		StopLoss:           &stop,
 		TakeProfit:         &target,
 		Confidence:         &confidence,
@@ -138,8 +143,16 @@ func promoteAISuggestion(ctx context.Context, pool *pgxpool.Pool, req aiSuggesti
 		if err := candidateSvc.Qualify(ctx, candidate.ID); err != nil {
 			return aiSuggestionPromoteResponse{}, err
 		}
-		status = candidatesmod.StatusAwaitingApproval
-		route = "approval_required"
+		qualified, err := candidateSvc.GetByID(ctx, candidate.ID)
+		if err != nil {
+			return aiSuggestionPromoteResponse{}, err
+		}
+		status = qualified.Status
+		if status == candidatesmod.StatusAwaitingApproval {
+			route = "approval_required"
+		} else {
+			route = "candidate_repair_required"
+		}
 	}
 	if err := attachAISuggestionCandidateMetadata(ctx, pool, candidate.ID, signalID, req, route); err != nil {
 		return aiSuggestionPromoteResponse{}, err
