@@ -22,6 +22,7 @@ type candidateEconomicPolicy struct {
 	SizingPolicyVersion string                               `json:"sizing_policy_version"`
 	RiskAllocation      float64                              `json:"risk_allocation"`
 	RequestedLeverage   float64                              `json:"requested_leverage"`
+	SlippageAllowance   *float64                             `json:"slippage_allowance"`
 	Instruments         map[string]candidateEconomicIdentity `json:"instruments"`
 }
 
@@ -47,7 +48,7 @@ func loadCandidateEconomicPolicy() (candidateEconomicPolicy, error) {
 	}
 	if strings.TrimSpace(policy.PolicyVersion) == "" || strings.TrimSpace(policy.IdentityPolicy) == "" ||
 		strings.TrimSpace(policy.IdentitySource) == "" || strings.TrimSpace(policy.SizingPolicyID) == "" ||
-		strings.TrimSpace(policy.SizingPolicyVersion) == "" || len(policy.Instruments) == 0 {
+		strings.TrimSpace(policy.SizingPolicyVersion) == "" || len(policy.Instruments) == 0 || policy.SlippageAllowance == nil || !finiteNonNegative(*policy.SlippageAllowance) {
 		return candidateEconomicPolicy{}, errors.New("canonical_economic_inputs_unavailable: policy provenance and explicit instrument mappings are required")
 	}
 	return policy, nil
@@ -58,13 +59,14 @@ func (p candidateEconomicPolicy) build(symbol string, candidateID uuid.UUID, now
 	if !ok || strings.TrimSpace(identity.InstrumentID) == "" || strings.TrimSpace(identity.IssuerID) == "" {
 		return candidatesmod.CandidateEconomicInput{}, errors.New("canonical_economic_inputs_unavailable: explicit instrument and issuer identity mapping is missing")
 	}
-	if p.RiskAllocation <= 0 || p.RequestedLeverage <= 0 || strings.TrimSpace(p.PolicyVersion) == "" {
+	if p.RiskAllocation <= 0 || p.RequestedLeverage <= 0 || strings.TrimSpace(p.PolicyVersion) == "" || p.SlippageAllowance == nil || !finiteNonNegative(*p.SlippageAllowance) {
 		return candidatesmod.CandidateEconomicInput{}, errors.New("canonical_economic_inputs_unavailable: explicit sizing request is missing")
 	}
 	return candidatesmod.BuildCandidateEconomicInput(candidatesmod.CandidateEconomicInput{
 		CandidateID: candidateID, InstrumentID: identity.InstrumentID, IssuerID: identity.IssuerID,
 		IdentitySource: p.IdentitySource, IdentityPolicyVersion: p.IdentityPolicy,
 		RiskAllocation: p.RiskAllocation, RequestedLeverage: p.RequestedLeverage,
-		SizingPolicyID: p.SizingPolicyID, SizingPolicyVersion: p.SizingPolicyVersion,
+		SlippageAllowance: p.SlippageAllowance,
+		SizingPolicyID:    p.SizingPolicyID, SizingPolicyVersion: p.SizingPolicyVersion,
 	}, now)
 }

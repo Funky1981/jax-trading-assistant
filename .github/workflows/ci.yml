@@ -133,6 +133,14 @@ jobs:
           ./internal/modules/exploratorypaper
           ./internal/modules/approvals
           ./internal/modules/candidates
+      - name: required canonical PAPER handoff PostgreSQL proof
+        run: >-
+          go test -count=1 -v ./cmd/trader
+          -run '^TestCanonicalPaperHandoffPostgres'
+      - name: required canonical PAPER handoff Linux race proof
+        run: >-
+          go test -race -count=1 ./cmd/trader
+          -run '^TestCanonicalPaperHandoffPostgres'
       - name: required PostgreSQL frontend signal integration tests
         run: >-
           go test -count=1 ./cmd/trader

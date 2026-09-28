@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -252,6 +253,16 @@ func (s *Store) UpdateStatus(ctx context.Context, id uuid.UUID, toStatus string,
 func (s *Store) GetByID(ctx context.Context, id uuid.UUID) (*Candidate, error) {
 	row := s.pool.QueryRow(ctx, candidateSelectSQL+` WHERE id = $1`, id)
 	return scanCandidate(row)
+}
+
+// GetByIDTx loads a candidate from the caller's transaction so a canonical
+// decision can validate candidate, economic input, evidence, and account state
+// under one database snapshot.
+func (s *Store) GetByIDTx(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*Candidate, error) {
+	if tx == nil {
+		return nil, fmt.Errorf("candidate transaction is required")
+	}
+	return scanCandidate(tx.QueryRow(ctx, candidateSelectSQL+` WHERE id = $1`, id))
 }
 
 // List returns candidates, optionally filtered by status or symbol.

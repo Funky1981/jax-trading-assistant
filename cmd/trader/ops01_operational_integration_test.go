@@ -196,7 +196,8 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	promoter.marketPolicy = &marketDataSafetyPolicy{AllowedSources: []string{"ops01-provider-substitute"}, Timeframe: "1h", MaxAge: 48 * time.Hour, allowNonProductionSources: true}
 	promoter.economicPolicy = &candidateEconomicPolicy{PolicyVersion: "ops01-fixture-policy-v1", IdentityPolicy: "ops01-fixture-identity-v1", IdentitySource: "ops01-test-fixture",
 		SizingPolicyID: "ops01-risk-request", SizingPolicyVersion: "v1", RiskAllocation: .01, RequestedLeverage: 1,
-		Instruments: map[string]candidateEconomicIdentity{"QQQ": {InstrumentID: "instrument-test-qqq", IssuerID: "issuer-test-qqq"}}}
+		SlippageAllowance: floatPointer(.25),
+		Instruments:       map[string]candidateEconomicIdentity{"QQQ": {InstrumentID: "instrument-test-qqq", IssuerID: "issuer-test-qqq"}}}
 	promoter.now = func() time.Time { return now }
 	rows, err := promoter.loadPromotionRows(ctx, 250)
 	if err != nil {

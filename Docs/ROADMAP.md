@@ -87,7 +87,9 @@ not promote a strategy or prove a trading edge.
 | OPS-02B3 / OPS-02B | **GO / EXTERNALLY REVIEWED** |
 | OPS-02C1 | **GO / EXTERNALLY REVIEWED** |
 | CORE-READINESS-01 | **COMPLETE / BLOCKED_BEFORE_HYPOTHESIS_DESIGN** |
-| CORE-READINESS-02 | **RECOMMENDED / SEPARATE AUTHORIZATION REQUIRED** |
+| CORE-READINESS-02A3 | **GO / EXTERNALLY REVIEWED / CANDIDATE ECONOMIC INPUT CONTRACT** |
+| CORE-READINESS-02A4 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / CANONICAL QUEUE HANDOFF** |
+| CORE-READINESS-02B | **REMAINING / ISOLATED GENUINE-MARKET END-TO-END PROOF / NOT STARTED** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -339,9 +341,15 @@ COMPLETE / BLOCKED BEFORE HYPOTHESIS DESIGN
 
 ↓
 
-CORE-READINESS-02
-CANONICAL APPROVED-PAPER SEAM AND MARKET-DATA PROOF
-RECOMMENDED / SEPARATE AUTHORIZATION REQUIRED
+CORE-READINESS-02A4
+CANONICAL CANDIDATE → PORTFOLIO RISK → HUMAN APPROVAL → PAPER QUEUE
+IMPLEMENTED / EXTERNAL REVIEW REQUIRED
+
+↓
+
+CORE-READINESS-02B
+ISOLATED GENUINE-MARKET END-TO-END PROOF
+REMAINING / NOT STARTED
 
 ↓
 
@@ -375,21 +383,21 @@ FUTURE / SEPARATE AUTHORIZATION
 
 ## Deferred work
 
-CORE-READINESS-01 is complete and blocks hypothesis design. CORE-READINESS-02
-is only recommended and requires separate technical-lead authorization; it
-must be limited to the documented actor, canonical risk/approval/PAPER entry,
-and market-data proof blockers. No strategy is selected by this roadmap
-update. PAPER-03, PAPER-04, and FORMAL-01 remain future work; FORMAL-01
-requires separate authorization. VAL-04B, HARNESS-04, live-readiness, Phase
-13, and commercialisation are not current implementation work. No new
-prospective pilot is authorized; live execution remains unauthorized.
+CORE-READINESS-01 is complete and blocks hypothesis design. CORE-READINESS-02A4
+is implemented through the account-scoped queue and requires external review.
+CORE-READINESS-02B remains the isolated genuine-market end-to-end proof and has
+not started. No strategy is selected by this roadmap update. PAPER-03, PAPER-04,
+and FORMAL-01 remain future work; FORMAL-01 requires separate authorization.
+VAL-04B, HARNESS-04, live-readiness, Phase 13, and commercialisation are not
+current implementation work. No new prospective pilot is authorized; live
+execution remains unauthorized.
 
 ## Current success criterion
 
-CORE-READINESS-01 is complete and blocks hypothesis design until its documented
-approval, canonical PAPER-entry and market-data proof blockers are resolved
-and reviewed through separately authorized CORE-READINESS-02 work. This is not
-strategy selection or a profitability claim.
+CORE-READINESS-01 remains `BLOCKED_BEFORE_HYPOTHESIS_DESIGN`. CORE-READINESS-02A4
+implements the canonical approved-PAPER handoff through the queue; CORE-READINESS-02B
+must still provide isolated genuine-market end-to-end proof and external review.
+Neither package is strategy selection or a profitability claim.
 
 ## North Star
 

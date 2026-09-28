@@ -74,12 +74,13 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - PAPER-02A3: `ACTIVATED / SUPERSEDED BY OPS-02A`.
 - PAPER-02: `ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES`.
 - CORE-READINESS-01: `COMPLETE / BLOCKED_BEFORE_HYPOTHESIS_DESIGN`.
-- CORE-READINESS-02: `RECOMMENDED / SEPARATE AUTHORIZATION REQUIRED`.
-- CORE-READINESS-02A3: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; canonical
-  candidate economic inputs and compile recovery only. CORE-READINESS-02A4 is
-  not implemented; Working Jax remains not ready. Legacy World Monitor
-  APPROVE actions are service-level blocked until the canonical current-account
-  portfolio-risk handoff exists; CandidateEconomicInput is not approval.
+- CORE-READINESS-02: `IN PROGRESS`; 02A4 awaits external review and 02B remains.
+- CORE-READINESS-02A3: `GO / EXTERNALLY REVIEWED`; typed candidate economic
+  input contract.
+- CORE-READINESS-02A4: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; canonical
+  current-account portfolio risk, JWT-bound human decision, durable PaperIntent,
+  and account-scoped queue. Queue consumption is outside scope. Working Jax
+  remains `BLOCKED_BEFORE_HYPOTHESIS_DESIGN` pending CORE-READINESS-02B.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
 - Harness foundation contracts: `HARNESS-01 GO / EXTERNALLY REVIEWED`.
 - Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE`.
@@ -114,14 +115,12 @@ database query in this documentation update.
 ## Next recommended work (not yet authorized)
 
 CORE-READINESS-01 found that the reusable core is not yet trustworthy enough
-to begin hypothesis design. The recommended next package is CORE-READINESS-02:
-bind candidate approval actors to JWT claims; connect persisted candidate,
-account-scoped risk decision and human approval to the exploratory PAPER entry
-queue through a server-owned handoff; and define/prove genuine market-price
-provenance, freshness and no-lookahead semantics. This recommendation is not
-authorization to implement, select a strategy, mutate the normal database,
-create/activate a pilot, collect prospective evidence, start runtime services,
-or use a broker. Separate technical-lead authorization is required. PAPER-02
-remains aborted and historically preserved; HARNESS-04 is deferred,
-FORMAL_FORWARD_PAPER is not started, and broker/live execution is not
-authorized.
+to begin hypothesis design. CORE-READINESS-02A4 implements the canonical
+server-owned candidate-to-queue seam but does not consume the queue or prove
+genuine-market end-to-end semantics. The remaining package is
+CORE-READINESS-02B: isolated genuine-market end-to-end proof, subject to
+separate authorization and external review. No strategy selection, normal
+database mutation, new pilot, prospective evidence collection, runtime
+deployment, or broker use is authorized here. PAPER-02 remains aborted and
+historically preserved; HARNESS-04 is deferred, FORMAL_FORWARD_PAPER is not
+started, and broker/live execution is not authorized.

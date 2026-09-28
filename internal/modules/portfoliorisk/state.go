@@ -79,6 +79,7 @@ type PortfolioSnapshot struct {
 	Provider          string         `json:"provider"`
 	Currency          string         `json:"currency"`
 	Synthetic         bool           `json:"synthetic"`
+	KnownEmpty        bool           `json:"known_empty"`
 	Cash              ObservedNumber `json:"cash"`
 	Equity            ObservedNumber `json:"equity"`
 	Positions         []Position     `json:"positions"`
@@ -154,7 +155,14 @@ func (s PortfolioSnapshot) Validate() error {
 		return fmt.Errorf("%w: known cash cannot be negative in Phase 09", ErrInvalidSnapshot)
 	}
 	if len(s.Positions) == 0 {
-		return fmt.Errorf("%w: at least one position record is required; use an empty known snapshot explicitly only at a later policy boundary", ErrInvalidSnapshot)
+		if !s.KnownEmpty {
+			return fmt.Errorf("%w: zero positions require an explicit known-empty account assertion", ErrInvalidSnapshot)
+		}
+		if !s.Cash.Known || !s.Equity.Known || s.Equity.Value <= 0 || len(s.Provenance) == 0 {
+			return fmt.Errorf("%w: known-empty portfolio requires known cash, positive equity, and provenance", ErrInvalidSnapshot)
+		}
+	} else if s.KnownEmpty {
+		return fmt.Errorf("%w: known-empty portfolio cannot contain positions", ErrInvalidSnapshot)
 	}
 	for i, p := range s.Positions {
 		if strings.TrimSpace(p.InstrumentID) == "" || !finiteNonZero(p.SignedQuantity) {

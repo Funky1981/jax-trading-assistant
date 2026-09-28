@@ -27,6 +27,30 @@ func TestCalculateExposureIsDeterministicAndSigned(t *testing.T) {
 	}
 }
 
+func TestKnownEmptyPortfolioProducesZeroExposureAndAllowsRiskEvaluation(t *testing.T) {
+	snapshot := PortfolioSnapshot{
+		AccountID: "empty-paper-account", AsOf: stateNow.Add(-time.Minute), CapturedAt: stateNow,
+		Provider: "paper-ledger+account", Currency: "USD", ValuationBasis: "cash-plus-marked-positions", KnownEmpty: true,
+		Cash: KnownNumber(100000, "paper_accounts.cash"), Equity: KnownNumber(100000, "derived-cash-plus-market-value"),
+		Provenance: []string{"paper_accounts:empty-paper-account", "paper_ledger_events:empty-paper-account"},
+	}
+	analytics, err := CalculateExposure(snapshot, stateNow, 10*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(analytics.Lines) != 0 || analytics.GrossExposure != 0 || analytics.NetExposure != 0 || analytics.LongExposure != 0 || analytics.ShortExposure != 0 || analytics.MaxConcentration != 0 || analytics.CashAllocation != 1 {
+		t.Fatalf("known-empty exposure=%#v", analytics)
+	}
+	policy, err := BuildRiskPolicy(fixturePolicy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	decision := EvaluateRecommendation(recommendation(5000), snapshot, analytics, policy, stateNow, 10*time.Minute)
+	if decision.Outcome != DecisionAccept {
+		t.Fatalf("known-empty account risk decision=%#v", decision)
+	}
+}
+
 func TestDerivedAnalyticsIdentityCannotBeTampered(t *testing.T) {
 	snapshot := fixtureSnapshot()
 	analytics, err := CalculateExposure(snapshot, stateNow, 10*time.Minute)

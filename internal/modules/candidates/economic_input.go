@@ -26,6 +26,7 @@ type CandidateEconomicInput struct {
 	IdentityPolicyVersion string    `json:"identity_policy_version"`
 	RiskAllocation        float64   `json:"risk_allocation"`
 	RequestedLeverage     float64   `json:"requested_leverage"`
+	SlippageAllowance     *float64  `json:"slippage_allowance,omitempty"`
 	SizingPolicyID        string    `json:"sizing_policy_id"`
 	SizingPolicyVersion   string    `json:"sizing_policy_version"`
 	ContentIdentity       string    `json:"content_identity"`
@@ -68,8 +69,12 @@ func BuildCandidateEconomicInput(input CandidateEconomicInput, now time.Time) (C
 		RequestedLeverage     float64   `json:"requested_leverage"`
 		SizingPolicyID        string    `json:"sizing_policy_id"`
 		SizingPolicyVersion   string    `json:"sizing_policy_version"`
+		SlippageAllowance     *float64  `json:"slippage_allowance,omitempty"`
 	}{input.CandidateID, input.ContractVersion, input.InstrumentID, input.IssuerID, input.IdentitySource,
-		input.IdentityPolicyVersion, input.RiskAllocation, input.RequestedLeverage, input.SizingPolicyID, input.SizingPolicyVersion}
+		input.IdentityPolicyVersion, input.RiskAllocation, input.RequestedLeverage, input.SizingPolicyID, input.SizingPolicyVersion, input.SlippageAllowance}
+	if input.SlippageAllowance != nil && (math.IsNaN(*input.SlippageAllowance) || math.IsInf(*input.SlippageAllowance, 0) || *input.SlippageAllowance < 0) {
+		return CandidateEconomicInput{}, errors.New("candidate economic input slippage allowance must be finite and non-negative")
+	}
 	canonical, err := json.Marshal(identityFields)
 	if err != nil {
 		return CandidateEconomicInput{}, fmt.Errorf("marshal candidate economic identity: %w", err)

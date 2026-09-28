@@ -12,7 +12,8 @@ import (
 func TestCandidateEconomicPolicyFailsClosedForMissingIdentityOrSizing(t *testing.T) {
 	base := candidateEconomicPolicy{PolicyVersion: "policy-v1", IdentityPolicy: "identity-v1", IdentitySource: "reviewed-map",
 		SizingPolicyID: "request-policy", SizingPolicyVersion: "v1", RiskAllocation: .01, RequestedLeverage: 1,
-		Instruments: map[string]candidateEconomicIdentity{"QQQ": {InstrumentID: "instrument-test-qqq", IssuerID: "issuer-test-qqq"}}}
+		SlippageAllowance: floatPointer(.25),
+		Instruments:       map[string]candidateEconomicIdentity{"QQQ": {InstrumentID: "instrument-test-qqq", IssuerID: "issuer-test-qqq"}}}
 	if _, err := base.build("QQQ", uuid.New(), time.Now()); err != nil {
 		t.Fatalf("explicit fixture policy rejected: %v", err)
 	}
@@ -37,7 +38,7 @@ func TestLoadCandidateEconomicPolicyRequiresExplicitFile(t *testing.T) {
 		t.Fatal("missing policy path must fail closed")
 	}
 	path := filepath.Join(t.TempDir(), "policy.json")
-	if err := os.WriteFile(path, []byte(`{"policy_version":"v1","identity_policy_version":"id-v1","identity_source":"reviewed","sizing_policy_id":"s","sizing_policy_version":"v1","risk_allocation":0.01,"requested_leverage":1,"instruments":{"QQQ":{"instrument_id":"instrument-test-qqq","issuer_id":"issuer-test-qqq"}}}`), 0600); err != nil {
+	if err := os.WriteFile(path, []byte(`{"policy_version":"v1","identity_policy_version":"id-v1","identity_source":"reviewed","sizing_policy_id":"s","sizing_policy_version":"v1","risk_allocation":0.01,"requested_leverage":1,"slippage_allowance":0.25,"instruments":{"QQQ":{"instrument_id":"instrument-test-qqq","issuer_id":"issuer-test-qqq"}}}`), 0600); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv(candidateEconomicPolicyEnv, path)

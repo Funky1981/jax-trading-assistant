@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -348,8 +349,32 @@ func (s *PostgresStore) SaveApprovedEntry(ctx context.Context, candidateID strin
 // workflow to the exploratory runtime. The payload is treated as untrusted;
 // LoadApprovedEntries replaces its evidence with the persisted projection.
 func (s *PostgresStore) QueueApprovedEntry(ctx context.Context, entry EntryRequest) error {
+	if s == nil || s.pool == nil {
+		return fmt.Errorf("%w: PostgreSQL store is unavailable", ErrFailedClosed)
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := s.QueueApprovedEntryTx(ctx, tx, entry); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return failClosed("commit approved entry queue", err)
+	}
+	return nil
+}
+
+// QueueApprovedEntryTx inserts the canonical queue handoff into a caller-owned
+// transaction. It never resets or overwrites an existing queue row; exact
+// replay is read-only, while a different payload for the candidate conflicts.
+func (s *PostgresStore) QueueApprovedEntryTx(ctx context.Context, tx pgx.Tx, entry EntryRequest) error {
 	if s == nil || s.pool == nil || strings.TrimSpace(entry.CandidateID) == "" || strings.TrimSpace(entry.Approval.Workflow.WorkflowID) == "" || strings.TrimSpace(entry.Approval.PaperIntent.IntentID) == "" {
 		return fmt.Errorf("%w: approved entry queue identity is incomplete", ErrFailedClosed)
+	}
+	if tx == nil {
+		return fmt.Errorf("%w: queue transaction is required", ErrFailedClosed)
 	}
 	if err := s.requireAccount(entry.Ledger.AccountID); err != nil {
 		return failClosed("queue approved entry account binding", err)
@@ -369,16 +394,17 @@ func (s *PostgresStore) QueueApprovedEntry(ctx context.Context, entry EntryReque
 	}
 	requestID := queueIdentity(entry.CandidateID, entry.Approval.Workflow.WorkflowID, entry.Approval.PaperIntent.IntentID)
 	now := s.now().UTC()
-	result, err := s.pool.Exec(ctx, `INSERT INTO exploratory_paper_entry_queue(request_id,candidate_id,payload,status,created_at,updated_at) VALUES($1,$2,$3,'PENDING',$4,$4) ON CONFLICT(candidate_id) DO UPDATE SET payload=EXCLUDED.payload,updated_at=EXCLUDED.updated_at,status='PENDING' WHERE exploratory_paper_entry_queue.payload=EXCLUDED.payload`, requestID, entry.CandidateID, payload, now)
+	result, err := tx.Exec(ctx, `INSERT INTO exploratory_paper_entry_queue(request_id,candidate_id,payload,status,created_at,updated_at) VALUES($1,$2,$3,'PENDING',$4,$4) ON CONFLICT(candidate_id) DO NOTHING`, requestID, entry.CandidateID, payload, now)
 	if err != nil {
 		return failClosed("queue approved entry", err)
 	}
 	if result.RowsAffected() == 0 {
 		var existing []byte
-		if err := s.pool.QueryRow(ctx, `SELECT payload FROM exploratory_paper_entry_queue WHERE candidate_id=$1`, entry.CandidateID).Scan(&existing); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT payload FROM exploratory_paper_entry_queue WHERE candidate_id=$1 FOR UPDATE`, entry.CandidateID).Scan(&existing); err != nil {
 			return failClosed("verify queued entry identity", err)
 		}
-		if string(existing) != string(payload) {
+		var stored EntryRequest
+		if json.Unmarshal(existing, &stored) != nil || !reflect.DeepEqual(stored, entry) {
 			return failClosed("queued entry identity", ErrPersistenceConflict)
 		}
 	}

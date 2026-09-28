@@ -61,3 +61,35 @@ func TestRecoveryNeverAutoAdvancesToApproval(t *testing.T) {
 		t.Fatal("reconciliation state auto-advanced to confirmation")
 	}
 }
+
+func TestRestoreWorkflowStateReconstructsDurableAuditForNextCommand(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	original := NewStore()
+	wf, err := original.Create(ctx, CreateRequest{RiskDecision: acceptedRiskDecision(t, now), Now: now, IdempotencyKey: "restore-single-create"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wf, err = original.RequestHumanConfirmation(ctx, TransitionRequest{WorkflowID: wf.WorkflowID, Actor: "workflow-system", ActorRole: ActorSystem, IdempotencyKey: "restore-single-await", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, err := original.Events(ctx, wf.WorkflowID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored, err := RestoreWorkflowState(wf, events, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := restored.Replay(ctx, wf.WorkflowID)
+	if err != nil || got.State != StateAwaitingHumanConfirmation {
+		t.Fatalf("restored replay=%#v err=%v", got, err)
+	}
+	// Exact command retry after restart resolves from the reconstructed audit
+	// idempotency record instead of appending another semantic event.
+	retry, err := restored.RequestHumanConfirmation(ctx, TransitionRequest{WorkflowID: wf.WorkflowID, Actor: "workflow-system", ActorRole: ActorSystem, IdempotencyKey: "restore-single-await", Now: now})
+	if err != nil || retry.Revision != wf.Revision {
+		t.Fatalf("restored idempotent retry=%#v err=%v", retry, err)
+	}
+}

@@ -88,7 +88,8 @@ func TestCandidateEconomicInputPostgresPersistenceReplayAndHistoricalNoBackfill(
 	}
 	policy := &candidateEconomicPolicy{PolicyVersion: "fixture-policy-v1", IdentityPolicy: "fixture-identity-v1", IdentitySource: "test-fixture-map",
 		SizingPolicyID: "fixture-request", SizingPolicyVersion: "v1", RiskAllocation: .01, RequestedLeverage: .75,
-		Instruments: map[string]candidateEconomicIdentity{"QQQ": {InstrumentID: "instrument-test-qqq", IssuerID: "issuer-test-qqq"}}}
+		SlippageAllowance: floatPointer(.25),
+		Instruments:       map[string]candidateEconomicIdentity{"QQQ": {InstrumentID: "instrument-test-qqq", IssuerID: "issuer-test-qqq"}}}
 	promoter := newWorldMonitorOpportunityPromoter(pool)
 	promoter.economicPolicy = policy
 	_, outcome, err := promoter.reviewCandidateRisk(ctx, configuredCandidateID, uuid.New(), uuid.NullUUID{})
@@ -99,7 +100,7 @@ func TestCandidateEconomicInputPostgresPersistenceReplayAndHistoricalNoBackfill(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if configuredInput.InstrumentID != "instrument-test-qqq" || configuredInput.IssuerID != "issuer-test-qqq" || configuredInput.RiskAllocation != .01 || configuredInput.RequestedLeverage != .75 {
+	if configuredInput.InstrumentID != "instrument-test-qqq" || configuredInput.IssuerID != "issuer-test-qqq" || configuredInput.RiskAllocation != .01 || configuredInput.RequestedLeverage != .75 || configuredInput.SlippageAllowance == nil || *configuredInput.SlippageAllowance != .25 {
 		t.Fatalf("configured world-monitor input differs: %+v", configuredInput)
 	}
 }

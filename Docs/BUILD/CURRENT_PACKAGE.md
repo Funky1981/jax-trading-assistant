@@ -1,25 +1,26 @@
 # Current Build Package
 
-Current routing: **CORE-READINESS-02A3 — CANONICAL CANDIDATE ECONOMIC INPUTS
-AND COMPILE RECOVERY**, implemented and awaiting external review. This narrow
-correction does not authorize the full CORE-READINESS-02 handoff or mark
-Working Jax ready. CORE-READINESS-01 verdict:
+Current routing: **CORE-READINESS-02A4 — CANONICAL PAPER HANDOFF**, implemented
+and awaiting external review. The package ends at the account-scoped
+exploratory entry queue; it does not consume the queue or mark Working Jax
+ready. CORE-READINESS-01 verdict:
 **BLOCKED_BEFORE_HYPOTHESIS_DESIGN**. No strategy is selected and no pilot or
 economic activity is authorized.
 
-CORE-READINESS-02A3 adds a typed append-only candidate economic-input contract,
-removes proof/default sizing from the World Monitor canonical path, and leaves
-the incomplete public entry queue unavailable until 02A4. See
-`Docs/BUILD/CORE-READINESS-02A3-CANDIDATE-ECONOMIC-INPUTS.md`. CORE-READINESS-02A4
-remains a separate package and is not implemented here. Until then, legacy
-World Monitor APPROVE actions are blocked in the shared approval service,
-regardless of historical risk/gate fields or presence of CandidateEconomicInput;
-that input is not portfolio approval. Safe non-approval actions remain enabled.
+CORE-READINESS-02A3 established the typed append-only candidate economic-input
+contract. CORE-READINESS-02A4 connects persisted candidates and explicit
+economic inputs to current PAPER portfolio risk, authenticated human decision,
+durable workflow/PaperIntent, and one account-scoped queue row. See
+`Docs/BUILD/CORE-READINESS-02A3-CANDIDATE-ECONOMIC-INPUTS.md` and
+`Docs/BUILD/CORE-READINESS-02A4-CANONICAL-PAPER-HANDOFF.md`. The legacy World
+Monitor APPROVE route remains blocked; only the explicit canonical PAPER
+handoff can approve that candidate path. The queue is not consumed by 02A4.
 
-Read `Docs/BUILD/CORE-READINESS-01-WORKING-JAX-V1-AUDIT.md`. Its bounded
-blockers are JWT-bound candidate actor identity, server-owned candidate/risk/
-approval-to-exploratory-entry wiring, and genuine market-data provenance and
-temporal proof. OPS-01 remains synthetic/disposable full-loop evidence;
+Read `Docs/BUILD/CORE-READINESS-01-WORKING-JAX-V1-AUDIT.md`. 02A4 addresses the
+server-owned candidate/risk/approval-to-queue seam and JWT-bound decision actor.
+The remaining package is CORE-READINESS-02B: isolated genuine-market
+end-to-end proof, including current provider semantics and temporal safety.
+OPS-01 remains synthetic/disposable full-loop evidence;
 OPS-02B remains real-runtime event-intake evidence with zero economic activity.
 
 OPS-02A: **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / SUPERSEDED BY OPS-02B AND OPS-02C1**.

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // PersistCandidateEconomicInput appends the explicit economic request. Exact
@@ -26,12 +27,12 @@ func (s *Store) PersistCandidateEconomicInput(ctx context.Context, input Candida
 		INSERT INTO candidate_economic_inputs (
 			candidate_id, contract_version, instrument_id, issuer_id, identity_source,
 			identity_policy_version, risk_allocation, requested_leverage, sizing_policy_id,
-			sizing_policy_version, content_identity, created_at, payload
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+			sizing_policy_version, content_identity, created_at, payload, slippage_allowance
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 		ON CONFLICT (candidate_id) DO NOTHING
 	`, validated.CandidateID, validated.ContractVersion, validated.InstrumentID, validated.IssuerID,
 		validated.IdentitySource, validated.IdentityPolicyVersion, validated.RiskAllocation, validated.RequestedLeverage,
-		validated.SizingPolicyID, validated.SizingPolicyVersion, validated.ContentIdentity, validated.CreatedAt, payload)
+		validated.SizingPolicyID, validated.SizingPolicyVersion, validated.ContentIdentity, validated.CreatedAt, payload, validated.SlippageAllowance)
 	if err != nil {
 		return fmt.Errorf("insert candidate economic input: %w", err)
 	}
@@ -47,7 +48,8 @@ func (s *Store) PersistCandidateEconomicInput(ctx context.Context, input Candida
 
 func (s *Store) GetCandidateEconomicInput(ctx context.Context, candidateID uuid.UUID) (CandidateEconomicInput, error) {
 	var payload []byte
-	err := s.pool.QueryRow(ctx, `SELECT payload FROM candidate_economic_inputs WHERE candidate_id=$1`, candidateID).Scan(&payload)
+	var persistedSlippage float64
+	err := s.pool.QueryRow(ctx, `SELECT payload,COALESCE(slippage_allowance::float8,-1) FROM candidate_economic_inputs WHERE candidate_id=$1`, candidateID).Scan(&payload, &persistedSlippage)
 	if err != nil {
 		return CandidateEconomicInput{}, fmt.Errorf("load candidate economic input: %w", err)
 	}
@@ -59,7 +61,42 @@ func (s *Store) GetCandidateEconomicInput(ctx context.Context, candidateID uuid.
 	if err != nil {
 		return CandidateEconomicInput{}, fmt.Errorf("validate stored candidate economic input: %w", err)
 	}
+	if !candidateEconomicSlippageMatches(validated.SlippageAllowance, persistedSlippage) {
+		return CandidateEconomicInput{}, fmt.Errorf("stored economic input slippage column conflicts with immutable payload")
+	}
 	return validated, nil
+}
+
+// GetCandidateEconomicInputTx reads and validates the immutable economic
+// request through the caller's transaction.
+func (s *Store) GetCandidateEconomicInputTx(ctx context.Context, tx pgx.Tx, candidateID uuid.UUID) (CandidateEconomicInput, error) {
+	if tx == nil {
+		return CandidateEconomicInput{}, fmt.Errorf("candidate transaction is required")
+	}
+	var payload []byte
+	var persistedSlippage float64
+	if err := tx.QueryRow(ctx, `SELECT payload,COALESCE(slippage_allowance::float8,-1) FROM candidate_economic_inputs WHERE candidate_id=$1`, candidateID).Scan(&payload, &persistedSlippage); err != nil {
+		return CandidateEconomicInput{}, fmt.Errorf("load candidate economic input: %w", err)
+	}
+	var input CandidateEconomicInput
+	if err := json.Unmarshal(payload, &input); err != nil {
+		return CandidateEconomicInput{}, fmt.Errorf("decode candidate economic input: %w", err)
+	}
+	validated, err := BuildCandidateEconomicInput(input, input.CreatedAt)
+	if err != nil {
+		return CandidateEconomicInput{}, fmt.Errorf("validate stored candidate economic input: %w", err)
+	}
+	if !candidateEconomicSlippageMatches(validated.SlippageAllowance, persistedSlippage) {
+		return CandidateEconomicInput{}, fmt.Errorf("stored economic input slippage column conflicts with immutable payload")
+	}
+	return validated, nil
+}
+
+func candidateEconomicSlippageMatches(payload *float64, column float64) bool {
+	if payload == nil {
+		return column == -1
+	}
+	return column == *payload
 }
 
 // MarkEconomicInputUnavailable keeps research candidates non-approvable until

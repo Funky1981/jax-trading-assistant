@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -13,11 +14,13 @@ import (
 	"jax-trading-assistant/libs/auth"
 	"jax-trading-assistant/libs/runtimepolicy"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func registerExploratoryPaperRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool) {
+	registerCanonicalPaperHandoffRoutes(mux, protect, pool)
 	operationalStore, operationalErr := newExploratoryOperationalStore(pool)
 	historicalReadOnlyStore := exploratorypaper.NewPostgresStore(pool)
 	pilotStore := exploratorypaper.NewPilotPostgresStore(pool)
@@ -32,6 +35,84 @@ func registerExploratoryPaperRoutes(mux *http.ServeMux, protect func(http.Handle
 	mux.HandleFunc("/api/v1/exploratory-paper/pilot", protect(exploratoryPilotHandler(pilotStore, historicalReadOnlyStore)))
 	mux.HandleFunc("/api/v1/exploratory-paper/pilot/opportunities", protect(exploratoryPilotOpportunitiesHandler(pilotStore)))
 	mux.HandleFunc("/api/v1/exploratory-paper/pilot-readiness", protect(exploratoryPilotReadinessHandler))
+}
+
+func registerCanonicalPaperHandoffRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, pool *pgxpool.Pool) {
+	registerCanonicalPaperHandoffServiceRoutes(mux, protect, newCanonicalHandoffService(pool))
+}
+
+func registerCanonicalPaperHandoffServiceRoutes(mux *http.ServeMux, protect func(http.HandlerFunc) http.HandlerFunc, service *canonicalHandoffService) {
+	mux.HandleFunc("/api/v1/exploratory-paper/handoff/", protect(func(w http.ResponseWriter, r *http.Request) {
+		handleCanonicalPaperHandoff(w, r, service)
+	}))
+}
+
+func handleCanonicalPaperHandoff(w http.ResponseWriter, r *http.Request, service *canonicalHandoffService) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if runtimepolicy.CurrentMode() != runtimepolicy.ModePaper {
+		http.Error(w, "canonical PAPER handoff requires PAPER runtime mode", http.StatusConflict)
+		return
+	}
+	actor, authenticated := authenticatedExploratoryExitActor(r)
+	if !authenticated {
+		http.Error(w, "validated JWT identity is required", http.StatusForbidden)
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil || len(strings.TrimSpace(string(body))) != 0 {
+		http.Error(w, "canonical handoff accepts no caller-supplied economic payload", http.StatusBadRequest)
+		return
+	}
+	parts := strings.Split(strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/v1/exploratory-paper/handoff/"), "/"), "/")
+	if len(parts) != 2 {
+		http.NotFound(w, r)
+		return
+	}
+	idText := parts[0]
+	action := parts[1]
+	candidateID, err := uuid.Parse(idText)
+	if err != nil || candidateID == uuid.Nil {
+		http.Error(w, "valid candidate ID is required", http.StatusBadRequest)
+		return
+	}
+	switch action {
+	case "prepare":
+		result, err := service.prepare(r.Context(), candidateID)
+		if err != nil {
+			writeCanonicalHandoffError(w, err)
+			return
+		}
+		jsonOK(w, result)
+	case "approve":
+		result, err := service.approve(r.Context(), candidateID, actor)
+		if err != nil {
+			writeCanonicalHandoffError(w, err)
+			return
+		}
+		jsonOK(w, result)
+	case "reject":
+		result, err := service.reject(r.Context(), candidateID, actor)
+		if err != nil {
+			writeCanonicalHandoffError(w, err)
+			return
+		}
+		jsonOK(w, map[string]any{"candidateId": candidateID.String(), "workflowId": result.workflow.WorkflowID, "workflowState": result.workflow.State})
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func writeCanonicalHandoffError(w http.ResponseWriter, err error) {
+	status := http.StatusConflict
+	if errors.Is(err, errCanonicalHandoffRejected) {
+		status = http.StatusUnprocessableEntity
+	} else if strings.Contains(err.Error(), "unavailable") || strings.Contains(err.Error(), "requires PAPER_ACCOUNT_ID") || strings.Contains(err.Error(), "policy") {
+		status = http.StatusServiceUnavailable
+	}
+	http.Error(w, "canonical PAPER handoff failed: "+err.Error(), status)
 }
 
 func newExploratoryOperationalStore(pool *pgxpool.Pool) (*exploratorypaper.PostgresStore, error) {

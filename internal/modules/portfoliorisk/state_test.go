@@ -120,6 +120,40 @@ func TestSnapshotValidationRejectsConflictingAndMalformedFacts(t *testing.T) {
 	}
 }
 
+func TestKnownEmptyPortfolioRequiresExplicitKnownFactsAndProvenance(t *testing.T) {
+	snapshot := PortfolioSnapshot{
+		AccountID: "empty-paper-account", AsOf: stateNow.Add(-time.Minute), CapturedAt: stateNow,
+		Provider: "paper-ledger+account", Currency: "USD", ValuationBasis: "cash-plus-marked-positions",
+		Cash: KnownNumber(100000, "paper_accounts.cash"), Equity: KnownNumber(100000, "derived-cash-plus-market-value"),
+		Provenance: []string{"paper_accounts:empty-paper-account", "paper_ledger_events:empty-paper-account"},
+	}
+	if _, err := BuildSnapshot(snapshot); !errors.Is(err, ErrInvalidSnapshot) {
+		t.Fatalf("unmarked zero-position snapshot error=%v, want invalid", err)
+	}
+	snapshot.KnownEmpty = true
+	canonical, err := BuildSnapshot(snapshot)
+	if err != nil {
+		t.Fatalf("explicit known-empty snapshot: %v", err)
+	}
+	if len(canonical.Positions) != 0 || !canonical.KnownEmpty || canonical.Synthetic {
+		t.Fatalf("known-empty snapshot fabricated or misclassified positions: %#v", canonical)
+	}
+	for name, mutate := range map[string]func(*PortfolioSnapshot){
+		"unknown-cash":        func(s *PortfolioSnapshot) { s.Cash = UnknownNumber("unknown") },
+		"unknown-equity":      func(s *PortfolioSnapshot) { s.Equity = UnknownNumber("unknown") },
+		"non-positive-equity": func(s *PortfolioSnapshot) { s.Equity = KnownNumber(0, "fixture") },
+		"missing-provenance":  func(s *PortfolioSnapshot) { s.Provenance = nil },
+	} {
+		t.Run(name, func(t *testing.T) {
+			invalid := snapshot
+			mutate(&invalid)
+			if _, err := BuildSnapshot(invalid); !errors.Is(err, ErrInvalidSnapshot) {
+				t.Fatalf("error=%v, want invalid snapshot", err)
+			}
+		})
+	}
+}
+
 func TestMemorySnapshotStoreIsAppendOnly(t *testing.T) {
 	store := NewMemorySnapshotStore()
 	snapshot, err := BuildSnapshot(fixtureSnapshot())

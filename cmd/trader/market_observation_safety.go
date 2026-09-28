@@ -10,6 +10,7 @@ import (
 
 	"jax-trading-assistant/libs/marketdata"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -57,8 +58,16 @@ func (policy marketDataSafetyPolicy) validateObservation(observation marketdata.
 }
 
 func loadCanonicalQuoteObservation(ctx context.Context, pool *pgxpool.Pool, symbol string, asOf time.Time, policy marketDataSafetyPolicy) (marketdata.EconomicObservation, error) {
+	return loadCanonicalQuoteObservationFrom(ctx, pool, symbol, asOf, policy)
+}
+
+type marketObservationQueryer interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func loadCanonicalQuoteObservationFrom(ctx context.Context, queryer marketObservationQueryer, symbol string, asOf time.Time, policy marketDataSafetyPolicy) (marketdata.EconomicObservation, error) {
 	var observation marketdata.EconomicObservation
-	err := pool.QueryRow(ctx, `
+	err := queryer.QueryRow(ctx, `
 		SELECT symbol,provider,timestamp,received_at,bid,ask,price
 		FROM quotes
 		WHERE UPPER(symbol)=UPPER($1)

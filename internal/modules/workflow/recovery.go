@@ -87,6 +87,36 @@ func RestoreSnapshot(data []byte) (*Store, error) {
 	return store, nil
 }
 
+// RestoreWorkflowState reconstructs one workflow from its durable state and
+// append-only audit stream. It is intended for database adapters that load a
+// workflow under a row lock before applying another state-machine command.
+func RestoreWorkflowState(current Workflow, events []TransitionEvent, intent *PaperIntent) (*Store, error) {
+	snapshot := DurableSnapshot{
+		Version:     DurableSnapshotVersion,
+		Workflows:   map[string]Workflow{current.WorkflowID: current},
+		Events:      map[string][]TransitionEvent{current.WorkflowID: append([]TransitionEvent(nil), events...)},
+		Idempotency: map[string]PersistedIdempotency{}, PaperIntents: map[string]PaperIntent{},
+		Breakers: map[string]Breaker{}, BreakerEvents: map[string][]BreakerEvent{}, BreakerIdempotency: map[string]string{},
+	}
+	if intent != nil {
+		snapshot.PaperIntents[current.WorkflowID] = *intent
+	}
+	for _, event := range events {
+		snapshot.Idempotency[event.IdempotencyKey] = PersistedIdempotency{Fingerprint: event.InputFingerprint, WorkflowID: current.WorkflowID, Event: event}
+	}
+	if err := validateSnapshot(snapshot); err != nil {
+		return nil, fmt.Errorf("restore workflow state: %w", err)
+	}
+	store := NewStore()
+	store.workflows = snapshot.Workflows
+	store.events = snapshot.Events
+	store.paperIntents = snapshot.PaperIntents
+	for key, record := range snapshot.Idempotency {
+		store.idempotency[key] = idempotencyRecord{fingerprint: record.Fingerprint, workflowID: record.WorkflowID, event: record.Event}
+	}
+	return store, nil
+}
+
 func validateSnapshot(snapshot DurableSnapshot) error {
 	if snapshot.Version != DurableSnapshotVersion || snapshot.Workflows == nil || snapshot.Events == nil || snapshot.Idempotency == nil || snapshot.PaperIntents == nil || snapshot.Breakers == nil || snapshot.BreakerEvents == nil || snapshot.BreakerIdempotency == nil {
 		return fmt.Errorf("unsupported or incomplete durable workflow snapshot")

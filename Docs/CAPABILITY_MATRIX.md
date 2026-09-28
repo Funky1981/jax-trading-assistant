@@ -10,9 +10,10 @@ demonstrated-edge claims. PAPER-02R, OPS-01, OPS-02B, and OPS-02C1 are
 integrity only; it did not establish strategy quality, predictive skill,
 profitability, an economic edge, or formal-forward readiness.
 CORE-READINESS-01 is complete with verdict
-`BLOCKED_BEFORE_HYPOTHESIS_DESIGN`. CORE-READINESS-02 is recommended to
-resolve the documented approval, exploratory-entry and market-data proof
-blockers, pending separate technical-lead authorization.
+`BLOCKED_BEFORE_HYPOTHESIS_DESIGN`. CORE-READINESS-02A4 implements the
+server-owned candidate-to-account-scoped-queue handoff and awaits external
+review. CORE-READINESS-02B's isolated genuine-market end-to-end proof remains
+outstanding; Working Jax is not ready for hypothesis design.
 
 This matrix tracks capability maturity. It is supporting evidence for the
 authoritative active roadmap in `Docs/ROADMAP.md`; it is not itself the roadmap
@@ -67,6 +68,7 @@ current sequence and the operational-versus-scientific proof boundary.
 | PAPER-02 prospective pilot readiness | TESTED | Paper Trading | Frozen protocol, pilot identity, non-trade opportunity ledger, new-evidence classification, latency/market quality, incidents, metrics, and read model | `Docs/PAPER_TRADING/PAPER-02-PROSPECTIVE-PILOT-PROTOCOL.md`, `Docs/BUILD/PAPER-02-READINESS-EVIDENCE.md` | `internal/modules/exploratorypaper/pilot*.go`, migration 000073 | ABORTED / HISTORICALLY PRESERVED / 0 genuine prospective opportunities; no edge claim |
 | PAPER-02R incident preservation and corrected runtime readiness | TESTED | Paper Trading / Platform | Historical incident preservation, durable exit recommendation/approval, corrected economic accounting, ledger reconciliation, honest market-data/excursion coverage, isolated required PostgreSQL CI, and narrow HARNESS temporal/replay corrections | `Docs/BUILD/PAPER-02R-INCIDENT-PRESERVATION-RUNTIME-READINESS.md`, `Docs/PAPER_TRADING/PAPER-02-2026-01-INCIDENT-REVIEW.md` | `internal/modules/exploratorypaper`, `internal/modules/harnessstate`, `internal/testsupport`, required CI job | GO / EXTERNALLY REVIEWED; no pilot continuation or edge claim |
 | PAPER-02 genuine prospective event intake | TESTED | Data Ingestion and Paper Trading | Canonical World Monitor source contract, safe configuration identity, provenance/timestamp preservation, cursor/page idempotency, evidence compatibility, pre-activation exclusion | `cmd/trader/world_monitor_pull_worker.go`, `Docs/BUILD/PAPER-02A2-GENUINE-PROSPECTIVE-INTAKE.md` | `cmd/trader/world_monitor_pull_worker_test.go`, `cmd/trader/paper02_readiness_test.go`, `internal/modules/exploratorypaper/pilot_test.go` | Historical activation boundary preserved; no genuine opportunity was created; pilot later aborted by OPS-02A |
+| CORE-READINESS-02A4 canonical approved-PAPER handoff | TESTED | Candidate Review / Portfolio Risk / Paper Trading | Persisted candidate and explicit economics, current account/ledger snapshot, deterministic portfolio risk, JWT-bound decision, durable workflow/intent, account-scoped queue-only boundary, replay/restart/concurrency | `cmd/trader/canonical_paper_handoff*.go`, `internal/modules/approvals/canonical_paper.go`, `Docs/BUILD/CORE-READINESS-02A4-CANONICAL-PAPER-HANDOFF.md` | `cmd/trader/canonical_paper_handoff_api_test.go`, `cmd/trader/canonical_paper_handoff_integration_test.go`, `internal/modules/portfoliorisk`, `internal/modules/workflow` | Implemented / external review required; no queue consumption, runtime deployment, pilot, strategy selection, or edge claim; 02B genuine-market proof remains |
 | Exploratory/formal evidence firewall | TESTED | Paper Trading | Explicit mode labels and review boundary | `Docs/PAPER_TRADING/EXPLORATORY_VS_FORMAL.md` | `internal/modules/exploratorypaper` | Prevents exploratory observations from becoming promotion evidence |
 | Demonstrated trading edge | PLANNED | Research and Evidence | Separately authorized formal evidence | `Docs/BUILD/PAPER-02.md` | Not started | Not demonstrated by PAPER-01 or PAPER-02 |
 | Decision Core Phase 1 | TESTED | Decision Core | Unit tests + FTSE golden fixture | `internal/decisioning/core` | `internal/decisioning/core/decision_test.go`, `tests/golden/decision_runner_test.go` | Deterministic structured decision core implemented; Phase 2 Event Intelligence feeds enriched events into this core |
