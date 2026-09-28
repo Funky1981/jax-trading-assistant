@@ -73,7 +73,8 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - OPS-02C1: `GO / EXTERNALLY REVIEWED`.
 - PAPER-02A3: `ACTIVATED / SUPERSEDED BY OPS-02A`.
 - PAPER-02: `ABORTED / HISTORICALLY PRESERVED / 0 GENUINE PROSPECTIVE OPPORTUNITIES`.
-- CORE-READINESS-01: `NEXT / WORKING JAX V1 SCIENTIFIC READINESS AUDIT`.
+- CORE-READINESS-01: `COMPLETE / BLOCKED_BEFORE_HYPOTHESIS_DESIGN`.
+- CORE-READINESS-02: `RECOMMENDED / SEPARATE AUTHORIZATION REQUIRED`.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
 - Harness foundation contracts: `HARNESS-01 GO / EXTERNALLY REVIEWED`.
 - Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE`.
@@ -105,14 +106,17 @@ zero ACTIVE pilots after OPS-02C1, and zero enabled strategy instances after
 OPS-02B fixture disablement. These are the recorded package results, not a new
 database query in this documentation update.
 
-## Next authorized work
+## Next recommended work (not yet authorized)
 
-Do not continue PAPER-02-2026-01 or reinterpret its preserved history. The next
-authorized package is CORE-READINESS-01: an audit of the current repository and
-reviewed runtime evidence against the minimum trustworthy Working Jax v1 loop.
-It must determine whether controlled economic-hypothesis testing can begin
-without architectural rewrite. It does not select a hypothesis. A separately
-selected and preregistered exploratory economic hypothesis may be considered
-only after that audit. A new prospective pilot is not started or authorized;
-HARNESS-04 is deferred, FORMAL_FORWARD_PAPER is not started, and broker/live
-execution is not authorized.
+CORE-READINESS-01 found that the reusable core is not yet trustworthy enough
+to begin hypothesis design. The recommended next package is CORE-READINESS-02:
+bind candidate approval actors to JWT claims; connect persisted candidate,
+account-scoped risk decision and human approval to the exploratory PAPER entry
+queue through a server-owned handoff; and define/prove genuine market-price
+provenance, freshness and no-lookahead semantics. This recommendation is not
+authorization to implement, select a strategy, mutate the normal database,
+create/activate a pilot, collect prospective evidence, start runtime services,
+or use a broker. Separate technical-lead authorization is required. PAPER-02
+remains aborted and historically preserved; HARNESS-04 is deferred,
+FORMAL_FORWARD_PAPER is not started, and broker/live execution is not
+authorized.

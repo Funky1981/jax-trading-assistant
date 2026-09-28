@@ -4,10 +4,11 @@ Paper trading in this repository is hypothetical and evidence-bounded. A paper t
 
 ## Current package
 
-`Docs/BUILD/CURRENT_PACKAGE.md` routes to CORE-READINESS-01, a Working Jax v1
-scientific-readiness audit. PAPER-02-2026-01 is aborted and historically
-preserved with zero genuine prospective opportunities. No new pilot is started
-or authorized.
+`Docs/BUILD/CURRENT_PACKAGE.md` records the CORE-READINESS-01 verdict
+`BLOCKED_BEFORE_HYPOTHESIS_DESIGN` and recommends CORE-READINESS-02, pending
+separate authorization. PAPER-02-2026-01 is aborted and historically preserved
+with zero genuine prospective opportunities. No new pilot is started or
+authorized.
 
 ## Contracts
 

@@ -8,8 +8,11 @@ identity and historical records remain separate from formal evidence and
 demonstrated-edge claims. PAPER-02R, OPS-01, OPS-02B, and OPS-02C1 are
 `GO / EXTERNALLY REVIEWED`. OPS-02B established bounded runtime operational
 integrity only; it did not establish strategy quality, predictive skill,
-profitability, an economic edge, or formal-forward readiness. The next package
-is CORE-READINESS-01, an audit of the minimum Working Jax v1 loop.
+profitability, an economic edge, or formal-forward readiness.
+CORE-READINESS-01 is complete with verdict
+`BLOCKED_BEFORE_HYPOTHESIS_DESIGN`. CORE-READINESS-02 is recommended to
+resolve the documented approval, exploratory-entry and market-data proof
+blockers, pending separate technical-lead authorization.
 
 This matrix tracks capability maturity. It is supporting evidence for the
 authoritative active roadmap in `Docs/ROADMAP.md`; it is not itself the roadmap

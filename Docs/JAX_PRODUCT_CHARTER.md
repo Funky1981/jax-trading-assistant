@@ -81,10 +81,11 @@ an economic edge, or readiness for formal forward paper. Trading edge remains
 `NOT DEMONSTRATED`; `FORMAL_FORWARD_PAPER` is `NOT STARTED`; live execution is
 not authorized.
 
-`CORE-READINESS-01` is the next package. It audits whether the current system
-can reliably complete the minimum Working Jax v1 loop below without an
-architectural rewrite. It is an audit first and does not select a strategy or
-authorize a pilot.
+`CORE-READINESS-01` is complete with verdict
+`BLOCKED_BEFORE_HYPOTHESIS_DESIGN`. The recommended next package is
+`CORE-READINESS-02`, pending separate technical-lead authorization, to resolve
+the documented candidate-approval, canonical PAPER-entry, and market-data
+proof blockers. This does not select a strategy or authorize a pilot.
 
 The current Working Jax v1 criterion is:
 
@@ -100,6 +101,7 @@ data
 → outcome
 ```
 
-Only after CORE-READINESS-01 may a separately selected and preregistered
-exploratory economic hypothesis be considered. A new prospective pilot is
-`NOT STARTED / NOT AUTHORIZED`. HARNESS-04 is `NOT STARTED / DEFERRED`.
+Only after the CORE-READINESS-02 blockers are corrected and externally
+reviewed may a separately selected and preregistered exploratory economic
+hypothesis be considered. A new prospective pilot is `NOT STARTED / NOT
+AUTHORIZED`. HARNESS-04 is `NOT STARTED / DEFERRED`.

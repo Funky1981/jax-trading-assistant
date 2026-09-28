@@ -1,8 +1,16 @@
 # Current Build Package
 
-Current routing: **CORE-READINESS-01 — WORKING JAX V1 / SCIENTIFIC READINESS
-AUDIT**. This is an audit-first package; it does not select a strategy or
-authorize a pilot.
+Current routing: **CORE-READINESS-02 — CANONICAL APPROVED-PAPER SEAM AND
+MARKET-DATA PROOF**, recommended by CORE-READINESS-01 and awaiting separate
+technical-lead authorization. CORE-READINESS-01 verdict:
+**BLOCKED_BEFORE_HYPOTHESIS_DESIGN**. No strategy is selected and no pilot or
+economic activity is authorized.
+
+Read `Docs/BUILD/CORE-READINESS-01-WORKING-JAX-V1-AUDIT.md`. Its bounded
+blockers are JWT-bound candidate actor identity, server-owned candidate/risk/
+approval-to-exploratory-entry wiring, and genuine market-data provenance and
+temporal proof. OPS-01 remains synthetic/disposable full-loop evidence;
+OPS-02B remains real-runtime event-intake evidence with zero economic activity.
 
 OPS-02A: **EXECUTED / PAPER-02 HISTORICALLY PRESERVED / SUPERSEDED BY OPS-02B AND OPS-02C1**.
 The artifact-forensics, canonical closure, World Monitor verification, and

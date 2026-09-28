@@ -86,7 +86,8 @@ not promote a strategy or prove a trading edge.
 | OPS-02B1 | **IMPLEMENTED / VALIDATED / SUPERSEDED BY OPS-02B3** |
 | OPS-02B3 / OPS-02B | **GO / EXTERNALLY REVIEWED** |
 | OPS-02C1 | **GO / EXTERNALLY REVIEWED** |
-| CORE-READINESS-01 | **NEXT / WORKING JAX V1 SCIENTIFIC READINESS AUDIT** |
+| CORE-READINESS-01 | **COMPLETE / BLOCKED_BEFORE_HYPOTHESIS_DESIGN** |
+| CORE-READINESS-02 | **RECOMMENDED / SEPARATE AUTHORIZATION REQUIRED** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -289,8 +290,8 @@ alone means a demonstrated trading edge.
 
 ## Working Jax v1 readiness criterion
 
-CORE-READINESS-01 must audit the current repository and reviewed runtime
-evidence against this minimum end-to-end loop:
+CORE-READINESS-01 audited the current repository and reviewed runtime evidence
+against this minimum end-to-end loop:
 
 ```text
 data
@@ -304,15 +305,13 @@ data
 → outcome
 ```
 
-The audit must determine whether this loop is sufficiently trustworthy to
-begin controlled economic-hypothesis testing without an architectural rewrite.
-Successful startup or bounded operational proof does not establish that every
-component or transition is proven. The scientific stage must start from an
-explicit economic hypothesis and predefined failure criteria. OPS-02B did not
-prove a strategy, predictive skill, profitability, an economic edge, or
-formal-forward readiness. Do not revive `ma_crossover_v1` or reinterpret its
-failed frozen recovery validation; do not select a strategy family in
-CORE-READINESS-01.
+The audit verdict is `BLOCKED_BEFORE_HYPOTHESIS_DESIGN`: candidate approval
+actor identity is caller-header controlled; candidate risk/approval does not
+produce the portfolio-risk-bound exploratory entry request; and genuine
+market-price provenance/freshness/no-lookahead semantics have not been proven
+in the corrected runtime. OPS-02B did not prove a strategy, predictive skill,
+profitability, an economic edge, or formal-forward readiness. Do not revive
+`ma_crossover_v1` or reinterpret its failed frozen recovery validation.
 
 ## Current development sequence
 
@@ -336,7 +335,13 @@ GO / EXTERNALLY REVIEWED
 
 CORE-READINESS-01
 WORKING JAX V1 / SCIENTIFIC READINESS AUDIT
-NEXT
+COMPLETE / BLOCKED BEFORE HYPOTHESIS DESIGN
+
+↓
+
+CORE-READINESS-02
+CANONICAL APPROVED-PAPER SEAM AND MARKET-DATA PROOF
+RECOMMENDED / SEPARATE AUTHORIZATION REQUIRED
 
 ↓
 
@@ -370,20 +375,21 @@ FUTURE / SEPARATE AUTHORIZATION
 
 ## Deferred work
 
-CORE-READINESS-01 is the next authorized work and must remain an audit first.
-Only after it may a separately selected and preregistered exploratory economic
-hypothesis be considered. No strategy is selected by this roadmap update.
-PAPER-03, PAPER-04, and FORMAL-01 remain future work; FORMAL-01 requires
-separate authorization. VAL-04B, HARNESS-04, live-readiness, Phase 13, and
-commercialisation are not current implementation work. No new prospective
-pilot is authorized; live execution remains unauthorized.
+CORE-READINESS-01 is complete and blocks hypothesis design. CORE-READINESS-02
+is only recommended and requires separate technical-lead authorization; it
+must be limited to the documented actor, canonical risk/approval/PAPER entry,
+and market-data proof blockers. No strategy is selected by this roadmap
+update. PAPER-03, PAPER-04, and FORMAL-01 remain future work; FORMAL-01
+requires separate authorization. VAL-04B, HARNESS-04, live-readiness, Phase
+13, and commercialisation are not current implementation work. No new
+prospective pilot is authorized; live execution remains unauthorized.
 
 ## Current success criterion
 
-The current success criterion is a completed CORE-READINESS-01 audit that
-identifies only the blockers that must be resolved before controlled economic-
-hypothesis testing can begin. It is not strategy selection or a profitability
-claim.
+CORE-READINESS-01 is complete and blocks hypothesis design until its documented
+approval, canonical PAPER-entry and market-data proof blockers are resolved
+and reviewed through separately authorized CORE-READINESS-02 work. This is not
+strategy selection or a profitability claim.
 
 ## North Star
 
