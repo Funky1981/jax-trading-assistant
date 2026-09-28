@@ -36,7 +36,7 @@ func (observation EconomicObservation) ValidateForMode(symbol, timeframe string,
 	if len(allowedSources) == 0 || maxAge <= 0 {
 		return fmt.Errorf("market observation policy is incomplete")
 	}
-	if strings.ToUpper(strings.TrimSpace(observation.Symbol)) != strings.ToUpper(strings.TrimSpace(symbol)) || strings.TrimSpace(symbol) == "" {
+	if !strings.EqualFold(strings.TrimSpace(observation.Symbol), strings.TrimSpace(symbol)) || strings.TrimSpace(symbol) == "" {
 		return fmt.Errorf("market observation symbol mismatch")
 	}
 	source := strings.ToLower(strings.TrimSpace(observation.Source))
@@ -45,7 +45,7 @@ func (observation EconomicObservation) ValidateForMode(symbol, timeframe string,
 	}
 	allowed := false
 	for _, candidate := range allowedSources {
-		if source == strings.ToLower(strings.TrimSpace(candidate)) && strings.TrimSpace(candidate) != "" {
+		if strings.EqualFold(source, strings.TrimSpace(candidate)) && strings.TrimSpace(candidate) != "" {
 			allowed = true
 			break
 		}
