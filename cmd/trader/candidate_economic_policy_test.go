@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,5 +45,32 @@ func TestLoadCandidateEconomicPolicyRequiresExplicitFile(t *testing.T) {
 	t.Setenv(candidateEconomicPolicyEnv, path)
 	if _, err := loadCandidateEconomicPolicy(); err != nil {
 		t.Fatalf("explicit policy rejected: %v", err)
+	}
+}
+
+func Test02BTechnicalProofCandidatePolicyContainsOnlyVerifiedApprovedCatalog(t *testing.T) {
+	path, err := filepath.Abs("../../config/core-readiness-02b-candidate-economic-policy.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(candidateEconomicPolicyEnv, path)
+	policy, err := loadCandidateEconomicPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"SPY", "QQQ", "DIA", "IWM", "XLK", "XLF", "XLE", "SMH", "SOXX", "TLT", "GLD"}
+	if policy.PolicyVersion != "core-readiness-02b-technical-proof-v1" || policy.IdentityPolicy != "jax-us-etf-identity-v1" || policy.IdentitySource != "operator-reviewed-official-fund-identity-mapping" || policy.RiskAllocation != .005 || policy.RequestedLeverage != 1 || policy.SlippageAllowance == nil || *policy.SlippageAllowance != .50 || len(policy.Instruments) != len(want) {
+		t.Fatalf("unexpected technical proof policy: %+v", policy)
+	}
+	for _, symbol := range want {
+		identity, ok := policy.Instruments[symbol]
+		if !ok || identity.InstrumentID != "jax.instrument.us.etf."+strings.ToLower(symbol) || strings.TrimSpace(identity.IssuerID) == "" {
+			t.Errorf("missing explicit approved identity for %s: %+v", symbol, identity)
+		}
+	}
+	for _, excluded := range []string{"TQQQ", "SQQQ", "UVXY", "VXX"} {
+		if _, ok := policy.Instruments[excluded]; ok {
+			t.Errorf("excluded instrument %s appears in proof policy", excluded)
+		}
 	}
 }

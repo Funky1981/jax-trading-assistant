@@ -77,7 +77,7 @@ func TestOpportunityScannerDoesNotPromoteWithoutReadyCandidateEconomics(t *testi
 	}
 
 	scanner := newOpportunityScanner(pool)
-	scanner.marketPolicy = &marketDataSafetyPolicy{AllowedSources: []string{"core-readiness-fixture"}, Timeframe: "1h", MaxAge: 5 * time.Minute, allowNonProductionSources: true}
+	scanner.marketPolicy = &marketDataSafetyPolicy{AllowedSources: []string{"core-readiness-fixture"}, Timeframe: "1h", QuoteMaxAge: time.Minute, LatestCompletedCandleMaxAge: 90 * time.Minute, CandleHistoryLookback: 7 * 24 * time.Hour, allowNonProductionSources: true}
 	result, err := scanner.ScanOnce(ctx)
 	if err != nil {
 		t.Fatalf("scan once: %v", err)

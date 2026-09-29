@@ -1,11 +1,14 @@
 # Current Build Package
 
-Current routing: **CORE-READINESS-02A4 — CANONICAL PAPER HANDOFF**, implemented
-and awaiting external review. The package ends at the account-scoped
-exploratory entry queue; it does not consume the queue or mark Working Jax
-ready. CORE-READINESS-01 verdict:
-**BLOCKED_BEFORE_HYPOTHESIS_DESIGN**. No strategy is selected and no pilot or
-economic activity is authorized.
+Current routing: **CORE-READINESS-02B1 — PROOF POLICY + MARKET TEMPORAL
+PREREQUISITES**, implementation and validation. This package establishes only
+technical-proof policy, market temporal semantics, and isolated technical
+routing. It does not execute the genuine-market CORE-READINESS-02B proof.
+CORE-READINESS-02A4 and 02A4R remain **GO / EXTERNALLY REVIEWED**. The 02A4
+queue remains account-scoped and is not consumed by 02A4. CORE-READINESS-01
+remains **BLOCKED_BEFORE_HYPOTHESIS_DESIGN** until CORE-READINESS-02B is
+completed and externally reviewed. No strategy is selected, and no new pilot
+or economic activity is authorized.
 
 CORE-READINESS-02A4R is a narrow identity-compatibility correction to the
 PortfolioSnapshot v1 wire representation: false `KnownEmpty` is omitted to
@@ -24,8 +27,9 @@ handoff can approve that candidate path. The queue is not consumed by 02A4.
 
 Read `Docs/BUILD/CORE-READINESS-01-WORKING-JAX-V1-AUDIT.md`. 02A4 addresses the
 server-owned candidate/risk/approval-to-queue seam and JWT-bound decision actor.
-The remaining package is CORE-READINESS-02B: isolated genuine-market
-end-to-end proof, including current provider semantics and temporal safety.
+CORE-READINESS-02B1 is the prerequisite policy/temporal contract. The remaining
+package is CORE-READINESS-02B: isolated genuine-market end-to-end proof,
+including genuine provider observations and the reviewed runtime loop.
 OPS-01 remains synthetic/disposable full-loop evidence;
 OPS-02B remains real-runtime event-intake evidence with zero economic activity.
 

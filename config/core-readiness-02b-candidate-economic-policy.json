@@ -1,0 +1,23 @@
+{
+  "policy_version": "core-readiness-02b-technical-proof-v1",
+  "identity_policy_version": "jax-us-etf-identity-v1",
+  "identity_source": "operator-reviewed-official-fund-identity-mapping",
+  "sizing_policy_id": "core-readiness-02b-technical-sizing",
+  "sizing_policy_version": "v1",
+  "risk_allocation": 0.005,
+  "requested_leverage": 1.0,
+  "slippage_allowance": 0.50,
+  "instruments": {
+    "SPY": { "instrument_id": "jax.instrument.us.etf.spy", "issuer_id": "jax.issuer.us.trust.spdr-s-and-p-500-etf-trust" },
+    "QQQ": { "instrument_id": "jax.instrument.us.etf.qqq", "issuer_id": "jax.issuer.us.trust.invesco-qqq-trust-series-1" },
+    "DIA": { "instrument_id": "jax.instrument.us.etf.dia", "issuer_id": "jax.issuer.us.trust.spdr-dow-jones-industrial-average-etf-trust" },
+    "IWM": { "instrument_id": "jax.instrument.us.etf.iwm", "issuer_id": "jax.issuer.us.trust.ishares-trust" },
+    "XLK": { "instrument_id": "jax.instrument.us.etf.xlk", "issuer_id": "jax.issuer.us.trust.select-sector-spdr-trust" },
+    "XLF": { "instrument_id": "jax.instrument.us.etf.xlf", "issuer_id": "jax.issuer.us.trust.select-sector-spdr-trust" },
+    "XLE": { "instrument_id": "jax.instrument.us.etf.xle", "issuer_id": "jax.issuer.us.trust.select-sector-spdr-trust" },
+    "SMH": { "instrument_id": "jax.instrument.us.etf.smh", "issuer_id": "jax.issuer.us.trust.vaneck-etf-trust" },
+    "SOXX": { "instrument_id": "jax.instrument.us.etf.soxx", "issuer_id": "jax.issuer.us.trust.ishares-trust" },
+    "TLT": { "instrument_id": "jax.instrument.us.etf.tlt", "issuer_id": "jax.issuer.us.trust.ishares-trust" },
+    "GLD": { "instrument_id": "jax.instrument.us.etf.gld", "issuer_id": "jax.issuer.us.trust.spdr-gold-trust" }
+  }
+}

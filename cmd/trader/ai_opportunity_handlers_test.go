@@ -55,7 +55,7 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	promoter := newWorldMonitorOpportunityPromoter(pool)
-	promoter.marketPolicy = &marketDataSafetyPolicy{AllowedSources: []string{"core-readiness-fixture"}, Timeframe: "1h", MaxAge: 5 * time.Minute, allowNonProductionSources: true}
+	promoter.marketPolicy = &marketDataSafetyPolicy{AllowedSources: []string{"core-readiness-fixture"}, Timeframe: "1h", QuoteMaxAge: time.Minute, LatestCompletedCandleMaxAge: 90 * time.Minute, CandleHistoryLookback: 7 * 24 * time.Hour, allowNonProductionSources: true}
 	aiSuggestionPromoteHandlerWithPromoter(pool, promoter)(rec, req)
 
 	if rec.Code != http.StatusOK {

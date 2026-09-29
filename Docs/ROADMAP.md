@@ -88,8 +88,9 @@ not promote a strategy or prove a trading edge.
 | OPS-02C1 | **GO / EXTERNALLY REVIEWED** |
 | CORE-READINESS-01 | **COMPLETE / BLOCKED_BEFORE_HYPOTHESIS_DESIGN** |
 | CORE-READINESS-02A3 | **GO / EXTERNALLY REVIEWED / CANDIDATE ECONOMIC INPUT CONTRACT** |
-| CORE-READINESS-02A4 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / CANONICAL QUEUE HANDOFF** |
-| CORE-READINESS-02B | **REMAINING / ISOLATED GENUINE-MARKET END-TO-END PROOF / NOT STARTED** |
+| CORE-READINESS-02A4 / 02A4R | **GO / EXTERNALLY REVIEWED / CANONICAL QUEUE HANDOFF** |
+| CORE-READINESS-02B1 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / POLICY + TEMPORAL PREREQUISITES** |
+| CORE-READINESS-02B | **NOT YET EXECUTED / ISOLATED GENUINE-MARKET END-TO-END PROOF** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -343,6 +344,12 @@ COMPLETE / BLOCKED BEFORE HYPOTHESIS DESIGN
 
 CORE-READINESS-02A4
 CANONICAL CANDIDATE → PORTFOLIO RISK → HUMAN APPROVAL → PAPER QUEUE
+GO / EXTERNALLY REVIEWED
+
+↓
+
+CORE-READINESS-02B1
+TECHNICAL-PROOF POLICY + MARKET TEMPORAL PREREQUISITES
 IMPLEMENTED / EXTERNAL REVIEW REQUIRED
 
 ↓
@@ -385,8 +392,10 @@ FUTURE / SEPARATE AUTHORIZATION
 
 CORE-READINESS-01 is complete and blocks hypothesis design. CORE-READINESS-02A4
 is implemented through the account-scoped queue and requires external review.
-CORE-READINESS-02B remains the isolated genuine-market end-to-end proof and has
-not started. No strategy is selected by this roadmap update. PAPER-03, PAPER-04,
+CORE-READINESS-02B1 establishes only technical proof policy, temporal market
+semantics, and disposable routing. CORE-READINESS-02B remains the isolated
+genuine-market end-to-end proof and has not started. No strategy is selected by
+this roadmap update. PAPER-03, PAPER-04,
 and FORMAL-01 remain future work; FORMAL-01 requires separate authorization.
 VAL-04B, HARNESS-04, live-readiness, Phase 13, and commercialisation are not
 current implementation work. No new prospective pilot is authorized; live
@@ -395,8 +404,9 @@ execution remains unauthorized.
 ## Current success criterion
 
 CORE-READINESS-01 remains `BLOCKED_BEFORE_HYPOTHESIS_DESIGN`. CORE-READINESS-02A4
-implements the canonical approved-PAPER handoff through the queue; CORE-READINESS-02B
-must still provide isolated genuine-market end-to-end proof and external review.
+and 02A4R are `GO / EXTERNALLY REVIEWED`; 02B1 is the implemented technical
+policy/temporal prerequisite. CORE-READINESS-02B must still provide isolated
+genuine-market end-to-end proof and external review.
 Neither package is strategy selection or a profitability claim.
 
 ## North Star

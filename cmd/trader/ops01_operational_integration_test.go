@@ -92,7 +92,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		at := now.Add(-time.Duration(25-i) * time.Hour)
 		closePrice := 95.0 + float64(i)*0.25
-		if _, err := pool.Exec(ctx, `INSERT INTO candles(symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,market_data_classification,ingested_at) VALUES('QQQ',$1,$2,$2,$3,$2,$4,$2,'1h','ops01-provider-substitute','provider_observation','substitute',$1)`, at, closePrice, closePrice-0.5, 10000+i); err != nil {
+		if _, err := pool.Exec(ctx, `INSERT INTO candles(symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,market_data_classification,ingested_at) VALUES('QQQ',$1,$2,$2,$3,$2,$4,$2,'1h','ops01-provider-substitute','interval_start','substitute',$5)`, at, closePrice, closePrice-0.5, 10000+i, at.Add(time.Hour)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -193,7 +193,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	}
 
 	promoter := newWorldMonitorOpportunityPromoter(pool)
-	promoter.marketPolicy = &marketDataSafetyPolicy{AllowedSources: []string{"ops01-provider-substitute"}, Timeframe: "1h", MaxAge: 48 * time.Hour, allowNonProductionSources: true}
+	promoter.marketPolicy = &marketDataSafetyPolicy{AllowedSources: []string{"ops01-provider-substitute"}, Timeframe: "1h", QuoteMaxAge: time.Minute, LatestCompletedCandleMaxAge: 90 * time.Minute, CandleHistoryLookback: 7 * 24 * time.Hour, allowNonProductionSources: true}
 	promoter.economicPolicy = &candidateEconomicPolicy{PolicyVersion: "ops01-fixture-policy-v1", IdentityPolicy: "ops01-fixture-identity-v1", IdentitySource: "ops01-test-fixture",
 		SizingPolicyID: "ops01-risk-request", SizingPolicyVersion: "v1", RiskAllocation: .01, RequestedLeverage: 1,
 		SlippageAllowance: floatPointer(.25),

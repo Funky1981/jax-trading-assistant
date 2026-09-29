@@ -14,6 +14,7 @@ type EconomicObservation struct {
 	Source       string        `json:"source"`
 	ProviderAt   time.Time     `json:"providerAt"`
 	ReceivedAt   time.Time     `json:"receivedAt"`
+	CompletedAt  time.Time     `json:"completedAt,omitempty"`
 	Timeframe    string        `json:"timeframe,omitempty"`
 	Bid          float64       `json:"bid,omitempty"`
 	Ask          float64       `json:"ask,omitempty"`

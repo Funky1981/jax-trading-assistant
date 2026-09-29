@@ -138,6 +138,10 @@ jobs:
         run: >-
           go test -count=1 -v ./cmd/trader
           -run '^TestCanonicalPaperHandoffPostgres'
+      - name: required CORE-READINESS-02B temporal and routing PostgreSQL proof
+        run: >-
+          go test -count=1 -v ./cmd/trader
+          -run '^Test(CanonicalMarketLoadersSeparateQuoteAndCandleTemporalBounds|02BTechnicalRoutingFixtureExistsOnlyInGuardedDisposableDatabase)$'
       - name: required canonical PAPER handoff Linux race proof
         run: >-
           go test -race -count=1 ./cmd/trader

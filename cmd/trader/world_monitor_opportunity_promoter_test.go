@@ -644,7 +644,7 @@ func insertWorldMonitorChartCandles(t *testing.T, ctx context.Context, pool *pgx
 }
 
 func disposableMarketDataPolicy() *marketDataSafetyPolicy {
-	return &marketDataSafetyPolicy{AllowedSources: []string{"core-readiness-fixture"}, Timeframe: "1m", MaxAge: time.Hour, allowNonProductionSources: true}
+	return &marketDataSafetyPolicy{AllowedSources: []string{"core-readiness-fixture"}, Timeframe: "1m", QuoteMaxAge: time.Minute, LatestCompletedCandleMaxAge: time.Hour, CandleHistoryLookback: 7 * 24 * time.Hour, allowNonProductionSources: true}
 }
 
 func containsJSONKey(raw []byte, key string) bool {

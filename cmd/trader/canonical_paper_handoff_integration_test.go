@@ -355,7 +355,7 @@ func createCanonicalHandoffFixture(t *testing.T, ctx context.Context, pool *pgxp
 	for index := 0; index < 25; index++ {
 		at := now.Add(-time.Duration(25-index) * time.Hour)
 		closePrice := 95 + float64(index)*.25
-		if _, err := pool.Exec(ctx, `INSERT INTO candles(symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,market_data_classification,ingested_at) VALUES('QQQ',$1,$2,$2,$3,$2,$4,$2,'1h',$5,'provider_observation','substitute',$1)`, at, closePrice, closePrice-.5, 10000+index, fixtureSource); err != nil {
+		if _, err := pool.Exec(ctx, `INSERT INTO candles(symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,market_data_classification,ingested_at) VALUES('QQQ',$1,$2,$2,$3,$2,$4,$2,'1h',$5,'interval_start','substitute',$6)`, at, closePrice, closePrice-.5, 10000+index, fixtureSource, at.Add(time.Hour)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -363,7 +363,7 @@ func createCanonicalHandoffFixture(t *testing.T, ctx context.Context, pool *pgxp
 		NormalizedSummary: summary, EventType: "macro_rates", Headline: "Federal Reserve announces policy decision", Summary: summary,
 		SourceURLs: []string{article}, SourceCount: 2, PossibleAffectedETFs: []string{"QQQ"}, AssetThemes: []string{"technology"},
 		Confidence: .8, ConfidenceReasons: []string{"provider confidence"}, MappingReason: mapping, EventTime: eventAt}
-	market := marketDataSafetyPolicy{AllowedSources: []string{fixtureSource}, Timeframe: "1h", MaxAge: 48 * time.Hour, allowNonProductionSources: true}
+	market := marketDataSafetyPolicy{AllowedSources: []string{fixtureSource}, Timeframe: "1h", QuoteMaxAge: time.Minute, LatestCompletedCandleMaxAge: 90 * time.Minute, CandleHistoryLookback: 7 * 24 * time.Hour, allowNonProductionSources: true}
 	inputPolicy := &candidateEconomicPolicy{PolicyVersion: "canonical-test-policy-v1", IdentityPolicy: "canonical-test-identity-v1", IdentitySource: "disposable-integration-fixture",
 		SizingPolicyID: "canonical-test-sizing-v1", SizingPolicyVersion: "v1", RiskAllocation: .01, RequestedLeverage: leverage, SlippageAllowance: floatPointer(.5),
 		Instruments: map[string]candidateEconomicIdentity{"QQQ": {InstrumentID: "instrument-test-qqq", IssuerID: "issuer-test-qqq"}}}
@@ -398,7 +398,7 @@ func newCanonicalTestService(pool *pgxpool.Pool, accountID string, now time.Time
 	economic := candidateEconomicPolicy{PolicyVersion: "canonical-test-policy-v1", IdentityPolicy: "canonical-test-identity-v1", IdentitySource: "disposable-integration-fixture",
 		SizingPolicyID: "canonical-test-sizing-v1", SizingPolicyVersion: "v1", RiskAllocation: .01, RequestedLeverage: .5, SlippageAllowance: floatPointer(.5),
 		Instruments: map[string]candidateEconomicIdentity{"QQQ": {InstrumentID: "instrument-test-qqq", IssuerID: "issuer-test-qqq"}}}
-	market := marketDataSafetyPolicy{AllowedSources: []string{"canonical-fixture"}, Timeframe: "1h", MaxAge: 48 * time.Hour, allowNonProductionSources: true}
+	market := marketDataSafetyPolicy{AllowedSources: []string{"canonical-fixture"}, Timeframe: "1h", QuoteMaxAge: time.Minute, LatestCompletedCandleMaxAge: 90 * time.Minute, CandleHistoryLookback: 7 * 24 * time.Hour, allowNonProductionSources: true}
 	// Resolve the per-fixture source from the durable most recent quote.
 	var source string
 	_ = pool.QueryRow(context.Background(), `SELECT provider FROM quotes WHERE symbol='QQQ'`).Scan(&source)

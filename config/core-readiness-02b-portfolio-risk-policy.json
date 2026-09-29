@@ -1,0 +1,8 @@
+{
+  "contract_version": "jax.portfolio.risk_policy/v1",
+  "version": "core-readiness-02b-technical-proof-v1",
+  "currency": "USD",
+  "maximum_position_value": 50000,
+  "maximum_risk_allocation": 0.02,
+  "maximum_leverage": 1.0
+}
