@@ -7,6 +7,12 @@ ready. CORE-READINESS-01 verdict:
 **BLOCKED_BEFORE_HYPOTHESIS_DESIGN**. No strategy is selected and no pilot or
 economic activity is authorized.
 
+CORE-READINESS-02A4R is a narrow identity-compatibility correction to the
+PortfolioSnapshot v1 wire representation: false `KnownEmpty` is omitted to
+preserve historical non-empty SnapshotIDs, while true remains explicit. The
+correction does not rewrite historical records and remains within the 02A4
+canonical handoff boundary.
+
 CORE-READINESS-02A3 established the typed append-only candidate economic-input
 contract. CORE-READINESS-02A4 connects persisted candidates and explicit
 economic inputs to current PAPER portfolio risk, authenticated human decision,

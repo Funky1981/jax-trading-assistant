@@ -77,7 +77,10 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - CORE-READINESS-02: `IN PROGRESS`; 02A4 awaits external review and 02B remains.
 - CORE-READINESS-02A3: `GO / EXTERNALLY REVIEWED`; typed candidate economic
   input contract.
-- CORE-READINESS-02A4: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; canonical
+- CORE-READINESS-02A4 / 02A4R: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; the
+  narrow PortfolioSnapshot v1 identity correction preserves legacy non-empty
+  SnapshotIDs by omitting false `KnownEmpty`, while true remains explicit.
+  No historical database rows or identities were rewritten. Canonical
   current-account portfolio risk, JWT-bound human decision, durable PaperIntent,
   and account-scoped queue. Queue consumption is outside scope. Working Jax
   remains `BLOCKED_BEFORE_HYPOTHESIS_DESIGN` pending CORE-READINESS-02B.

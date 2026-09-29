@@ -35,6 +35,25 @@ position. Unit tests prove that this semantic produces zero gross/net/long/
 short exposure and cash allocation equal to cash divided by equity; an
 unmarked zero-position snapshot remains invalid.
 
+## PortfolioSnapshot v1 identity compatibility correction (CORE-READINESS-02A4R)
+
+`KnownEmpty` adds a new explicit semantic without changing the existing
+`jax.portfolio.snapshot/v1` contract or its canonical identity algorithm.
+`KnownEmpty=false` is omitted from canonical JSON, preserving the exact
+pre-02A4R v1 representation and the content-addressed IDs of historical
+non-empty snapshots. A historical JSON payload with no `known_empty` field
+decodes as false and rebuilds to the same `SnapshotID`. `KnownEmpty=true` is
+serialized explicitly and remains distinct after JSON round trip. Zero
+positions with false, and non-empty positions with true, remain invalid.
+
+Regression coverage compares a current non-empty snapshot against an
+independently declared pre-02A4 `PortfolioSnapshot` wire struct and legacy
+canonical SHA-256, reloads a legacy payload through `PostgresSnapshotStore.Get`
+and `BuildSnapshot`, verifies the canonical handoff reload helper, and
+round-trips a `RiskDecision` bound to the original legacy snapshot identity.
+No historical database row, SnapshotID, risk decision, or workflow identity
+was rewritten.
+
 ## Requested exposure and portfolio risk
 
 Production requires `JAX_PORTFOLIO_RISK_POLICY_FILE`, a valid versioned

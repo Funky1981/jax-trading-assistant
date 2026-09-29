@@ -2,7 +2,12 @@ package portfoliorisk
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 )
@@ -39,6 +44,131 @@ func TestBuildSnapshotIsStableAndOrderIndependent(t *testing.T) {
 	}
 	if a.Positions[0].Direction() != "LONG" || a.Positions[1].Direction() != "SHORT" {
 		t.Fatalf("signed direction lost: %#v", a.Positions)
+	}
+}
+
+// legacyPortfolioSnapshotV1 is the exact pre-KnownEmpty JSON field contract.
+// Keep it local to the test so the expected identity does not use the current
+// PortfolioSnapshot serializer.
+type legacyPortfolioSnapshotV1 struct {
+	SnapshotID        string         `json:"snapshot_id"`
+	ContractVersion   string         `json:"contract_version"`
+	IdentityAlgorithm string         `json:"identity_algorithm"`
+	AccountID         string         `json:"account_id"`
+	AsOf              time.Time      `json:"as_of"`
+	CapturedAt        time.Time      `json:"captured_at"`
+	Provider          string         `json:"provider"`
+	Currency          string         `json:"currency"`
+	Synthetic         bool           `json:"synthetic"`
+	Cash              ObservedNumber `json:"cash"`
+	Equity            ObservedNumber `json:"equity"`
+	Positions         []Position     `json:"positions"`
+	Provenance        []string       `json:"provenance"`
+	ValuationBasis    string         `json:"valuation_basis"`
+}
+
+func legacySnapshotFromCurrent(snapshot PortfolioSnapshot) legacyPortfolioSnapshotV1 {
+	snapshot.SnapshotID = ""
+	if snapshot.ContractVersion == "" {
+		snapshot.ContractVersion = PortfolioContractVersion
+	}
+	if snapshot.IdentityAlgorithm == "" {
+		snapshot.IdentityAlgorithm = PortfolioIdentityAlgorithm
+	}
+	snapshot.AsOf = snapshot.AsOf.UTC()
+	snapshot.CapturedAt = snapshot.CapturedAt.UTC()
+	snapshot.Currency = strings.ToUpper(strings.TrimSpace(snapshot.Currency))
+	snapshot.Provider = strings.TrimSpace(snapshot.Provider)
+	snapshot.AccountID = strings.TrimSpace(snapshot.AccountID)
+	snapshot.ValuationBasis = strings.TrimSpace(snapshot.ValuationBasis)
+	snapshot.Provenance = append([]string(nil), snapshot.Provenance...)
+	sort.Strings(snapshot.Provenance)
+	positions := append([]Position(nil), snapshot.Positions...)
+	for i := range positions {
+		positions[i].InstrumentID = strings.TrimSpace(positions[i].InstrumentID)
+		positions[i].Currency = strings.ToUpper(strings.TrimSpace(positions[i].Currency))
+		positions[i].PriceSource = strings.TrimSpace(positions[i].PriceSource)
+		positions[i].Provenance = append([]string(nil), positions[i].Provenance...)
+		sort.Strings(positions[i].Provenance)
+		positions[i].ValuationAsOf = positions[i].ValuationAsOf.UTC()
+	}
+	sort.Slice(positions, func(i, j int) bool {
+		if positions[i].InstrumentID != positions[j].InstrumentID {
+			return positions[i].InstrumentID < positions[j].InstrumentID
+		}
+		return positions[i].SignedQuantity < positions[j].SignedQuantity
+	})
+	return legacyPortfolioSnapshotV1{
+		ContractVersion: snapshot.ContractVersion, IdentityAlgorithm: snapshot.IdentityAlgorithm,
+		AccountID: snapshot.AccountID, AsOf: snapshot.AsOf, CapturedAt: snapshot.CapturedAt,
+		Provider: snapshot.Provider, Currency: snapshot.Currency, Synthetic: snapshot.Synthetic,
+		Cash: snapshot.Cash, Equity: snapshot.Equity, Positions: positions,
+		Provenance: snapshot.Provenance, ValuationBasis: snapshot.ValuationBasis,
+	}
+}
+
+func legacySnapshotIdentity(snapshot legacyPortfolioSnapshotV1) (string, []byte, error) {
+	payload, err := json.Marshal(snapshot)
+	if err != nil {
+		return "", nil, err
+	}
+	digest := sha256.Sum256(payload)
+	return "pf_" + hex.EncodeToString(digest[:]), payload, nil
+}
+
+func TestKnownEmptyFalsePreservesLegacyV1SnapshotIdentity(t *testing.T) {
+	snapshot := fixtureSnapshot()
+	snapshot.Positions = append(snapshot.Positions,
+		Position{InstrumentID: "NYSE:XYZ", InstrumentResolved: true, Currency: "USD", SignedQuantity: -2,
+			Price: KnownNumber(50, "fixture"), MarketValue: KnownNumber(-100, "fixture"), CostBasis: UnknownNumber("not supplied"),
+			ValuationAsOf: stateNow.Add(-3 * time.Minute), PriceSource: "fixture", Provenance: []string{"fixture:z", "fixture:a"}},
+	)
+	snapshot.Provenance = []string{"fixture:z", "fixture:a"}
+
+	legacy := legacySnapshotFromCurrent(snapshot)
+	legacyID, legacyJSON, err := legacySnapshotIdentity(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := BuildSnapshot(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.SnapshotID != legacyID {
+		t.Fatalf("current v1 identity %q differs from pre-KnownEmpty identity %q; legacy JSON: %s", current.SnapshotID, legacyID, legacyJSON)
+	}
+	if strings.Contains(string(legacyJSON), `"known_empty"`) {
+		t.Fatal("legacy canonical JSON unexpectedly contains known_empty")
+	}
+}
+
+func TestLegacySnapshotPayloadWithoutKnownEmptyReloadsWithSameIdentity(t *testing.T) {
+	legacy := legacySnapshotFromCurrent(fixtureSnapshot())
+	legacyID, _, err := legacySnapshotIdentity(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy.SnapshotID = legacyID
+	payload, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(payload), `"known_empty"`) {
+		t.Fatal("historical payload contains known_empty")
+	}
+	var decoded PortfolioSnapshot
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.KnownEmpty {
+		t.Fatal("missing historical known_empty was not decoded as false")
+	}
+	canonical, err := BuildSnapshot(decoded)
+	if err != nil {
+		t.Fatalf("rebuild historical snapshot: %v", err)
+	}
+	if canonical.SnapshotID != legacyID {
+		t.Fatalf("historical identity changed: got %q want %q", canonical.SnapshotID, legacyID)
 	}
 }
 
@@ -137,6 +267,25 @@ func TestKnownEmptyPortfolioRequiresExplicitKnownFactsAndProvenance(t *testing.T
 	}
 	if len(canonical.Positions) != 0 || !canonical.KnownEmpty || canonical.Synthetic {
 		t.Fatalf("known-empty snapshot fabricated or misclassified positions: %#v", canonical)
+	}
+	knownEmptyJSON, err := json.Marshal(canonical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(knownEmptyJSON), `"known_empty":true`) {
+		t.Fatalf("true known-empty semantic was not explicitly serialized: %s", knownEmptyJSON)
+	}
+	var knownEmptyRoundTrip PortfolioSnapshot
+	if err := json.Unmarshal(knownEmptyJSON, &knownEmptyRoundTrip); err != nil || !knownEmptyRoundTrip.KnownEmpty {
+		t.Fatalf("known-empty round trip lost true semantic: snapshot=%+v err=%v", knownEmptyRoundTrip, err)
+	}
+	if _, err := BuildSnapshot(knownEmptyRoundTrip); err != nil {
+		t.Fatalf("known-empty round trip identity invalid: %v", err)
+	}
+	nonEmptyKnownEmpty := fixtureSnapshot()
+	nonEmptyKnownEmpty.KnownEmpty = true
+	if _, err := BuildSnapshot(nonEmptyKnownEmpty); !errors.Is(err, ErrInvalidSnapshot) {
+		t.Fatalf("non-empty KnownEmpty=true error=%v, want invalid", err)
 	}
 	for name, mutate := range map[string]func(*PortfolioSnapshot){
 		"unknown-cash":        func(s *PortfolioSnapshot) { s.Cash = UnknownNumber("unknown") },

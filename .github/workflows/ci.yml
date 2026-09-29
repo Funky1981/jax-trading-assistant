@@ -129,6 +129,7 @@ jobs:
         run: >-
           go test -count=1
           ./internal/testsupport
+          ./internal/modules/portfoliorisk
           ./internal/modules/harnessstate
           ./internal/modules/exploratorypaper
           ./internal/modules/approvals

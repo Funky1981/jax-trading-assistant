@@ -79,7 +79,7 @@ type PortfolioSnapshot struct {
 	Provider          string         `json:"provider"`
 	Currency          string         `json:"currency"`
 	Synthetic         bool           `json:"synthetic"`
-	KnownEmpty        bool           `json:"known_empty"`
+	KnownEmpty        bool           `json:"known_empty,omitempty"`
 	Cash              ObservedNumber `json:"cash"`
 	Equity            ObservedNumber `json:"equity"`
 	Positions         []Position     `json:"positions"`
