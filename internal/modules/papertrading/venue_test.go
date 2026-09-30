@@ -69,6 +69,30 @@ func TestPaperVenueRejectsLiveUnknownStaleAndUnsupportedPaths(t *testing.T) {
 	}
 }
 
+func TestPaperMarketTickAllowsOnlyCausalBoundedQuoteClockSkew(t *testing.T) {
+	received := time.Date(2026, 9, 29, 14, 0, 0, 0, time.UTC)
+	tick := MarketTick{TickID: "skewed", InstrumentID: "QQQ", Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 1,
+		Timestamp: received.Add(77 * time.Millisecond), LastProviderAt: received.Add(60 * time.Millisecond), ReceivedAt: received,
+		AsOf: received.Add(100 * time.Millisecond), Session: SessionOpen, Source: "alpaca"}
+	if err := tick.Validate(time.Minute); err != nil {
+		t.Fatalf("causal 77ms-skew tick rejected: %v", err)
+	}
+	tick.AsOf = received.Add(50 * time.Millisecond)
+	if err := tick.Validate(time.Minute); err == nil {
+		t.Fatal("tick was accepted before its quote became available")
+	}
+	tick.AsOf = received.Add(time.Second)
+	tick.Timestamp = received.Add(251 * time.Millisecond)
+	if err := tick.Validate(time.Minute); err == nil {
+		t.Fatal("tick with excessive provider/receipt skew was accepted")
+	}
+	tick.Timestamp = received.Add(-61 * time.Second)
+	tick.LastProviderAt = received.Add(-time.Second)
+	if err := tick.Validate(time.Minute); err != ErrStaleMarketData {
+		t.Fatalf("stale quote/fresh trade result=%v, want stale-market-data", err)
+	}
+}
+
 func TestPaperVenueConsumesLiquidityAndSupportsCancellation(t *testing.T) {
 	now := time.Date(2026, 9, 8, 10, 0, 0, 0, time.UTC)
 	wf, intent := approvedPaperArtifacts(t, now)

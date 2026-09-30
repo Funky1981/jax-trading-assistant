@@ -25,8 +25,8 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 	}
 
 	_, err := pool.Exec(ctx, `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, provider, received_at, updated_at)
-		VALUES ('SOXX', 240.00, 239.95, 240.05, 100, 100, 100000, NOW(), 'TEST', 'core-readiness-fixture', NOW(), NOW())
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, last_trade_timestamp, exchange, provider, received_at, updated_at)
+		VALUES ('SOXX', 240.00, 239.95, 240.05, 100, 100, 100000, NOW(), NOW(), 'TEST', 'core-readiness-fixture', NOW(), NOW())
 		ON CONFLICT (symbol) DO UPDATE
 		SET price = EXCLUDED.price,
 		    bid = EXCLUDED.bid,
@@ -34,6 +34,7 @@ func TestAISuggestionPromoteCreatesApprovalCandidate(t *testing.T) {
 		    bid_size = EXCLUDED.bid_size,
 		    ask_size = EXCLUDED.ask_size,
 		    timestamp = EXCLUDED.timestamp,
+		    last_trade_timestamp = EXCLUDED.last_trade_timestamp,
 		    provider = EXCLUDED.provider,
 		    received_at = EXCLUDED.received_at,
 		    updated_at = EXCLUDED.updated_at

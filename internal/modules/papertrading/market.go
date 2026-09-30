@@ -1,8 +1,11 @@
 package papertrading
 
 import (
+	"errors"
 	"fmt"
 	"time"
+
+	"jax-trading-assistant/libs/marketdata"
 )
 
 type MarketTick struct {
@@ -13,7 +16,9 @@ type MarketTick struct {
 	Last              float64   `json:"last"`
 	AvailableQuantity float64   `json:"available_quantity"`
 	Timestamp         time.Time `json:"timestamp"`
+	LastProviderAt    time.Time `json:"last_provider_at,omitempty"`
 	ReceivedAt        time.Time `json:"received_at"`
+	AsOf              time.Time `json:"as_of,omitempty"`
 	Session           Session   `json:"session"`
 	Source            string    `json:"source"`
 }
@@ -31,11 +36,19 @@ func (tick MarketTick) Validate(maxAge time.Duration) error {
 	if tick.Timestamp.IsZero() || tick.ReceivedAt.IsZero() || tick.Timestamp.Location() != time.UTC || tick.ReceivedAt.Location() != time.UTC {
 		return fmt.Errorf("%w: timestamps must be UTC", ErrInvalidMarketData)
 	}
-	if tick.ReceivedAt.Before(tick.Timestamp) {
-		return fmt.Errorf("%w: received before market timestamp", ErrInvalidMarketData)
+	lastProviderAt := tick.LastProviderAt
+	if lastProviderAt.IsZero() {
+		lastProviderAt = tick.Timestamp
 	}
-	if maxAge <= 0 || tick.ReceivedAt.Sub(tick.Timestamp) > maxAge {
-		return ErrStaleMarketData
+	asOf := tick.AsOf
+	if asOf.IsZero() {
+		asOf = tick.ReceivedAt
+	}
+	if err := marketdata.ValidateQuoteTemporal(tick.Timestamp, lastProviderAt, tick.ReceivedAt, asOf, maxAge, marketdata.MaxQuoteClockSkew); err != nil {
+		if errors.Is(err, marketdata.ErrQuoteStale) {
+			return ErrStaleMarketData
+		}
+		return fmt.Errorf("%w: %v", ErrInvalidMarketData, err)
 	}
 	return nil
 }

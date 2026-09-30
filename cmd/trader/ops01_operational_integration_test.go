@@ -83,7 +83,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	`, strategyInstanceID, "ops01-"+suffix, `{"symbols":["QQQ"]}`, "ops01-"+suffix); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO quotes(symbol,price,bid,ask,bid_size,ask_size,volume,timestamp,exchange,provider,received_at) VALUES('QQQ',100,99.5,100.5,1000,1000,100000,$1,'fixture-exchange','ops01-provider-substitute',$1) ON CONFLICT (symbol) DO UPDATE SET price=EXCLUDED.price,bid=EXCLUDED.bid,ask=EXCLUDED.ask,bid_size=EXCLUDED.bid_size,ask_size=EXCLUDED.ask_size,volume=EXCLUDED.volume,timestamp=EXCLUDED.timestamp,exchange=EXCLUDED.exchange,provider=EXCLUDED.provider,received_at=EXCLUDED.received_at`, now); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO quotes(symbol,price,bid,ask,bid_size,ask_size,volume,timestamp,last_trade_timestamp,exchange,provider,received_at) VALUES('QQQ',100,99.5,100.5,1000,1000,100000,$1,$1,'fixture-exchange','ops01-provider-substitute',$1) ON CONFLICT (symbol) DO UPDATE SET price=EXCLUDED.price,bid=EXCLUDED.bid,ask=EXCLUDED.ask,bid_size=EXCLUDED.bid_size,ask_size=EXCLUDED.ask_size,volume=EXCLUDED.volume,timestamp=EXCLUDED.timestamp,last_trade_timestamp=EXCLUDED.last_trade_timestamp,exchange=EXCLUDED.exchange,provider=EXCLUDED.provider,received_at=EXCLUDED.received_at`, now); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(ctx, `DELETE FROM candles WHERE symbol='QQQ' AND source='ops01-provider-substitute'`); err != nil {

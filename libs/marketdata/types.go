@@ -4,15 +4,16 @@ import "time"
 
 // Quote represents a real-time or delayed market quote
 type Quote struct {
-	Symbol    string
-	Price     float64
-	Bid       float64
-	Ask       float64
-	BidSize   int64
-	AskSize   int64
-	Volume    int64
-	Timestamp time.Time
-	Exchange  string
+	Symbol         string
+	Price          float64
+	Bid            float64
+	Ask            float64
+	BidSize        int64
+	AskSize        int64
+	Volume         int64
+	Timestamp      time.Time // provider timestamp for bid/ask quote
+	TradeTimestamp time.Time // provider timestamp for Price/latest trade
+	Exchange       string
 }
 
 // Candle represents OHLCV data for a given timeframe

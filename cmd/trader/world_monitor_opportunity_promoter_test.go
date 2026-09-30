@@ -46,8 +46,8 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 		t.Fatalf("insert strategy instance: %v", err)
 	}
 	_, err = pool.Exec(ctx, `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, provider, received_at, updated_at)
-		VALUES ('QQQ', 500.00, 499.95, 500.05, 100, 100, 100000, $1, 'TEST', 'core-readiness-fixture', $1, NOW())
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, last_trade_timestamp, exchange, provider, received_at, updated_at)
+		VALUES ('QQQ', 500.00, 499.95, 500.05, 100, 100, 100000, $1, $1, 'TEST', 'core-readiness-fixture', $1, NOW())
 		ON CONFLICT (symbol) DO UPDATE
 		SET price = EXCLUDED.price,
 		    bid = EXCLUDED.bid,
@@ -55,6 +55,7 @@ func TestWorldMonitorOpportunityPromoterCreatesApprovalCandidate(t *testing.T) {
 		    bid_size = EXCLUDED.bid_size,
 		    ask_size = EXCLUDED.ask_size,
 		    timestamp = EXCLUDED.timestamp,
+		    last_trade_timestamp = EXCLUDED.last_trade_timestamp,
 		    provider = EXCLUDED.provider,
 		    received_at = EXCLUDED.received_at,
 		    updated_at = EXCLUDED.updated_at
@@ -394,8 +395,8 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 		t.Fatalf("insert strategy instance: %v", err)
 	}
 	_, err = pool.Exec(ctx, `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, provider, received_at, updated_at)
-		VALUES ('QQQ', 500.00, 499.95, 500.05, 100, 100, 100000, $1, 'TEST', 'core-readiness-fixture', $1, NOW())
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, last_trade_timestamp, exchange, provider, received_at, updated_at)
+		VALUES ('QQQ', 500.00, 499.95, 500.05, 100, 100, 100000, $1, $1, 'TEST', 'core-readiness-fixture', $1, NOW())
 		ON CONFLICT (symbol) DO UPDATE
 		SET price = EXCLUDED.price,
 		    bid = EXCLUDED.bid,
@@ -403,6 +404,7 @@ func TestWorldMonitorOpportunityPromoterBlocksWhenChartConfirmationMissing(t *te
 		    bid_size = EXCLUDED.bid_size,
 		    ask_size = EXCLUDED.ask_size,
 		    timestamp = EXCLUDED.timestamp,
+		    last_trade_timestamp = EXCLUDED.last_trade_timestamp,
 		    provider = EXCLUDED.provider,
 		    received_at = EXCLUDED.received_at,
 		    updated_at = EXCLUDED.updated_at
@@ -627,7 +629,7 @@ func insertWorldMonitorChartCandles(t *testing.T, ctx context.Context, pool *pgx
 		timestamps = append(timestamps, ts)
 		_, err := pool.Exec(ctx, `
 			INSERT INTO candles (symbol, timestamp, open, high, low, close, volume, vwap, timeframe, source, timestamp_semantics, market_data_classification, ingested_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $6, '1m', 'core-readiness-fixture', 'test_fixture', 'synthetic', NOW())
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $6, '1m', 'core-readiness-fixture', 'interval_start', 'synthetic', NOW())
 			ON CONFLICT DO NOTHING
 		`, symbol, ts, close-0.2, close+0.5, close-0.5, close, 1000+i)
 		if err != nil {

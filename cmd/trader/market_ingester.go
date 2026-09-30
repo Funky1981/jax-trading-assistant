@@ -140,15 +140,25 @@ func startMarketIngester(ctx context.Context, pool *pgxpool.Pool) {
 
 // ingestQuote fetches and upserts the latest quote for symbol.
 func ingestQuote(ctx context.Context, pool *pgxpool.Pool, client *marketdata.Client, symbol string) error {
+	requestStartedAt := time.Now().UTC()
 	quote, provider, err := client.GetQuoteWithSource(ctx, symbol)
 	if err != nil {
 		return fmt.Errorf("get quote: %w", err)
 	}
-	receivedAt := time.Now().UTC()
+	responseReceivedAt := time.Now().UTC()
+	if quote == nil || quote.Timestamp.IsZero() || quote.TradeTimestamp.IsZero() {
+		return fmt.Errorf("get quote: required quote or latest-trade timestamp is missing")
+	}
+	return persistQuoteObservation(ctx, pool, quote, provider, requestStartedAt, responseReceivedAt)
+}
 
-	_, err = pool.Exec(ctx, `
-		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, exchange, provider, received_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+func persistQuoteObservation(ctx context.Context, pool *pgxpool.Pool, quote *marketdata.Quote, provider string, requestStartedAt, responseReceivedAt time.Time) error {
+	if quote == nil || quote.Timestamp.IsZero() || quote.TradeTimestamp.IsZero() || requestStartedAt.IsZero() || responseReceivedAt.Before(requestStartedAt) {
+		return fmt.Errorf("quote persistence requires distinct provider timestamps and valid request/response bounds")
+	}
+	_, err := pool.Exec(ctx, `
+		INSERT INTO quotes (symbol, price, bid, ask, bid_size, ask_size, volume, timestamp, last_trade_timestamp, exchange, provider, received_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
 		ON CONFLICT (symbol) DO UPDATE SET
 			price      = EXCLUDED.price,
 			bid        = EXCLUDED.bid,
@@ -157,20 +167,25 @@ func ingestQuote(ctx context.Context, pool *pgxpool.Pool, client *marketdata.Cli
 			ask_size   = EXCLUDED.ask_size,
 			volume     = EXCLUDED.volume,
 			timestamp  = EXCLUDED.timestamp,
+			last_trade_timestamp = EXCLUDED.last_trade_timestamp,
 			exchange   = EXCLUDED.exchange,
 			provider   = EXCLUDED.provider,
 			received_at = EXCLUDED.received_at,
 			updated_at = NOW()`,
 		quote.Symbol, quote.Price, quote.Bid, quote.Ask,
-		quote.BidSize, quote.AskSize, quote.Volume, quote.Timestamp, quote.Exchange, provider, receivedAt,
+		quote.BidSize, quote.AskSize, quote.Volume, quote.Timestamp, quote.TradeTimestamp, quote.Exchange, provider, responseReceivedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("upsert quote: %w", err)
 	}
 
 	observability.LogEvent(ctx, "info", "quote.ingested", map[string]any{
-		"symbol": symbol,
-		"price":  quote.Price,
+		"symbol":               quote.Symbol,
+		"price":                quote.Price,
+		"request_started_at":   requestStartedAt.Format(time.RFC3339Nano),
+		"response_received_at": responseReceivedAt.Format(time.RFC3339Nano),
+		"quote_timestamp":      quote.Timestamp.UTC().Format(time.RFC3339Nano),
+		"trade_timestamp":      quote.TradeTimestamp.UTC().Format(time.RFC3339Nano),
 	})
 	return nil
 }

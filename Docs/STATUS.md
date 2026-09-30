@@ -83,9 +83,13 @@ documented gates. They do not prove a trading edge or authorize live execution.
   No historical database rows or identities were rewritten. Canonical
   current-account portfolio risk, JWT-bound human decision, durable PaperIntent,
   and account-scoped queue. Queue consumption is outside scope.
-- CORE-READINESS-02B1: `IMPLEMENTED / VALIDATION IN PROGRESS / TECHNICAL-PROOF PREREQUISITES`; explicit candidate and portfolio policy, split market freshness,
-  candle completion semantics, and disposable routing fixture only. It does not
-  execute CORE-READINESS-02B or select a strategy.
+- CORE-READINESS-02B1: `GO / EXTERNALLY REVIEWED`; technical-proof policy,
+  split market freshness, candle completion semantics, and guarded disposable
+  routing fixture only.
+- CORE-READINESS-02B2: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; separate Alpaca
+  quote/trade timestamps, nullable persistence, bounded clock-skew, and strict
+  availability validation. CORE-READINESS-02B remains blocked and not yet
+  executed.
 - CORE-READINESS-02B remains `NOT YET EXECUTED`; Working Jax remains
   `BLOCKED_BEFORE_HYPOTHESIS_DESIGN` pending the isolated genuine-market proof
   and external review.

@@ -14,6 +14,7 @@ import (
 	"jax-trading-assistant/internal/modules/papertrading"
 	"jax-trading-assistant/internal/modules/portfoliorisk"
 	"jax-trading-assistant/internal/modules/workflow"
+	"jax-trading-assistant/libs/marketdata"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -332,9 +333,9 @@ func (s *canonicalHandoffService) approveOnce(ctx context.Context, candidateID u
 	if !finitePositive(quantity) || quantity < venue.MinimumQuantity || quantity*quote.Last > account.account.Cash+1e-9 || quantity*quote.Last > math.Abs(risk.ResultingValue)+1e-6 {
 		return response, fmt.Errorf("risk-approved quantity cannot satisfy venue, capital, and exposure limits")
 	}
-	tickID := "tick_" + canonicalDigest(input.Candidate.Symbol, quote.Source, quote.ProviderAt.UTC().Format(time.RFC3339Nano), quote.ReceivedAt.UTC().Format(time.RFC3339Nano), fmt.Sprintf("%.12g|%.12g|%.12g", quote.Bid, quote.Ask, quote.Last))
+	tickID := "tick_" + canonicalDigest(input.Candidate.Symbol, quote.Source, quote.ProviderAt.UTC().Format(time.RFC3339Nano), quote.LastProviderAt.UTC().Format(time.RFC3339Nano), quote.ReceivedAt.UTC().Format(time.RFC3339Nano), fmt.Sprintf("%.12g|%.12g|%.12g", quote.Bid, quote.Ask, quote.Last))
 	tick := papertrading.MarketTick{TickID: tickID, InstrumentID: input.Economic.InstrumentID, Bid: quote.Bid, Ask: quote.Ask, Last: quote.Last,
-		AvailableQuantity: quantity, Timestamp: quote.ProviderAt.UTC(), ReceivedAt: quote.ReceivedAt.UTC(), Session: papertrading.Session(session), Source: quote.Source}
+		AvailableQuantity: quantity, Timestamp: quote.ProviderAt.UTC(), LastProviderAt: quote.LastProviderAt.UTC(), ReceivedAt: quote.ReceivedAt.UTC(), AsOf: now.UTC(), Session: papertrading.Session(session), Source: quote.Source}
 	if err := tick.Validate(venue.MaxQuoteAge); err != nil {
 		return response, fmt.Errorf("fresh PAPER market tick is invalid: %w", err)
 	}
@@ -401,11 +402,12 @@ func buildCanonicalThesis(input canonicalHandoffInput, risk portfoliorisk.RiskDe
 			Source           string    `json:"source"`
 			Timeframe        string    `json:"timeframe"`
 			EntryObservation struct {
-				Symbol     string    `json:"symbol"`
-				Source     string    `json:"source"`
-				Last       float64   `json:"last"`
-				ProviderAt time.Time `json:"providerAt"`
-				ReceivedAt time.Time `json:"receivedAt"`
+				Symbol         string    `json:"symbol"`
+				Source         string    `json:"source"`
+				Last           float64   `json:"last"`
+				ProviderAt     time.Time `json:"providerAt"`
+				LastProviderAt time.Time `json:"lastProviderAt"`
+				ReceivedAt     time.Time `json:"receivedAt"`
 			} `json:"entryObservation"`
 		} `json:"chartConfirmation"`
 		Horizon struct {
@@ -417,7 +419,8 @@ func buildCanonicalThesis(input canonicalHandoffInput, risk portfoliorisk.RiskDe
 		return out, thesis, result, fmt.Errorf("missing durable candidate metadata for thesis projection")
 	}
 	candidate := input.Candidate
-	if metadata.WorldMonitor.NormalizedEventID == "" || metadata.WorldMonitor.IsSynthetic || metadata.WorldMonitor.EventType == "" || metadata.WorldMonitor.MappingReason == "" || metadata.Chart.Reason == "" || metadata.Chart.Source == "" || metadata.Chart.Timeframe == "" || metadata.Chart.CandleCount < 20 || !finitePositive(metadata.Chart.LastClose) || !finitePositive(metadata.Chart.SMA20) || metadata.Chart.CheckedAt.IsZero() || metadata.Chart.EntryObservation.Source == "" || !strings.EqualFold(metadata.Chart.EntryObservation.Symbol, candidate.Symbol) || !finitePositive(metadata.Chart.EntryObservation.Last) || metadata.Chart.EntryObservation.ProviderAt.IsZero() || metadata.Chart.EntryObservation.ReceivedAt.Before(metadata.Chart.EntryObservation.ProviderAt) || candidate.EntryPrice == nil || math.Abs(metadata.Chart.EntryObservation.Last-*candidate.EntryPrice) > 1e-8 {
+	entryObservation := marketdata.EconomicObservation{ProviderAt: metadata.Chart.EntryObservation.ProviderAt, LastProviderAt: metadata.Chart.EntryObservation.LastProviderAt, ReceivedAt: metadata.Chart.EntryObservation.ReceivedAt}
+	if metadata.WorldMonitor.NormalizedEventID == "" || metadata.WorldMonitor.IsSynthetic || metadata.WorldMonitor.EventType == "" || metadata.WorldMonitor.MappingReason == "" || metadata.Chart.Reason == "" || metadata.Chart.Source == "" || metadata.Chart.Timeframe == "" || metadata.Chart.CandleCount < 20 || !finitePositive(metadata.Chart.LastClose) || !finitePositive(metadata.Chart.SMA20) || metadata.Chart.CheckedAt.IsZero() || metadata.Chart.EntryObservation.Source == "" || !strings.EqualFold(metadata.Chart.EntryObservation.Symbol, candidate.Symbol) || !finitePositive(metadata.Chart.EntryObservation.Last) || entryObservation.ValidateQuoteTemporal(metadata.Chart.CheckedAt, 60*time.Second, marketdata.MaxQuoteClockSkew) != nil || candidate.EntryPrice == nil || math.Abs(metadata.Chart.EntryObservation.Last-*candidate.EntryPrice) > 1e-8 {
 		return out, thesis, result, fmt.Errorf("missing durable thesis provenance: normalized event, event category, source-backed mapping reason, or chart confirmation")
 	}
 	eventID := metadata.WorldMonitor.NormalizedEventID

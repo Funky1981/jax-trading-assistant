@@ -1,28 +1,36 @@
 package marketdata
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
 	"time"
 )
 
+const MaxQuoteClockSkew = 250 * time.Millisecond
+
+var ErrProviderClockSkewExceeded = errors.New("PROVIDER_CLOCK_SKEW_EXCEEDED")
+var ErrQuoteNotYetAvailable = errors.New("market observation is not yet available at asOf")
+var ErrQuoteStale = errors.New("quote or trade observation is stale")
+
 // EconomicObservation is the bounded market input used by economic decisions.
 // It carries provider and acquisition time separately from exchange identity.
 type EconomicObservation struct {
-	Symbol       string        `json:"symbol"`
-	Source       string        `json:"source"`
-	ProviderAt   time.Time     `json:"providerAt"`
-	ReceivedAt   time.Time     `json:"receivedAt"`
-	CompletedAt  time.Time     `json:"completedAt,omitempty"`
-	Timeframe    string        `json:"timeframe,omitempty"`
-	Bid          float64       `json:"bid,omitempty"`
-	Ask          float64       `json:"ask,omitempty"`
-	Last         float64       `json:"last"`
-	Mode         string        `json:"mode"`
-	AsOf         time.Time     `json:"asOf"`
-	FreshnessAge time.Duration `json:"freshnessAge"`
-	Provenance   string        `json:"provenance"`
+	Symbol         string        `json:"symbol"`
+	Source         string        `json:"source"`
+	ProviderAt     time.Time     `json:"providerAt"`
+	LastProviderAt time.Time     `json:"lastProviderAt,omitempty"`
+	ReceivedAt     time.Time     `json:"receivedAt"`
+	CompletedAt    time.Time     `json:"completedAt,omitempty"`
+	Timeframe      string        `json:"timeframe,omitempty"`
+	Bid            float64       `json:"bid,omitempty"`
+	Ask            float64       `json:"ask,omitempty"`
+	Last           float64       `json:"last"`
+	Mode           string        `json:"mode"`
+	AsOf           time.Time     `json:"asOf"`
+	FreshnessAge   time.Duration `json:"freshnessAge"`
+	Provenance     string        `json:"provenance"`
 }
 
 // ValidateFor enforces source, identity, temporal, freshness and price
@@ -57,20 +65,59 @@ func (observation EconomicObservation) ValidateForMode(symbol, timeframe string,
 	if strings.TrimSpace(observation.Mode) == "" || strings.TrimSpace(observation.Provenance) == "" {
 		return fmt.Errorf("market observation mode and provenance classification are required")
 	}
-	if observation.ProviderAt.IsZero() || observation.ReceivedAt.IsZero() || asOf.IsZero() || observation.ReceivedAt.Before(observation.ProviderAt) {
-		return fmt.Errorf("market observation provenance timestamps are incomplete or invalid")
-	}
-	if observation.ProviderAt.After(asOf) || observation.ReceivedAt.After(asOf) {
-		return fmt.Errorf("market observation is from the future")
-	}
-	if age := asOf.Sub(observation.ProviderAt); age < 0 || age > maxAge || asOf.Sub(observation.ReceivedAt) > maxAge {
-		return fmt.Errorf("market observation is stale")
+	if requireQuoteSides || strings.EqualFold(strings.TrimSpace(observation.Mode), "QUOTE") {
+		if err := observation.ValidateQuoteTemporal(asOf, maxAge, MaxQuoteClockSkew); err != nil {
+			return err
+		}
+	} else {
+		if observation.ProviderAt.IsZero() || observation.ReceivedAt.IsZero() || asOf.IsZero() || observation.ReceivedAt.Before(observation.ProviderAt) {
+			return fmt.Errorf("market observation provenance timestamps are incomplete or invalid")
+		}
+		if observation.ProviderAt.After(asOf) || observation.ReceivedAt.After(asOf) {
+			return fmt.Errorf("market observation is from the future")
+		}
+		if age := asOf.Sub(observation.ProviderAt); age < 0 || age > maxAge || asOf.Sub(observation.ReceivedAt) > maxAge {
+			return fmt.Errorf("market observation is stale")
+		}
 	}
 	if timeframe != "" && strings.TrimSpace(observation.Timeframe) != timeframe {
 		return fmt.Errorf("market observation timeframe mismatch")
 	}
 	if !validObservationPrice(observation.Last) || (requireQuoteSides && (!validObservationPrice(observation.Bid) || !validObservationPrice(observation.Ask) || observation.Bid > observation.Ask)) {
 		return fmt.Errorf("market observation prices are invalid")
+	}
+	return nil
+}
+
+// ValidateQuoteTemporal requires separate bid/ask and last-trade timestamps.
+// Small cross-clock skew is retained without rewriting source timestamps, but
+// the observation cannot be used until all source and receipt times are
+// available at asOf.
+func (observation EconomicObservation) ValidateQuoteTemporal(asOf time.Time, maxAge, maxClockSkew time.Duration) error {
+	return ValidateQuoteTemporal(observation.ProviderAt, observation.LastProviderAt, observation.ReceivedAt, asOf, maxAge, maxClockSkew)
+}
+
+func ValidateQuoteTemporal(providerAt, lastProviderAt, receivedAt, asOf time.Time, maxAge, maxClockSkew time.Duration) error {
+	if providerAt.IsZero() || lastProviderAt.IsZero() || receivedAt.IsZero() || asOf.IsZero() || maxAge <= 0 || maxClockSkew < 0 {
+		return fmt.Errorf("quote provenance timestamps or temporal policy are incomplete")
+	}
+	for _, timestamp := range []time.Time{providerAt, lastProviderAt} {
+		if timestamp.After(receivedAt) && timestamp.Sub(receivedAt) > maxClockSkew {
+			return fmt.Errorf("%w: provider timestamp exceeds receipt clock by %s", ErrProviderClockSkewExceeded, timestamp.Sub(receivedAt))
+		}
+	}
+	availableAt := receivedAt
+	if providerAt.After(availableAt) {
+		availableAt = providerAt
+	}
+	if lastProviderAt.After(availableAt) {
+		availableAt = lastProviderAt
+	}
+	if asOf.Before(availableAt) {
+		return ErrQuoteNotYetAvailable
+	}
+	if asOf.Sub(providerAt) > maxAge || asOf.Sub(lastProviderAt) > maxAge {
+		return ErrQuoteStale
 	}
 	return nil
 }

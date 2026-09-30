@@ -1,9 +1,10 @@
 # Current Build Package
 
-Current routing: **CORE-READINESS-02B1 — PROOF POLICY + MARKET TEMPORAL
-PREREQUISITES**, implementation and validation. This package establishes only
-technical-proof policy, market temporal semantics, and isolated technical
-routing. It does not execute the genuine-market CORE-READINESS-02B proof.
+Current routing: **CORE-READINESS-02B2 — ALPACA QUOTE TEMPORAL SEMANTICS
+CORRECTION**, implementation and validation. This package separates bid/ask
+quote and latest-trade provenance, persists both timestamps, and applies
+bounded clock-skew plus strict availability semantics. It does not execute the
+genuine-market CORE-READINESS-02B proof.
 CORE-READINESS-02A4 and 02A4R remain **GO / EXTERNALLY REVIEWED**. The 02A4
 queue remains account-scoped and is not consumed by 02A4. CORE-READINESS-01
 remains **BLOCKED_BEFORE_HYPOTHESIS_DESIGN** until CORE-READINESS-02B is
@@ -27,8 +28,9 @@ handoff can approve that candidate path. The queue is not consumed by 02A4.
 
 Read `Docs/BUILD/CORE-READINESS-01-WORKING-JAX-V1-AUDIT.md`. 02A4 addresses the
 server-owned candidate/risk/approval-to-queue seam and JWT-bound decision actor.
-CORE-READINESS-02B1 is the prerequisite policy/temporal contract. The remaining
-package is CORE-READINESS-02B: isolated genuine-market end-to-end proof,
+CORE-READINESS-02B1 is **GO / EXTERNALLY REVIEWED** as the prerequisite
+policy/temporal contract. CORE-READINESS-02B2 is the current correction and
+requires external review before CORE-READINESS-02B: isolated genuine-market end-to-end proof,
 including genuine provider observations and the reviewed runtime loop.
 OPS-01 remains synthetic/disposable full-loop evidence;
 OPS-02B remains real-runtime event-intake evidence with zero economic activity.

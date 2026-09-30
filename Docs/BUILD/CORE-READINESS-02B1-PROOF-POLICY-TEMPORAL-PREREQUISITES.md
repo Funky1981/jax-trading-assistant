@@ -1,6 +1,6 @@
 # CORE-READINESS-02B1 — Proof Policy and Market Temporal Prerequisites
 
-Status: **IMPLEMENTED / VALIDATION IN PROGRESS**. CORE-READINESS-02B1 closes technical policy and market-time semantics prerequisites only. The isolated genuine-market economic end-to-end proof, CORE-READINESS-02B, remains **NOT YET EXECUTED**.
+Status: **GO / EXTERNALLY REVIEWED**. CORE-READINESS-02B1 closes technical policy and market-time semantics prerequisites only. CORE-READINESS-02B remains **BLOCKED / NOT YET EXECUTED** pending external review of the 02B2 temporal-semantics correction.
 
 ## Boundary
 

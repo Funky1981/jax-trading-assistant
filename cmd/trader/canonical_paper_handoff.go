@@ -351,10 +351,13 @@ func (s *canonicalHandoffService) buildPortfolioSnapshot(ctx context.Context, qu
 			Price: portfoliorisk.KnownNumber(observation.Last, observation.Source), MarketValue: portfoliorisk.KnownNumber(marketValue, observation.Source),
 			CostBasis:     portfoliorisk.KnownNumber(position.Quantity*position.AverageCost, "paper_ledger_events"),
 			ValuationAsOf: observation.ProviderAt.UTC(), PriceSource: observation.Source,
-			Provenance: []string{"quotes:" + observation.Source + ":" + observation.ProviderAt.UTC().Format(time.RFC3339Nano), "quote_received_at:" + observation.ReceivedAt.UTC().Format(time.RFC3339Nano), "instrument_mapping:" + position.InstrumentID + "=" + symbol}})
+			Provenance: []string{"quotes:" + observation.Source + ":" + observation.ProviderAt.UTC().Format(time.RFC3339Nano), "quote_last_trade_at:" + observation.LastProviderAt.UTC().Format(time.RFC3339Nano), "quote_received_at:" + observation.ReceivedAt.UTC().Format(time.RFC3339Nano), "instrument_mapping:" + position.InstrumentID + "=" + symbol}})
 		markedValue += marketValue
 		if observation.ProviderAt.After(asOf) {
 			asOf = observation.ProviderAt.UTC()
+		}
+		if observation.LastProviderAt.After(asOf) {
+			asOf = observation.LastProviderAt.UTC()
 		}
 		if observation.ReceivedAt.After(capturedAt) {
 			capturedAt = observation.ReceivedAt.UTC()

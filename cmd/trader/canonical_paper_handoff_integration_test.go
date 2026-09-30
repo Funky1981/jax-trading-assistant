@@ -282,7 +282,7 @@ func TestCanonicalPaperHandoffPostgresFailsClosedAtQueueTime(t *testing.T) {
 		if _, err := service.prepare(ctx, fixture.candidateID); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := pool.Exec(ctx, `UPDATE quotes SET price=110,bid=109.9,ask=110.1,timestamp=$1,received_at=$1 WHERE symbol='QQQ'`, now); err != nil {
+		if _, err := pool.Exec(ctx, `UPDATE quotes SET price=110,bid=109.9,ask=110.1,timestamp=$1,last_trade_timestamp=$1,received_at=$1 WHERE symbol='QQQ'`, now); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := service.approve(ctx, fixture.candidateID, "operator-fail-closed"); err == nil {
@@ -346,7 +346,7 @@ func createCanonicalHandoffFixture(t *testing.T, ctx context.Context, pool *pgxp
 	if _, err := pool.Exec(ctx, `INSERT INTO world_monitor_research_inbox(id,source,world_monitor_event_id,source_event_id,status,event_type,headline,summary,source_urls,source_count,event_time,possible_affected_etfs,asset_themes,severity,source_tier,confidence,confidence_reasons,mapping_reason,dedupe_key,raw_payload,normalized_event_id) VALUES($1,$2,$3,$4,'new','macro_rates',$5,$6,$7::jsonb,2,$8,'["QQQ"]'::jsonb,'["technology"]'::jsonb,'medium','tier1',0.8,'["provider confidence"]'::jsonb,$9,$10,'{}'::jsonb,$11)`, inboxID, fixtureSource, sourceEventID, sourceEventID, "Federal Reserve announces policy decision", summary, fmt.Sprintf(`["%s"]`, article), eventAt, mapping, "canonical-dedupe-"+suffix, normalizedID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO quotes(symbol,price,bid,ask,bid_size,ask_size,volume,timestamp,exchange,provider,received_at) VALUES('QQQ',100,99.9,100.1,1000,1000,100000,$1,'fixture-exchange',$2,$1) ON CONFLICT (symbol) DO UPDATE SET price=EXCLUDED.price,bid=EXCLUDED.bid,ask=EXCLUDED.ask,bid_size=EXCLUDED.bid_size,ask_size=EXCLUDED.ask_size,volume=EXCLUDED.volume,timestamp=EXCLUDED.timestamp,exchange=EXCLUDED.exchange,provider=EXCLUDED.provider,received_at=EXCLUDED.received_at`, now, fixtureSource); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO quotes(symbol,price,bid,ask,bid_size,ask_size,volume,timestamp,last_trade_timestamp,exchange,provider,received_at) VALUES('QQQ',100,99.9,100.1,1000,1000,100000,$1,$1,'fixture-exchange',$2,$1) ON CONFLICT (symbol) DO UPDATE SET price=EXCLUDED.price,bid=EXCLUDED.bid,ask=EXCLUDED.ask,bid_size=EXCLUDED.bid_size,ask_size=EXCLUDED.ask_size,volume=EXCLUDED.volume,timestamp=EXCLUDED.timestamp,last_trade_timestamp=EXCLUDED.last_trade_timestamp,exchange=EXCLUDED.exchange,provider=EXCLUDED.provider,received_at=EXCLUDED.received_at`, now, fixtureSource); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(ctx, `DELETE FROM candles WHERE symbol='QQQ' AND source=$1`, fixtureSource); err != nil {

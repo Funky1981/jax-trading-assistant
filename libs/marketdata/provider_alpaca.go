@@ -61,22 +61,9 @@ func (p *AlpacaProvider) GetQuote(ctx context.Context, symbol string) (*Quote, e
 			return nil, fmt.Errorf("%w: %v", ErrProviderError, err)
 		}
 
-		if snapshot == nil || snapshot.LatestTrade == nil {
-			return nil, ErrNoData
-		}
-
-		quote := &Quote{
-			Symbol:    symbol,
-			Price:     snapshot.LatestTrade.Price,
-			Timestamp: snapshot.LatestTrade.Timestamp,
-			Exchange:  snapshot.LatestTrade.Exchange,
-		}
-
-		if snapshot.LatestQuote != nil {
-			quote.Bid = snapshot.LatestQuote.BidPrice
-			quote.Ask = snapshot.LatestQuote.AskPrice
-			quote.BidSize = int64(snapshot.LatestQuote.BidSize)
-			quote.AskSize = int64(snapshot.LatestQuote.AskSize)
+		quote, err := alpacaQuoteFromSnapshot(symbol, snapshot)
+		if err != nil {
+			return nil, err
 		}
 
 		if snapshot.DailyBar != nil {
@@ -90,6 +77,22 @@ func (p *AlpacaProvider) GetQuote(ctx context.Context, symbol string) (*Quote, e
 		return nil, err
 	}
 	return result.(*Quote), nil
+}
+
+func alpacaQuoteFromSnapshot(symbol string, snapshot *marketdata.Snapshot) (*Quote, error) {
+	if snapshot == nil || snapshot.LatestTrade == nil || snapshot.LatestQuote == nil {
+		return nil, ErrNoData
+	}
+	if snapshot.LatestQuote.Timestamp.IsZero() || snapshot.LatestTrade.Timestamp.IsZero() {
+		return nil, fmt.Errorf("%w: Alpaca snapshot is missing quote or trade timestamp provenance", ErrNoData)
+	}
+	return &Quote{
+		Symbol: symbol, Price: snapshot.LatestTrade.Price,
+		Timestamp: snapshot.LatestQuote.Timestamp, TradeTimestamp: snapshot.LatestTrade.Timestamp,
+		Exchange: snapshot.LatestTrade.Exchange,
+		Bid:      snapshot.LatestQuote.BidPrice, Ask: snapshot.LatestQuote.AskPrice,
+		BidSize: int64(snapshot.LatestQuote.BidSize), AskSize: int64(snapshot.LatestQuote.AskSize),
+	}, nil
 }
 
 // GetCandles fetches historical OHLCV data

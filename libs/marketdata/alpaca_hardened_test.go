@@ -9,9 +9,33 @@ import (
 	"testing"
 	"time"
 
+	alpacamarketdata "github.com/alpacahq/alpaca-trade-api-go/v3/marketdata"
+
 	"jax-trading-assistant/libs/contracts/canonical"
 	providercontract "jax-trading-assistant/libs/contracts/provider"
 )
+
+func TestAlpacaQuoteBindsBidAskAndTradeToTheirOwnTimestamps(t *testing.T) {
+	quoteAt := time.Date(2026, 9, 29, 14, 0, 0, 0, time.UTC)
+	tradeAt := quoteAt.Add(17 * time.Millisecond)
+	snapshot := &alpacamarketdata.Snapshot{
+		LatestQuote: &alpacamarketdata.Quote{Timestamp: quoteAt, BidPrice: 100, AskPrice: 101, BidSize: 4, AskSize: 5},
+		LatestTrade: &alpacamarketdata.Trade{Timestamp: tradeAt, Price: 100.5, Exchange: "X"},
+	}
+	got, err := alpacaQuoteFromSnapshot("QQQ", snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Timestamp.Equal(quoteAt) || !got.TradeTimestamp.Equal(tradeAt) || got.Bid != 100 || got.Ask != 101 || got.Price != 100.5 {
+		t.Fatalf("quote/trade provenance was mixed: %+v", got)
+	}
+	if _, err := alpacaQuoteFromSnapshot("QQQ", &alpacamarketdata.Snapshot{LatestTrade: snapshot.LatestTrade}); err == nil {
+		t.Fatal("missing quote side was accepted")
+	}
+	if _, err := alpacaQuoteFromSnapshot("QQQ", &alpacamarketdata.Snapshot{LatestQuote: snapshot.LatestQuote, LatestTrade: &alpacamarketdata.Trade{Price: 100}}); err == nil {
+		t.Fatal("missing latest-trade timestamp was accepted")
+	}
+}
 
 func alpacaRetention() providercontract.RawPayloadRetentionPolicy {
 	return providercontract.RawPayloadRetentionPolicy{Class: providercontract.RawPayloadRetentionReplayAudit, Policy: canonical.VersionIdentity{Namespace: "jax.raw_retention", Value: "replay-audit/v1"}, Redistribution: providercontract.RawPayloadRedistributionNotAuthorized}

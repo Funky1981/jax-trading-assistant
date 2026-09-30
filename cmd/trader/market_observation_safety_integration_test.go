@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"jax-trading-assistant/libs/marketdata"
 )
 
 func TestCanonicalMarketLoadersSeparateQuoteAndCandleTemporalBounds(t *testing.T) {
@@ -40,7 +41,7 @@ func TestCanonicalMarketLoadersSeparateQuoteAndCandleTemporalBounds(t *testing.T
 			t.Cleanup(func() { cleanup(symbol) })
 			asOf := time.Now().UTC().Truncate(time.Microsecond)
 			observedAt := asOf.Add(-tc.age)
-			if _, err := pool.Exec(ctx, `INSERT INTO quotes(symbol,price,bid,ask,bid_size,ask_size,volume,timestamp,exchange,provider,received_at) VALUES($1,100,99,101,1,1,1,$2,'fixture',$3,$2)`, symbol, observedAt, source); err != nil {
+			if _, err := pool.Exec(ctx, `INSERT INTO quotes(symbol,price,bid,ask,bid_size,ask_size,volume,timestamp,last_trade_timestamp,exchange,provider,received_at) VALUES($1,100,99,101,1,1,1,$2,$2,'fixture',$3,$2)`, symbol, observedAt, source); err != nil {
 				t.Fatal(err)
 			}
 			_, err := loadCanonicalQuoteObservation(ctx, pool, symbol, asOf, policy)
@@ -49,6 +50,47 @@ func TestCanonicalMarketLoadersSeparateQuoteAndCandleTemporalBounds(t *testing.T
 			}
 		})
 	}
+	t.Run("quote/persisted-three-timestamps-roundtrip-exactly", func(t *testing.T) {
+		symbol := "Q" + suffix + "R"
+		t.Cleanup(func() { cleanup(symbol) })
+		requestStartedAt := time.Date(2026, 9, 29, 14, 0, 0, 122456000, time.UTC)
+		receivedAt := requestStartedAt.Add(time.Millisecond)
+		quoteAt := receivedAt.Add(77 * time.Millisecond)
+		tradeAt := receivedAt.Add(60 * time.Millisecond)
+		asOf := receivedAt.Add(100 * time.Millisecond)
+		quote := &marketdata.Quote{Symbol: symbol, Price: 100, Bid: 99, Ask: 101, BidSize: 1, AskSize: 1, Volume: 1, Timestamp: quoteAt, TradeTimestamp: tradeAt, Exchange: "fixture"}
+		if err := persistQuoteObservation(ctx, pool, quote, source, requestStartedAt, receivedAt); err != nil {
+			t.Fatal(err)
+		}
+		got, err := loadCanonicalQuoteObservation(ctx, pool, symbol, asOf, policy)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !got.ProviderAt.Equal(quoteAt) || !got.LastProviderAt.Equal(tradeAt) || !got.ReceivedAt.Equal(receivedAt) {
+			t.Fatalf("timestamp roundtrip mismatch: quote=%s trade=%s received=%s", got.ProviderAt, got.LastProviderAt, got.ReceivedAt)
+		}
+		if got.FreshnessAge != 40*time.Millisecond {
+			t.Fatalf("paired observation freshness=%s, want oldest source age 40ms", got.FreshnessAge)
+		}
+		if _, err := loadCanonicalQuoteObservation(ctx, pool, symbol, receivedAt.Add(50*time.Millisecond), policy); err == nil {
+			t.Fatal("77ms-future provider quote was accepted before AvailableAt")
+		}
+	})
+	t.Run("quote/legacy-missing-trade-provenance-fails-closed", func(t *testing.T) {
+		symbol := "Q" + suffix + "L"
+		t.Cleanup(func() { cleanup(symbol) })
+		asOf := time.Now().UTC().Truncate(time.Microsecond)
+		if _, err := pool.Exec(ctx, `INSERT INTO quotes(symbol,price,bid,ask,bid_size,ask_size,volume,timestamp,exchange,provider,received_at) VALUES($1,100,99,101,1,1,1,$2,'fixture',$3,$2)`, symbol, asOf.Add(-time.Second), source); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := loadCanonicalQuoteObservation(ctx, pool, symbol, asOf, policy); err == nil {
+			t.Fatal("legacy quote without trade timestamp provenance was accepted")
+		}
+		var tradeAt *time.Time
+		if err := pool.QueryRow(ctx, `SELECT last_trade_timestamp FROM quotes WHERE symbol=$1`, symbol).Scan(&tradeAt); err != nil || tradeAt != nil {
+			t.Fatalf("legacy timestamp was rewritten: value=%v err=%v", tradeAt, err)
+		}
+	})
 
 	// An interval-start hourly candle is unavailable until its hour completes;
 	// an earlier ingestion timestamp is rejected even when read after completion.
