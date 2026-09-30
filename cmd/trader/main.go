@@ -71,6 +71,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("invalid runtime configuration: %v", err)
 	}
+	proofMode := coreReadiness02BProofModeEnabled()
+	if proofMode {
+		if err := validateCoreReadiness02BProofMode(cfg); err != nil {
+			log.Fatalf("CORE-READINESS-02B proof mode rejected: %v", err)
+		}
+	}
 
 	log.Printf("starting jax-trader v%s (built: %s)", version, buildTime)
 	log.Printf("database: %s", maskDSN(cfg.DatabaseURL))
@@ -100,6 +106,15 @@ func main() {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 	log.Println("database connection established")
+	if proofMode {
+		var environment string
+		if err := dbPool.QueryRow(ctx, `SELECT environment FROM paper_accounts WHERE account_id=$1`, strings.TrimSpace(os.Getenv("PAPER_ACCOUNT_ID"))).Scan(&environment); err != nil {
+			log.Fatalf("CORE-READINESS-02B proof mode could not resolve its dedicated PAPER account: %v", err)
+		}
+		if environment != "PAPER" {
+			log.Fatalf("CORE-READINESS-02B proof mode requires its dedicated account to be in PAPER environment")
+		}
+	}
 	rawStore, err := rawpayloadstore.NewPostgresRawPayloadStore(dbPool)
 	if err != nil {
 		log.Fatalf("failed to initialise durable raw payload store: %v", err)
@@ -135,7 +150,7 @@ func main() {
 	}
 
 	loadedStrategies := registry.List()
-	if err := requireApprovedStrategies(cfg.RuntimeMode, len(loadedStrategies)); err != nil {
+	if err := requireApprovedStrategiesForStartup(cfg.RuntimeMode, len(loadedStrategies), proofMode); err != nil {
 		log.Fatalf("approved strategy startup gate failed: %v", err)
 	}
 	log.Printf("registered %d strategies: %v", len(loadedStrategies), loadedStrategies)
@@ -335,7 +350,7 @@ func loadConfig() (Config, error) {
 		log.Println("PORT not set, using default 8100")
 	}
 
-	if cfg.IBBridgeURL == "" {
+	if cfg.IBBridgeURL == "" && !coreReadiness02BProofModeEnabled() {
 		cfg.IBBridgeURL = "http://localhost:8092"
 		log.Println("IB_BRIDGE_URL not set, using default")
 	}

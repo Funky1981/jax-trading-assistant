@@ -301,7 +301,11 @@ func startFrontendAPIServer(ctx context.Context, pool *pgxpool.Pool, reg *strate
 	}
 
 	mux := http.NewServeMux()
-	marketAPI := newMarketTools(pool, envStr("IB_BRIDGE_URL", "http://localhost:8092"), stores...)
+	ibBridgeURL := envStr("IB_BRIDGE_URL", "http://localhost:8092")
+	if coreReadiness02BProofModeEnabled() {
+		ibBridgeURL = ""
+	}
+	marketAPI := newMarketTools(pool, ibBridgeURL, stores...)
 
 	// ── Auth ──────────────────────────────────────────────────────────────────
 	// /auth/status is always public — frontend uses it to decide whether to show login

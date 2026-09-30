@@ -77,7 +77,7 @@ func loadIngesterConfig() ingesterConfig {
 // It uses the existing pgxpool for DB writes.
 func startMarketIngester(ctx context.Context, pool *pgxpool.Pool) {
 	cfg := loadIngesterConfig()
-	if cfg.IBBridgeURL == "" {
+	if cfg.IBBridgeURL == "" && !coreReadiness02BProofModeEnabled() {
 		log.Println("market ingester: IB_BRIDGE_URL not set — skipping")
 		return
 	}
