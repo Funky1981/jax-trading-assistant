@@ -92,6 +92,7 @@ type ExitApprovalSource interface {
 
 type RuntimeStore interface {
 	FindByCandidate(context.Context, string) (LifecycleRecord, bool, error)
+	HasOtherActiveInstrumentExposure(context.Context, string, string, string, string) (bool, error)
 	PersistPendingOrder(context.Context, papertrading.PaperOrder, string, ApprovalSnapshot) error
 	SaveApprovedEntry(context.Context, string, TradeThesis, EntryBinding, ApprovalSnapshot, Position, EntrySnapshot) (string, error)
 	PersistReviewSchedule(context.Context, string, ReviewSchedule) error
@@ -229,6 +230,16 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 	ledger, err := papertrading.RestorePaperLedger(entry.Ledger)
 	if err != nil {
 		return fmt.Errorf("%w: restore paper ledger: %v", ErrFailedClosed, err)
+	}
+	occupied, err := r.Store.HasOtherActiveInstrumentExposure(ctx, r.AccountID, entry.Thesis.InstrumentID, entry.CandidateID, entry.Approval.PaperIntent.RecommendationID)
+	if err != nil {
+		return fmt.Errorf("%w: check account/instrument exclusivity: %v", ErrFailedClosed, err)
+	}
+	if occupied {
+		return fmt.Errorf("%w: account already has another active or pending exposure for instrument %q", ErrFailedClosed, entry.Thesis.InstrumentID)
+	}
+	if position, exists := ledger.Snapshot().Positions[entry.Thesis.InstrumentID]; exists && math.Abs(position.Quantity) > canonicalQuantityTolerance {
+		return fmt.Errorf("%w: account ledger already has quantity %g for instrument %q", ErrFailedClosed, position.Quantity, entry.Thesis.InstrumentID)
 	}
 	createdAt := r.Now().UTC()
 	if confirmedAt := entry.Approval.Workflow.Confirmation.ConfirmedAt; createdAt.Before(confirmedAt) {
@@ -431,6 +442,13 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if err != nil {
 		return fmt.Errorf("restore review ledger: %w", err)
 	}
+	if position.Thesis.InstrumentID != item.Lifecycle.EntryFill.InstrumentID || item.Lifecycle.EntryFill.Quantity <= 0 {
+		return fmt.Errorf("%w: exiting lifecycle entry-fill identity is invalid", ErrFailedClosed)
+	}
+	preExit, exists := ledger.Snapshot().Positions[position.Thesis.InstrumentID]
+	if !exists || math.Abs(preExit.Quantity-item.Lifecycle.EntryFill.Quantity) > canonicalQuantityTolerance {
+		return fmt.Errorf("%w: pre-exit ledger quantity does not match lifecycle entry fill (ledger=%g lifecycle=%g)", ErrFailedClosed, preExit.Quantity, item.Lifecycle.EntryFill.Quantity)
+	}
 	costModel := r.CostModel
 	if costModel.ModelID == "" {
 		costModel = papertrading.DefaultCostModel()
@@ -503,7 +521,7 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: venueSnapshot, Account: account}, fills[0].FilledAt); result.Status != papertrading.ReconciliationClean {
 		return fmt.Errorf("%w: exit ledger reconciliation failed: %v", ErrFailedClosed, result.ReasonCodes)
 	}
-	if position, remainsOpen := account.Positions[order.InstrumentID]; remainsOpen && position.Quantity > canonicalQuantityTolerance {
+	if position, remainsOpen := account.Positions[order.InstrumentID]; remainsOpen && math.Abs(position.Quantity) > canonicalQuantityTolerance {
 		return fmt.Errorf("%w: canonical exit fill left quantity %g open for instrument %q", ErrFailedClosed, position.Quantity, order.InstrumentID)
 	}
 	outcome, err := BuildOutcomeFromFillsWithCoverage(position, item.Lifecycle.Binding, item.Lifecycle.EntryFill, fills[0], decision.Reason, item.Review.SessionNumber, observation.Path, item.Lifecycle.Checkpoints, observation.Excursion)

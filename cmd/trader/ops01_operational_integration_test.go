@@ -319,6 +319,9 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if pendingOrders != 1 || prematureFills != 0 {
 		t.Fatalf("OPS-01 first pass pending orders=%d premature fills=%d", pendingOrders, prematureFills)
 	}
+	if occupied, err := runtime.Store.(*exploratorypaper.PostgresStore).HasOtherActiveInstrumentExposure(ctx, accountID, "jax.instrument.us.etf.qqq", "another-candidate", "another-recommendation"); err != nil || !occupied {
+		t.Fatalf("durable pending queue/order did not block a second same-instrument entry: occupied=%t err=%v", occupied, err)
+	}
 	executionAt := entryAt.Add(1200 * time.Millisecond)
 	if _, err := pool.Exec(ctx, `UPDATE quotes SET price=100,bid=99.9,ask=100.1,bid_size=1000,ask_size=4,timestamp=$1,last_trade_timestamp=$1,received_at=$1,provider='ops01-provider-substitute' WHERE symbol='QQQ'`, executionAt); err != nil {
 		t.Fatal(err)
@@ -388,6 +391,19 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if record.EntryFill.Quantity != 10 || record.EntryOrder.Status != papertrading.OrderFilled || record.EntryOrder.RemainingQuantity != 0 || record.EntryOrder.FilledQuantity != 10 {
 		t.Fatalf("canonical entry did not complete atomically after sufficient liquidity: order=%#v fill=%#v", record.EntryOrder, record.EntryFill)
 	}
+	entryLedger, err := loadPaperLedger(ctx, pool, record.EntryFill.FillID)
+	if err != nil || entryLedger.Positions[record.Thesis.Thesis.InstrumentID].Quantity != record.EntryFill.Quantity {
+		t.Fatalf("open instrument ledger quantity does not equal its sole lifecycle entry fill: ledger=%+v entry=%g err=%v", entryLedger.Positions[record.Thesis.Thesis.InstrumentID], record.EntryFill.Quantity, err)
+	}
+	guardTx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureCanonicalInstrumentAvailable(ctx, guardTx, accountID, record.Thesis.Thesis.InstrumentID, "candidate-while-open"); err == nil || !strings.Contains(err.Error(), "canonical instrument exposure conflict") {
+		_ = guardTx.Rollback(ctx)
+		t.Fatalf("canonical handoff gate did not reject another candidate while lifecycle is open: %v", err)
+	}
+	_ = guardTx.Rollback(ctx)
 	if err := restartedRuntime.RunEntryCycle(ctx); err != nil {
 		t.Fatalf("OPS-01 entry replay after lifecycle persistence: %v", err)
 	}
@@ -405,6 +421,33 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	}
 	if entryQueueStatus != "PROCESSED" {
 		t.Fatalf("completed entry queue status=%s, want PROCESSED", entryQueueStatus)
+	}
+	occupied, err := restartedStore.HasOtherActiveInstrumentExposure(ctx, accountID, record.Thesis.Thesis.InstrumentID, "different-candidate", "different-recommendation")
+	if err != nil || !occupied {
+		t.Fatalf("durable open lifecycle did not block another same-instrument candidate: occupied=%t err=%v", occupied, err)
+	}
+	secondEntry := queuedEntries[0]
+	secondEntry.CandidateID = "ops01-second-same-instrument-candidate"
+	secondEntry.PositionID = "ops01-second-same-instrument-position"
+	entryArtifactsBefore := len(restartedRuntime.Venue.Snapshot().Orders) + len(restartedRuntime.Venue.Snapshot().Fills)
+	secondEntryRuntime := *restartedRuntime
+	secondEntryRuntime.Entries = ops01EntrySource{entries: []exploratorypaper.EntryRequest{secondEntry}}
+	if err := secondEntryRuntime.RunEntryCycle(ctx); err == nil || !strings.Contains(err.Error(), "active or pending exposure") {
+		t.Fatalf("runtime accepted another same-instrument lifecycle or failed without explicit conflict: %v", err)
+	}
+	if got := len(restartedRuntime.Venue.Snapshot().Orders) + len(restartedRuntime.Venue.Snapshot().Fills); got != entryArtifactsBefore || lenMustCount(t, ctx, pool, `SELECT COUNT(*) FROM exploratory_paper_lifecycles WHERE instrument_id=$1 AND state <> 'CLOSED'`, record.Thesis.Thesis.InstrumentID) != 1 {
+		t.Fatal("runtime backstop created a second economic artifact or active lifecycle")
+	}
+	if occupied, err := restartedStore.HasOtherActiveInstrumentExposure(ctx, accountID, "jax.instrument.us.etf.spy", "different-candidate", "different-recommendation"); err != nil || occupied {
+		t.Fatalf("open QQQ lifecycle incorrectly blocked a different instrument: occupied=%t err=%v", occupied, err)
+	}
+	isolationAccountID := accountID + "-isolation"
+	if _, err := pool.Exec(ctx, `INSERT INTO paper_accounts(account_id,contract_version,environment,currency,initial_cash,cash,equity,realized_pnl,fees,updated_at) VALUES($1,$2,'PAPER','USD',100000,100000,100000,0,0,$3)`, isolationAccountID, papertrading.LedgerContractVersion, now); err != nil {
+		t.Fatal(err)
+	}
+	otherStore := exploratorypaper.NewPostgresStoreForAccount(pool, isolationAccountID)
+	if occupied, err := otherStore.HasOtherActiveInstrumentExposure(ctx, isolationAccountID, record.Thesis.Thesis.InstrumentID, "different-candidate", "different-recommendation"); err != nil || occupied {
+		t.Fatalf("open QQQ lifecycle leaked across PAPER accounts: occupied=%t err=%v", occupied, err)
 	}
 	// Exercise the production PostgreSQL review source itself: lifecycle thesis
 	// identity remains opaque while candle selection uses the frozen QQQ symbol.
@@ -710,6 +753,18 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	} else if position, remainsOpen := ledger.Positions["jax.instrument.us.etf.qqq"]; remainsOpen && position.Quantity > 1e-9 {
 		t.Fatalf("paper ledger retained quantity after completed exit: %#v", position)
 	}
+	if occupied, err := pendingExitRuntime.Store.(*exploratorypaper.PostgresStore).HasOtherActiveInstrumentExposure(ctx, accountID, record.Thesis.Thesis.InstrumentID, "candidate-after-close", "recommendation-after-close"); err != nil || occupied {
+		t.Fatalf("durably closed lifecycle did not release instrument exclusivity: occupied=%t err=%v", occupied, err)
+	}
+	closedGuardTx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureCanonicalInstrumentAvailable(ctx, closedGuardTx, accountID, record.Thesis.Thesis.InstrumentID, "candidate-after-close"); err != nil {
+		_ = closedGuardTx.Rollback(ctx)
+		t.Fatalf("canonical handoff gate did not release QQQ after durable close: %v", err)
+	}
+	_ = closedGuardTx.Rollback(ctx)
 	finalReplay, err := newExploratoryPaperRuntime(pool)
 	if err != nil {
 		t.Fatal(err)
@@ -733,6 +788,14 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if orderCount != 2 || fillCount != 2 || ledgerCount != 2 {
 		t.Fatalf("economic action identities were duplicated or lost: orders=%d fills=%d ledger=%d", orderCount, fillCount, ledgerCount)
 	}
+}
+
+type ops01EntrySource struct {
+	entries []exploratorypaper.EntryRequest
+}
+
+func (s ops01EntrySource) LoadApprovedEntries(context.Context) ([]exploratorypaper.EntryRequest, error) {
+	return append([]exploratorypaper.EntryRequest(nil), s.entries...), nil
 }
 
 type ops01FixtureReviewSource struct {

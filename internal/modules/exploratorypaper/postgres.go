@@ -880,6 +880,48 @@ func (s *PostgresStore) FindByCandidate(ctx context.Context, candidateID string)
 	return record, true, err
 }
 
+// HasOtherActiveInstrumentExposure is the runtime-side backstop for the
+// Working-Jax-v1 single-lifecycle accounting contract. It excludes this
+// candidate's own pending order/queue replay, but treats every other open
+// lifecycle, pending order/queue item, or non-flat ledger quantity as occupied.
+func (s *PostgresStore) HasOtherActiveInstrumentExposure(ctx context.Context, accountID, instrumentID, candidateID, recommendationID string) (bool, error) {
+	if err := s.requireAccount(accountID); err != nil {
+		return false, failClosed("instrument exclusivity account binding", err)
+	}
+	if strings.TrimSpace(instrumentID) == "" || strings.TrimSpace(candidateID) == "" || strings.TrimSpace(recommendationID) == "" {
+		return false, fmt.Errorf("instrument exclusivity identity is incomplete")
+	}
+	var occupied bool
+	err := s.pool.QueryRow(ctx, `
+		SELECT
+			EXISTS (
+				SELECT 1 FROM exploratory_paper_lifecycles l
+				JOIN paper_orders entry_order ON entry_order.order_id=l.entry_order_id
+				WHERE entry_order.account_id=$1 AND l.instrument_id=$2 AND l.state <> 'CLOSED'
+				  AND l.candidate_id <> $3
+			) OR EXISTS (
+				SELECT 1 FROM paper_orders o
+				WHERE o.account_id=$1 AND o.instrument_id=$2
+				  AND o.status IN ('NEW','ACTIVE','PARTIALLY_FILLED')
+				  AND o.recommendation_id <> $4
+			) OR EXISTS (
+				SELECT 1 FROM exploratory_paper_entry_queue q
+				WHERE q.status IN ('PENDING','FAILED_CLOSED') AND q.candidate_id <> $3
+				  AND q.payload->'Ledger'->>'account_id'=$1
+				  AND q.payload->'Thesis'->>'instrumentId'=$2
+			) OR EXISTS (
+				SELECT 1 FROM paper_ledger_events e
+				WHERE e.account_id=$1 AND e.instrument_id=$2
+				GROUP BY e.account_id,e.instrument_id
+				HAVING ABS(SUM(CASE WHEN e.direction='LONG' THEN e.quantity ELSE -e.quantity END)) > 0.000000001
+			)
+	`, accountID, instrumentID, candidateID, recommendationID).Scan(&occupied)
+	if err != nil {
+		return false, failClosed("check durable instrument exclusivity", err)
+	}
+	return occupied, nil
+}
+
 func (s *PostgresStore) ListDueReviews(ctx context.Context, now time.Time) ([]ReviewRecord, error) {
 	if now.IsZero() || now.Location() != time.UTC {
 		return nil, fmt.Errorf("due-review time must be UTC")

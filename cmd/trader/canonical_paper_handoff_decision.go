@@ -206,6 +206,45 @@ func (s *canonicalHandoffService) approve(ctx context.Context, candidateID uuid.
 	return canonicalPrepareResult{}, fmt.Errorf("canonical APPROVE transaction retries exhausted")
 }
 
+func canonicalInstrumentLockKey(accountID, instrumentID string) string {
+	return fmt.Sprintf("%d:%s%d:%s", len(accountID), accountID, len(instrumentID), instrumentID)
+}
+
+func ensureCanonicalInstrumentAvailable(ctx context.Context, tx pgx.Tx, accountID, instrumentID, candidateID string) error {
+	var occupied bool
+	err := tx.QueryRow(ctx, `
+		SELECT
+			EXISTS (
+				SELECT 1
+				FROM exploratory_paper_lifecycles l
+				JOIN paper_orders entry_order ON entry_order.order_id=l.entry_order_id
+				WHERE entry_order.account_id=$1 AND l.instrument_id=$2 AND l.state <> 'CLOSED'
+			) OR EXISTS (
+				SELECT 1 FROM paper_orders o
+				WHERE o.account_id=$1 AND o.instrument_id=$2
+				  AND o.status IN ('NEW','ACTIVE','PARTIALLY_FILLED')
+				  AND o.recommendation_id <> $3
+			) OR EXISTS (
+				SELECT 1 FROM exploratory_paper_entry_queue q
+				WHERE q.status IN ('PENDING','FAILED_CLOSED') AND q.candidate_id <> $3
+				  AND q.payload->'Ledger'->>'account_id'=$1
+				  AND q.payload->'Thesis'->>'instrumentId'=$2
+			) OR EXISTS (
+				SELECT 1 FROM paper_ledger_events e
+				WHERE e.account_id=$1 AND e.instrument_id=$2
+				GROUP BY e.account_id,e.instrument_id
+				HAVING ABS(SUM(CASE WHEN e.direction='LONG' THEN e.quantity ELSE -e.quantity END)) > 0.000000001
+			)
+	`, accountID, instrumentID, candidateID).Scan(&occupied)
+	if err != nil {
+		return fmt.Errorf("check canonical account/instrument exclusivity: %w", err)
+	}
+	if occupied {
+		return fmt.Errorf("canonical instrument exposure conflict: account %q already has pending or active exposure in %q", accountID, instrumentID)
+	}
+	return nil
+}
+
 func (s *canonicalHandoffService) approveOnce(ctx context.Context, candidateID uuid.UUID, actor string) (canonicalPrepareResult, error) {
 	var response canonicalPrepareResult
 	if err := s.configurationError(); err != nil {
@@ -214,8 +253,29 @@ func (s *canonicalHandoffService) approveOnce(ctx context.Context, candidateID u
 	if candidateID == uuid.Nil || strings.TrimSpace(actor) == "" {
 		return response, fmt.Errorf("candidate and authenticated JWT actor are required")
 	}
+	// The immutable economic input supplies the lock key before the serializable
+	// transaction begins. A session advisory lock acquired before BEGIN ensures
+	// the subsequent transaction snapshot sees the prior same-account/instrument
+	// winner after waiting; a transaction-scoped lock here would retain a stale
+	// serializable snapshot on some PostgreSQL schedules.
+	economic, err := candidatesmod.NewStore(s.pool).GetCandidateEconomicInput(ctx, candidateID)
+	if err != nil {
+		return response, err
+	}
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return response, err
+	}
+	defer conn.Release()
+	lockKey := canonicalInstrumentLockKey(s.accountID, economic.InstrumentID)
+	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock(hashtextextended($1, 729104))`, lockKey); err != nil {
+		return response, err
+	}
+	defer func() {
+		_, _ = conn.Exec(context.Background(), `SELECT pg_advisory_unlock(hashtextextended($1, 729104))`, lockKey)
+	}()
 	now := s.now().UTC()
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	tx, err := conn.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
 	if err != nil {
 		return response, err
 	}
@@ -241,6 +301,9 @@ func (s *canonicalHandoffService) approveOnce(ctx context.Context, candidateID u
 	if err != nil {
 		return response, err
 	}
+	if input.Economic.InstrumentID != economic.InstrumentID {
+		return response, fmt.Errorf("candidate canonical instrument changed while acquiring the exclusivity guard")
+	}
 	if err := s.validateCanonicalCandidate(input); err != nil {
 		return response, err
 	}
@@ -253,6 +316,9 @@ func (s *canonicalHandoffService) approveOnce(ctx context.Context, candidateID u
 	}
 	if record.workflow.State != workflow.StateAwaitingHumanConfirmation {
 		return response, fmt.Errorf("canonical approval requires AWAITING_HUMAN_CONFIRMATION")
+	}
+	if err := ensureCanonicalInstrumentAvailable(ctx, tx, s.accountID, input.Economic.InstrumentID, candidateID.String()); err != nil {
+		return response, err
 	}
 	risk, err := loadCanonicalRiskTx(ctx, tx, record.workflow.RiskDecisionID)
 	if err != nil || risk.RecommendationID != candidateID.String() || risk.PortfolioSnapshotID != record.workflow.PortfolioSnapshotID || (risk.Outcome != portfoliorisk.DecisionAccept && risk.Outcome != portfoliorisk.DecisionAmend) {

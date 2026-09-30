@@ -153,6 +153,107 @@ func TestCanonicalPaperHandoffPostgresAcceptRestartConcurrencyAndQueueOnly(t *te
 	}
 }
 
+func TestCanonicalPaperHandoffPostgresSingleInstrumentApprovalExclusivity(t *testing.T) {
+	t.Setenv("JAX_RUNTIME_MODE", "paper")
+	pool := testFrontendAPIPool(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	fixtureA := createCanonicalHandoffFixture(t, ctx, pool, now.Add(-2*time.Second), "exclusive-a", .5)
+	fixtureB := createCanonicalHandoffFixture(t, ctx, pool, now.Add(-time.Second), "exclusive-b", .5)
+	service := newCanonicalTestService(pool, fixtureA.accountID, now, nil)
+	preparedA, err := service.prepare(ctx, fixtureA.candidateID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preparedB, err := service.prepare(ctx, fixtureB.candidateID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preparedA.InstrumentID != preparedB.InstrumentID {
+		t.Fatalf("same-instrument concurrency fixtures differ: A=%s B=%s", preparedA.InstrumentID, preparedB.InstrumentID)
+	}
+	manager, err := auth.NewJWTManager(auth.Config{Secret: []byte("canonical-exclusive-integration-secret"), Expiry: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, err := manager.GenerateToken("exclusive-operator", "exclusive-operator", "operator")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	registerCanonicalPaperHandoffServiceRoutes(mux, manager.MiddlewareFunc, service)
+	results := make(chan *httptest.ResponseRecorder, 2)
+	var group sync.WaitGroup
+	for _, candidateID := range []uuid.UUID{fixtureA.candidateID, fixtureB.candidateID} {
+		group.Add(1)
+		go func(candidateID uuid.UUID) {
+			defer group.Done()
+			results <- canonicalHandoffHTTP(t, mux, http.MethodPost, "/api/v1/exploratory-paper/handoff/"+candidateID.String()+"/approve", token, "", "")
+		}(candidateID)
+	}
+	group.Wait()
+	close(results)
+	var won, rejected int
+	var winner uuid.UUID
+	for result := range results {
+		switch result.Code {
+		case http.StatusOK:
+			won++
+			var approval canonicalPrepareResult
+			if err := json.Unmarshal(result.Body.Bytes(), &approval); err != nil {
+				t.Fatal(err)
+			}
+			winner, err = uuid.Parse(approval.CandidateID)
+			if err != nil {
+				t.Fatal(err)
+			}
+		case http.StatusConflict:
+			rejected++
+			if !strings.Contains(result.Body.String(), "canonical instrument exposure conflict") {
+				t.Fatalf("losing same-instrument approval did not report canonical conflict: %s", result.Body.String())
+			}
+		default:
+			t.Fatalf("concurrent same-instrument approval status=%d body=%s", result.Code, result.Body.String())
+		}
+	}
+	if won != 1 || rejected != 1 || winner == uuid.Nil {
+		t.Fatalf("same-instrument approval race did not have exactly one winner: won=%d rejected=%d", won, rejected)
+	}
+	if lenMustCount(t, ctx, pool, `SELECT COUNT(*) FROM exploratory_paper_entry_queue WHERE payload->'Ledger'->>'account_id'=$1 AND payload->'Thesis'->>'instrumentId'=$2 AND status='PENDING'`, fixtureA.accountID, preparedA.InstrumentID) != 1 {
+		t.Fatal("concurrent same-instrument approval created more than one pending queue identity")
+	}
+	for _, candidateID := range []uuid.UUID{fixtureA.candidateID, fixtureB.candidateID} {
+		if candidateID != winner && (lenMustCount(t, ctx, pool, `SELECT COUNT(*) FROM candidate_approvals WHERE candidate_id=$1 AND decision='approved'`, candidateID) != 0 || lenMustCount(t, ctx, pool, `SELECT COUNT(*) FROM exploratory_paper_entry_queue WHERE candidate_id=$1::text`, candidateID.String()) != 0) {
+			t.Fatal("losing candidate created a durable approval or queue row")
+		}
+		if candidateID != winner && lenMustCount(t, ctx, pool, `SELECT COUNT(*) FROM workflow_instances WHERE recommendation_id=$1 AND payload->'paperIntent'->>'intentId' <> ''`, candidateID.String()) != 0 {
+			t.Fatal("losing candidate created a second durable PaperIntent")
+		}
+	}
+	if lenMustCount(t, ctx, pool, `SELECT COUNT(*) FROM paper_orders WHERE recommendation_id IN ($1,$2)`, fixtureA.candidateID.String(), fixtureB.candidateID.String()) != 0 ||
+		lenMustCount(t, ctx, pool, `SELECT COUNT(*) FROM paper_fills f JOIN workflow_instances w ON w.workflow_id=f.workflow_id WHERE w.recommendation_id IN ($1,$2)`, fixtureA.candidateID.String(), fixtureB.candidateID.String()) != 0 ||
+		lenMustCount(t, ctx, pool, `SELECT COUNT(*) FROM exploratory_paper_lifecycles WHERE candidate_id IN ($1,$2)`, fixtureA.candidateID.String(), fixtureB.candidateID.String()) != 0 {
+		t.Fatal("handoff exclusivity loser produced an order, fill, or lifecycle")
+	}
+
+	// The same durable guard remains account- and instrument-scoped.
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := ensureCanonicalInstrumentAvailable(ctx, tx, fixtureA.accountID, "instrument-test-spy", "unrelated-spy-candidate"); err != nil {
+		t.Fatalf("different instrument was incorrectly blocked: %v", err)
+	}
+	if err := ensureCanonicalInstrumentAvailable(ctx, tx, fixtureA.accountID+"-other", preparedA.InstrumentID, "other-account-candidate"); err != nil {
+		t.Fatalf("same instrument in another account was incorrectly blocked: %v", err)
+	}
+	if err := ensureCanonicalInstrumentAvailable(ctx, tx, fixtureA.accountID, preparedA.InstrumentID, winner.String()); err != nil {
+		t.Fatalf("winning candidate replay was not exempted from its own queue row: %v", err)
+	}
+}
+
 func TestCanonicalPaperHandoffPostgresAmendRejectAndAccountIsolation(t *testing.T) {
 	t.Setenv("JAX_RUNTIME_MODE", "paper")
 	pool := testFrontendAPIPool(t)

@@ -55,6 +55,7 @@ type runtimeStore struct {
 	ledger            papertrading.PaperAccount
 	pendingOrders     map[string]papertrading.PaperOrder
 	outcome           *Outcome
+	occupied          bool
 }
 
 func (s *runtimeStore) PersistPendingOrder(_ context.Context, order papertrading.PaperOrder, _ string, _ ApprovalSnapshot) error {
@@ -73,6 +74,10 @@ func (s *runtimeStore) FindByCandidate(_ context.Context, candidateID string) (L
 		return s.record, true, nil
 	}
 	return LifecycleRecord{}, false, nil
+}
+
+func (s *runtimeStore) HasOtherActiveInstrumentExposure(context.Context, string, string, string, string) (bool, error) {
+	return s.occupied, nil
 }
 
 func (s *runtimeStore) SaveApprovedEntry(_ context.Context, candidateID string, thesis TradeThesis, binding EntryBinding, approval ApprovalSnapshot, position Position, entry EntrySnapshot) (string, error) {
@@ -199,6 +204,17 @@ func TestRuntimeLoopUsesCanonicalEntryApprovalPaperVenueAndIdempotentRetry(t *te
 	store := &recordingRuntimeStore{runtimeStore: &runtimeStore{}}
 	currentTime := now.Add(3 * time.Second)
 	runtime := &Runtime{Mode: "PAPER", AccountID: "runtime-account", Store: store, Entries: runtimeEntrySource{entries: []EntryRequest{entry}}, Reviews: runtimeReviewSource{}, Execution: &runtimeExecutionSource{ticks: []papertrading.MarketTick{executionTick}}, Venue: venue, CostModel: costs, Now: func() time.Time { return currentTime }}
+	blockedVenue, err := papertrading.NewPaperVenue(papertrading.DefaultPaperCapabilityContract(), costs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockedStore := &runtimeStore{occupied: true}
+	blockedRuntime := *runtime
+	blockedRuntime.Store = blockedStore
+	blockedRuntime.Venue = blockedVenue
+	if err := blockedRuntime.RunEntryCycle(context.Background()); err == nil || len(blockedVenue.Snapshot().Orders) != 0 {
+		t.Fatalf("runtime exclusivity backstop did not fail before order creation: err=%v orders=%d", err, len(blockedVenue.Snapshot().Orders))
+	}
 	mismatchedEntry := entry
 	mismatchedEntry.CandidateID = "candidate-mismatched-account"
 	mismatchedEntry.Ledger.AccountID = "other-account"
@@ -345,6 +361,26 @@ func TestRuntimeLoopProcessesDueReviewAndPreservesMissingData(t *testing.T) {
 	exitExecution := papertrading.MarketTick{TickID: "review-exit-execution", InstrumentID: thesis.InstrumentID, Bid: 94, Ask: 95, Last: 94, AvailableQuantity: 10, Timestamp: executionAt.Add(time.Second), LastProviderAt: executionAt.Add(time.Second), ReceivedAt: executionAt.Add(time.Second), AsOf: executionAt.Add(time.Second), RequireTemporalProvenance: true, Session: papertrading.SessionOpen, Source: "canonical-market"}
 	currentExitTime := exitTime
 	runtime := &Runtime{Mode: "PAPER", AccountID: "review-account", Store: store, Entries: runtimeEntrySource{}, Reviews: availableReviewSource{observation: observation}, Execution: &runtimeExecutionSource{ticks: []papertrading.MarketTick{exitExecution}}, ExitApprover: runtimeExitApprover{approval: ApprovalSnapshot{Workflow: exitWorkflow, PaperIntent: exitIntent}}, Venue: venue, CostModel: costs, Now: func() time.Time { return currentExitTime }}
+	underfilled := observation
+	underfilled.Ledger.Positions = map[string]papertrading.LedgerPosition{}
+	for instrument, ledgerPosition := range observation.Ledger.Positions {
+		underfilled.Ledger.Positions[instrument] = ledgerPosition
+	}
+	underfilledPosition := underfilled.Ledger.Positions[thesis.InstrumentID]
+	underfilledPosition.Quantity = 9
+	underfilled.Ledger.Positions[thesis.InstrumentID] = underfilledPosition
+	guardVenue, err := papertrading.NewPaperVenue(papertrading.DefaultPaperCapabilityContract(), costs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	guardStore := &recordingRuntimeStore{runtimeStore: &runtimeStore{record: store.record, found: true, ledger: store.ledger}}
+	guardRuntime := *runtime
+	guardRuntime.Store = guardStore
+	guardRuntime.Reviews = availableReviewSource{observation: underfilled}
+	guardRuntime.Venue = guardVenue
+	if err := guardRuntime.processReview(context.Background(), ReviewRecord{Lifecycle: store.record, Review: Review{ReviewID: "review-underfilled-ledger", PositionID: entry.PositionID, SessionNumber: 1, Status: "PENDING"}}); err == nil || len(guardVenue.Snapshot().Orders) != 0 || len(guardVenue.Snapshot().Fills) != 0 {
+		t.Fatalf("pre-exit ledger mismatch was not rejected before economic exit: err=%v orders=%d fills=%d", err, len(guardVenue.Snapshot().Orders), len(guardVenue.Snapshot().Fills))
+	}
 	noApprovalRuntime := *runtime
 	noApprovalRuntime.ExitApprover = nil
 	if err := noApprovalRuntime.RunDueReviews(context.Background()); err != nil {

@@ -103,7 +103,13 @@ documented gates. They do not prove a trading edge or authorize live execution.
 - CORE-READINESS-02B2R4: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; the
   canonical exploratory runtime waits for sufficient full-order liquidity and
   only persists entry/exit lifecycle transitions after one complete fill.
-  Generic PaperVenue partial fills remain supported.
+  Generic PaperVenue partial fills remain supported; superseded for final
+  acceptance by R4R1.
+- CORE-READINESS-02B2R4R1: `IMPLEMENTATION VALIDATED / EXTERNAL REVIEW REQUIRED`;
+  canonical approvals are exclusive per PAPER account/instrument, runtime
+  repeats the durable exposure check, and exit quantity is bound to the
+  lifecycle entry fill. See
+  `Docs/BUILD/CORE-READINESS-02B2R4R1-SINGLE-INSTRUMENT-EXCLUSIVITY.md`.
 - CORE-READINESS-02B remains blocked and not executed; host clock
   synchronization is a separate blocker.
 - CORE-READINESS-02B remains `NOT YET EXECUTED`; Working Jax remains
