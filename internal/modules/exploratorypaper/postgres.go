@@ -159,7 +159,7 @@ func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, account
 	}
 	orders := map[string]papertrading.PaperOrder{}
 	orderRows, err := s.pool.Query(ctx, `
-		SELECT order_id,contract_version,venue_id,environment,paper_intent_id,workflow_id,recommendation_id,risk_decision_id,confirmation_id,
+		SELECT order_id,account_id,contract_version,venue_id,environment,paper_intent_id,workflow_id,recommendation_id,risk_decision_id,confirmation_id,
 		       instrument_id,direction,quantity,remaining_quantity,filled_quantity,order_type,limit_price,cost_model_id,created_at,activates_at,status
 		FROM paper_orders ORDER BY created_at,order_id
 	`)
@@ -168,9 +168,10 @@ func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, account
 	}
 	for orderRows.Next() {
 		var order papertrading.PaperOrder
+		var orderAccountID *string
 		var environment, direction, orderType, status string
 		var limitPrice *float64
-		if err := orderRows.Scan(&order.OrderID, &order.ContractVersion, &order.VenueID, &environment, &order.PaperIntentID, &order.WorkflowID, &order.RecommendationID, &order.RiskDecisionID, &order.ConfirmationID, &order.InstrumentID, &direction, &order.Quantity, &order.RemainingQuantity, &order.FilledQuantity, &orderType, &limitPrice, &order.CostModelID, &order.CreatedAt, &order.ActivatesAt, &status); err != nil {
+		if err := orderRows.Scan(&order.OrderID, &orderAccountID, &order.ContractVersion, &order.VenueID, &environment, &order.PaperIntentID, &order.WorkflowID, &order.RecommendationID, &order.RiskDecisionID, &order.ConfirmationID, &order.InstrumentID, &direction, &order.Quantity, &order.RemainingQuantity, &order.FilledQuantity, &orderType, &limitPrice, &order.CostModelID, &order.CreatedAt, &order.ActivatesAt, &status); err != nil {
 			orderRows.Close()
 			return nil, fmt.Errorf("scan paper order for restore: %w", err)
 		}
@@ -182,6 +183,13 @@ func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, account
 		order.ActivatesAt = order.ActivatesAt.UTC()
 		if limitPrice != nil {
 			order.LimitPrice = *limitPrice
+		}
+		if orderAccountID != nil && strings.TrimSpace(*orderAccountID) != "" {
+			if prior, exists := orderOwners[order.OrderID]; exists && prior != *orderAccountID {
+				orderRows.Close()
+				return nil, failClosed("restore paper order owner", fmt.Errorf("order ownership conflicts between order row and ledger"))
+			}
+			orderOwners[order.OrderID] = *orderAccountID
 		}
 		if orderOwners[order.OrderID] == accountID {
 			orders[order.OrderID] = order
@@ -197,7 +205,7 @@ func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, account
 	lastTick := time.Time{}
 	fillRows, err := s.pool.Query(ctx, `
 		SELECT fill_id,contract_version,order_id,paper_intent_id,workflow_id,instrument_id,direction,quantity,price,
-		       cost_model_id,mid_price,spread_cost,slippage_cost,commission,executed_price,filled_at,tick_id
+		       cost_model_id,mid_price,spread_cost,slippage_cost,commission,executed_price,filled_at,tick_id,execution_market_provenance
 		FROM paper_fills ORDER BY filled_at,fill_id
 	`)
 	if err != nil {
@@ -207,11 +215,18 @@ func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, account
 		var fill papertrading.PaperFill
 		var direction string
 		var executedPrice *float64
-		if err := fillRows.Scan(&fill.FillID, &fill.ContractVersion, &fill.OrderID, &fill.PaperIntentID, &fill.WorkflowID, &fill.InstrumentID, &direction, &fill.Quantity, &fill.Price, &fill.Costs.ModelID, &fill.Costs.MidPrice, &fill.Costs.SpreadCost, &fill.Costs.SlippageCost, &fill.Costs.Commission, &executedPrice, &fill.FilledAt, &fill.TickID); err != nil {
+		var provenance []byte
+		if err := fillRows.Scan(&fill.FillID, &fill.ContractVersion, &fill.OrderID, &fill.PaperIntentID, &fill.WorkflowID, &fill.InstrumentID, &direction, &fill.Quantity, &fill.Price, &fill.Costs.ModelID, &fill.Costs.MidPrice, &fill.Costs.SpreadCost, &fill.Costs.SlippageCost, &fill.Costs.Commission, &executedPrice, &fill.FilledAt, &fill.TickID, &provenance); err != nil {
 			fillRows.Close()
 			return nil, fmt.Errorf("scan paper fill for restore: %w", err)
 		}
 		fill.Direction = direction
+		if len(provenance) > 0 {
+			if err := json.Unmarshal(provenance, &fill.MarketProvenance); err != nil {
+				fillRows.Close()
+				return nil, failClosed("decode execution market provenance", err)
+			}
+		}
 		fill.FilledAt = fill.FilledAt.UTC()
 		if executedPrice != nil {
 			fill.Costs.ExecutedPrice = *executedPrice
@@ -270,15 +285,22 @@ func (s *PostgresStore) loadPaperArtifactOwnership(ctx context.Context) (map[str
 	if err := rows.Err(); err != nil {
 		return nil, nil, err
 	}
-	orderRows, err := s.pool.Query(ctx, `SELECT order_id FROM paper_orders ORDER BY order_id`)
+	orderRows, err := s.pool.Query(ctx, `SELECT order_id,account_id FROM paper_orders ORDER BY order_id`)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer orderRows.Close()
 	for orderRows.Next() {
 		var orderID string
-		if err := orderRows.Scan(&orderID); err != nil {
+		var accountID *string
+		if err := orderRows.Scan(&orderID, &accountID); err != nil {
 			return nil, nil, err
+		}
+		if accountID != nil && strings.TrimSpace(*accountID) != "" {
+			if prior, exists := orderOwners[orderID]; exists && prior != *accountID {
+				return nil, nil, fmt.Errorf("order %s has conflicting paper account owners %s and %s", orderID, prior, *accountID)
+			}
+			orderOwners[orderID] = *accountID
 		}
 		if _, ok := orderOwners[orderID]; !ok {
 			return nil, nil, fmt.Errorf("order %s has no provable paper account owner", orderID)
@@ -288,6 +310,66 @@ func (s *PostgresStore) loadPaperArtifactOwnership(ctx context.Context) (map[str
 		return nil, nil, err
 	}
 	return orderOwners, fillOwners, nil
+}
+
+// PersistPendingOrder makes a NEW order durable before the runtime waits for a
+// post-latency observation. Existing identity is accepted only as an exact
+// replay within the same account and workflow.
+func (s *PostgresStore) PersistPendingOrder(ctx context.Context, order papertrading.PaperOrder, accountID string, approval ApprovalSnapshot) error {
+	if s == nil || s.pool == nil || order.Validate() != nil || order.Status != papertrading.OrderNew {
+		return fmt.Errorf("%w: pending paper order is invalid", ErrFailedClosed)
+	}
+	if err := s.requireAccount(accountID); err != nil {
+		return failClosed("pending order account binding", err)
+	}
+	if approval.Workflow.WorkflowID != order.WorkflowID || approval.PaperIntent.IntentID != order.PaperIntentID || approval.Workflow.Confirmation == nil || approval.Workflow.Confirmation.ConfirmationID != order.ConfirmationID {
+		return failClosed("pending order approval binding", ErrPersistenceConflict)
+	}
+	if err := approval.Workflow.Validate(); err != nil {
+		return failClosed("pending order workflow", err)
+	}
+	if err := approval.PaperIntent.Validate(); err != nil {
+		return failClosed("pending order intent", err)
+	}
+	if err := approval.Workflow.Confirmation.ValidateFor(approval.Workflow, order.CreatedAt); err != nil {
+		return failClosed("pending order human confirmation time", err)
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := persistWorkflowSnapshot(ctx, tx, approval); err != nil {
+		return failClosed("persist pending order workflow", err)
+	}
+	result, err := tx.Exec(ctx, `
+		INSERT INTO paper_orders (order_id,account_id,contract_version,venue_id,environment,paper_intent_id,workflow_id,recommendation_id,risk_decision_id,confirmation_id,instrument_id,direction,quantity,remaining_quantity,filled_quantity,order_type,limit_price,cost_model_id,created_at,activates_at,status)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+		ON CONFLICT (order_id) DO NOTHING
+	`, order.OrderID, accountID, order.ContractVersion, order.VenueID, string(order.Environment), order.PaperIntentID, order.WorkflowID, order.RecommendationID, order.RiskDecisionID, order.ConfirmationID, order.InstrumentID, order.Direction, order.Quantity, order.RemainingQuantity, order.FilledQuantity, string(order.OrderType), nullableFloat(order.LimitPrice), order.CostModelID, order.CreatedAt, order.ActivatesAt, string(order.Status))
+	if err != nil {
+		return failClosed("persist pending paper order", err)
+	}
+	if result.RowsAffected() == 0 {
+		var existing papertrading.PaperOrder
+		var existingAccount, environment, direction, orderType, status string
+		var limitPrice *float64
+		if err := tx.QueryRow(ctx, `SELECT account_id,order_id,contract_version,venue_id,environment,paper_intent_id,workflow_id,recommendation_id,risk_decision_id,confirmation_id,instrument_id,direction,quantity,remaining_quantity,filled_quantity,order_type,limit_price,cost_model_id,created_at,activates_at,status FROM paper_orders WHERE order_id=$1 FOR UPDATE`, order.OrderID).Scan(&existingAccount, &existing.OrderID, &existing.ContractVersion, &existing.VenueID, &environment, &existing.PaperIntentID, &existing.WorkflowID, &existing.RecommendationID, &existing.RiskDecisionID, &existing.ConfirmationID, &existing.InstrumentID, &direction, &existing.Quantity, &existing.RemainingQuantity, &existing.FilledQuantity, &orderType, &limitPrice, &existing.CostModelID, &existing.CreatedAt, &existing.ActivatesAt, &status); err != nil {
+			return failClosed("verify pending paper order replay", err)
+		}
+		existing.Environment, existing.Direction, existing.OrderType, existing.Status = papertrading.Environment(environment), direction, papertrading.OrderType(orderType), papertrading.PaperOrderStatus(status)
+		existing.CreatedAt, existing.ActivatesAt = existing.CreatedAt.UTC(), existing.ActivatesAt.UTC()
+		if limitPrice != nil {
+			existing.LimitPrice = *limitPrice
+		}
+		if existingAccount != accountID || existing.OrderID != order.OrderID || existing.PaperIntentID != order.PaperIntentID || existing.WorkflowID != order.WorkflowID || !existing.CreatedAt.Truncate(time.Microsecond).Equal(order.CreatedAt.Truncate(time.Microsecond)) || !existing.ActivatesAt.Truncate(time.Microsecond).Equal(order.ActivatesAt.Truncate(time.Microsecond)) || existing.Status != papertrading.OrderNew {
+			return failClosed("pending paper order replay", fmt.Errorf("%w: account=%q/%q order=%q/%q intent=%q/%q workflow=%q/%q created=%s/%s activates=%s/%s status=%s", ErrPersistenceConflict, existingAccount, accountID, existing.OrderID, order.OrderID, existing.PaperIntentID, order.PaperIntentID, existing.WorkflowID, order.WorkflowID, existing.CreatedAt.Format(time.RFC3339Nano), order.CreatedAt.Format(time.RFC3339Nano), existing.ActivatesAt.Format(time.RFC3339Nano), order.ActivatesAt.Format(time.RFC3339Nano), existing.Status))
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return failClosed("commit pending paper order", err)
+	}
+	return nil
 }
 
 func (s *PostgresStore) SaveApprovedEntry(ctx context.Context, candidateID string, thesis TradeThesis, binding EntryBinding, approval ApprovalSnapshot, position Position, entry EntrySnapshot) (string, error) {
@@ -656,19 +738,35 @@ func persistWorkflowSnapshot(ctx context.Context, tx pgx.Tx, approval ApprovalSn
 }
 
 func persistPaperArtifacts(ctx context.Context, tx pgx.Tx, order papertrading.PaperOrder, fill papertrading.PaperFill, account papertrading.PaperAccount) error {
-	_, err := tx.Exec(ctx, `
-		INSERT INTO paper_orders (order_id,contract_version,venue_id,environment,paper_intent_id,workflow_id,recommendation_id,risk_decision_id,confirmation_id,instrument_id,direction,quantity,remaining_quantity,filled_quantity,order_type,limit_price,cost_model_id,created_at,activates_at,status)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
-		ON CONFLICT (order_id) DO NOTHING
-	`, order.OrderID, order.ContractVersion, order.VenueID, string(order.Environment), order.PaperIntentID, order.WorkflowID, order.RecommendationID, order.RiskDecisionID, order.ConfirmationID, order.InstrumentID, order.Direction, order.Quantity, order.RemainingQuantity, order.FilledQuantity, string(order.OrderType), nullableFloat(order.LimitPrice), order.CostModelID, order.CreatedAt, order.ActivatesAt, string(order.Status))
+	orderResult, err := tx.Exec(ctx, `
+		INSERT INTO paper_orders (order_id,account_id,contract_version,venue_id,environment,paper_intent_id,workflow_id,recommendation_id,risk_decision_id,confirmation_id,instrument_id,direction,quantity,remaining_quantity,filled_quantity,order_type,limit_price,cost_model_id,created_at,activates_at,status)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+		ON CONFLICT (order_id) DO UPDATE SET account_id=EXCLUDED.account_id,remaining_quantity=EXCLUDED.remaining_quantity,filled_quantity=EXCLUDED.filled_quantity,status=EXCLUDED.status
+		WHERE (paper_orders.account_id IS NULL OR paper_orders.account_id=EXCLUDED.account_id)
+		  AND paper_orders.paper_intent_id=EXCLUDED.paper_intent_id AND paper_orders.workflow_id=EXCLUDED.workflow_id
+		  AND paper_orders.instrument_id=EXCLUDED.instrument_id AND paper_orders.quantity=EXCLUDED.quantity
+		  AND paper_orders.created_at=EXCLUDED.created_at AND paper_orders.activates_at=EXCLUDED.activates_at
+	`, order.OrderID, account.AccountID, order.ContractVersion, order.VenueID, string(order.Environment), order.PaperIntentID, order.WorkflowID, order.RecommendationID, order.RiskDecisionID, order.ConfirmationID, order.InstrumentID, order.Direction, order.Quantity, order.RemainingQuantity, order.FilledQuantity, string(order.OrderType), nullableFloat(order.LimitPrice), order.CostModelID, order.CreatedAt, order.ActivatesAt, string(order.Status))
 	if err != nil {
 		return err
 	}
+	if orderResult.RowsAffected() != 1 {
+		return ErrPersistenceConflict
+	}
+	var marketProvenance any
+	if orderProvenance := fill.MarketProvenance; orderProvenance != nil {
+		encoded, marshalErr := json.Marshal(orderProvenance)
+		err = marshalErr
+		if err != nil {
+			return err
+		}
+		marketProvenance = string(encoded)
+	}
 	_, err = tx.Exec(ctx, `
-		INSERT INTO paper_fills (fill_id,contract_version,order_id,paper_intent_id,workflow_id,instrument_id,direction,quantity,price,cost_model_id,mid_price,spread_cost,slippage_cost,commission,executed_price,filled_at,tick_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+		INSERT INTO paper_fills (fill_id,contract_version,order_id,paper_intent_id,workflow_id,instrument_id,direction,quantity,price,cost_model_id,mid_price,spread_cost,slippage_cost,commission,executed_price,filled_at,tick_id,execution_market_provenance)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 		ON CONFLICT (fill_id) DO NOTHING
-	`, fill.FillID, fill.ContractVersion, fill.OrderID, fill.PaperIntentID, fill.WorkflowID, fill.InstrumentID, fill.Direction, fill.Quantity, fill.Price, fill.Costs.ModelID, fill.Costs.MidPrice, fill.Costs.SpreadCost, fill.Costs.SlippageCost, fill.Costs.Commission, fill.Costs.ExecutedPrice, fill.FilledAt, fill.TickID)
+	`, fill.FillID, fill.ContractVersion, fill.OrderID, fill.PaperIntentID, fill.WorkflowID, fill.InstrumentID, fill.Direction, fill.Quantity, fill.Price, fill.Costs.ModelID, fill.Costs.MidPrice, fill.Costs.SpreadCost, fill.Costs.SlippageCost, fill.Costs.Commission, fill.Costs.ExecutedPrice, fill.FilledAt, fill.TickID, marketProvenance)
 	if err != nil {
 		return err
 	}
@@ -1331,11 +1429,17 @@ func (s *PostgresStore) loadWorkflowAndPaperArtifacts(ctx context.Context, recor
 	var fill papertrading.PaperFill
 	var fillDirection string
 	var executedPrice *float64
-	err = s.pool.QueryRow(ctx, `SELECT fill_id,contract_version,order_id,paper_intent_id,workflow_id,instrument_id,direction,quantity,price,cost_model_id,mid_price,spread_cost,slippage_cost,commission,executed_price,filled_at,tick_id FROM paper_fills WHERE fill_id=$1`, fillID).Scan(&fill.FillID, &fill.ContractVersion, &fill.OrderID, &fill.PaperIntentID, &fill.WorkflowID, &fill.InstrumentID, &fillDirection, &fill.Quantity, &fill.Price, &fill.Costs.ModelID, &fill.Costs.MidPrice, &fill.Costs.SpreadCost, &fill.Costs.SlippageCost, &fill.Costs.Commission, &executedPrice, &fill.FilledAt, &fill.TickID)
+	var executionProvenance []byte
+	err = s.pool.QueryRow(ctx, `SELECT fill_id,contract_version,order_id,paper_intent_id,workflow_id,instrument_id,direction,quantity,price,cost_model_id,mid_price,spread_cost,slippage_cost,commission,executed_price,filled_at,tick_id,execution_market_provenance FROM paper_fills WHERE fill_id=$1`, fillID).Scan(&fill.FillID, &fill.ContractVersion, &fill.OrderID, &fill.PaperIntentID, &fill.WorkflowID, &fill.InstrumentID, &fillDirection, &fill.Quantity, &fill.Price, &fill.Costs.ModelID, &fill.Costs.MidPrice, &fill.Costs.SpreadCost, &fill.Costs.SlippageCost, &fill.Costs.Commission, &executedPrice, &fill.FilledAt, &fill.TickID, &executionProvenance)
 	if err != nil {
 		return err
 	}
 	fill.Direction = fillDirection
+	if len(executionProvenance) > 0 {
+		if err := json.Unmarshal(executionProvenance, &fill.MarketProvenance); err != nil {
+			return failClosed("decode entry execution provenance", err)
+		}
+	}
 	fill.FilledAt = fill.FilledAt.UTC()
 	if executedPrice == nil {
 		return fmt.Errorf("paper fill executed price is missing")

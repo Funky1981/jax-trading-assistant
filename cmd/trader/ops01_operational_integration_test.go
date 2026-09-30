@@ -273,7 +273,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		Candidate:   exploratorypaper.CandidateInput{EventID: eventID, IssuerID: thesis.IssuerID, InstrumentID: thesis.InstrumentID, EventCategory: thesis.EventCategory, EventTimestamp: thesis.EventTimestamp, GeneratedAt: thesis.CandidateGeneratedAt, SourceURL: articleURL, Direction: thesis.Direction, CausalMechanism: thesis.ExpectedMechanism, QuantContext: thesis.QuantTechnicalContext, RiskAssessment: thesis.RiskAssessment, TechnicalConfirmation: "persisted candle confirmation", CandidatePolicyVersion: "candidate-evidence-scoring-v1"},
 		Evidence:    exploratorypaper.EvidenceAssessment{Provider: "candidate_evidence_scores", PolicyVersion: "candidate-evidence-scoring-v1", ReviewedAt: now, SourceBacked: true, QualityState: "sufficient", QualityScore: .9, RequiredQualityScore: .7, EvidenceReady: true, EvidenceGateReady: true, Corroborated: true, IssuerRelevant: true, InstrumentRelevant: true, IndependentSourceGroups: 2},
 		Thesis:      thesis, RiskDecision: riskDecision, Approval: approval, PositionID: "ops01-position-" + suffix, Quantity: 10,
-		Tick:  papertrading.MarketTick{TickID: "ops01-entry-tick-" + suffix, InstrumentID: "QQQ", Bid: 99.5, Ask: 100.5, Last: 100, AvailableQuantity: 10, Timestamp: entryAt.Add(2 * time.Second), ReceivedAt: entryAt.Add(2 * time.Second), Session: papertrading.SessionOpen, Source: "ops01-market-substitute"},
+		Tick:  papertrading.MarketTick{TickID: "ops01-entry-tick-" + suffix, InstrumentID: "QQQ", Bid: 99.5, Ask: 100.5, Last: 100, AvailableQuantity: 10, Timestamp: entryAt, ReceivedAt: entryAt, Session: papertrading.SessionOpen, Source: "ops01-market-substitute"},
 		Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: papertrading.DefaultCostModel(), Ledger: ledgerSnapshot, Calendar: calendar, Now: entryAt,
 	}
 	store := runtime.Store.(*exploratorypaper.PostgresStore)
@@ -292,9 +292,29 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		t.Fatalf("canonical candidate projection decision=%#v err=%v candidate=%#v evidence=%#v", projection, err, queuedEntries[0].Candidate, queuedEntries[0].Evidence)
 	}
 	runtime.Reviews = &ops01FixtureReviewSource{pool: pool, calendar: calendar, observedAt: now.Add(24 * time.Hour), price: 104}
+	testMarketPolicy := &marketDataSafetyPolicy{AllowedSources: []string{"ops01-provider-substitute"}, QuoteMaxAge: time.Minute, allowNonProductionSources: true}
+	runtime.Execution = &postgresPaperExecutionObservationSource{pool: pool, marketPolicy: testMarketPolicy, calendar: &calendar}
 	runtime.Now = func() time.Time { return entryAt }
 	if err := runtime.RunEntryCycle(ctx); err != nil {
 		t.Fatal(err)
+	}
+	var pendingOrders, prematureFills int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_orders WHERE paper_intent_id=$1`, approval.PaperIntent.IntentID).Scan(&pendingOrders); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_fills WHERE paper_intent_id=$1`, approval.PaperIntent.IntentID).Scan(&prematureFills); err != nil {
+		t.Fatal(err)
+	}
+	if pendingOrders != 1 || prematureFills != 0 {
+		t.Fatalf("OPS-01 first pass pending orders=%d premature fills=%d", pendingOrders, prematureFills)
+	}
+	executionAt := entryAt.Add(1200 * time.Millisecond)
+	if _, err := pool.Exec(ctx, `UPDATE quotes SET price=100,bid=99.9,ask=100.1,bid_size=1000,ask_size=1000,timestamp=$1,last_trade_timestamp=$1,received_at=$1,provider='ops01-provider-substitute' WHERE symbol='QQQ'`, executionAt); err != nil {
+		t.Fatal(err)
+	}
+	runtime.Now = func() time.Time { return executionAt }
+	if err := runtime.RunEntryCycle(ctx); err != nil {
+		t.Fatalf("OPS-01 post-latency entry: %v", err)
 	}
 	restartedRuntime, err := newExploratoryPaperRuntime(pool)
 	if err != nil {
@@ -313,7 +333,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	restartedRuntime.Reviews = &ops01FixtureReviewSource{pool: pool, calendar: calendar, observedAt: now.Add(24 * time.Hour), price: 104}
+	restartedRuntime.Reviews = &ops01FixtureReviewSource{pool: pool, calendar: calendar, observedAt: now.Add(2 * time.Hour), price: 104}
 	restartedRuntime.Now = func() time.Time { return now.Add(2 * time.Hour) }
 	reviewRuntime := restartedRuntime
 	if err := reviewRuntime.RunDueReviews(ctx); err != nil {
@@ -458,7 +478,9 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		t.Fatal(err)
 	}
 	finalRuntime.Reviews = &ops01FixtureReviewSource{pool: pool, calendar: calendar, observedAt: now.Add(24 * time.Hour), price: 104}
-	finalRuntime.Now = func() time.Time { return now.Add(3 * time.Hour) }
+	finalRuntime.Execution = &postgresPaperExecutionObservationSource{pool: pool, marketPolicy: testMarketPolicy, calendar: &calendar}
+	finalNow := now.Add(3 * time.Hour)
+	finalRuntime.Now = func() time.Time { return finalNow }
 	if err := finalRuntime.RunDueReviews(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -466,8 +488,8 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if finalRecord.Outcome == nil || finalRecord.Position.State != exploratorypaper.StateClosed || finalRecord.Outcome.EntryFillID != record.EntryFill.FillID || finalRecord.Outcome.ExitFillID == "" {
-		t.Fatalf("final durable outcome incomplete: %#v", finalRecord)
+	if finalRecord.Outcome != nil || finalRecord.Position.State == exploratorypaper.StateClosed {
+		t.Fatalf("OPS-01 review observation incorrectly filled the latency-bound exit: outcome=%#v position=%#v", finalRecord.Outcome, finalRecord.Position)
 	}
 	var exitWorkflowID string
 	for _, storedReview := range finalRecord.Reviews {
@@ -477,7 +499,32 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		}
 	}
 	if exitWorkflowID == "" {
-		t.Fatalf("durable exit workflow identity is missing: %#v", finalRecord.Reviews)
+		t.Fatalf("durable pending exit workflow identity is missing: %#v", finalRecord.Reviews)
+	}
+	var pendingExitOrders, prematureExitFills int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_orders WHERE workflow_id=$1`, exitWorkflowID).Scan(&pendingExitOrders); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_fills WHERE workflow_id=$1`, exitWorkflowID).Scan(&prematureExitFills); err != nil {
+		t.Fatal(err)
+	}
+	if pendingExitOrders != 1 || prematureExitFills != 0 {
+		t.Fatalf("OPS-01 exit first pass pending orders=%d premature fills=%d", pendingExitOrders, prematureExitFills)
+	}
+	exitExecutionAt := now.Add(3*time.Hour + 1200*time.Millisecond)
+	if _, err := pool.Exec(ctx, `UPDATE quotes SET price=103,bid=102.9,ask=103.1,bid_size=1000,ask_size=1000,timestamp=$1,last_trade_timestamp=$1,received_at=$1,provider='ops01-provider-substitute' WHERE symbol='QQQ'`, exitExecutionAt); err != nil {
+		t.Fatal(err)
+	}
+	finalNow = exitExecutionAt
+	if err := finalRuntime.RunDueReviews(ctx); err != nil {
+		t.Fatalf("OPS-01 post-latency exit: %v", err)
+	}
+	finalRecord, err = finalRuntime.Store.(*exploratorypaper.PostgresStore).Get(ctx, positionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finalRecord.Outcome == nil || finalRecord.Position.State != exploratorypaper.StateClosed || finalRecord.Outcome.EntryFillID != record.EntryFill.FillID || finalRecord.Outcome.ExitFillID == "" {
+		t.Fatalf("final durable outcome incomplete: %#v", finalRecord)
 	}
 	var orderCount, fillCount, ledgerCount int
 	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM paper_orders WHERE workflow_id=$1 OR workflow_id=$2`, record.Binding.WorkflowID, exitWorkflowID).Scan(&orderCount); err != nil {

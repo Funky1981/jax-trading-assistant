@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"jax-trading-assistant/internal/modules/papertrading"
 	"jax-trading-assistant/libs/runtimepolicy"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -91,11 +93,73 @@ func newExploratoryPaperRuntime(pool *pgxpool.Pool) (*exploratorypaper.Runtime, 
 		Store:        store,
 		Entries:      store,
 		Reviews:      &postgresExploratoryReviewSource{pool: pool, now: func() time.Time { return time.Now().UTC() }},
+		Execution:    &postgresPaperExecutionObservationSource{pool: pool},
 		ExitApprover: store,
 		Venue:        venue,
 		CostModel:    costModel,
 		Now:          func() time.Time { return time.Now().UTC() },
 	}, nil
+}
+
+// postgresPaperExecutionObservationSource uses the existing strict canonical
+// provider quote loader. A candle/review/approval snapshot is never promoted
+// into a later execution observation.
+type postgresPaperExecutionObservationSource struct {
+	pool         *pgxpool.Pool
+	marketPolicy *marketDataSafetyPolicy // non-nil only for explicit isolated test injection
+	calendar     *exploratorypaper.SessionCalendar
+}
+
+func (s *postgresPaperExecutionObservationSource) LoadExecutionObservation(ctx context.Context, instrumentID, direction string, asOf time.Time) (papertrading.MarketTick, bool, error) {
+	if s == nil || s.pool == nil || strings.TrimSpace(instrumentID) == "" || (direction != "LONG" && direction != "SHORT") || asOf.IsZero() || asOf.Location() != time.UTC {
+		return papertrading.MarketTick{}, false, fmt.Errorf("canonical PAPER execution-observation request is incomplete")
+	}
+	var policy marketDataSafetyPolicy
+	var err error
+	if s.marketPolicy != nil {
+		policy = *s.marketPolicy
+	} else {
+		policy, err = marketDataSafetyPolicyFromEnv()
+		if err != nil {
+			return papertrading.MarketTick{}, false, fmt.Errorf("execution market-data policy unavailable: %w", err)
+		}
+	}
+	observation, err := loadCanonicalQuoteObservation(ctx, s.pool, instrumentID, asOf, policy)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return papertrading.MarketTick{}, false, nil
+		}
+		return papertrading.MarketTick{}, false, err
+	}
+	quantity := observation.AskSize
+	if direction == "SHORT" {
+		quantity = observation.BidSize
+	}
+	if quantity <= 0 {
+		return papertrading.MarketTick{}, false, nil
+	}
+	var calendar exploratorypaper.SessionCalendar
+	if s.calendar != nil {
+		calendar = *s.calendar
+	} else {
+		calendar, err = configuredExploratoryCalendar()
+		if err != nil {
+			return papertrading.MarketTick{}, false, err
+		}
+	}
+	availableAt := observation.ReceivedAt
+	if observation.ProviderAt.After(availableAt) {
+		availableAt = observation.ProviderAt
+	}
+	if observation.LastProviderAt.After(availableAt) {
+		availableAt = observation.LastProviderAt
+	}
+	session, err := calendar.SessionState(availableAt.UTC())
+	if err != nil {
+		return papertrading.MarketTick{}, false, err
+	}
+	tickID := fmt.Sprintf("exec_%s_%s_%s_%s", strings.ToLower(observation.Source), observation.ProviderAt.UTC().Format("20060102T150405.000000000Z"), observation.LastProviderAt.UTC().Format("150405.000000000Z"), observation.ReceivedAt.UTC().Format("150405.000000000Z"))
+	return papertrading.MarketTick{TickID: tickID, InstrumentID: instrumentID, Bid: observation.Bid, Ask: observation.Ask, Last: observation.Last, AvailableQuantity: quantity, Timestamp: observation.ProviderAt.UTC(), LastProviderAt: observation.LastProviderAt.UTC(), ReceivedAt: observation.ReceivedAt.UTC(), AsOf: observation.AsOf.UTC(), RequireTemporalProvenance: true, Session: papertrading.Session(session), Source: observation.Source}, true, nil
 }
 
 type exploratoryWorkerHealth struct {

@@ -21,6 +21,17 @@ func (runtimeReviewSource) LoadReviewObservation(context.Context, LifecycleRecor
 	return ReviewObservation{}, ErrReviewInputsUnavailable
 }
 
+type runtimeExecutionSource struct{ ticks []papertrading.MarketTick }
+
+func (s *runtimeExecutionSource) LoadExecutionObservation(_ context.Context, _, _ string, _ time.Time) (papertrading.MarketTick, bool, error) {
+	if len(s.ticks) == 0 {
+		return papertrading.MarketTick{}, false, nil
+	}
+	tick := s.ticks[0]
+	s.ticks = s.ticks[1:]
+	return tick, true, nil
+}
+
 type availableReviewSource struct{ observation ReviewObservation }
 
 func (s availableReviewSource) LoadReviewObservation(context.Context, LifecycleRecord, Review) (ReviewObservation, error) {
@@ -42,7 +53,19 @@ type runtimeStore struct {
 	checkpointIDs     map[int]bool
 	recommendationIDs map[string]bool
 	ledger            papertrading.PaperAccount
+	pendingOrders     map[string]papertrading.PaperOrder
 	outcome           *Outcome
+}
+
+func (s *runtimeStore) PersistPendingOrder(_ context.Context, order papertrading.PaperOrder, _ string, _ ApprovalSnapshot) error {
+	if s.pendingOrders == nil {
+		s.pendingOrders = map[string]papertrading.PaperOrder{}
+	}
+	if prior, ok := s.pendingOrders[order.PaperIntentID]; ok && prior.OrderID != order.OrderID {
+		return ErrPersistenceConflict
+	}
+	s.pendingOrders[order.PaperIntentID] = order
+	return nil
 }
 
 func (s *runtimeStore) FindByCandidate(_ context.Context, candidateID string) (LifecycleRecord, bool, error) {
@@ -101,7 +124,9 @@ func (s *runtimeStore) PersistExitRecommendation(_ context.Context, _ string, _ 
 	return nil
 }
 func (s *runtimeStore) PersistExitApproval(context.Context, string, Review, ApprovalSnapshot) error {
-	s.approved++
+	if s.approved == 0 {
+		s.approved++
+	}
 	return nil
 }
 func (s *runtimeStore) PersistExitRejection(context.Context, string, Review, ApprovalSnapshot) error {
@@ -168,8 +193,12 @@ func TestRuntimeLoopUsesCanonicalEntryApprovalPaperVenueAndIdempotentRetry(t *te
 		t.Fatal(err)
 	}
 	entry := EntryRequest{CandidateID: "candidate-1", Candidate: input, Evidence: *input.ReviewedEvidence, Thesis: thesis, RiskDecision: risk, Approval: ApprovalSnapshot{Workflow: approvalWorkflow, PaperIntent: approvalIntent}, PositionID: "runtime-position", Quantity: 10, Tick: papertrading.MarketTick{TickID: "runtime-entry-tick", InstrumentID: thesis.InstrumentID, Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 10, Timestamp: now.Add(2 * time.Second), LastProviderAt: now.Add(2 * time.Second), ReceivedAt: now.Add(2 * time.Second), AsOf: now.Add(2 * time.Second), RequireTemporalProvenance: true, Session: papertrading.SessionOpen, Source: "canonical-market"}, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: costs, Ledger: ledger.Snapshot(), Calendar: calendar, Now: now}
+	executionTick := entry.Tick
+	executionTick.TickID = "runtime-entry-execution"
+	executionTick.Timestamp, executionTick.LastProviderAt, executionTick.ReceivedAt, executionTick.AsOf = now.Add(4*time.Second), now.Add(4*time.Second), now.Add(4*time.Second), now.Add(4*time.Second)
 	store := &recordingRuntimeStore{runtimeStore: &runtimeStore{}}
-	runtime := &Runtime{Mode: "PAPER", AccountID: "runtime-account", Store: store, Entries: runtimeEntrySource{entries: []EntryRequest{entry}}, Reviews: runtimeReviewSource{}, Venue: venue, CostModel: costs, Now: func() time.Time { return now }}
+	currentTime := now.Add(3 * time.Second)
+	runtime := &Runtime{Mode: "PAPER", AccountID: "runtime-account", Store: store, Entries: runtimeEntrySource{entries: []EntryRequest{entry}}, Reviews: runtimeReviewSource{}, Execution: &runtimeExecutionSource{ticks: []papertrading.MarketTick{executionTick}}, Venue: venue, CostModel: costs, Now: func() time.Time { return currentTime }}
 	mismatchedEntry := entry
 	mismatchedEntry.CandidateID = "candidate-mismatched-account"
 	mismatchedEntry.Ledger.AccountID = "other-account"
@@ -194,7 +223,14 @@ func TestRuntimeLoopUsesCanonicalEntryApprovalPaperVenueAndIdempotentRetry(t *te
 		t.Fatalf("mismatched entry mutated venue: before=%d after=%d", beforeMismatch, got)
 	}
 	if err := runtime.RunEntryCycle(context.Background()); err != nil {
-		t.Fatalf("runtime entry: %v", err)
+		t.Fatalf("runtime pending entry pass: %v", err)
+	}
+	if store.found || len(venue.Snapshot().Fills) != 0 || len(venue.Snapshot().Orders) != 1 {
+		t.Fatal("pre-activation pass did not preserve exactly one pending order without a fill")
+	}
+	currentTime = now.Add(4 * time.Second)
+	if err := runtime.RunEntryCycle(context.Background()); err != nil {
+		t.Fatalf("runtime post-activation entry: %v", err)
 	}
 	if !store.found || store.record.EntryFill.FillID == "" || store.record.Position.PositionID != entry.PositionID || store.scheduled != 5 || store.processed != 1 {
 		t.Fatalf("runtime entry was not durably handed off: %#v", store)
@@ -231,8 +267,9 @@ func TestRuntimeLoopRejectsReviewForDifferentAccountBeforeVenueAction(t *testing
 		Reviews: availableReviewSource{observation: ReviewObservation{
 			Ledger: papertrading.PaperAccount{AccountID: "account-b"},
 		}},
-		Venue: venue,
-		Now:   func() time.Time { return now },
+		Execution: &runtimeExecutionSource{},
+		Venue:     venue,
+		Now:       func() time.Time { return now },
 	}
 	before := len(venue.Snapshot().Orders)
 	err = runtime.processReview(context.Background(), ReviewRecord{Review: Review{PositionID: "position-account-scope", SessionNumber: 1}})
@@ -252,7 +289,7 @@ func TestRuntimeLoopSurfacesReviewUnavailablePersistenceFailure(t *testing.T) {
 	}
 	persistErr := errors.New("review unavailable persistence failed")
 	store := &runtimeStore{due: []ReviewRecord{{Review: Review{ReviewID: "review-persist-failure", PositionID: "position-1", SessionNumber: 1}}}, missingErr: persistErr}
-	runtime := &Runtime{Mode: "PAPER", AccountID: "account-1", Store: store, Entries: runtimeEntrySource{}, Reviews: runtimeReviewSource{}, Venue: venue, Now: func() time.Time { return now }}
+	runtime := &Runtime{Mode: "PAPER", AccountID: "account-1", Store: store, Entries: runtimeEntrySource{}, Reviews: runtimeReviewSource{}, Execution: &runtimeExecutionSource{}, Venue: venue, Now: func() time.Time { return now }}
 	err = runtime.RunDueReviews(context.Background())
 	if !errors.Is(err, ErrReviewUnavailablePersistence) || !errors.Is(err, persistErr) {
 		t.Fatalf("RunDueReviews error = %v, want persistence error surfaced", err)
@@ -286,8 +323,17 @@ func TestRuntimeLoopProcessesDueReviewAndPreservesMissingData(t *testing.T) {
 		t.Fatal(err)
 	}
 	entry := EntryRequest{CandidateID: "candidate-review", Candidate: input, Evidence: *input.ReviewedEvidence, Thesis: thesis, RiskDecision: risk, Approval: ApprovalSnapshot{Workflow: wf, PaperIntent: intent}, PositionID: "review-position", Quantity: 10, Tick: papertrading.MarketTick{TickID: "review-entry", InstrumentID: thesis.InstrumentID, Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 10, Timestamp: now.Add(2 * time.Second), ReceivedAt: now.Add(2 * time.Second), Session: papertrading.SessionOpen, Source: "canonical-market"}, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: costs, Ledger: ledger.Snapshot(), Calendar: calendar, Now: now}
+	entryExecution := entry.Tick
+	entryExecution.TickID = "review-entry-execution"
+	entryExecution.Timestamp, entryExecution.LastProviderAt, entryExecution.ReceivedAt, entryExecution.AsOf = now.Add(6*time.Second), now.Add(6*time.Second), now.Add(6*time.Second), now.Add(6*time.Second)
+	entryExecution.RequireTemporalProvenance = true
 	store := &recordingRuntimeStore{runtimeStore: &runtimeStore{}}
-	entryRuntime := &Runtime{Mode: "PAPER", AccountID: "review-account", Store: store, Entries: runtimeEntrySource{entries: []EntryRequest{entry}}, Reviews: runtimeReviewSource{}, Venue: venue, CostModel: costs, Now: func() time.Time { return now }}
+	entryNow := now.Add(3 * time.Second)
+	entryRuntime := &Runtime{Mode: "PAPER", AccountID: "review-account", Store: store, Entries: runtimeEntrySource{entries: []EntryRequest{entry}}, Reviews: runtimeReviewSource{}, Execution: &runtimeExecutionSource{ticks: []papertrading.MarketTick{entryExecution}}, Venue: venue, CostModel: costs, Now: func() time.Time { return entryNow }}
+	if err := entryRuntime.RunEntryCycle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	entryNow = now.Add(5 * time.Second)
 	if err := entryRuntime.RunEntryCycle(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +342,9 @@ func TestRuntimeLoopProcessesDueReviewAndPreservesMissingData(t *testing.T) {
 	executionAt := exitTime.Add(2 * time.Second)
 	exitWorkflow, exitIntent := approvedIntent(t, "review-exit", "SHORT", exitTime)
 	observation := ReviewObservation{Tick: papertrading.MarketTick{TickID: "review-tick", InstrumentID: thesis.InstrumentID, Bid: 94, Ask: 95, Last: 94, AvailableQuantity: 10, Timestamp: executionAt, ReceivedAt: executionAt, Session: papertrading.SessionOpen, Source: "canonical-market"}, Price: 94, PriceSource: "canonical-market", Evidence: []RelevantEvidence{{Reference: EvidenceReference{EvidenceID: "runtime-invalidation", SourceID: "issuer-source", SourceURL: "https://example.test/invalidation", Quality: "high", ObservedAt: exitTime}, IssuerID: thesis.IssuerID, InstrumentID: thesis.InstrumentID, Signal: EvidenceInvalidates, Reason: "issuer correction invalidates the mechanism"}}, Calendar: calendar, Ledger: store.ledger, Path: []PriceObservation{{ObservationID: "review-path", At: exitTime, Price: 94, Source: "canonical-market"}}, ThesisInvalidated: true}
-	runtime := &Runtime{Mode: "PAPER", AccountID: "review-account", Store: store, Entries: runtimeEntrySource{}, Reviews: availableReviewSource{observation: observation}, ExitApprover: runtimeExitApprover{approval: ApprovalSnapshot{Workflow: exitWorkflow, PaperIntent: exitIntent}}, Venue: venue, CostModel: costs, Now: func() time.Time { return exitTime }}
+	exitExecution := papertrading.MarketTick{TickID: "review-exit-execution", InstrumentID: thesis.InstrumentID, Bid: 94, Ask: 95, Last: 94, AvailableQuantity: 10, Timestamp: executionAt.Add(time.Second), LastProviderAt: executionAt.Add(time.Second), ReceivedAt: executionAt.Add(time.Second), AsOf: executionAt.Add(time.Second), RequireTemporalProvenance: true, Session: papertrading.SessionOpen, Source: "canonical-market"}
+	currentExitTime := exitTime
+	runtime := &Runtime{Mode: "PAPER", AccountID: "review-account", Store: store, Entries: runtimeEntrySource{}, Reviews: availableReviewSource{observation: observation}, Execution: &runtimeExecutionSource{ticks: []papertrading.MarketTick{exitExecution}}, ExitApprover: runtimeExitApprover{approval: ApprovalSnapshot{Workflow: exitWorkflow, PaperIntent: exitIntent}}, Venue: venue, CostModel: costs, Now: func() time.Time { return currentExitTime }}
 	noApprovalRuntime := *runtime
 	noApprovalRuntime.ExitApprover = nil
 	if err := noApprovalRuntime.RunDueReviews(context.Background()); err != nil {
@@ -305,6 +353,13 @@ func TestRuntimeLoopProcessesDueReviewAndPreservesMissingData(t *testing.T) {
 	if store.recommended != 1 || store.outcome != nil {
 		t.Fatalf("exit recommendation was not durable before approval: recommended=%d outcome=%#v", store.recommended, store.outcome)
 	}
+	if err := runtime.RunDueReviews(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if store.outcome != nil || len(venue.Snapshot().Fills) != 1 {
+		t.Fatal("approved exit should remain pending while its positive latency elapses")
+	}
+	currentExitTime = exitTime.Add(time.Second)
 	if err := runtime.RunDueReviews(context.Background()); err != nil {
 		t.Fatal(err)
 	}

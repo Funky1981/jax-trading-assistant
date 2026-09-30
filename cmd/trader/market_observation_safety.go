@@ -90,17 +90,16 @@ type marketObservationQueryer interface {
 func loadCanonicalQuoteObservationFrom(ctx context.Context, queryer marketObservationQueryer, symbol string, asOf time.Time, policy marketDataSafetyPolicy) (marketdata.EconomicObservation, error) {
 	var observation marketdata.EconomicObservation
 	err := queryer.QueryRow(ctx, `
-		SELECT symbol,provider,timestamp,last_trade_timestamp,received_at,bid,ask,price
+		SELECT symbol,provider,timestamp,last_trade_timestamp,received_at,bid,ask,bid_size,ask_size,price
 		FROM quotes
 		WHERE UPPER(symbol)=UPPER($1)
 		  AND provider = ANY($2::text[])
 		  AND timestamp <= $3
 		  AND last_trade_timestamp <= $3
 		  AND received_at <= $3
-		AND timestamp >= $3 - make_interval(secs => $4::double precision)
 		ORDER BY timestamp DESC, last_trade_timestamp DESC, received_at DESC, provider ASC
 		LIMIT 1
-	`, symbol, policy.AllowedSources, asOf.UTC(), policy.QuoteMaxAge.Seconds()).Scan(&observation.Symbol, &observation.Source, &observation.ProviderAt, &observation.LastProviderAt, &observation.ReceivedAt, &observation.Bid, &observation.Ask, &observation.Last)
+	`, symbol, policy.AllowedSources, asOf.UTC()).Scan(&observation.Symbol, &observation.Source, &observation.ProviderAt, &observation.LastProviderAt, &observation.ReceivedAt, &observation.Bid, &observation.Ask, &observation.BidSize, &observation.AskSize, &observation.Last)
 	if err != nil {
 		return marketdata.EconomicObservation{}, fmt.Errorf("load bounded provider quote: %w", err)
 	}

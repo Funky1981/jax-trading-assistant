@@ -24,6 +24,7 @@ var (
 	ErrReviewUnavailablePersistence = errors.New("exploratory paper review-unavailable persistence failed")
 	ErrCanonicalProjection          = errors.New("canonical evidence projection is unavailable or invalid")
 	ErrRuntimeIdentityConflict      = errors.New("exploratory paper runtime identity conflict")
+	ErrExecutionObservationPending  = errors.New("exploratory paper order is waiting for a post-activation observation")
 )
 
 // EntryRequest is produced by the existing accepted event-driven path. The
@@ -49,6 +50,13 @@ type EntryRequest struct {
 
 type EntrySource interface {
 	LoadApprovedEntries(context.Context) ([]EntryRequest, error)
+}
+
+// ExecutionObservationSource loads a new canonical quote observation for an
+// already-created order. It must preserve provider quote/trade/receipt/as-of
+// provenance and must not return the approval/review snapshot as a substitute.
+type ExecutionObservationSource interface {
+	LoadExecutionObservation(context.Context, string, string, time.Time) (papertrading.MarketTick, bool, error)
 }
 
 type ReviewObservation struct {
@@ -83,6 +91,7 @@ type ExitApprovalSource interface {
 
 type RuntimeStore interface {
 	FindByCandidate(context.Context, string) (LifecycleRecord, bool, error)
+	PersistPendingOrder(context.Context, papertrading.PaperOrder, string, ApprovalSnapshot) error
 	SaveApprovedEntry(context.Context, string, TradeThesis, EntryBinding, ApprovalSnapshot, Position, EntrySnapshot) (string, error)
 	PersistReviewSchedule(context.Context, string, ReviewSchedule) error
 	MarkEntryProcessed(context.Context, string) error
@@ -102,6 +111,7 @@ type Runtime struct {
 	Store        RuntimeStore
 	Entries      EntrySource
 	Reviews      ReviewSource
+	Execution    ExecutionObservationSource
 	ExitApprover ExitApprovalSource
 	Venue        *papertrading.PaperVenue
 	CostModel    papertrading.CostModel
@@ -115,7 +125,7 @@ func (r *Runtime) validate() error {
 	if strings.TrimSpace(r.AccountID) == "" {
 		return fmt.Errorf("%w: paper account identity is missing", ErrFailedClosed)
 	}
-	if r.Store == nil || r.Entries == nil || r.Reviews == nil || r.Venue == nil {
+	if r.Store == nil || r.Entries == nil || r.Reviews == nil || r.Execution == nil || r.Venue == nil {
 		return fmt.Errorf("%w: runtime dependencies are incomplete", ErrFailedClosed)
 	}
 	if r.Now == nil {
@@ -219,26 +229,61 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 	if err != nil {
 		return fmt.Errorf("%w: restore paper ledger: %v", ErrFailedClosed, err)
 	}
-	createdAt := entry.Now
+	createdAt := r.Now().UTC()
 	if confirmedAt := entry.Approval.Workflow.Confirmation.ConfirmedAt; createdAt.Before(confirmedAt) {
 		createdAt = confirmedAt
 	}
-	order, err := r.Venue.Submit(papertrading.CreateOrderRequest{Workflow: entry.Approval.Workflow, PaperIntent: entry.Approval.PaperIntent, Venue: entry.Venue, CostModel: entry.CostModel, InstrumentID: entry.Thesis.InstrumentID, Quantity: entry.Quantity, ReferencePrice: entry.Tick.Last, OrderType: papertrading.OrderMarket, CreatedAt: createdAt, IdempotencyKey: entry.Approval.PaperIntent.IntentID})
-	if err != nil {
-		return err
-	}
-	fills, err := r.Venue.ProcessTickWithSafety(entry.Tick, false)
-	if err != nil || len(fills) != 1 {
+	request := papertrading.CreateOrderRequest{Workflow: entry.Approval.Workflow, PaperIntent: entry.Approval.PaperIntent, Venue: entry.Venue, CostModel: entry.CostModel, InstrumentID: entry.Thesis.InstrumentID, Quantity: entry.Quantity, ReferencePrice: entry.Tick.Last, OrderType: papertrading.OrderMarket, CreatedAt: createdAt, IdempotencyKey: entry.Approval.PaperIntent.IntentID}
+	order, found := r.Venue.OrderForIntent(entry.Approval.PaperIntent.IntentID)
+	if found {
+		if order.WorkflowID != entry.Approval.Workflow.WorkflowID || order.InstrumentID != entry.Thesis.InstrumentID || order.Quantity != entry.Quantity || order.Direction != entry.Approval.PaperIntent.Direction {
+			return ErrRuntimeIdentityConflict
+		}
+	} else {
+		order, err = r.Venue.Submit(request)
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("%w: entry did not produce exactly one simulated fill", ErrFailedClosed)
+	}
+	if err := r.Store.PersistPendingOrder(ctx, order, r.AccountID, entry.Approval); err != nil {
+		return fmt.Errorf("persist pending entry order: %w", err)
+	}
+	if r.Now().UTC().Before(order.ActivatesAt) {
+		return nil
+	}
+	executionTick, available, err := r.Execution.LoadExecutionObservation(ctx, order.InstrumentID, order.Direction, r.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("load entry execution observation: %w", err)
+	}
+	if !available {
+		return nil
+	}
+	if err := r.Venue.ValidateMarketTick(executionTick); err != nil {
+		return fmt.Errorf("%w: entry execution observation: %v", ErrFailedClosed, err)
+	}
+	if executionTick.Session != papertrading.SessionOpen {
+		return nil
+	}
+	if err := validatePostActivationObservation(executionTick, entry.Tick.TickID, order); errors.Is(err, ErrExecutionObservationPending) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	fills, err := r.Venue.ProcessOrderTickWithSafety(executionTick, order.OrderID, false)
+	if err != nil {
+		return err
+	}
+	if len(fills) == 0 {
+		return fmt.Errorf("%w: valid post-activation entry observation did not execute the market order", ErrFailedClosed)
+	}
+	if len(fills) != 1 || fills[0].FilledAt.Before(entry.Approval.Workflow.Confirmation.ConfirmedAt) || fills[0].FilledAt.Before(order.CreatedAt) || fills[0].FilledAt.Before(order.ActivatesAt) {
+		return fmt.Errorf("%w: entry fill violates order or human-approval causality", ErrFailedClosed)
 	}
 	account, err := ledger.ApplyFill(fills[0])
 	if err != nil {
 		return err
 	}
-	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: r.Venue.Snapshot(), Account: account}, entry.Now.UTC()); result.Status != papertrading.ReconciliationClean {
+	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: r.Venue.Snapshot(), Account: account}, fills[0].FilledAt); result.Status != papertrading.ReconciliationClean {
 		return fmt.Errorf("%w: entry ledger reconciliation failed: %v", ErrFailedClosed, result.ReasonCodes)
 	}
 	venueSnapshot := r.Venue.Snapshot()
@@ -387,27 +432,58 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if approvalAt := approval.Workflow.Confirmation.ConfirmedAt; createdAt.Before(approvalAt) {
 		createdAt = approvalAt
 	}
-	order, err := r.Venue.Submit(papertrading.CreateOrderRequest{Workflow: approval.Workflow, PaperIntent: approval.PaperIntent, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: costModel, InstrumentID: position.Thesis.InstrumentID, Quantity: item.Lifecycle.EntryFill.Quantity, ReferencePrice: observation.Price, OrderType: papertrading.OrderMarket, CreatedAt: createdAt, IdempotencyKey: approval.PaperIntent.IntentID})
-	if err != nil {
-		return fmt.Errorf("submit exit order: %w", err)
+	request := papertrading.CreateOrderRequest{Workflow: approval.Workflow, PaperIntent: approval.PaperIntent, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: costModel, InstrumentID: position.Thesis.InstrumentID, Quantity: item.Lifecycle.EntryFill.Quantity, ReferencePrice: observation.Price, OrderType: papertrading.OrderMarket, CreatedAt: createdAt, IdempotencyKey: approval.PaperIntent.IntentID}
+	order, found := r.Venue.OrderForIntent(approval.PaperIntent.IntentID)
+	if found {
+		if order.WorkflowID != approval.Workflow.WorkflowID || order.InstrumentID != position.Thesis.InstrumentID || order.Quantity != item.Lifecycle.EntryFill.Quantity || order.Direction != approval.PaperIntent.Direction {
+			return ErrRuntimeIdentityConflict
+		}
+	} else {
+		order, err = r.Venue.Submit(request)
+		if err != nil {
+			return fmt.Errorf("submit exit order: %w", err)
+		}
 	}
-	fills, err := r.Venue.ProcessTickWithSafety(observation.Tick, false)
-	if err != nil || len(fills) != 1 {
-		return fmt.Errorf("%w: exit did not produce exactly one simulated fill", ErrFailedClosed)
+	if err := r.Store.PersistPendingOrder(ctx, order, r.AccountID, approval); err != nil {
+		return fmt.Errorf("persist pending exit order: %w", err)
+	}
+	if r.Now().UTC().Before(order.ActivatesAt) {
+		return nil
+	}
+	executionTick, available, err := r.Execution.LoadExecutionObservation(ctx, order.InstrumentID, order.Direction, r.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("load exit execution observation: %w", err)
+	}
+	if !available {
+		return nil
+	}
+	if err := r.Venue.ValidateMarketTick(executionTick); err != nil {
+		return fmt.Errorf("%w: exit execution observation: %v", ErrFailedClosed, err)
+	}
+	if executionTick.Session != papertrading.SessionOpen {
+		return nil
+	}
+	if err := validatePostActivationObservation(executionTick, observation.Tick.TickID, order); errors.Is(err, ErrExecutionObservationPending) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	fills, err := r.Venue.ProcessOrderTickWithSafety(executionTick, order.OrderID, false)
+	if err != nil {
+		return err
+	}
+	if len(fills) == 0 {
+		return fmt.Errorf("%w: valid post-activation exit observation did not execute the market order", ErrFailedClosed)
+	}
+	if len(fills) != 1 || fills[0].FilledAt.Before(approval.Workflow.Confirmation.ConfirmedAt) || fills[0].FilledAt.Before(order.CreatedAt) || fills[0].FilledAt.Before(order.ActivatesAt) {
+		return fmt.Errorf("%w: exit fill violates order or human-approval causality", ErrFailedClosed)
 	}
 	account, err := ledger.ApplyFill(fills[0])
 	if err != nil {
 		return fmt.Errorf("apply exit fill to ledger: %w", err)
 	}
-	reconciliationAt := observation.ReceivedAt
-	if reconciliationAt.IsZero() {
-		reconciliationAt = observation.Tick.ReceivedAt
-	}
-	if reconciliationAt.IsZero() {
-		reconciliationAt = observation.Tick.Timestamp
-	}
 	venueSnapshot := r.Venue.Snapshot()
-	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: venueSnapshot, Account: account}, reconciliationAt.UTC()); result.Status != papertrading.ReconciliationClean {
+	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: venueSnapshot, Account: account}, fills[0].FilledAt); result.Status != papertrading.ReconciliationClean {
 		return fmt.Errorf("%w: exit ledger reconciliation failed: %v", ErrFailedClosed, result.ReasonCodes)
 	}
 	persistedOrder, ok := venueSnapshot.Orders[order.OrderID]
@@ -419,4 +495,24 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 		return fmt.Errorf("build exit outcome: %w", err)
 	}
 	return r.Store.PersistOutcome(ctx, position.PositionID, ExitSnapshot{Order: persistedOrder, Fill: fills[0], Ledger: account, Approval: &approval}, outcome)
+}
+
+func validatePostActivationObservation(tick papertrading.MarketTick, priorTickID string, order papertrading.PaperOrder) error {
+	if !tick.RequireTemporalProvenance {
+		return fmt.Errorf("%w: execution observation lacks strict canonical temporal provenance", ErrFailedClosed)
+	}
+	availableAt, err := tick.AvailableAt()
+	if err != nil {
+		return fmt.Errorf("%w: execution observation availability: %v", ErrFailedClosed, err)
+	}
+	if availableAt.Before(order.ActivatesAt) {
+		return fmt.Errorf("%w: observation availability %s is before order activation %s", ErrExecutionObservationPending, availableAt, order.ActivatesAt)
+	}
+	if tick.TickID == priorTickID {
+		return fmt.Errorf("%w: execution observation must be distinct from the approval/review snapshot", ErrFailedClosed)
+	}
+	if tick.InstrumentID != order.InstrumentID || availableAt.Before(order.CreatedAt) {
+		return fmt.Errorf("%w: execution observation predates or does not match the pending order", ErrFailedClosed)
+	}
+	return nil
 }

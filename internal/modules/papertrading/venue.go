@@ -12,22 +12,26 @@ import (
 )
 
 type PaperFill struct {
-	FillID          string        `json:"fill_id"`
-	ContractVersion string        `json:"contract_version"`
-	OrderID         string        `json:"order_id"`
-	PaperIntentID   string        `json:"paper_intent_id"`
-	WorkflowID      string        `json:"workflow_id"`
-	InstrumentID    string        `json:"instrument_id"`
-	Direction       string        `json:"direction"`
-	Quantity        float64       `json:"quantity"`
-	Price           float64       `json:"price"`
-	Costs           CostBreakdown `json:"costs"`
-	FilledAt        time.Time     `json:"filled_at"`
-	TickID          string        `json:"tick_id"`
+	FillID           string            `json:"fill_id"`
+	ContractVersion  string            `json:"contract_version"`
+	OrderID          string            `json:"order_id"`
+	PaperIntentID    string            `json:"paper_intent_id"`
+	WorkflowID       string            `json:"workflow_id"`
+	InstrumentID     string            `json:"instrument_id"`
+	Direction        string            `json:"direction"`
+	Quantity         float64           `json:"quantity"`
+	Price            float64           `json:"price"`
+	Costs            CostBreakdown     `json:"costs"`
+	FilledAt         time.Time         `json:"filled_at"`
+	TickID           string            `json:"tick_id"`
+	MarketProvenance *MarketProvenance `json:"market_provenance,omitempty"`
 }
 
 func (fill PaperFill) Validate() error {
 	if fill.ContractVersion != FillContractVersion || fill.OrderID == "" || fill.PaperIntentID == "" || fill.WorkflowID == "" || fill.InstrumentID == "" || (fill.Direction != "LONG" && fill.Direction != "SHORT") || !finitePositive(fill.Quantity) || !finitePositive(fill.Price) || fill.TickID == "" || fill.FilledAt.IsZero() || fill.FilledAt.Location() != time.UTC || fill.Costs.ModelID == "" || fill.FillID != fillIdentity(fill) {
+		return ErrInvalidArtifact
+	}
+	if fill.MarketProvenance != nil && (!fill.MarketProvenance.StrictTemporal || fill.MarketProvenance.Provider == "" || fill.MarketProvenance.QuoteProviderAt.IsZero() || fill.MarketProvenance.TradeProviderAt.IsZero() || fill.MarketProvenance.ReceivedAt.IsZero() || fill.MarketProvenance.AsOf.IsZero() || fill.MarketProvenance.AvailableAt.IsZero() || fill.MarketProvenance.AvailableAt.After(fill.FilledAt)) {
 		return ErrInvalidArtifact
 	}
 	return nil
@@ -40,6 +44,7 @@ type VenueSnapshot struct {
 	Fills          map[string]PaperFill  `json:"fills"`
 	ProcessedTicks map[string]string     `json:"processed_ticks"`
 	CommandKeys    map[string]string     `json:"command_keys"`
+	ConsumedByTick map[string]float64    `json:"consumed_by_tick,omitempty"`
 	LastTick       time.Time             `json:"last_tick"`
 }
 
@@ -52,6 +57,7 @@ type PaperVenue struct {
 	intentOrders   map[string]string
 	processedTicks map[string]string
 	commandKeys    map[string]string
+	consumedByTick map[string]float64
 	lastTick       time.Time
 }
 
@@ -62,7 +68,7 @@ func NewPaperVenue(contract CapabilityContract, costModel CostModel) (*PaperVenu
 	if err := costModel.Validate(); err != nil {
 		return nil, err
 	}
-	return &PaperVenue{contract: contract, costModel: costModel, orders: map[string]PaperOrder{}, fills: map[string]PaperFill{}, intentOrders: map[string]string{}, processedTicks: map[string]string{}, commandKeys: map[string]string{}}, nil
+	return &PaperVenue{contract: contract, costModel: costModel, orders: map[string]PaperOrder{}, fills: map[string]PaperFill{}, intentOrders: map[string]string{}, processedTicks: map[string]string{}, commandKeys: map[string]string{}, consumedByTick: map[string]float64{}}, nil
 }
 
 func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
@@ -92,6 +98,7 @@ func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
 			return nil, ErrInvalidArtifact
 		}
 		venue.fills[id] = fill
+		venue.consumedByTick[fill.TickID] += fill.Quantity
 	}
 	filledByOrder := make(map[string]float64)
 	for _, fill := range snapshot.Fills {
@@ -113,6 +120,14 @@ func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
 			return nil, ErrInvalidArtifact
 		}
 		venue.commandKeys[key] = fingerprint
+	}
+	for tickID, quantity := range snapshot.ConsumedByTick {
+		if tickID == "" || !finiteNonNegative(quantity) {
+			return nil, ErrInvalidArtifact
+		}
+		if quantity > venue.consumedByTick[tickID] {
+			venue.consumedByTick[tickID] = quantity
+		}
 	}
 	if !snapshot.LastTick.IsZero() && snapshot.LastTick.Location() != time.UTC {
 		return nil, ErrInvalidArtifact
@@ -145,11 +160,48 @@ func (venue *PaperVenue) Submit(request CreateOrderRequest) (PaperOrder, error) 
 	return order, nil
 }
 
+// OrderForIntent returns the durable-in-process order identity for safe runtime
+// retries after restoration. It does not mutate order state.
+func (venue *PaperVenue) OrderForIntent(paperIntentID string) (PaperOrder, bool) {
+	venue.mu.Lock()
+	defer venue.mu.Unlock()
+	id, ok := venue.intentOrders[paperIntentID]
+	if !ok {
+		return PaperOrder{}, false
+	}
+	order, ok := venue.orders[id]
+	return order, ok
+}
+
 func (venue *PaperVenue) ProcessTick(tick MarketTick) ([]PaperFill, error) {
 	return venue.ProcessTickWithSafety(tick, false)
 }
 
+func (venue *PaperVenue) ValidateMarketTick(tick MarketTick) error {
+	if err := tick.Validate(venue.contract.MaxQuoteAge); err != nil {
+		return err
+	}
+	if tick.Session == SessionUnknown {
+		return ErrMarketUnknown
+	}
+	return nil
+}
+
 func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped bool) ([]PaperFill, error) {
+	return venue.processTick(tick, breakerTripped, "")
+}
+
+// ProcessOrderTickWithSafety limits one observation to one durable order. This
+// lets the account-scoped runtime persist that order's fill and ledger in one
+// transaction without mutating unrelated pending orders in memory.
+func (venue *PaperVenue) ProcessOrderTickWithSafety(tick MarketTick, orderID string, breakerTripped bool) ([]PaperFill, error) {
+	if orderID == "" {
+		return nil, ErrOrderNotFound
+	}
+	return venue.processTick(tick, breakerTripped, orderID)
+}
+
+func (venue *PaperVenue) processTick(tick MarketTick, breakerTripped bool, onlyOrderID string) ([]PaperFill, error) {
 	if breakerTripped {
 		return nil, ErrPaperExecutionBlocked
 	}
@@ -165,20 +217,39 @@ func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped b
 	}
 	venue.mu.Lock()
 	defer venue.mu.Unlock()
-	if prior, ok := venue.processedTicks[tick.TickID]; ok {
+	orderProcessedKey := tick.TickID + "|" + onlyOrderID
+	if onlyOrderID != "" {
+		if prior, ok := venue.processedTicks[orderProcessedKey]; ok {
+			if prior != tickFingerprint(tick) {
+				return nil, ErrIdempotencyConflict
+			}
+			return nil, nil
+		}
+	}
+	prior, tickSeen := venue.processedTicks[tick.TickID]
+	if tickSeen {
 		if prior != tickFingerprint(tick) {
 			return nil, ErrIdempotencyConflict
 		}
-		return nil, nil
-	}
-	if !venue.lastTick.IsZero() && !availableAt.After(venue.lastTick) {
-		return nil, fmt.Errorf("%w: market ticks must be strictly ordered", ErrInvalidMarketData)
+		if onlyOrderID == "" {
+			return nil, nil
+		}
+		if !venue.lastTick.Equal(availableAt) {
+			return nil, fmt.Errorf("%w: repeated market observation at %s is no longer the latest tick (last=%s)", ErrInvalidMarketData, availableAt, venue.lastTick)
+		}
+	} else if !venue.lastTick.IsZero() && !availableAt.After(venue.lastTick) {
+		return nil, fmt.Errorf("%w: market tick %s must be after last tick %s", ErrInvalidMarketData, availableAt, venue.lastTick)
 	}
 	if tick.Session == SessionUnknown {
 		return nil, ErrMarketUnknown
 	}
-	venue.processedTicks[tick.TickID] = tickFingerprint(tick)
-	venue.lastTick = availableAt
+	if !tickSeen {
+		venue.processedTicks[tick.TickID] = tickFingerprint(tick)
+		venue.lastTick = availableAt
+	}
+	if onlyOrderID != "" {
+		venue.processedTicks[orderProcessedKey] = tickFingerprint(tick)
+	}
 	if tick.Session == SessionClosed {
 		venue.activateOrdersLocked(availableAt)
 		return nil, nil
@@ -190,8 +261,14 @@ func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped b
 	}
 	sort.Strings(ids)
 	var fills []PaperFill
-	available := tick.AvailableQuantity
+	available := tick.AvailableQuantity - venue.consumedByTick[tick.TickID]
+	if available < 0 {
+		available = 0
+	}
 	for _, id := range ids {
+		if onlyOrderID != "" && id != onlyOrderID {
+			continue
+		}
 		order := venue.orders[id]
 		if order.Status != OrderActive && order.Status != OrderPartiallyFilled {
 			continue
@@ -207,7 +284,14 @@ func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped b
 		if order.OrderType == OrderLimit && ((order.Direction == "LONG" && costs.ExecutedPrice > order.LimitPrice) || (order.Direction == "SHORT" && costs.ExecutedPrice < order.LimitPrice)) {
 			continue
 		}
+		provenance, err := tick.Provenance()
+		if err != nil && tick.RequireTemporalProvenance {
+			return fills, err
+		}
 		fill := PaperFill{ContractVersion: FillContractVersion, OrderID: order.OrderID, PaperIntentID: order.PaperIntentID, WorkflowID: order.WorkflowID, InstrumentID: order.InstrumentID, Direction: order.Direction, Quantity: quantity, Price: costs.ExecutedPrice, Costs: costs, FilledAt: availableAt, TickID: tick.TickID}
+		if provenance.StrictTemporal {
+			fill.MarketProvenance = &provenance
+		}
 		fill.FillID = fillIdentity(fill)
 		if err := fill.Validate(); err != nil {
 			return fills, err
@@ -224,6 +308,7 @@ func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped b
 		}
 		venue.orders[id] = order
 		venue.fills[fill.FillID] = fill
+		venue.consumedByTick[tick.TickID] += quantity
 		fills = append(fills, fill)
 		available -= quantity
 	}
@@ -310,7 +395,11 @@ func (venue *PaperVenue) Snapshot() VenueSnapshot {
 	for key, value := range venue.commandKeys {
 		commands[key] = value
 	}
-	return VenueSnapshot{Contract: venue.contract, CostModel: venue.costModel, Orders: orders, Fills: fills, ProcessedTicks: processed, CommandKeys: commands, LastTick: venue.lastTick}
+	consumed := make(map[string]float64, len(venue.consumedByTick))
+	for key, value := range venue.consumedByTick {
+		consumed[key] = value
+	}
+	return VenueSnapshot{Contract: venue.contract, CostModel: venue.costModel, Orders: orders, Fills: fills, ProcessedTicks: processed, CommandKeys: commands, ConsumedByTick: consumed, LastTick: venue.lastTick}
 }
 
 func fillIdentity(fill PaperFill) string {

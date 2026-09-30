@@ -24,6 +24,34 @@ type MarketTick struct {
 	Source                    string    `json:"source"`
 }
 
+// MarketProvenance records the immutable source times used by a canonical
+// quote-based execution. AvailableAt is the first instant when every source
+// timestamp and local receipt is causally observable.
+type MarketProvenance struct {
+	Provider        string    `json:"provider"`
+	QuoteProviderAt time.Time `json:"quote_provider_at"`
+	TradeProviderAt time.Time `json:"trade_provider_at"`
+	ReceivedAt      time.Time `json:"received_at"`
+	AsOf            time.Time `json:"as_of"`
+	AvailableAt     time.Time `json:"available_at"`
+	StrictTemporal  bool      `json:"strict_temporal"`
+}
+
+func (tick MarketTick) Provenance() (MarketProvenance, error) {
+	availableAt, err := tick.AvailableAt()
+	if err != nil {
+		return MarketProvenance{}, err
+	}
+	if !tick.RequireTemporalProvenance || tick.LastProviderAt.IsZero() || tick.AsOf.IsZero() {
+		return MarketProvenance{}, fmt.Errorf("%w: strict quote/trade/receipt/as-of provenance is required", ErrInvalidMarketData)
+	}
+	return MarketProvenance{
+		Provider: tick.Source, QuoteProviderAt: tick.Timestamp.UTC(),
+		TradeProviderAt: tick.LastProviderAt.UTC(), ReceivedAt: tick.ReceivedAt.UTC(),
+		AsOf: tick.AsOf.UTC(), AvailableAt: availableAt.UTC(), StrictTemporal: true,
+	}, nil
+}
+
 func (tick MarketTick) Validate(maxAge time.Duration) error {
 	if tick.TickID == "" || tick.InstrumentID == "" || tick.Source == "" {
 		return fmt.Errorf("%w: tick identity is unknown", ErrInvalidMarketData)

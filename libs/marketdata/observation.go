@@ -26,6 +26,8 @@ type EconomicObservation struct {
 	Timeframe      string        `json:"timeframe,omitempty"`
 	Bid            float64       `json:"bid,omitempty"`
 	Ask            float64       `json:"ask,omitempty"`
+	BidSize        float64       `json:"bidSize,omitempty"`
+	AskSize        float64       `json:"askSize,omitempty"`
 	Last           float64       `json:"last"`
 	Mode           string        `json:"mode"`
 	AsOf           time.Time     `json:"asOf"`
