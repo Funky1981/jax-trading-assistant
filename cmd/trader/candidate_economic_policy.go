@@ -53,6 +53,18 @@ func (p candidateEconomicPolicy) instrumentSymbol(instrumentID string) (string, 
 	return matches[0], nil
 }
 
+func (p candidateEconomicPolicy) frozenInstrumentSymbol(instrumentID, frozenSymbol string) (string, error) {
+	symbol, err := p.instrumentSymbol(instrumentID)
+	if err != nil {
+		return "", err
+	}
+	frozenSymbol = strings.ToUpper(strings.TrimSpace(frozenSymbol))
+	if frozenSymbol == "" || frozenSymbol != symbol {
+		return "", fmt.Errorf("canonical_economic_inputs_unavailable: current symbol mapping %q differs from frozen market symbol %q", symbol, frozenSymbol)
+	}
+	return symbol, nil
+}
+
 func loadCandidateEconomicPolicy() (candidateEconomicPolicy, error) {
 	path := strings.TrimSpace(os.Getenv(candidateEconomicPolicyEnv))
 	if path == "" {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -76,6 +77,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		}
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM strategy_signals WHERE instance_id=$1`, strategyInstanceID)
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM candles WHERE symbol='QQQ' AND source='ops01-provider-substitute'`)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM candles WHERE symbol='QQQ' AND source='ops01-review-identity-substitute'`)
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM quotes WHERE symbol='QQQ'`)
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM strategy_instances WHERE id=$1`, strategyInstanceID)
 		_, _ = pool.Exec(cleanupCtx, `DELETE FROM world_monitor_pull_cursors WHERE consumer_name=$1 AND source_endpoint_identity LIKE $2`, worldMonitorPullConsumer, "%/api/v1/jax/events")
@@ -338,6 +340,53 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if record.CandidateID != candidateID || record.EntryOrder.OrderID == "" || record.EntryFill.FillID == "" || len(record.Reviews) != 5 {
 		t.Fatalf("entry lifecycle identity incomplete: %#v", record)
 	}
+	if record.EntryFill.MarketProvenance == nil || record.EntryFill.MarketProvenance.MarketSymbol != "QQQ" {
+		t.Fatalf("durable entry fill did not retain the frozen QQQ identity: %#v", record.EntryFill.MarketProvenance)
+	}
+	// Exercise the production PostgreSQL review source itself: lifecycle thesis
+	// identity remains opaque while candle selection uses the frozen QQQ symbol.
+	reviewStart := now.Add(-2*time.Hour - time.Minute)
+	if _, err := pool.Exec(ctx, `INSERT INTO candles(symbol,timestamp,open,high,low,close,volume,vwap,timeframe,source,timestamp_semantics,market_data_classification,ingested_at) VALUES('QQQ',$1,99,105,98,104,100,100,'1h','ops01-review-identity-substitute','interval_start','real',$2) ON CONFLICT DO NOTHING`, reviewStart, reviewStart.Add(time.Hour+time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO candidate_evidence_items(evidence_id,candidate_id,source_type,source_ref,observed_at,summary,evidence_kind,supports_candidate,contradicts_candidate,confidence,impact_score,quality_score,freshness_status) VALUES($1,$2::uuid,'ops01-test','https://example.test/ops01-review',$3,'disposable review evidence','news',TRUE,FALSE,.9,.9,.9,'fresh') ON CONFLICT(evidence_id) DO NOTHING`, uuid.New(), candidateID, now.Add(-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	reviewPolicy := &marketDataSafetyPolicy{AllowedSources: []string{"ops01-review-identity-substitute"}, Timeframe: "1h", LatestCompletedCandleMaxAge: 4 * time.Hour, CandleHistoryLookback: 7 * 24 * time.Hour, allowNonProductionSources: true}
+	productionReview := &postgresExploratoryReviewSource{pool: pool, now: func() time.Time { return now }, marketPolicy: reviewPolicy}
+	reviewRequest := exploratorypaper.Review{PositionID: positionID, SessionNumber: 1, ScheduledAt: reviewStart.Add(-time.Minute)}
+	currentEconomicPolicy, err := loadCandidateEconomicPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	driftedEconomicPolicy := currentEconomicPolicy
+	driftedEconomicPolicy.Instruments = make(map[string]candidateEconomicIdentity, len(currentEconomicPolicy.Instruments))
+	for marketSymbol, identity := range currentEconomicPolicy.Instruments {
+		if marketSymbol != "QQQ" {
+			driftedEconomicPolicy.Instruments[marketSymbol] = identity
+		}
+	}
+	driftedEconomicPolicy.Instruments["OTHER"] = currentEconomicPolicy.Instruments["QQQ"]
+	driftBytes, err := json.Marshal(driftedEconomicPolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	driftPath := filepath.Join(t.TempDir(), "ops01-drifted-economic-policy.json")
+	if err := os.WriteFile(driftPath, driftBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(candidateEconomicPolicyEnv, driftPath)
+	if _, err := productionReview.LoadReviewObservation(ctx, record, reviewRequest); err == nil {
+		t.Fatal("production review source accepted a policy remap away from the frozen QQQ lifecycle identity")
+	}
+	t.Setenv(candidateEconomicPolicyEnv, economicPolicyPath)
+	reviewObservation, err := productionReview.LoadReviewObservation(ctx, record, reviewRequest)
+	if err != nil {
+		t.Fatalf("production review source failed opaque-instrument to QQQ candle lookup: %v", err)
+	}
+	if reviewObservation.Tick.InstrumentID != "jax.instrument.us.etf.qqq" || reviewObservation.Tick.MarketSymbol != "QQQ" || reviewObservation.Price != 104 || !strings.Contains(reviewObservation.MarketProvenance, "market_symbol=QQQ") || !strings.Contains(reviewObservation.MarketProvenance, "instrument_id=jax.instrument.us.etf.qqq") {
+		t.Fatalf("production review observation lost canonical lifecycle/symbol identity: %#v", reviewObservation)
+	}
 	if _, err := pool.Exec(ctx, `UPDATE exploratory_paper_reviews SET scheduled_at=$2,status='PENDING' WHERE position_id=$1 AND session_number=1`, positionID, now.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
@@ -532,7 +581,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if finalRecord.Outcome == nil || finalRecord.Position.State != exploratorypaper.StateClosed || finalRecord.Outcome.EntryFillID != record.EntryFill.FillID || finalRecord.Outcome.ExitFillID == "" {
+	if finalRecord.Outcome == nil || finalRecord.Position.State != exploratorypaper.StateClosed || finalRecord.Outcome.EntryFillID != record.EntryFill.FillID || finalRecord.Outcome.ExitFillID == "" || finalRecord.Outcome.InstrumentID != "jax.instrument.us.etf.qqq" {
 		t.Fatalf("final durable outcome incomplete: %#v", finalRecord)
 	}
 	var orderCount, fillCount, ledgerCount int
@@ -567,7 +616,11 @@ func (s *ops01FixtureReviewSource) LoadReviewObservation(ctx context.Context, re
 	for _, item := range record.Thesis.Thesis.Evidence {
 		evidence = append(evidence, exploratorypaper.RelevantEvidence{Reference: item, IssuerID: record.Thesis.Thesis.IssuerID, InstrumentID: record.Thesis.Thesis.InstrumentID, Signal: exploratorypaper.EvidenceInvalidates, Reason: "OPS-01 fixture review invalidation"})
 	}
-	tick := papertrading.MarketTick{TickID: "ops01-review-" + record.Position.PositionID + "-" + string(rune('0'+review.SessionNumber)), InstrumentID: record.Thesis.Thesis.InstrumentID, Bid: s.price - 0.5, Ask: s.price + 0.5, Last: s.price, AvailableQuantity: record.EntryFill.Quantity, Timestamp: observedAt, ReceivedAt: observedAt, Session: papertrading.SessionOpen, Source: "ops01-market-substitute"}
+	marketSymbol := ""
+	if record.EntryFill.MarketProvenance != nil {
+		marketSymbol = record.EntryFill.MarketProvenance.MarketSymbol
+	}
+	tick := papertrading.MarketTick{TickID: "ops01-review-" + record.Position.PositionID + "-" + string(rune('0'+review.SessionNumber)), InstrumentID: record.Thesis.Thesis.InstrumentID, MarketSymbol: marketSymbol, Bid: s.price - 0.5, Ask: s.price + 0.5, Last: s.price, AvailableQuantity: record.EntryFill.Quantity, Timestamp: observedAt, ReceivedAt: observedAt, Session: papertrading.SessionOpen, Source: "ops01-market-substitute"}
 	return exploratorypaper.ReviewObservation{Tick: tick, Price: s.price, PriceSource: "ops01-market-substitute", Evidence: evidence, Calendar: s.calendar, Ledger: ledger, QuoteMode: "MODELED_CANDLE_CLOSE", LiquidityMode: "MODELED_POSITION_CAPACITY", ActualQuoteAvailable: false, ObservedAt: observedAt, ReceivedAt: observedAt, ThesisInvalidated: true, Path: []exploratorypaper.PriceObservation{{ObservationID: tick.TickID, At: observedAt, Price: s.price, Source: "ops01-market-substitute"}}, Excursion: exploratorypaper.ExcursionCoverage{Status: "INCOMPLETE", WindowStart: record.Position.EntryAt, WindowEnd: observedAt, ExpectedObservationCount: review.SessionNumber, Cadence: "ops01-fixture", SourceProvenance: true}}, nil
 }
 

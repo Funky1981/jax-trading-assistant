@@ -38,27 +38,29 @@ func (fill PaperFill) Validate() error {
 }
 
 type VenueSnapshot struct {
-	Contract       CapabilityContract    `json:"contract"`
-	CostModel      CostModel             `json:"cost_model"`
-	Orders         map[string]PaperOrder `json:"orders"`
-	Fills          map[string]PaperFill  `json:"fills"`
-	ProcessedTicks map[string]string     `json:"processed_ticks"`
-	CommandKeys    map[string]string     `json:"command_keys"`
-	ConsumedByTick map[string]float64    `json:"consumed_by_tick,omitempty"`
-	LastTick       time.Time             `json:"last_tick"`
+	Contract              CapabilityContract    `json:"contract"`
+	CostModel             CostModel             `json:"cost_model"`
+	Orders                map[string]PaperOrder `json:"orders"`
+	Fills                 map[string]PaperFill  `json:"fills"`
+	ProcessedTicks        map[string]string     `json:"processed_ticks"`
+	CommandKeys           map[string]string     `json:"command_keys"`
+	ConsumedByTick        map[string]float64    `json:"consumed_by_tick,omitempty"`
+	LastTick              time.Time             `json:"last_tick"`
+	LastTicksByInstrument map[string]time.Time  `json:"last_ticks_by_instrument,omitempty"`
 }
 
 type PaperVenue struct {
-	mu             sync.Mutex
-	contract       CapabilityContract
-	costModel      CostModel
-	orders         map[string]PaperOrder
-	fills          map[string]PaperFill
-	intentOrders   map[string]string
-	processedTicks map[string]string
-	commandKeys    map[string]string
-	consumedByTick map[string]float64
-	lastTick       time.Time
+	mu                    sync.Mutex
+	contract              CapabilityContract
+	costModel             CostModel
+	orders                map[string]PaperOrder
+	fills                 map[string]PaperFill
+	intentOrders          map[string]string
+	processedTicks        map[string]string
+	commandKeys           map[string]string
+	consumedByTick        map[string]float64
+	lastTick              time.Time
+	lastTicksByInstrument map[string]time.Time
 }
 
 func NewPaperVenue(contract CapabilityContract, costModel CostModel) (*PaperVenue, error) {
@@ -68,7 +70,7 @@ func NewPaperVenue(contract CapabilityContract, costModel CostModel) (*PaperVenu
 	if err := costModel.Validate(); err != nil {
 		return nil, err
 	}
-	return &PaperVenue{contract: contract, costModel: costModel, orders: map[string]PaperOrder{}, fills: map[string]PaperFill{}, intentOrders: map[string]string{}, processedTicks: map[string]string{}, commandKeys: map[string]string{}, consumedByTick: map[string]float64{}}, nil
+	return &PaperVenue{contract: contract, costModel: costModel, orders: map[string]PaperOrder{}, fills: map[string]PaperFill{}, intentOrders: map[string]string{}, processedTicks: map[string]string{}, commandKeys: map[string]string{}, consumedByTick: map[string]float64{}, lastTicksByInstrument: map[string]time.Time{}}, nil
 }
 
 func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
@@ -133,6 +135,15 @@ func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
 		return nil, ErrInvalidArtifact
 	}
 	venue.lastTick = snapshot.LastTick
+	for instrumentID, at := range snapshot.LastTicksByInstrument {
+		if instrumentID == "" || at.IsZero() || at.Location() != time.UTC {
+			return nil, ErrInvalidArtifact
+		}
+		if snapshot.LastTick.Before(at) {
+			return nil, ErrInvalidArtifact
+		}
+		venue.lastTicksByInstrument[instrumentID] = at
+	}
 	return venue, nil
 }
 
@@ -234,18 +245,27 @@ func (venue *PaperVenue) processTick(tick MarketTick, breakerTripped bool, onlyO
 		if onlyOrderID == "" {
 			return nil, nil
 		}
-		if !venue.lastTick.Equal(availableAt) {
-			return nil, fmt.Errorf("%w: repeated market observation at %s is no longer the latest tick (last=%s)", ErrInvalidMarketData, availableAt, venue.lastTick)
+		latest, ok := venue.lastTicksByInstrument[tick.InstrumentID]
+		legacyLatest := !ok && len(venue.lastTicksByInstrument) == 0 && venue.lastTick.Equal(availableAt)
+		if !legacyLatest && (!ok || !latest.Equal(availableAt)) {
+			return nil, fmt.Errorf("%w: repeated market observation at %s is no longer the latest tick for instrument %s", ErrInvalidMarketData, availableAt, tick.InstrumentID)
 		}
-	} else if !venue.lastTick.IsZero() && !availableAt.After(venue.lastTick) {
-		return nil, fmt.Errorf("%w: market tick %s must be after last tick %s", ErrInvalidMarketData, availableAt, venue.lastTick)
+	} else if latest, ok := venue.lastTicksByInstrument[tick.InstrumentID]; ok && !availableAt.After(latest) {
+		return nil, fmt.Errorf("%w: market tick %s must be after last tick %s for instrument %s", ErrInvalidMarketData, availableAt, latest, tick.InstrumentID)
+	} else if len(venue.lastTicksByInstrument) == 0 && !venue.lastTick.IsZero() && !availableAt.After(venue.lastTick) {
+		// Legacy snapshots stored only a global high-water mark. Retain their
+		// conservative ordering until the first instrument-scoped observation.
+		return nil, fmt.Errorf("%w: market tick %s must be after legacy last tick %s", ErrInvalidMarketData, availableAt, venue.lastTick)
 	}
 	if tick.Session == SessionUnknown {
 		return nil, ErrMarketUnknown
 	}
 	if !tickSeen {
 		venue.processedTicks[tick.TickID] = tickFingerprint(tick)
-		venue.lastTick = availableAt
+		venue.lastTicksByInstrument[tick.InstrumentID] = availableAt
+		if venue.lastTick.IsZero() || availableAt.After(venue.lastTick) {
+			venue.lastTick = availableAt
+		}
 	}
 	if onlyOrderID != "" {
 		venue.processedTicks[orderProcessedKey] = tickFingerprint(tick)
@@ -399,7 +419,11 @@ func (venue *PaperVenue) Snapshot() VenueSnapshot {
 	for key, value := range venue.consumedByTick {
 		consumed[key] = value
 	}
-	return VenueSnapshot{Contract: venue.contract, CostModel: venue.costModel, Orders: orders, Fills: fills, ProcessedTicks: processed, CommandKeys: commands, ConsumedByTick: consumed, LastTick: venue.lastTick}
+	lastTicks := make(map[string]time.Time, len(venue.lastTicksByInstrument))
+	for instrumentID, at := range venue.lastTicksByInstrument {
+		lastTicks[instrumentID] = at
+	}
+	return VenueSnapshot{Contract: venue.contract, CostModel: venue.costModel, Orders: orders, Fills: fills, ProcessedTicks: processed, CommandKeys: commands, ConsumedByTick: consumed, LastTick: venue.lastTick, LastTicksByInstrument: lastTicks}
 }
 
 func fillIdentity(fill PaperFill) string {

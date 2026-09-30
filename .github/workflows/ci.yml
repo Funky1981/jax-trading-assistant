@@ -146,6 +146,10 @@ jobs:
         run: >-
           go test -count=1 -v ./cmd/trader
           -run '^TestProductionPaperExecutionObservationResolvesCanonicalInstrumentSymbol$'
+      - name: required production PAPER review instrument-to-symbol PostgreSQL proof
+        run: >-
+          go test -count=1 -v ./cmd/trader
+          -run '^TestOPS01OperationalReadinessProof$'
       - name: required canonical PAPER handoff Linux race proof
         run: >-
           go test -race -count=1 ./cmd/trader

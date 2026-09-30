@@ -23,7 +23,7 @@ func (runtimeReviewSource) LoadReviewObservation(context.Context, LifecycleRecor
 
 type runtimeExecutionSource struct{ ticks []papertrading.MarketTick }
 
-func (s *runtimeExecutionSource) LoadExecutionObservation(_ context.Context, _, _ string, _ time.Time) (papertrading.MarketTick, bool, error) {
+func (s *runtimeExecutionSource) LoadExecutionObservation(_ context.Context, _, _, _ string, _ time.Time) (papertrading.MarketTick, bool, error) {
 	if len(s.ticks) == 0 {
 		return papertrading.MarketTick{}, false, nil
 	}

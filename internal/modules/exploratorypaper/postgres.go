@@ -203,6 +203,7 @@ func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, account
 
 	fills := map[string]papertrading.PaperFill{}
 	lastTick := time.Time{}
+	lastTicksByInstrument := map[string]time.Time{}
 	fillRows, err := s.pool.Query(ctx, `
 		SELECT fill_id,contract_version,order_id,paper_intent_id,workflow_id,instrument_id,direction,quantity,price,
 		       cost_model_id,mid_price,spread_cost,slippage_cost,commission,executed_price,filled_at,tick_id,execution_market_provenance
@@ -235,8 +236,15 @@ func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, account
 		}
 		if fillOwners[fill.FillID] == accountID {
 			fills[fill.FillID] = fill
-			if lastTick.IsZero() || fill.FilledAt.After(lastTick) {
-				lastTick = fill.FilledAt
+			availableAt := fill.FilledAt
+			if fill.MarketProvenance != nil && !fill.MarketProvenance.AvailableAt.IsZero() {
+				availableAt = fill.MarketProvenance.AvailableAt.UTC()
+			}
+			if prior, ok := lastTicksByInstrument[fill.InstrumentID]; !ok || availableAt.After(prior) {
+				lastTicksByInstrument[fill.InstrumentID] = availableAt
+			}
+			if lastTick.IsZero() || availableAt.After(lastTick) {
+				lastTick = availableAt
 			}
 		}
 	}
@@ -248,6 +256,7 @@ func (s *PostgresStore) RestorePaperVenueForAccount(ctx context.Context, account
 	return papertrading.RestorePaperVenue(papertrading.VenueSnapshot{
 		Contract: contract, CostModel: costModel, Orders: orders, Fills: fills,
 		ProcessedTicks: map[string]string{}, CommandKeys: map[string]string{}, LastTick: lastTick,
+		LastTicksByInstrument: lastTicksByInstrument,
 	})
 }
 

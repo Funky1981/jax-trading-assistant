@@ -281,7 +281,11 @@ func (s *canonicalHandoffService) approveOnce(ctx context.Context, candidateID u
 	if stop >= entry || target <= entry {
 		return response, fmt.Errorf("candidate LONG stop/entry/target geometry is invalid")
 	}
-	quote, err := loadCanonicalQuoteObservationFrom(ctx, tx, input.Candidate.Symbol, now, s.market)
+	marketSymbol, err := s.economic.frozenInstrumentSymbol(input.Economic.InstrumentID, input.Candidate.Symbol)
+	if err != nil {
+		return response, fmt.Errorf("candidate market identity does not match canonical economic policy: %w", err)
+	}
+	quote, err := loadCanonicalQuoteObservationFrom(ctx, tx, marketSymbol, now, s.market)
 	if err != nil {
 		return response, fmt.Errorf("fresh canonical entry observation unavailable: %w", err)
 	}
@@ -333,8 +337,8 @@ func (s *canonicalHandoffService) approveOnce(ctx context.Context, candidateID u
 	if !finitePositive(quantity) || quantity < venue.MinimumQuantity || quantity*quote.Last > account.account.Cash+1e-9 || quantity*quote.Last > math.Abs(risk.ResultingValue)+1e-6 {
 		return response, fmt.Errorf("risk-approved quantity cannot satisfy venue, capital, and exposure limits")
 	}
-	tickID := "tick_" + canonicalDigest(input.Candidate.Symbol, quote.Source, quote.ProviderAt.UTC().Format(time.RFC3339Nano), quote.LastProviderAt.UTC().Format(time.RFC3339Nano), quote.ReceivedAt.UTC().Format(time.RFC3339Nano), fmt.Sprintf("%.12g|%.12g|%.12g", quote.Bid, quote.Ask, quote.Last))
-	tick := papertrading.MarketTick{TickID: tickID, InstrumentID: input.Economic.InstrumentID, Bid: quote.Bid, Ask: quote.Ask, Last: quote.Last,
+	tickID := "tick_" + canonicalDigest(marketSymbol, quote.Source, quote.ProviderAt.UTC().Format(time.RFC3339Nano), quote.LastProviderAt.UTC().Format(time.RFC3339Nano), quote.ReceivedAt.UTC().Format(time.RFC3339Nano), fmt.Sprintf("%.12g|%.12g|%.12g", quote.Bid, quote.Ask, quote.Last))
+	tick := papertrading.MarketTick{TickID: tickID, InstrumentID: input.Economic.InstrumentID, MarketSymbol: marketSymbol, Bid: quote.Bid, Ask: quote.Ask, Last: quote.Last,
 		AvailableQuantity: quantity, Timestamp: quote.ProviderAt.UTC(), LastProviderAt: quote.LastProviderAt.UTC(), ReceivedAt: quote.ReceivedAt.UTC(), AsOf: now.UTC(), RequireTemporalProvenance: true, Session: papertrading.Session(session), Source: quote.Source}
 	if err := tick.Validate(venue.MaxQuoteAge); err != nil {
 		return response, fmt.Errorf("fresh PAPER market tick is invalid: %w", err)

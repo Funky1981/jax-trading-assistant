@@ -110,15 +110,15 @@ type postgresPaperExecutionObservationSource struct {
 	calendar     *exploratorypaper.SessionCalendar
 }
 
-func (s *postgresPaperExecutionObservationSource) LoadExecutionObservation(ctx context.Context, instrumentID, direction string, asOf time.Time) (papertrading.MarketTick, bool, error) {
-	if s == nil || s.pool == nil || strings.TrimSpace(instrumentID) == "" || (direction != "LONG" && direction != "SHORT") || asOf.IsZero() || asOf.Location() != time.UTC {
+func (s *postgresPaperExecutionObservationSource) LoadExecutionObservation(ctx context.Context, instrumentID, frozenSymbol, direction string, asOf time.Time) (papertrading.MarketTick, bool, error) {
+	if s == nil || s.pool == nil || strings.TrimSpace(instrumentID) == "" || strings.TrimSpace(frozenSymbol) == "" || (direction != "LONG" && direction != "SHORT") || asOf.IsZero() || asOf.Location() != time.UTC {
 		return papertrading.MarketTick{}, false, fmt.Errorf("canonical PAPER execution-observation request is incomplete")
 	}
 	economicPolicy, err := loadCandidateEconomicPolicy()
 	if err != nil {
 		return papertrading.MarketTick{}, false, fmt.Errorf("execution instrument identity policy unavailable: %w", err)
 	}
-	symbol, err := economicPolicy.instrumentSymbol(instrumentID)
+	symbol, err := economicPolicy.frozenInstrumentSymbol(instrumentID, frozenSymbol)
 	if err != nil {
 		return papertrading.MarketTick{}, false, fmt.Errorf("execution instrument identity unresolved: %w", err)
 	}
@@ -165,7 +165,7 @@ func (s *postgresPaperExecutionObservationSource) LoadExecutionObservation(ctx c
 	if err != nil {
 		return papertrading.MarketTick{}, false, err
 	}
-	tickID := fmt.Sprintf("exec_%s_%s_%s_%s", strings.ToLower(observation.Source), observation.ProviderAt.UTC().Format("20060102T150405.000000000Z"), observation.LastProviderAt.UTC().Format("150405.000000000Z"), observation.ReceivedAt.UTC().Format("150405.000000000Z"))
+	tickID := "exec_" + canonicalDigest(instrumentID, symbol, strings.ToLower(observation.Source), observation.ProviderAt.UTC().Format(time.RFC3339Nano), observation.LastProviderAt.UTC().Format(time.RFC3339Nano), observation.ReceivedAt.UTC().Format(time.RFC3339Nano))
 	return papertrading.MarketTick{TickID: tickID, InstrumentID: instrumentID, MarketSymbol: symbol, Bid: observation.Bid, Ask: observation.Ask, Last: observation.Last, AvailableQuantity: quantity, Timestamp: observation.ProviderAt.UTC(), LastProviderAt: observation.LastProviderAt.UTC(), ReceivedAt: observation.ReceivedAt.UTC(), AsOf: observation.AsOf.UTC(), RequireTemporalProvenance: true, Session: papertrading.Session(session), Source: observation.Source}, true, nil
 }
 
@@ -218,7 +218,18 @@ func (s *postgresExploratoryReviewSource) LoadReviewObservation(ctx context.Cont
 	if s.now != nil {
 		reviewAsOf = s.now().UTC()
 	}
-	observations, err := loadBoundedCandles(ctx, s.pool, record.Thesis.Thesis.InstrumentID, reviewAsOf, policy, 1)
+	if record.EntryFill.MarketProvenance == nil {
+		return exploratorypaper.ReviewObservation{}, fmt.Errorf("review lifecycle is missing frozen entry market identity")
+	}
+	economicPolicy, err := loadCandidateEconomicPolicy()
+	if err != nil {
+		return exploratorypaper.ReviewObservation{}, fmt.Errorf("review instrument identity policy unavailable: %w", err)
+	}
+	symbol, err := economicPolicy.frozenInstrumentSymbol(record.Thesis.Thesis.InstrumentID, record.EntryFill.MarketProvenance.MarketSymbol)
+	if err != nil {
+		return exploratorypaper.ReviewObservation{}, fmt.Errorf("review instrument identity unresolved: %w", err)
+	}
+	observations, err := loadBoundedCandles(ctx, s.pool, symbol, reviewAsOf, policy, 1)
 	if err != nil {
 		return exploratorypaper.ReviewObservation{}, fmt.Errorf("market observation unavailable: %w", err)
 	}
@@ -270,13 +281,14 @@ func (s *postgresExploratoryReviewSource) LoadReviewObservation(ctx context.Cont
 	if err != nil {
 		return exploratorypaper.ReviewObservation{}, err
 	}
-	tick := papertrading.MarketTick{TickID: fmt.Sprintf("review-%s-%d", record.Position.PositionID, review.SessionNumber), InstrumentID: record.Thesis.Thesis.InstrumentID, Bid: price, Ask: price, Last: price, AvailableQuantity: record.EntryFill.Quantity, Timestamp: observedAt, ReceivedAt: receivedAt, Session: papertrading.Session(state), Source: source}
+	tick := papertrading.MarketTick{TickID: fmt.Sprintf("review-%s-%d", record.Position.PositionID, review.SessionNumber), InstrumentID: record.Thesis.Thesis.InstrumentID, MarketSymbol: symbol, Bid: price, Ask: price, Last: price, AvailableQuantity: record.EntryFill.Quantity, Timestamp: observedAt, ReceivedAt: receivedAt, Session: papertrading.Session(state), Source: source}
 	return exploratorypaper.ReviewObservation{
 		Tick: tick, Price: price, PriceSource: source, Evidence: evidence, Calendar: calendar, Ledger: ledger,
 		QuoteMode: "MODELED_CANDLE_CLOSE", LiquidityMode: "MODELED_POSITION_CAPACITY", ActualQuoteAvailable: false,
-		ObservedAt: observedAt, ReceivedAt: receivedAt, MarketTimeframe: marketObservation.Timeframe, MarketAsOf: marketObservation.AsOf, MarketProvenance: marketObservation.Provenance,
-		Excursion: exploratorypaper.ExcursionCoverage{Status: "INCOMPLETE", WindowStart: record.Position.EntryAt, WindowEnd: observedAt, ExpectedObservationCount: review.SessionNumber, Cadence: "one_observation_per_review", SourceProvenance: true, KnownGaps: []string{"candle-close-only-review-observation"}},
-		Path:      []exploratorypaper.PriceObservation{{ObservationID: tick.TickID, At: observedAt, Price: price, Source: source}},
+		ObservedAt: observedAt, ReceivedAt: receivedAt, MarketTimeframe: marketObservation.Timeframe, MarketAsOf: marketObservation.AsOf,
+		MarketProvenance: fmt.Sprintf("%s;instrument_id=%s;market_symbol=%s", marketObservation.Provenance, record.Thesis.Thesis.InstrumentID, symbol),
+		Excursion:        exploratorypaper.ExcursionCoverage{Status: "INCOMPLETE", WindowStart: record.Position.EntryAt, WindowEnd: observedAt, ExpectedObservationCount: review.SessionNumber, Cadence: "one_observation_per_review", SourceProvenance: true, KnownGaps: []string{"candle-close-only-review-observation"}},
+		Path:             []exploratorypaper.PriceObservation{{ObservationID: tick.TickID, At: observedAt, Price: price, Source: source}},
 	}, nil
 }
 

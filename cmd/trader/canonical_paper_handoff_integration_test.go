@@ -141,6 +141,9 @@ func TestCanonicalPaperHandoffPostgresAcceptRestartConcurrencyAndQueueOnly(t *te
 	if err := json.Unmarshal(queuePayload, &queued); err != nil {
 		t.Fatal(err)
 	}
+	if queued.Tick.InstrumentID != first.InstrumentID || queued.Tick.MarketSymbol != first.Symbol {
+		t.Fatalf("immutable approval market observation did not freeze the canonical instrument-to-symbol binding: tick=%+v handoff=%+v", queued.Tick, first)
+	}
 	if queued.Approval.Workflow.State != "PAPER_INTENT_CREATED" || queued.Approval.Workflow.Confirmation == nil || queued.Approval.Workflow.Confirmation.Actor != "operator-02a4" || queued.RiskDecision.DecisionID != first.RiskDecisionID || queued.Approval.PaperIntent.IntentID == "" || queued.Quantity*queued.Tick.Last > queued.RiskDecision.ResultingValue+1e-6 {
 		t.Fatalf("durable queue is not bound to authenticated approved risk: %+v", queued)
 	}

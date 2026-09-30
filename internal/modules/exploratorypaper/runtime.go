@@ -56,7 +56,7 @@ type EntrySource interface {
 // already-created order. It must preserve provider quote/trade/receipt/as-of
 // provenance and must not return the approval/review snapshot as a substitute.
 type ExecutionObservationSource interface {
-	LoadExecutionObservation(context.Context, string, string, time.Time) (papertrading.MarketTick, bool, error)
+	LoadExecutionObservation(context.Context, string, string, string, time.Time) (papertrading.MarketTick, bool, error)
 }
 
 type ReviewObservation struct {
@@ -251,7 +251,7 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 	if r.Now().UTC().Before(order.ActivatesAt) {
 		return nil
 	}
-	executionTick, available, err := r.Execution.LoadExecutionObservation(ctx, order.InstrumentID, order.Direction, r.Now().UTC())
+	executionTick, available, err := r.Execution.LoadExecutionObservation(ctx, order.InstrumentID, entry.Tick.MarketSymbol, order.Direction, r.Now().UTC())
 	if err != nil {
 		return fmt.Errorf("load entry execution observation: %w", err)
 	}
@@ -450,7 +450,7 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if r.Now().UTC().Before(order.ActivatesAt) {
 		return nil
 	}
-	executionTick, available, err := r.Execution.LoadExecutionObservation(ctx, order.InstrumentID, order.Direction, r.Now().UTC())
+	executionTick, available, err := r.Execution.LoadExecutionObservation(ctx, order.InstrumentID, observation.Tick.MarketSymbol, order.Direction, r.Now().UTC())
 	if err != nil {
 		return fmt.Errorf("load exit execution observation: %w", err)
 	}
