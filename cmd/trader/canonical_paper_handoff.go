@@ -10,7 +10,6 @@ import (
 	"math"
 	"os"
 	"reflect"
-	"sort"
 	"strings"
 	"time"
 
@@ -298,20 +297,13 @@ func loadPaperAccountRead(ctx context.Context, queryer interface {
 }
 
 func (s *canonicalHandoffService) instrumentSymbol(instrumentID string) (string, error) {
+	if s == nil {
+		return "", errors.New("canonical_economic_inputs_unavailable: handoff service is unavailable")
+	}
 	if s.economicErr != nil {
 		return "", s.economicErr
 	}
-	var matches []string
-	for symbol, identity := range s.economic.Instruments {
-		if strings.TrimSpace(identity.InstrumentID) == instrumentID {
-			matches = append(matches, strings.ToUpper(strings.TrimSpace(symbol)))
-		}
-	}
-	sort.Strings(matches)
-	if len(matches) != 1 {
-		return "", fmt.Errorf("instrument %q does not have one explicit symbol mapping", instrumentID)
-	}
-	return matches[0], nil
+	return s.economic.instrumentSymbol(instrumentID)
 }
 
 func (s *canonicalHandoffService) buildPortfolioSnapshot(ctx context.Context, queryer interface {

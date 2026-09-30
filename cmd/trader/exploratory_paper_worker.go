@@ -114,8 +114,15 @@ func (s *postgresPaperExecutionObservationSource) LoadExecutionObservation(ctx c
 	if s == nil || s.pool == nil || strings.TrimSpace(instrumentID) == "" || (direction != "LONG" && direction != "SHORT") || asOf.IsZero() || asOf.Location() != time.UTC {
 		return papertrading.MarketTick{}, false, fmt.Errorf("canonical PAPER execution-observation request is incomplete")
 	}
+	economicPolicy, err := loadCandidateEconomicPolicy()
+	if err != nil {
+		return papertrading.MarketTick{}, false, fmt.Errorf("execution instrument identity policy unavailable: %w", err)
+	}
+	symbol, err := economicPolicy.instrumentSymbol(instrumentID)
+	if err != nil {
+		return papertrading.MarketTick{}, false, fmt.Errorf("execution instrument identity unresolved: %w", err)
+	}
 	var policy marketDataSafetyPolicy
-	var err error
 	if s.marketPolicy != nil {
 		policy = *s.marketPolicy
 	} else {
@@ -124,7 +131,7 @@ func (s *postgresPaperExecutionObservationSource) LoadExecutionObservation(ctx c
 			return papertrading.MarketTick{}, false, fmt.Errorf("execution market-data policy unavailable: %w", err)
 		}
 	}
-	observation, err := loadCanonicalQuoteObservation(ctx, s.pool, instrumentID, asOf, policy)
+	observation, err := loadCanonicalQuoteObservation(ctx, s.pool, symbol, asOf, policy)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return papertrading.MarketTick{}, false, nil
@@ -159,7 +166,7 @@ func (s *postgresPaperExecutionObservationSource) LoadExecutionObservation(ctx c
 		return papertrading.MarketTick{}, false, err
 	}
 	tickID := fmt.Sprintf("exec_%s_%s_%s_%s", strings.ToLower(observation.Source), observation.ProviderAt.UTC().Format("20060102T150405.000000000Z"), observation.LastProviderAt.UTC().Format("150405.000000000Z"), observation.ReceivedAt.UTC().Format("150405.000000000Z"))
-	return papertrading.MarketTick{TickID: tickID, InstrumentID: instrumentID, Bid: observation.Bid, Ask: observation.Ask, Last: observation.Last, AvailableQuantity: quantity, Timestamp: observation.ProviderAt.UTC(), LastProviderAt: observation.LastProviderAt.UTC(), ReceivedAt: observation.ReceivedAt.UTC(), AsOf: observation.AsOf.UTC(), RequireTemporalProvenance: true, Session: papertrading.Session(session), Source: observation.Source}, true, nil
+	return papertrading.MarketTick{TickID: tickID, InstrumentID: instrumentID, MarketSymbol: symbol, Bid: observation.Bid, Ask: observation.Ask, Last: observation.Last, AvailableQuantity: quantity, Timestamp: observation.ProviderAt.UTC(), LastProviderAt: observation.LastProviderAt.UTC(), ReceivedAt: observation.ReceivedAt.UTC(), AsOf: observation.AsOf.UTC(), RequireTemporalProvenance: true, Session: papertrading.Session(session), Source: observation.Source}, true, nil
 }
 
 type exploratoryWorkerHealth struct {

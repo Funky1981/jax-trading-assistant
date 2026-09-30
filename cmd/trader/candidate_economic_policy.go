@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,6 +32,27 @@ type candidateEconomicIdentity struct {
 	IssuerID     string `json:"issuer_id"`
 }
 
+// instrumentSymbol resolves canonical economic identity only through the
+// explicit instrument map. Both canonical handoff and PAPER execution quote
+// lookup use this resolver so symbols are never inferred from IDs.
+func (p candidateEconomicPolicy) instrumentSymbol(instrumentID string) (string, error) {
+	instrumentID = strings.TrimSpace(instrumentID)
+	if instrumentID == "" {
+		return "", errors.New("canonical_economic_inputs_unavailable: instrument identity is empty")
+	}
+	var matches []string
+	for symbol, identity := range p.Instruments {
+		if strings.TrimSpace(identity.InstrumentID) == instrumentID {
+			matches = append(matches, strings.ToUpper(strings.TrimSpace(symbol)))
+		}
+	}
+	sort.Strings(matches)
+	if len(matches) != 1 || matches[0] == "" {
+		return "", fmt.Errorf("canonical_economic_inputs_unavailable: instrument %q does not have one explicit symbol mapping", instrumentID)
+	}
+	return matches[0], nil
+}
+
 func loadCandidateEconomicPolicy() (candidateEconomicPolicy, error) {
 	path := strings.TrimSpace(os.Getenv(candidateEconomicPolicyEnv))
 	if path == "" {
@@ -50,6 +72,11 @@ func loadCandidateEconomicPolicy() (candidateEconomicPolicy, error) {
 		strings.TrimSpace(policy.IdentitySource) == "" || strings.TrimSpace(policy.SizingPolicyID) == "" ||
 		strings.TrimSpace(policy.SizingPolicyVersion) == "" || len(policy.Instruments) == 0 || policy.SlippageAllowance == nil || !finiteNonNegative(*policy.SlippageAllowance) {
 		return candidateEconomicPolicy{}, errors.New("canonical_economic_inputs_unavailable: policy provenance and explicit instrument mappings are required")
+	}
+	for symbol, identity := range policy.Instruments {
+		if strings.TrimSpace(symbol) == "" || strings.TrimSpace(identity.InstrumentID) == "" || strings.TrimSpace(identity.IssuerID) == "" {
+			return candidateEconomicPolicy{}, errors.New("canonical_economic_inputs_unavailable: every instrument mapping must include symbol, instrument ID, and issuer ID")
+		}
 	}
 	return policy, nil
 }

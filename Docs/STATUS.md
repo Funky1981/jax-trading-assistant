@@ -90,10 +90,15 @@ documented gates. They do not prove a trading edge or authorize live execution.
   quote/trade timestamps, nullable persistence, bounded clock-skew, and strict
   availability validation. CORE-READINESS-02B remains blocked and not yet
   executed.
-- CORE-READINESS-02B2R2: `IMPLEMENTED / VALIDATION IN PROGRESS`; durable pending
-  PAPER entry/exit orders wait for distinct post-latency persisted provider
-  quotes; approval-time evidence remains unchanged. CORE-READINESS-02B remains
-  blocked and not executed.
+- CORE-READINESS-02B2R2: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; durable
+  pending PAPER entry/exit orders wait for distinct post-latency persisted
+  provider quotes; approval-time evidence remains unchanged.
+- CORE-READINESS-02B2R3: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; post-latency
+  quote lookup resolves canonical instrument IDs through the shared explicit
+  candidate-economic identity policy; quote provenance records the resolved
+  symbol while order/fill identity remains canonical.
+- CORE-READINESS-02B remains blocked and not executed; host clock
+  synchronization is a separate blocker.
 - CORE-READINESS-02B remains `NOT YET EXECUTED`; Working Jax remains
   `BLOCKED_BEFORE_HYPOTHESIS_DESIGN` pending the isolated genuine-market proof
   and external review.

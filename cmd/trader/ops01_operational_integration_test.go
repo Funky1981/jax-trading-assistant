@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -28,6 +29,11 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	t.Setenv("EXECUTION_ENABLED", "false")
 	t.Setenv("BROKER_EXECUTION_ALLOWED", "false")
 	t.Setenv("MAX_LEVERAGE", "1")
+	economicPolicyPath, err := filepath.Abs(filepath.Join("..", "..", "config", "core-readiness-02b-candidate-economic-policy.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(candidateEconomicPolicyEnv, economicPolicyPath)
 	dsn := testsupport.PostgresDSN(t, "OPS01_DATABASE_URL")
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
@@ -273,8 +279,11 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		Candidate:   exploratorypaper.CandidateInput{EventID: eventID, IssuerID: thesis.IssuerID, InstrumentID: thesis.InstrumentID, EventCategory: thesis.EventCategory, EventTimestamp: thesis.EventTimestamp, GeneratedAt: thesis.CandidateGeneratedAt, SourceURL: articleURL, Direction: thesis.Direction, CausalMechanism: thesis.ExpectedMechanism, QuantContext: thesis.QuantTechnicalContext, RiskAssessment: thesis.RiskAssessment, TechnicalConfirmation: "persisted candle confirmation", CandidatePolicyVersion: "candidate-evidence-scoring-v1"},
 		Evidence:    exploratorypaper.EvidenceAssessment{Provider: "candidate_evidence_scores", PolicyVersion: "candidate-evidence-scoring-v1", ReviewedAt: now, SourceBacked: true, QualityState: "sufficient", QualityScore: .9, RequiredQualityScore: .7, EvidenceReady: true, EvidenceGateReady: true, Corroborated: true, IssuerRelevant: true, InstrumentRelevant: true, IndependentSourceGroups: 2},
 		Thesis:      thesis, RiskDecision: riskDecision, Approval: approval, PositionID: "ops01-position-" + suffix, Quantity: 10,
-		Tick:  papertrading.MarketTick{TickID: "ops01-entry-tick-" + suffix, InstrumentID: "QQQ", Bid: 99.5, Ask: 100.5, Last: 100, AvailableQuantity: 10, Timestamp: entryAt, ReceivedAt: entryAt, Session: papertrading.SessionOpen, Source: "ops01-market-substitute"},
+		Tick:  papertrading.MarketTick{TickID: "ops01-entry-tick-" + suffix, InstrumentID: "jax.instrument.us.etf.qqq", MarketSymbol: "QQQ", Bid: 99.5, Ask: 100.5, Last: 100, AvailableQuantity: 10, Timestamp: entryAt, ReceivedAt: entryAt, Session: papertrading.SessionOpen, Source: "ops01-market-substitute"},
 		Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: papertrading.DefaultCostModel(), Ledger: ledgerSnapshot, Calendar: calendar, Now: entryAt,
+	}
+	if _, err := papertrading.CreatePaperOrder(papertrading.CreateOrderRequest{Workflow: entry.Approval.Workflow, PaperIntent: entry.Approval.PaperIntent, Venue: entry.Venue, CostModel: entry.CostModel, InstrumentID: entry.Thesis.InstrumentID, Quantity: entry.Quantity, ReferencePrice: entry.Tick.Last, OrderType: papertrading.OrderMarket, CreatedAt: entryAt, IdempotencyKey: entry.Approval.PaperIntent.IntentID}); err != nil {
+		t.Fatalf("OPS-01 synthetic entry order preflight: %v; thesis=%q confirmation=%q intent=%q", err, entry.Thesis.InstrumentID, entry.Approval.Workflow.Confirmation.InstrumentID, entry.Approval.PaperIntent.InstrumentID)
 	}
 	store := runtime.Store.(*exploratorypaper.PostgresStore)
 	if err := store.QueueApprovedEntry(ctx, entry); err != nil {
@@ -296,7 +305,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	runtime.Execution = &postgresPaperExecutionObservationSource{pool: pool, marketPolicy: testMarketPolicy, calendar: &calendar}
 	runtime.Now = func() time.Time { return entryAt }
 	if err := runtime.RunEntryCycle(ctx); err != nil {
-		t.Fatal(err)
+		t.Fatalf("OPS-01 pending entry pass: %v", err)
 	}
 	var pendingOrders, prematureFills int
 	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_orders WHERE paper_intent_id=$1`, approval.PaperIntent.IntentID).Scan(&pendingOrders); err != nil {
@@ -569,7 +578,7 @@ func ops01TestNow(ctx context.Context, pool *pgxpool.Pool) (time.Time, error) {
 }
 
 func ops01Thesis(eventID string, now time.Time) exploratorypaper.TradeThesis {
-	return exploratorypaper.TradeThesis{ThesisID: "ops01-thesis-" + strings.ReplaceAll(eventID, "ops01-provider-", ""), ContractVersion: exploratorypaper.ContractVersion, Mode: exploratorypaper.ExploratoryPaperMode, EventID: eventID, IssuerID: "ops01-federal-reserve", InstrumentID: "QQQ", Direction: exploratorypaper.DirectionLong, Exposure: "technology ETF", EventCategory: "macro_rates", EventTimestamp: now, CandidateGeneratedAt: now, CausalReason: "fixture policy decision changes technology-rate sensitivity", Evidence: []exploratorypaper.EvidenceReference{{EvidenceID: "ops01-evidence-provider-" + eventID, SourceID: "ops01-provider", SourceURL: "https://ops01.example/provider/" + eventID, Quality: "high", ObservedAt: now}, {EvidenceID: "ops01-evidence-chart-" + eventID, SourceID: "ops01-market", SourceURL: "https://ops01.example/market/" + eventID, Quality: "high", ObservedAt: now}}, ExpectedMechanism: "rate decision changes technology duration valuation", ExpectedHorizonSessions: 3, EntryRationale: "explicit OPS-01 readiness fixture", QuantTechnicalContext: "provider event plus persisted rising candle confirmation", RiskAssessment: "paper-only bounded risk", EntryPolicyVersion: "paper-02-entry-v1", ProtectiveStop: 98, Target: 104, InvalidationConditions: []string{"fixture review invalidates thesis"}, Confidence: .8, Uncertainty: "fixture market transport", PolicyVersion: "paper-02-policy-v1", CreatedAt: now}
+	return exploratorypaper.TradeThesis{ThesisID: "ops01-thesis-" + strings.ReplaceAll(eventID, "ops01-provider-", ""), ContractVersion: exploratorypaper.ContractVersion, Mode: exploratorypaper.ExploratoryPaperMode, EventID: eventID, IssuerID: "ops01-federal-reserve", InstrumentID: "jax.instrument.us.etf.qqq", Direction: exploratorypaper.DirectionLong, Exposure: "technology ETF", EventCategory: "macro_rates", EventTimestamp: now, CandidateGeneratedAt: now, CausalReason: "fixture policy decision changes technology-rate sensitivity", Evidence: []exploratorypaper.EvidenceReference{{EvidenceID: "ops01-evidence-provider-" + eventID, SourceID: "ops01-provider", SourceURL: "https://ops01.example/provider/" + eventID, Quality: "high", ObservedAt: now}, {EvidenceID: "ops01-evidence-chart-" + eventID, SourceID: "ops01-market", SourceURL: "https://ops01.example/market/" + eventID, Quality: "high", ObservedAt: now}}, ExpectedMechanism: "rate decision changes technology duration valuation", ExpectedHorizonSessions: 3, EntryRationale: "explicit OPS-01 readiness fixture", QuantTechnicalContext: "provider event plus persisted rising candle confirmation", RiskAssessment: "paper-only bounded risk", EntryPolicyVersion: "paper-02-entry-v1", ProtectiveStop: 98, Target: 104, InvalidationConditions: []string{"fixture review invalidates thesis"}, Confidence: .8, Uncertainty: "fixture market transport", PolicyVersion: "paper-02-policy-v1", CreatedAt: now}
 }
 
 func ops01Calendar(now time.Time) exploratorypaper.SessionCalendar {
@@ -592,7 +601,7 @@ func ops01ApprovedApproval(t *testing.T, risk portfoliorisk.RiskDecision, at tim
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmation, err := workflow.NewConfirmation(wf, "QQQ", direction, at, at.Add(48*time.Hour))
+	confirmation, err := workflow.NewConfirmation(wf, "jax.instrument.us.etf.qqq", direction, at, at.Add(48*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -650,7 +659,7 @@ func ops01SyntheticRisk(t *testing.T, recommendationID string, at time.Time, acc
 	}
 	riskAllocation, leverage := .01, 1.0
 	decision := portfoliorisk.EvaluateRecommendation(portfoliorisk.RecommendationRiskInput{
-		RecommendationID: recommendationID, InstrumentID: "QQQ", Currency: "USD", SignedMarketValue: 1200,
+		RecommendationID: recommendationID, InstrumentID: "jax.instrument.us.etf.qqq", Currency: "USD", SignedMarketValue: 1200,
 		RiskAllocation: &riskAllocation, RequestedLeverage: &leverage, ExecutionAuthority: "NONE", QuantResultIDs: []string{"ops01-fixture"},
 	}, snapshot, analytics, policy, at, time.Hour)
 	if decision.Outcome != portfoliorisk.DecisionAccept {

@@ -1,11 +1,12 @@
 # Current Build Package
 
-Current routing: **CORE-READINESS-02B2R2 — POST-LATENCY MARKET OBSERVATION
-EXECUTION**, implementation and validation. This package persists approved
-PAPER orders before waiting for a distinct strict-provenance quote available
-after configured latency, then stores execution provenance with the fill.
-Approval-time entry and exit evidence remains unchanged. CORE-READINESS-02B
-remains blocked and not executed.
+Current routing: **CORE-READINESS-02B2R3 — CANONICAL INSTRUMENT-TO-SYMBOL
+EXECUTION MAPPING**, implementation and validation. This narrow correction
+shares the explicit candidate-economic identity resolver between canonical
+handoff valuation and post-latency execution quote lookup. Execution orders and
+fills retain canonical instrument IDs; quote lookup and execution provenance
+use the explicitly mapped market symbol. CORE-READINESS-02B remains blocked and
+not executed; host clock synchronization is a separate blocker.
 CORE-READINESS-02A4 and 02A4R remain **GO / EXTERNALLY REVIEWED**. The 02A4
 queue remains account-scoped and is not consumed by 02A4. CORE-READINESS-01
 remains **BLOCKED_BEFORE_HYPOTHESIS_DESIGN** until CORE-READINESS-02B is
@@ -30,10 +31,11 @@ handoff can approve that candidate path. The queue is not consumed by 02A4.
 Read `Docs/BUILD/CORE-READINESS-01-WORKING-JAX-V1-AUDIT.md`. 02A4 addresses the
 server-owned candidate/risk/approval-to-queue seam and JWT-bound decision actor.
 CORE-READINESS-02B1 is **GO / EXTERNALLY REVIEWED** as the prerequisite
-policy/temporal contract. CORE-READINESS-02B2R2 is the current runtime-liveness
-correction and requires external review before CORE-READINESS-02B: isolated
-genuine-market end-to-end proof, including genuine provider observations and
-the reviewed runtime loop.
+policy/temporal contract. CORE-READINESS-02B2R2 corrected post-latency runtime
+liveness. CORE-READINESS-02B2R3 corrects only the canonical instrument-to-symbol
+mapping used by that execution path and requires external review before
+CORE-READINESS-02B: isolated genuine-market end-to-end proof, including genuine
+provider observations and the reviewed runtime loop.
 OPS-01 remains synthetic/disposable full-loop evidence;
 OPS-02B remains real-runtime event-intake evidence with zero economic activity.
 

@@ -11,6 +11,7 @@ import (
 type MarketTick struct {
 	TickID                    string    `json:"tick_id"`
 	InstrumentID              string    `json:"instrument_id"`
+	MarketSymbol              string    `json:"market_symbol,omitempty"`
 	Bid                       float64   `json:"bid"`
 	Ask                       float64   `json:"ask"`
 	Last                      float64   `json:"last"`
@@ -29,6 +30,7 @@ type MarketTick struct {
 // timestamp and local receipt is causally observable.
 type MarketProvenance struct {
 	Provider        string    `json:"provider"`
+	MarketSymbol    string    `json:"market_symbol,omitempty"`
 	QuoteProviderAt time.Time `json:"quote_provider_at"`
 	TradeProviderAt time.Time `json:"trade_provider_at"`
 	ReceivedAt      time.Time `json:"received_at"`
@@ -46,7 +48,7 @@ func (tick MarketTick) Provenance() (MarketProvenance, error) {
 		return MarketProvenance{}, fmt.Errorf("%w: strict quote/trade/receipt/as-of provenance is required", ErrInvalidMarketData)
 	}
 	return MarketProvenance{
-		Provider: tick.Source, QuoteProviderAt: tick.Timestamp.UTC(),
+		Provider: tick.Source, MarketSymbol: tick.MarketSymbol, QuoteProviderAt: tick.Timestamp.UTC(),
 		TradeProviderAt: tick.LastProviderAt.UTC(), ReceivedAt: tick.ReceivedAt.UTC(),
 		AsOf: tick.AsOf.UTC(), AvailableAt: availableAt.UTC(), StrictTemporal: true,
 	}, nil
