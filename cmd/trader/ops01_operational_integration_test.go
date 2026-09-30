@@ -320,12 +320,54 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		t.Fatalf("OPS-01 first pass pending orders=%d premature fills=%d", pendingOrders, prematureFills)
 	}
 	executionAt := entryAt.Add(1200 * time.Millisecond)
-	if _, err := pool.Exec(ctx, `UPDATE quotes SET price=100,bid=99.9,ask=100.1,bid_size=1000,ask_size=1000,timestamp=$1,last_trade_timestamp=$1,received_at=$1,provider='ops01-provider-substitute' WHERE symbol='QQQ'`, executionAt); err != nil {
+	if _, err := pool.Exec(ctx, `UPDATE quotes SET price=100,bid=99.9,ask=100.1,bid_size=1000,ask_size=4,timestamp=$1,last_trade_timestamp=$1,received_at=$1,provider='ops01-provider-substitute' WHERE symbol='QQQ'`, executionAt); err != nil {
 		t.Fatal(err)
 	}
 	runtime.Now = func() time.Time { return executionAt }
 	if err := runtime.RunEntryCycle(ctx); err != nil {
-		t.Fatalf("OPS-01 post-latency entry: %v", err)
+		t.Fatalf("OPS-01 insufficient-liquidity entry should remain pending: %v", err)
+	}
+	var entryFills, entryLifecycles int
+	var entryQueueStatus, entryOrderStatus string
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_fills WHERE paper_intent_id=$1`, approval.PaperIntent.IntentID).Scan(&entryFills); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM exploratory_paper_lifecycles WHERE candidate_id=$1`, candidateID).Scan(&entryLifecycles); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT status FROM exploratory_paper_entry_queue WHERE candidate_id=$1`, candidateID).Scan(&entryQueueStatus); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT status FROM paper_orders WHERE paper_intent_id=$1`, approval.PaperIntent.IntentID).Scan(&entryOrderStatus); err != nil {
+		t.Fatal(err)
+	}
+	if entryFills != 0 || entryLifecycles != 0 || entryQueueStatus != "PENDING" || entryOrderStatus != string(papertrading.OrderNew) {
+		t.Fatalf("insufficient entry liquidity changed canonical state: fills=%d lifecycles=%d queue=%s order=%s", entryFills, entryLifecycles, entryQueueStatus, entryOrderStatus)
+	}
+	// Restart while the order is durably pending; the same insufficient quote
+	// must remain a normal wait and must not consume the approved queue row.
+	pendingEntryRuntime, err := newExploratoryPaperRuntime(pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pendingEntryRuntime.Execution = &postgresPaperExecutionObservationSource{pool: pool, marketPolicy: testMarketPolicy, calendar: &calendar}
+	pendingEntryRuntime.Now = func() time.Time { return executionAt }
+	if err := pendingEntryRuntime.RunEntryCycle(ctx); err != nil {
+		t.Fatalf("OPS-01 restarted insufficient-liquidity entry: %v", err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_fills WHERE paper_intent_id=$1`, approval.PaperIntent.IntentID).Scan(&entryFills); err != nil {
+		t.Fatal(err)
+	}
+	if entryFills != 0 {
+		t.Fatalf("restarted entry produced a partial fill: %d", entryFills)
+	}
+	executionAt = executionAt.Add(time.Second)
+	if _, err := pool.Exec(ctx, `UPDATE quotes SET price=100,bid=99.9,ask=100.1,bid_size=1000,ask_size=10,timestamp=$1,last_trade_timestamp=$1,received_at=$1,provider='ops01-provider-substitute' WHERE symbol='QQQ'`, executionAt); err != nil {
+		t.Fatal(err)
+	}
+	pendingEntryRuntime.Now = func() time.Time { return executionAt }
+	if err := pendingEntryRuntime.RunEntryCycle(ctx); err != nil {
+		t.Fatalf("OPS-01 liquid post-restart entry: %v", err)
 	}
 	restartedRuntime, err := newExploratoryPaperRuntime(pool)
 	if err != nil {
@@ -342,6 +384,27 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	}
 	if record.EntryFill.MarketProvenance == nil || record.EntryFill.MarketProvenance.MarketSymbol != "QQQ" {
 		t.Fatalf("durable entry fill did not retain the frozen QQQ identity: %#v", record.EntryFill.MarketProvenance)
+	}
+	if record.EntryFill.Quantity != 10 || record.EntryOrder.Status != papertrading.OrderFilled || record.EntryOrder.RemainingQuantity != 0 || record.EntryOrder.FilledQuantity != 10 {
+		t.Fatalf("canonical entry did not complete atomically after sufficient liquidity: order=%#v fill=%#v", record.EntryOrder, record.EntryFill)
+	}
+	if err := restartedRuntime.RunEntryCycle(ctx); err != nil {
+		t.Fatalf("OPS-01 entry replay after lifecycle persistence: %v", err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_fills WHERE paper_intent_id=$1`, approval.PaperIntent.IntentID).Scan(&entryFills); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM exploratory_paper_lifecycles WHERE candidate_id=$1`, candidateID).Scan(&entryLifecycles); err != nil {
+		t.Fatal(err)
+	}
+	if entryFills != 1 || entryLifecycles != 1 {
+		t.Fatalf("entry replay duplicated economic artifacts: fills=%d lifecycles=%d", entryFills, entryLifecycles)
+	}
+	if err := pool.QueryRow(ctx, `SELECT status FROM exploratory_paper_entry_queue WHERE candidate_id=$1`, candidateID).Scan(&entryQueueStatus); err != nil {
+		t.Fatal(err)
+	}
+	if entryQueueStatus != "PROCESSED" {
+		t.Fatalf("completed entry queue status=%s, want PROCESSED", entryQueueStatus)
 	}
 	// Exercise the production PostgreSQL review source itself: lifecycle thesis
 	// identity remains opaque while candle selection uses the frozen QQQ symbol.
@@ -569,20 +632,93 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 	if pendingExitOrders != 1 || prematureExitFills != 0 {
 		t.Fatalf("OPS-01 exit first pass pending orders=%d premature fills=%d", pendingExitOrders, prematureExitFills)
 	}
+	if err := pool.QueryRow(ctx, `SELECT status FROM paper_orders WHERE workflow_id=$1`, exitWorkflowID).Scan(&entryOrderStatus); err != nil {
+		t.Fatal(err)
+	}
+	if entryOrderStatus != string(papertrading.OrderNew) {
+		t.Fatalf("approved exit order status=%s before full liquidity, want NEW", entryOrderStatus)
+	}
 	exitExecutionAt := now.Add(3*time.Hour + 1200*time.Millisecond)
-	if _, err := pool.Exec(ctx, `UPDATE quotes SET price=103,bid=102.9,ask=103.1,bid_size=1000,ask_size=1000,timestamp=$1,last_trade_timestamp=$1,received_at=$1,provider='ops01-provider-substitute' WHERE symbol='QQQ'`, exitExecutionAt); err != nil {
+	if _, err := pool.Exec(ctx, `UPDATE quotes SET price=103,bid=102.9,ask=103.1,bid_size=3,ask_size=1000,timestamp=$1,last_trade_timestamp=$1,received_at=$1,provider='ops01-provider-substitute' WHERE symbol='QQQ'`, exitExecutionAt); err != nil {
 		t.Fatal(err)
 	}
 	finalNow = exitExecutionAt
 	if err := finalRuntime.RunDueReviews(ctx); err != nil {
-		t.Fatalf("OPS-01 post-latency exit: %v", err)
+		t.Fatalf("OPS-01 insufficient-liquidity exit should remain pending: %v", err)
 	}
 	finalRecord, err = finalRuntime.Store.(*exploratorypaper.PostgresStore).Get(ctx, positionID)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if finalRecord.Outcome != nil || finalRecord.Position.State == exploratorypaper.StateClosed {
+		t.Fatalf("insufficient exit liquidity closed the position or wrote an outcome: %#v", finalRecord)
+	}
+	var partialExitFills, prematureOutcomes int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_fills WHERE workflow_id=$1`, exitWorkflowID).Scan(&partialExitFills); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM exploratory_paper_outcomes WHERE position_id=$1`, positionID).Scan(&prematureOutcomes); err != nil {
+		t.Fatal(err)
+	}
+	if partialExitFills != 0 || prematureOutcomes != 0 {
+		t.Fatalf("insufficient exit liquidity produced artifacts: fills=%d outcomes=%d", partialExitFills, prematureOutcomes)
+	}
+	// Restore the pending exit from PostgreSQL before a distinct, adequately
+	// liquid observation becomes available.
+	pendingExitRuntime, err := newExploratoryPaperRuntime(pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pendingExitRuntime.Reviews = &ops01FixtureReviewSource{pool: pool, calendar: calendar, observedAt: now.Add(24 * time.Hour), price: 104}
+	pendingExitRuntime.Execution = &postgresPaperExecutionObservationSource{pool: pool, marketPolicy: testMarketPolicy, calendar: &calendar}
+	pendingExitRuntime.Now = func() time.Time { return exitExecutionAt }
+	if err := pendingExitRuntime.RunDueReviews(ctx); err != nil {
+		t.Fatalf("OPS-01 restarted insufficient-liquidity exit: %v", err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM paper_fills WHERE workflow_id=$1`, exitWorkflowID).Scan(&partialExitFills); err != nil {
+		t.Fatal(err)
+	}
+	if partialExitFills != 0 {
+		t.Fatalf("restarted exit produced a partial fill: %d", partialExitFills)
+	}
+	exitExecutionAt = exitExecutionAt.Add(time.Second)
+	if _, err := pool.Exec(ctx, `UPDATE quotes SET price=103,bid=102.9,ask=103.1,bid_size=10,ask_size=1000,timestamp=$1,last_trade_timestamp=$1,received_at=$1,provider='ops01-provider-substitute' WHERE symbol='QQQ'`, exitExecutionAt); err != nil {
+		t.Fatal(err)
+	}
+	finalNow = exitExecutionAt
+	pendingExitRuntime.Now = func() time.Time { return finalNow }
+	if err := pendingExitRuntime.RunDueReviews(ctx); err != nil {
+		t.Fatalf("OPS-01 liquid post-restart exit: %v", err)
+	}
+	finalRecord, err = pendingExitRuntime.Store.(*exploratorypaper.PostgresStore).Get(ctx, positionID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if finalRecord.Outcome == nil || finalRecord.Position.State != exploratorypaper.StateClosed || finalRecord.Outcome.EntryFillID != record.EntryFill.FillID || finalRecord.Outcome.ExitFillID == "" || finalRecord.Outcome.InstrumentID != "jax.instrument.us.etf.qqq" {
 		t.Fatalf("final durable outcome incomplete: %#v", finalRecord)
+	}
+	var exitOrderStatus string
+	var exitRemaining, exitFilled, exitQuantity float64
+	if err := pool.QueryRow(ctx, `SELECT status,remaining_quantity,filled_quantity,quantity FROM paper_orders WHERE workflow_id=$1`, exitWorkflowID).Scan(&exitOrderStatus, &exitRemaining, &exitFilled, &exitQuantity); err != nil {
+		t.Fatal(err)
+	}
+	if exitOrderStatus != string(papertrading.OrderFilled) || exitRemaining != 0 || exitFilled != 10 || exitQuantity != 10 {
+		t.Fatalf("canonical exit did not fully close the approved order: status=%s remaining=%g filled=%g quantity=%g", exitOrderStatus, exitRemaining, exitFilled, exitQuantity)
+	}
+	if ledger, err := loadPaperLedger(ctx, pool, record.EntryFill.FillID); err != nil {
+		t.Fatal(err)
+	} else if position, remainsOpen := ledger.Positions["jax.instrument.us.etf.qqq"]; remainsOpen && position.Quantity > 1e-9 {
+		t.Fatalf("paper ledger retained quantity after completed exit: %#v", position)
+	}
+	finalReplay, err := newExploratoryPaperRuntime(pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalReplay.Reviews = &ops01FixtureReviewSource{pool: pool, calendar: calendar, observedAt: now.Add(24 * time.Hour), price: 104}
+	finalReplay.Execution = &postgresPaperExecutionObservationSource{pool: pool, marketPolicy: testMarketPolicy, calendar: &calendar}
+	finalReplay.Now = func() time.Time { return finalNow }
+	if err := finalReplay.RunDueReviews(ctx); err != nil {
+		t.Fatalf("OPS-01 exit replay after outcome persistence: %v", err)
 	}
 	var orderCount, fillCount, ledgerCount int
 	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM paper_orders WHERE workflow_id=$1 OR workflow_id=$2`, record.Binding.WorkflowID, exitWorkflowID).Scan(&orderCount); err != nil {

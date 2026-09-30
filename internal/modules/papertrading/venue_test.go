@@ -195,6 +195,9 @@ func TestPaperVenueConsumesLiquidityAndSupportsCancellation(t *testing.T) {
 	now := time.Date(2026, 9, 8, 10, 0, 0, 0, time.UTC)
 	wf, intent := approvedPaperArtifacts(t, now)
 	contract := DefaultPaperCapabilityContract()
+	if !contract.SupportsPartialFills {
+		t.Fatal("generic paper venue contract must continue to support partial fills")
+	}
 	costs := DefaultCostModel()
 	venue, err := NewPaperVenue(contract, costs)
 	if err != nil {

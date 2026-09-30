@@ -158,7 +158,7 @@ jobs:
         run: >-
           go test -count=1 ./cmd/trader
           -run 'Test(SignalsListHandlerExpiresLegacyPendingSignals|RecommendationsListHandlerExcludesExpiredPendingSignals|SignalApproveRejectsExpiredPendingSignal|SignalApproveBlocksETFEntryBypass)$'
-      - name: required OPS-01 operational PostgreSQL proof
+      - name: required OPS-01 and canonical PAPER full-fill atomicity entry/exit proof
         run: go test -count=1 ./cmd/trader -run '^TestOPS01OperationalReadinessProof$' -v
       - name: required replay and lifecycle race tests
         run: >-

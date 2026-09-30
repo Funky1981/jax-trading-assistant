@@ -97,6 +97,13 @@ documented gates. They do not prove a trading edge or authorize live execution.
   quote lookup resolves canonical instrument IDs through the shared explicit
   candidate-economic identity policy; quote provenance records the resolved
   symbol while order/fill identity remains canonical.
+- CORE-READINESS-02B2R3R1: `GO / EXTERNALLY REVIEWED` at
+  `555384f48b2d0f62d68e0fd2fb1a04efee5a9fbb`; canonical market identity and
+  policy-drift closure across approval, entry, review, and exit.
+- CORE-READINESS-02B2R4: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; the
+  canonical exploratory runtime waits for sufficient full-order liquidity and
+  only persists entry/exit lifecycle transitions after one complete fill.
+  Generic PaperVenue partial fills remain supported.
 - CORE-READINESS-02B remains blocked and not executed; host clock
   synchronization is a separate blocker.
 - CORE-READINESS-02B remains `NOT YET EXECUTED`; Working Jax remains

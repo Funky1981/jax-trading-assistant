@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -245,6 +246,9 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 			return err
 		}
 	}
+	if order.FilledQuantity != 0 || math.Abs(order.RemainingQuantity-order.Quantity) > canonicalQuantityTolerance {
+		return fmt.Errorf("%w: canonical entry order is not an untouched full-quantity order", ErrFailedClosed)
+	}
 	if err := r.Store.PersistPendingOrder(ctx, order, r.AccountID, entry.Approval); err != nil {
 		return fmt.Errorf("persist pending entry order: %w", err)
 	}
@@ -269,6 +273,9 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 	} else if err != nil {
 		return err
 	}
+	if !hasFullOrderLiquidity(executionTick, order, r.Venue.Snapshot()) {
+		return nil
+	}
 	fills, err := r.Venue.ProcessOrderTickWithSafety(executionTick, order.OrderID, false)
 	if err != nil {
 		return err
@@ -279,17 +286,17 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 	if len(fills) != 1 || fills[0].FilledAt.Before(entry.Approval.Workflow.Confirmation.ConfirmedAt) || fills[0].FilledAt.Before(order.CreatedAt) || fills[0].FilledAt.Before(order.ActivatesAt) {
 		return fmt.Errorf("%w: entry fill violates order or human-approval causality", ErrFailedClosed)
 	}
+	venueSnapshot := r.Venue.Snapshot()
+	persistedOrder, ok := venueSnapshot.Orders[order.OrderID]
+	if !ok || !isCompleteCanonicalFill(persistedOrder, fills[0], order.RemainingQuantity) {
+		return fmt.Errorf("%w: canonical entry did not complete the entire order atomically", ErrFailedClosed)
+	}
 	account, err := ledger.ApplyFill(fills[0])
 	if err != nil {
 		return err
 	}
 	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: r.Venue.Snapshot(), Account: account}, fills[0].FilledAt); result.Status != papertrading.ReconciliationClean {
 		return fmt.Errorf("%w: entry ledger reconciliation failed: %v", ErrFailedClosed, result.ReasonCodes)
-	}
-	venueSnapshot := r.Venue.Snapshot()
-	persistedOrder, ok := venueSnapshot.Orders[order.OrderID]
-	if !ok {
-		return fmt.Errorf("%w: filled entry order is missing from venue snapshot", ErrFailedClosed)
 	}
 	position, err := OpenApprovedPosition(entry.PositionID, entry.Thesis, EntryBindingFrom(entry), fills[0].FilledAt, fills[0].Price)
 	if err != nil {
@@ -444,6 +451,9 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 			return fmt.Errorf("submit exit order: %w", err)
 		}
 	}
+	if order.FilledQuantity != 0 || math.Abs(order.RemainingQuantity-order.Quantity) > canonicalQuantityTolerance {
+		return fmt.Errorf("%w: canonical exit order is not an untouched full-quantity order", ErrFailedClosed)
+	}
 	if err := r.Store.PersistPendingOrder(ctx, order, r.AccountID, approval); err != nil {
 		return fmt.Errorf("persist pending exit order: %w", err)
 	}
@@ -468,6 +478,9 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	} else if err != nil {
 		return err
 	}
+	if !hasFullOrderLiquidity(executionTick, order, r.Venue.Snapshot()) {
+		return nil
+	}
 	fills, err := r.Venue.ProcessOrderTickWithSafety(executionTick, order.OrderID, false)
 	if err != nil {
 		return err
@@ -478,23 +491,45 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if len(fills) != 1 || fills[0].FilledAt.Before(approval.Workflow.Confirmation.ConfirmedAt) || fills[0].FilledAt.Before(order.CreatedAt) || fills[0].FilledAt.Before(order.ActivatesAt) {
 		return fmt.Errorf("%w: exit fill violates order or human-approval causality", ErrFailedClosed)
 	}
+	venueSnapshot := r.Venue.Snapshot()
+	persistedOrder, ok := venueSnapshot.Orders[order.OrderID]
+	if !ok || !isCompleteCanonicalFill(persistedOrder, fills[0], order.RemainingQuantity) {
+		return fmt.Errorf("%w: canonical exit did not complete the entire order atomically", ErrFailedClosed)
+	}
 	account, err := ledger.ApplyFill(fills[0])
 	if err != nil {
 		return fmt.Errorf("apply exit fill to ledger: %w", err)
 	}
-	venueSnapshot := r.Venue.Snapshot()
 	if result := papertrading.Reconcile(papertrading.ReconciliationInput{VenueSnapshot: venueSnapshot, Account: account}, fills[0].FilledAt); result.Status != papertrading.ReconciliationClean {
 		return fmt.Errorf("%w: exit ledger reconciliation failed: %v", ErrFailedClosed, result.ReasonCodes)
 	}
-	persistedOrder, ok := venueSnapshot.Orders[order.OrderID]
-	if !ok {
-		return fmt.Errorf("%w: filled exit order is missing from venue snapshot", ErrFailedClosed)
+	if position, remainsOpen := account.Positions[order.InstrumentID]; remainsOpen && position.Quantity > canonicalQuantityTolerance {
+		return fmt.Errorf("%w: canonical exit fill left quantity %g open for instrument %q", ErrFailedClosed, position.Quantity, order.InstrumentID)
 	}
 	outcome, err := BuildOutcomeFromFillsWithCoverage(position, item.Lifecycle.Binding, item.Lifecycle.EntryFill, fills[0], decision.Reason, item.Review.SessionNumber, observation.Path, item.Lifecycle.Checkpoints, observation.Excursion)
 	if err != nil {
 		return fmt.Errorf("build exit outcome: %w", err)
 	}
 	return r.Store.PersistOutcome(ctx, position.PositionID, ExitSnapshot{Order: persistedOrder, Fill: fills[0], Ledger: account, Approval: &approval}, outcome)
+}
+
+// canonicalQuantityTolerance matches the paper venue's quantity arithmetic
+// tolerance. Generic PaperVenue partial fills remain supported; the
+// exploratory lifecycle currently persists one atomic entry and one atomic
+// exit, so this runtime waits for enough liquidity before invoking the venue.
+const canonicalQuantityTolerance = 1e-9
+
+func hasFullOrderLiquidity(tick papertrading.MarketTick, order papertrading.PaperOrder, snapshot papertrading.VenueSnapshot) bool {
+	available := tick.AvailableQuantity - snapshot.ConsumedByTick[tick.TickID]
+	return available > 0 && available+canonicalQuantityTolerance >= order.RemainingQuantity
+}
+
+func isCompleteCanonicalFill(order papertrading.PaperOrder, fill papertrading.PaperFill, expectedQuantity float64) bool {
+	return order.Status == papertrading.OrderFilled &&
+		math.Abs(order.RemainingQuantity) <= canonicalQuantityTolerance &&
+		math.Abs(order.FilledQuantity-order.Quantity) <= canonicalQuantityTolerance &&
+		math.Abs(fill.Quantity-expectedQuantity) <= canonicalQuantityTolerance &&
+		math.Abs(expectedQuantity-order.Quantity) <= canonicalQuantityTolerance
 }
 
 func validatePostActivationObservation(tick papertrading.MarketTick, priorTickID string, order papertrading.PaperOrder) error {

@@ -1,12 +1,17 @@
 # Current Build Package
 
-Current routing: **CORE-READINESS-02B2R3 — CANONICAL INSTRUMENT-TO-SYMBOL
-EXECUTION MAPPING**, implementation and validation. This narrow correction
-shares the explicit candidate-economic identity resolver between canonical
-handoff valuation and post-latency execution quote lookup. Execution orders and
-fills retain canonical instrument IDs; quote lookup and execution provenance
-use the explicitly mapped market symbol. CORE-READINESS-02B remains blocked and
-not executed; host clock synchronization is a separate blocker.
+Current routing: **CORE-READINESS-02B2R4 — CANONICAL FULL-FILL ATOMICITY GATE**,
+implementation and external review required. The corrected 02B2 → 02B2R3R1
+chain is **GO / EXTERNALLY REVIEWED** at
+`555384f48b2d0f62d68e0fd2fb1a04efee5a9fbb`. This package keeps generic
+PaperVenue partial fills available, while the canonical exploratory lifecycle
+waits for enough displayed liquidity to complete each entry or exit order in a
+single fill. Pending orders remain durable through restarts; lifecycle opening
+and outcome closure require full order completion. See
+`Docs/BUILD/CORE-READINESS-02B2R4-CANONICAL-FULL-FILL-ATOMICITY.md`.
+CORE-READINESS-02B remains **BLOCKED / NOT EXECUTED**; host clock
+synchronization remains a separate blocker. No hypothesis-readiness or trading
+edge claim is made.
 CORE-READINESS-02A4 and 02A4R remain **GO / EXTERNALLY REVIEWED**. The 02A4
 queue remains account-scoped and is not consumed by 02A4. CORE-READINESS-01
 remains **BLOCKED_BEFORE_HYPOTHESIS_DESIGN** until CORE-READINESS-02B is
@@ -32,10 +37,12 @@ Read `Docs/BUILD/CORE-READINESS-01-WORKING-JAX-V1-AUDIT.md`. 02A4 addresses the
 server-owned candidate/risk/approval-to-queue seam and JWT-bound decision actor.
 CORE-READINESS-02B1 is **GO / EXTERNALLY REVIEWED** as the prerequisite
 policy/temporal contract. CORE-READINESS-02B2R2 corrected post-latency runtime
-liveness. CORE-READINESS-02B2R3 corrects only the canonical instrument-to-symbol
-mapping used by that execution path and requires external review before
-CORE-READINESS-02B: isolated genuine-market end-to-end proof, including genuine
-provider observations and the reviewed runtime loop.
+liveness. CORE-READINESS-02B2R3R1 closes canonical market identity across
+approval, entry, review and exit and is externally reviewed at the SHA above.
+CORE-READINESS-02B2R4 is the current narrow full-fill atomicity package and
+requires external review before CORE-READINESS-02B: isolated genuine-market
+end-to-end proof, including genuine provider observations and the reviewed
+runtime loop.
 OPS-01 remains synthetic/disposable full-loop evidence;
 OPS-02B remains real-runtime event-intake evidence with zero economic activity.
 
