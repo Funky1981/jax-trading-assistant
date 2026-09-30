@@ -29,6 +29,7 @@ const (
 	ReasonInvalidMarketData  ReasonCode = "INVALID_MARKET_REFERENCE"
 	ReasonUnknownEnvironment ReasonCode = "UNKNOWN_ENVIRONMENT"
 	ReasonWorkflowMismatch   ReasonCode = "WORKFLOW_MISMATCH"
+	ReasonInvalidFillTiming  ReasonCode = "INVALID_FILL_TIMING"
 )
 
 type ReconciliationInput struct {
@@ -85,6 +86,9 @@ func Reconcile(input ReconciliationInput, checkedAt time.Time) ReconciliationRes
 			add(ReasonMissingOrder, "fill references a missing order")
 		} else {
 			order := input.VenueSnapshot.Orders[fill.OrderID]
+			if fill.FilledAt.Before(order.ActivatesAt) {
+				add(ReasonInvalidFillTiming, "fill predates order activation")
+			}
 			if fill.PaperIntentID != order.PaperIntentID || fill.WorkflowID != order.WorkflowID || fill.InstrumentID != order.InstrumentID || fill.Direction != order.Direction {
 				add(ReasonWorkflowMismatch, "fill provenance does not match its order")
 			}

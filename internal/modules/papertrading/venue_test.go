@@ -73,9 +73,13 @@ func TestPaperMarketTickAllowsOnlyCausalBoundedQuoteClockSkew(t *testing.T) {
 	received := time.Date(2026, 9, 29, 14, 0, 0, 0, time.UTC)
 	tick := MarketTick{TickID: "skewed", InstrumentID: "QQQ", Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 1,
 		Timestamp: received.Add(77 * time.Millisecond), LastProviderAt: received.Add(60 * time.Millisecond), ReceivedAt: received,
-		AsOf: received.Add(100 * time.Millisecond), Session: SessionOpen, Source: "alpaca"}
+		AsOf: received.Add(100 * time.Millisecond), RequireTemporalProvenance: true, Session: SessionOpen, Source: "alpaca"}
 	if err := tick.Validate(time.Minute); err != nil {
 		t.Fatalf("causal 77ms-skew tick rejected: %v", err)
+	}
+	availableAt, err := tick.AvailableAt()
+	if err != nil || !availableAt.Equal(received.Add(77*time.Millisecond)) {
+		t.Fatalf("77ms skew AvailableAt=%s err=%v", availableAt, err)
 	}
 	tick.AsOf = received.Add(50 * time.Millisecond)
 	if err := tick.Validate(time.Minute); err == nil {
@@ -86,10 +90,104 @@ func TestPaperMarketTickAllowsOnlyCausalBoundedQuoteClockSkew(t *testing.T) {
 	if err := tick.Validate(time.Minute); err == nil {
 		t.Fatal("tick with excessive provider/receipt skew was accepted")
 	}
+	tick.Timestamp = received.Add(60 * time.Millisecond)
+	tick.LastProviderAt = received.Add(251 * time.Millisecond)
+	if err := tick.Validate(time.Minute); err == nil {
+		t.Fatal("tick with excessive trade/receipt skew was accepted")
+	}
+	tick.LastProviderAt = received.Add(60 * time.Millisecond)
 	tick.Timestamp = received.Add(-61 * time.Second)
 	tick.LastProviderAt = received.Add(-time.Second)
 	if err := tick.Validate(time.Minute); err != ErrStaleMarketData {
 		t.Fatalf("stale quote/fresh trade result=%v, want stale-market-data", err)
+	}
+	tick.Timestamp = received.Add(-time.Second)
+	tick.LastProviderAt = received.Add(-61 * time.Second)
+	if err := tick.Validate(time.Minute); err != ErrStaleMarketData {
+		t.Fatalf("fresh quote/stale trade result=%v, want stale-market-data", err)
+	}
+}
+
+func TestCanonicalPaperExecutionWaitsForCausalAvailabilityAndLatency(t *testing.T) {
+	base := time.Date(2026, 9, 30, 14, 0, 0, 0, time.UTC)
+	approvalAt := base.Add(200 * time.Millisecond)
+	wf, intent := approvedPaperArtifacts(t, approvalAt)
+	contract, costs := DefaultPaperCapabilityContract(), DefaultCostModel()
+	venue, err := NewPaperVenue(contract, costs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	quoteAt := base
+	tradeAt := base.Add(17 * time.Millisecond)
+	receivedAt := base.Add(100 * time.Millisecond)
+	original := MarketTick{TickID: "canonical-original", InstrumentID: "AAPL", Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 1,
+		Timestamp: quoteAt, LastProviderAt: tradeAt, ReceivedAt: receivedAt, AsOf: approvalAt,
+		RequireTemporalProvenance: true, Session: SessionOpen, Source: "alpaca"}
+	availableAt, err := original.AvailableAt()
+	if err != nil || !availableAt.Equal(receivedAt) {
+		t.Fatalf("AvailableAt=%s, err=%v; want receipt %s", availableAt, err, receivedAt)
+	}
+	order, err := venue.Submit(CreateOrderRequest{Workflow: wf, PaperIntent: intent, Venue: contract, CostModel: costs,
+		InstrumentID: "AAPL", Quantity: 1, ReferencePrice: 100, OrderType: OrderMarket, CreatedAt: approvalAt, IdempotencyKey: intent.IntentID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if order.CreatedAt.Before(approvalAt) || order.ActivatesAt.Before(base.Add(1200*time.Millisecond)) {
+		t.Fatalf("order timing created=%s activates=%s", order.CreatedAt, order.ActivatesAt)
+	}
+	if fills, err := venue.ProcessTick(original); err != nil || len(fills) != 0 {
+		t.Fatalf("pre-activation original observation fills=%#v err=%v", fills, err)
+	}
+	laterAt := order.ActivatesAt
+	later := MarketTick{TickID: "canonical-later", InstrumentID: "AAPL", Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 1,
+		Timestamp: laterAt.Add(-50 * time.Millisecond), LastProviderAt: laterAt.Add(-25 * time.Millisecond), ReceivedAt: laterAt,
+		AsOf: laterAt, RequireTemporalProvenance: true, Session: SessionOpen, Source: "alpaca"}
+	laterAvailableAt, err := later.AvailableAt()
+	if err != nil || laterAvailableAt.Before(order.ActivatesAt) {
+		t.Fatalf("later observation availability=%s activation=%s err=%v", laterAvailableAt, order.ActivatesAt, err)
+	}
+	fills, err := venue.ProcessTick(later)
+	if err != nil || len(fills) != 1 {
+		t.Fatalf("later observation fills=%#v err=%v", fills, err)
+	}
+	if fills[0].FilledAt.Before(order.ActivatesAt) || fills[0].FilledAt.Before(approvalAt) || fills[0].FilledAt.Before(laterAvailableAt) {
+		t.Fatalf("fill violates causal bounds: fill=%s activation=%s approval=%s available=%s", fills[0].FilledAt, order.ActivatesAt, approvalAt, laterAvailableAt)
+	}
+	if !original.Timestamp.Equal(quoteAt) || !original.LastProviderAt.Equal(tradeAt) || !original.ReceivedAt.Equal(receivedAt) {
+		t.Fatalf("source provenance timestamps were rewritten: %#v", original)
+	}
+	if replay, err := venue.ProcessTick(later); err != nil || len(replay) != 0 {
+		t.Fatalf("later observation replay fills=%#v err=%v", replay, err)
+	}
+	if got := venue.Snapshot().Orders[order.OrderID]; got.Status != OrderFilled || got.FilledQuantity != order.Quantity {
+		t.Fatalf("venue order state=%#v", got)
+	}
+}
+
+func TestCanonicalPaperExecutionRejectsMissingTemporalProvenance(t *testing.T) {
+	now := time.Date(2026, 9, 30, 14, 0, 0, 0, time.UTC)
+	tick := MarketTick{TickID: "canonical-missing-trade", InstrumentID: "AAPL", Bid: 99, Ask: 101, Last: 100, AvailableQuantity: 1,
+		Timestamp: now, ReceivedAt: now, AsOf: now, RequireTemporalProvenance: true, Session: SessionOpen, Source: "alpaca"}
+	if err := tick.Validate(time.Minute); err == nil {
+		t.Fatal("canonical tick without latest-trade provenance was accepted")
+	}
+	if _, err := tick.AvailableAt(); err == nil {
+		t.Fatal("canonical tick without latest-trade provenance has availability")
+	}
+	tick.LastProviderAt = now
+	tick.AsOf = time.Time{}
+	if err := tick.Validate(time.Minute); err == nil {
+		t.Fatal("canonical tick without as-of provenance was accepted")
+	}
+}
+
+func TestPaperOrderCannotPrecedeHumanConfirmation(t *testing.T) {
+	confirmedAt := time.Date(2026, 9, 30, 14, 0, 0, 200000000, time.UTC)
+	wf, intent := approvedPaperArtifacts(t, confirmedAt)
+	_, err := CreatePaperOrder(CreateOrderRequest{Workflow: wf, PaperIntent: intent, Venue: DefaultPaperCapabilityContract(), CostModel: DefaultCostModel(),
+		InstrumentID: "AAPL", Quantity: 1, ReferencePrice: 100, OrderType: OrderMarket, CreatedAt: confirmedAt.Add(-time.Millisecond), IdempotencyKey: intent.IntentID})
+	if err == nil {
+		t.Fatal("order creation before human confirmation was accepted")
 	}
 }
 

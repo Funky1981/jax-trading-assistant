@@ -74,7 +74,7 @@ func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
 		return nil, ErrInvalidArtifact
 	}
 	for id, order := range snapshot.Orders {
-		if id != order.OrderID || order.Validate() != nil {
+		if id != order.OrderID || order.Validate() != nil || order.CostModelID != snapshot.CostModel.ModelID || !order.ActivatesAt.Equal(order.CreatedAt.Add(snapshot.CostModel.Latency)) {
 			return nil, ErrInvalidArtifact
 		}
 		if prior, exists := venue.intentOrders[order.PaperIntentID]; exists && prior != id {
@@ -88,7 +88,7 @@ func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
 			return nil, ErrInvalidArtifact
 		}
 		order, exists := venue.orders[fill.OrderID]
-		if !exists || fill.Quantity > order.Quantity {
+		if !exists || fill.Quantity > order.Quantity || fill.FilledAt.Before(order.ActivatesAt) {
 			return nil, ErrInvalidArtifact
 		}
 		venue.fills[id] = fill
@@ -122,7 +122,7 @@ func RestorePaperVenue(snapshot VenueSnapshot) (*PaperVenue, error) {
 }
 
 func (venue *PaperVenue) Submit(request CreateOrderRequest) (PaperOrder, error) {
-	if request.Venue.VenueID != venue.contract.VenueID || request.CostModel.ModelID != venue.costModel.ModelID {
+	if request.Venue.VenueID != venue.contract.VenueID || request.CostModel != venue.costModel {
 		return PaperOrder{}, ErrInvalidContract
 	}
 	if request.Venue.Environment != EnvironmentPaper {
@@ -159,6 +159,10 @@ func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped b
 	if tick.Session == SessionUnknown {
 		return nil, ErrMarketUnknown
 	}
+	availableAt, err := tick.AvailableAt()
+	if err != nil {
+		return nil, err
+	}
 	venue.mu.Lock()
 	defer venue.mu.Unlock()
 	if prior, ok := venue.processedTicks[tick.TickID]; ok {
@@ -167,19 +171,19 @@ func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped b
 		}
 		return nil, nil
 	}
-	if !venue.lastTick.IsZero() && !tick.Timestamp.After(venue.lastTick) {
+	if !venue.lastTick.IsZero() && !availableAt.After(venue.lastTick) {
 		return nil, fmt.Errorf("%w: market ticks must be strictly ordered", ErrInvalidMarketData)
 	}
 	if tick.Session == SessionUnknown {
 		return nil, ErrMarketUnknown
 	}
 	venue.processedTicks[tick.TickID] = tickFingerprint(tick)
-	venue.lastTick = tick.Timestamp
+	venue.lastTick = availableAt
 	if tick.Session == SessionClosed {
-		venue.activateOrdersLocked(tick.Timestamp)
+		venue.activateOrdersLocked(availableAt)
 		return nil, nil
 	}
-	venue.activateOrdersLocked(tick.Timestamp)
+	venue.activateOrdersLocked(availableAt)
 	ids := make([]string, 0, len(venue.orders))
 	for id := range venue.orders {
 		ids = append(ids, id)
@@ -203,7 +207,7 @@ func (venue *PaperVenue) ProcessTickWithSafety(tick MarketTick, breakerTripped b
 		if order.OrderType == OrderLimit && ((order.Direction == "LONG" && costs.ExecutedPrice > order.LimitPrice) || (order.Direction == "SHORT" && costs.ExecutedPrice < order.LimitPrice)) {
 			continue
 		}
-		fill := PaperFill{ContractVersion: FillContractVersion, OrderID: order.OrderID, PaperIntentID: order.PaperIntentID, WorkflowID: order.WorkflowID, InstrumentID: order.InstrumentID, Direction: order.Direction, Quantity: quantity, Price: costs.ExecutedPrice, Costs: costs, FilledAt: tick.Timestamp, TickID: tick.TickID}
+		fill := PaperFill{ContractVersion: FillContractVersion, OrderID: order.OrderID, PaperIntentID: order.PaperIntentID, WorkflowID: order.WorkflowID, InstrumentID: order.InstrumentID, Direction: order.Direction, Quantity: quantity, Price: costs.ExecutedPrice, Costs: costs, FilledAt: availableAt, TickID: tick.TickID}
 		fill.FillID = fillIdentity(fill)
 		if err := fill.Validate(); err != nil {
 			return fills, err

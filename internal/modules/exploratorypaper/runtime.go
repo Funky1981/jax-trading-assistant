@@ -220,8 +220,8 @@ func (r *Runtime) processEntry(ctx context.Context, entry EntryRequest) error {
 		return fmt.Errorf("%w: restore paper ledger: %v", ErrFailedClosed, err)
 	}
 	createdAt := entry.Now
-	if createdAt.After(entry.Tick.Timestamp) {
-		createdAt = entry.Tick.Timestamp
+	if confirmedAt := entry.Approval.Workflow.Confirmation.ConfirmedAt; createdAt.Before(confirmedAt) {
+		createdAt = confirmedAt
 	}
 	order, err := r.Venue.Submit(papertrading.CreateOrderRequest{Workflow: entry.Approval.Workflow, PaperIntent: entry.Approval.PaperIntent, Venue: entry.Venue, CostModel: entry.CostModel, InstrumentID: entry.Thesis.InstrumentID, Quantity: entry.Quantity, ReferencePrice: entry.Tick.Last, OrderType: papertrading.OrderMarket, CreatedAt: createdAt, IdempotencyKey: entry.Approval.PaperIntent.IntentID})
 	if err != nil {
@@ -383,9 +383,9 @@ func (r *Runtime) processReview(ctx context.Context, item ReviewRecord) error {
 	if costModel.ModelID == "" {
 		costModel = papertrading.DefaultCostModel()
 	}
-	createdAt := observation.Tick.Timestamp.Add(-costModel.Latency)
-	if !createdAt.Before(observation.Tick.Timestamp) {
-		createdAt = observation.Tick.Timestamp
+	createdAt := r.Now().UTC()
+	if approvalAt := approval.Workflow.Confirmation.ConfirmedAt; createdAt.Before(approvalAt) {
+		createdAt = approvalAt
 	}
 	order, err := r.Venue.Submit(papertrading.CreateOrderRequest{Workflow: approval.Workflow, PaperIntent: approval.PaperIntent, Venue: papertrading.DefaultPaperCapabilityContract(), CostModel: costModel, InstrumentID: position.Thesis.InstrumentID, Quantity: item.Lifecycle.EntryFill.Quantity, ReferencePrice: observation.Price, OrderType: papertrading.OrderMarket, CreatedAt: createdAt, IdempotencyKey: approval.PaperIntent.IntentID})
 	if err != nil {

@@ -108,6 +108,9 @@ func (confirmation Confirmation) ValidateFor(workflow Workflow, now time.Time) e
 	if err := validateUTC(now); err != nil || !now.Before(confirmation.ExpiresAt) {
 		return fmt.Errorf("confirmation is expired")
 	}
+	if now.Before(confirmation.ConfirmedAt) {
+		return fmt.Errorf("confirmation cannot be used before it was confirmed")
+	}
 	if confirmation.ConfirmationID != confirmationIdentity(confirmation) {
 		return ErrBindingMismatch
 	}

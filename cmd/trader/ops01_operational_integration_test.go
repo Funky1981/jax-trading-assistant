@@ -328,7 +328,7 @@ func TestOPS01OperationalReadinessProof(t *testing.T) {
 		t.Fatalf("exit recommendation was not durable: %#v", review)
 	}
 
-	exitApproval := ops01ApprovalForRecommendation(t, review.ExitRecommendationID, now.Add(24*time.Hour), "ops01-exit-operator", accountID)
+	exitApproval := ops01ApprovalForRecommendation(t, review.ExitRecommendationID, now, "ops01-exit-operator", accountID)
 	exitApproval.ExitBinding = &exploratorypaper.ExitApprovalBinding{PositionID: positionID, ReviewID: review.ReviewID, RecommendationID: review.ExitRecommendationID, EntryWorkflowID: record.Binding.WorkflowID, EntryPaperIntentID: record.Binding.PaperIntentID}
 	manager, err := auth.NewJWTManager(auth.Config{Secret: []byte("ops01-test-secret"), Expiry: time.Hour})
 	if err != nil {
@@ -545,7 +545,7 @@ func ops01ApprovedApproval(t *testing.T, risk portfoliorisk.RiskDecision, at tim
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmation, err := workflow.NewConfirmation(wf, "QQQ", direction, at, at.Add(time.Hour))
+	confirmation, err := workflow.NewConfirmation(wf, "QQQ", direction, at, at.Add(48*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}

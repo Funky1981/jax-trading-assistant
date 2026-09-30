@@ -335,7 +335,7 @@ func (s *canonicalHandoffService) approveOnce(ctx context.Context, candidateID u
 	}
 	tickID := "tick_" + canonicalDigest(input.Candidate.Symbol, quote.Source, quote.ProviderAt.UTC().Format(time.RFC3339Nano), quote.LastProviderAt.UTC().Format(time.RFC3339Nano), quote.ReceivedAt.UTC().Format(time.RFC3339Nano), fmt.Sprintf("%.12g|%.12g|%.12g", quote.Bid, quote.Ask, quote.Last))
 	tick := papertrading.MarketTick{TickID: tickID, InstrumentID: input.Economic.InstrumentID, Bid: quote.Bid, Ask: quote.Ask, Last: quote.Last,
-		AvailableQuantity: quantity, Timestamp: quote.ProviderAt.UTC(), LastProviderAt: quote.LastProviderAt.UTC(), ReceivedAt: quote.ReceivedAt.UTC(), AsOf: now.UTC(), Session: papertrading.Session(session), Source: quote.Source}
+		AvailableQuantity: quantity, Timestamp: quote.ProviderAt.UTC(), LastProviderAt: quote.LastProviderAt.UTC(), ReceivedAt: quote.ReceivedAt.UTC(), AsOf: now.UTC(), RequireTemporalProvenance: true, Session: papertrading.Session(session), Source: quote.Source}
 	if err := tick.Validate(venue.MaxQuoteAge); err != nil {
 		return response, fmt.Errorf("fresh PAPER market tick is invalid: %w", err)
 	}

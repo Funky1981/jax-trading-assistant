@@ -157,6 +157,10 @@ func TestPostgresRestartRestoresExploratoryLifecycle(t *testing.T) {
 	if err := restored.Position.Close(exitFills[0].FilledAt); err != nil {
 		t.Fatal(err)
 	}
+	// This integration fixture models an operator decision at exitAt; align the
+	// persistence clock with that deterministic approval time rather than the
+	// machine wall clock.
+	store.now = func() time.Time { return exitAt.Add(time.Second) }
 	if err := store.PersistExitApproval(ctx, position.PositionID, review, exitApproval); err != nil {
 		t.Fatal(err)
 	}
