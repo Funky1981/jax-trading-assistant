@@ -402,12 +402,13 @@ corrects post-latency PAPER execution liveness. CORE-READINESS-02B2R3R1 closes
 canonical identity across the lifecycle and is GO / EXTERNALLY REVIEWED.
 CORE-READINESS-02B2R4 adds full-fill atomicity; R4R1 adds per-account/instrument
 exclusivity and was externally reviewed before the genuine proof. CORE-READINESS-
-02B has executed one partial genuine-provider attempt and stopped at a WATCH-only
-event with no candidate; continue sequentially from disposable cursor `72795`
-when the regular US market session is open. The first attempt's current-tail
-anchoring replaced the planned stale cursor and is explicitly a technical-proof
-protocol deviation, not economic evidence. No strategy is selected by this
-roadmap update. PAPER-03, PAPER-04,
+02B has executed two partial genuine-provider attempts and stopped at zero
+eligible candidates. Attempt 2 processed 25 events from cursor `72795` to
+`76220` (20 `NO_TRADE`, 5 `WATCH`, no `CANDIDATE`); continue only sequentially
+from disposable cursor `76220` when the regular US PAPER session is open.
+Attempt 1's current-tail anchoring replaced the planned stale cursor and is
+explicitly a technical-proof protocol deviation, not economic evidence. No
+strategy is selected by this roadmap update. PAPER-03, PAPER-04,
 and FORMAL-01 remain future work; FORMAL-01 requires separate authorization.
 VAL-04B, HARNESS-04, live-readiness, Phase 13, and commercialisation are not
 current implementation work. No new prospective pilot is authorized; live

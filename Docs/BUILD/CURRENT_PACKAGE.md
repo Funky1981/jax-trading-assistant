@@ -1,11 +1,12 @@
 # Current Build Package
 
 Current routing: **CORE-READINESS-02B — SEQUENTIAL GENUINE-MARKET PROOF
-CONTINUATION**. The first bounded genuine attempt is recorded as
-`PARTIAL GENUINE PROOF EXECUTED / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT`; its event
-remained WATCH and no candidate was created. Continue only from frozen
-disposable World Monitor cursor `72795`, at a valid regular US PAPER session.
-The current host-clock blocker was cleared during the recorded proof. See
+CONTINUATION**. Two bounded genuine attempts are recorded as
+`PARTIAL GENUINE PROOF EXECUTED / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT`.
+Attempt 2 processed 25 events after cursor `72795`, with 20 `NO_TRADE`, 5
+`WATCH`, and no candidate. Continue only from frozen disposable World Monitor
+cursor `76220`, at a valid regular US PAPER session. Both attempt clock gates
+passed. See
 `Docs/BUILD/CORE-READINESS-02B-GENUINE-MARKET-END-TO-END-PROOF.md`.
 
 CORE-READINESS-02B2R4R1 — SINGLE-INSTRUMENT LIFECYCLE EXCLUSIVITY — was

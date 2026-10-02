@@ -16,11 +16,12 @@ for technical-proof policy, split market temporal bounds, interval completion
 semantics, and a disposable routing fixture. CORE-READINESS-02B2 implements
 separate Alpaca quote/trade provenance, bounded clock-skew, and strict
 availability validation; it remains subject to external review.
-CORE-READINESS-02B has partial genuine-provider technical evidence: the bounded
-current-tail sample reached a genuine event decision (`WATCH`) and Alpaca market
-observations, but produced no eligible candidate. It remains
+CORE-READINESS-02B has partial genuine-provider technical evidence: two bounded
+pages reached deterministic genuine-event decisions and Alpaca market data,
+but produced no eligible candidate. Attempt 2 processed 25 events from cursor
+`72795` to `76220` (20 `NO_TRADE`, 5 `WATCH`, no `CANDIDATE`). It remains
 `BLOCKED_NO_ELIGIBLE_GENUINE_EVENT`; sequential continuation is frozen at
-disposable cursor `72795`. This is not strategy or edge evidence, and Working
+disposable cursor `76220`. This is not strategy or edge evidence, and Working
 Jax is not ready for hypothesis design.
 
 CORE-READINESS-02B2R2 implements durable post-latency pending PAPER execution.

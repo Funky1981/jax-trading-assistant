@@ -110,16 +110,18 @@ documented gates. They do not prove a trading edge or authorize live execution.
   lifecycle entry fill. See
   `Docs/BUILD/CORE-READINESS-02B2R4R1-SINGLE-INSTRUMENT-EXCLUSIVITY.md`.
 - CORE-READINESS-02B: `PARTIAL GENUINE PROOF EXECUTED / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT`.
-  The genuine proof passed its host-clock gate and reached a current-tail
-  World Monitor WATCH decision plus genuine Alpaca quote/trade/candle evidence;
-  no candidate or economic lifecycle resulted. This is technical integrity
-  evidence, not a strategy failure or edge claim. The sequential continuation
-  boundary is disposable cursor `72795`; the prior normal Jax cursor was not
-  read or advanced. See
+  Attempts 1 and 2 passed their session/clock gates and processed bounded
+  genuine World Monitor pages. Attempt 2 processed 25 events after disposable
+  cursor `72795`, producing 20 `NO_TRADE`, 5 `WATCH`, no `CANDIDATE`, and 24
+  unresolved asset resolutions. No candidate or economic lifecycle resulted.
+  This is technical integrity evidence, not a strategy failure or edge claim.
+  The next sequential continuation boundary is disposable cursor `76220`; the
+  normal Jax database and cursor were not accessed. See
   `Docs/BUILD/CORE-READINESS-02B-GENUINE-MARKET-END-TO-END-PROOF.md`.
 - Working Jax remains `BLOCKED_BEFORE_HYPOTHESIS_DESIGN` pending completion and
-  external review of the full isolated genuine-market proof. The prior
-  host-clock blocker was cleared during the recorded attempt.
+  external review of the full isolated genuine-market proof. Both recorded
+  attempts passed their host-clock gates; Attempt 2 stopped at zero eligible
+  candidates.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
 - Harness foundation contracts: `HARNESS-01 GO / EXTERNALLY REVIEWED`.
 - Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE`.
