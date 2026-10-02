@@ -1,12 +1,15 @@
 # Current Build Package
 
-Current routing: **CORE-READINESS-02B — SEQUENTIAL GENUINE-MARKET PROOF
-CONTINUATION**. Two bounded genuine attempts are recorded as
+Current routing: **CORE-READINESS-02B-R2 — PROOF-MODE TECHNICAL ROUTING
+STARTUP CORRECTION**. Two bounded genuine attempts are recorded as
 `PARTIAL GENUINE PROOF EXECUTED / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT`.
 Attempt 2 processed 25 events after cursor `72795`, with 20 `NO_TRADE`, 5
-`WATCH`, and no candidate. Continue only from frozen disposable World Monitor
-cursor `76220`, at a valid regular US PAPER session. Both attempt clock gates
-passed. See
+`WATCH`, and no candidate. Attempt 2 remains valid at its reached zero-promoter-
+input boundary; the routing startup incompatibility was discovered afterward
+and is corrected before Attempt 3. Cursor `76220` remains frozen and must
+not be consumed by R2. After external GO, continue sequentially from that cursor
+only in a valid regular US PAPER session. See
+`Docs/BUILD/CORE-READINESS-02B-R2-PROOF-ROUTING-STARTUP.md` and
 `Docs/BUILD/CORE-READINESS-02B-GENUINE-MARKET-END-TO-END-PROOF.md`.
 
 CORE-READINESS-02B2R4R1 — SINGLE-INSTRUMENT LIFECYCLE EXCLUSIVITY — was
@@ -21,8 +24,11 @@ remain available; the canonical v1 lifecycle remains single-exposure and
 full-fill only. See
 `Docs/BUILD/CORE-READINESS-02B2R4R1-SINGLE-INSTRUMENT-EXCLUSIVITY.md`.
 CORE-READINESS-02B remains blocked because no eligible genuine candidate was
-produced in the prior bounded sample. This WATCH-only infrastructure result is
-not a strategy failure, hypothesis-readiness result, or trading-edge claim.
+produced in the prior bounded sample. Attempt 2 had zero promoter input rows at
+the unchanged 0.55 minimum; the routing issue did not cause its zero-candidate
+result. R2 corrects proof-mode fixture startup before another sequential page
+is consumed. This technical infrastructure result is not strategy evidence,
+hypothesis selection, or a trading-edge claim.
 CORE-READINESS-02A4 and 02A4R remain **GO / EXTERNALLY REVIEWED**. The 02A4
 queue remains account-scoped and is not consumed by 02A4. CORE-READINESS-01
 remains **BLOCKED_BEFORE_HYPOTHESIS_DESIGN** until CORE-READINESS-02B is
@@ -51,10 +57,11 @@ policy/temporal contract. CORE-READINESS-02B2R2 corrected post-latency runtime
 liveness. CORE-READINESS-02B2R3R1 closes canonical market identity across
 approval, entry, review and exit and is externally reviewed at the SHA above.
 CORE-READINESS-02B2R4R1's reviewed accounting/lifecycle exclusivity contract is
-part of the accepted proof-code chain. CORE-READINESS-02B is the current package:
-continue at most one new sequential event-page attempt from cursor `72795` and
-only during a valid market session. Do not scan backwards, cherry-pick pages,
-or change the reviewed policy.
+part of the accepted proof-code chain. CORE-READINESS-02B-R2 corrects the
+proof-mode-only routing fixture startup order and restart validation. The
+current genuine-proof cursor remains `76220`; do not consume it until R2 has
+external GO and a later authorized attempt runs during a valid market session.
+Do not scan backwards, cherry-pick pages, or change the reviewed policy.
 OPS-01 remains synthetic/disposable full-loop evidence;
 OPS-02B remains real-runtime event-intake evidence with zero economic activity.
 

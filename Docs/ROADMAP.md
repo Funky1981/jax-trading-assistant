@@ -93,7 +93,8 @@ not promote a strategy or prove a trading edge.
 | CORE-READINESS-02B2 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / ALPACA QUOTE TEMPORAL SEMANTICS** |
 | CORE-READINESS-02B2R2 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / POST-LATENCY PAPER EXECUTION** |
 | CORE-READINESS-02B2R3 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / CANONICAL INSTRUMENT-TO-SYMBOL EXECUTION MAPPING** |
-| CORE-READINESS-02B | **PARTIAL GENUINE PROOF / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT / SEQUENTIAL CONTINUATION FROM 72795** |
+| CORE-READINESS-02B | **PARTIAL GENUINE PROOF / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT / CURSOR 76220 FROZEN** |
+| CORE-READINESS-02B-R2 | **IMPLEMENTED / TECHNICAL VALIDATION PASSED** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -359,7 +360,8 @@ IMPLEMENTED / EXTERNAL REVIEW REQUIRED
 
 CORE-READINESS-02B
 ISOLATED GENUINE-MARKET END-TO-END PROOF
-REMAINING / NOT STARTED
+PARTIAL / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT
+R2 ROUTING STARTUP CORRECTION BEFORE CURSOR 76220
 
 ↓
 
@@ -405,10 +407,14 @@ exclusivity and was externally reviewed before the genuine proof. CORE-READINESS
 02B has executed two partial genuine-provider attempts and stopped at zero
 eligible candidates. Attempt 2 processed 25 events from cursor `72795` to
 `76220` (20 `NO_TRADE`, 5 `WATCH`, no `CANDIDATE`); continue only sequentially
-from disposable cursor `76220` when the regular US PAPER session is open.
+from disposable cursor `76220` only after the R2 proof-mode technical routing
+startup correction has external GO and the regular US PAPER session is open.
+Attempt 2 remains valid at its zero-promoter-input boundary; the routing issue
+was found afterward and did not cause that result.
 Attempt 1's current-tail anchoring replaced the planned stale cursor and is
 explicitly a technical-proof protocol deviation, not economic evidence. No
-strategy is selected by this roadmap update. PAPER-03, PAPER-04,
+page at cursor `76220` has been consumed by R2, and no strategy or edge claim is
+made by the routing correction. PAPER-03, PAPER-04,
 and FORMAL-01 remain future work; FORMAL-01 requires separate authorization.
 VAL-04B, HARNESS-04, live-readiness, Phase 13, and commercialisation are not
 current implementation work. No new prospective pilot is authorized; live

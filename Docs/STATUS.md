@@ -113,11 +113,19 @@ documented gates. They do not prove a trading edge or authorize live execution.
   Attempts 1 and 2 passed their session/clock gates and processed bounded
   genuine World Monitor pages. Attempt 2 processed 25 events after disposable
   cursor `72795`, producing 20 `NO_TRADE`, 5 `WATCH`, no `CANDIDATE`, and 24
-  unresolved asset resolutions. No candidate or economic lifecycle resulted.
-  This is technical integrity evidence, not a strategy failure or edge claim.
-  The next sequential continuation boundary is disposable cursor `76220`; the
-  normal Jax database and cursor were not accessed. See
+  unresolved asset resolutions. There were zero promoter input rows at the
+  unchanged 0.55 minimum; no candidate or economic lifecycle resulted.
+  Attempt 2 is valid at that reached boundary. R2 corrects the later-discovered
+  technical routing fixture/startup incompatibility before cursor `76220` is
+  consumed. Normal PAPER event-provider readiness is unchanged; the disposable
+  proof fixture is ensured after the generic gate and reused only through a
+  proof-mode-specific startup path. No strategy or edge claim is made. See
+  `Docs/BUILD/CORE-READINESS-02B-R2-PROOF-ROUTING-STARTUP.md` and
   `Docs/BUILD/CORE-READINESS-02B-GENUINE-MARKET-END-TO-END-PROOF.md`.
+- CORE-READINESS-02B-R2: `IMPLEMENTED / TECHNICAL VALIDATION PASSED`. The
+  guarded disposable routing
+  fixture is installed after generic readiness, validated on restart, and
+  excluded from approved strategy artifacts. Cursor `76220` is untouched.
 - Working Jax remains `BLOCKED_BEFORE_HYPOTHESIS_DESIGN` pending completion and
   external review of the full isolated genuine-market proof. Both recorded
   attempts passed their host-clock gates; Attempt 2 stopped at zero eligible
@@ -159,10 +167,12 @@ CORE-READINESS-01 found that the reusable core is not yet trustworthy enough
 to begin hypothesis design. CORE-READINESS-02A4 implements the canonical
 server-owned candidate-to-queue seam. CORE-READINESS-02B has a partial genuine
 provider proof but stopped at a WATCH-only event with no eligible candidate.
-The continuation is sequential from disposable World Monitor cursor `72795`;
-the first attempt's current-tail anchoring was a technical-proof protocol
-deviation and is not economic or strategy evidence. No strategy selection, normal
-database mutation, new pilot, prospective evidence collection, runtime
+R2 corrects the proof-mode routing fixture/startup incompatibility before the
+next page; Attempt 2 remains valid at its zero-promoter-input boundary. The
+frozen sequential continuation cursor is disposable World Monitor cursor
+`76220`; the first attempt's current-tail anchoring was a technical-proof
+protocol deviation and is not economic or strategy evidence. No strategy
+selection, normal database mutation, new pilot, prospective evidence collection, runtime
 deployment, or broker use is authorized here. PAPER-02 remains aborted and
 historically preserved; HARNESS-04 is deferred, FORMAL_FORWARD_PAPER is not
 started, and broker/live execution is not authorized.

@@ -138,8 +138,14 @@ func main() {
 	// Initialize strategy registry
 	registry := strategies.NewRegistry()
 	strategyTypeRegistry := strategytypes.DefaultRegistry()
-	if err := validateEventProviderReadiness(ctx, dbPool, strategyTypeRegistry, cfg.RuntimeMode); err != nil {
+	if err := validateEventProviderReadiness(ctx, dbPool, strategyTypeRegistry, cfg.RuntimeMode, proofMode); err != nil {
 		log.Fatalf("event provider readiness failed: %v", err)
+	}
+	if proofMode {
+		if err := ensureCoreReadiness02BTechnicalRoutingFixture(ctx, dbPool, proofMode, cfg.DatabaseURL); err != nil {
+			log.Fatalf("CORE-READINESS-02B technical routing fixture rejected: %v", err)
+		}
+		log.Println("CORE-READINESS-02B disposable technical routing fixture verified")
 	}
 
 	// ADR-0012 Phase 4: Load strategies from APPROVED artifacts only
@@ -377,12 +383,14 @@ func validateStartupProviderPolicy(mode runtimepolicy.Mode) error {
 	return nil
 }
 
-func validateEventProviderReadiness(ctx context.Context, db *pgxpool.Pool, registry *strategytypes.Registry, mode runtimepolicy.Mode) error {
+func validateEventProviderReadiness(ctx context.Context, db *pgxpool.Pool, registry *strategytypes.Registry, mode runtimepolicy.Mode, proofMode ...bool) error {
+	ignoreTechnicalFixture := len(proofMode) == 1 && proofMode[0] && coreReadiness02BProofModeEnabled()
 	rows, err := db.Query(ctx, `
 		SELECT strategy_type_id
 		FROM strategy_instances
 		WHERE enabled = TRUE
-	`)
+		  AND (NOT $1::boolean OR name <> $2)
+	`, ignoreTechnicalFixture, coreReadiness02BTechnicalRoutingFixtureName)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "strategy_instances") && strings.Contains(strings.ToLower(err.Error()), "does not exist") {
 			log.Printf("event provider readiness skipped: strategy_instances table missing (migrations not fully applied)")

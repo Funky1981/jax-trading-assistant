@@ -88,6 +88,27 @@ The planned initial cursor `50984` was superseded before the successful current-
 
 The Attempt 2 result is `BLOCKED_NO_ELIGIBLE_GENUINE_EVENT`, a valid technical result. It is not strategy, edge, or formal-forward evidence. No threshold, confidence, asset-resolution rule, candidate contract, chart rule, or risk policy was changed.
 
+### R2 routing correction before the next page
+
+The later-discovered startup issue does not invalidate Attempt 2. That attempt
+had zero promoter input rows at the unchanged `0.55` minimum and stopped before
+candidate creation; its result remains **VALID AT REACHED ZERO-PROMOTER-INPUT
+BOUNDARY**. The technical routing fixture/startup incompatibility was found
+afterward and is corrected by CORE-READINESS-02B-R2 before another page is
+consumed.
+
+R2 keeps generic event-provider readiness unchanged for ordinary PAPER mode.
+On first proof-mode startup it runs that gate before installing the fixture;
+on restart, only the reserved fixture row is omitted from the proof-mode
+provider scan, then the helper validates the existing row's complete identity
+and semantics. The fixture remains outside the approved artifact registry and
+routes only symbols in the reviewed candidate economic policy. See
+`Docs/BUILD/CORE-READINESS-02B-R2-PROOF-ROUTING-STARTUP.md`.
+
+No proof page was requested or consumed by R2. The frozen continuation cursor
+remains **`76220`**, and Attempt 3 remains **NOT STARTED**. R2 makes no strategy,
+hypothesis, or trading-edge claim.
+
 The initial stale bounded page (`0 → 27`, 25 records, digest `ecb38b1cd58f90bb8c7d2b8fc973548a29a2889bf2b6d7568b4005bfdac0095c`) is preserved in the original proof record but was excluded from attempt 1's current-window candidate sample. Its recorded decisions were 23 `NO_TRADE` and 2 `WATCH`; it did not supply attempt-1 candidate evidence.
 
 The frozen continuation boundary is cursor **`76220`** after Attempt 2. At most the first newly available provider page after that cursor may be consumed in a future attempt, and only during a valid regular US PAPER session. Do not scan backwards, cherry-pick later pages, or change event/candidate/risk policy. If the session gate is closed, do not request or consume the continuation page. A WATCH or NO_TRADE remains a valid technical outcome.
