@@ -93,7 +93,7 @@ not promote a strategy or prove a trading edge.
 | CORE-READINESS-02B2 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / ALPACA QUOTE TEMPORAL SEMANTICS** |
 | CORE-READINESS-02B2R2 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / POST-LATENCY PAPER EXECUTION** |
 | CORE-READINESS-02B2R3 | **IMPLEMENTED / EXTERNAL REVIEW REQUIRED / CANONICAL INSTRUMENT-TO-SYMBOL EXECUTION MAPPING** |
-| CORE-READINESS-02B | **NOT YET EXECUTED / ISOLATED GENUINE-MARKET END-TO-END PROOF** |
+| CORE-READINESS-02B | **PARTIAL GENUINE PROOF / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT / SEQUENTIAL CONTINUATION FROM 72795** |
 | FORMAL_FORWARD_PAPER | **NOT STARTED** |
 | Trading edge | **NOT DEMONSTRATED** |
 | Phase 13 | **NOT STARTED / BLOCKED** |
@@ -401,9 +401,13 @@ quote/trade provenance and remains subject to external review. CORE-READINESS-02
 corrects post-latency PAPER execution liveness. CORE-READINESS-02B2R3R1 closes
 canonical identity across the lifecycle and is GO / EXTERNALLY REVIEWED.
 CORE-READINESS-02B2R4 adds full-fill atomicity; R4R1 adds per-account/instrument
-exclusivity and requires external review. CORE-READINESS-02B remains the
-isolated genuine-market end-to-end proof and has not started. No strategy is selected by
-this roadmap update. PAPER-03, PAPER-04,
+exclusivity and was externally reviewed before the genuine proof. CORE-READINESS-
+02B has executed one partial genuine-provider attempt and stopped at a WATCH-only
+event with no candidate; continue sequentially from disposable cursor `72795`
+when the regular US market session is open. The first attempt's current-tail
+anchoring replaced the planned stale cursor and is explicitly a technical-proof
+protocol deviation, not economic evidence. No strategy is selected by this
+roadmap update. PAPER-03, PAPER-04,
 and FORMAL-01 remain future work; FORMAL-01 requires separate authorization.
 VAL-04B, HARNESS-04, live-readiness, Phase 13, and commercialisation are not
 current implementation work. No new prospective pilot is authorized; live
@@ -413,10 +417,10 @@ execution remains unauthorized.
 
 CORE-READINESS-01 remains `BLOCKED_BEFORE_HYPOTHESIS_DESIGN`. CORE-READINESS-02A4
 and 02A4R are `GO / EXTERNALLY REVIEWED`; 02B1 is `GO / EXTERNALLY REVIEWED`;
-02B2 and 02B2R2 require external review; 02B2R3R1 is GO / EXTERNALLY REVIEWED;
-R4 is superseded for final acceptance by R4R1, which requires external review.
-CORE-READINESS-02B must still provide isolated
-genuine-market end-to-end proof and external review.
+02B2 and 02B2R2 require external review; 02B2R3R1 and R4R1 are GO / EXTERNALLY
+REVIEWED. CORE-READINESS-02B has partial genuine-provider evidence but remains
+blocked before hypothesis design until the full technical chain is completed
+and externally reviewed.
 Neither package is strategy selection or a profitability claim.
 
 ## North Star

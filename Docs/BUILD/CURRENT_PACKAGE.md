@@ -1,7 +1,16 @@
 # Current Build Package
 
-Current routing: **CORE-READINESS-02B2R4R1 — SINGLE-INSTRUMENT LIFECYCLE
-EXCLUSIVITY**, implementation validated and external review required.
+Current routing: **CORE-READINESS-02B — SEQUENTIAL GENUINE-MARKET PROOF
+CONTINUATION**. The first bounded genuine attempt is recorded as
+`PARTIAL GENUINE PROOF EXECUTED / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT`; its event
+remained WATCH and no candidate was created. Continue only from frozen
+disposable World Monitor cursor `72795`, at a valid regular US PAPER session.
+The current host-clock blocker was cleared during the recorded proof. See
+`Docs/BUILD/CORE-READINESS-02B-GENUINE-MARKET-END-TO-END-PROOF.md`.
+
+CORE-READINESS-02B2R4R1 — SINGLE-INSTRUMENT LIFECYCLE EXCLUSIVITY — was
+externally reviewed before the genuine proof and is included in its proof code;
+it is no longer the active package.
 CORE-READINESS-02B2R3R1 remains **GO / EXTERNALLY REVIEWED** at
 `555384f48b2d0f62d68e0fd2fb1a04efee5a9fbb`. CORE-READINESS-02B2R4 implemented
 full-fill atomicity and is superseded for final acceptance by R4R1. R4R1 adds
@@ -10,9 +19,9 @@ pre-exit ledger-to-lifecycle quantity binding. Generic PaperVenue partial fills
 remain available; the canonical v1 lifecycle remains single-exposure and
 full-fill only. See
 `Docs/BUILD/CORE-READINESS-02B2R4R1-SINGLE-INSTRUMENT-EXCLUSIVITY.md`.
-CORE-READINESS-02B remains **BLOCKED / NOT EXECUTED**; host clock
-synchronization remains a separate blocker. No hypothesis-readiness or trading
-edge claim is made.
+CORE-READINESS-02B remains blocked because no eligible genuine candidate was
+produced in the prior bounded sample. This WATCH-only infrastructure result is
+not a strategy failure, hypothesis-readiness result, or trading-edge claim.
 CORE-READINESS-02A4 and 02A4R remain **GO / EXTERNALLY REVIEWED**. The 02A4
 queue remains account-scoped and is not consumed by 02A4. CORE-READINESS-01
 remains **BLOCKED_BEFORE_HYPOTHESIS_DESIGN** until CORE-READINESS-02B is
@@ -40,10 +49,11 @@ CORE-READINESS-02B1 is **GO / EXTERNALLY REVIEWED** as the prerequisite
 policy/temporal contract. CORE-READINESS-02B2R2 corrected post-latency runtime
 liveness. CORE-READINESS-02B2R3R1 closes canonical market identity across
 approval, entry, review and exit and is externally reviewed at the SHA above.
-CORE-READINESS-02B2R4R1 is the current narrow accounting/lifecycle exclusivity
-package and requires external review before CORE-READINESS-02B: isolated
-genuine-market end-to-end proof, including genuine provider observations and
-the reviewed runtime loop.
+CORE-READINESS-02B2R4R1's reviewed accounting/lifecycle exclusivity contract is
+part of the accepted proof-code chain. CORE-READINESS-02B is the current package:
+continue at most one new sequential event-page attempt from cursor `72795` and
+only during a valid market session. Do not scan backwards, cherry-pick pages,
+or change the reviewed policy.
 OPS-01 remains synthetic/disposable full-loop evidence;
 OPS-02B remains real-runtime event-intake evidence with zero economic activity.
 

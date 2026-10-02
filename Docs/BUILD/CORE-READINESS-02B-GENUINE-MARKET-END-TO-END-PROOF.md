@@ -61,6 +61,20 @@ An initial bounded pull from position zero returned 25 genuine but stale events 
 - The proof runtime ran only in `PAPER`; `ExecutionAuthority=NONE`; `EXECUTION_ENABLED=false`; `BROKER_EXECUTION_ALLOWED=false`; `ALLOW_LIVE_TRADING=false`; maximum leverage was 1x. IB Bridge was not used. Broker/order API calls: 0.
 - No event/candidate threshold, chart requirement, risk parameter, market freshness bound, or strategy setting was changed. No genuine candidate, quote, event, liquidity, or human decision was fabricated.
 
+## Sequential attempt ledger and authority
+
+Current authority: **`PARTIAL GENUINE PROOF EXECUTED / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT`**. The recorded host-clock gate passed during attempt 1; the former host-clock blocker is cleared for that attempt only. CORE-READINESS-02B remains incomplete and is not ready for hypothesis design.
+
+The planned initial cursor `50984` was superseded before the successful current-window sample. The proof used a read-only health maximum to avoid treating the stale July events as the current technical sample, anchoring its disposable consumer at `72770`. This is recorded as a **TECHNICAL-PROOF PROTOCOL DEVIATION: current-tail anchoring replaced the earlier stale pre-registered cursor.** It is acceptable only for infrastructure proof and is not economic or strategy evidence. The normal Jax cursor was not read or advanced.
+
+| Attempt | Code SHA | UTC start / end | Cursor before → after | Page digest | Event count | Decision counts (NO_TRADE / WATCH / CANDIDATE / rejected-or-unresolved) | Candidate count / selected ID | Furthest proven boundary | Stop reason |
+|---|---|---|---|---|---:|---|---|---|---|
+| 1 | `e818fa2ad3b31a72a535d150de1237cdaf4a2078` | Start `2026-09-30T18:27:30.0924154Z`; end not independently recorded | `72770 → 72795` | `e0b174046fbdaebc69431ea41adf7375e9d25e206cbac84b39dcb7cb80c762dc` | 1 | `0 / 1 / 0 / 0` | 0 / none | Genuine World Monitor page and normalized event; live-origin WATCH decision; XLE asset resolution; genuine Alpaca quote/trade and completed-candle evidence | Event confidence `0.50` was below the unchanged `0.55` promoter minimum and the candidate contract was incomplete; no candidate was created |
+
+The initial stale bounded page (`0 → 27`, 25 records, digest `ecb38b1cd58f90bb8c7d2b8fc973548a29a2889bf2b6d7568b4005bfdac0095c`) is preserved in the original proof record but was excluded from attempt 1's current-window candidate sample. Its recorded decisions were 23 `NO_TRADE` and 2 `WATCH`; it did not supply attempt-1 candidate evidence.
+
+The frozen continuation boundary is cursor **`72795`**. Attempt 2 has not been executed. At most the first newly available provider page after that cursor may be consumed in a future attempt, and only during a valid regular US PAPER session. Do not scan backwards, cherry-pick later pages, or change event/candidate/risk policy. If the session gate is closed, do not request or consume the continuation page. A WATCH or NO_TRADE remains a valid technical outcome.
+
 ## Validation and exact-SHA workflows
 
 Local validation on the proof-code SHA used a fresh disposable validation database migrated to version 81. `go test -count=1 ./...`, `golangci-lint run ./...` (0 issues), gofmt verification, `git diff --check`, `go list -mod=readonly -m all`, and `docker compose config --quiet` passed. The optional raw-payload integration variable was left unset to keep that test isolated; required PostgreSQL tests ran with `PAPER02R_REQUIRED_INTEGRATION=true`.

@@ -88,8 +88,7 @@ documented gates. They do not prove a trading edge or authorize live execution.
   routing fixture only.
 - CORE-READINESS-02B2: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; separate Alpaca
   quote/trade timestamps, nullable persistence, bounded clock-skew, and strict
-  availability validation. CORE-READINESS-02B remains blocked and not yet
-  executed.
+  availability validation. Its evidence is preserved in the package record.
 - CORE-READINESS-02B2R2: `IMPLEMENTED / EXTERNAL REVIEW REQUIRED`; durable
   pending PAPER entry/exit orders wait for distinct post-latency persisted
   provider quotes; approval-time evidence remains unchanged.
@@ -105,16 +104,22 @@ documented gates. They do not prove a trading edge or authorize live execution.
   only persists entry/exit lifecycle transitions after one complete fill.
   Generic PaperVenue partial fills remain supported; superseded for final
   acceptance by R4R1.
-- CORE-READINESS-02B2R4R1: `IMPLEMENTATION VALIDATED / EXTERNAL REVIEW REQUIRED`;
+- CORE-READINESS-02B2R4R1: `GO / EXTERNALLY REVIEWED` before the genuine proof;
   canonical approvals are exclusive per PAPER account/instrument, runtime
   repeats the durable exposure check, and exit quantity is bound to the
   lifecycle entry fill. See
   `Docs/BUILD/CORE-READINESS-02B2R4R1-SINGLE-INSTRUMENT-EXCLUSIVITY.md`.
-- CORE-READINESS-02B remains blocked and not executed; host clock
-  synchronization is a separate blocker.
-- CORE-READINESS-02B remains `NOT YET EXECUTED`; Working Jax remains
-  `BLOCKED_BEFORE_HYPOTHESIS_DESIGN` pending the isolated genuine-market proof
-  and external review.
+- CORE-READINESS-02B: `PARTIAL GENUINE PROOF EXECUTED / BLOCKED_NO_ELIGIBLE_GENUINE_EVENT`.
+  The genuine proof passed its host-clock gate and reached a current-tail
+  World Monitor WATCH decision plus genuine Alpaca quote/trade/candle evidence;
+  no candidate or economic lifecycle resulted. This is technical integrity
+  evidence, not a strategy failure or edge claim. The sequential continuation
+  boundary is disposable cursor `72795`; the prior normal Jax cursor was not
+  read or advanced. See
+  `Docs/BUILD/CORE-READINESS-02B-GENUINE-MARKET-END-TO-END-PROOF.md`.
+- Working Jax remains `BLOCKED_BEFORE_HYPOTHESIS_DESIGN` pending completion and
+  external review of the full isolated genuine-market proof. The prior
+  host-clock blocker was cleared during the recorded attempt.
 - Harness architecture: `HARNESS-00 GO / EXTERNALLY REVIEWED`.
 - Harness foundation contracts: `HARNESS-01 GO / EXTERNALLY REVIEWED`.
 - Harness retrieval/context builder: `HARNESS-02 IMPLEMENTED / EXTERNALLY REVIEWED / OFFLINE`.
@@ -150,10 +155,11 @@ database query in this documentation update.
 
 CORE-READINESS-01 found that the reusable core is not yet trustworthy enough
 to begin hypothesis design. CORE-READINESS-02A4 implements the canonical
-server-owned candidate-to-queue seam but does not consume the queue or prove
-genuine-market end-to-end semantics. The remaining package is
-CORE-READINESS-02B: isolated genuine-market end-to-end proof, subject to
-separate authorization and external review. No strategy selection, normal
+server-owned candidate-to-queue seam. CORE-READINESS-02B has a partial genuine
+provider proof but stopped at a WATCH-only event with no eligible candidate.
+The continuation is sequential from disposable World Monitor cursor `72795`;
+the first attempt's current-tail anchoring was a technical-proof protocol
+deviation and is not economic or strategy evidence. No strategy selection, normal
 database mutation, new pilot, prospective evidence collection, runtime
 deployment, or broker use is authorized here. PAPER-02 remains aborted and
 historically preserved; HARNESS-04 is deferred, FORMAL_FORWARD_PAPER is not
